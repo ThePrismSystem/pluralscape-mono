@@ -1,0 +1,26 @@
+{
+  "name": "@pluralscape/import-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "dependencies": {
+    "@pluralscape/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "@types/node": "^25.6.0",
+    "eslint": "^10.2.0",
+    "typescript": "^6.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
+  }
+}

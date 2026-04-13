@@ -155,6 +155,69 @@ describe("createFrontingSession", () => {
       systemId: SYSTEM_ID,
     });
   });
+
+  it("creates a fronting session with endTime", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([makeFSRow({ endTime: 2000 })]);
+    const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher.js");
+
+    const result = await createFrontingSession(
+      db,
+      SYSTEM_ID,
+      { ...VALID_CREATE_PARAMS, endTime: 2000 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.endTime).toBe(2000);
+    expect(vi.mocked(dispatchWebhookEvent)).toHaveBeenCalledWith(
+      chain,
+      SYSTEM_ID,
+      "fronting.ended",
+      expect.objectContaining({ sessionId: expect.any(String) }),
+    );
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "fronting-session.ended" }),
+    );
+  });
+
+  it("throws 400 when endTime < startTime", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      createFrontingSession(
+        db,
+        SYSTEM_ID,
+        { ...VALID_CREATE_PARAMS, endTime: 500 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("throws 400 when endTime equals startTime", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      createFrontingSession(
+        db,
+        SYSTEM_ID,
+        { ...VALID_CREATE_PARAMS, endTime: 1000 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("creates a fronting session without endTime (stays null)", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([makeFSRow()]);
+
+    const result = await createFrontingSession(db, SYSTEM_ID, VALID_CREATE_PARAMS, AUTH, mockAudit);
+
+    expect(result.endTime).toBeNull();
+  });
 });
 
 // ── listFrontingSessions ──────────────────────────────────────────────

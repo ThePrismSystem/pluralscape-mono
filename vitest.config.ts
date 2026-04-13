@@ -13,6 +13,7 @@ const PACKAGES = [
   "validation",
   "rotation-worker",
   "email",
+  "import-core",
 ];
 
 function projectConfig(name: string, root: string) {
@@ -76,6 +77,31 @@ export default defineConfig({
           testTimeout: 30000,
           hookTimeout: 30000,
           setupFiles: ["src/__tests__/integration/setup-env.ts"],
+        },
+      },
+      {
+        test: {
+          name: "import-pk",
+          root: "packages/import-pk",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.ts"],
+          exclude: ["**/*.integration.{test,spec}.ts", "**/*.e2e.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 5000,
+          hookTimeout: 10000,
+        },
+      },
+      {
+        test: {
+          name: "import-pk-integration",
+          root: "packages/import-pk",
+          environment: "node",
+          include: ["src/**/*.integration.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 30000,
+          hookTimeout: 30000,
         },
       },
       projectConfig("api", "apps/api"),
@@ -240,6 +266,8 @@ export default defineConfig({
         "apps/api/src/middleware/idempotency-store.ts",
         "apps/api/src/middleware/rate-limit-store.ts",
         "apps/api/src/services/hierarchy-service-types.ts",
+        // import-core: test utilities are helpers, not production code
+        "packages/import-core/src/testing/**/*.ts",
       ],
       reporter: ["text", "json-summary", "lcov", "html"],
       reportsDirectory: "./coverage",

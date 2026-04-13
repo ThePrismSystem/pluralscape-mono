@@ -85,5 +85,8 @@ ui-design-local/
 .env.sp-test-*
 scripts/.sp-test-*.json
 
+# PK import test artifacts (seeded account manifests)
+scripts/.pk-seed-*.json
+
 # OS
 .tmp

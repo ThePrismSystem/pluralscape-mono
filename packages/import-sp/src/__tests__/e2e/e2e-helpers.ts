@@ -5,138 +5,44 @@
  * wired to the real Pluralscape API server on port 10099. The persister
  * encrypts all payloads with a test master key and persists through tRPC,
  * matching the same data path the mobile app takes in production.
+ *
+ * Generic helpers are imported from @pluralscape/test-utils/e2e.
+ * This file contains only SP-specific entity dispatch.
  */
-import crypto from "node:crypto";
-
 import {
   encryptTier1,
   generateMasterKey,
   initSodium,
   serializeEncryptedBlob,
 } from "@pluralscape/crypto";
+import {
+  API_BASE_URL,
+  createBaseE2EPersister,
+  getSystemId,
+  registerTestAccount,
+} from "@pluralscape/test-utils/e2e";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 
-import type {
-  PersistableEntity,
-  Persister,
-  PersisterUpsertResult,
-} from "../../persistence/persister.types.js";
+import type { PersistableEntity } from "../../persistence/persister.types.js";
 import type { AppRouter } from "@pluralscape/api/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
-  ImportCollectionType,
-  ImportError,
-  SystemId,
-  T1EncryptedBlob,
-} from "@pluralscape/types";
+  CryptoDeps,
+  E2EPersisterContext,
+  GenericPersistableEntity,
+  HandleCreateContext,
+  PersisterUpsertResult,
+} from "@pluralscape/test-utils/e2e";
+import type { SystemId, T1EncryptedBlob } from "@pluralscape/types";
 
-const E2E_PORT = 10_099;
-const API_BASE_URL = `http://localhost:${String(E2E_PORT)}`;
+// ── tRPC client factory (local to avoid circular dep) ─────────────────
+
 const TRPC_URL = `${API_BASE_URL}/v1/trpc`;
-
-/** Maximum URL length before httpBatchLink splits into multiple requests. */
 const MAX_URL_LENGTH = 2_083;
-
-/** Maximum operations per batch request. */
 const MAX_BATCH_ITEMS = 10;
-
-/** Batch size for ref upserts (matches mobile persister). */
-const REF_BATCH_SIZE = 50;
-
-/** Placeholder for update calls that route through a parent scope. */
-const COMMENT_UPDATE_PLACEHOLDER_SESSION = "fs_import_placeholder";
-const MESSAGE_UPDATE_PLACEHOLDER_CHANNEL = "ch_import_placeholder";
-
-// ── Registration ─────────────────────────────────────────────────────
-
-interface RegisterData {
-  sessionToken: string;
-  recoveryKey: string;
-  accountId: string;
-  accountType: string;
-}
-
-interface RegisterResponse {
-  data: RegisterData;
-}
-
-export interface RegisteredAccount {
-  sessionToken: string;
-  recoveryKey: string;
-  accountId: string;
-  email: string;
-  password: string;
-}
-
-/**
- * Register a fresh test account against the E2E API server.
- */
-export async function registerTestAccount(): Promise<RegisteredAccount> {
-  const uuid = crypto.randomUUID();
-  const email = `e2e-import-${uuid}@test.pluralscape.local`;
-  const password = `E2E-ImportTest-${uuid}`;
-
-  const res = await fetch(`${API_BASE_URL}/v1/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email,
-      password,
-      recoveryKeyBackupConfirmed: true,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Registration failed (${String(res.status)}): ${body}`);
-  }
-
-  const envelope = (await res.json()) as RegisterResponse;
-  return {
-    ...envelope.data,
-    email,
-    password,
-  };
-}
-
-// ── System discovery ────────────────────────────────────────────────
-
-interface SystemListItem {
-  id: string;
-}
-
-interface SystemListResponse {
-  data: SystemListItem[];
-}
-
-/**
- * Fetch the first system ID for the authenticated account via REST.
- */
-export async function getSystemId(sessionToken: string): Promise<SystemId> {
-  const res = await fetch(`${API_BASE_URL}/v1/systems`, {
-    headers: { Authorization: `Bearer ${sessionToken}` },
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Failed to list systems (${String(res.status)}): ${body}`);
-  }
-
-  const body = (await res.json()) as SystemListResponse;
-  const first = body.data[0];
-  if (!first) {
-    throw new Error("No systems found for authenticated account");
-  }
-  return first.id as SystemId;
-}
-
-// ── tRPC client ─────────────────────────────────────────────────────
 
 export type TRPCClient = ReturnType<typeof createTRPCClient<AppRouter>>;
 
-/**
- * Create a typed vanilla tRPC client for the E2E API server.
- */
 export function makeTrpcClient(token: string): TRPCClient {
   return createTRPCClient<AppRouter>({
     links: [
@@ -150,455 +56,391 @@ export function makeTrpcClient(token: string): TRPCClient {
   });
 }
 
-// ── Crypto initialization ───────────────────────────────────────────
+// ── Crypto helpers (local to avoid circular dep) ──────────────────────
 
 let cryptoReady = false;
 
-export async function ensureCryptoReady(): Promise<void> {
+async function ensureCryptoReady(): Promise<void> {
   if (cryptoReady) return;
   await initSodium();
   cryptoReady = true;
 }
 
-/**
- * Encrypt a payload as a T1 blob and return the base64 string the API expects.
- */
 function encryptForApi(data: unknown, masterKey: KdfMasterKey): string {
   const blob: T1EncryptedBlob = encryptTier1(data, masterKey);
   const binary = serializeEncryptedBlob(blob);
   return Buffer.from(binary).toString("base64");
 }
 
-// ── E2E Persister ───────────────────────────────────────────────────
+const cryptoDeps: CryptoDeps<KdfMasterKey> = {
+  ensureCryptoReady,
+  generateMasterKey,
+  encryptForApi,
+};
 
-/** A ref entry queued for batch upsert. */
-interface QueuedRef {
-  readonly sourceEntityType: ImportCollectionType;
-  readonly sourceEntityId: string;
-  readonly pluralscapeEntityId: string;
-}
+export { ensureCryptoReady, generateMasterKey, getSystemId, registerTestAccount };
+export type { KdfMasterKey, SystemId };
 
-export interface E2EPersisterContext {
-  readonly persister: Persister;
-  readonly masterKey: KdfMasterKey;
-  readonly systemId: SystemId;
-  /** Count of entities created during the import run. */
-  readonly getCreatedCount: () => number;
-  /** Drain any non-fatal errors recorded by the persister. */
-  readonly drainErrors: () => readonly ImportError[];
+/** E2E persister context parameterized with the real master key type. */
+export type E2EPersisterCtx = E2EPersisterContext<KdfMasterKey>;
+
+/** Placeholder for update calls that route through a parent scope. */
+const COMMENT_UPDATE_PLACEHOLDER_SESSION = "fs_import_placeholder";
+const MESSAGE_UPDATE_PLACEHOLDER_CHANNEL = "ch_import_placeholder";
+
+// ── SP-specific entity dispatch ─────────────────────────────────────
+
+/**
+ * Dispatch a create call to the correct tRPC procedure based on entity
+ * type. Each branch matches the corresponding mobile persister helper.
+ */
+async function handleCreate(
+  entity: GenericPersistableEntity,
+  ctx: HandleCreateContext<TRPCClient, KdfMasterKey>,
+): Promise<{ id: string }> {
+  const spEntity = entity as PersistableEntity;
+  const { trpc, systemId, masterKey } = ctx;
+
+  switch (spEntity.entityType) {
+    case "system-profile": {
+      const current = await trpc.system.get.query({ systemId });
+      return trpc.system.update.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload, masterKey),
+        version: current.version,
+      });
+    }
+    case "system-settings": {
+      const current = await trpc.systemSettings.settings.get.query({ systemId });
+      return trpc.systemSettings.settings.update.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload, masterKey),
+        version: current.version,
+      });
+    }
+    case "privacy-bucket":
+      return trpc.bucket.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+      });
+    case "field-definition":
+      return trpc.field.definition.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        fieldType: spEntity.payload.fieldType,
+        required: spEntity.payload.required,
+        sortOrder: spEntity.payload.sortOrder,
+      });
+    case "custom-front":
+      return trpc.customFront.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+      });
+    case "member": {
+      const encrypted = encryptForApi(spEntity.payload.encrypted, masterKey);
+      const result = await trpc.member.create.mutate({
+        systemId,
+        encryptedData: encrypted,
+      });
+      // Fan out field values
+      for (const fv of spEntity.payload.fieldValues) {
+        const fieldDefId = lookupRefResult(fv.fieldSourceId);
+        if (fieldDefId !== null) {
+          await trpc.field.value.set.mutate({
+            systemId,
+            fieldDefinitionId: fieldDefId,
+            owner: { kind: "member", id: result.id },
+            encryptedData: encryptForApi({ value: fv.value }, masterKey),
+          });
+        }
+      }
+      return result;
+    }
+    case "group": {
+      const result = await trpc.group.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        parentGroupId: spEntity.payload.parentGroupId,
+        sortOrder: spEntity.payload.sortOrder,
+      });
+      for (const memberId of spEntity.payload.memberIds) {
+        await trpc.group.addMember.mutate({
+          systemId,
+          groupId: result.id,
+          memberId,
+        });
+      }
+      return result;
+    }
+    case "fronting-session":
+      return trpc.frontingSession.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        startTime: spEntity.payload.startTime,
+        endTime: spEntity.payload.endTime ?? undefined,
+        memberId: spEntity.payload.memberId,
+        customFrontId: spEntity.payload.customFrontId,
+        structureEntityId: spEntity.payload.structureEntityId,
+      });
+    case "fronting-comment":
+      return trpc.frontingComment.create.mutate({
+        systemId,
+        sessionId: spEntity.payload.frontingSessionId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        memberId: spEntity.payload.memberId,
+        customFrontId: spEntity.payload.customFrontId,
+        structureEntityId: spEntity.payload.structureEntityId,
+      });
+    case "journal-entry":
+      return trpc.note.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        author: spEntity.payload.author,
+      });
+    case "poll": {
+      const result = await trpc.poll.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        kind: spEntity.payload.kind,
+        createdByMemberId: spEntity.payload.createdByMemberId,
+        allowMultipleVotes: spEntity.payload.allowMultipleVotes,
+        maxVotesPerMember: spEntity.payload.maxVotesPerMember,
+        allowAbstain: spEntity.payload.allowAbstain,
+        allowVeto: spEntity.payload.allowVeto,
+        endsAt: spEntity.payload.endsAt,
+      });
+      // Cast votes
+      for (const vote of spEntity.payload.votes) {
+        await trpc.poll.castVote.mutate({
+          systemId,
+          pollId: result.id,
+          optionId: vote.optionId.length > 0 ? vote.optionId : null,
+          voter: {
+            entityType: "member" as const,
+            entityId: vote.memberId ?? result.id,
+          },
+          encryptedData: encryptForApi({ comment: vote.comment }, masterKey),
+        });
+      }
+      return result;
+    }
+    case "channel-category":
+      return trpc.channel.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        type: spEntity.payload.type,
+        parentId: spEntity.payload.parentId,
+        sortOrder: spEntity.payload.sortOrder,
+      });
+    case "channel":
+      return trpc.channel.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        type: spEntity.payload.type,
+        parentId: spEntity.payload.parentId,
+        sortOrder: spEntity.payload.sortOrder,
+      });
+    case "chat-message":
+      return trpc.message.create.mutate({
+        systemId,
+        channelId: spEntity.payload.channelId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        timestamp: spEntity.payload.timestamp,
+        replyToId: spEntity.payload.replyToId,
+      });
+    case "board-message":
+      return trpc.boardMessage.create.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        sortOrder: spEntity.payload.sortOrder,
+        pinned: spEntity.payload.pinned,
+      });
+    default: {
+      const _exhaustive: never = spEntity;
+      throw new Error(`Unhandled entity type: ${String(_exhaustive)}`);
+    }
+  }
 }
 
 /**
- * Create a Persister backed by real tRPC calls to the E2E API server.
- *
- * Encrypts all payloads with a freshly generated master key and persists
- * them through the real API, verifying the full import pipeline from
- * engine through encryption to server persistence.
- *
- * Avatar fetching is not supported — tests should use avatarMode: "skip".
+ * Look up a previously imported entity's Pluralscape ID by source ID.
+ * Used for field-value fan-out. Returns null if not found.
+ */
+const refResults = new Map<string, string>();
+function lookupRefResult(sourceId: string): string | null {
+  return refResults.get(`field-definition:${sourceId}`) ?? null;
+}
+
+/**
+ * Handle an update call by dispatching to the correct tRPC procedure.
+ */
+async function handleUpdate(
+  entity: GenericPersistableEntity,
+  existingId: string,
+  ctx: HandleCreateContext<TRPCClient, KdfMasterKey>,
+): Promise<PersisterUpsertResult> {
+  const spEntity = entity as PersistableEntity;
+  const { trpc, systemId, masterKey } = ctx;
+  const version = 1;
+
+  switch (spEntity.entityType) {
+    case "system-profile":
+      await trpc.system.update.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload, masterKey),
+        version,
+      });
+      break;
+    case "system-settings":
+      await trpc.systemSettings.settings.update.mutate({
+        systemId,
+        encryptedData: encryptForApi(spEntity.payload, masterKey),
+        version,
+      });
+      break;
+    case "privacy-bucket":
+      await trpc.bucket.update.mutate({
+        systemId,
+        bucketId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "field-definition":
+      await trpc.field.definition.update.mutate({
+        systemId,
+        fieldDefinitionId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "custom-front":
+      await trpc.customFront.update.mutate({
+        systemId,
+        customFrontId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "member":
+      await trpc.member.update.mutate({
+        systemId,
+        memberId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "group":
+      await trpc.group.update.mutate({
+        systemId,
+        groupId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "fronting-session":
+      await trpc.frontingSession.update.mutate({
+        systemId,
+        sessionId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "fronting-comment":
+      await trpc.frontingComment.update.mutate({
+        systemId,
+        sessionId: COMMENT_UPDATE_PLACEHOLDER_SESSION,
+        commentId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "journal-entry":
+      await trpc.note.update.mutate({
+        systemId,
+        noteId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "poll":
+      await trpc.poll.update.mutate({
+        systemId,
+        pollId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "channel-category":
+      await trpc.channel.update.mutate({
+        systemId,
+        channelId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "channel":
+      await trpc.channel.update.mutate({
+        systemId,
+        channelId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "chat-message":
+      await trpc.message.update.mutate({
+        systemId,
+        channelId: MESSAGE_UPDATE_PLACEHOLDER_CHANNEL,
+        messageId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    case "board-message":
+      await trpc.boardMessage.update.mutate({
+        systemId,
+        boardMessageId: existingId,
+        encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
+        version,
+      });
+      break;
+    default: {
+      const _exhaustive: never = spEntity;
+      throw new Error(`Unhandled entity type: ${String(_exhaustive)}`);
+    }
+  }
+  return { action: "updated", pluralscapeEntityId: existingId };
+}
+
+// ── E2E Persister (SP-specific) ────────────────────────────────────
+
+/**
+ * Create an E2E persister for SP import backed by real tRPC calls.
  */
 export async function createE2EPersister(
   trpcClient: TRPCClient,
   systemId: SystemId,
-): Promise<E2EPersisterContext> {
-  await ensureCryptoReady();
-  const masterKey = generateMasterKey();
-
-  const refQueue: QueuedRef[] = [];
-  const errors: ImportError[] = [];
-  let createdCount = 0;
-
-  async function flushRefs(): Promise<void> {
-    while (refQueue.length >= REF_BATCH_SIZE) {
-      const batch = refQueue.splice(0, REF_BATCH_SIZE);
-      await trpcClient.importEntityRef.upsertBatch.mutate({
-        systemId,
-        source: "simply-plural",
-        entries: batch.map((r) => ({
-          sourceEntityType: r.sourceEntityType,
-          sourceEntityId: r.sourceEntityId,
-          pluralscapeEntityId: r.pluralscapeEntityId,
-        })),
-      });
-    }
-  }
-
-  async function flushAllRefs(): Promise<void> {
-    await flushRefs();
-    if (refQueue.length > 0) {
-      const batch = refQueue.splice(0, refQueue.length);
-      await trpcClient.importEntityRef.upsertBatch.mutate({
-        systemId,
-        source: "simply-plural",
-        entries: batch.map((r) => ({
-          sourceEntityType: r.sourceEntityType,
-          sourceEntityId: r.sourceEntityId,
-          pluralscapeEntityId: r.pluralscapeEntityId,
-        })),
-      });
-    }
-  }
-
-  function queueRef(entityType: ImportCollectionType, sourceEntityId: string, psId: string): void {
-    refQueue.push({
-      sourceEntityType: entityType,
-      sourceEntityId,
-      pluralscapeEntityId: psId,
-    });
-  }
-
-  /**
-   * Dispatch a create call to the correct tRPC procedure based on entity
-   * type. Each branch matches the corresponding mobile persister helper.
-   */
-  async function handleCreate(entity: PersistableEntity): Promise<{ id: string }> {
-    switch (entity.entityType) {
-      case "system-profile": {
-        const current = await trpcClient.system.get.query({ systemId });
-        return trpcClient.system.update.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          version: current.version,
-        });
-      }
-      case "system-settings": {
-        const current = await trpcClient.systemSettings.settings.get.query({ systemId });
-        return trpcClient.systemSettings.settings.update.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          version: current.version,
-        });
-      }
-      case "privacy-bucket":
-        return trpcClient.bucket.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-        });
-      case "field-definition":
-        return trpcClient.field.definition.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          fieldType: entity.payload.fieldType,
-          required: entity.payload.required,
-          sortOrder: entity.payload.sortOrder,
-        });
-      case "custom-front":
-        return trpcClient.customFront.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-        });
-      case "member": {
-        const encrypted = encryptForApi(entity.payload.encrypted, masterKey);
-        const result = await trpcClient.member.create.mutate({
-          systemId,
-          encryptedData: encrypted,
-        });
-        // Fan out field values
-        for (const fv of entity.payload.fieldValues) {
-          const fieldDefId = lookupRefResult(fv.fieldSourceId);
-          if (fieldDefId !== null) {
-            await trpcClient.field.value.set.mutate({
-              systemId,
-              fieldDefinitionId: fieldDefId,
-              owner: { kind: "member", id: result.id },
-              encryptedData: encryptForApi({ value: fv.value }, masterKey),
-            });
-          }
-        }
-        return result;
-      }
-      case "group": {
-        const result = await trpcClient.group.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          parentGroupId: entity.payload.parentGroupId,
-          sortOrder: entity.payload.sortOrder,
-        });
-        for (const memberId of entity.payload.memberIds) {
-          await trpcClient.group.addMember.mutate({
-            systemId,
-            groupId: result.id,
-            memberId,
-          });
-        }
-        return result;
-      }
-      case "fronting-session":
-        return trpcClient.frontingSession.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          startTime: entity.payload.startTime,
-          memberId: entity.payload.memberId,
-          customFrontId: entity.payload.customFrontId,
-          structureEntityId: entity.payload.structureEntityId,
-        });
-      case "fronting-comment":
-        return trpcClient.frontingComment.create.mutate({
-          systemId,
-          sessionId: entity.payload.frontingSessionId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          memberId: entity.payload.memberId,
-          customFrontId: entity.payload.customFrontId,
-          structureEntityId: entity.payload.structureEntityId,
-        });
-      case "journal-entry":
-        return trpcClient.note.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          author: entity.payload.author,
-        });
-      case "poll": {
-        const result = await trpcClient.poll.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          kind: entity.payload.kind,
-          createdByMemberId: entity.payload.createdByMemberId,
-          allowMultipleVotes: entity.payload.allowMultipleVotes,
-          maxVotesPerMember: entity.payload.maxVotesPerMember,
-          allowAbstain: entity.payload.allowAbstain,
-          allowVeto: entity.payload.allowVeto,
-          endsAt: entity.payload.endsAt,
-        });
-        // Cast votes
-        for (const vote of entity.payload.votes) {
-          await trpcClient.poll.castVote.mutate({
-            systemId,
-            pollId: result.id,
-            optionId: vote.optionId.length > 0 ? vote.optionId : null,
-            voter: {
-              entityType: "member" as const,
-              entityId: vote.memberId ?? result.id,
-            },
-            encryptedData: encryptForApi({ comment: vote.comment }, masterKey),
-          });
-        }
-        return result;
-      }
-      case "channel-category":
-        return trpcClient.channel.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          type: entity.payload.type,
-          parentId: entity.payload.parentId,
-          sortOrder: entity.payload.sortOrder,
-        });
-      case "channel":
-        return trpcClient.channel.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          type: entity.payload.type,
-          parentId: entity.payload.parentId,
-          sortOrder: entity.payload.sortOrder,
-        });
-      case "chat-message":
-        return trpcClient.message.create.mutate({
-          systemId,
-          channelId: entity.payload.channelId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          timestamp: entity.payload.timestamp,
-          replyToId: entity.payload.replyToId,
-        });
-      case "board-message":
-        return trpcClient.boardMessage.create.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          sortOrder: entity.payload.sortOrder,
-          pinned: entity.payload.pinned,
-        });
-      default: {
-        const _exhaustive: never = entity;
-        throw new Error(`Unhandled entity type: ${String(_exhaustive)}`);
-      }
-    }
-  }
-
-  /**
-   * Look up a previously imported entity's Pluralscape ID by its ref queue.
-   * This is used for field-value fan-out where the field definition's source
-   * ID needs resolving. Returns null if not found.
-   */
-  const refResults = new Map<string, string>();
-  function lookupRefResult(sourceId: string): string | null {
-    // Walk all queued + already flushed refs looking for a field-definition
-    for (const ref of refQueue) {
-      if (ref.sourceEntityType === "field-definition" && ref.sourceEntityId === sourceId) {
-        return ref.pluralscapeEntityId;
-      }
-    }
-    return refResults.get(`field-definition:${sourceId}`) ?? null;
-  }
-
-  async function handleUpdate(
-    entity: PersistableEntity,
-    existingId: string,
-  ): Promise<PersisterUpsertResult> {
-    const version = 1;
-    switch (entity.entityType) {
-      case "system-profile":
-        await trpcClient.system.update.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          version,
-        });
-        break;
-      case "system-settings":
-        await trpcClient.systemSettings.settings.update.mutate({
-          systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          version,
-        });
-        break;
-      case "privacy-bucket":
-        await trpcClient.bucket.update.mutate({
-          systemId,
-          bucketId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "field-definition":
-        await trpcClient.field.definition.update.mutate({
-          systemId,
-          fieldDefinitionId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "custom-front":
-        await trpcClient.customFront.update.mutate({
-          systemId,
-          customFrontId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "member":
-        await trpcClient.member.update.mutate({
-          systemId,
-          memberId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "group":
-        await trpcClient.group.update.mutate({
-          systemId,
-          groupId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "fronting-session":
-        await trpcClient.frontingSession.update.mutate({
-          systemId,
-          sessionId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "fronting-comment":
-        await trpcClient.frontingComment.update.mutate({
-          systemId,
-          sessionId: COMMENT_UPDATE_PLACEHOLDER_SESSION,
-          commentId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "journal-entry":
-        await trpcClient.note.update.mutate({
-          systemId,
-          noteId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "poll":
-        await trpcClient.poll.update.mutate({
-          systemId,
-          pollId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "channel-category":
-        await trpcClient.channel.update.mutate({
-          systemId,
-          channelId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "channel":
-        await trpcClient.channel.update.mutate({
-          systemId,
-          channelId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "chat-message":
-        await trpcClient.message.update.mutate({
-          systemId,
-          channelId: MESSAGE_UPDATE_PLACEHOLDER_CHANNEL,
-          messageId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      case "board-message":
-        await trpcClient.boardMessage.update.mutate({
-          systemId,
-          boardMessageId: existingId,
-          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
-          version,
-        });
-        break;
-      default: {
-        const _exhaustive: never = entity;
-        throw new Error(`Unhandled entity type: ${String(_exhaustive)}`);
-      }
-    }
-    return { action: "updated", pluralscapeEntityId: existingId };
-  }
-
-  // ID translation: entityType:sourceEntityId -> Pluralscape entity ID
-  const idMap = new Map<string, string>();
-
-  async function upsertEntity(entity: PersistableEntity): Promise<PersisterUpsertResult> {
-    const key = `${entity.entityType}:${entity.sourceEntityId}`;
-    const existingId = idMap.get(key);
-
-    if (existingId !== undefined) {
-      return handleUpdate(entity, existingId);
-    }
-
-    const result = await handleCreate(entity);
-    createdCount += 1;
-    idMap.set(key, result.id);
-    // Track ref results for field-value fan-out lookups
-    refResults.set(key, result.id);
-    queueRef(entity.entityType, entity.sourceEntityId, result.id);
-    await flushRefs();
-    return { action: "created", pluralscapeEntityId: result.id };
-  }
-
-  const persister: Persister = {
-    upsertEntity,
-    recordError(error: ImportError): Promise<void> {
-      errors.push(error);
-      return Promise.resolve();
-    },
-    async flush(): Promise<void> {
-      await flushAllRefs();
-    },
-  };
-
-  return {
-    persister,
-    masterKey,
+): Promise<E2EPersisterContext<KdfMasterKey>> {
+  const ctx = await createBaseE2EPersister({
+    trpcClient,
     systemId,
-    getCreatedCount: () => createdCount,
-    drainErrors: () => errors.splice(0, errors.length),
+    source: "simply-plural",
+    crypto: cryptoDeps,
+    handleCreate,
+    handleUpdate,
+  });
+
+  // Wire up ref tracking for field-value fan-out -- the base persister
+  // tracks entity IDs internally but SP needs a local map for inline
+  // field-definition lookups during member create.
+  const originalUpsert = ctx.persister.upsertEntity.bind(ctx.persister);
+  ctx.persister.upsertEntity = async (entity) => {
+    const result = await originalUpsert(entity);
+    if (result.action === "created") {
+      refResults.set(`${entity.entityType}:${entity.sourceEntityId}`, result.pluralscapeEntityId);
+    }
+    return result;
   };
+
+  return ctx;
 }

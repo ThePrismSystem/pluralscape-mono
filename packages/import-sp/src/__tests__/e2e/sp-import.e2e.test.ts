@@ -44,7 +44,7 @@ import {
   assertBoardMessages,
 } from "./entity-assertions.js";
 
-import type { E2EPersisterContext, TRPCClient } from "./e2e-helpers.js";
+import type { E2EPersisterCtx as E2EPersisterContext, TRPCClient } from "./e2e-helpers.js";
 import type { ImportRunResult } from "../../engine/import-engine.js";
 import type { Manifest } from "../integration/manifest.types.js";
 import type { ImportCheckpointState } from "@pluralscape/types";

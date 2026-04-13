@@ -1,11 +1,11 @@
 /**
  * Constants for the Simply Plural import engine.
  *
- * Magic numbers extracted here per the workspace's no-magic-numbers lint rule.
+ * Shared constants (CHECKPOINT_CHUNK_SIZE, MAX_WARNING_BUFFER_SIZE) are
+ * re-exported from import-core. SP-specific constants live here.
  */
 
-/** Number of source documents persisted between checkpoint writes. */
-export const CHECKPOINT_CHUNK_SIZE = 50;
+export { CHECKPOINT_CHUNK_SIZE, MAX_WARNING_BUFFER_SIZE } from "@pluralscape/import-core";
 
 /** Maximum number of retry attempts for transient SP API failures. */
 export const SP_API_MAX_RETRIES = 5;
@@ -18,9 +18,6 @@ export const SP_API_BACKOFF_MAX_MS = 16_000;
 
 /** Default per-request timeout for SP API calls in milliseconds. */
 export const SP_API_REQUEST_TIMEOUT_MS = 30_000;
-
-/** Maximum number of warnings retained per import (prevents unbounded growth). */
-export const MAX_WARNING_BUFFER_SIZE = 1_000;
 
 // ── SP CustomFieldType numeric enum values ────────────────────────────────────
 // Sourced from SP's `typeConverters` array in

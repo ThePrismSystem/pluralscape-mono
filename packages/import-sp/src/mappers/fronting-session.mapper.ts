@@ -21,7 +21,7 @@ import type { z } from "zod/v4";
 
 export type MappedFrontingSession = Omit<
   z.infer<typeof CreateFrontingSessionBodySchema>,
-  "encryptedData"
+  "encryptedData" | "endTime"
 > & {
   readonly encrypted: FrontingSessionEncryptedFields;
   readonly endTime: number | null;

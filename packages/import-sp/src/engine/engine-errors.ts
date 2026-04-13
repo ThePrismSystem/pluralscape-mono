@@ -5,9 +5,13 @@ import {
 } from "../sources/api-source.js";
 
 import type { SpCollectionName } from "../sources/sp-collections.js";
-import type { ImportEntityType, ImportError } from "@pluralscape/types";
+import type { ImportError, ImportEntityType } from "@pluralscape/types";
 
-export interface ClassifyContext {
+// Re-export shared error utilities from import-core.
+export { isFatalError } from "@pluralscape/import-core";
+export type { ClassifyContext } from "@pluralscape/import-core";
+
+interface SpClassifyContext {
   readonly entityType: ImportEntityType;
   readonly entityId: string | null;
 }
@@ -18,6 +22,9 @@ export interface ClassifyContext {
  * the document was deleted between runs. Classified as fatal + recoverable:
  * the user needs to restart the import from scratch (or from an earlier
  * checkpoint) rather than silently skipping the rest of the collection.
+ *
+ * SP-specific: `collection` is typed as `SpCollectionName` rather than
+ * the generic `string` used by import-core's `ResumeCutoffNotFoundError`.
  */
 export class ResumeCutoffNotFoundError extends Error {
   public readonly collection: SpCollectionName;
@@ -52,7 +59,7 @@ export class ResumeCutoffNotFoundError extends Error {
  * attribute it to. Non-fatal errors carry `ctx.entityType`/`ctx.entityId` so
  * the persister can record per-document failures.
  */
-export function classifyError(thrown: unknown, ctx: ClassifyContext): ImportError {
+export function classifyError(thrown: unknown, ctx: SpClassifyContext): ImportError {
   if (thrown instanceof ApiSourcePermanentError) {
     return {
       entityType: "unknown",
@@ -106,8 +113,4 @@ export function classifyError(thrown: unknown, ctx: ClassifyContext): ImportErro
     message,
     fatal: false,
   };
-}
-
-export function isFatalError(error: ImportError): boolean {
-  return error.fatal;
 }

@@ -1,0 +1,98 @@
+{
+  "version": 2,
+  "id": "adv01",
+  "name": "Adversarial Test System",
+  "members": [
+    {
+      "id": "unis1",
+      "name": "\u00c9lise",
+      "display_name": null,
+      "pronouns": "elle",
+      "description": "Accent in name",
+      "color": null,
+      "avatar_url": null,
+      "proxy_tags": [],
+      "created": "2024-07-01T00:00:00Z"
+    },
+    {
+      "id": "unis2",
+      "name": "\u5149\u306e\u5b50",
+      "display_name": null,
+      "pronouns": null,
+      "description": "CJK characters in name",
+      "color": "aabbcc",
+      "avatar_url": null,
+      "proxy_tags": [],
+      "created": "2024-07-01T00:00:00Z"
+    },
+    {
+      "id": "unis3",
+      "name": "\u03a3\u03b9\u03b3\u03bc\u03b1",
+      "display_name": null,
+      "pronouns": "they/them",
+      "description": null,
+      "color": "112233",
+      "avatar_url": "https://example.com/sigma.png",
+      "proxy_tags": [],
+      "created": "2024-07-01T00:00:00Z"
+    },
+    {
+      "id": "unis4",
+      "name": "\ud83c\udf0a Wave",
+      "display_name": null,
+      "pronouns": "xe/xem",
+      "description": "Emoji in name",
+      "color": null,
+      "avatar_url": null,
+      "proxy_tags": [],
+      "created": "2024-07-01T00:00:00Z"
+    },
+    {
+      "id": "unis5",
+      "name": "Normal Member",
+      "display_name": "Display Override",
+      "pronouns": "she/they",
+      "description": "Has a display name override",
+      "color": "ff00ff",
+      "avatar_url": null,
+      "proxy_tags": [{ "prefix": "[", "suffix": "]" }],
+      "created": "2024-07-01T00:00:00Z",
+      "privacy": {
+        "visibility": "private",
+        "description_privacy": "private"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "id": "agrp1",
+      "name": "Unicode Group \ud83c\udf08",
+      "description": "Group with emoji in name",
+      "members": ["unis1", "unis2"]
+    },
+    {
+      "id": "agrp2",
+      "name": "Ghost Ref Group",
+      "description": "References a member that does not exist",
+      "members": ["unis3", "nonexistent_id"]
+    },
+    {
+      "id": "agrp3",
+      "name": "Empty Group",
+      "description": null,
+      "members": []
+    }
+  ],
+  "switches": [
+    { "timestamp": "2024-07-01T00:00:00.000Z", "members": ["unis1"] },
+    { "timestamp": "2024-07-01T00:00:00.100Z", "members": ["unis2"] },
+    { "timestamp": "2024-07-01T00:00:00.200Z", "members": ["unis1", "unis2"] },
+    { "timestamp": "2024-07-01T00:00:00.200Z", "members": ["unis3"] },
+    { "timestamp": "2024-07-01T00:00:01.000Z", "members": ["unis1", "unis4"] },
+    { "timestamp": "2024-07-01T00:01:00.000Z", "members": [] },
+    { "timestamp": "2024-07-01T00:02:00.000Z", "members": ["unis4"] },
+    { "timestamp": "2024-07-01T00:03:00.000Z", "members": ["unis1"] },
+    { "timestamp": "2024-07-01T00:04:00.000Z", "members": ["unis1", "unis4"] },
+    { "timestamp": "2024-07-01T01:00:00.000Z", "members": ["unis3"] }
+  ]
+}

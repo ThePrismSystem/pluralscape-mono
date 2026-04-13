@@ -1,7 +1,8 @@
 import type { SpCollectionName } from "./sp-collections.js";
+import type { SourceMode } from "@pluralscape/import-core";
 
-/** Discriminator for which kind of source is producing documents. */
-export type SourceMode = "api" | "file" | "fake";
+// SourceMode is identical to import-core's — re-export for consistency.
+export type { SourceMode } from "@pluralscape/import-core";
 
 /**
  * A single event yielded by an `ImportDataSource`.
@@ -17,6 +18,9 @@ export type SourceMode = "api" | "file" | "fake";
  * `kind: "invalid-source-document"` and keeps iterating. Transport and
  * parse errors (network, SAX failure, HTTP 5xx) still throw and remain
  * fatal.
+ *
+ * SP-specific: `collection` is typed as `SpCollectionName` rather than
+ * the generic `string` used by import-core.
  */
 export type SourceEvent =
   | {
