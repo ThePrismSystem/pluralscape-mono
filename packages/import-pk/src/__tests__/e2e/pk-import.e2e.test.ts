@@ -114,7 +114,7 @@ function defineImportSuite(
     });
 
     it("fronting sessions have correct field values", async () => {
-      await assertPkFrontingSessions(trpc, ctx.masterKey, ctx.systemId, manifest);
+      await assertPkFrontingSessions(trpc, ctx.masterKey, ctx.systemId);
     });
 
     it("privacy buckets have correct field values", async () => {
