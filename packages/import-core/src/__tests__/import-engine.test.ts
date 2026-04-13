@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { emptyCheckpointState } from "../checkpoint.js";
 import { runImportEngine, buildPersistableEntity } from "../import-engine.js";
 import { mapped, failed, skipped } from "../mapper-result.js";
 import { createFakeImportSource } from "../testing/fake-source.js";
@@ -1079,6 +1080,127 @@ describe("runImportEngine", () => {
       expect(result.errors[0]?.fatal).toBe(true);
       expect(result.errors[0]?.message).toBe("batch network error");
     });
+
+    it("handles updated and skipped upsert actions in batch path", async () => {
+      const docs = [
+        { _id: "b1", name: "One" },
+        { _id: "b2", name: "Two" },
+      ];
+      const source1 = makeBatchSource(docs);
+      const { persister, snapshot } = createInMemoryPersister();
+      const dispatch = makeBatchDispatch((d) =>
+        d.map((doc) => ({ sourceEntityId: doc.sourceId, result: mapped(doc.document) })),
+      );
+
+      // First run: all created
+      await runImportEngine({
+        source: source1,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: dispatch,
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+      expect(snapshot().countByType("member")).toBe(2);
+
+      // Second run with same data: upserts return "skipped" (content identical)
+      const source2 = makeBatchSource(docs);
+      const result2 = await runImportEngine({
+        source: source2,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: dispatch,
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+      expect(result2.outcome).toBe("completed");
+
+      // Third run with different data: upserts return "updated"
+      const source3 = makeBatchSource([
+        { _id: "b1", name: "Updated" },
+        { _id: "b2", name: "Changed" },
+      ]);
+      const result3 = await runImportEngine({
+        source: source3,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: dispatch,
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+      expect(result3.outcome).toBe("completed");
+      expect(snapshot().countByType("member")).toBe(2);
+    });
+
+    it("handles non-fatal persister error in batch and continues", async () => {
+      const source = makeBatchSource([{ _id: "b1" }, { _id: "b2" }]);
+      const { persister, snapshot } = createInMemoryPersister({
+        throwOn: [
+          {
+            entityType: "member",
+            sourceEntityId: "b1",
+            error: new Error("transient"),
+            fatal: false,
+            once: true,
+          },
+        ],
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.fatal).toBe(false);
+      expect(snapshot().countByType("member")).toBe(1);
+    });
+
+    it("handles drop event with null sourceId in batch path", async () => {
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "drop", collection: "items", sourceId: null, reason: "no id" };
+          yield { kind: "doc", collection: "items", sourceId: "b1", document: { _id: "b1" } };
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.errors).toHaveLength(1);
+      expect(snapshot().countByType("member")).toBe(1);
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -1336,6 +1458,84 @@ describe("runImportEngine", () => {
 
       expect(result.outcome).toBe("completed");
       expect(snapshot().countByType("member")).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Resume from checkpoint with unknown entity type
+  // -----------------------------------------------------------------------
+
+  describe("resume with unknown entity type falls back to start", () => {
+    it("starts from index 0 when checkpoint entity type is not in dependency order", async () => {
+      const source = createFakeImportSource(makeSimpleData());
+      const { persister, snapshot } = createInMemoryPersister();
+
+      // Create a checkpoint that references a collection type not in the dependency order
+      const initialCheckpoint = emptyCheckpointState({
+        firstEntityType: "fronting-session", // not in SIMPLE_DEPENDENCY_ORDER
+        selectedCategories: {},
+        avatarMode: "skip",
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        initialCheckpoint,
+      });
+
+      // Should fall back to index 0 and process everything
+      expect(result.outcome).toBe("completed");
+      expect(snapshot().countByType("member")).toBe(2);
+      expect(snapshot().countByType("group")).toBe(2);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Failed mapper result in single mapper path
+  // -----------------------------------------------------------------------
+
+  describe("failed mapper result in single mapper path", () => {
+    it("records non-fatal error and continues", async () => {
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "Aria" },
+          { _id: "m2", name: "bad" },
+          { _id: "m3", name: "Cass" },
+        ],
+      });
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: {
+            entityType: "member",
+            map: (doc: unknown) => {
+              const record = doc as Record<string, unknown>;
+              if (record["name"] === "bad")
+                return failed({ kind: "validation-failed", message: "bad name" });
+              return mapped(doc);
+            },
+          },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.message).toBe("bad name");
+      expect(snapshot().countByType("member")).toBe(2);
     });
   });
 });
