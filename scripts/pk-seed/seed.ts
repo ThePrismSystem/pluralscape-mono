@@ -81,13 +81,13 @@ export async function executePlan(
   writeManifestAtomic(mode, working as Manifest);
 
   for (const entry of plan.create) {
-    const sourceId = await createEntity(client, fixtures, entry, refMap);
-    refMap.set(entry.ref, sourceId);
+    const created = await createEntity(client, fixtures, entry, refMap);
+    refMap.set(entry.ref, created.sourceId);
 
     const manifestEntry: ManifestEntry = {
       ref: entry.ref,
-      sourceId,
-      fields: {},
+      sourceId: created.sourceId,
+      fields: created.fields,
     };
     working[entry.entityType].push(manifestEntry);
     writeManifestAtomic(mode, working as Manifest);
@@ -101,7 +101,7 @@ async function createEntity(
   fixtures: EntityFixtures,
   entry: { entityType: EntityTypeKey; ref: string },
   refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   switch (entry.entityType) {
     case "members":
       return createMember(client, fixtures, entry.ref, refMap);
@@ -121,7 +121,7 @@ async function createMember(
   fixtures: EntityFixtures,
   ref: string,
   _refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   const fixture = fixtures.members.find((m) => m.ref === ref);
   if (!fixture) throw new Error(`member fixture not found: ${ref}`);
 
@@ -133,7 +133,10 @@ async function createMember(
     await client.patchMember(memberId, { privacy: fixture.privacy });
   }
 
-  return memberId;
+  return {
+    sourceId: memberId,
+    fields: { name: fixture.body.name },
+  };
 }
 
 async function createGroup(
@@ -141,7 +144,7 @@ async function createGroup(
   fixtures: EntityFixtures,
   ref: string,
   refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   const fixture = fixtures.groups.find((g) => g.ref === ref);
   if (!fixture) throw new Error(`group fixture not found: ${ref}`);
 
@@ -158,7 +161,10 @@ async function createGroup(
     await client.addGroupMembers(groupId, resolvedMemberIds);
   }
 
-  return groupId;
+  return {
+    sourceId: groupId,
+    fields: { name: fixture.body.name },
+  };
 }
 
 async function createSwitch(
@@ -166,7 +172,7 @@ async function createSwitch(
   fixtures: EntityFixtures,
   ref: string,
   refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   const fixture = fixtures.switches.find((s) => s.ref === ref);
   if (!fixture) throw new Error(`switch fixture not found: ${ref}`);
 
@@ -179,7 +185,10 @@ async function createSwitch(
 
   const timestamp = resolveTimestamp(fixture.timestamp);
   const result = await client.createSwitch({ members: resolvedMembers, timestamp });
-  return result.id;
+  return {
+    sourceId: result.id,
+    fields: { timestamp },
+  };
 }
 
 function buildWorkingManifest(
