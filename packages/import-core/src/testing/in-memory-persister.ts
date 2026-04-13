@@ -46,6 +46,8 @@ export interface InMemoryPersisterSnapshot {
   readonly flushCount: number;
   /** Count entities of a given type. */
   readonly countByType: (entityType: ImportCollectionType) => number;
+  /** Filter entities by type. */
+  readonly entitiesByType: (entityType: ImportCollectionType) => readonly StoredEntity[];
   /** True iff at least one entity of the given type was upserted. */
   readonly hasType: (entityType: ImportCollectionType) => boolean;
   /** Lookup a single stored entity by type and source id. */
@@ -199,6 +201,7 @@ export function createInMemoryPersister(options: InMemoryPersisterOptions = {}):
         errors: [...errors],
         flushCount,
         countByType: (entityType) => entities.filter((e) => e.entityType === entityType).length,
+        entitiesByType: (entityType) => entities.filter((e) => e.entityType === entityType),
         hasType: (entityType) => entities.some((e) => e.entityType === entityType),
         find: (entityType, sourceEntityId) => {
           const internal = store.get(storageKey(entityType, sourceEntityId));
