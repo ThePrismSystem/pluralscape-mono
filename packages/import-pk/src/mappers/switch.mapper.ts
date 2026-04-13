@@ -130,9 +130,14 @@ export function mapSwitchBatch(
             `Invariant violation: unresolved member "${pkMemberId}" in activeFronters`,
           );
         }
+        // PK allows duplicate timestamps on consecutive switches, which produces
+        // zero-duration sessions (endTime === startTime). Bump endTime by 1 ms so
+        // every PK fronting session is captured rather than rejected by the API's
+        // "endTime must be after startTime" constraint.
+        const endTime = sw.timestampMs === startTime ? sw.timestampMs + 1 : sw.timestampMs;
         outputs.push({
           sourceEntityId: `session:${pkMemberId}:${String(startTime)}`,
-          result: mapped(buildSession(resolved, startTime, sw.timestampMs)),
+          result: mapped(buildSession(resolved, startTime, endTime)),
         });
         activeFronters.delete(pkMemberId);
       }
