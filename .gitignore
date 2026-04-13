@@ -30,6 +30,7 @@ bun.lockb
 .env.*
 !.env.example
 !.env.sp-test.example
+!.env.pk-test.example
 *.pem
 *.key
 
