@@ -147,8 +147,8 @@ function assertPayloadSpotChecks(
         throw new Error(`first note entity should exist (sourceId=${firstNote.sourceId})`);
       }
       expect(entity.payload).toBeDefined();
-      const payload = entity.payload as Record<string, unknown>;
-      expect(payload["title"]).toBe(firstNote.fields["title"]);
+      const payload = entity.payload as { encrypted: Record<string, unknown> };
+      expect(payload.encrypted["title"]).toBe(firstNote.fields["title"]);
     }
   }
 

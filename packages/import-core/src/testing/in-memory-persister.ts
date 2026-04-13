@@ -27,7 +27,6 @@ import { createHash } from "node:crypto";
 import type { PersistableEntity, Persister, PersisterUpsertResult } from "../persister.types.js";
 import type { ImportCollectionType, ImportError } from "@pluralscape/types";
 
-
 /** Length of the SHA-256 hex prefix used as the deterministic ID. */
 const DETERMINISTIC_ID_LENGTH = 26;
 
