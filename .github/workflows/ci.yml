@@ -277,6 +277,9 @@ jobs:
       - name: Run SP import E2E tests
         run: pnpm test:e2e:sp-import
 
+      - name: Run PK import E2E tests
+        run: pnpm test:e2e:pk-import
+
       - name: Extract E2E test count
         if: github.ref == 'refs/heads/main'
         id: e2e-data
