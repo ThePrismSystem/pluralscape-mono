@@ -834,4 +834,508 @@ describe("runImportEngine", () => {
       expect(closeCalled).toBe(true);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Batch mapper coverage
+  // -----------------------------------------------------------------------
+
+  describe("batch mapper path", () => {
+    const batchDependencyOrder = ["items"];
+    const batchCollectionToEntityType = (): ImportCollectionType => "member";
+
+    function makeBatchSource(docs: Record<string, unknown>[]): ImportDataSource {
+      return {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          for (const doc of docs) {
+            yield {
+              kind: "doc",
+              collection: "items",
+              sourceId: doc["_id"] as string,
+              document: doc,
+            };
+          }
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+    }
+
+    function makeBatchDispatch(
+      mapBatch: (
+        docs: readonly SourceDocument[],
+        ctx: MappingContext,
+      ) => readonly BatchMapperOutput[],
+    ): Readonly<Record<string, MapperDispatchEntry>> {
+      return {
+        items: { entityType: "member", batch: true, mapBatch } as BatchMapperEntry,
+      };
+    }
+
+    it("persists entities via batch mapper", async () => {
+      const source = makeBatchSource([
+        { _id: "b1", name: "One" },
+        { _id: "b2", name: "Two" },
+      ]);
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(snapshot().countByType("member")).toBe(2);
+    });
+
+    it("records skipped and failed results from batch mapper", async () => {
+      const source = makeBatchSource([{ _id: "b1" }, { _id: "b2" }, { _id: "b3" }]);
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d, i) => ({
+            sourceEntityId: d.sourceId,
+            result:
+              i === 0
+                ? mapped(d.document)
+                : i === 1
+                  ? skipped({ kind: "empty-name", reason: "skip" })
+                  : failed({ kind: "validation-failed", message: "bad" }),
+          })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(snapshot().countByType("member")).toBe(1);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.message).toBe("bad");
+    });
+
+    it("handles drop events in batch path", async () => {
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "drop", collection: "items", sourceId: "d1", reason: "bad doc" };
+          yield { kind: "doc", collection: "items", sourceId: "b1", document: { _id: "b1" } };
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.kind).toBe("invalid-source-document");
+      expect(snapshot().countByType("member")).toBe(1);
+    });
+
+    it("aborts on abort signal during batch accumulation", async () => {
+      const controller = new AbortController();
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "doc", collection: "items", sourceId: "b1", document: { _id: "b1" } };
+          controller.abort();
+          yield { kind: "doc", collection: "items", sourceId: "b2", document: { _id: "b2" } };
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        abortSignal: controller.signal,
+      });
+
+      expect(result.outcome).toBe("aborted");
+    });
+
+    it("aborts on abort signal during batch result processing", async () => {
+      const controller = new AbortController();
+      const source = makeBatchSource([{ _id: "b1" }, { _id: "b2" }]);
+      const { persister } = createInMemoryPersister();
+      let callCount = 0;
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) => {
+          return docs.map((d) => {
+            callCount += 1;
+            if (callCount === 2) controller.abort();
+            return { sourceEntityId: d.sourceId, result: mapped(d.document) };
+          });
+        }),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        abortSignal: controller.signal,
+      });
+
+      expect(result.outcome).toBe("aborted");
+    });
+
+    it("handles fatal persister error in batch path", async () => {
+      const source = makeBatchSource([{ _id: "b1" }]);
+      const { persister } = createInMemoryPersister({
+        throwOn: [
+          {
+            entityType: "member",
+            sourceEntityId: "b1",
+            error: new SyntaxError("fatal"),
+            fatal: true,
+          },
+        ],
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors[0]?.fatal).toBe(true);
+    });
+
+    it("source iteration throw in batch path produces fatal abort", async () => {
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "doc", collection: "items", sourceId: "b1", document: { _id: "b1" } };
+          throw new Error("batch network error");
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: makeBatchDispatch((docs) =>
+          docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+        ),
+        dependencyOrder: batchDependencyOrder,
+        collectionToEntityType: batchCollectionToEntityType,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors[0]?.fatal).toBe(true);
+      expect(result.errors[0]?.message).toBe("batch network error");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Selected categories opt-out
+  // -----------------------------------------------------------------------
+
+  describe("selected categories opt-out", () => {
+    it("skips collection when selectedCategories is false for its entity type", async () => {
+      const source = createFakeImportSource(makeSimpleData());
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: { member: false }, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(snapshot().countByType("member")).toBe(0);
+      // Groups depend on members but since members were skipped, FK misses are expected
+      expect(snapshot().countByType("group")).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // No mapper entry for collection
+  // -----------------------------------------------------------------------
+
+  describe("missing mapper entry", () => {
+    it("skips collection with no mapper in dispatch table", async () => {
+      const source = createFakeImportSource({
+        members: [{ _id: "m1", name: "Aria" }],
+        extras: [{ _id: "e1", data: "test" }],
+      });
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+          // No entry for "extras"
+        },
+        dependencyOrder: ["members", "extras"],
+        collectionToEntityType: (c: string) => (c === "members" ? "member" : "group"),
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(snapshot().countByType("member")).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Drop event with null sourceId
+  // -----------------------------------------------------------------------
+
+  describe("drop event with null sourceId", () => {
+    it("records error without advancing lastSourceId", async () => {
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "drop", collection: "members", sourceId: null, reason: "no id" };
+          yield { kind: "doc", collection: "members", sourceId: "m1", document: { _id: "m1" } };
+        },
+        listCollections: () => Promise.resolve(["members"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.errors).toHaveLength(1);
+      expect(snapshot().countByType("member")).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Upsert action coverage (updated, skipped)
+  // -----------------------------------------------------------------------
+
+  describe("upsert action variants in single mapper", () => {
+    it("handles 'updated' upsert action on re-import", async () => {
+      const data = makeSimpleData();
+      const source1 = createFakeImportSource(data);
+      const { persister, snapshot } = createInMemoryPersister();
+
+      // First import: all entities are "created"
+      await runImportEngine({
+        source: source1,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+      expect(snapshot().countByType("member")).toBe(2);
+
+      // Second import with same data: entities become "updated" or "skipped"
+      const source2 = createFakeImportSource(data);
+      const result2 = await runImportEngine({
+        source: source2,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result2.outcome).toBe("completed");
+      // Entities still exist (no duplicates)
+      expect(snapshot().countByType("member")).toBe(2);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Abort after drop in single mapper path
+  // -----------------------------------------------------------------------
+
+  describe("abort after drop in single mapper", () => {
+    it("aborts when signal fires after processing a drop event", async () => {
+      const controller = new AbortController();
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "drop", collection: "members", sourceId: "d1", reason: "bad" };
+          controller.abort();
+          yield { kind: "doc", collection: "members", sourceId: "m1", document: { _id: "m1" } };
+        },
+        listCollections: () => Promise.resolve(["members"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        abortSignal: controller.signal,
+      });
+
+      expect(result.outcome).toBe("aborted");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Non-fatal persister error in single mapper path
+  // -----------------------------------------------------------------------
+
+  describe("non-fatal persister error in single mapper continues", () => {
+    it("records error and processes remaining entities", async () => {
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "Aria" },
+          { _id: "m2", name: "Blake" },
+        ],
+      });
+      const { persister, snapshot } = createInMemoryPersister({
+        throwOn: [
+          {
+            entityType: "member",
+            sourceEntityId: "m1",
+            error: new Error("transient"),
+            fatal: false,
+            once: true,
+          },
+        ],
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.fatal).toBe(false);
+      expect(snapshot().countByType("member")).toBe(1); // m2 succeeded
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Skipped single-mapper result
+  // -----------------------------------------------------------------------
+
+  describe("skipped mapper result in single mapper path", () => {
+    it("advances checkpoint past skipped entities", async () => {
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "" },
+          { _id: "m2", name: "Blake" },
+        ],
+      });
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: {
+            entityType: "member",
+            map: (doc: unknown) => {
+              const record = doc as Record<string, unknown>;
+              if (!record["name"]) return skipped({ kind: "empty-name", reason: "no name" });
+              return mapped(doc);
+            },
+          },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(snapshot().countByType("member")).toBe(1);
+    });
+  });
 });

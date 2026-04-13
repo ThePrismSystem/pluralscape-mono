@@ -266,6 +266,8 @@ export default defineConfig({
         "apps/api/src/middleware/idempotency-store.ts",
         "apps/api/src/middleware/rate-limit-store.ts",
         "apps/api/src/services/hierarchy-service-types.ts",
+        // import-core: test utilities are helpers, not production code
+        "packages/import-core/src/testing/**/*.ts",
       ],
       reporter: ["text", "json-summary", "lcov", "html"],
       reportsDirectory: "./coverage",
