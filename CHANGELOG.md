@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
 
+## Milestone 9: Data Import
+
+### Added
+
+- Import-core engine (`packages/import-core`) — shared orchestration: checkpoint-based resumable imports, pluggable Persister interface, entity reference tracking, batch processing, error classification (ADR 034)
+- Simply Plural import (`packages/import-sp`) — 15 collection mappers (14 with full API support), file and API source modes, Zod validation per document, encrypted payload alignment, notes support
+- PluralKit import (`packages/import-pk`) — member, group, fronting session, and group membership mapping from PK JSON exports, zero-duration session handling
+- Import API endpoints — SP and PK import routes with batch entity-ref operations, tRPC routers, REST mirrors
+- Mobile import glue — SP token storage (expo-secure-store), avatar fetcher (API/ZIP/skip modes), 17 entity persisters, import hooks (`useStartImport`, `useImportJob`, `useImportProgress`, etc.)
+- SP seed script (`scripts/sp-seed`) — deterministic SP test data seeder with ref-keyed idempotent re-runs, crash-resilient manifest writes, export trigger with 429 handling
+- PK seed script (`scripts/pk-seed`) — deterministic PK test data seeder for E2E tests
+- `.env.sp-test.example` and `.env.pk-test.example` — environment templates for import E2E tests
+- ADR 033: PluralKit API client library selection
+- ADR 034: Import-core extraction — shared import orchestration engine
+- E2E tests expanded — import-job lifecycle, entity-ref batch operations, SP and PK import flows
+
+### Fixed
+
+- Zero-duration fronting sessions from PK imports (endTime bumped by 1ms)
+- SP import audit findings and real-data bugs (12 findings across security, architecture, typing, performance)
+- Privacy bucket encrypt/decrypt cycle in data transforms
+- `follow-redirects` overridden to >=1.16.0 (GHSA-r4q5-vmmm-2653)
+
 ## Milestone 8: App Foundation & Data Layer
 
 ### Added

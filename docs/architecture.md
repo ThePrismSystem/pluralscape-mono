@@ -114,23 +114,33 @@ Tooling packages (`eslint-config`, `prettier-config`, `tsconfig`, `test-utils`) 
   ┌──────┐
   │ data │  (api-client + crypto + sync + types)
   └──────┘
+
+  ┌─────────────┐
+  │ import-core │  (types)
+  └──────┬──────┘
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────────┐  ┌───────────┐
+│ import-sp │  │ import-pk │  (import-core + types + validation)
+└───────────┘  └───────────┘
 ```
 
 ### Classification
 
-| Category    | Packages                                                   |
-| ----------- | ---------------------------------------------------------- |
-| Server-only | `db`, `queue`, `rotation-worker`, `email`                  |
-| Client-only | `api-client`, `data`                                       |
-| Shared      | `types`, `crypto`, `sync`, `validation`, `i18n`, `storage` |
+| Category    | Packages                                                      |
+| ----------- | ------------------------------------------------------------- |
+| Server-only | `db`, `queue`, `rotation-worker`, `email`                     |
+| Client-only | `api-client`, `data`, `import-core`, `import-sp`, `import-pk` |
+| Shared      | `types`, `crypto`, `sync`, `validation`, `i18n`, `storage`    |
 
 ### App Consumers
 
-| App            | Packages consumed                                                          |
-| -------------- | -------------------------------------------------------------------------- |
-| `apps/api`     | `crypto`, `db`, `email`, `queue`, `storage`, `sync`, `types`, `validation` |
-| `apps/mobile`  | `api-client`, `crypto`, `data`, `i18n`, `sync`, `types`                    |
-| `apps/api-e2e` | `api` (for router types), `crypto`, `sync`, `types`                        |
+| App            | Packages consumed                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| `apps/api`     | `crypto`, `db`, `email`, `queue`, `storage`, `sync`, `types`, `validation`                       |
+| `apps/mobile`  | `api-client`, `crypto`, `data`, `i18n`, `import-core`, `import-sp`, `import-pk`, `sync`, `types` |
+| `apps/api-e2e` | `api` (for router types), `crypto`, `sync`, `types`                                              |
 
 ---
 
@@ -270,12 +280,14 @@ Milestones are ordered to eliminate rework by resolving foundational dependencie
 
 **M7 — Data portability**: Email notifications, webhook enhancements, and public API surface. Infrastructure that supports external integration is deferred until the core API is stable; it does not drive internal architecture.
 
-**M8 — Client app foundation**: The mobile/web UI consumes the API. Building the client after the API is stable prevents constant frontend rework caused by breaking schema changes. Import/export, PluralKit bridge, and API key management are client-side features bundled here. In practice, M8 epics are developed in parallel with M2–M7 — each API feature ships with its corresponding UI.
+**M8 — Client app foundation**: The mobile/web UI consumes the API. Building the client after the API is stable prevents constant frontend rework caused by breaking schema changes. API key management and the complete data hook surface are client-side features bundled here. In practice, M8 epics are developed in parallel with M2–M7 — each API feature ships with its corresponding UI.
 
-**M9–M10 — UI design → buildout**: Visual design system established before the buildout phase; avoids retrofitting accessibility and design tokens.
+**M9 — Data import**: Import engines are data-layer work — parsing, mapping, and persisting external data into the Pluralscape schema. Building import before UI/UX design ensures the full data surface (including imported SP and PK data) is established before screen design begins.
 
-**M11 — Data interpolation**: Wire screens to tRPC hooks and local SQLite; the full offline-first experience becomes testable end-to-end.
+**M10–M11 — UI design → buildout**: Visual design system established before the buildout phase; avoids retrofitting accessibility and design tokens.
 
-**M12 — Ancillary features**: Vertical slices (timers, custom fields, innerworld, etc.) added after the core loop is proven stable.
+**M12 — Data interpolation**: Wire screens to tRPC hooks and local SQLite; the full offline-first experience becomes testable end-to-end.
 
-**M13–M14 — Self-hosted → polish**: Self-hosted mode requires a complete, stable feature set before the SQLite adapter is meaningful. Polish is the final hardening pass before public launch.
+**M13 — Ancillary features**: Vertical slices (data export, PluralKit bridge, Littles Safe Mode, fronting history reports) added after the core loop is proven stable.
+
+**M14–M15 — Self-hosted → polish**: Self-hosted mode requires a complete, stable feature set before the SQLite adapter is meaningful. Polish is the final hardening pass before public launch.

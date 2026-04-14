@@ -882,7 +882,7 @@ erDiagram
 
 ## 14. Jobs & Lifecycle
 
-Import/export pipelines, account purge lifecycle, and application-domain lifecycle events (e.g., member discovery milestones). Audit log is append-only and partitioned by timestamp in production.
+Import/export pipelines, entity reference tracking (external-to-internal ID mapping for dedup), account purge lifecycle, and application-domain lifecycle events (e.g., member discovery milestones). Audit log is append-only and partitioned by timestamp in production.
 
 ```mermaid
 erDiagram
@@ -910,6 +910,17 @@ erDiagram
         integer chunks_total
         integer chunks_completed
         timestamp completed_at
+    }
+
+    import_entity_refs {
+        varchar id PK
+        varchar account_id FK
+        varchar system_id FK
+        varchar source "simply-plural | pluralkit"
+        varchar source_entity_type
+        varchar source_entity_id
+        varchar pluralscape_entity_id
+        timestamp imported_at
     }
 
     export_requests {
@@ -958,6 +969,8 @@ erDiagram
 
     accounts ||--o{ import_jobs : "initiates"
     systems ||--o{ import_jobs : "targets"
+    accounts ||--o{ import_entity_refs : "owns"
+    systems ||--o{ import_entity_refs : "targets"
     accounts ||--o{ export_requests : "requests"
     systems ||--o{ export_requests : "targets"
     blob_metadata ||--o{ export_requests : "output"

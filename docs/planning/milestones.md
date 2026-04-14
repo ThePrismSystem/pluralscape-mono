@@ -158,7 +158,20 @@ Epics:
 - ~~CRDT sync entity coverage~~ [COMPLETED] — all document types mapped to sync strategies with materializer registration tests
 - ~~M8 audit remediation~~ [COMPLETED] — P1 + P2 remediation across hook factories, security (plaintext zeroing, error sanitization), missing hooks, observer overhead documentation, bug fixes
 
-## Milestone 9: UI/UX Design
+## Milestone 9: Data Import [COMPLETED]
+
+Goal: Import engines for Simply Plural and PluralKit, with shared orchestration layer, API infrastructure, mobile glue, and E2E test suites. Data import is data-layer work — establishing the full data surface (including imported data) before UI/UX design begins.
+
+Epics:
+
+- ~~Simply Plural import~~ [COMPLETED] — `packages/import-sp`: 15 collection mappers (14 with full API support), file and API source modes, Zod validation per document, encrypted payload alignment, notes support
+- ~~PluralKit import~~ [COMPLETED] — `packages/import-pk`: member, group, fronting session, and group membership mapping from PK JSON exports, zero-duration session handling
+- ~~Import-core extraction~~ [COMPLETED] — `packages/import-core`: shared orchestration engine with Persister interface, checkpoint resume, entity reference tracking, batch processing, error classification (ADR 034)
+- ~~Import API infrastructure~~ [COMPLETED] — REST + tRPC routes for SP and PK import, batch entity-ref operations, tRPC routers, REST mirrors
+- ~~Mobile import glue~~ [COMPLETED] — SP token storage (expo-secure-store), avatar fetcher (API/ZIP/skip modes), 17 entity persisters, import hooks (`useStartImport`, `useImportJob`, `useImportProgress`, etc.)
+- ~~SP and PK seed scripts + E2E test infrastructure~~ [COMPLETED] — `scripts/sp-seed` (deterministic SP test data seeder), `scripts/pk-seed` (PK test data seeder), `.env.sp-test.example`, `.env.pk-test.example`
+
+## Milestone 10: UI/UX Design
 
 Goal: Stitch-generated HTML mockups for every screen family, establishing visual language, interaction patterns, and layout decisions before React Native code is written.
 
@@ -175,7 +188,7 @@ Epics:
 - Journaling screen designs
 - Search & settings screen designs
 
-## Milestone 10: UI/UX Buildout
+## Milestone 11: UI/UX Buildout
 
 Goal: Translate Stitch HTML mockups into React Native/Expo components with placeholder data. Every screen navigable and visually complete, but not wired to real data.
 
@@ -193,7 +206,7 @@ Epics:
 - Search & settings screen buildout
 - Platform adaptation
 
-## Milestone 11: Data Interpolation
+## Milestone 12: Data Interpolation
 
 Goal: Wire every screen to its real data hooks from M8, replacing placeholder/mock data with live API data. Handle loading states, error states, and verify end-to-end flows.
 
@@ -211,20 +224,18 @@ Epics:
 - Real-time & sync integration
 - End-to-end flow verification
 
-## Milestone 12: Ancillary Features
+## Milestone 13: Ancillary Features
 
-Goal: Self-contained features with their own data logic and UI, built end-to-end as complete vertical slices.
+Goal: Self-contained features (data export, PluralKit bridge, Littles Safe Mode, fronting history reports) built end-to-end as vertical slices.
 
 Epics:
 
-- Simply Plural import
-- PluralKit import
 - Data export
 - PluralKit bridge
 - Littles Safe Mode
 - Fronting history report generation
 
-## Milestone 13: Self-Hosted
+## Milestone 14: Self-Hosted
 
 Goal: Two-tier self-hosted deployment (ADR 012)
 
@@ -237,7 +248,7 @@ Epics:
 - Capability matrix documentation
 - Self-hosted documentation
 
-## Milestone 14: Polish and Launch
+## Milestone 15: Polish and Launch
 
 Goal: Security audit, performance, beta testing
 
@@ -274,4 +285,4 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 For system topology, package dependencies, data flow, encryption boundaries, and the development sequence rationale, see the [Architecture Overview](../architecture.md).
 
-32 accepted ADRs are documented in [`docs/adr/`](../adr/).
+34 accepted ADRs are documented in [`docs/adr/`](../adr/).
