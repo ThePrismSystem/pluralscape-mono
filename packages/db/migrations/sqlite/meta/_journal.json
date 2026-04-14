@@ -8,6 +8,13 @@
       "when": 1776163020895,
       "tag": "0000_absent_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776175255889,
+      "tag": "0001_minor_scorpion",
+      "breakpoints": true
     }
   ]
 }
