@@ -472,7 +472,7 @@ describe("PG views / query helpers", () => {
         accountId,
         systemId,
         platform: "ios",
-        token: `token_${crypto.randomUUID()}`,
+        tokenHash: `tokenHash_${crypto.randomUUID()}`.slice(0, 64),
         createdAt: now,
       });
       await db.insert(deviceTokens).values({
@@ -480,7 +480,7 @@ describe("PG views / query helpers", () => {
         accountId,
         systemId,
         platform: "android",
-        token: `token_${crypto.randomUUID()}`,
+        tokenHash: `tokenHash_${crypto.randomUUID()}`.slice(0, 64),
         createdAt: now,
         revokedAt: now,
       });

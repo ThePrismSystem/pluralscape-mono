@@ -6,13 +6,13 @@ import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
+import { hashSessionToken } from "../lib/session-token.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
 import {
   DEFAULT_DEVICE_TOKEN_LIMIT,
   MAX_DEVICE_TOKENS_PER_LIST,
-  TOKEN_MASK_VISIBLE_CHARS,
 } from "./device-token.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -47,25 +47,23 @@ export interface DeviceTokenResult {
   readonly id: DeviceTokenId;
   readonly systemId: SystemId;
   readonly platform: DeviceTokenPlatform;
-  readonly token: string;
+  readonly tokenHash: string;
   readonly lastActiveAt: UnixMillis | null;
   readonly createdAt: UnixMillis;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/** Mask a token string, showing only the last `TOKEN_MASK_VISIBLE_CHARS` characters. */
-function maskToken(token: string): string {
-  return token.length > TOKEN_MASK_VISIBLE_CHARS
-    ? `***${token.slice(-TOKEN_MASK_VISIBLE_CHARS)}`
-    : token;
+/** Hash a device token using BLAKE2b (same pattern as session tokens). */
+export function hashDeviceToken(token: string): string {
+  return hashSessionToken(token);
 }
 
 function toDeviceTokenResult(row: {
   id: string;
   systemId: string;
   platform: DeviceTokenPlatform;
-  token: string;
+  tokenHash: string;
   lastActiveAt: number | null;
   createdAt: number;
 }): DeviceTokenResult {
@@ -73,7 +71,7 @@ function toDeviceTokenResult(row: {
     id: row.id as DeviceTokenId,
     systemId: row.systemId as SystemId,
     platform: row.platform,
-    token: row.token,
+    tokenHash: row.tokenHash,
     lastActiveAt: (row.lastActiveAt ?? null) as UnixMillis | null,
     createdAt: row.createdAt as UnixMillis,
   };
@@ -94,6 +92,8 @@ export async function registerDeviceToken(
 ): Promise<DeviceTokenResult> {
   assertSystemOwnership(systemId, auth);
 
+  const tokenHash = hashDeviceToken(params.token);
+
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const timestamp = now();
     const id = createId(ID_PREFIXES.deviceToken) as DeviceTokenId;
@@ -105,12 +105,12 @@ export async function registerDeviceToken(
         accountId: auth.accountId,
         systemId,
         platform: params.platform,
-        token: params.token,
+        tokenHash,
         createdAt: timestamp,
         lastActiveAt: timestamp,
       })
       .onConflictDoUpdate({
-        target: [deviceTokens.token, deviceTokens.platform],
+        target: [deviceTokens.tokenHash, deviceTokens.platform],
         set: {
           lastActiveAt: timestamp,
           revokedAt: null,
@@ -127,7 +127,7 @@ export async function registerDeviceToken(
         id,
         systemId,
         platform: params.platform,
-        token: maskToken(params.token),
+        tokenHash,
         lastActiveAt: timestamp as UnixMillis | null,
         createdAt: timestamp,
       } satisfies DeviceTokenResult;
@@ -141,7 +141,7 @@ export async function registerDeviceToken(
       systemId,
     });
 
-    return toDeviceTokenResult({ ...row, token: maskToken(row.token) });
+    return toDeviceTokenResult(row);
   });
 }
 
@@ -164,7 +164,7 @@ export async function updateDeviceToken(
       .set({
         lastActiveAt: timestamp,
         ...(params.platform !== undefined && { platform: params.platform }),
-        ...(params.token !== undefined && { token: params.token }),
+        ...(params.token !== undefined && { tokenHash: hashDeviceToken(params.token) }),
       })
       .where(
         and(
@@ -187,7 +187,7 @@ export async function updateDeviceToken(
       systemId,
     });
 
-    return toDeviceTokenResult({ ...row, token: maskToken(row.token) });
+    return toDeviceTokenResult(row);
   });
 }
 
@@ -295,10 +295,7 @@ export async function listDeviceTokens(
     return buildCompositePaginatedResult(
       rows,
       limit,
-      (row) => {
-        const result = toDeviceTokenResult(row);
-        return { ...result, token: maskToken(result.token) };
-      },
+      (row) => toDeviceTokenResult(row),
       (item) => item.createdAt,
     );
   });

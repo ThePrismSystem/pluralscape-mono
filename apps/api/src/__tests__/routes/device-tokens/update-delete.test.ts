@@ -46,7 +46,7 @@ const MOCK_TOKEN = {
   id: TOKEN_ID as never,
   systemId: MOCK_AUTH.systemId as never,
   platform: "ios" as const,
-  token: "***abcd1234",
+  tokenHash: "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
   lastActiveAt: 2000 as never,
   createdAt: 1000 as never,
 };

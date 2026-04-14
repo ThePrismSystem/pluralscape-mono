@@ -1008,7 +1008,7 @@ export const SQLITE_DDL = {
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       platform TEXT NOT NULL,
-      token TEXT NOT NULL,
+      token_hash TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       last_active_at INTEGER,
       revoked_at INTEGER,
@@ -1019,7 +1019,7 @@ export const SQLITE_DDL = {
     CREATE INDEX device_tokens_account_id_idx ON device_tokens (account_id);
     CREATE INDEX device_tokens_system_id_idx ON device_tokens (system_id);
     CREATE INDEX device_tokens_revoked_at_idx ON device_tokens (revoked_at);
-    CREATE UNIQUE INDEX device_tokens_token_platform_unique ON device_tokens (token, platform)
+    CREATE UNIQUE INDEX device_tokens_token_hash_platform_unique ON device_tokens (token_hash, platform)
   `,
   notificationConfigs: `
     CREATE TABLE notification_configs (

@@ -78,7 +78,7 @@ import {
   systemStructureEntityMemberLinks,
   systemStructureEntityTypes,
 } from "../../schema/pg/structure.js";
-import { syncChanges, syncDocuments, syncSnapshots } from "../../schema/pg/sync.js";
+import { syncChanges, syncConflicts, syncDocuments, syncSnapshots } from "../../schema/pg/sync.js";
 import { systemSettings } from "../../schema/pg/system-settings.js";
 import { systems } from "../../schema/pg/systems.js";
 import { checkInRecords, timerConfigs } from "../../schema/pg/timers.js";
@@ -283,6 +283,8 @@ export const PG_DDL = {
   syncChangesIndexes: indexDDL(syncChanges),
   syncSnapshots: pgTableToCreateDDL(syncSnapshots),
   syncSnapshotsIndexes: indexDDL(syncSnapshots),
+  syncConflicts: pgTableToCreateDDL(syncConflicts),
+  syncConflictsIndexes: indexDDL(syncConflicts),
   // --- Key Rotation ---
   bucketKeyRotations: pgTableToCreateDDL(bucketKeyRotations),
   bucketKeyRotationsIndexes: indexDDL(bucketKeyRotations),
@@ -712,6 +714,8 @@ export async function createPgSyncTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.syncChangesIndexes);
   await pgExec(client, PG_DDL.syncSnapshots);
   await pgExec(client, PG_DDL.syncSnapshotsIndexes);
+  await pgExec(client, PG_DDL.syncConflicts);
+  await pgExec(client, PG_DDL.syncConflictsIndexes);
 }
 
 export async function createPgAnalyticsTables(client: PGlite): Promise<void> {
@@ -893,6 +897,8 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.syncChangesIndexes);
   await pgExec(client, PG_DDL.syncSnapshots);
   await pgExec(client, PG_DDL.syncSnapshotsIndexes);
+  await pgExec(client, PG_DDL.syncConflicts);
+  await pgExec(client, PG_DDL.syncConflictsIndexes);
   // Snapshots
   await pgExec(client, PG_DDL.systemSnapshots);
   await pgExec(client, PG_DDL.systemSnapshotsIndexes);

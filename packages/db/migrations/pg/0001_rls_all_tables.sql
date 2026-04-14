@@ -214,8 +214,14 @@ CREATE POLICY buckets_system_isolation ON buckets USING (system_id = NULLIF(curr
 -- friend_connections
 ALTER TABLE friend_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE friend_connections FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS friend_connections_account_isolation ON friend_connections;
-CREATE POLICY friend_connections_account_isolation ON friend_connections USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
+DROP POLICY IF EXISTS friend_connections_read ON friend_connections;
+CREATE POLICY friend_connections_read ON friend_connections FOR SELECT USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar OR friend_account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
+DROP POLICY IF EXISTS friend_connections_write ON friend_connections;
+CREATE POLICY friend_connections_write ON friend_connections FOR INSERT WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
+DROP POLICY IF EXISTS friend_connections_update ON friend_connections;
+CREATE POLICY friend_connections_update ON friend_connections FOR UPDATE USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
+DROP POLICY IF EXISTS friend_connections_delete ON friend_connections;
+CREATE POLICY friend_connections_delete ON friend_connections FOR DELETE USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar OR friend_account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
 
 -- friend_codes
 ALTER TABLE friend_codes ENABLE ROW LEVEL SECURITY;
@@ -402,4 +408,22 @@ ALTER TABLE sync_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_documents FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS sync_documents_system_isolation ON sync_documents;
 CREATE POLICY sync_documents_system_isolation ON sync_documents USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+
+-- sync_changes
+ALTER TABLE sync_changes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_changes FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS sync_changes_system_isolation ON sync_changes;
+CREATE POLICY sync_changes_system_isolation ON sync_changes USING (document_id IN (SELECT document_id FROM sync_documents WHERE system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (document_id IN (SELECT document_id FROM sync_documents WHERE system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+
+-- sync_snapshots
+ALTER TABLE sync_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_snapshots FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS sync_snapshots_system_isolation ON sync_snapshots;
+CREATE POLICY sync_snapshots_system_isolation ON sync_snapshots USING (document_id IN (SELECT document_id FROM sync_documents WHERE system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (document_id IN (SELECT document_id FROM sync_documents WHERE system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+
+-- sync_conflicts
+ALTER TABLE sync_conflicts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_conflicts FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS sync_conflicts_system_isolation ON sync_conflicts;
+CREATE POLICY sync_conflicts_system_isolation ON sync_conflicts USING (document_id IN (SELECT document_id FROM sync_documents WHERE system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (document_id IN (SELECT document_id FROM sync_documents WHERE system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
 

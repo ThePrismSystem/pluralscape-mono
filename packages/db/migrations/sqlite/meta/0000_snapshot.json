@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5df7bc79-c960-40be-a295-7dbf26690b17",
+  "id": "b344807a-7de2-4d75-beae-d11164a01e88",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -1942,8 +1942,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "token": {
-          "name": "token",
+        "token_hash": {
+          "name": "token_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -1987,9 +1987,9 @@
           "columns": ["revoked_at"],
           "isUnique": false
         },
-        "device_tokens_token_platform_unique": {
-          "name": "device_tokens_token_platform_unique",
-          "columns": ["token", "platform"],
+        "device_tokens_token_hash_platform_unique": {
+          "name": "device_tokens_token_hash_platform_unique",
+          "columns": ["token_hash", "platform"],
           "isUnique": true
         }
       },

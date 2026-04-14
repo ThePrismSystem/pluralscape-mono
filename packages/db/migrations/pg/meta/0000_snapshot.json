@@ -1,5 +1,5 @@
 {
-  "id": "8d73a4e3-91dd-4722-aa22-d9fb724cfbdc",
+  "id": "783582d1-b263-4660-aa31-f9bbd6555488",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2379,9 +2379,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "token": {
-          "name": "token",
-          "type": "varchar(512)",
+        "token_hash": {
+          "name": "token_hash",
+          "type": "varchar(64)",
           "primaryKey": false,
           "notNull": true
         },
@@ -2473,10 +2473,10 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "device_tokens_token_platform_unique": {
-          "name": "device_tokens_token_platform_unique",
+        "device_tokens_token_hash_platform_unique": {
+          "name": "device_tokens_token_hash_platform_unique",
           "nullsNotDistinct": false,
-          "columns": ["token", "platform"]
+          "columns": ["token_hash", "platform"]
         }
       },
       "policies": {},

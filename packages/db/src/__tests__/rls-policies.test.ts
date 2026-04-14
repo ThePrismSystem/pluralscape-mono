@@ -2,12 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { applyAllRls } from "../rls/apply.js";
 import {
+  accountBidirectionalRlsPolicy,
   accountRlsPolicy,
   dropPolicySql,
   dualTenantRlsPolicy,
   enableRls,
   generateRlsStatements,
   RLS_TABLE_POLICIES,
+  systemFkRlsPolicy,
   systemRlsPolicy,
 } from "../rls/policies.js";
 
@@ -88,6 +90,65 @@ describe("dualTenantRlsPolicy", () => {
   });
 });
 
+describe("systemFkRlsPolicy", () => {
+  it("generates subquery-based policy scoped via system FK", () => {
+    const result = systemFkRlsPolicy(
+      "sync_changes",
+      "document_id",
+      "sync_documents",
+      "document_id",
+      "system_id",
+    );
+    expect(result).toContain("CREATE POLICY sync_changes_system_isolation");
+    expect(result).toContain(
+      "document_id IN (SELECT document_id FROM sync_documents WHERE system_id =",
+    );
+    expect(result).toContain("USING");
+    expect(result).toContain("WITH CHECK");
+    expect(result).toContain("NULLIF(current_setting('app.current_system_id', true), '')");
+  });
+});
+
+describe("accountBidirectionalRlsPolicy", () => {
+  it("generates 4 per-operation policies for bidirectional tables", () => {
+    const policies = accountBidirectionalRlsPolicy("friend_connections");
+
+    expect(policies).toHaveLength(4);
+  });
+
+  it("SELECT allows both account_id and friend_account_id", () => {
+    const policies = accountBidirectionalRlsPolicy("friend_connections");
+
+    expect(policies[0]).toContain("FOR SELECT");
+    expect(policies[0]).toContain("account_id =");
+    expect(policies[0]).toContain("OR friend_account_id =");
+  });
+
+  it("INSERT restricted to account_id only", () => {
+    const policies = accountBidirectionalRlsPolicy("friend_connections");
+
+    expect(policies[1]).toContain("FOR INSERT");
+    expect(policies[1]).toContain("account_id =");
+    expect(policies[1]).not.toContain("friend_account_id");
+  });
+
+  it("UPDATE restricted to account_id only", () => {
+    const policies = accountBidirectionalRlsPolicy("friend_connections");
+
+    expect(policies[2]).toContain("FOR UPDATE");
+    expect(policies[2]).toContain("account_id =");
+    expect(policies[2]).not.toContain("friend_account_id");
+  });
+
+  it("DELETE allows both account_id and friend_account_id", () => {
+    const policies = accountBidirectionalRlsPolicy("friend_connections");
+
+    expect(policies[3]).toContain("FOR DELETE");
+    expect(policies[3]).toContain("account_id =");
+    expect(policies[3]).toContain("OR friend_account_id =");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // generateRlsStatements
 // ---------------------------------------------------------------------------
@@ -145,6 +206,44 @@ describe("generateRlsStatements", () => {
 
     expect(stmts).toHaveLength(3);
     expect(stmts[2]).toContain("tenant_isolation");
+  });
+
+  it("returns system-fk subquery policy for sync_changes", () => {
+    const stmts = generateRlsStatements("sync_changes");
+
+    expect(stmts).toHaveLength(3);
+    expect(stmts[2]).toContain(
+      "document_id IN (SELECT document_id FROM sync_documents WHERE system_id =",
+    );
+  });
+
+  it("returns system-fk subquery policy for sync_snapshots", () => {
+    const stmts = generateRlsStatements("sync_snapshots");
+
+    expect(stmts).toHaveLength(3);
+    expect(stmts[2]).toContain(
+      "document_id IN (SELECT document_id FROM sync_documents WHERE system_id =",
+    );
+  });
+
+  it("returns system-fk subquery policy for sync_conflicts", () => {
+    const stmts = generateRlsStatements("sync_conflicts");
+
+    expect(stmts).toHaveLength(3);
+    expect(stmts[2]).toContain(
+      "document_id IN (SELECT document_id FROM sync_documents WHERE system_id =",
+    );
+  });
+
+  it("returns 6 statements for account-bidirectional friend_connections", () => {
+    const stmts = generateRlsStatements("friend_connections");
+
+    // 2 enable + 4 per-operation policies
+    expect(stmts).toHaveLength(6);
+    expect(stmts[2]).toContain("FOR SELECT");
+    expect(stmts[3]).toContain("FOR INSERT");
+    expect(stmts[4]).toContain("FOR UPDATE");
+    expect(stmts[5]).toContain("FOR DELETE");
   });
 
   it("returns direct system_id policy for key_grants", () => {
@@ -225,6 +324,12 @@ describe("RLS_TABLE_POLICIES", () => {
     expect(RLS_TABLE_POLICIES).toHaveProperty("field_definition_scopes", "system");
   });
 
+  it("includes sync child tables with system-fk scope", () => {
+    expect(RLS_TABLE_POLICIES).toHaveProperty("sync_changes", "system-fk");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("sync_snapshots", "system-fk");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("sync_conflicts", "system-fk");
+  });
+
   it("has valid scope types for all entries", () => {
     const validScopes = new Set<RlsScopeType>([
       "system",
@@ -233,6 +338,8 @@ describe("RLS_TABLE_POLICIES", () => {
       "account-pk",
       "dual",
       "account-fk",
+      "system-fk",
+      "account-bidirectional",
     ]);
 
     for (const [table, scope] of Object.entries(RLS_TABLE_POLICIES)) {

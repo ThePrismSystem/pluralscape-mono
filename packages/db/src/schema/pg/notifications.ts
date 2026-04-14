@@ -47,7 +47,7 @@ export const deviceTokens = pgTable(
     platform: varchar("platform", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<DeviceTokenPlatform>(),
-    token: varchar("token", { length: 512 }).notNull(),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
     lastActiveAt: pgTimestamp("last_active_at"),
     revokedAt: pgTimestamp("revoked_at"),
@@ -56,7 +56,7 @@ export const deviceTokens = pgTable(
     index("device_tokens_account_id_idx").on(t.accountId),
     index("device_tokens_system_id_idx").on(t.systemId),
     index("device_tokens_revoked_at_idx").on(t.revokedAt),
-    unique("device_tokens_token_platform_unique").on(t.token, t.platform),
+    unique("device_tokens_token_hash_platform_unique").on(t.tokenHash, t.platform),
     check("device_tokens_platform_check", enumCheck(t.platform, DEVICE_TOKEN_PLATFORMS)),
   ],
 );

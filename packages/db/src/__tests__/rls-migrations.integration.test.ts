@@ -61,10 +61,14 @@ describe("RLS migration bootstrap", () => {
     await expect(applyAllRlsToClient(client)).resolves.toBeUndefined();
   });
 
-  it("exactly one policy per RLS-protected table", async () => {
+  it("every RLS-protected table has at least one policy", async () => {
     const result = await client.query<PgPolicyRow>("SELECT DISTINCT tablename FROM pg_policies");
-    const expectedCount = Object.keys(RLS_TABLE_POLICIES).length;
-    expect(result.rows).toHaveLength(expectedCount);
+    const policiedTables = new Set(result.rows.map((r) => r.tablename));
+    const expectedTables = Object.keys(RLS_TABLE_POLICIES);
+    for (const table of expectedTables) {
+      expect(policiedTables.has(table), `Missing policy for: ${table}`).toBe(true);
+    }
+    expect(policiedTables.size).toBe(expectedTables.length);
   });
 
   it("migration file matches regenerated output (sync guard)", () => {

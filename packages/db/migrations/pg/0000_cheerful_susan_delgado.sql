@@ -245,11 +245,11 @@ CREATE TABLE "device_tokens" (
 	"account_id" varchar(50) NOT NULL,
 	"system_id" varchar(50) NOT NULL,
 	"platform" varchar(50) NOT NULL,
-	"token" varchar(512) NOT NULL,
+	"token_hash" varchar(64) NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"last_active_at" timestamptz,
 	"revoked_at" timestamptz,
-	CONSTRAINT "device_tokens_token_platform_unique" UNIQUE("token","platform"),
+	CONSTRAINT "device_tokens_token_hash_platform_unique" UNIQUE("token_hash","platform"),
 	CONSTRAINT "device_tokens_platform_check" CHECK ("device_tokens"."platform" IS NULL OR "device_tokens"."platform" IN ('ios', 'android', 'web'))
 );
 --> statement-breakpoint

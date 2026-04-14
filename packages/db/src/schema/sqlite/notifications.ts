@@ -43,7 +43,7 @@ export const deviceTokens = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     platform: text("platform").notNull().$type<DeviceTokenPlatform>(),
-    token: text("token").notNull(),
+    tokenHash: text("token_hash").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     lastActiveAt: sqliteTimestamp("last_active_at"),
     revokedAt: sqliteTimestamp("revoked_at"),
@@ -52,7 +52,7 @@ export const deviceTokens = sqliteTable(
     index("device_tokens_account_id_idx").on(t.accountId),
     index("device_tokens_system_id_idx").on(t.systemId),
     index("device_tokens_revoked_at_idx").on(t.revokedAt),
-    unique("device_tokens_token_platform_unique").on(t.token, t.platform),
+    unique("device_tokens_token_hash_platform_unique").on(t.tokenHash, t.platform),
     check("device_tokens_platform_check", enumCheck(t.platform, DEVICE_TOKEN_PLATFORMS)),
   ],
 );
