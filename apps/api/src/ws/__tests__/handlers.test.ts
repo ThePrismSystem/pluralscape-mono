@@ -129,7 +129,7 @@ function mockDb(publicKeys: Uint8Array[] = []): PostgresJsDatabase {
   };
   return {
     select: vi.fn().mockReturnValue(chain),
-  } as unknown as PostgresJsDatabase;
+  } as never;
 }
 
 function brandedBytes(size: number, fill: number) {
@@ -385,7 +385,12 @@ describe("handleSubmitChange", () => {
     submit.mockResolvedValue(42);
     const db = mockDb([validKeyBytes]);
 
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-nocheck"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitChange(
+      makeSubmitMsg("doc-sc-nocheck"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SubmitChangeResult");
     if (result.type === "SubmitChangeResult") {
       expect(result.response.assignedSeq).toBe(42);
@@ -403,7 +408,12 @@ describe("handleSubmitChange", () => {
 
     const { relay } = mockRelay();
     const db = mockDb([validKeyBytes]);
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-inv"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitChange(
+      makeSubmitMsg("doc-sc-inv"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("INVALID_ENVELOPE");
@@ -420,9 +430,9 @@ describe("handleSubmitChange", () => {
 
     const { relay } = mockRelay();
     const db = mockDb([validKeyBytes]);
-    await expect(handleSubmitChange(makeSubmitMsg("doc-sc-rethrow"), relay, db, TEST_ACCOUNT_ID)).rejects.toThrow(
-      "unexpected sodium error",
-    );
+    await expect(
+      handleSubmitChange(makeSubmitMsg("doc-sc-rethrow"), relay, db, TEST_ACCOUNT_ID),
+    ).rejects.toThrow("unexpected sodium error");
   });
 
   it("returns SyncError INVALID_ENVELOPE when verifyEnvelopeSignature returns false", async () => {
@@ -433,7 +443,12 @@ describe("handleSubmitChange", () => {
 
     const { relay } = mockRelay();
     const db = mockDb([validKeyBytes]);
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-false"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitChange(
+      makeSubmitMsg("doc-sc-false"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("INVALID_ENVELOPE");
@@ -447,7 +462,12 @@ describe("handleSubmitChange", () => {
     const differentKey = new Uint8Array(32).fill(99);
     const db = mockDb([differentKey]);
 
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-badkey"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitChange(
+      makeSubmitMsg("doc-sc-badkey"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("UNAUTHORIZED_KEY");
@@ -459,7 +479,12 @@ describe("handleSubmitChange", () => {
     const { relay } = mockRelay();
     const db = mockDb([]);
 
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-nokeys"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitChange(
+      makeSubmitMsg("doc-sc-nokeys"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("UNAUTHORIZED_KEY");
@@ -472,7 +497,12 @@ describe("handleSubmitChange", () => {
     submit.mockRejectedValue(new EnvelopeLimitExceededError("doc-sc-quota", 1000));
     const db = mockDb([validKeyBytes]);
 
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-quota"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitChange(
+      makeSubmitMsg("doc-sc-quota"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("QUOTA_EXCEEDED");
@@ -485,9 +515,9 @@ describe("handleSubmitChange", () => {
     submit.mockRejectedValue(new Error("unexpected relay error"));
     const db = mockDb([validKeyBytes]);
 
-    await expect(handleSubmitChange(makeSubmitMsg("doc-sc-unknown"), relay, db, TEST_ACCOUNT_ID)).rejects.toThrow(
-      "unexpected relay error",
-    );
+    await expect(
+      handleSubmitChange(makeSubmitMsg("doc-sc-unknown"), relay, db, TEST_ACCOUNT_ID),
+    ).rejects.toThrow("unexpected relay error");
   });
 });
 
@@ -518,7 +548,12 @@ describe("handleSubmitSnapshot", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay } = mockRelay();
     const db = mockDb([validSnapshotKeyBytes]);
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-ok"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitSnapshot(
+      makeSubmitSnapshotMsg("doc-ss-ok"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SnapshotAccepted");
     if (result.type === "SnapshotAccepted") {
       expect(result.snapshotVersion).toBe(5);
@@ -533,7 +568,12 @@ describe("handleSubmitSnapshot", () => {
 
     const { relay } = mockRelay();
     const db = mockDb([validSnapshotKeyBytes]);
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-badsig"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitSnapshot(
+      makeSubmitSnapshotMsg("doc-ss-badsig"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("INVALID_ENVELOPE");
@@ -546,7 +586,12 @@ describe("handleSubmitSnapshot", () => {
     const differentKey = new Uint8Array(32).fill(99);
     const db = mockDb([differentKey]);
 
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-badkey"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitSnapshot(
+      makeSubmitSnapshotMsg("doc-ss-badkey"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("UNAUTHORIZED_KEY");
@@ -559,7 +604,12 @@ describe("handleSubmitSnapshot", () => {
     submitSnapshot.mockRejectedValue(new SnapshotVersionConflictError(6, 5));
     const db = mockDb([validSnapshotKeyBytes]);
 
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-vc"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitSnapshot(
+      makeSubmitSnapshotMsg("doc-ss-vc"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("VERSION_CONFLICT");
@@ -572,7 +622,12 @@ describe("handleSubmitSnapshot", () => {
     submitSnapshot.mockRejectedValue(new SnapshotSizeLimitExceededError("doc-ss-size", 2000, 1000));
     const db = mockDb([validSnapshotKeyBytes]);
 
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-size"), relay, db, TEST_ACCOUNT_ID);
+    const result = await handleSubmitSnapshot(
+      makeSubmitSnapshotMsg("doc-ss-size"),
+      relay,
+      db,
+      TEST_ACCOUNT_ID,
+    );
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("QUOTA_EXCEEDED");
@@ -585,9 +640,9 @@ describe("handleSubmitSnapshot", () => {
     submitSnapshot.mockRejectedValue(new Error("unexpected snapshot error"));
     const db = mockDb([validSnapshotKeyBytes]);
 
-    await expect(handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-unk"), relay, db, TEST_ACCOUNT_ID)).rejects.toThrow(
-      "unexpected snapshot error",
-    );
+    await expect(
+      handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-unk"), relay, db, TEST_ACCOUNT_ID),
+    ).rejects.toThrow("unexpected snapshot error");
   });
 });
 

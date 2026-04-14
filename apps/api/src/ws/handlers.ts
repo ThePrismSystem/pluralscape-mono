@@ -21,6 +21,7 @@ import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { AppLogger } from "../lib/logger.js";
+import type { AeadNonce, SignPublicKey, Signature } from "@pluralscape/crypto";
 import type {
   ChangeAccepted,
   ChangesResponse,
@@ -198,17 +199,19 @@ export interface SubmitChangeResult {
  * Shared by both change and snapshot submission handlers.
  */
 export function verifyEnvelopeOrError(
-  envelope: { authorPublicKey: Uint8Array; nonce: Uint8Array; signature: Uint8Array; ciphertext: Uint8Array },
-  correlationId: string,
+  envelope: {
+    authorPublicKey: SignPublicKey;
+    nonce: AeadNonce;
+    signature: Signature;
+    ciphertext: Uint8Array;
+  },
+  correlationId: string | null,
   docId: SyncDocumentId,
 ): SyncError | null {
   if (!shouldVerifyEnvelopeSignatures()) return null;
   try {
     const sodium = getSodium();
-    const valid = verifyEnvelopeSignature(
-      { ...envelope, documentId: docId, seq: 0 },
-      sodium,
-    );
+    const valid = verifyEnvelopeSignature({ ...envelope, documentId: docId, seq: 0 }, sodium);
     if (!valid) {
       return {
         type: "SyncError",
@@ -241,7 +244,7 @@ export async function verifyKeyOwnership(
   db: PostgresJsDatabase,
   accountId: AccountId,
   authorPublicKey: Uint8Array,
-  correlationId: string,
+  correlationId: string | null,
   docId: SyncDocumentId,
 ): Promise<SyncError | null> {
   const rows = await db
@@ -249,10 +252,12 @@ export async function verifyKeyOwnership(
     .from(authKeys)
     .where(eq(authKeys.accountId, accountId));
 
-  const keyBytes = authorPublicKey instanceof Uint8Array ? authorPublicKey : new Uint8Array(authorPublicKey);
+  const keyBytes =
+    authorPublicKey instanceof Uint8Array ? authorPublicKey : new Uint8Array(authorPublicKey);
 
   const match = rows.some((row) => {
-    const rowBytes = row.publicKey instanceof Uint8Array ? row.publicKey : new Uint8Array(row.publicKey);
+    const rowBytes =
+      row.publicKey instanceof Uint8Array ? row.publicKey : new Uint8Array(row.publicKey);
     if (rowBytes.length !== keyBytes.length) return false;
     for (let i = 0; i < rowBytes.length; i++) {
       if (rowBytes[i] !== keyBytes[i]) return false;

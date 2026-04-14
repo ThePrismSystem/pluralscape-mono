@@ -31,13 +31,27 @@ vi.mock("../../lib/session-auth.js", () => ({
 }));
 
 /**
- * Chainable mock for `db.select().from().where().limit()`.
- * `mockDbLimit` is the terminal mock that controls the returned rows.
+ * Chainable mock for `db.select().from().where()[.limit()]`.
+ * `mockDbLimit` is the terminal mock for single-row lookups.
+ *
+ * The chain is thenable so `await db.select().from().where()` resolves
+ * to `mockWhereRows` (used by verifyKeyOwnership which has no `.limit()`).
+ * Default: returns a row matching the test authorPublicKey (fill=4)
+ * so key-ownership checks pass.
  */
 const mockDbLimit = vi.fn().mockResolvedValue([]);
-const mockDbChain = {
+const mockWhereRows: unknown[] = [
+  { publicKey: new Uint8Array(32).fill(4) },
+  { publicKey: new Uint8Array(32).fill(8) },
+];
+const mockDbChain: Record<string, unknown> = {
   from: vi.fn().mockReturnThis(),
-  where: vi.fn().mockReturnThis(),
+  where: vi.fn(() => ({
+    limit: mockDbLimit,
+    then(resolve: (v: unknown[]) => void, reject?: (e: unknown) => void) {
+      return Promise.resolve(mockWhereRows).then(resolve, reject);
+    },
+  })),
   limit: mockDbLimit,
 };
 const mockDb = { select: vi.fn().mockReturnValue(mockDbChain) };
