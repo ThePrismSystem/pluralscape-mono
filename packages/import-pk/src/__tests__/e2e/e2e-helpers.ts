@@ -27,6 +27,7 @@ import {
   registerTestAccount,
 } from "@pluralscape/test-utils/e2e";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import { z } from "zod/v4";
 
 import { pkCollectionToEntityType } from "../../engine/entity-type-map.js";
 import { createPkApiImportSource } from "../../sources/pk-api-source.js";
@@ -98,6 +99,21 @@ type PkEntityType = "member" | "group" | "fronting-session" | "privacy-bucket";
 
 const PK_ENTITY_TYPES = new Set<string>(["member", "group", "fronting-session", "privacy-bucket"]);
 
+function assertPayloadShape<T extends Record<string, unknown>>(
+  payload: unknown,
+  entityType: string,
+  requiredKeys: readonly (keyof T)[],
+): asserts payload is T {
+  if (!payload || typeof payload !== "object") {
+    throw new Error(`Expected object payload for ${entityType}, got ${typeof payload}`);
+  }
+  for (const key of requiredKeys) {
+    if (!((key as string) in (payload as Record<string, unknown>))) {
+      throw new Error(`Missing required key "${String(key)}" in ${entityType} payload`);
+    }
+  }
+}
+
 async function handleCreate(
   entity: GenericPersistableEntity,
   ctx: HandleCreateContext<TRPCClient, KdfMasterKey>,
@@ -110,28 +126,27 @@ async function handleCreate(
   const entityType = entity.entityType as PkEntityType;
 
   switch (entityType) {
-    case "member":
+    case "member": {
+      assertPayloadShape<{ encrypted: unknown }>(entity.payload, "member", ["encrypted"]);
       return trpc.member.create.mutate({
         systemId,
-        encryptedData: encryptForApi(
-          (entity.payload as { encrypted: unknown }).encrypted,
-          masterKey,
-        ),
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
       });
+    }
     case "group": {
-      const payload = entity.payload as {
+      assertPayloadShape<{
         encrypted: unknown;
         parentGroupId: string | null;
         sortOrder: number;
         memberIds: readonly string[];
-      };
+      }>(entity.payload, "group", ["encrypted", "parentGroupId", "sortOrder", "memberIds"]);
       const result = await trpc.group.create.mutate({
         systemId,
-        encryptedData: encryptForApi(payload.encrypted, masterKey),
-        parentGroupId: payload.parentGroupId,
-        sortOrder: payload.sortOrder,
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+        parentGroupId: entity.payload.parentGroupId,
+        sortOrder: entity.payload.sortOrder,
       });
-      for (const memberId of payload.memberIds) {
+      for (const memberId of entity.payload.memberIds) {
         await trpc.group.addMember.mutate({
           systemId,
           groupId: result.id,
@@ -141,32 +156,31 @@ async function handleCreate(
       return result;
     }
     case "fronting-session": {
-      const payload = entity.payload as {
+      assertPayloadShape<{
         encrypted: unknown;
         startTime: number;
         endTime: number | null;
         memberId: string | undefined;
         customFrontId: string | undefined;
         structureEntityId: string | undefined;
-      };
+      }>(entity.payload, "fronting-session", ["encrypted", "startTime"]);
       return trpc.frontingSession.create.mutate({
         systemId,
-        encryptedData: encryptForApi(payload.encrypted, masterKey),
-        startTime: payload.startTime,
-        endTime: payload.endTime ?? undefined,
-        memberId: payload.memberId,
-        customFrontId: payload.customFrontId,
-        structureEntityId: payload.structureEntityId,
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+        startTime: entity.payload.startTime,
+        endTime: entity.payload.endTime ?? undefined,
+        memberId: entity.payload.memberId,
+        customFrontId: entity.payload.customFrontId,
+        structureEntityId: entity.payload.structureEntityId,
       });
     }
-    case "privacy-bucket":
+    case "privacy-bucket": {
+      assertPayloadShape<{ encrypted: unknown }>(entity.payload, "privacy-bucket", ["encrypted"]);
       return trpc.bucket.create.mutate({
         systemId,
-        encryptedData: encryptForApi(
-          (entity.payload as { encrypted: unknown }).encrypted,
-          masterKey,
-        ),
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
       });
+    }
     default: {
       const _exhaustive: never = entityType;
       throw new Error(`Unsupported PK entity type: ${String(_exhaustive)}`);
@@ -191,22 +205,38 @@ export async function createPkE2EPersister(
 
 // ── Manifest loading ────────────────────────────────────────────────
 
+const PkManifestSchema = z.object({
+  token: z.string(),
+  systemId: z.string(),
+  mode: z.enum(["minimal", "adversarial"]),
+  expectedSessionCount: z.number().int().nonnegative(),
+  members: z.array(
+    z.object({
+      ref: z.string(),
+      sourceId: z.string(),
+      fields: z.object({ name: z.string() }),
+    }),
+  ),
+  groups: z.array(
+    z.object({
+      ref: z.string(),
+      sourceId: z.string(),
+      fields: z.object({ name: z.string() }),
+    }),
+  ),
+  switches: z.array(
+    z.object({
+      ref: z.string(),
+      sourceId: z.string(),
+      fields: z.object({ timestamp: z.string() }),
+    }),
+  ),
+});
+
 export function loadManifest(mode: "minimal" | "adversarial"): PkManifest {
   const filePath = path.join(MONOREPO_ROOT, `scripts/.pk-seed-${mode}-manifest.json`);
   const raw = readFileSync(filePath, "utf-8");
-  const parsed = JSON.parse(raw) as PkManifest;
-  for (const key of ["members", "groups", "switches"] as const) {
-    for (const entry of parsed[key]) {
-      if (typeof entry.ref !== "string") {
-        throw new Error(
-          `manifest format out of date (missing 'ref' field in ${key}) — ` +
-            `delete scripts/.pk-seed-${mode}-manifest.json and re-run ` +
-            `pnpm seed:pk-test ${mode} to regenerate`,
-        );
-      }
-    }
-  }
-  return parsed;
+  return PkManifestSchema.parse(JSON.parse(raw));
 }
 
 // ── Source factories ────────────────────────────────────────────────
