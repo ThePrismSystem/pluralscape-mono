@@ -11,6 +11,10 @@ import { writeManifestAtomic } from "./manifest.js";
 import type { PkMode, EntityTypeKey } from "./constants.js";
 import { ENTITY_TYPES_IN_ORDER, ONE_DAY_MS } from "./constants.js";
 import type { EntityFixtures } from "./fixtures/types.js";
+import { createMappingContext } from "@pluralscape/import-core";
+import { mapSwitchBatch } from "../../packages/import-pk/src/mappers/switch.mapper.js";
+
+import type { SourceDocument } from "@pluralscape/import-core";
 
 /**
  * Walk a value and replace any ref-shaped string with its resolved server-side ID.
@@ -59,6 +63,7 @@ interface WritableManifest {
   token: string;
   systemId: string;
   mode: PkMode;
+  expectedSessionCount: number;
   members: ManifestEntry[];
   groups: ManifestEntry[];
   switches: ManifestEntry[];
@@ -93,7 +98,51 @@ export async function executePlan(
     writeManifestAtomic(mode, working as Manifest);
   }
 
+  // Compute expected session count by running the same mapper the import
+  // engine uses, so the manifest stays accurate if fixtures change.
+  working.expectedSessionCount = computeExpectedSessionCount(fixtures, refMap);
+  writeManifestAtomic(mode, working as Manifest);
+
   return working as Manifest;
+}
+
+/**
+ * Build switch SourceDocuments from fixtures and run mapSwitchBatch
+ * to compute how many fronting sessions the import engine will produce.
+ */
+function computeExpectedSessionCount(
+  fixtures: EntityFixtures,
+  refMap: ReadonlyMap<string, string>,
+): number {
+  const ctx = createMappingContext({ sourceMode: "file" });
+
+  // Register all members so the mapper can resolve refs
+  for (const memberFixture of fixtures.members) {
+    const sourceId = refMap.get(memberFixture.ref);
+    if (sourceId === undefined) continue;
+    // Use the sourceId as both the PK id and the Pluralscape id —
+    // we only care about the count, not the resolved IDs.
+    ctx.register("member", sourceId, sourceId);
+  }
+
+  // Build SourceDocuments from switch fixtures
+  const documents: SourceDocument[] = fixtures.switches.map((sw) => {
+    const resolvedMembers = sw.members.map((memberRef) => {
+      const resolved = refMap.get(memberRef);
+      if (resolved === undefined) {
+        throw new UnresolvedRefError(memberRef);
+      }
+      return resolved;
+    });
+    const timestamp = resolveTimestamp(sw.timestamp);
+    return {
+      sourceId: sw.ref,
+      document: { timestamp, members: resolvedMembers },
+    };
+  });
+
+  const results = mapSwitchBatch(documents, ctx);
+  return results.filter((r) => r.result.status === "mapped").length;
 }
 
 async function createEntity(
@@ -202,6 +251,7 @@ function buildWorkingManifest(
     token,
     systemId,
     mode,
+    expectedSessionCount: 0,
     members: [],
     groups: [],
     switches: [],
