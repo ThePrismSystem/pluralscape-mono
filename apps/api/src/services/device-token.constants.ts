@@ -8,6 +8,3 @@ export const DEFAULT_DEVICE_TOKEN_LIMIT = 25;
 
 /** Maximum page size for device token list requests. */
 export const MAX_DEVICE_TOKENS_PER_LIST = 100;
-
-/** Number of trailing characters to show in masked token strings. */
-export const TOKEN_MASK_VISIBLE_CHARS = 8;

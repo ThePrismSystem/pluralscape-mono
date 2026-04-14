@@ -467,16 +467,16 @@ describe("SQLite views / query helpers", () => {
       expect(active).toHaveLength(0);
     });
 
-    it("returns non-revoked tokens with token field", () => {
+    it("returns non-revoked tokens with tokenHash field", () => {
       const now = Date.now();
-      const tokenValue = `token_${crypto.randomUUID()}`;
+      const tokenHashValue = `tokenHash_${crypto.randomUUID()}`.slice(0, 64);
       db.insert(deviceTokens)
         .values({
           id: crypto.randomUUID(),
           accountId,
           systemId,
           platform: "ios",
-          token: tokenValue,
+          tokenHash: tokenHashValue,
           createdAt: now,
         })
         .run();
@@ -486,7 +486,7 @@ describe("SQLite views / query helpers", () => {
           accountId,
           systemId,
           platform: "android",
-          token: `token_${crypto.randomUUID()}`,
+          tokenHash: `tokenHash_${crypto.randomUUID()}`.slice(0, 64),
           createdAt: now,
           revokedAt: now,
         })

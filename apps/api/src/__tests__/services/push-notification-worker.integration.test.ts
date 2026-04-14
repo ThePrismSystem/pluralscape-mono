@@ -49,21 +49,21 @@ describe("push-notification-worker (PGlite integration)", () => {
 
   async function insertToken(opts?: {
     revokedAt?: number;
-  }): Promise<{ id: DeviceTokenId; token: string }> {
+  }): Promise<{ id: DeviceTokenId; tokenHash: string }> {
     const id = `dt_${crypto.randomUUID()}` as DeviceTokenId;
-    const token = `token-${crypto.randomUUID()}`;
+    const tokenHash = `hash-${crypto.randomUUID()}`;
     const now = Date.now();
     await db.insert(deviceTokens).values({
       id,
       accountId,
       systemId,
       platform: "ios",
-      token,
+      tokenHash,
       createdAt: now,
       lastActiveAt: null,
       revokedAt: opts?.revokedAt ?? null,
     });
-    return { id, token };
+    return { id, tokenHash };
   }
 
   function makePayload(
@@ -85,14 +85,14 @@ describe("push-notification-worker (PGlite integration)", () => {
 
   // ── processPushNotification ──────────────────────────────────────────
 
-  it("calls provider.send with correct args and updates lastActiveAt", async () => {
-    const { id: tokenId, token: tokenValue } = await insertToken();
+  it("calls provider.send with device token ID and updates lastActiveAt", async () => {
+    const { id: tokenId } = await insertToken();
     const sendSpy = vi.fn().mockResolvedValue(undefined);
     const provider: PushProvider = { send: sendSpy };
 
     await processPushNotification(asDb(db), makePayload(tokenId), provider);
 
-    expect(sendSpy).toHaveBeenCalledWith(tokenValue, "ios", {
+    expect(sendSpy).toHaveBeenCalledWith(tokenId, "ios", {
       title: "Switch Alert",
       body: "A friend switched fronters",
       data: null,
@@ -179,7 +179,7 @@ describe("push-notification-worker (PGlite integration)", () => {
   it("stub provider does not throw", async () => {
     const stub = new StubPushProvider();
     await expect(
-      stub.send("token", "ios", { title: "T", body: "B", data: null }),
+      stub.send("dt_test-token-id" as DeviceTokenId, "ios", { title: "T", body: "B", data: null }),
     ).resolves.toBeUndefined();
   });
 });

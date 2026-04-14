@@ -68,7 +68,7 @@ describe("SQLite notifications schema", () => {
           accountId,
           systemId,
           platform: "ios",
-          token: "fcm-token-abc",
+          tokenHash: "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
           createdAt: now,
           lastActiveAt: now,
         })
@@ -77,7 +77,9 @@ describe("SQLite notifications schema", () => {
       const rows = db.select().from(deviceTokens).where(eq(deviceTokens.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.platform).toBe("ios");
-      expect(rows[0]?.token).toBe("fcm-token-abc");
+      expect(rows[0]?.tokenHash).toBe(
+        "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
+      );
       expect(rows[0]?.revokedAt).toBeNull();
     });
 
@@ -93,7 +95,7 @@ describe("SQLite notifications schema", () => {
           accountId,
           systemId,
           platform: "android",
-          token: `token-${crypto.randomUUID()}`,
+          tokenHash: `tokenHash-${crypto.randomUUID()}`.slice(0, 64),
           createdAt: now,
         })
         .run();
@@ -111,18 +113,18 @@ describe("SQLite notifications schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO device_tokens (id, account_id, system_id, platform, token, created_at)
+            `INSERT INTO device_tokens (id, account_id, system_id, platform, token_hash, created_at)
              VALUES (?, ?, ?, ?, ?, ?)`,
           )
           .run(crypto.randomUUID(), accountId, systemId, "invalid-platform", "tok", now),
       ).toThrow();
     });
 
-    it("rejects duplicate token+platform pair", () => {
+    it("rejects duplicate tokenHash+platform pair", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const now = Date.now();
-      const token = `token-${crypto.randomUUID()}`;
+      const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       db.insert(deviceTokens)
         .values({
@@ -130,7 +132,7 @@ describe("SQLite notifications schema", () => {
           accountId,
           systemId,
           platform: "ios",
-          token,
+          tokenHash,
           createdAt: now,
         })
         .run();
@@ -143,18 +145,18 @@ describe("SQLite notifications schema", () => {
             accountId,
             systemId,
             platform: "ios",
-            token,
+            tokenHash,
             createdAt: now,
           })
           .run(),
       ).toThrow();
     });
 
-    it("allows same token on different platforms", () => {
+    it("allows same tokenHash on different platforms", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const now = Date.now();
-      const token = `token-${crypto.randomUUID()}`;
+      const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       db.insert(deviceTokens)
         .values({
@@ -162,7 +164,7 @@ describe("SQLite notifications schema", () => {
           accountId,
           systemId,
           platform: "ios",
-          token,
+          tokenHash,
           createdAt: now,
         })
         .run();
@@ -173,7 +175,7 @@ describe("SQLite notifications schema", () => {
           accountId,
           systemId,
           platform: "android",
-          token,
+          tokenHash,
           createdAt: now,
         })
         .run();
@@ -191,7 +193,7 @@ describe("SQLite notifications schema", () => {
           accountId,
           systemId,
           platform: "web",
-          token: `token-${crypto.randomUUID()}`,
+          tokenHash: `tokenHash-${crypto.randomUUID()}`.slice(0, 64),
           createdAt: now,
         })
         .run();
@@ -213,7 +215,7 @@ describe("SQLite notifications schema", () => {
           accountId,
           systemId,
           platform: "ios",
-          token: `token-${crypto.randomUUID()}`,
+          tokenHash: `tokenHash-${crypto.randomUUID()}`.slice(0, 64),
           createdAt: now,
         })
         .run();

@@ -38,7 +38,7 @@ const MOCK_TOKEN_RESULT = {
   id: TOKEN_ID,
   systemId: MOCK_SYSTEM_ID,
   platform: "ios" as const,
-  token: "***abc123",
+  tokenHash: "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
   lastActiveAt: 1_700_000_000_000 as UnixMillis,
   createdAt: 1_700_000_000_000 as UnixMillis,
 };

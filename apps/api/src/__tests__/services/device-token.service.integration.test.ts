@@ -10,6 +10,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  hashDeviceToken,
   listDeviceTokens,
   registerDeviceToken,
   revokeDeviceToken,
@@ -69,8 +70,27 @@ describe("device-token.service (PGlite integration)", () => {
     expect(result.id).toMatch(/^dt_/);
     expect(result.systemId).toBe(systemId);
     expect(result.platform).toBe("ios");
-    expect(result.token).toBe("***oken-abc");
+    expect(result.tokenHash).toBe(hashDeviceToken("apns-token-abc"));
     expect(result.createdAt).toBeTypeOf("number");
+  });
+
+  it("stores token as hash, not plaintext", async () => {
+    const plaintext = "plaintext-token-for-hash-test";
+    await registerDeviceToken(
+      asDb(db),
+      systemId,
+      { platform: "ios", token: plaintext },
+      auth,
+      noopAudit,
+    );
+
+    const [row] = await db
+      .select({ tokenHash: deviceTokens.tokenHash })
+      .from(deviceTokens)
+      .where(eq(deviceTokens.tokenHash, hashDeviceToken(plaintext)));
+    expect(row).toBeDefined();
+    expect(row?.tokenHash).toBe(hashDeviceToken(plaintext));
+    expect(row?.tokenHash).not.toBe(plaintext);
   });
 
   it("upserts on same token+platform (updates lastActiveAt)", async () => {
@@ -92,7 +112,7 @@ describe("device-token.service (PGlite integration)", () => {
 
     // Should return same record (upsert, not duplicate)
     expect(second.id).toBe(first.id);
-    expect(second.token).toBe("***oken-xyz");
+    expect(second.tokenHash).toBe(hashDeviceToken("fcm-token-xyz"));
   });
 
   it("creates separate record for same token on different platform", async () => {
@@ -259,7 +279,7 @@ describe("device-token.service (PGlite integration)", () => {
 
     // Should return a result (no error) but not modify the DB row
     expect(result.systemId).toBe(otherSystemId);
-    expect(result.token).toBe("***st-token");
+    expect(result.tokenHash).toBe(hashDeviceToken("reassign-test-token"));
 
     // No audit event should be written for the no-op
     expect(audit.calls).toHaveLength(0);
@@ -268,7 +288,7 @@ describe("device-token.service (PGlite integration)", () => {
     const [row] = await db
       .select({ accountId: deviceTokens.accountId, systemId: deviceTokens.systemId })
       .from(deviceTokens)
-      .where(eq(deviceTokens.token, "reassign-test-token"));
+      .where(eq(deviceTokens.tokenHash, hashDeviceToken("reassign-test-token")));
     expect(row?.accountId).toBe(accountId);
     expect(row?.systemId).toBe(systemId);
 
@@ -302,9 +322,9 @@ describe("device-token.service (PGlite integration)", () => {
     expect(reregTokens.map((t) => t.id)).toContain(reregistered.id);
   });
 
-  // ── registration masks tokens ──────────────────────────────────────
+  // ── token hashing ──────────────────────────────────────────────────
 
-  it("masks token in registration response", async () => {
+  it("returns hashed token in registration response", async () => {
     const result = await registerDeviceToken(
       asDb(db),
       systemId,
@@ -313,25 +333,13 @@ describe("device-token.service (PGlite integration)", () => {
       noopAudit,
     );
 
-    expect(result.token).toBe("***on-token");
-    expect(result.token).not.toContain("a-very-long");
+    expect(result.tokenHash).toBe(hashDeviceToken("a-very-long-registration-token"));
+    expect(result.tokenHash).not.toContain("a-very-long");
   });
 
-  it("returns short tokens unmasked in registration response", async () => {
-    const result = await registerDeviceToken(
-      asDb(db),
-      systemId,
-      { platform: "ios", token: "short" },
-      auth,
-      noopAudit,
-    );
+  // ── list returns hashes ───────────────────────────────────────────
 
-    expect(result.token).toBe("short");
-  });
-
-  // ── list masks tokens ─────────────────────────────────────────────
-
-  it("masks token values in list response", async () => {
+  it("returns hashed token values in list response", async () => {
     await registerDeviceToken(
       asDb(db),
       systemId,
@@ -341,8 +349,8 @@ describe("device-token.service (PGlite integration)", () => {
     );
 
     const { data: tokens } = await listDeviceTokens(asDb(db), systemId, auth);
-    expect(tokens[0]?.token).toBe("***-testing");
-    expect(tokens[0]?.token).not.toBe("a-very-long-token-string-for-testing");
+    expect(tokens[0]?.tokenHash).toBe(hashDeviceToken("a-very-long-token-string-for-testing"));
+    expect(tokens[0]?.tokenHash).not.toBe("a-very-long-token-string-for-testing");
   });
 
   // ── Authorization ────────────────────────────────────────────────────

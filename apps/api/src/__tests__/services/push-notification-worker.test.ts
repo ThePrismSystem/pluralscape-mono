@@ -13,7 +13,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     accountId: "account_id",
     systemId: "system_id",
     platform: "platform",
-    token: "token",
+    tokenHash: "token_hash",
     createdAt: "created_at",
     lastActiveAt: "last_active_at",
     revokedAt: "revoked_at",
@@ -104,38 +104,18 @@ describe("push-notification-worker", () => {
   // ── StubPushProvider ──────────────────────────────────────────────
 
   describe("StubPushProvider", () => {
-    it("logs notification and resolves", async () => {
+    it("logs notification with device token ID and resolves", async () => {
       const stub = new StubPushProvider();
 
-      await stub.send("test-token-value", PLATFORM, MOCK_PAYLOAD);
+      await stub.send(DEVICE_TOKEN_ID, PLATFORM, MOCK_PAYLOAD);
 
       expect(vi.mocked(logger)["info"]).toHaveBeenCalledWith(
         "[push-worker] stub delivery",
-        expect.objectContaining({ platform: PLATFORM, title: MOCK_PAYLOAD.title }),
-      );
-    });
-
-    it("masks long tokens in log output", async () => {
-      const stub = new StubPushProvider();
-      const longToken = "abcdef1234567890abcdef1234567890";
-
-      await stub.send(longToken, PLATFORM, MOCK_PAYLOAD);
-
-      expect(vi.mocked(logger)["info"]).toHaveBeenCalledWith(
-        "[push-worker] stub delivery",
-        expect.objectContaining({ token: expect.stringContaining("***") }),
-      );
-    });
-
-    it("does not mask short tokens", async () => {
-      const stub = new StubPushProvider();
-      const shortToken = "12345678";
-
-      await stub.send(shortToken, PLATFORM, MOCK_PAYLOAD);
-
-      expect(vi.mocked(logger)["info"]).toHaveBeenCalledWith(
-        "[push-worker] stub delivery",
-        expect.objectContaining({ token: shortToken }),
+        expect.objectContaining({
+          platform: PLATFORM,
+          title: MOCK_PAYLOAD.title,
+          deviceTokenId: DEVICE_TOKEN_ID,
+        }),
       );
     });
   });
@@ -146,11 +126,11 @@ describe("push-notification-worker", () => {
     it("delivers notification and updates lastActiveAt", async () => {
       const { db, chain } = mockDb();
       const provider = makeMockProvider();
-      chain.limit.mockResolvedValueOnce([{ token: "actual-token", revokedAt: null }]);
+      chain.limit.mockResolvedValueOnce([{ id: DEVICE_TOKEN_ID, revokedAt: null }]);
 
       await processPushNotification(db, makeJobPayload(), provider);
 
-      expect(provider.send).toHaveBeenCalledWith("actual-token", PLATFORM, MOCK_PAYLOAD);
+      expect(provider.send).toHaveBeenCalledWith(DEVICE_TOKEN_ID, PLATFORM, MOCK_PAYLOAD);
       // Should update lastActiveAt
       expect(chain.set).toHaveBeenCalled();
     });
@@ -172,7 +152,7 @@ describe("push-notification-worker", () => {
     it("skips delivery when device token is revoked", async () => {
       const { db, chain } = mockDb();
       const provider = makeMockProvider();
-      chain.limit.mockResolvedValueOnce([{ token: "actual-token", revokedAt: 500 }]);
+      chain.limit.mockResolvedValueOnce([{ id: DEVICE_TOKEN_ID, revokedAt: 500 }]);
 
       await processPushNotification(db, makeJobPayload(), provider);
 
@@ -188,7 +168,7 @@ describe("push-notification-worker", () => {
       const provider = makeMockProvider();
       const providerError = new Error("APNS delivery failed");
       provider.send.mockRejectedValueOnce(providerError);
-      chain.limit.mockResolvedValueOnce([{ token: "actual-token", revokedAt: null }]);
+      chain.limit.mockResolvedValueOnce([{ id: DEVICE_TOKEN_ID, revokedAt: null }]);
 
       await expect(processPushNotification(db, makeJobPayload(), provider)).rejects.toThrow(
         "APNS delivery failed",
@@ -197,7 +177,7 @@ describe("push-notification-worker", () => {
 
     it("uses default StubPushProvider when none injected", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ token: "actual-token", revokedAt: null }]);
+      chain.limit.mockResolvedValueOnce([{ id: DEVICE_TOKEN_ID, revokedAt: null }]);
 
       // Should not throw — uses default stub provider
       await processPushNotification(db, makeJobPayload());

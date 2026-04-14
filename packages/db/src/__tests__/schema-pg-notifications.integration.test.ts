@@ -64,7 +64,7 @@ describe("PG notifications schema", () => {
         accountId,
         systemId,
         platform: "ios",
-        token: "fcm-token-abc",
+        tokenHash: "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
         createdAt: now,
         lastActiveAt: now,
       });
@@ -72,7 +72,9 @@ describe("PG notifications schema", () => {
       const rows = await db.select().from(deviceTokens).where(eq(deviceTokens.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.platform).toBe("ios");
-      expect(rows[0]?.token).toBe("fcm-token-abc");
+      expect(rows[0]?.tokenHash).toBe(
+        "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
+      );
       expect(rows[0]?.revokedAt).toBeNull();
     });
 
@@ -87,7 +89,7 @@ describe("PG notifications schema", () => {
         accountId,
         systemId,
         platform: "android",
-        token: `token-${crypto.randomUUID()}`,
+        tokenHash: `tokenHash-${crypto.randomUUID()}`.slice(0, 64),
         createdAt: now,
       });
 
@@ -107,24 +109,24 @@ describe("PG notifications schema", () => {
           accountId,
           systemId,
           platform: "desktop" as "ios",
-          token: "tok",
+          tokenHash: "abc123def456abc123def456abc123def456abc123def456abc123def456abcd",
           createdAt: now,
         }),
       ).rejects.toThrow();
     });
 
-    it("rejects duplicate token+platform pair", async () => {
+    it("rejects duplicate tokenHash+platform pair", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const now = Date.now();
-      const token = `token-${crypto.randomUUID()}`;
+      const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       await db.insert(deviceTokens).values({
         id: crypto.randomUUID(),
         accountId,
         systemId,
         platform: "ios",
-        token,
+        tokenHash,
         createdAt: now,
       });
 
@@ -134,24 +136,24 @@ describe("PG notifications schema", () => {
           accountId,
           systemId,
           platform: "ios",
-          token,
+          tokenHash,
           createdAt: now,
         }),
       ).rejects.toThrow();
     });
 
-    it("allows same token on different platforms", async () => {
+    it("allows same tokenHash on different platforms", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const now = Date.now();
-      const token = `token-${crypto.randomUUID()}`;
+      const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       await db.insert(deviceTokens).values({
         id: crypto.randomUUID(),
         accountId,
         systemId,
         platform: "ios",
-        token,
+        tokenHash,
         createdAt: now,
       });
 
@@ -160,7 +162,7 @@ describe("PG notifications schema", () => {
         accountId,
         systemId,
         platform: "android",
-        token,
+        tokenHash,
         createdAt: now,
       });
     });
@@ -176,7 +178,7 @@ describe("PG notifications schema", () => {
         accountId,
         systemId,
         platform: "web",
-        token: `token-${crypto.randomUUID()}`,
+        tokenHash: `tokenHash-${crypto.randomUUID()}`.slice(0, 64),
         createdAt: now,
       });
 
@@ -196,7 +198,7 @@ describe("PG notifications schema", () => {
         accountId,
         systemId,
         platform: "ios",
-        token: `token-${crypto.randomUUID()}`,
+        tokenHash: `tokenHash-${crypto.randomUUID()}`.slice(0, 64),
         createdAt: now,
       });
 

@@ -58,13 +58,17 @@ vi.mock("../../lib/tenant-context.js", () => ({
   tenantCtx: vi.fn(() => ({ systemId: SYSTEM_ID, accountId: "acct_test" })),
 }));
 
+vi.mock("../../lib/session-token.js", () => ({
+  hashSessionToken: vi.fn((token: string) => `hashed_${token}`),
+}));
+
 vi.mock("@pluralscape/db/pg", () => ({
   deviceTokens: {
     id: "id",
     accountId: "account_id",
     systemId: "system_id",
     platform: "platform",
-    token: "token",
+    tokenHash: "token_hash",
     createdAt: "created_at",
     lastActiveAt: "last_active_at",
     revokedAt: "revoked_at",
@@ -111,6 +115,7 @@ const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const PLATFORM: DeviceTokenPlatform = "ios";
 const TOKEN_VALUE = "abcdef1234567890abcdef1234567890";
+const TOKEN_HASH = `hashed_${TOKEN_VALUE}`;
 
 function makeTokenRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -118,7 +123,7 @@ function makeTokenRow(overrides: Record<string, unknown> = {}): Record<string, u
     accountId: AUTH.accountId,
     systemId: SYSTEM_ID,
     platform: PLATFORM,
-    token: TOKEN_VALUE,
+    tokenHash: TOKEN_HASH,
     createdAt: 1000,
     lastActiveAt: 1000,
     revokedAt: null,
@@ -142,15 +147,14 @@ describe("device-token service", () => {
   describe("registerDeviceToken", () => {
     const params = { platform: PLATFORM, token: TOKEN_VALUE };
 
-    it("registers and returns masked token result", async () => {
+    it("registers and returns hashed token result", async () => {
       mockTx.returning.mockResolvedValueOnce([makeTokenRow()]);
 
       const result = await registerDeviceToken({} as never, SYSTEM_ID, params, AUTH, mockAudit);
 
       expect(result.id).toBe(TOKEN_ID);
       expect(result.platform).toBe(PLATFORM);
-      // Token should be masked — only last 8 chars visible
-      expect(result.token).toMatch(/\*\*\*.{8}$/);
+      expect(result.tokenHash).toBe(TOKEN_HASH);
       expect(mockAudit).toHaveBeenCalledWith(
         mockTx,
         expect.objectContaining({ eventType: "device-token.registered" }),
@@ -165,25 +169,9 @@ describe("device-token service", () => {
 
       expect(result.systemId).toBe(SYSTEM_ID);
       expect(result.platform).toBe(PLATFORM);
-      expect(result.token).toMatch(/\*\*\*/);
+      expect(result.tokenHash).toBe(TOKEN_HASH);
       // Should NOT write audit for a no-op
       expect(mockAudit).not.toHaveBeenCalled();
-    });
-
-    it("masks short token values", async () => {
-      const shortToken = "12345678";
-      mockTx.returning.mockResolvedValueOnce([makeTokenRow({ token: shortToken })]);
-
-      const result = await registerDeviceToken(
-        {} as never,
-        SYSTEM_ID,
-        { platform: PLATFORM, token: shortToken },
-        AUTH,
-        mockAudit,
-      );
-
-      // Short tokens (length <= TOKEN_MASK_VISIBLE_CHARS) are returned as-is
-      expect(result.token).toBe(shortToken);
     });
 
     it("rejects when ownership check fails", async () => {
@@ -199,9 +187,9 @@ describe("device-token service", () => {
 
   describe("updateDeviceToken", () => {
     it("updates token with all fields provided", async () => {
-      // Single UPDATE … RETURNING — no initial SELECT
+      const newHash = "hashed_newtoken1234567890newtoken26789012";
       mockTx.returning.mockResolvedValueOnce([
-        makeTokenRow({ platform: "android", token: "newtoken1234567890newtoken12789012" }),
+        makeTokenRow({ platform: "android", tokenHash: newHash }),
       ]);
 
       const result = await updateDeviceToken(
@@ -214,7 +202,7 @@ describe("device-token service", () => {
       );
 
       expect(result.platform).toBe("android");
-      expect(result.token).toMatch(/\*\*\*/);
+      expect(result.tokenHash).toBe(newHash);
       expect(mockAudit).toHaveBeenCalledWith(
         mockTx,
         expect.objectContaining({ eventType: "device-token.updated" }),
@@ -239,7 +227,8 @@ describe("device-token service", () => {
 
     it("merges only provided fields (token only)", async () => {
       const newToken = "replacement_token_value_1234567890";
-      mockTx.returning.mockResolvedValueOnce([makeTokenRow({ token: newToken })]);
+      const newHash = `hashed_${newToken}`;
+      mockTx.returning.mockResolvedValueOnce([makeTokenRow({ tokenHash: newHash })]);
 
       const result = await updateDeviceToken(
         {} as never,
@@ -250,7 +239,7 @@ describe("device-token service", () => {
         mockAudit,
       );
 
-      expect(result.token).toMatch(/\*\*\*/);
+      expect(result.tokenHash).toBe(newHash);
       expect(mockAudit).toHaveBeenCalled();
     });
 
@@ -351,7 +340,7 @@ describe("device-token service", () => {
   // ── listDeviceTokens ──────────────────────────────────────────────
 
   describe("listDeviceTokens", () => {
-    it("returns paginated result with masked tokens", async () => {
+    it("returns paginated result with hashed tokens", async () => {
       mockTx.limit.mockResolvedValueOnce([makeTokenRow(), makeTokenRow({ id: "dt_other" })]);
 
       const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
@@ -359,8 +348,7 @@ describe("device-token service", () => {
       expect(result.data).toHaveLength(2);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
-      // Tokens should be masked
-      expect(result.data[0]?.token).toMatch(/\*\*\*/);
+      expect(result.data[0]?.tokenHash).toBe(TOKEN_HASH);
     });
 
     it("sets hasMore and nextCursor when more items exist", async () => {
