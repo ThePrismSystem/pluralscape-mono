@@ -66,12 +66,10 @@ function makeDeps(overrides?: Partial<KeyLifecycleDeps>): KeyLifecycleDeps {
 let manager: MobileKeyLifecycleManager;
 let deps: KeyLifecycleDeps;
 let salt: PwhashSalt;
-let encryptedMasterKey: EncryptedPayload;
 
-beforeEach(async () => {
+beforeEach(() => {
   vi.useFakeTimers();
   salt = generateSalt();
-  encryptedMasterKey = await createWrappedMasterKey(TEST_PASSWORD, salt);
   deps = makeDeps();
   manager = new MobileKeyLifecycleManager(deps);
 });
@@ -106,27 +104,47 @@ describe("initial state", () => {
 
 describe("unlockWithPassword", () => {
   it("transitions from terminated to unlocked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     expect(manager.state).toBe("unlocked");
   });
 
   it("transitions from locked to unlocked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     expect(manager.state).toBe("locked");
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     expect(manager.state).toBe("unlocked");
   });
 
   it("makes getMasterKey return a KdfMasterKey", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const masterKey = manager.getMasterKey();
     expect(masterKey).toBeInstanceOf(Uint8Array);
     expect(masterKey).toHaveLength(32);
   });
 
   it("makes getIdentityKeys return sign and box keypairs", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const keys = manager.getIdentityKeys();
     expect(keys.sign.publicKey).toBeInstanceOf(Uint8Array);
     expect(keys.sign.secretKey).toBeInstanceOf(Uint8Array);
@@ -136,7 +154,11 @@ describe("unlockWithPassword", () => {
 
   it("stores masterKey in secure storage", async () => {
     const storageSpy = vi.spyOn(deps.storage, "store");
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     expect(storageSpy).toHaveBeenCalledWith(
       "master-key",
       expect.any(Uint8Array),
@@ -145,24 +167,44 @@ describe("unlockWithPassword", () => {
   });
 
   it("throws InvalidStateTransitionError from unlocked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await expect(
-      manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey),
+      manager.unlockWithPassword(
+        TEST_PASSWORD,
+        salt,
+        await createWrappedMasterKey(TEST_PASSWORD, salt),
+      ),
     ).rejects.toThrow(InvalidStateTransitionError);
   });
 
   it("throws InvalidStateTransitionError from grace", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
     await expect(
-      manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey),
+      manager.unlockWithPassword(
+        TEST_PASSWORD,
+        salt,
+        await createWrappedMasterKey(TEST_PASSWORD, salt),
+      ),
     ).rejects.toThrow(InvalidStateTransitionError);
   });
 
   it("passes requireBiometric: true to storage.store", async () => {
     const storageSpy = vi.spyOn(deps.storage, "store");
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     expect(storageSpy).toHaveBeenCalledWith(
       "master-key",
       expect.any(Uint8Array),
@@ -176,7 +218,11 @@ describe("unlockWithPassword", () => {
     });
     const m = new MobileKeyLifecycleManager(convenienceDeps);
     const storageSpy = vi.spyOn(convenienceDeps.storage, "store");
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     expect(storageSpy).toHaveBeenCalledWith(
       "master-key",
       expect.any(Uint8Array),
@@ -191,9 +237,9 @@ describe("unlockWithPassword", () => {
     const memzeroSpy = vi.spyOn(failingDeps.sodium, "memzero");
     const m = new MobileKeyLifecycleManager(failingDeps);
 
-    await expect(m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey)).rejects.toThrow(
-      storageError,
-    );
+    await expect(
+      m.unlockWithPassword(TEST_PASSWORD, salt, await createWrappedMasterKey(TEST_PASSWORD, salt)),
+    ).rejects.toThrow(storageError);
     // Should have memzeroed the derived keys (at least 3 calls: signSK, boxSK, masterKey)
     expect(memzeroSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(m.state).toBe("terminated");
@@ -204,7 +250,11 @@ describe("unlockWithPassword", () => {
 
 describe("unlockWithBiometric", () => {
   it("transitions from locked to unlocked when storage has masterKey", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     expect(manager.state).toBe("locked");
     await manager.unlockWithBiometric();
@@ -216,7 +266,11 @@ describe("unlockWithBiometric", () => {
     const freshDeps = makeDeps();
     const freshManager = new MobileKeyLifecycleManager(freshDeps);
     // Move to locked state first — unlock then lock
-    await freshManager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await freshManager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await freshManager.lock();
     // Clear storage to simulate missing key
     await freshDeps.storage.clearAll();
@@ -229,12 +283,20 @@ describe("unlockWithBiometric", () => {
   });
 
   it("throws InvalidStateTransitionError from unlocked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await expect(manager.unlockWithBiometric()).rejects.toThrow(InvalidStateTransitionError);
   });
 
   it("throws InvalidStateTransitionError from grace", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
     await expect(manager.unlockWithBiometric()).rejects.toThrow(InvalidStateTransitionError);
@@ -253,7 +315,11 @@ describe("unlockWithBiometric", () => {
     const memzeroSpy = vi.spyOn(customDeps.sodium, "memzero");
 
     // First unlock succeeds, then lock
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await m.lock();
     expect(m.state).toBe("locked");
 
@@ -270,32 +336,52 @@ describe("unlockWithBiometric", () => {
 
 describe("lock", () => {
   it("transitions from unlocked to locked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     expect(manager.state).toBe("locked");
   });
 
   it("clears keys — getMasterKey throws after lock", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     expect(() => manager.getMasterKey()).toThrow(KeysLockedError);
   });
 
   it("clears keys — getIdentityKeys throws after lock", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     expect(() => manager.getIdentityKeys()).toThrow(KeysLockedError);
   });
 
   it("calls bucketKeyCache.clearAll()", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const clearSpy = vi.spyOn(deps.bucketKeyCache, "clearAll");
     await manager.lock();
     expect(clearSpy).toHaveBeenCalled();
   });
 
   it("calls sodium.memzero on identity keys and masterKey", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const memzeroSpy = vi.spyOn(deps.sodium, "memzero");
     await manager.lock();
     // Should memzero: identity sign SK, identity box SK, masterKey (at least 3 calls)
@@ -303,7 +389,11 @@ describe("lock", () => {
   });
 
   it("is idempotent from locked state", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     await expect(manager.lock()).resolves.toBeUndefined();
     expect(manager.state).toBe("locked");
@@ -318,7 +408,11 @@ describe("lock", () => {
     const onBeforeLock = vi.fn().mockResolvedValue(undefined);
     const depsWithCallback = makeDeps({ onBeforeLock });
     const m = new MobileKeyLifecycleManager(depsWithCallback);
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await m.lock();
     expect(onBeforeLock).toHaveBeenCalledTimes(1);
   });
@@ -328,7 +422,11 @@ describe("lock", () => {
     const onBeforeLock = vi.fn().mockRejectedValue(lockError);
     const depsWithCallback = makeDeps({ onBeforeLock });
     const m = new MobileKeyLifecycleManager(depsWithCallback);
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await expect(m.lock()).rejects.toThrow(lockError);
     expect(m.state).toBe("locked");
     expect(() => m.getMasterKey()).toThrow(KeysLockedError);
@@ -339,14 +437,22 @@ describe("lock", () => {
     const onBeforeLock = vi.fn().mockRejectedValue(lockError);
     const depsWithCallback = makeDeps({ onBeforeLock });
     const m = new MobileKeyLifecycleManager(depsWithCallback);
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await expect(m.logout()).rejects.toThrow(lockError);
     expect(m.state).toBe("terminated");
     expect(() => m.getMasterKey()).toThrow(KeysLockedError);
   });
 
   it("transitions from grace to locked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
     await manager.lock();
@@ -358,7 +464,11 @@ describe("lock", () => {
 
 describe("clearing order", () => {
   it("clears in correct order: bucketKeyCache → identity keys → masterKey", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
 
     // Capture buffer references before lock for identity-based matching
     const masterKeyRef = manager.getMasterKey();
@@ -397,20 +507,32 @@ describe("clearing order", () => {
 
 describe("grace period", () => {
   it("onBackground transitions from unlocked to grace", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
   });
 
   it("onForeground transitions from grace back to unlocked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     manager.onForeground();
     expect(manager.state).toBe("unlocked");
   });
 
   it("grace timer expiry triggers lock", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
 
@@ -419,7 +541,11 @@ describe("grace period", () => {
   });
 
   it("onForeground cancels grace timer", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     manager.onForeground();
     expect(manager.state).toBe("unlocked");
@@ -437,7 +563,11 @@ describe("grace period", () => {
     };
     const paranoidDeps = makeDeps({ config: paranoidConfig });
     const m = new MobileKeyLifecycleManager(paranoidDeps);
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     m.onBackground();
     // With graceTimeoutMs=0, should lock immediately (async)
     await vi.advanceTimersByTimeAsync(0);
@@ -445,7 +575,11 @@ describe("grace period", () => {
   });
 
   it("getMasterKey returns key during grace", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
     const key = manager.getMasterKey();
@@ -454,7 +588,11 @@ describe("grace period", () => {
   });
 
   it("getIdentityKeys returns keys during grace", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
     const keys = manager.getIdentityKeys();
@@ -463,7 +601,11 @@ describe("grace period", () => {
   });
 
   it("getBucketKey works during grace", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const masterKey = manager.getMasterKey();
     const bucketKey = generateBucketKey();
     const wrapped = encryptBucketKey(bucketKey, masterKey, 1);
@@ -478,7 +620,11 @@ describe("grace period", () => {
   });
 
   it("onBackground is a no-op from locked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     manager.onBackground();
     expect(manager.state).toBe("locked");
@@ -490,13 +636,21 @@ describe("grace period", () => {
   });
 
   it("onForeground is a no-op from unlocked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onForeground();
     expect(manager.state).toBe("unlocked");
   });
 
   it("onForeground is a no-op from locked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     manager.onForeground();
     expect(manager.state).toBe("locked");
@@ -508,7 +662,11 @@ describe("grace period", () => {
     const onLockError = vi.fn();
     const customDeps = makeDeps({ onBeforeLock, onLockError });
     const m = new MobileKeyLifecycleManager(customDeps);
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
 
     m.onBackground();
     expect(m.state).toBe("grace");
@@ -523,7 +681,11 @@ describe("grace period", () => {
 
 describe("inactivity timer", () => {
   it("locks after inactivity timeout", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     expect(manager.state).toBe("unlocked");
 
     await vi.advanceTimersByTimeAsync(STANDARD_CONFIG.inactivityTimeoutMs);
@@ -531,7 +693,11 @@ describe("inactivity timer", () => {
   });
 
   it("onUserActivity resets the timer", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
 
     // Advance most of the way
     await vi.advanceTimersByTimeAsync(STANDARD_CONFIG.inactivityTimeoutMs - 1000);
@@ -550,7 +716,11 @@ describe("inactivity timer", () => {
   });
 
   it("restarts inactivity timer after foreground return", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
     manager.onForeground();
@@ -561,7 +731,11 @@ describe("inactivity timer", () => {
   });
 
   it("onUserActivity is a no-op from locked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     // Should not throw
     manager.onUserActivity();
@@ -579,7 +753,11 @@ describe("inactivity timer", () => {
     const onLockError = vi.fn();
     const customDeps = makeDeps({ onBeforeLock, onLockError });
     const m = new MobileKeyLifecycleManager(customDeps);
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
 
     await vi.advanceTimersByTimeAsync(STANDARD_CONFIG.inactivityTimeoutMs);
     expect(m.state).toBe("locked");
@@ -593,7 +771,11 @@ describe("getBucketKey", () => {
   const bucketId = "bucket-test-001" as BucketId;
 
   it("decrypts and returns a bucket key", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const masterKey = manager.getMasterKey();
 
     // Generate and wrap a bucket key
@@ -610,7 +792,11 @@ describe("getBucketKey", () => {
   });
 
   it("caches the bucket key on first access", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const masterKey = manager.getMasterKey();
 
     const bucketKey = generateBucketKey();
@@ -625,7 +811,11 @@ describe("getBucketKey", () => {
   });
 
   it("returns cached key on second access without decrypting again", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const masterKey = manager.getMasterKey();
 
     const bucketKey = generateBucketKey();
@@ -644,20 +834,32 @@ describe("getBucketKey", () => {
   });
 
   it("throws KeysLockedError when locked", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     expect(() => manager.getBucketKey(bucketId, new Uint8Array(64), 1)).toThrow(KeysLockedError);
   });
 
   it("throws on truncated encrypted key data", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     // Too short to contain nonce (24 bytes) + any ciphertext
     const truncated = new Uint8Array(10);
     expect(() => manager.getBucketKey(bucketId, truncated, 1)).toThrow();
   });
 
   it("throws DecryptionFailedError on corrupted ciphertext", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const masterKey = manager.getMasterKey();
     const bucketKey = generateBucketKey();
     const wrapped = encryptBucketKey(bucketKey, masterKey, 1);
@@ -678,34 +880,58 @@ describe("getBucketKey", () => {
 
 describe("logout", () => {
   it("transitions to terminated state", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.logout();
     expect(manager.state).toBe("terminated");
   });
 
   it("clears secure storage", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     const clearSpy = vi.spyOn(deps.storage, "clearAll");
     await manager.logout();
     expect(clearSpy).toHaveBeenCalled();
   });
 
   it("clears all keys from memory", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.logout();
     expect(() => manager.getMasterKey()).toThrow(KeysLockedError);
     expect(() => manager.getIdentityKeys()).toThrow(KeysLockedError);
   });
 
   it("can unlock again after logout", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.logout();
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     expect(manager.state).toBe("unlocked");
   });
 
   it("logout from locked transitions to terminated", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     await manager.lock();
     expect(manager.state).toBe("locked");
     await manager.logout();
@@ -719,7 +945,11 @@ describe("logout", () => {
   });
 
   it("logout from grace transitions to terminated", async () => {
-    await manager.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await manager.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
     manager.onBackground();
     expect(manager.state).toBe("grace");
     await manager.logout();
@@ -733,7 +963,11 @@ describe("logout", () => {
     const customDeps = makeDeps({ onBeforeLock });
     vi.spyOn(customDeps.storage, "clearAll").mockRejectedValue(storageError);
     const m = new MobileKeyLifecycleManager(customDeps);
-    await m.unlockWithPassword(TEST_PASSWORD, salt, encryptedMasterKey);
+    await m.unlockWithPassword(
+      TEST_PASSWORD,
+      salt,
+      await createWrappedMasterKey(TEST_PASSWORD, salt),
+    );
 
     await expect(m.logout()).rejects.toSatisfy((error: Error) => {
       expect(error.message).toContain("storage.clearAll() and onBeforeLock both threw");
