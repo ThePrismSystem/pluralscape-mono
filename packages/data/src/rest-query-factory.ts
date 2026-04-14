@@ -1,3 +1,5 @@
+import { ApiClientError } from "./api-client-error.js";
+
 import type { ApiClient, MaybeOptionalInit, paths } from "@pluralscape/api-client";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { QueryKey } from "@tanstack/react-query";
@@ -53,9 +55,10 @@ export interface RestQueryFactory {
  * Accepting `unknown` here keeps the public API fully typed while avoiding
  * implementation-level assertions on every call site.
  */
-function unwrap(result: { data?: unknown; error?: unknown }, path: string): unknown {
+function unwrap(result: { data?: unknown; error?: unknown }): unknown {
   if (result.error !== undefined) {
-    throw new Error(`API error on ${path}: ${JSON.stringify(result.error)}`);
+    const err = result.error as { code?: string; message?: string } | undefined;
+    throw new ApiClientError(err?.code ?? "UNKNOWN", err?.message ?? "Request failed");
   }
   return result.data;
 }
@@ -94,7 +97,7 @@ export function createRestQueryFactory(deps: RestQueryFactoryDeps): RestQueryFac
             erased.path,
             erased.init as Record<string, unknown> | undefined,
           );
-          const data = unwrap(result, erased.path);
+          const data = unwrap(result);
           if (erased.decrypt !== undefined) {
             const masterKey = deps.getMasterKey();
             if (masterKey === null) throw new Error("Master key not available for decryption");
