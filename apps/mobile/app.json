@@ -7,6 +7,14 @@
     "newArchEnabled": true,
     "icon": "./assets/icon.png",
     "platforms": ["ios", "android", "web"],
+    "plugins": [
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ]
+    ],
     "web": {
       "bundler": "metro",
       "output": "single"

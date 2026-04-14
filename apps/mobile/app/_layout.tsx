@@ -216,6 +216,13 @@ export default function RootLayout(): React.JSX.Element {
       });
   }, [platform]);
 
+  const getToken = useCallback(() => {
+    if (tokenStore === null) {
+      throw new Error("getToken called before token store initialized");
+    }
+    return tokenStore.getToken();
+  }, [tokenStore]);
+
   if (initError !== null) {
     return <ErrorScreen error={initError} onRetry={initPlatform} />;
   }
@@ -223,8 +230,6 @@ export default function RootLayout(): React.JSX.Element {
   if (platform === null || tokenStore === null) {
     return <LoadingSpinner />;
   }
-
-  const getToken = useCallback(() => tokenStore.getToken(), [tokenStore]);
 
   return (
     <PlatformProvider context={platform}>
