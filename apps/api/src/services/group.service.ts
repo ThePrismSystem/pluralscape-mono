@@ -7,7 +7,7 @@ import {
   ReorderGroupsBodySchema,
   UpdateGroupBodySchema,
 } from "@pluralscape/validation";
-import { and, eq, max, sql } from "drizzle-orm";
+import { and, eq, inArray, max, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -479,29 +479,30 @@ export async function reorderGroups(
       }
     }
 
-    const results = await Promise.all(
-      parsed.data.operations.map((op) =>
-        tx
-          .update(groups)
-          .set({ sortOrder: op.sortOrder })
-          .where(
-            and(
-              eq(groups.id, op.groupId),
-              eq(groups.systemId, systemId),
-              eq(groups.archived, false),
-            ),
-          )
-          .returning({ id: groups.id }),
-      ),
+    const targetIds = parsed.data.operations.map((op) => op.groupId);
+    const cases = parsed.data.operations.map(
+      (op) => sql`WHEN ${groups.id} = ${op.groupId} THEN ${op.sortOrder}`,
     );
+    const updatedRows = await tx
+      .update(groups)
+      .set({
+        sortOrder: sql<number>`CASE ${sql.join(cases, sql` `)} ELSE ${groups.sortOrder} END::integer`,
+      })
+      .where(
+        and(
+          inArray(groups.id, targetIds),
+          eq(groups.systemId, systemId),
+          eq(groups.archived, false),
+        ),
+      )
+      .returning({ id: groups.id });
 
-    const ops = parsed.data.operations;
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const op = ops[i];
-      if ((!result || result.length === 0) && op) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `Group ${op.groupId} not found`);
-      }
+    if (updatedRows.length !== parsed.data.operations.length) {
+      throw new ApiHttpError(
+        HTTP_NOT_FOUND,
+        "NOT_FOUND",
+        `Expected ${String(parsed.data.operations.length)} groups, updated ${String(updatedRows.length)}`,
+      );
     }
 
     await audit(tx, {

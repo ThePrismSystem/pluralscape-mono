@@ -2,7 +2,7 @@ import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto
 import { memberPhotos, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "@pluralscape/validation";
-import { and, count, eq, gt, max, or } from "drizzle-orm";
+import { and, count, eq, gt, inArray, max, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -343,34 +343,32 @@ export async function reorderMemberPhotos(
       );
     }
 
-    // Batch update sort orders
-    const updateResults = await Promise.all(
-      parsed.data.order.map((item) =>
-        tx
-          .update(memberPhotos)
-          .set({ sortOrder: item.sortOrder, updatedAt: timestamp })
-          .where(
-            and(
-              eq(memberPhotos.id, item.id),
-              eq(memberPhotos.memberId, memberId),
-              eq(memberPhotos.systemId, systemId),
-            ),
-          )
-          .returning({ id: memberPhotos.id }),
-      ),
+    // Batch update sort orders with single CASE/WHEN query
+    const targetIds = parsed.data.order.map((item) => item.id);
+    const cases = parsed.data.order.map(
+      (item) => sql`WHEN ${memberPhotos.id} = ${item.id} THEN ${item.sortOrder}`,
     );
+    const updatedRows = await tx
+      .update(memberPhotos)
+      .set({
+        sortOrder: sql<number>`CASE ${sql.join(cases, sql` `)} ELSE ${memberPhotos.sortOrder} END::integer`,
+        updatedAt: timestamp,
+      })
+      .where(
+        and(
+          inArray(memberPhotos.id, targetIds),
+          eq(memberPhotos.memberId, memberId),
+          eq(memberPhotos.systemId, systemId),
+        ),
+      )
+      .returning({ id: memberPhotos.id });
 
-    const orderItems = parsed.data.order;
-    for (let i = 0; i < updateResults.length; i++) {
-      const result = updateResults[i];
-      const item = orderItems[i];
-      if ((!result || result.length === 0) && item) {
-        throw new ApiHttpError(
-          HTTP_NOT_FOUND,
-          "NOT_FOUND",
-          `Failed to update sort order for photo ${item.id}`,
-        );
-      }
+    if (updatedRows.length !== parsed.data.order.length) {
+      throw new ApiHttpError(
+        HTTP_NOT_FOUND,
+        "NOT_FOUND",
+        `Failed to update sort order for ${String(parsed.data.order.length - updatedRows.length)} photos`,
+      );
     }
 
     await audit(tx, {
