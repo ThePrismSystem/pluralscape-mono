@@ -67,8 +67,15 @@ describe("createRestQueryFactory", () => {
       getMasterKey: () => null,
     });
     const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
-    await expect(opts.queryFn()).rejects.toThrow(ApiClientError);
-    await expect(opts.queryFn()).rejects.toThrow("Not found");
+    try {
+      await opts.queryFn();
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(ApiClientError);
+      expect((err as ApiClientError).code).toBe("NOT_FOUND");
+      expect((err as ApiClientError).message).toBe("Not found");
+      expect((err as ApiClientError).path).toBe("/health");
+    }
   });
 
   it("queryFn error does not contain raw JSON details", async () => {
@@ -91,6 +98,7 @@ describe("createRestQueryFactory", () => {
       expect((err as ApiClientError).message).toBe("Invalid input");
       expect((err as Error).message).not.toContain("details");
       expect((err as Error).message).not.toContain("required");
+      expect((err as ApiClientError).path).toBe("/health");
     }
   });
 
@@ -107,6 +115,24 @@ describe("createRestQueryFactory", () => {
       expect(err).toBeInstanceOf(ApiClientError);
       expect((err as ApiClientError).code).toBe("UNKNOWN");
       expect((err as ApiClientError).message).toBe("Request failed");
+      expect((err as ApiClientError).path).toBe("/health");
+    }
+  });
+
+  it("queryFn error handles string error values gracefully", async () => {
+    const factory = createRestQueryFactory({
+      apiClient: makeApiClient(undefined, "plain string error"),
+      getMasterKey: () => null,
+    });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    try {
+      await opts.queryFn();
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(ApiClientError);
+      expect((err as ApiClientError).code).toBe("UNKNOWN");
+      expect((err as ApiClientError).message).toBe("Request failed");
+      expect((err as ApiClientError).path).toBe("/health");
     }
   });
 

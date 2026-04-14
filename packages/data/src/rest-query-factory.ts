@@ -55,10 +55,18 @@ export interface RestQueryFactory {
  * Accepting `unknown` here keeps the public API fully typed while avoiding
  * implementation-level assertions on every call site.
  */
-function unwrap(result: { data?: unknown; error?: unknown }): unknown {
+function isApiErrorShape(v: unknown): v is { code?: string; message?: string } {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function unwrap(result: { data?: unknown; error?: unknown }, path: string): unknown {
   if (result.error !== undefined) {
-    const err = result.error as { code?: string; message?: string } | undefined;
-    throw new ApiClientError(err?.code ?? "UNKNOWN", err?.message ?? "Request failed");
+    const err = isApiErrorShape(result.error) ? result.error : undefined;
+    throw new ApiClientError(
+      (err?.code ?? "UNKNOWN") as ApiClientError["code"],
+      err?.message ?? "Request failed",
+      path,
+    );
   }
   return result.data;
 }
@@ -97,7 +105,7 @@ export function createRestQueryFactory(deps: RestQueryFactoryDeps): RestQueryFac
             erased.path,
             erased.init as Record<string, unknown> | undefined,
           );
-          const data = unwrap(result);
+          const data = unwrap(result, erased.path);
           if (erased.decrypt !== undefined) {
             const masterKey = deps.getMasterKey();
             if (masterKey === null) throw new Error("Master key not available for decryption");
