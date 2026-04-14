@@ -1,11 +1,11 @@
 ---
 # client-ziee
 title: Add client-side rate limit handling (retryLink + Retry-After)
-status: done
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-14T06:52:31Z
-updated_at: 2026-04-14T06:52:31Z
+updated_at: 2026-04-14T07:22:16Z
 parent: ps-9ujv
 ---
 
@@ -26,3 +26,8 @@ Reference: security/260414-0126-stride-owasp-full-audit/ (discovered during reme
 
 - Added `retryLink` to `apps/mobile/src/providers/trpc-provider.tsx`: retries up to 3 times on `TOO_MANY_REQUESTS` (httpStatus 429 or tRPC code).
 - Added `onResponse` middleware to `packages/api-client/src/index.ts`: retries 429 responses once after parsing `Retry-After` header (defaults to 1s delay).
+
+## Summary of Changes
+
+- Added retryLink to tRPC client (trpc-provider.tsx) — retries TOO_MANY_REQUESTS up to 3 times
+- Added onResponse middleware to REST client (api-client/index.ts) — single retry on 429 with Retry-After parsing
