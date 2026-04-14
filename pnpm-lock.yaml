@@ -401,10 +401,10 @@ importers:
         version: link:../types
       '@tanstack/react-query':
         specifier: ^5.97.0
-        version: 5.97.0(react@19.2.4)
+        version: 5.97.0(react@19.2.5)
       react:
         specifier: '>=19.0.0'
-        version: 19.2.4
+        version: 19.2.5
 
   packages/db:
     dependencies:
@@ -656,7 +656,7 @@ importers:
         version: link:../types
       bullmq:
         specifier: ^5.73.3
-        version: 5.73.3
+        version: 5.73.5
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@electric-sql/pglite@0.4.4)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@55.0.15(expo@55.0.13)(react-native@0.85.0(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5))(postgres@3.4.9)
@@ -3857,8 +3857,8 @@ packages:
     resolution: {integrity: sha512-bkXY9WsVpY7CvMhKSR6pZilZu9Ln5WDrKVBUXf2S443etkmEO4V58heTecXcUIsNsi4Rx8JUO4NfX1IcQl4deg==}
     engines: {node: '>=18.20'}
 
-  bullmq@5.73.3:
-    resolution: {integrity: sha512-WnwQYYJ6UKdyPXS1OkEp7QY+vFE3nblDLMTwYSqXRym9l+7KC0tAkODITC9mxxCFZGx5jrfAist9p8cZTIZIaQ==}
+  bullmq@5.73.5:
+    resolution: {integrity: sha512-bZu3t1c/1smbA8Jk46OrLA4JRHPTv4uLbqUP0uaviV7S4c/rSl/qKmg3twgKKz+3aB4E0NL0jcjQW5eHwGyQOw==}
 
   bun-types@1.3.11:
     resolution: {integrity: sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg==}
@@ -6291,10 +6291,6 @@ packages:
     resolution: {integrity: sha512-Ttl5D7Rnmi6JGMUpri4UjB4BAN0FPs4yRDnu2XSsigCWOLm11o8GwRlVsh27ER+4WFqsGtrBuuv5zumUaRCmKw==}
     peerDependencies:
       react: ^19.2.4
-
-  react@19.2.4:
-    resolution: {integrity: sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ==}
-    engines: {node: '>=0.10.0'}
 
   react@19.2.5:
     resolution: {integrity: sha512-llUJLzz1zTUBrskt2pwZgLq59AemifIftw4aB7JxOqf1HY2FDaGDxgwpAPVzHU1kdWabH7FauP4i1oEeer2WCA==}
@@ -10238,11 +10234,6 @@ snapshots:
 
   '@tanstack/query-core@5.97.0': {}
 
-  '@tanstack/react-query@5.97.0(react@19.2.4)':
-    dependencies:
-      '@tanstack/query-core': 5.97.0
-      react: 19.2.4
-
   '@tanstack/react-query@5.97.0(react@19.2.5)':
     dependencies:
       '@tanstack/query-core': 5.97.0
@@ -10923,7 +10914,7 @@ snapshots:
 
   builtin-modules@5.0.0: {}
 
-  bullmq@5.73.3:
+  bullmq@5.73.5:
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.10.1
@@ -13620,8 +13611,6 @@ snapshots:
       react: 19.2.5
       react-is: 19.2.5
       scheduler: 0.27.0
-
-  react@19.2.4: {}
 
   react@19.2.5: {}
 
