@@ -17,6 +17,22 @@ import type { ReactNode } from "react";
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_TOO_MANY_REQUESTS = 429;
+const RETRY_MAX_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1_000;
+
+/** Retry predicate for rate-limited requests. Exported for testing. */
+export function shouldRetryRateLimit(opts: {
+  error: { data?: { httpStatus?: number; code?: string } | null };
+  attempts: number;
+}): boolean {
+  if (
+    opts.error.data?.httpStatus === HTTP_TOO_MANY_REQUESTS ||
+    opts.error.data?.code === "TOO_MANY_REQUESTS"
+  ) {
+    return opts.attempts < RETRY_MAX_ATTEMPTS;
+  }
+  return false;
+}
 
 export function isTRPCClientError(cause: unknown): cause is TRPCClientError<AppRouter> {
   return cause instanceof TRPCClientError;
@@ -75,15 +91,8 @@ export function TRPCProvider({
           enabled: (opts) => __DEV__ && opts.direction === "down" && "error" in opts.result,
         }),
         retryLink({
-          retry(opts) {
-            if (
-              opts.error.data?.httpStatus === HTTP_TOO_MANY_REQUESTS ||
-              opts.error.data?.code === "TOO_MANY_REQUESTS"
-            ) {
-              return opts.attempts < 3;
-            }
-            return false;
-          },
+          retry: shouldRetryRateLimit,
+          retryDelayMs: (attempt) => RETRY_BASE_DELAY_MS * 2 ** (attempt - 1),
         }),
         splitLink({
           condition: (op) => op.type === "subscription",
