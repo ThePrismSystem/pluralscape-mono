@@ -51,6 +51,9 @@ vi.mock("@pluralscape/db/pg", () => ({
     createdAt: "created_at",
     updatedAt: "updated_at",
   },
+  systems: {
+    id: "id",
+  },
 }));
 
 vi.mock("@pluralscape/types", async (importOriginal) => {
@@ -67,6 +70,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
   return {
     ...actual,
     and: vi.fn((...args: unknown[]) => args),
+    count: vi.fn(() => "count(*)"),
     eq: vi.fn((a: unknown, b: unknown) => [a, b]),
     lt: vi.fn((a: unknown, b: unknown) => ["lt", a, b]),
     or: vi.fn((...args: unknown[]) => args),
@@ -170,6 +174,17 @@ describe("note service", () => {
 
       await expect(createNote(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
+    });
+
+    it("throws QUOTA_EXCEEDED when note count is at maximum", async () => {
+      const { db, chain } = mockDb();
+      chain.where
+        .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+        .mockResolvedValueOnce([{ count: 5000 }]); // quota count -> at limit
+
+      await expect(createNote(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }),
       );
     });
   });
