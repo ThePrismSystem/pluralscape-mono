@@ -116,6 +116,15 @@ describe("decryptGroup", () => {
     const raw = makeRawGroup({ encryptedData: encrypted });
     expect(() => decryptGroup(raw, masterKey)).toThrow("not an object");
   });
+
+  it("throws when imageSource is a non-object, non-null value", () => {
+    const encrypted = encryptAndEncodeT1(
+      { name: "Test", description: null, imageSource: "not-an-object", color: null, emoji: null },
+      masterKey,
+    );
+    const raw = makeRawGroup({ encryptedData: encrypted });
+    expect(() => decryptGroup(raw, masterKey)).toThrow("imageSource must be object or null");
+  });
 });
 
 describe("decryptGroupPage", () => {
