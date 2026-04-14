@@ -26,7 +26,7 @@ describe("SYNC_PROTOCOL_VERSION", () => {
 // ── SyncErrorCode ────────────────────────────────────────────────────
 
 describe("SyncErrorCode", () => {
-  it("exhaustive array of all 13 codes compiles as SyncErrorCode[]", () => {
+  it("exhaustive array of all 14 codes compiles as SyncErrorCode[]", () => {
     const allCodes: SyncErrorCode[] = [
       "AUTH_FAILED",
       "AUTH_EXPIRED",
@@ -39,10 +39,11 @@ describe("SyncErrorCode", () => {
       "QUOTA_EXCEEDED",
       "RATE_LIMITED",
       "INVALID_ENVELOPE",
+      "UNAUTHORIZED_KEY",
       "PROTOCOL_MISMATCH",
       "INTERNAL_ERROR",
     ];
-    expect(allCodes).toHaveLength(13);
+    expect(allCodes).toHaveLength(14);
   });
 
   it("includes DOCUMENT_LOAD_DENIED", () => {

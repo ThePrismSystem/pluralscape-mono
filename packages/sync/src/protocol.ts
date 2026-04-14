@@ -87,6 +87,7 @@ export type SyncErrorCode =
   | "QUOTA_EXCEEDED" // Storage budget exceeded (see document-lifecycle.md §6)
   | "RATE_LIMITED" // Submitting changes too rapidly
   | "INVALID_ENVELOPE" // Envelope signature verification failed; envelope dropped
+  | "UNAUTHORIZED_KEY" // authorPublicKey does not belong to the authenticated account
   | "PROTOCOL_MISMATCH" // Client protocolVersion != SYNC_PROTOCOL_VERSION
   | "INTERNAL_ERROR"; // Server-side error; retry after backoff
 

@@ -49,15 +49,18 @@ vi.mock("../../lib/session-auth.js", () => ({
 
 /**
  * Chainable mock for db.select().from().where()[.limit()].
- * `mockWhere` is the terminal mock that controls the returned rows for SubscribeRequest.
+ * `mockWhere` is the terminal mock that controls the returned rows for SubscribeRequest
+ * and verifyKeyOwnership (which awaits `.where()` directly without `.limit()`).
  * `mockLimit` is the terminal mock for single-row lookups (FetchSnapshot, etc.).
+ *
+ * The chain is thenable so `await db.select().from().where()` resolves to `[]`.
  */
 const mockLimit = vi.fn().mockResolvedValue([]);
-const mockWhere = vi.fn().mockReturnThis();
-const mockDbChain = {
+const mockDbChain: Record<string, ReturnType<typeof vi.fn>> & { then: ReturnType<typeof vi.fn> } = {
   from: vi.fn().mockReturnThis(),
-  where: mockWhere,
+  where: vi.fn().mockReturnThis(),
   limit: mockLimit,
+  then: vi.fn((resolve: (v: unknown[]) => void) => resolve([])),
 };
 const mockDb = { select: vi.fn().mockReturnValue(mockDbChain) };
 

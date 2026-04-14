@@ -5,12 +5,14 @@
  * into a single module for import simplicity.
  */
 import { getSodium, InvalidInputError } from "@pluralscape/crypto";
+import { authKeys } from "@pluralscape/db/pg";
 import {
   EnvelopeLimitExceededError,
   SnapshotSizeLimitExceededError,
   SnapshotVersionConflictError,
   verifyEnvelopeSignature,
 } from "@pluralscape/sync";
+import { eq } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
 
@@ -40,7 +42,8 @@ import type {
   SyncRelayService,
   UnsubscribeRequest,
 } from "@pluralscape/sync";
-import type { SyncDocumentId } from "@pluralscape/types";
+import type { AccountId, SyncDocumentId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Manifest ────────────────────────────────────────────────────────
 
@@ -188,48 +191,118 @@ export interface SubmitChangeResult {
   readonly sequencedEnvelope: EncryptedChangeEnvelope;
 }
 
+// ── Shared verification helpers ────────────────────────────────────
+
+/**
+ * Verify an envelope signature and return a SyncError on failure, or null on success.
+ * Shared by both change and snapshot submission handlers.
+ */
+export function verifyEnvelopeOrError(
+  envelope: { authorPublicKey: Uint8Array; nonce: Uint8Array; signature: Uint8Array; ciphertext: Uint8Array },
+  correlationId: string,
+  docId: SyncDocumentId,
+): SyncError | null {
+  if (!shouldVerifyEnvelopeSignatures()) return null;
+  try {
+    const sodium = getSodium();
+    const valid = verifyEnvelopeSignature(
+      { ...envelope, documentId: docId, seq: 0 },
+      sodium,
+    );
+    if (!valid) {
+      return {
+        type: "SyncError",
+        correlationId,
+        code: "INVALID_ENVELOPE",
+        message: "Envelope signature verification failed",
+        docId,
+      };
+    }
+  } catch (err: unknown) {
+    if (err instanceof InvalidInputError) {
+      return {
+        type: "SyncError",
+        correlationId,
+        code: "INVALID_ENVELOPE",
+        message: "Envelope signature verification failed",
+        docId,
+      };
+    }
+    throw err;
+  }
+  return null;
+}
+
+/**
+ * Verify that the given authorPublicKey belongs to the authenticated account.
+ * Queries the auth_keys table to find a matching signing key.
+ */
+export async function verifyKeyOwnership(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  authorPublicKey: Uint8Array,
+  correlationId: string,
+  docId: SyncDocumentId,
+): Promise<SyncError | null> {
+  const rows = await db
+    .select({ publicKey: authKeys.publicKey })
+    .from(authKeys)
+    .where(eq(authKeys.accountId, accountId));
+
+  const keyBytes = authorPublicKey instanceof Uint8Array ? authorPublicKey : new Uint8Array(authorPublicKey);
+
+  const match = rows.some((row) => {
+    const rowBytes = row.publicKey instanceof Uint8Array ? row.publicKey : new Uint8Array(row.publicKey);
+    if (rowBytes.length !== keyBytes.length) return false;
+    for (let i = 0; i < rowBytes.length; i++) {
+      if (rowBytes[i] !== keyBytes[i]) return false;
+    }
+    return true;
+  });
+
+  if (!match) {
+    return {
+      type: "SyncError",
+      correlationId,
+      code: "UNAUTHORIZED_KEY",
+      message: "Author public key does not belong to the authenticated account",
+      docId,
+    };
+  }
+  return null;
+}
+
+// ── Submit ──────────────────────────────────────────────────────────
+
 /**
  * Handle a SubmitChangeRequest. Returns ChangeAccepted and the sequenced envelope.
  *
  * When envelope signature verification is enabled (VERIFY_ENVELOPE_SIGNATURES env var),
  * the server verifies the envelope signature before storing/broadcasting. On failure,
  * returns a SyncError with code INVALID_ENVELOPE and the envelope is dropped.
+ *
+ * After signature verification, validates that the authorPublicKey belongs to the
+ * authenticated account's registered signing keys.
  */
 export async function handleSubmitChange(
   message: SubmitChangeRequest,
   relay: SyncRelayService,
+  db: PostgresJsDatabase,
+  accountId: AccountId,
 ): Promise<SubmitChangeResult | SyncError> {
   // Sec-M2: Server-side envelope signature verification
-  if (shouldVerifyEnvelopeSignatures()) {
-    let valid: boolean;
-    try {
-      const sodium = getSodium();
-      valid = verifyEnvelopeSignature(
-        { ...message.change, documentId: message.docId, seq: 0 },
-        sodium,
-      );
-    } catch (err: unknown) {
-      if (err instanceof InvalidInputError) {
-        return {
-          type: "SyncError",
-          correlationId: message.correlationId,
-          code: "INVALID_ENVELOPE",
-          message: "Envelope signature verification failed",
-          docId: message.docId,
-        };
-      }
-      throw err;
-    }
-    if (!valid) {
-      return {
-        type: "SyncError",
-        correlationId: message.correlationId,
-        code: "INVALID_ENVELOPE",
-        message: "Envelope signature verification failed",
-        docId: message.docId,
-      };
-    }
-  }
+  const sigError = verifyEnvelopeOrError(message.change, message.correlationId, message.docId);
+  if (sigError) return sigError;
+
+  // Sec-S-H1: Verify authorPublicKey belongs to the authenticated account
+  const keyError = await verifyKeyOwnership(
+    db,
+    accountId,
+    message.change.authorPublicKey,
+    message.correlationId,
+    message.docId,
+  );
+  if (keyError) return keyError;
 
   let assignedSeq: number;
   try {
@@ -266,11 +339,32 @@ export async function handleSubmitChange(
   };
 }
 
-/** Handle a SubmitSnapshotRequest. Returns SnapshotAccepted or SyncError on conflict. */
+/**
+ * Handle a SubmitSnapshotRequest. Returns SnapshotAccepted or SyncError on conflict.
+ *
+ * Verifies envelope signature (when enabled) and authorPublicKey ownership
+ * before persisting the snapshot.
+ */
 export async function handleSubmitSnapshot(
   message: SubmitSnapshotRequest,
   relay: SyncRelayService,
+  db: PostgresJsDatabase,
+  accountId: AccountId,
 ): Promise<SnapshotAccepted | SyncError> {
+  // Sec-S-M2: Server-side snapshot signature verification
+  const sigError = verifyEnvelopeOrError(message.snapshot, message.correlationId, message.docId);
+  if (sigError) return sigError;
+
+  // Sec-S-H1: Verify authorPublicKey belongs to the authenticated account
+  const keyError = await verifyKeyOwnership(
+    db,
+    accountId,
+    message.snapshot.authorPublicKey,
+    message.correlationId,
+    message.docId,
+  );
+  if (keyError) return keyError;
+
   try {
     await relay.submitSnapshot({ ...message.snapshot, documentId: message.docId });
     return {
