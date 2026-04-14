@@ -24,11 +24,11 @@ const SOURCE = "pluralkit" as const;
 
 // ── Ref lookup wrapper ──────────────────────────────────────────────
 
-async function lookupPkRefs(
+async function lookupPkRefs<F>(
   trpc: TRPCClient,
   systemId: SystemId,
   sourceEntityType: Parameters<typeof lookupRefs>[3],
-  entries: readonly PkManifestEntry<Record<string, unknown>>[],
+  entries: readonly PkManifestEntry<F>[],
 ): Promise<Record<string, string>> {
   if (entries.length === 0) return {};
   return lookupRefs(
