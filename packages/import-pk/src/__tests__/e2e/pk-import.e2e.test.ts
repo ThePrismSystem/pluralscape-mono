@@ -201,4 +201,54 @@ describe.skipIf(!canRunFileSource)("PK Import E2E — Checkpoint Resume", () => 
     expect(resumeResult.outcome).toBe("completed");
     expect(resumeResult.errors.filter((e) => e.fatal)).toHaveLength(0);
   });
+
+  it("resumes adversarial import from an aborted checkpoint", async () => {
+    const account = await registerTestAccount();
+    const trpc = makeTrpcClient(account.sessionToken);
+    const systemId = await getSystemId(account.sessionToken);
+
+    // First run: abort after 3 progress callbacks
+    const abortController = new AbortController();
+    let progressCount = 0;
+    const ABORT_AFTER_PROGRESS = 3;
+    let abortedCheckpoint: ImportCheckpointState | undefined;
+
+    const abortCtx = await createPkE2EPersister(trpc, systemId);
+    const abortResult = await runPkImport({
+      source: createFileSource("adversarial"),
+      persister: abortCtx.persister,
+      initialCheckpoint: makeInitialCheckpoint(),
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: (state) => {
+        progressCount += 1;
+        if (progressCount >= ABORT_AFTER_PROGRESS) {
+          abortedCheckpoint = state;
+          abortController.abort();
+        }
+        return Promise.resolve();
+      },
+      abortSignal: abortController.signal,
+    });
+
+    expect(abortResult.outcome).toBe("aborted");
+    expect(abortedCheckpoint).toBeDefined();
+    if (!abortedCheckpoint) {
+      throw new Error("abort checkpoint was not captured");
+    }
+
+    expect(abortCtx.getCreatedCount()).toBeGreaterThan(0);
+
+    // Second run: resume from the aborted checkpoint
+    const resumeCtx = await createPkE2EPersister(trpc, systemId);
+    const resumeResult = await runPkImport({
+      source: createFileSource("adversarial"),
+      persister: resumeCtx.persister,
+      initialCheckpoint: abortedCheckpoint,
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+
+    expect(resumeResult.outcome).toBe("completed");
+    expect(resumeResult.errors.filter((e) => e.fatal)).toHaveLength(0);
+  });
 });
