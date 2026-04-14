@@ -31,8 +31,13 @@ export function materializeDocument(
   const entityTypes = getEntityTypesForDocument(documentType);
 
   for (const entityType of entityTypes) {
-    const tableDef = getTableDef(entityType);
     const incoming = extractEntities(entityType, doc);
+
+    // Skip entity types with no incoming data — avoids full-table scan
+    // when the document contains no entities of this type.
+    if (incoming.length === 0) continue;
+
+    const tableDef = getTableDef(entityType);
     const current = db.queryAll<EntityRow>(`SELECT * FROM ${tableDef.tableName}`, []);
     const diff = diffEntities(current, incoming);
     applyDiff(db, tableDef, entityType, documentType, diff, eventBus);
