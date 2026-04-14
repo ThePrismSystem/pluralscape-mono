@@ -11,8 +11,10 @@ import type { EntityRow, MaterializerDb } from "../base-materializer.js";
 function makeDb(tables?: Map<string, EntityRow[]>) {
   const t = tables ?? new Map<string, EntityRow[]>();
   const calls: { sql: string; params: unknown[] }[] = [];
+  const queries: string[] = [];
   const db: MaterializerDb = {
     queryAll<T>(sql: string): T[] {
+      queries.push(sql);
       const match = /FROM\s+(\w+)/.exec(sql);
       const tableName = match?.[1] ?? "";
       return (t.get(tableName) ?? []) as T[];
@@ -24,7 +26,7 @@ function makeDb(tables?: Map<string, EntityRow[]>) {
       return fn();
     },
   };
-  return { db, calls };
+  return { db, calls, queries };
 }
 
 function makeEventBus() {
@@ -165,6 +167,49 @@ describe("materializeDocument", () => {
 
     // No inserts or deletes should occur
     expect(calls).toHaveLength(0);
+  });
+
+  it("skips SELECT queries for entity types not present in the document", () => {
+    const { db, queries } = makeDb();
+    const { eventBus } = makeEventBus();
+
+    // system-core has multiple entity types (system, system-settings, member, etc.)
+    // but we only provide members — other tables should not be queried
+    const doc: Record<string, unknown> = {
+      members: {
+        mem_1: {
+          systemId: "sys_1",
+          name: "Alice",
+          pronouns: "she/her",
+          description: null,
+          avatarSource: null,
+          colors: ["#ff0000"],
+          saturationLevel: "full",
+          tags: [],
+          suppressFriendFrontNotification: false,
+          boardMessageNotificationOnFront: true,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 2000,
+        },
+      },
+    };
+
+    materializeDocument("system-core", doc, db, eventBus);
+
+    // Only the members table should be queried
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain("members");
+  });
+
+  it("issues zero SELECT queries when document has no entity data", () => {
+    const { db, queries } = makeDb();
+    const { eventBus } = makeEventBus();
+
+    // system-core has many entity types but doc is empty — no queries should fire
+    materializeDocument("system-core", {}, db, eventBus);
+
+    expect(queries).toHaveLength(0);
   });
 
   it("materializes note document type without errors (no entity types map to it)", () => {
