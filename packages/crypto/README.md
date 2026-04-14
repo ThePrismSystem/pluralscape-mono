@@ -16,7 +16,7 @@ The key hierarchy flows from a user password through Argon2id to a 256-bit maste
 
 **Sodium lifecycle** — `initSodium`, `configureSodium`, `getSodium`, `isReady`
 
-**Key derivation** — `deriveMasterKey`, `generateSalt`, `derivePasswordKey`, `generateMasterKey`, `wrapMasterKey`, `unwrapMasterKey`, `deriveSyncEncryptionKey`
+**Key derivation** — `generateSalt`, `derivePasswordKey`, `generateMasterKey`, `wrapMasterKey`, `unwrapMasterKey`, `deriveSyncEncryptionKey`
 
 **Symmetric encryption** — `encrypt`, `decrypt`, `encryptJSON`, `decryptJSON`, `encryptStream`, `decryptStream`
 
@@ -69,13 +69,12 @@ configureSodium(new WasmSodiumAdapter());
 await initSodium();
 ```
 
-Derive a master key from a password and encrypt data at T1 (zero-knowledge):
+Generate a master key and encrypt data at T1 (zero-knowledge):
 
 ```ts
-import { deriveMasterKey, encryptTier1, decryptTier1, generateSalt } from "@pluralscape/crypto";
+import { generateMasterKey, encryptTier1, decryptTier1 } from "@pluralscape/crypto";
 
-const salt = generateSalt();
-const masterKey = await deriveMasterKey({ password: "hunter2", salt });
+const masterKey = generateMasterKey();
 
 const blob = encryptTier1({ name: "Maple", role: "host" }, masterKey);
 // blob.tier === 1 — safe to send to server
