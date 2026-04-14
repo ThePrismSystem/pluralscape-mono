@@ -1,4 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
+import { configureSodium, initSodium } from "@pluralscape/crypto";
+import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import * as schema from "@pluralscape/db/pg";
 import {
   createPgNotificationTables,
@@ -38,6 +40,9 @@ describe("device-token.service (PGlite integration)", () => {
   let auth: AuthContext;
 
   beforeAll(async () => {
+    configureSodium(new WasmSodiumAdapter());
+    await initSodium();
+
     client = await PGlite.create();
     db = drizzle(client, { schema });
 

@@ -125,7 +125,8 @@ describe("relationship.service (PGlite integration)", () => {
 
     it("rejects cross-system access", async () => {
       const otherAccountId = genAccountId();
-      const otherAuth = makeAuth(otherAccountId, systemId);
+      const otherSystemId = `sys_${crypto.randomUUID()}` as SystemId;
+      const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
       await assertApiError(
         createRelationship(asDb(db), systemId, relParams(), otherAuth, noopAudit),

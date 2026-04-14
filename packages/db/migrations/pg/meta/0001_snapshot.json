@@ -2381,7 +2381,7 @@
         },
         "token_hash": {
           "name": "token_hash",
-          "type": "varchar(64)",
+          "type": "varchar(128)",
           "primaryKey": false,
           "notNull": true
         },

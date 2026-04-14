@@ -245,7 +245,7 @@ CREATE TABLE "device_tokens" (
 	"account_id" varchar(50) NOT NULL,
 	"system_id" varchar(50) NOT NULL,
 	"platform" varchar(50) NOT NULL,
-	"token_hash" varchar(64) NOT NULL,
+	"token_hash" varchar(128) NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"last_active_at" timestamptz,
 	"revoked_at" timestamptz,

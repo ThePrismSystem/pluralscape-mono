@@ -165,7 +165,8 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
 
     it("rejects cross-system access", async () => {
       const otherAccountId = genAccountId();
-      const otherAuth = makeAuth(otherAccountId, systemId);
+      const otherSystemId = `sys_${crypto.randomUUID()}` as SystemId;
+      const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
       await assertApiError(
         createStructureEntity(asDb(db), systemId, entityParams(), otherAuth, noopAudit),
