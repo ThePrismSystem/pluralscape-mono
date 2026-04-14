@@ -29,9 +29,12 @@ import type {
   NoteId,
   PollId,
   PollVoteId,
+  RelationshipId,
   SessionId,
   SystemId,
+  SystemSnapshotId,
   SystemStructureEntityId,
+  SystemStructureEntityTypeId,
   TimerId,
   WebhookDeliveryId,
   WebhookId,
@@ -186,4 +189,16 @@ export function genPollVoteId(): PollVoteId {
 
 export function genAcknowledgementId(): AcknowledgementId {
   return `ack_${crypto.randomUUID()}` as AcknowledgementId;
+}
+
+export function genRelationshipId(): RelationshipId {
+  return `rel_${crypto.randomUUID()}` as RelationshipId;
+}
+
+export function genSystemSnapshotId(): SystemSnapshotId {
+  return `snap_${crypto.randomUUID()}` as SystemSnapshotId;
+}
+
+export function genStructureEntityTypeId(): SystemStructureEntityTypeId {
+  return `stet_${crypto.randomUUID()}` as SystemStructureEntityTypeId;
 }
