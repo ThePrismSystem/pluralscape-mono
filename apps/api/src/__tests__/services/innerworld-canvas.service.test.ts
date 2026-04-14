@@ -31,6 +31,28 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@pluralscape/db/pg", () => ({
+  innerworldCanvas: {
+    systemId: "system_id",
+    encryptedData: "encrypted_data",
+    version: "version",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  },
+  systems: { id: "id" },
+}));
+
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("drizzle-orm")>();
+  return {
+    ...actual,
+    and: vi.fn((...args: unknown[]) => args),
+    count: vi.fn(() => "count(*)"),
+    eq: vi.fn((a: unknown, b: unknown) => [a, b]),
+    sql: Object.assign(vi.fn(), { join: vi.fn() }),
+  };
+});
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
@@ -220,5 +242,27 @@ describe("upsertCanvas", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws QUOTA_EXCEEDED on first write when canvas count is at maximum", async () => {
+    const { db, chain } = mockDb();
+    // No existing canvas (triggers INSERT path); .limit() resolves via its own mock
+    chain.limit.mockResolvedValueOnce([]);
+    // Call 1: existing-check .where() → needs .limit() chained; return chain (has .limit)
+    chain.where.mockReturnValueOnce(chain);
+    // Call 2: quota-lock .where() → needs .for() chained; return chain (has .for)
+    chain.where.mockReturnValueOnce(chain);
+    // Call 3: quota-count .where() → resolves directly to count at limit
+    chain.where.mockResolvedValueOnce([{ count: 50 }]);
+
+    await expect(
+      upsertCanvas(
+        db,
+        SYSTEM_ID,
+        { version: 1, encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
   });
 });
