@@ -653,11 +653,4 @@ describe("RotationWorker", () => {
     expect(sodiumSpy).toHaveBeenCalledWith(OLD_KEY);
     expect(sodiumSpy).toHaveBeenCalledWith(NEW_KEY);
   });
-
-  it("does not throw when sodium is not provided", async () => {
-    apiClient.claimChunk.mockResolvedValue({ data: [], rotationState: "migrating" });
-
-    const worker = new RotationWorker(makeConfig({ sodium: undefined }));
-    await expect(worker.start()).resolves.toBeUndefined();
-  });
 });

@@ -57,7 +57,7 @@ export interface RotationWorkerConfig {
   readonly newKey: AeadKey;
   readonly newKeyVersion: number;
   readonly chunkSize?: number;
-  readonly sodium?: RotationSodium;
+  readonly sodium: RotationSodium;
 }
 
 /** Status callback for progress reporting. */
