@@ -1,9 +1,9 @@
-import { innerworldCanvas, systems } from "@pluralscape/db/pg";
+import { innerworldCanvas } from "@pluralscape/db/pg";
 import { now, toUnixMillis } from "@pluralscape/types";
 import { UpdateCanvasBodySchema } from "@pluralscape/validation";
-import { count, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
-import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -15,10 +15,6 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-const MAX_INNERWORLD_CANVASES_PER_SYSTEM = 50;
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -102,26 +98,6 @@ export async function upsertCanvas(
       // First write — require version=1
       if (parsed.version !== 1) {
         throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Canvas not found");
-      }
-
-      // Enforce per-system canvas quota (INSERT path only — updates don't consume quota)
-      await tx
-        .select({ id: systems.id })
-        .from(systems)
-        .where(eq(systems.id, systemId))
-        .for("update");
-
-      const [canvasCount] = await tx
-        .select({ count: count() })
-        .from(innerworldCanvas)
-        .where(eq(innerworldCanvas.systemId, systemId));
-
-      if ((canvasCount?.count ?? 0) >= MAX_INNERWORLD_CANVASES_PER_SYSTEM) {
-        throw new ApiHttpError(
-          HTTP_TOO_MANY_REQUESTS,
-          "QUOTA_EXCEEDED",
-          `Maximum of ${String(MAX_INNERWORLD_CANVASES_PER_SYSTEM)} innerworld canvases per system`,
-        );
       }
 
       const [row] = await tx
