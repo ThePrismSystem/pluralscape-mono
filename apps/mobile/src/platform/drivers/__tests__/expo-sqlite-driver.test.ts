@@ -1,34 +1,67 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock expo-sqlite since it's not available in vitest
-const mockFinalizeSync = vi.fn();
-
-const mockGetFirstSync = vi.fn<() => Record<string, unknown> | null>(() => null);
-const mockGetAllSync = vi.fn<() => Record<string, unknown>[]>(() => []);
-const mockExecuteSync = vi.fn(() => ({
-  getAllSync: mockGetAllSync,
-  getFirstSync: mockGetFirstSync,
-}));
-const mockPrepareSync = vi.fn(() => ({
-  executeSync: mockExecuteSync,
-  finalizeSync: mockFinalizeSync,
-}));
-const mockExecSync = vi.fn();
-const mockWithTransactionSync = vi.fn((fn: () => void) => {
-  fn();
-});
-const mockCloseSync = vi.fn();
-
-vi.mock("expo-sqlite", () => ({
-  openDatabaseSync: vi.fn(() => ({
+// vi.mock factories are hoisted — all mock fns must come from vi.hoisted()
+const {
+  mockFinalizeSync,
+  mockGetFirstSync,
+  mockGetAllSync,
+  mockExecuteSync,
+  mockPrepareSync,
+  mockExecSync,
+  mockWithTransactionSync,
+  mockCloseSync,
+  mockDeleteDatabaseSync,
+  mockOpenDatabaseSync,
+} = vi.hoisted(() => {
+  const mockFinalizeSync = vi.fn();
+  const mockGetFirstSync = vi.fn<() => Record<string, unknown> | null>(() => null);
+  const mockGetAllSync = vi.fn<() => Record<string, unknown>[]>(() => []);
+  const mockExecuteSync = vi.fn(() => ({
+    getAllSync: mockGetAllSync,
+    getFirstSync: mockGetFirstSync,
+  }));
+  const mockPrepareSync = vi.fn(() => ({
+    executeSync: mockExecuteSync,
+    finalizeSync: mockFinalizeSync,
+  }));
+  const mockExecSync = vi.fn();
+  const mockWithTransactionSync = vi.fn((fn: () => void) => {
+    fn();
+  });
+  const mockCloseSync = vi.fn();
+  const mockDeleteDatabaseSync = vi.fn();
+  const mockOpenDatabaseSync = vi.fn(() => ({
     prepareSync: mockPrepareSync,
     execSync: mockExecSync,
     withTransactionSync: mockWithTransactionSync,
     closeSync: mockCloseSync,
-  })),
+  }));
+
+  return {
+    mockFinalizeSync,
+    mockGetFirstSync,
+    mockGetAllSync,
+    mockExecuteSync,
+    mockPrepareSync,
+    mockExecSync,
+    mockWithTransactionSync,
+    mockCloseSync,
+    mockDeleteDatabaseSync,
+    mockOpenDatabaseSync,
+  };
+});
+
+vi.mock("expo-sqlite", () => ({
+  openDatabaseSync: mockOpenDatabaseSync,
+  deleteDatabaseSync: mockDeleteDatabaseSync,
 }));
 
-import { createExpoSqliteDriver } from "../expo-sqlite-driver.js";
+import {
+  createExpoSqliteDriver,
+  DB_ENCRYPTION_KDF_CONTEXT,
+  DB_ENCRYPTION_KEY_BYTES,
+  DB_ENCRYPTION_SUBKEY_ID,
+} from "../expo-sqlite-driver.js";
 
 describe("createExpoSqliteDriver", () => {
   beforeEach(() => {
@@ -125,6 +158,62 @@ describe("createExpoSqliteDriver", () => {
         driver.prepare("SELECT 1").run();
       }).toThrow("db error");
       expect(mockFinalizeSync).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("encryption", () => {
+    const TEST_KEY_HEX = "a".repeat(64);
+
+    it("applies PRAGMA key when encryptionKeyHex is provided", async () => {
+      await createExpoSqliteDriver({ encryptionKeyHex: TEST_KEY_HEX });
+      expect(mockExecSync).toHaveBeenCalledWith(`PRAGMA key = "x'${TEST_KEY_HEX}'"`);
+    });
+
+    it("does not apply PRAGMA key when no encryption key is provided", async () => {
+      await createExpoSqliteDriver();
+      expect(mockExecSync).not.toHaveBeenCalledWith(expect.stringContaining("PRAGMA key"));
+    });
+
+    it("deletes and recreates DB when encrypted open fails on unencrypted DB", async () => {
+      // First execSync (PRAGMA key) succeeds, then SELECT on sqlite_master throws
+      // (simulating an unencrypted DB that can't be read with a key)
+      let execCallCount = 0;
+      mockExecSync.mockImplementation((sql: string) => {
+        execCallCount++;
+        // Call 1: PRAGMA key on first open - succeeds
+        // Call 2: SELECT count(*) from sqlite_master - fails (unencrypted DB)
+        if (execCallCount === 2 && sql.includes("sqlite_master")) {
+          throw new Error("file is not a database");
+        }
+        // Call 3+: After delete and reopen, everything succeeds
+      });
+
+      await createExpoSqliteDriver({ encryptionKeyHex: TEST_KEY_HEX });
+
+      expect(mockCloseSync).toHaveBeenCalledOnce();
+      expect(mockDeleteDatabaseSync).toHaveBeenCalledWith("pluralscape-sync.db");
+      // openDatabaseSync called twice: initial open + reopen after delete
+      expect(mockOpenDatabaseSync).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not delete DB when encrypted open succeeds", async () => {
+      await createExpoSqliteDriver({ encryptionKeyHex: TEST_KEY_HEX });
+      expect(mockDeleteDatabaseSync).not.toHaveBeenCalled();
+      expect(mockCloseSync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("encryption constants", () => {
+    it("exports KDF context of exactly 8 bytes", () => {
+      expect(DB_ENCRYPTION_KDF_CONTEXT).toHaveLength(8);
+    });
+
+    it("exports a positive subkey ID", () => {
+      expect(DB_ENCRYPTION_SUBKEY_ID).toBeGreaterThan(0);
+    });
+
+    it("exports 32-byte key length (256-bit)", () => {
+      expect(DB_ENCRYPTION_KEY_BYTES).toBe(32);
     });
   });
 });

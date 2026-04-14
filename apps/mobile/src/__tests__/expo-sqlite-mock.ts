@@ -91,6 +91,11 @@ export function __getOpenedDatabase(name: string): MockDatabase | undefined {
   return openedDatabases.get(name);
 }
 
+export function deleteDatabaseSync(name: string): void {
+  openedDatabases.delete(name);
+}
+
 export default {
   openDatabaseSync,
+  deleteDatabaseSync,
 };
