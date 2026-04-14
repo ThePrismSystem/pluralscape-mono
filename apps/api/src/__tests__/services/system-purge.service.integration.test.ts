@@ -18,24 +18,20 @@ vi.mock("../../lib/pwhash-offload.js", () => ({
 }));
 
 import { purgeSystem } from "../../services/system-purge.service.js";
-import { asDb, makeAuth, noopAudit, spyAudit, assertApiError } from "../helpers/integration-setup.js";
+import {
+  asDb,
+  makeAuth,
+  noopAudit,
+  spyAudit,
+  assertApiError,
+} from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const {
-  systems,
-  members,
-  groups,
-  groupMemberships,
-  relationships,
-  frontingSessions,
-  customFronts,
-  notes,
-  channels,
-  messages,
-} = schema;
+const { systems, members, groups, groupMemberships, relationships, notes, channels, messages } =
+  schema;
 
 describe("system-purge.service (PGlite integration)", () => {
   let client: PGlite;
@@ -91,11 +87,9 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     await db.insert(groupMemberships).values({
-      id: `gm_${crypto.randomUUID()}`,
       groupId,
       memberId: memberA,
       systemId,
-      sortOrder: 0,
       createdAt: now,
     });
 
@@ -116,7 +110,7 @@ describe("system-purge.service (PGlite integration)", () => {
       id: `msg_${crypto.randomUUID()}`,
       channelId,
       systemId,
-      authorMemberId: memberA,
+      timestamp: now,
       encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
@@ -188,18 +182,12 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     it("does not affect other systems", async () => {
-      const { auth, accountId } = await setupSystemWithDependents();
+      const { auth, accountId, systemId } = await setupSystemWithDependents();
       const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
       const otherMemberId = await pgInsertMember(db, otherSystemId);
 
       // Purge the first system
-      await purgeSystem(
-        asDb(db),
-        auth.systemId,
-        { password: "correct-password" },
-        auth,
-        noopAudit,
-      );
+      await purgeSystem(asDb(db), systemId, { password: "correct-password" }, auth, noopAudit);
 
       // Other system and its members are still present
       const otherSystemRows = await db

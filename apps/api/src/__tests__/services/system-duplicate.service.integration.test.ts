@@ -73,23 +73,14 @@ describe("system-duplicate.service (PGlite integration)", () => {
   describe("duplicateSystem", () => {
     it("creates a new system from a snapshot", async () => {
       const audit = spyAudit();
-      const result = await duplicateSystem(
-        asDb(db),
-        systemId,
-        { snapshotId },
-        auth,
-        audit,
-      );
+      const result = await duplicateSystem(asDb(db), systemId, { snapshotId }, auth, audit);
 
       expect(result.id).toMatch(/^sys_/);
       expect(result.id).not.toBe(systemId);
       expect(result.sourceSnapshotId).toBe(snapshotId);
 
       // Verify the new system exists in DB
-      const [newSystem] = await db
-        .select()
-        .from(systems)
-        .where(eq(systems.id, result.id));
+      const [newSystem] = await db.select().from(systems).where(eq(systems.id, result.id));
       expect(newSystem).toBeDefined();
       expect(newSystem?.accountId).toBe(accountId);
 
@@ -102,10 +93,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
       await duplicateSystem(asDb(db), systemId, { snapshotId }, auth, noopAudit);
 
       // Source system still exists
-      const [sourceSystem] = await db
-        .select()
-        .from(systems)
-        .where(eq(systems.id, systemId));
+      const [sourceSystem] = await db.select().from(systems).where(eq(systems.id, systemId));
       expect(sourceSystem).toBeDefined();
 
       // Source snapshot still exists
@@ -153,7 +141,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
     it("rejects duplication for non-system account type", async () => {
       const nonSystemAuth: AuthContext = {
         ...auth,
-        accountType: "api-key",
+        accountType: "viewer",
       };
 
       await assertApiError(
@@ -164,20 +152,8 @@ describe("system-duplicate.service (PGlite integration)", () => {
     });
 
     it("creates distinct new system per duplication call", async () => {
-      const result1 = await duplicateSystem(
-        asDb(db),
-        systemId,
-        { snapshotId },
-        auth,
-        noopAudit,
-      );
-      const result2 = await duplicateSystem(
-        asDb(db),
-        systemId,
-        { snapshotId },
-        auth,
-        noopAudit,
-      );
+      const result1 = await duplicateSystem(asDb(db), systemId, { snapshotId }, auth, noopAudit);
+      const result2 = await duplicateSystem(asDb(db), systemId, { snapshotId }, auth, noopAudit);
 
       expect(result1.id).not.toBe(result2.id);
 

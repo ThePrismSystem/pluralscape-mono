@@ -5,7 +5,6 @@ import {
   pgInsertAccount,
   pgInsertMember,
   pgInsertSystem,
-  testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
@@ -90,9 +89,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
     await db.delete(systemStructureEntities);
   });
 
-  function entityParams(
-    overrides: Record<string, unknown> = {},
-  ): Record<string, unknown> {
+  function entityParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     return {
       structureEntityTypeId: entityTypeId,
       encryptedData: testEncryptedDataBase64(),
@@ -107,13 +104,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
   describe("createStructureEntity", () => {
     it("creates an entity with correct fields and audit event", async () => {
       const audit = spyAudit();
-      const result = await createStructureEntity(
-        asDb(db),
-        systemId,
-        entityParams(),
-        auth,
-        audit,
-      );
+      const result = await createStructureEntity(asDb(db), systemId, entityParams(), auth, audit);
 
       expect(result.id).toMatch(/^ste_/);
       expect(result.systemId).toBe(systemId);
@@ -253,9 +244,9 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
 
       // Clean up extra type's entities
       await db.delete(systemStructureEntities);
-      await db.delete(systemStructureEntityTypes).where(
-        eq(systemStructureEntityTypes.id, otherType.id),
-      );
+      await db
+        .delete(systemStructureEntityTypes)
+        .where(eq(systemStructureEntityTypes.id, otherType.id));
     });
 
     it("excludes archived entities by default", async () => {
@@ -345,7 +336,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
           auth,
           noopAudit,
         ),
-        "VERSION_CONFLICT",
+        "CONFLICT",
         409,
       );
     });
@@ -442,15 +433,12 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const now = Date.now();
       await db.insert(systemStructureEntityAssociations).values({
         id: `stea_${crypto.randomUUID()}`,
         systemId,
         sourceEntityId: entityA.id,
         targetEntityId: entityB.id,
-        encryptedData: testBlob(),
-        createdAt: now,
-        updatedAt: now,
+        createdAt: Date.now(),
       });
 
       await assertApiError(
@@ -463,13 +451,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
 
     it("throws NOT_FOUND for nonexistent entity", async () => {
       await assertApiError(
-        deleteStructureEntity(
-          asDb(db),
-          systemId,
-          `ste_${crypto.randomUUID()}`,
-          auth,
-          noopAudit,
-        ),
+        deleteStructureEntity(asDb(db), systemId, `ste_${crypto.randomUUID()}`, auth, noopAudit),
         "NOT_FOUND",
         404,
       );
@@ -540,9 +522,9 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
 
       // Clean up
       await db.delete(systemStructureEntities);
-      await db.delete(systemStructureEntityTypes).where(
-        eq(systemStructureEntityTypes.id, tempType.id),
-      );
+      await db
+        .delete(systemStructureEntityTypes)
+        .where(eq(systemStructureEntityTypes.id, tempType.id));
     });
 
     it("allows entity type deletion when no entities reference it", async () => {

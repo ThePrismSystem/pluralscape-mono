@@ -32,7 +32,7 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, MemberId, RelationshipId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const { relationships, members } = schema;
+const { relationships } = schema;
 
 describe("relationship.service (PGlite integration)", () => {
   let client: PGlite;
@@ -79,13 +79,7 @@ describe("relationship.service (PGlite integration)", () => {
   describe("createRelationship", () => {
     it("creates a relationship between two members", async () => {
       const audit = spyAudit();
-      const result = await createRelationship(
-        asDb(db),
-        systemId,
-        relParams(),
-        auth,
-        audit,
-      );
+      const result = await createRelationship(asDb(db), systemId, relParams(), auth, audit);
 
       expect(result.id).toMatch(/^rel_/);
       expect(result.systemId).toBe(systemId);
@@ -145,13 +139,7 @@ describe("relationship.service (PGlite integration)", () => {
 
   describe("getRelationship", () => {
     it("returns a relationship by id", async () => {
-      const created = await createRelationship(
-        asDb(db),
-        systemId,
-        relParams(),
-        auth,
-        noopAudit,
-      );
+      const created = await createRelationship(asDb(db), systemId, relParams(), auth, noopAudit);
 
       const fetched = await getRelationship(asDb(db), systemId, created.id, auth);
       expect(fetched.id).toBe(created.id);
@@ -161,12 +149,7 @@ describe("relationship.service (PGlite integration)", () => {
 
     it("throws NOT_FOUND for nonexistent id", async () => {
       await assertApiError(
-        getRelationship(
-          asDb(db),
-          systemId,
-          `rel_${crypto.randomUUID()}` as RelationshipId,
-          auth,
-        ),
+        getRelationship(asDb(db), systemId, `rel_${crypto.randomUUID()}` as RelationshipId, auth),
         "NOT_FOUND",
         404,
       );
@@ -215,13 +198,7 @@ describe("relationship.service (PGlite integration)", () => {
 
     it("filters by type", async () => {
       await createRelationship(asDb(db), systemId, relParams(), auth, noopAudit);
-      await createRelationship(
-        asDb(db),
-        systemId,
-        relParams({ type: "partner" }),
-        auth,
-        noopAudit,
-      );
+      await createRelationship(asDb(db), systemId, relParams({ type: "partner" }), auth, noopAudit);
 
       const result = await listRelationships(
         asDb(db),
@@ -249,13 +226,7 @@ describe("relationship.service (PGlite integration)", () => {
 
   describe("updateRelationship", () => {
     it("updates type and bidirectional flag", async () => {
-      const created = await createRelationship(
-        asDb(db),
-        systemId,
-        relParams(),
-        auth,
-        noopAudit,
-      );
+      const created = await createRelationship(asDb(db), systemId, relParams(), auth, noopAudit);
 
       const audit = spyAudit();
       const updated = await updateRelationship(
@@ -279,13 +250,7 @@ describe("relationship.service (PGlite integration)", () => {
     });
 
     it("rejects stale version (OCC)", async () => {
-      const created = await createRelationship(
-        asDb(db),
-        systemId,
-        relParams(),
-        auth,
-        noopAudit,
-      );
+      const created = await createRelationship(asDb(db), systemId, relParams(), auth, noopAudit);
 
       await assertApiError(
         updateRelationship(
@@ -301,7 +266,7 @@ describe("relationship.service (PGlite integration)", () => {
           auth,
           noopAudit,
         ),
-        "VERSION_CONFLICT",
+        "CONFLICT",
         409,
       );
     });
@@ -311,21 +276,11 @@ describe("relationship.service (PGlite integration)", () => {
 
   describe("deleteRelationship", () => {
     it("hard-deletes a relationship", async () => {
-      const created = await createRelationship(
-        asDb(db),
-        systemId,
-        relParams(),
-        auth,
-        noopAudit,
-      );
+      const created = await createRelationship(asDb(db), systemId, relParams(), auth, noopAudit);
       const audit = spyAudit();
       await deleteRelationship(asDb(db), systemId, created.id, auth, audit);
 
-      await assertApiError(
-        getRelationship(asDb(db), systemId, created.id, auth),
-        "NOT_FOUND",
-        404,
-      );
+      await assertApiError(getRelationship(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
       expect(audit.calls[0]?.eventType).toBe("relationship.deleted");
     });
 
@@ -348,22 +303,12 @@ describe("relationship.service (PGlite integration)", () => {
 
   describe("archive / restore", () => {
     it("archives and then restores a relationship", async () => {
-      const created = await createRelationship(
-        asDb(db),
-        systemId,
-        relParams(),
-        auth,
-        noopAudit,
-      );
+      const created = await createRelationship(asDb(db), systemId, relParams(), auth, noopAudit);
 
       await archiveRelationship(asDb(db), systemId, created.id, auth, noopAudit);
 
       // Archived relationship is not visible via get
-      await assertApiError(
-        getRelationship(asDb(db), systemId, created.id, auth),
-        "NOT_FOUND",
-        404,
-      );
+      await assertApiError(getRelationship(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
 
       const restored = await restoreRelationship(asDb(db), systemId, created.id, auth, noopAudit);
       expect(restored.id).toBe(created.id);
