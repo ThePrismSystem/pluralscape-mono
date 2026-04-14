@@ -5,7 +5,7 @@ import { getNotificationPubSub } from "./notification-pubsub.js";
 
 import type { EntityChangeEvent, SystemId } from "@pluralscape/types";
 
-const EntityChangeEventSchema = z.discriminatedUnion("entity", [
+const EntityChangeEventSchema = z.union([
   z.object({
     entity: z.literal("message"),
     type: z.enum(["created", "updated", "archived", "deleted"]),
@@ -14,8 +14,12 @@ const EntityChangeEventSchema = z.discriminatedUnion("entity", [
   }),
   z.object({
     entity: z.literal("boardMessage"),
-    type: z.enum(["created", "updated", "archived", "deleted", "pinned", "unpinned", "reordered"]),
-    boardMessageId: z.string().optional(),
+    type: z.enum(["created", "updated", "archived", "deleted", "pinned", "unpinned"]),
+    boardMessageId: z.string(),
+  }),
+  z.object({
+    entity: z.literal("boardMessage"),
+    type: z.literal("reordered"),
   }),
   z.object({
     entity: z.literal("poll"),
