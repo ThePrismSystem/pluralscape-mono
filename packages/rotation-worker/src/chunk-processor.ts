@@ -1,4 +1,4 @@
-import { encrypt } from "@pluralscape/crypto";
+import { encrypt, getSodium } from "@pluralscape/crypto";
 
 import { decryptWithDualKey } from "./dual-key-reader.js";
 
@@ -64,8 +64,9 @@ async function processItem(
         newKeyVersion,
       );
 
-      // Re-encrypt with new key
+      // Re-encrypt with new key, then zero plaintext
       const encrypted = encrypt(plaintext, newKey);
+      getSodium().memzero(plaintext);
 
       // Upload re-encrypted blob
       await apiClient.uploadReencrypted(item.entityType, item.entityId, encrypted, newKeyVersion);

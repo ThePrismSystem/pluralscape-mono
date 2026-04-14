@@ -89,7 +89,7 @@ export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
 
 // ── Master key ──────────────────────────────────────────────────────
 export type { PwhashProfile } from "./master-key.js";
-export { deriveMasterKey, generateSalt } from "./master-key.js";
+export { generateSalt } from "./master-key.js";
 
 // ── Password hashing (string-based) ────────────────────────────────
 export { hashPassword, verifyPassword } from "./password.js";

@@ -14,7 +14,7 @@ import {
   generateIdentityKeypair,
   serializePublicKey,
 } from "../identity.js";
-import { deriveMasterKey, generateSalt } from "../master-key.js";
+import { generateMasterKey } from "../master-key-wrap.js";
 import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";
@@ -30,9 +30,8 @@ beforeAll(async () => {
   configureSodium(adapter);
   await initSodium();
 
-  const salt = generateSalt();
-  masterKey = await deriveMasterKey("test-password", salt, "mobile");
-  masterKey2 = await deriveMasterKey("different-password", salt, "mobile");
+  masterKey = generateMasterKey();
+  masterKey2 = generateMasterKey();
 });
 
 afterAll(() => {

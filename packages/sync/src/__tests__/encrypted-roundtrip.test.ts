@@ -2,10 +2,9 @@ import * as Automerge from "@automerge/automerge";
 import {
   configureSodium,
   createBucketKeyCache,
-  deriveMasterKey,
   generateBucketKey,
   generateIdentityKeypair,
-  generateSalt,
+  generateMasterKey,
   initSodium,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
@@ -39,8 +38,7 @@ beforeAll(async () => {
   configureSodium(sodium);
   await initSodium();
 
-  const salt = generateSalt();
-  masterKey = await deriveMasterKey("integration-test-password", salt, "mobile");
+  masterKey = generateMasterKey();
   const identity = generateIdentityKeypair(masterKey);
   signingKeys = identity.signing;
   bucketKeyCache = createBucketKeyCache();
@@ -233,29 +231,24 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     }
   });
 
-  it("multi-device: two devices derive same master key and sync successfully", async () => {
-    // Both devices use the same password + salt
-    const sharedSalt = generateSalt();
-    const password = "same-password-both-devices";
-    const masterKey1 = await deriveMasterKey(password, sharedSalt, "mobile");
-    const masterKey2 = await deriveMasterKey(password, sharedSalt, "mobile");
+  it("multi-device: two devices with same master key sync successfully", async () => {
+    // Both devices unwrap the same encrypted master key blob (KEK/DEK pattern),
+    // so they end up with the same random master key.
+    const sharedMasterKey = generateMasterKey();
 
-    // Verify deterministic derivation
-    expect(new Uint8Array(masterKey1)).toEqual(new Uint8Array(masterKey2));
-
-    const identity1 = generateIdentityKeypair(masterKey1);
-    const identity2 = generateIdentityKeypair(masterKey2);
+    const identity1 = generateIdentityKeypair(sharedMasterKey);
+    const identity2 = generateIdentityKeypair(sharedMasterKey);
     const cache1 = createBucketKeyCache();
     const cache2 = createBucketKeyCache();
 
     const resolver1 = DocumentKeyResolver.create({
-      masterKey: masterKey1,
+      masterKey: sharedMasterKey,
       signingKeys: identity1.signing,
       bucketKeyCache: cache1,
       sodium,
     });
     const resolver2 = DocumentKeyResolver.create({
-      masterKey: masterKey2,
+      masterKey: sharedMasterKey,
       signingKeys: identity2.signing,
       bucketKeyCache: cache2,
       sodium,
@@ -284,7 +277,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       });
       await relay.submit(envelope);
 
-      // Device 2 syncs the change (using its own independently-derived keys)
+      // Device 2 syncs the change (using same master key, unwrapped independently)
       const session2 = new EncryptedSyncSession({
         doc: Automerge.clone(base),
         keys: keys2,
@@ -301,8 +294,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       resolver2.dispose();
       cache1.clearAll();
       cache2.clearAll();
-      sodium.memzero(masterKey1);
-      sodium.memzero(masterKey2);
+      sodium.memzero(sharedMasterKey);
     }
   });
 

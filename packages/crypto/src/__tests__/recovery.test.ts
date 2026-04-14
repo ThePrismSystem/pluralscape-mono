@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
-import { deriveMasterKey, generateSalt } from "../master-key.js";
+import { generateMasterKey } from "../master-key-wrap.js";
 import {
   generateRecoveryKey,
   isValidRecoveryKeyFormat,
@@ -19,8 +19,7 @@ let masterKey: KdfMasterKey;
 
 beforeAll(async () => {
   await setupSodium();
-  const salt = generateSalt();
-  masterKey = await deriveMasterKey("test-password", salt, "mobile");
+  masterKey = generateMasterKey();
 });
 
 afterAll(teardownSodium);

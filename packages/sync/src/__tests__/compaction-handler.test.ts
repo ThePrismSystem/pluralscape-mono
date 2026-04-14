@@ -6,9 +6,8 @@
 import {
   configureSodium,
   createBucketKeyCache,
-  deriveMasterKey,
   generateIdentityKeypair,
-  generateSalt,
+  generateMasterKey,
   initSodium,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
@@ -40,8 +39,7 @@ beforeAll(async () => {
   configureSodium(sodium);
   await initSodium();
 
-  const salt = generateSalt();
-  masterKey = await deriveMasterKey("compaction-test-password", salt, "mobile");
+  masterKey = generateMasterKey();
   const identity = generateIdentityKeypair(masterKey);
   signingKeys = identity.signing;
   bucketKeyCache = createBucketKeyCache();

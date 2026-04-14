@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, expectTypeOf, it, vi } from "vit
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
-import { deriveMasterKey, generateSalt } from "../master-key.js";
+import { generateMasterKey } from "../master-key-wrap.js";
 import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
 import {
   decryptTier1,
@@ -28,9 +28,8 @@ beforeAll(async () => {
   configureSodium(adapter);
   await initSodium();
 
-  const salt = generateSalt();
-  masterKey = await deriveMasterKey("test-password", salt, "mobile");
-  masterKey2 = await deriveMasterKey("different-password", salt, "mobile");
+  masterKey = generateMasterKey();
+  masterKey2 = generateMasterKey();
 });
 
 afterAll(() => {
