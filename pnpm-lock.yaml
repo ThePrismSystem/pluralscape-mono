@@ -401,10 +401,10 @@ importers:
         version: link:../types
       '@tanstack/react-query':
         specifier: ^5.97.0
-        version: 5.97.0(react@19.2.4)
+        version: 5.97.0(react@19.2.5)
       react:
         specifier: '>=19.0.0'
-        version: 19.2.4
+        version: 19.2.5
 
   packages/db:
     dependencies:
@@ -462,7 +462,7 @@ importers:
         version: 8.0.5
       resend:
         specifier: ^6.0.0
-        version: 6.10.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
+        version: 6.11.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*
@@ -6292,10 +6292,6 @@ packages:
     peerDependencies:
       react: ^19.2.4
 
-  react@19.2.4:
-    resolution: {integrity: sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ==}
-    engines: {node: '>=0.10.0'}
-
   react@19.2.5:
     resolution: {integrity: sha512-llUJLzz1zTUBrskt2pwZgLq59AemifIftw4aB7JxOqf1HY2FDaGDxgwpAPVzHU1kdWabH7FauP4i1oEeer2WCA==}
     engines: {node: '>=0.10.0'}
@@ -6373,8 +6369,8 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
-  resend@6.10.0:
-    resolution: {integrity: sha512-i7CwZpYj4Oho1RxsTpLcCUkO08+HiL4NXrm6jLJ2WzJ89UGI8eROSieLONJA3hnUrf1OYnCyfq5F6POnHUMv1Q==}
+  resend@6.11.0:
+    resolution: {integrity: sha512-S9gxOccfwc+E6Cr3q28Gu8NkiIjYlYPlj9rqk4zkIuzlEoh8sWu/IvJSg7U7t+o3g0Ov2IOCzcneUaCi/M/WdQ==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -6742,8 +6738,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  svix@1.88.0:
-    resolution: {integrity: sha512-vm/JrrUd3bVyBE+3L33TIyVSs8gS5fYx7lrISvKlDJXTYX1ACH4REX8P1tHxsSKoZi/rvifM1t0XRc5Vc45THw==}
+  svix@1.90.0:
+    resolution: {integrity: sha512-ljkZuyy2+IBEoESkIpn8sLM+sxJHQcPxlZFxU+nVDhltNfUMisMBzWX/UR8SjEnzoI28ZjCzMbmYAPwSTucoMw==}
 
   swagger2openapi@7.0.8:
     resolution: {integrity: sha512-upi/0ZGkYgEcLeGieoz8gT74oWHA0E7JivX7aN9mAf+Tc7BQoRBvnIGHoPDw+f9TXTW4s6kGYCZJtauP6OYp7g==}
@@ -10238,11 +10234,6 @@ snapshots:
 
   '@tanstack/query-core@5.97.0': {}
 
-  '@tanstack/react-query@5.97.0(react@19.2.4)':
-    dependencies:
-      '@tanstack/query-core': 5.97.0
-      react: 19.2.4
-
   '@tanstack/react-query@5.97.0(react@19.2.5)':
     dependencies:
       '@tanstack/query-core': 5.97.0
@@ -13621,8 +13612,6 @@ snapshots:
       react-is: 19.2.5
       scheduler: 0.27.0
 
-  react@19.2.4: {}
-
   react@19.2.5: {}
 
   readable-stream@2.3.8:
@@ -13722,10 +13711,10 @@ snapshots:
 
   require-from-string@2.0.2: {}
 
-  resend@6.10.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)):
+  resend@6.11.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)):
     dependencies:
       postal-mime: 2.7.4
-      svix: 1.88.0
+      svix: 1.90.0
     optionalDependencies:
       '@react-email/render': 1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
 
@@ -14081,7 +14070,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  svix@1.88.0:
+  svix@1.90.0:
     dependencies:
       standardwebhooks: 1.0.0
       uuid: 10.0.0
