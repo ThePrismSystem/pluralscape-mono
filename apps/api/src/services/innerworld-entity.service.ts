@@ -1,9 +1,9 @@
-import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
+import { innerworldEntities, innerworldRegions, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateEntityBodySchema, UpdateEntityBodySchema } from "@pluralscape/validation";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity as archiveEntityGeneric } from "../lib/entity-lifecycle.js";
@@ -29,6 +29,8 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+const MAX_INNERWORLD_ENTITIES_PER_SYSTEM = 500;
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -91,6 +93,24 @@ export async function createEntity(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Enforce per-system entity quota
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existingCount] = await tx
+      .select({ count: count() })
+      .from(innerworldEntities)
+      .where(
+        and(eq(innerworldEntities.systemId, systemId), eq(innerworldEntities.archived, false)),
+      );
+
+    if ((existingCount?.count ?? 0) >= MAX_INNERWORLD_ENTITIES_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_INNERWORLD_ENTITIES_PER_SYSTEM)} innerworld entities per system`,
+      );
+    }
+
     // Validate regionId exists in same system if provided
     const regionId = parsed.regionId ?? null;
     if (regionId !== null) {
