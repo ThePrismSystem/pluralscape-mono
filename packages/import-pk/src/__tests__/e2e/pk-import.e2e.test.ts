@@ -37,7 +37,7 @@ import {
 import type { E2EPersisterCtx as E2EPersisterContext, TRPCClient } from "./e2e-helpers.js";
 import type { PkManifest } from "../integration/manifest.types.js";
 import type { ImportRunResult } from "@pluralscape/import-core";
-import type { ImportCheckpointState } from "@pluralscape/types";
+import type { ImportCheckpointState, ImportFailureKind } from "@pluralscape/types";
 
 // ── No-op progress ──────────────────────────────────────────────────
 
@@ -90,12 +90,18 @@ function defineImportSuite(
     });
 
     it("non-fatal errors are all expected mapper failures", () => {
+      const EXPECTED_KINDS: readonly ImportFailureKind[] = [
+        "fk-miss",
+        "invalid-source-document",
+        "validation-failed",
+      ];
+
       const nonFatal = result.errors.filter((e) => !e.fatal);
       for (const e of nonFatal) {
+        expect(e.kind, `non-fatal error missing kind: ${JSON.stringify(e)}`).toBeDefined();
+        if (e.kind === undefined) continue; // unreachable — expect above throws
         expect(
-          ["fk-miss", "invalid-source-document", "validation-failed", undefined].includes(
-            (e as { kind?: string }).kind,
-          ),
+          EXPECTED_KINDS.includes(e.kind),
           `unexpected non-fatal error kind: ${JSON.stringify(e)}`,
         ).toBe(true);
       }
@@ -114,7 +120,7 @@ function defineImportSuite(
     });
 
     it("fronting sessions have correct field values", async () => {
-      await assertPkFrontingSessions(trpc, ctx.masterKey, ctx.systemId);
+      await assertPkFrontingSessions(trpc, ctx.masterKey, ctx.systemId, manifest);
     });
 
     it("privacy buckets have correct field values", async () => {
