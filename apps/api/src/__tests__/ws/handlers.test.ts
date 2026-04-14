@@ -112,6 +112,19 @@ function isSubmitChangeResult(
 }
 
 const log = mockLog();
+const TEST_ACCOUNT_ID = crypto.randomUUID() as AccountId;
+
+/**
+ * Create a mock PostgresJsDatabase that satisfies verifyKeyOwnership.
+ * Returns the test authorPublicKey so the ownership check passes.
+ */
+function mockDb(authorPublicKey: Uint8Array = pubkey(10)) {
+  const whereResult = Promise.resolve([{ publicKey: authorPublicKey }]);
+  const whereFn = vi.fn().mockReturnValue(whereResult);
+  const fromFn = vi.fn().mockReturnValue({ where: whereFn });
+  const selectFn = vi.fn().mockReturnValue({ from: fromFn });
+  return { select: selectFn } as never;
+}
 
 // Disable envelope signature verification for handler tests that use mock data.
 // Tests that specifically exercise signature verification enable it per-test.
@@ -515,7 +528,7 @@ describe("handleSubmitChange", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const result = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
     expect(isSubmitChangeResult(result)).toBe(true);
     if (!isSubmitChangeResult(result)) return;
 
@@ -544,8 +557,8 @@ describe("handleSubmitChange", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const result1 = await handleSubmitChange(msg1, relay.asService());
-    const result2 = await handleSubmitChange(msg2, relay.asService());
+    const result1 = await handleSubmitChange(msg1, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
+    const result2 = await handleSubmitChange(msg2, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
 
     expect(isSubmitChangeResult(result1)).toBe(true);
     expect(isSubmitChangeResult(result2)).toBe(true);
@@ -569,7 +582,7 @@ describe("handleSubmitChange", () => {
       change: changeWithDifferentDoc,
     };
 
-    const result = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
     expect(isSubmitChangeResult(result)).toBe(true);
     if (!isSubmitChangeResult(result)) return;
 
@@ -596,7 +609,12 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(
+      message,
+      relay.asService(),
+      mockDb(),
+      TEST_ACCOUNT_ID,
+    );
 
     expect(result.type).toBe("SnapshotAccepted");
     expect(result.correlationId).toBe(correlationId);
@@ -620,7 +638,12 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(
+      message,
+      relay.asService(),
+      mockDb(),
+      TEST_ACCOUNT_ID,
+    );
 
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
@@ -642,7 +665,12 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(
+      message,
+      relay.asService(),
+      mockDb(),
+      TEST_ACCOUNT_ID,
+    );
 
     expect(result.type).toBe("SyncError");
   });
@@ -659,7 +687,12 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(differentDocId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(
+      message,
+      relay.asService(),
+      mockDb(),
+      TEST_ACCOUNT_ID,
+    );
 
     expect(result.type).toBe("SnapshotAccepted");
 
@@ -898,7 +931,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const result = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
 
     expect(isSubmitChangeResult(result)).toBe(false);
     if (!isSubmitChangeResult(result)) {
@@ -925,7 +958,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const result = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
 
     expect(isSubmitChangeResult(result)).toBe(true);
   });
@@ -943,7 +976,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const result = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
 
     expect(isSubmitChangeResult(result)).toBe(true);
   });
@@ -972,7 +1005,12 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
       },
     };
 
-    const result = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(
+      message,
+      relay.asService(),
+      mockDb(publicKey),
+      TEST_ACCOUNT_ID,
+    );
 
     expect(isSubmitChangeResult(result)).toBe(true);
     if (isSubmitChangeResult(result)) {
@@ -1001,7 +1039,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
       },
     };
 
-    const result = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
 
     expect(isSubmitChangeResult(result)).toBe(false);
     if (!isSubmitChangeResult(result)) {

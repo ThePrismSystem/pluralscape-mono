@@ -55,14 +55,25 @@ vi.mock("../../lib/session-auth.js", () => ({
  *
  * The chain is thenable so `await db.select().from().where()` resolves to `[]`.
  */
+/**
+ * Default rows returned when the where() result is awaited directly
+ * (e.g. by verifyKeyOwnership). Contains a public key matching the
+ * test change payloads (fill=4, fill=8) so ownership checks pass.
+ */
+const defaultWhereRows: unknown[] = [
+  { publicKey: new Uint8Array(32).fill(4) },
+  { publicKey: new Uint8Array(32).fill(8) },
+];
 const mockLimit = vi.fn().mockResolvedValue([]);
-const mockDbChain: Record<string, ReturnType<typeof vi.fn>> & { then: ReturnType<typeof vi.fn> } = {
-  from: vi.fn().mockReturnThis(),
-  where: vi.fn().mockReturnThis(),
+const mockWhere = vi.fn(() => ({
   limit: mockLimit,
-  then: vi.fn((resolve: (v: unknown[]) => void) => resolve([])),
+  then(resolve: (v: unknown[]) => void, reject?: (e: unknown) => void) {
+    return Promise.resolve(defaultWhereRows).then(resolve, reject);
+  },
+}));
+const mockDb = {
+  select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue({ where: mockWhere }) }),
 };
-const mockDb = { select: vi.fn().mockReturnValue(mockDbChain) };
 
 vi.mock("../../lib/db.js", () => ({
   getDb: vi.fn().mockImplementation(() => Promise.resolve(mockDb)),
@@ -158,7 +169,12 @@ afterEach(() => {
   mockLimit.mockReset();
   mockLimit.mockResolvedValue([]);
   mockWhere.mockReset();
-  mockWhere.mockReturnThis();
+  mockWhere.mockImplementation(() => ({
+    limit: mockLimit,
+    then(resolve: (v: unknown[]) => void, reject?: (e: unknown) => void) {
+      return Promise.resolve(defaultWhereRows).then(resolve, reject);
+    },
+  }));
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -339,7 +355,15 @@ describe("message-router branch coverage", () => {
       const state = makeAuthenticatedState("conn-batch-db", ws, manager);
 
       // Mock the batch DB query (where() is the terminal call for SubscribeRequest)
-      mockWhere.mockResolvedValueOnce([{ documentId: "doc-batch-1", systemId: "sys_mr2" }]);
+      mockWhere.mockImplementationOnce(() => ({
+        limit: mockLimit,
+        then(resolve: (v: unknown[]) => void, reject?: (e: unknown) => void) {
+          return Promise.resolve([{ documentId: "doc-batch-1", systemId: "sys_mr2" }]).then(
+            resolve,
+            reject,
+          );
+        },
+      }));
 
       await routeMessage(
         JSON.stringify({
