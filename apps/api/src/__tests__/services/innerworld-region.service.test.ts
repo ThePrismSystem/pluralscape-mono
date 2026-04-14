@@ -10,6 +10,42 @@ import type { InnerWorldRegionId, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
+vi.mock("@pluralscape/db/pg", () => ({
+  innerworldEntities: {
+    id: "id",
+    regionId: "region_id",
+    systemId: "system_id",
+    archived: "archived",
+    archivedAt: "archived_at",
+    updatedAt: "updated_at",
+  },
+  innerworldRegions: {
+    id: "id",
+    systemId: "system_id",
+    parentRegionId: "parent_region_id",
+    encryptedData: "encrypted_data",
+    version: "version",
+    archived: "archived",
+    archivedAt: "archived_at",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  },
+  systems: { id: "id" },
+}));
+
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("drizzle-orm")>();
+  return {
+    ...actual,
+    and: vi.fn((...args: unknown[]) => args),
+    count: vi.fn(() => "count(*)"),
+    eq: vi.fn((a: unknown, b: unknown) => [a, b]),
+    gt: vi.fn((a: unknown, b: unknown) => ["gt", a, b]),
+    inArray: vi.fn((a: unknown, b: unknown) => ["inArray", a, b]),
+    sql: Object.assign(vi.fn(), { join: vi.fn() }),
+  };
+});
+
 vi.mock("@pluralscape/crypto", () => ({
   serializeEncryptedBlob: vi.fn(() => new Uint8Array([1, 2, 3])),
   deserializeEncryptedBlob: vi.fn((data: Uint8Array) => ({
@@ -173,6 +209,17 @@ describe("createRegion", () => {
     await expect(
       createRegion(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("throws QUOTA_EXCEEDED when region count is at maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 100 }]); // quota count -> at limit
+
+    await expect(
+      createRegion(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
   });
 });
 
