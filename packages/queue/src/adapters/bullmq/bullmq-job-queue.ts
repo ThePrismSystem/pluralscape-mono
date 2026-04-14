@@ -429,14 +429,14 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store first
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      let parsed: z.output<typeof StoredJobDataSchema>;
+      let parsed: StoredJobData;
       try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
       } catch {
         throw new Error(`Corrupt stored data for job ${jobId}`);
       }
       if (parsed.status !== "dead-letter") {
-        throw new InvalidJobTransitionError(jobId, parsed.status as JobStatus, "retry");
+        throw new InvalidJobTransitionError(jobId, parsed.status, "retry");
       }
       // Re-enqueue from cancelled store
       const updated: StoredJobData = {
@@ -476,9 +476,9 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store — already cancelled
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      let parsed: z.output<typeof StoredJobDataSchema>;
+      let parsed: StoredJobData;
       try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
       } catch {
         throw new Error(`Corrupt stored data for job ${jobId}`);
       }
@@ -517,9 +517,9 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      let parsed: z.output<typeof StoredJobDataSchema>;
+      let parsed: StoredJobData;
       try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
       } catch {
         throw new Error(`Corrupt stored data for job ${jobId}`);
       }
@@ -545,7 +545,9 @@ export class BullMQJobQueue implements JobQueue {
         if (raw !== null) {
           const id = key.replace(`${this.prefix}:cancelled:`, "") as JobId;
           try {
-            allJobs.push(fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw))));
+            allJobs.push(
+              fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw)) as StoredJobData),
+            );
           } catch {
             this.logger.warn("Corrupt cancelled job data, skipping", { jobId: id });
           }
