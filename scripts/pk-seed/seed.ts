@@ -11,10 +11,6 @@ import { writeManifestAtomic } from "./manifest.js";
 import type { PkMode, EntityTypeKey } from "./constants.js";
 import { ENTITY_TYPES_IN_ORDER, ONE_DAY_MS } from "./constants.js";
 import type { EntityFixtures } from "./fixtures/types.js";
-import { createMappingContext } from "@pluralscape/import-core";
-import { mapSwitchBatch } from "../../packages/import-pk/src/mappers/switch.mapper.js";
-
-import type { SourceDocument } from "@pluralscape/import-core";
 
 /**
  * Walk a value and replace any ref-shaped string with its resolved server-side ID.
@@ -107,42 +103,53 @@ export async function executePlan(
 }
 
 /**
- * Build switch SourceDocuments from fixtures and run mapSwitchBatch
- * to compute how many fronting sessions the import engine will produce.
+ * Simulate the switch-to-session co-front diffing algorithm to compute how
+ * many fronting sessions the import mapper will produce.
+ *
+ * This mirrors the logic in `packages/import-pk/src/mappers/switch.mapper.ts`
+ * without importing it (the scripts tsconfig can't resolve workspace packages).
  */
 function computeExpectedSessionCount(
   fixtures: EntityFixtures,
   refMap: ReadonlyMap<string, string>,
 ): number {
-  const ctx = createMappingContext({ sourceMode: "file" });
+  // Resolve and sort switches by timestamp
+  const resolved = fixtures.switches.map((sw) => ({
+    timestampMs: Date.parse(resolveTimestamp(sw.timestamp)),
+    members: new Set(
+      sw.members.map((memberRef) => {
+        const id = refMap.get(memberRef);
+        if (id === undefined) throw new UnresolvedRefError(memberRef);
+        return id;
+      }),
+    ),
+  }));
+  resolved.sort((a, b) => a.timestampMs - b.timestampMs);
 
-  // Register all members so the mapper can resolve refs
-  for (const memberFixture of fixtures.members) {
-    const sourceId = refMap.get(memberFixture.ref);
-    if (sourceId === undefined) continue;
-    // Use the sourceId as both the PK id and the Pluralscape id —
-    // we only care about the count, not the resolved IDs.
-    ctx.register("member", sourceId, sourceId);
+  // Track active fronters and count sessions produced
+  const activeFronters = new Map<string, number>();
+  let sessionCount = 0;
+
+  for (const sw of resolved) {
+    // Close sessions for members no longer fronting
+    for (const [memberId] of activeFronters) {
+      if (!sw.members.has(memberId)) {
+        sessionCount += 1;
+        activeFronters.delete(memberId);
+      }
+    }
+    // Start sessions for newly-fronting members
+    for (const memberId of sw.members) {
+      if (!activeFronters.has(memberId)) {
+        activeFronters.set(memberId, sw.timestampMs);
+      }
+    }
   }
 
-  // Build SourceDocuments from switch fixtures
-  const documents: SourceDocument[] = fixtures.switches.map((sw) => {
-    const resolvedMembers = sw.members.map((memberRef) => {
-      const resolved = refMap.get(memberRef);
-      if (resolved === undefined) {
-        throw new UnresolvedRefError(memberRef);
-      }
-      return resolved;
-    });
-    const timestamp = resolveTimestamp(sw.timestamp);
-    return {
-      sourceId: sw.ref,
-      document: { timestamp, members: resolvedMembers },
-    };
-  });
+  // Remaining active fronters become open sessions (endTime = null)
+  sessionCount += activeFronters.size;
 
-  const results = mapSwitchBatch(documents, ctx);
-  return results.filter((r) => r.result.status === "mapped").length;
+  return sessionCount;
 }
 
 async function createEntity(
