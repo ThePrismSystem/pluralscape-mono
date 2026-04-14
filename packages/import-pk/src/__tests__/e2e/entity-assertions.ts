@@ -7,10 +7,10 @@
  * the manifest expectations.
  */
 import {
-  decodeAndDecryptT1,
   decryptFrontingSession,
   decryptGroup,
   decryptMember,
+  decryptPrivacyBucket,
 } from "@pluralscape/data";
 import { lookupRefs, requireRef } from "@pluralscape/test-utils/e2e";
 import { expect } from "vitest";
@@ -28,7 +28,7 @@ async function lookupPkRefs(
   trpc: TRPCClient,
   systemId: SystemId,
   sourceEntityType: Parameters<typeof lookupRefs>[3],
-  entries: readonly PkManifestEntry[],
+  entries: readonly PkManifestEntry<Record<string, unknown>>[],
 ): Promise<Record<string, string>> {
   if (entries.length === 0) return {};
   return lookupRefs(
@@ -55,7 +55,7 @@ export async function assertPkMembers(
     const raw = await trpc.member.get.query({ systemId, memberId });
     const decrypted = decryptMember(raw, masterKey);
 
-    expect(decrypted.name, `${entry.ref}: name`).toBe(entry.fields["name"]);
+    expect(decrypted.name, `${entry.ref}: name`).toBe(entry.fields.name);
   }
 }
 
@@ -72,7 +72,7 @@ export async function assertPkGroups(
     const raw = await trpc.group.get.query({ systemId, groupId });
     const decrypted = decryptGroup(raw, masterKey);
 
-    expect(decrypted.name, `${entry.ref}: name`).toBe(entry.fields["name"]);
+    expect(decrypted.name, `${entry.ref}: name`).toBe(entry.fields.name);
   }
 }
 
@@ -80,15 +80,15 @@ export async function assertPkFrontingSessions(
   trpc: TRPCClient,
   masterKey: KdfMasterKey,
   systemId: SystemId,
+  manifest: PkManifest,
 ): Promise<void> {
   // PK switches are snapshots of who is fronting — the mapper diffs
-  // consecutive snapshots to derive per-member sessions. A switch list
-  // of length N does NOT produce N sessions; the count depends on
-  // co-fronts, empty switches, etc. We verify sessions were created
-  // and every session has a valid decryptable startTime.
+  // consecutive snapshots to derive per-member sessions. The expected count
+  // is computed by the seed script using the same mapper logic and stored
+  // in the manifest.
   const page = await trpc.frontingSession.list.query({ systemId, limit: 100 });
   const sessions = page.data;
-  expect(sessions.length, "at least one fronting session created").toBeGreaterThan(0);
+  expect(sessions.length, "fronting session count").toBe(manifest.expectedSessionCount);
 
   for (const session of sessions) {
     const decrypted = decryptFrontingSession(session, masterKey);
@@ -119,7 +119,7 @@ export async function assertPkPrivacyBuckets(
   }
 
   const raw = await trpc.bucket.get.query({ systemId, bucketId });
-  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey) as Record<string, unknown>;
+  const decrypted = decryptPrivacyBucket(raw, masterKey);
 
-  expect(decrypted["name"], "PK Private bucket name").toBe("PK Private");
+  expect(decrypted.name, "PK Private bucket name").toBe("PK Private");
 }
