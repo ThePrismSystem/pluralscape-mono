@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { EncryptedString } from "../encryption.js";
+import type { ServerSecret } from "../encryption.js";
 import type { ApiKeyId, SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
@@ -117,7 +117,7 @@ describe("WebhookConfig", () => {
     expectTypeOf<WebhookConfig["id"]>().toEqualTypeOf<WebhookId>();
     expectTypeOf<WebhookConfig["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<WebhookConfig["url"]>().toBeString();
-    expectTypeOf<WebhookConfig["secret"]>().toEqualTypeOf<EncryptedString>();
+    expectTypeOf<WebhookConfig["secret"]>().toEqualTypeOf<ServerSecret>();
     expectTypeOf<WebhookConfig["eventTypes"]>().toEqualTypeOf<readonly WebhookEventType[]>();
     expectTypeOf<WebhookConfig["enabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<WebhookConfig["cryptoKeyId"]>().toEqualTypeOf<ApiKeyId | null>();
