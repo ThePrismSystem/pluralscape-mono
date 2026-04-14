@@ -1,10 +1,11 @@
 ---
 # ps-aq2u
 title: PK import + import-core extraction implementation
-status: in-progress
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-12T18:57:13Z
-updated_at: 2026-04-12T18:57:13Z
+updated_at: 2026-04-14T03:58:23Z
 parent: ps-dvxb
 ---
 

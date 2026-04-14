@@ -16,11 +16,13 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-8 complete, Milestone 9 (UI/UX Design) next.**
+**Active development — Milestones 0-9 complete, Milestone 10 (UI/UX Design) next.**
 
 Milestones 0-7 built the full backend: data layer, API, sync, fronting, communication, privacy, and data portability. The REST API covers 304 operations across 31 route domains ([OpenAPI spec](docs/openapi/openapi.yaml)), with a type-safe tRPC layer mirroring the full surface for the Expo mobile client ([ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
 
-Milestone 8 delivered the complete client foundation: Expo app shell with auth-gated routing, a 14-provider initialization tree (platform detection, auth state machine, encryption, sync), offline-first local data layer (SQLite + FTS5 search), 50+ domain data hooks via factory pattern (`useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery`), web platform adapter (OPFS/IndexedDB), CRDT sync coverage for all entity types, and PluralKit import. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, the [architecture overview](docs/architecture.md) for system design, and the [mobile developer guide](docs/guides/mobile-developer-guide.md) for client internals.
+Milestone 8 delivered the complete client foundation: Expo app shell with auth-gated routing, a 14-provider initialization tree (platform detection, auth state machine, encryption, sync), offline-first local data layer (SQLite + FTS5 search), 50+ domain data hooks via factory pattern (`useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery`), web platform adapter (OPFS/IndexedDB), and CRDT sync coverage for all entity types.
+
+Milestone 9 delivered data import: a shared import-core orchestration engine (`packages/import-core`) with checkpoint resume and pluggable Persister interface, Simply Plural import (`packages/import-sp`) covering 15 collections with file and API source modes, PluralKit import (`packages/import-pk`) for members/groups/fronting sessions, import API endpoints (REST + tRPC), mobile glue with 17 entity persisters, and E2E test infrastructure with deterministic seed scripts. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, the [architecture overview](docs/architecture.md) for system design, and the [mobile developer guide](docs/guides/mobile-developer-guide.md) for client internals.
 
 ## Test Suite
 
@@ -65,6 +67,9 @@ packages/
   rotation-worker/ Key rotation worker — processes bucket key rotation chunks
   storage/         Blob storage — S3 + filesystem adapters, quota management
   validation/      Shared Zod validation schemas with contract tests
+  import-core/   Shared import orchestration — Persister, checkpoint, entity refs
+  import-sp/     Simply Plural import — collection mappers, file + API sources
+  import-pk/     PluralKit import — JSON export mapper
 
 tooling/
   eslint-config/   Shared ESLint configuration
@@ -79,7 +84,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (32 accepted)
+  adr/             Architecture Decision Records (34 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -199,7 +204,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 32 accepted ADRs cover the full stack from licensing through email provider selection. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 34 accepted ADRs cover the full stack from licensing through import engine architecture. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 

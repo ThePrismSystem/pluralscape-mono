@@ -179,7 +179,53 @@ the import twice produces identical results — the persister decides `created` 
 
 ## See also
 
-- `docs/adr/` — architecture decisions for the import engine design
+- [ADR 034](../../docs/adr/034-import-core-extraction.md) — import-core extraction rationale
+- `packages/import-core` — shared orchestration engine (Persister, checkpoint, error classification)
 - `.beans/` — work tracker (prefix `ps-nrg`)
 - `packages/types` — `ImportCollectionType`, `ImportError`, `ImportCheckpointState`
 - `packages/db` — `import_jobs`, `import_entity_refs` schema
+
+---
+
+## E2E test setup
+
+SP import E2E tests run against a real Simply Plural API instance with seeded test data.
+
+### Prerequisites
+
+1. Copy the environment template:
+
+   ```bash
+   cp .env.sp-test.example .env.sp-test
+   ```
+
+2. Fill in the SP API credentials in `.env.sp-test`
+
+3. Seed test data (creates deterministic SP entities, triggers export, writes manifest):
+   ```bash
+   source .env.sp-test && npx tsx scripts/sp-seed/seed.ts
+   ```
+   The seed script is idempotent — it probes SP for existing entities and reuses them.
+   After seeding, manually download the JSON export from the email SP sends.
+
+### Running E2E tests
+
+**File source tests** (run automatically if fixture files exist):
+
+```bash
+pnpm vitest run --project import-sp
+```
+
+**API source tests** (require live SP API access):
+
+```bash
+source .env.sp-test && SP_TEST_LIVE_API=true pnpm vitest run --project import-sp packages/import-sp/src/__tests__/e2e/sp-import.e2e.test.ts
+```
+
+### Architecture note
+
+This package was originally self-contained. The shared orchestration layer
+(Persister, checkpoint, error classification) was extracted into
+`@pluralscape/import-core` ([ADR 034](../../docs/adr/034-import-core-extraction.md))
+when the PluralKit import engine was built, to avoid duplicating the import
+infrastructure.
