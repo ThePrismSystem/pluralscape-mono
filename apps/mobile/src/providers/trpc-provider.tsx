@@ -1,6 +1,12 @@
 import { MAX_BATCH_ITEMS, MAX_URL_LENGTH, trpc } from "@pluralscape/api-client/trpc";
 import { TRPCClientError } from "@trpc/client";
-import { httpBatchLink, httpSubscriptionLink, loggerLink, splitLink } from "@trpc/client";
+import {
+  httpBatchLink,
+  httpSubscriptionLink,
+  loggerLink,
+  retryLink,
+  splitLink,
+} from "@trpc/client";
 import { useState } from "react";
 
 import { getApiBaseUrl } from "../config.js";
@@ -10,6 +16,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_TOO_MANY_REQUESTS = 429;
 
 export function isTRPCClientError(cause: unknown): cause is TRPCClientError<AppRouter> {
   return cause instanceof TRPCClientError;
@@ -66,6 +73,17 @@ export function TRPCProvider({
       links: [
         loggerLink({
           enabled: (opts) => __DEV__ && opts.direction === "down" && "error" in opts.result,
+        }),
+        retryLink({
+          retry(opts) {
+            if (
+              opts.error.data?.httpStatus === HTTP_TOO_MANY_REQUESTS ||
+              opts.error.data?.code === "TOO_MANY_REQUESTS"
+            ) {
+              return opts.attempts < 3;
+            }
+            return false;
+          },
         }),
         splitLink({
           condition: (op) => op.type === "subscription",

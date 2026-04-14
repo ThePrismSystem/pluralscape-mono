@@ -11,6 +11,10 @@ export interface ApiClientConfig {
   readonly platform?: "web" | "mobile";
 }
 
+const HTTP_TOO_MANY_REQUESTS = 429;
+const RETRY_AFTER_DEFAULT_MS = 1_000;
+const SECONDS_TO_MS = 1_000;
+
 export function createApiClient(config: ApiClientConfig): ReturnType<typeof createClient<paths>> {
   const client = createClient<paths>({
     baseUrl: config.baseUrl,
@@ -26,6 +30,18 @@ export function createApiClient(config: ApiClientConfig): ReturnType<typeof crea
         request.headers.set("Authorization", `Bearer ${token}`);
       }
       return request;
+    },
+  });
+
+  client.use({
+    async onResponse({ response, request }) {
+      if (response.status === HTTP_TOO_MANY_REQUESTS) {
+        const retryAfter = response.headers.get("Retry-After");
+        const delayMs = retryAfter ? Number(retryAfter) * SECONDS_TO_MS : RETRY_AFTER_DEFAULT_MS;
+        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+        return fetch(request);
+      }
+      return response;
     },
   });
 
