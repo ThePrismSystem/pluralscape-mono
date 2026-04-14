@@ -321,7 +321,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
     it("evicts oldest session when MAX_SESSIONS_PER_ACCOUNT is exceeded", async () => {
       // Import MAX_SESSIONS_PER_ACCOUNT from the constants file
-      const { MAX_SESSIONS_PER_ACCOUNT } = await import("../../routes/auth/auth.constants.js");
+      const { MAX_SESSIONS_PER_ACCOUNT } = await import("../../quota.constants.js");
 
       // Record the IDs of the first batch of sessions created via loginAccount
       const firstSessionIds: string[] = [];

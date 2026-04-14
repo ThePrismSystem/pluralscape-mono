@@ -28,11 +28,11 @@ import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
 import { getAccountLoginStore } from "../middleware/stores/account-login-store.js";
+import { MAX_SESSIONS_PER_ACCOUNT } from "../quota.constants.js";
 import {
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
-  MAX_SESSIONS_PER_ACCOUNT,
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,

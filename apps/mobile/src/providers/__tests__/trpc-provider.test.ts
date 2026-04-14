@@ -13,7 +13,11 @@ vi.mock("../../config.js", () => ({
   getApiBaseUrl: () => "https://api.example.com",
 }));
 
-import { createMemoizedTokenGetter, isTRPCClientError } from "../trpc-provider.js";
+import {
+  createMemoizedTokenGetter,
+  isTRPCClientError,
+  shouldRetryRateLimit,
+} from "../trpc-provider.js";
 
 describe("createMemoizedTokenGetter", () => {
   it("deduplicates concurrent calls into a single getToken invocation", async () => {
@@ -89,5 +93,32 @@ describe("isTRPCClientError", () => {
     expect(isTRPCClientError(null)).toBe(false);
     expect(isTRPCClientError(undefined)).toBe(false);
     expect(isTRPCClientError(42)).toBe(false);
+  });
+});
+
+describe("shouldRetryRateLimit", () => {
+  it("returns true for 429 httpStatus under 3 attempts", () => {
+    const opts = { error: { data: { httpStatus: 429, code: "OTHER" } }, attempts: 1 };
+    expect(shouldRetryRateLimit(opts as never)).toBe(true);
+  });
+
+  it("returns true for TOO_MANY_REQUESTS code under 3 attempts", () => {
+    const opts = { error: { data: { httpStatus: 400, code: "TOO_MANY_REQUESTS" } }, attempts: 2 };
+    expect(shouldRetryRateLimit(opts as never)).toBe(true);
+  });
+
+  it("returns false for non-429 errors", () => {
+    const opts = { error: { data: { httpStatus: 500, code: "INTERNAL_ERROR" } }, attempts: 1 };
+    expect(shouldRetryRateLimit(opts as never)).toBe(false);
+  });
+
+  it("returns false after 3 attempts", () => {
+    const opts = { error: { data: { httpStatus: 429, code: "TOO_MANY_REQUESTS" } }, attempts: 3 };
+    expect(shouldRetryRateLimit(opts as never)).toBe(false);
+  });
+
+  it("returns false when error data is missing", () => {
+    const opts = { error: {}, attempts: 1 };
+    expect(shouldRetryRateLimit(opts as never)).toBe(false);
   });
 });

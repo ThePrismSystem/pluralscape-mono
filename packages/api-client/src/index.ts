@@ -11,6 +11,12 @@ export interface ApiClientConfig {
   readonly platform?: "web" | "mobile";
 }
 
+const HTTP_TOO_MANY_REQUESTS = 429;
+const RETRY_AFTER_DEFAULT_MS = 1_000;
+const SECONDS_TO_MS = 1_000;
+const MAX_RETRY_ATTEMPTS = 1;
+const RETRY_COUNT_HEADER = "X-Retry-Count";
+
 export function createApiClient(config: ApiClientConfig): ReturnType<typeof createClient<paths>> {
   const client = createClient<paths>({
     baseUrl: config.baseUrl,
@@ -26,6 +32,30 @@ export function createApiClient(config: ApiClientConfig): ReturnType<typeof crea
         request.headers.set("Authorization", `Bearer ${token}`);
       }
       return request;
+    },
+  });
+
+  client.use({
+    async onResponse({ response, request, options }) {
+      if (response.status !== HTTP_TOO_MANY_REQUESTS) return response;
+
+      const retryCount = Number(request.headers.get(RETRY_COUNT_HEADER) ?? "0");
+      if (retryCount >= MAX_RETRY_ATTEMPTS) return response;
+
+      const retryAfter = response.headers.get("Retry-After");
+      const parsedDelay = retryAfter ? Number(retryAfter) * SECONDS_TO_MS : NaN;
+      const delayMs = Number.isNaN(parsedDelay) ? RETRY_AFTER_DEFAULT_MS : parsedDelay;
+
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+
+      const retryRequest = request.clone();
+      retryRequest.headers.set(RETRY_COUNT_HEADER, String(retryCount + 1));
+
+      try {
+        return await options.fetch(retryRequest);
+      } catch {
+        return response;
+      }
     },
   });
 

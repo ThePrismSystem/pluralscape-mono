@@ -64,6 +64,3 @@ export const ANTI_ENUM_TARGET_MS = 500;
 
 /** Expected length of EMAIL_HASH_PEPPER hex string (32 bytes = 64 hex chars). */
 export const PEPPER_HEX_LENGTH = 64;
-
-/** Maximum concurrent active sessions per account. Oldest session is evicted when exceeded. */
-export const MAX_SESSIONS_PER_ACCOUNT = 50;

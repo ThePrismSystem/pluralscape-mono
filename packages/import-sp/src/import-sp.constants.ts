@@ -5,7 +5,11 @@
  * re-exported from import-core. SP-specific constants live here.
  */
 
-export { CHECKPOINT_CHUNK_SIZE, MAX_WARNING_BUFFER_SIZE } from "@pluralscape/import-core";
+export {
+  CHECKPOINT_CHUNK_SIZE,
+  MAX_IMPORT_FILE_BYTES,
+  MAX_WARNING_BUFFER_SIZE,
+} from "@pluralscape/import-core";
 
 /** Maximum number of retry attempts for transient SP API failures. */
 export const SP_API_MAX_RETRIES = 5;

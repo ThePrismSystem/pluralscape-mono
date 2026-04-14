@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { ApiClientError } from "../api-client-error.js";
 import { createRestQueryFactory } from "../rest-query-factory.js";
 
 import type { ApiClientLike } from "../rest-query-factory.js";
@@ -62,11 +63,77 @@ describe("createRestQueryFactory", () => {
 
   it("queryFn throws when API returns an error", async () => {
     const factory = createRestQueryFactory({
-      apiClient: makeApiClient(undefined, { message: "Not found" }),
+      apiClient: makeApiClient(undefined, { code: "NOT_FOUND", message: "Not found" }),
       getMasterKey: () => null,
     });
     const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
-    await expect(opts.queryFn()).rejects.toThrow("API error on");
+    try {
+      await opts.queryFn();
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(ApiClientError);
+      expect((err as ApiClientError).code).toBe("NOT_FOUND");
+      expect((err as ApiClientError).message).toBe("Not found");
+      expect((err as ApiClientError).path).toBe("/health");
+    }
+  });
+
+  it("queryFn error does not contain raw JSON details", async () => {
+    const sensitiveError = {
+      code: "VALIDATION_ERROR",
+      message: "Invalid input",
+      details: [{ field: "email", message: "required" }],
+    };
+    const factory = createRestQueryFactory({
+      apiClient: makeApiClient(undefined, sensitiveError),
+      getMasterKey: () => null,
+    });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    try {
+      await opts.queryFn();
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(ApiClientError);
+      expect((err as ApiClientError).code).toBe("VALIDATION_ERROR");
+      expect((err as ApiClientError).message).toBe("Invalid input");
+      expect((err as Error).message).not.toContain("details");
+      expect((err as Error).message).not.toContain("required");
+      expect((err as ApiClientError).path).toBe("/health");
+    }
+  });
+
+  it("queryFn error uses defaults for missing code/message", async () => {
+    const factory = createRestQueryFactory({
+      apiClient: makeApiClient(undefined, { unexpected: "shape" }),
+      getMasterKey: () => null,
+    });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    try {
+      await opts.queryFn();
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(ApiClientError);
+      expect((err as ApiClientError).code).toBe("UNKNOWN");
+      expect((err as ApiClientError).message).toBe("Request failed");
+      expect((err as ApiClientError).path).toBe("/health");
+    }
+  });
+
+  it("queryFn error handles string error values gracefully", async () => {
+    const factory = createRestQueryFactory({
+      apiClient: makeApiClient(undefined, "plain string error"),
+      getMasterKey: () => null,
+    });
+    const opts = factory.queryOptions({ queryKey: ["item"], path: "/health" as never });
+    try {
+      await opts.queryFn();
+      expect.unreachable("should have thrown");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(ApiClientError);
+      expect((err as ApiClientError).code).toBe("UNKNOWN");
+      expect((err as ApiClientError).message).toBe("Request failed");
+      expect((err as ApiClientError).path).toBe("/health");
+    }
   });
 
   it("queryFn applies decrypt when provided and master key is available", async () => {

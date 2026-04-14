@@ -26,11 +26,14 @@
  */
 import clarinet from "clarinet";
 
+import { MAX_IMPORT_FILE_BYTES } from "../import-sp.constants.js";
 import { toRecord } from "../shared/to-record.js";
 
 import { isSpCollectionName, type SpCollectionName } from "./sp-collections.js";
 
 import type { ImportDataSource, SourceEvent } from "./source.types.js";
+
+export { MAX_IMPORT_FILE_BYTES } from "../import-sp.constants.js";
 
 export class FileSourceParseError extends Error {
   public readonly position: number | null;
@@ -48,6 +51,8 @@ type StackFrame =
 
 export interface FileImportSourceArgs {
   readonly stream: ReadableStream<Uint8Array>;
+  /** Override the byte limit — for testing only. Defaults to MAX_IMPORT_FILE_BYTES. */
+  readonly _maxBytes?: number;
 }
 
 interface PrescanState {
@@ -65,6 +70,7 @@ function wrapParseError(err: unknown, position: number): FileSourceParseError {
 }
 
 export function createFileImportSource(args: FileImportSourceArgs): ImportDataSource {
+  const maxBytes = args._maxBytes ?? MAX_IMPORT_FILE_BYTES;
   let prescan: PrescanState | null = null;
 
   async function parseStream(): Promise<PrescanState> {
@@ -223,10 +229,18 @@ export function createFileImportSource(args: FileImportSourceArgs): ImportDataSo
 
     // Consume the stream chunk by chunk.
     const reader = args.stream.getReader();
+    let totalBytes = 0;
     try {
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > maxBytes) {
+          throw new FileSourceParseError(
+            `Import file exceeds maximum size of ${String(maxBytes)} bytes`,
+            null,
+          );
+        }
         const text = decoder.decode(value, { stream: true });
         parser.write(text);
         if (pending.error !== null) throw pending.error;

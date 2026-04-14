@@ -31,6 +31,26 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@pluralscape/db/pg", () => ({
+  innerworldCanvas: {
+    systemId: "system_id",
+    encryptedData: "encrypted_data",
+    version: "version",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  },
+}));
+
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("drizzle-orm")>();
+  return {
+    ...actual,
+    and: vi.fn((...args: unknown[]) => args),
+    eq: vi.fn((a: unknown, b: unknown) => [a, b]),
+    sql: Object.assign(vi.fn(), { join: vi.fn() }),
+  };
+});
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");

@@ -1,9 +1,9 @@
-import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
+import { innerworldEntities, innerworldRegions, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateRegionBodySchema, UpdateRegionBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
 
-import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
@@ -11,6 +11,7 @@ import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_INNERWORLD_REGIONS_PER_SYSTEM } from "../quota.constants.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -89,6 +90,22 @@ export async function createRegion(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Enforce per-system region quota
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existingCount] = await tx
+      .select({ count: count() })
+      .from(innerworldRegions)
+      .where(and(eq(innerworldRegions.systemId, systemId), eq(innerworldRegions.archived, false)));
+
+    if ((existingCount?.count ?? 0) >= MAX_INNERWORLD_REGIONS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_INNERWORLD_REGIONS_PER_SYSTEM)} innerworld regions per system`,
+      );
+    }
+
     // Validate parentRegionId exists in same system if provided
     const parentRegionId = parsed.parentRegionId ?? null;
     if (parentRegionId !== null) {

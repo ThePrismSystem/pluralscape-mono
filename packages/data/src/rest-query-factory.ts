@@ -1,3 +1,5 @@
+import { ApiClientError } from "./api-client-error.js";
+
 import type { ApiClient, MaybeOptionalInit, paths } from "@pluralscape/api-client";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { QueryKey } from "@tanstack/react-query";
@@ -53,9 +55,18 @@ export interface RestQueryFactory {
  * Accepting `unknown` here keeps the public API fully typed while avoiding
  * implementation-level assertions on every call site.
  */
+function isApiErrorShape(v: unknown): v is { code?: string; message?: string } {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function unwrap(result: { data?: unknown; error?: unknown }, path: string): unknown {
   if (result.error !== undefined) {
-    throw new Error(`API error on ${path}: ${JSON.stringify(result.error)}`);
+    const err = isApiErrorShape(result.error) ? result.error : undefined;
+    throw new ApiClientError(
+      (err?.code ?? "UNKNOWN") as ApiClientError["code"],
+      err?.message ?? "Request failed",
+      path,
+    );
   }
   return result.data;
 }

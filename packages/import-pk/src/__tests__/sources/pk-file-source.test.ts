@@ -199,4 +199,13 @@ describe("createPkFileImportSource", () => {
     const events = await collectEvents(source, "nonexistent");
     expect(events).toHaveLength(0);
   });
+
+  it("rejects files exceeding the size limit", async () => {
+    const payload = makePayload();
+    const { dir, filePath } = writeTempFile(payload);
+    tempDirs.push(dir);
+    // Set a tiny limit so the real file exceeds it
+    const source = createPkFileImportSource({ filePath, _maxBytes: 1 });
+    await expect(collectEvents(source, "member")).rejects.toThrow(/exceeds maximum size/);
+  });
 });

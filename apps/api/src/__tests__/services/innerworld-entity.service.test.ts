@@ -10,6 +10,40 @@ import type { InnerWorldEntityId, InnerWorldRegionId, SystemId } from "@pluralsc
 
 // ── Mock external deps ───────────────────────────────────────────────
 
+vi.mock("@pluralscape/db/pg", () => ({
+  innerworldEntities: {
+    id: "id",
+    systemId: "system_id",
+    regionId: "region_id",
+    encryptedData: "encrypted_data",
+    version: "version",
+    archived: "archived",
+    archivedAt: "archived_at",
+    createdAt: "created_at",
+    updatedAt: "updated_at",
+  },
+  innerworldRegions: {
+    id: "id",
+    systemId: "system_id",
+    archived: "archived",
+  },
+  systems: {
+    id: "id",
+  },
+}));
+
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("drizzle-orm")>();
+  return {
+    ...actual,
+    and: vi.fn((...args: unknown[]) => args),
+    count: vi.fn(() => "count(*)"),
+    eq: vi.fn((a: unknown, b: unknown) => [a, b]),
+    gt: vi.fn((a: unknown, b: unknown) => ["gt", a, b]),
+    sql: Object.assign(vi.fn(), { join: vi.fn() }),
+  };
+});
+
 vi.mock("@pluralscape/crypto", () => ({
   serializeEncryptedBlob: vi.fn(() => new Uint8Array([1, 2, 3])),
   deserializeEncryptedBlob: vi.fn((data: Uint8Array) => ({
@@ -170,6 +204,44 @@ describe("createEntity", () => {
     await expect(
       createEntity(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("throws QUOTA_EXCEEDED when entity count is at maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 500 }]); // quota count -> at limit
+
+    await expect(
+      createEntity(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
+  });
+
+  it("allows creation when entity count is below maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 499 }]); // quota count -> below limit
+    chain.returning.mockResolvedValueOnce([makeEntityRow()]);
+
+    const result = await createEntity(
+      db,
+      SYSTEM_ID,
+      { encryptedData: VALID_BLOB_BASE64 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe(ENTITY_ID);
+  });
+
+  it("acquires FOR UPDATE lock on system row during quota check", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([makeEntityRow()]);
+
+    await createEntity(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit);
+
+    expect(chain.for).toHaveBeenCalledWith("update");
   });
 });
 

@@ -9,7 +9,11 @@ export type {
   PersisterUpsertResult,
   Persister,
 } from "./persister.types.js";
-export { CHECKPOINT_CHUNK_SIZE, MAX_WARNING_BUFFER_SIZE } from "./import-core.constants.js";
+export {
+  CHECKPOINT_CHUNK_SIZE,
+  MAX_IMPORT_FILE_BYTES,
+  MAX_WARNING_BUFFER_SIZE,
+} from "./import-core.constants.js";
 export { toRecord, summarizeMissingRefs, parseHexColor } from "./helpers.js";
 
 // Checkpoint

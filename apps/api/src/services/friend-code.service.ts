@@ -14,12 +14,9 @@ import {
   withCrossAccountTransaction,
 } from "../lib/rls-context.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
+import { MAX_FRIEND_CODES_PER_ACCOUNT } from "../quota.constants.js";
 
-import {
-  FRIEND_CODE_BYTES,
-  MAX_CODE_GENERATION_RETRIES,
-  MAX_FRIEND_CODES_PER_ACCOUNT,
-} from "./friend-code.constants.js";
+import { FRIEND_CODE_BYTES, MAX_CODE_GENERATION_RETRIES } from "./friend-code.constants.js";
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";

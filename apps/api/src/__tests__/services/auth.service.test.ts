@@ -12,10 +12,10 @@ vi.mock("../../env.js", () => ({ env: mockEnv }));
 import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { fromCursor } from "../../lib/pagination.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
+import { MAX_SESSIONS_PER_ACCOUNT } from "../../quota.constants.js";
 import {
   CLIENT_PLATFORM_HEADER,
   DEFAULT_PLATFORM,
-  MAX_SESSIONS_PER_ACCOUNT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,
 } from "../../routes/auth/auth.constants.js";
