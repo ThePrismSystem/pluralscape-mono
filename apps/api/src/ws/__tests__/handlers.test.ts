@@ -10,9 +10,14 @@
  *   - handleSubmitChange: verifyEnvelopeSignature returns false → SyncError
  *   - handleSubmitChange: EnvelopeLimitExceededError → SyncError QUOTA_EXCEEDED
  *   - handleSubmitChange: relay.submit throws unknown error → rethrows
+ *   - handleSubmitChange: UNAUTHORIZED_KEY when authorPublicKey not in account keys
  *   - handleSubmitSnapshot: SnapshotVersionConflictError → SyncError VERSION_CONFLICT
  *   - handleSubmitSnapshot: SnapshotSizeLimitExceededError → SyncError QUOTA_EXCEEDED
  *   - handleSubmitSnapshot: success path
+ *   - handleSubmitSnapshot: INVALID_ENVELOPE when snapshot signature is invalid
+ *   - handleSubmitSnapshot: UNAUTHORIZED_KEY when snapshot authorPublicKey not in account keys
+ *   - verifyEnvelopeOrError: disabled path, invalid sig, valid sig
+ *   - verifyKeyOwnership: matching key, no match, empty keys, multiple keys
  *   - handleSubscribeRequest: addSubscription returns false (drop)
  *   - handleSubscribeRequest: hasNewerSnapshot true / false
  *   - handleSubscribeRequest: catchup fetch throws → drops doc
@@ -50,6 +55,8 @@ import {
   handleSubscribeRequest,
   handleUnsubscribeRequest,
   shouldVerifyEnvelopeSignatures,
+  verifyEnvelopeOrError,
+  verifyKeyOwnership,
 } from "../handlers.js";
 
 import type { AppLogger } from "../../lib/logger.js";
@@ -67,6 +74,7 @@ import type {
   DocumentLoadRequest,
 } from "@pluralscape/sync";
 import type { SyncDocumentId, SystemId, AccountId, SessionId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Harness helpers ───────────────────────────────────────────────────
 
@@ -104,6 +112,24 @@ function mockRelay(): {
     getManifest,
   };
   return { relay, submit, getEnvelopesSince, submitSnapshot, getLatestSnapshot, getManifest };
+}
+
+const TEST_ACCOUNT_ID = "acct_h_test" as AccountId;
+
+/**
+ * Create a mock DB that returns the given public keys for the test account.
+ * Uses the drizzle query-builder chain pattern: db.select().from().where() → rows.
+ */
+function mockDb(publicKeys: Uint8Array[] = []): PostgresJsDatabase {
+  const rows = publicKeys.map((pk) => ({ publicKey: pk }));
+  const chain = {
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(rows),
+    }),
+  };
+  return {
+    select: vi.fn().mockReturnValue(chain),
+  } as unknown as PostgresJsDatabase;
 }
 
 function brandedBytes(size: number, fill: number) {
@@ -350,12 +376,16 @@ describe("handleSubmitChange", () => {
     };
   }
 
+  /** Key bytes used by makeSubmitMsg (fill=1, size=32). */
+  const validKeyBytes = new Uint8Array(32).fill(1);
+
   it("skips verification and returns SubmitChangeResult when verification disabled", async () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay, submit } = mockRelay();
     submit.mockResolvedValue(42);
+    const db = mockDb([validKeyBytes]);
 
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-nocheck"), relay);
+    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-nocheck"), relay, db, TEST_ACCOUNT_ID);
     expect(result.type).toBe("SubmitChangeResult");
     if (result.type === "SubmitChangeResult") {
       expect(result.response.assignedSeq).toBe(42);
@@ -372,7 +402,8 @@ describe("handleSubmitChange", () => {
     });
 
     const { relay } = mockRelay();
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-inv"), relay);
+    const db = mockDb([validKeyBytes]);
+    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-inv"), relay, db, TEST_ACCOUNT_ID);
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("INVALID_ENVELOPE");
@@ -388,7 +419,8 @@ describe("handleSubmitChange", () => {
     });
 
     const { relay } = mockRelay();
-    await expect(handleSubmitChange(makeSubmitMsg("doc-sc-rethrow"), relay)).rejects.toThrow(
+    const db = mockDb([validKeyBytes]);
+    await expect(handleSubmitChange(makeSubmitMsg("doc-sc-rethrow"), relay, db, TEST_ACCOUNT_ID)).rejects.toThrow(
       "unexpected sodium error",
     );
   });
@@ -400,10 +432,37 @@ describe("handleSubmitChange", () => {
     vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(false);
 
     const { relay } = mockRelay();
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-false"), relay);
+    const db = mockDb([validKeyBytes]);
+    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-false"), relay, db, TEST_ACCOUNT_ID);
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("INVALID_ENVELOPE");
+    }
+  });
+
+  it("returns SyncError UNAUTHORIZED_KEY when authorPublicKey does not match account keys", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    const { relay } = mockRelay();
+    // DB returns a different key than the one in the envelope
+    const differentKey = new Uint8Array(32).fill(99);
+    const db = mockDb([differentKey]);
+
+    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-badkey"), relay, db, TEST_ACCOUNT_ID);
+    expect(result.type).toBe("SyncError");
+    if (result.type === "SyncError") {
+      expect(result.code).toBe("UNAUTHORIZED_KEY");
+    }
+  });
+
+  it("returns SyncError UNAUTHORIZED_KEY when account has no keys", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    const { relay } = mockRelay();
+    const db = mockDb([]);
+
+    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-nokeys"), relay, db, TEST_ACCOUNT_ID);
+    expect(result.type).toBe("SyncError");
+    if (result.type === "SyncError") {
+      expect(result.code).toBe("UNAUTHORIZED_KEY");
     }
   });
 
@@ -411,8 +470,9 @@ describe("handleSubmitChange", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay, submit } = mockRelay();
     submit.mockRejectedValue(new EnvelopeLimitExceededError("doc-sc-quota", 1000));
+    const db = mockDb([validKeyBytes]);
 
-    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-quota"), relay);
+    const result = await handleSubmitChange(makeSubmitMsg("doc-sc-quota"), relay, db, TEST_ACCOUNT_ID);
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("QUOTA_EXCEEDED");
@@ -423,8 +483,9 @@ describe("handleSubmitChange", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay, submit } = mockRelay();
     submit.mockRejectedValue(new Error("unexpected relay error"));
+    const db = mockDb([validKeyBytes]);
 
-    await expect(handleSubmitChange(makeSubmitMsg("doc-sc-unknown"), relay)).rejects.toThrow(
+    await expect(handleSubmitChange(makeSubmitMsg("doc-sc-unknown"), relay, db, TEST_ACCOUNT_ID)).rejects.toThrow(
       "unexpected relay error",
     );
   });
@@ -433,6 +494,9 @@ describe("handleSubmitChange", () => {
 // ── handleSubmitSnapshot ──────────────────────────────────────────────
 
 describe("handleSubmitSnapshot", () => {
+  /** Key bytes used by makeSubmitSnapshotMsg (fill=1, size=32). */
+  const validSnapshotKeyBytes = new Uint8Array(32).fill(1);
+
   function makeSubmitSnapshotMsg(docId = "doc-ss-1"): SubmitSnapshotRequest {
     const { nonce, sig, key, ct } = brandedBytes(32, 1);
     return {
@@ -451,19 +515,51 @@ describe("handleSubmitSnapshot", () => {
   }
 
   it("returns SnapshotAccepted on success", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay } = mockRelay();
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-ok"), relay);
+    const db = mockDb([validSnapshotKeyBytes]);
+    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-ok"), relay, db, TEST_ACCOUNT_ID);
     expect(result.type).toBe("SnapshotAccepted");
     if (result.type === "SnapshotAccepted") {
       expect(result.snapshotVersion).toBe(5);
     }
   });
 
+  it("returns SyncError INVALID_ENVELOPE when snapshot signature is invalid", async () => {
+    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+
+    const syncModule = await import("@pluralscape/sync");
+    vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(false);
+
+    const { relay } = mockRelay();
+    const db = mockDb([validSnapshotKeyBytes]);
+    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-badsig"), relay, db, TEST_ACCOUNT_ID);
+    expect(result.type).toBe("SyncError");
+    if (result.type === "SyncError") {
+      expect(result.code).toBe("INVALID_ENVELOPE");
+    }
+  });
+
+  it("returns SyncError UNAUTHORIZED_KEY when snapshot authorPublicKey does not match account", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    const { relay } = mockRelay();
+    const differentKey = new Uint8Array(32).fill(99);
+    const db = mockDb([differentKey]);
+
+    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-badkey"), relay, db, TEST_ACCOUNT_ID);
+    expect(result.type).toBe("SyncError");
+    if (result.type === "SyncError") {
+      expect(result.code).toBe("UNAUTHORIZED_KEY");
+    }
+  });
+
   it("returns SyncError VERSION_CONFLICT on SnapshotVersionConflictError", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay, submitSnapshot } = mockRelay();
     submitSnapshot.mockRejectedValue(new SnapshotVersionConflictError(6, 5));
+    const db = mockDb([validSnapshotKeyBytes]);
 
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-vc"), relay);
+    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-vc"), relay, db, TEST_ACCOUNT_ID);
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("VERSION_CONFLICT");
@@ -471,10 +567,12 @@ describe("handleSubmitSnapshot", () => {
   });
 
   it("returns SyncError QUOTA_EXCEEDED on SnapshotSizeLimitExceededError", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay, submitSnapshot } = mockRelay();
     submitSnapshot.mockRejectedValue(new SnapshotSizeLimitExceededError("doc-ss-size", 2000, 1000));
+    const db = mockDb([validSnapshotKeyBytes]);
 
-    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-size"), relay);
+    const result = await handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-size"), relay, db, TEST_ACCOUNT_ID);
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
       expect(result.code).toBe("QUOTA_EXCEEDED");
@@ -482,10 +580,12 @@ describe("handleSubmitSnapshot", () => {
   });
 
   it("rethrows unknown errors from relay.submitSnapshot", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     const { relay, submitSnapshot } = mockRelay();
     submitSnapshot.mockRejectedValue(new Error("unexpected snapshot error"));
+    const db = mockDb([validSnapshotKeyBytes]);
 
-    await expect(handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-unk"), relay)).rejects.toThrow(
+    await expect(handleSubmitSnapshot(makeSubmitSnapshotMsg("doc-ss-unk"), relay, db, TEST_ACCOUNT_ID)).rejects.toThrow(
       "unexpected snapshot error",
     );
   });
@@ -674,5 +774,113 @@ describe("handleDocumentLoad", () => {
     expect(changesResp.changes).toHaveLength(0);
     // sinceSeq should be snapshotVersion=15 when snapshot exists
     expect(getEnvelopesSince).toHaveBeenCalledWith("doc-dl-2", 15, expect.any(Number));
+  });
+});
+
+// ── verifyEnvelopeOrError ────────────────────────────────────────────
+
+describe("verifyEnvelopeOrError", () => {
+  it("returns null when verification is disabled", () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    const { nonce, sig, key, ct } = brandedBytes(32, 1);
+    const result = verifyEnvelopeOrError(
+      { authorPublicKey: key, nonce, signature: sig, ciphertext: ct },
+      "corr-ve-1",
+      "doc-ve-1" as SyncDocumentId,
+    );
+    expect(result).toBeNull();
+  });
+
+  it("returns SyncError INVALID_ENVELOPE when signature is invalid", async () => {
+    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    const syncModule = await import("@pluralscape/sync");
+    vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(false);
+
+    const { nonce, sig, key, ct } = brandedBytes(32, 1);
+    const result = verifyEnvelopeOrError(
+      { authorPublicKey: key, nonce, signature: sig, ciphertext: ct },
+      "corr-ve-2",
+      "doc-ve-2" as SyncDocumentId,
+    );
+    expect(result).not.toBeNull();
+    expect(result?.code).toBe("INVALID_ENVELOPE");
+  });
+
+  it("returns null when signature is valid", async () => {
+    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    const syncModule = await import("@pluralscape/sync");
+    vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(true);
+
+    const { nonce, sig, key, ct } = brandedBytes(32, 1);
+    const result = verifyEnvelopeOrError(
+      { authorPublicKey: key, nonce, signature: sig, ciphertext: ct },
+      "corr-ve-3",
+      "doc-ve-3" as SyncDocumentId,
+    );
+    expect(result).toBeNull();
+  });
+});
+
+// ── verifyKeyOwnership ───────────────────────────────────────────────
+
+describe("verifyKeyOwnership", () => {
+  it("returns null when authorPublicKey matches an account key", async () => {
+    const key = new Uint8Array(32).fill(7);
+    const db = mockDb([key]);
+
+    const result = await verifyKeyOwnership(
+      db,
+      TEST_ACCOUNT_ID,
+      key,
+      "corr-ko-1",
+      "doc-ko-1" as SyncDocumentId,
+    );
+    expect(result).toBeNull();
+  });
+
+  it("returns SyncError UNAUTHORIZED_KEY when no keys match", async () => {
+    const envelopeKey = new Uint8Array(32).fill(7);
+    const accountKey = new Uint8Array(32).fill(8);
+    const db = mockDb([accountKey]);
+
+    const result = await verifyKeyOwnership(
+      db,
+      TEST_ACCOUNT_ID,
+      envelopeKey,
+      "corr-ko-2",
+      "doc-ko-2" as SyncDocumentId,
+    );
+    expect(result).not.toBeNull();
+    expect(result?.code).toBe("UNAUTHORIZED_KEY");
+  });
+
+  it("returns SyncError UNAUTHORIZED_KEY when account has no keys", async () => {
+    const envelopeKey = new Uint8Array(32).fill(7);
+    const db = mockDb([]);
+
+    const result = await verifyKeyOwnership(
+      db,
+      TEST_ACCOUNT_ID,
+      envelopeKey,
+      "corr-ko-3",
+      "doc-ko-3" as SyncDocumentId,
+    );
+    expect(result).not.toBeNull();
+    expect(result?.code).toBe("UNAUTHORIZED_KEY");
+  });
+
+  it("matches when account has multiple keys and one matches", async () => {
+    const envelopeKey = new Uint8Array(32).fill(7);
+    const otherKey = new Uint8Array(32).fill(8);
+    const db = mockDb([otherKey, envelopeKey]);
+
+    const result = await verifyKeyOwnership(
+      db,
+      TEST_ACCOUNT_ID,
+      envelopeKey,
+      "corr-ko-4",
+      "doc-ko-4" as SyncDocumentId,
+    );
+    expect(result).toBeNull();
   });
 });

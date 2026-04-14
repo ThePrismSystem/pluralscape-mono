@@ -403,6 +403,7 @@ type SyncErrorCode =
   | "QUOTA_EXCEEDED" // Storage budget exceeded (see document-lifecycle.md §6)
   | "RATE_LIMITED" // Submitting changes too rapidly
   | "INVALID_ENVELOPE" // Envelope signature verification failed; envelope dropped
+  | "UNAUTHORIZED_KEY" // authorPublicKey does not belong to the authenticated account
   | "PROTOCOL_MISMATCH" // Client protocolVersion != SYNC_PROTOCOL_VERSION
   | "INTERNAL_ERROR"; // Server-side error; retry after backoff
 ```
@@ -422,6 +423,7 @@ type SyncErrorCode =
 | `QUOTA_EXCEEDED`       | Surface to user; evict archived documents, then retry                 |
 | `RATE_LIMITED`         | Exponential backoff starting at 1 second                              |
 | `INVALID_ENVELOPE`     | Inspect change construction; verify signing key; do not retry as-is   |
+| `UNAUTHORIZED_KEY`     | Verify correct signing key is selected; re-fetch key list if needed   |
 | `PROTOCOL_MISMATCH`    | Upgrade client; do not retry                                          |
 | `INTERNAL_ERROR`       | Exponential backoff starting at 5 seconds                             |
 

@@ -560,7 +560,8 @@ export async function routeMessage(
       )
         return;
       try {
-        const result = await handleSubmitChange(msg, relay);
+        const db = await getDb();
+        const result = await handleSubmitChange(msg, relay, db, state.auth.accountId);
         if (result.type === "SyncError") {
           send(state, result, log);
           return;
@@ -634,7 +635,8 @@ export async function routeMessage(
       )
         return;
       try {
-        const response = await handleSubmitSnapshot(msg, relay);
+        const db = await getDb();
+        const response = await handleSubmitSnapshot(msg, relay, db, state.auth.accountId);
         if (!send(state, response, log)) return;
         // Post-success: set ownership only on non-error responses
         if (response.type !== "SyncError") {
