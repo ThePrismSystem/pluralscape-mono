@@ -30,6 +30,13 @@ import {
 import type { S3AdapterConfig } from "../adapters/s3/s3-config.js";
 import type { StorageKey } from "@pluralscape/types";
 
+// ── Mock @aws-sdk/s3-presigned-post ──────────────────────────────────────
+
+const mockCreatePresignedPost = vi.fn();
+vi.mock("@aws-sdk/s3-presigned-post", () => ({
+  createPresignedPost: (...args: unknown[]): unknown => mockCreatePresignedPost(...args),
+}));
+
 // ── Mock @aws-sdk/s3-request-presigner ────────────────────────────────────
 
 const mockGetSignedUrl = vi.fn();
@@ -74,6 +81,7 @@ const KEY = "sys/blob_test" as StorageKey;
 afterEach(() => {
   vi.restoreAllMocks();
   mockGetSignedUrl.mockReset();
+  mockCreatePresignedPost.mockReset();
 });
 
 // ── upload ────────────────────────────────────────────────────────────────
@@ -314,9 +322,17 @@ describe("S3BlobStorageAdapter.getMetadata", () => {
 // ── presigned URL helpers ─────────────────────────────────────────────────
 
 describe("S3BlobStorageAdapter.generatePresignedUploadUrl", () => {
-  it("returns supported url + expiresAt on success", async () => {
+  it("returns supported url + expiresAt + fields on success", async () => {
     const { adapter } = makeAdapter();
-    mockGetSignedUrl.mockResolvedValueOnce("https://signed.example/upload");
+    mockCreatePresignedPost.mockResolvedValueOnce({
+      url: "https://signed.example/upload",
+      fields: {
+        key: "sys/blob_test",
+        "Content-Type": "image/png",
+        policy: "abc",
+        "X-Amz-Signature": "sig",
+      },
+    });
     const result = await adapter.generatePresignedUploadUrl({
       storageKey: KEY,
       mimeType: "image/png",
@@ -326,12 +342,34 @@ describe("S3BlobStorageAdapter.generatePresignedUploadUrl", () => {
     if (result.supported) {
       expect(result.url).toBe("https://signed.example/upload");
       expect(result.expiresAt).toBeGreaterThan(Date.now());
+      expect(result.fields).toBeDefined();
+      expect(result.fields?.["Content-Type"]).toBe("image/png");
     }
+  });
+
+  it("passes content-length-range condition to createPresignedPost", async () => {
+    const { adapter } = makeAdapter();
+    mockCreatePresignedPost.mockResolvedValueOnce({
+      url: "https://signed.example/upload",
+      fields: { key: "sys/blob_test" },
+    });
+    await adapter.generatePresignedUploadUrl({
+      storageKey: KEY,
+      mimeType: "image/png",
+      sizeBytes: 2048,
+    });
+    expect(mockCreatePresignedPost).toHaveBeenCalledOnce();
+    const callArgs = mockCreatePresignedPost.mock.calls[0] as unknown[];
+    const options = callArgs[1] as { Conditions: unknown[] };
+    expect(options.Conditions).toEqual(expect.arrayContaining([["content-length-range", 1, 2048]]));
   });
 
   it("uses configured presignedUploadExpiryMs default when no override", async () => {
     const { adapter } = makeAdapter({ presignedUploadExpiryMs: 60_000 });
-    mockGetSignedUrl.mockResolvedValueOnce("https://signed.example/upload");
+    mockCreatePresignedPost.mockResolvedValueOnce({
+      url: "https://signed.example/upload",
+      fields: {},
+    });
     const before = Date.now();
     const result = await adapter.generatePresignedUploadUrl({
       storageKey: KEY,
@@ -346,7 +384,7 @@ describe("S3BlobStorageAdapter.generatePresignedUploadUrl", () => {
 
   it("propagates errors via mapS3Error", async () => {
     const { adapter } = makeAdapter();
-    mockGetSignedUrl.mockRejectedValueOnce(awsError("AccessDenied"));
+    mockCreatePresignedPost.mockRejectedValueOnce(awsError("AccessDenied"));
     await expect(
       adapter.generatePresignedUploadUrl({
         storageKey: KEY,

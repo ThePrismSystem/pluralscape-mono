@@ -83,7 +83,7 @@ export {
   UpdateEntityBodySchema,
   UpdateCanvasBodySchema,
 } from "./innerworld.js";
-export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema } from "./blob.js";
+export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema, ALLOWED_MIME_TYPES } from "./blob.js";
 export {
   CreateFrontingSessionBodySchema,
   UpdateFrontingSessionBodySchema,
