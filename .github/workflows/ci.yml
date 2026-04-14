@@ -275,10 +275,10 @@ jobs:
         run: pnpm test:e2e:slow | tee e2e-slow-output.txt
 
       - name: Run SP import E2E tests
-        run: pnpm test:e2e:sp-import
+        run: pnpm test:e2e:sp-import | tee e2e-sp-import-output.txt
 
       - name: Run PK import E2E tests
-        run: pnpm test:e2e:pk-import
+        run: pnpm test:e2e:pk-import | tee e2e-pk-import-output.txt
 
       - name: Extract E2E test count
         if: github.ref == 'refs/heads/main'
@@ -286,7 +286,9 @@ jobs:
         run: |
           E2E_COUNT=$(grep -oP '\d+(?= passed)' e2e-output.txt | tail -1)
           SLOW_COUNT=$(grep -oP '\d+(?= passed)' e2e-slow-output.txt | tail -1)
-          TOTAL=$(( ${E2E_COUNT:-0} + ${SLOW_COUNT:-0} ))
+          SP_COUNT=$(grep -oP '\d+(?= passed)' e2e-sp-import-output.txt | tail -1)
+          PK_COUNT=$(grep -oP '\d+(?= passed)' e2e-pk-import-output.txt | tail -1)
+          TOTAL=$(( ${E2E_COUNT:-0} + ${SLOW_COUNT:-0} + ${SP_COUNT:-0} + ${PK_COUNT:-0} ))
           echo "count=$TOTAL" >> "$GITHUB_OUTPUT"
           echo "message=${TOTAL} passed" >> "$GITHUB_OUTPUT"
 
