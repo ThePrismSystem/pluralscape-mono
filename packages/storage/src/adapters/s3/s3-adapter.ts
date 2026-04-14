@@ -5,6 +5,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { toUnixMillis } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
@@ -193,21 +194,26 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     const expiryMs = params.expiresInMs ?? this.presignedUploadExpiryMs;
     const expiresInSeconds = Math.ceil(expiryMs / MS_PER_SECOND);
 
-    const command = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: params.storageKey,
-      ContentType: params.mimeType ?? "application/octet-stream",
-      ContentLength: params.sizeBytes,
-    });
-
     try {
-      const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+      const { url, fields } = await createPresignedPost(this.client, {
+        Bucket: this.bucket,
+        Key: params.storageKey,
+        Expires: expiresInSeconds,
+        Conditions: [
+          ["content-length-range", 1, params.sizeBytes],
+          ["eq", "$Content-Type", params.mimeType ?? "application/octet-stream"],
+        ],
+        Fields: {
+          "Content-Type": params.mimeType ?? "application/octet-stream",
+        },
+      });
       const expiresAt = toUnixMillis(now() + expiryMs);
 
       return {
         supported: true,
         url,
         expiresAt,
+        fields,
       };
     } catch (err) {
       mapS3Error(err, params.storageKey);

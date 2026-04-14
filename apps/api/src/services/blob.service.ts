@@ -44,6 +44,8 @@ export interface UploadUrlResult {
   readonly blobId: BlobId;
   readonly uploadUrl: string;
   readonly expiresAt: UnixMillis;
+  /** Form fields required for POST-based presigned uploads. */
+  readonly fields?: Readonly<Record<string, string>>;
 }
 
 export interface BlobResult {
@@ -153,6 +155,7 @@ export async function createUploadUrl(
     blobId: blobId as BlobId,
     uploadUrl: presigned.url,
     expiresAt: presigned.expiresAt,
+    ...(presigned.fields ? { fields: presigned.fields } : {}),
   };
 }
 

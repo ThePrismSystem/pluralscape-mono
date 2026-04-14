@@ -165,12 +165,26 @@ export function useBlobUpload(): BlobUploadState {
           if (gen !== genRef.current) return;
           setStatus("uploading");
 
-          // Step 2: PUT file to presigned URL
-          const response = await fetch(urlResult.uploadUrl, {
-            method: "PUT",
-            body: input.file,
-            headers: { "Content-Type": input.mimeType },
-          });
+          // Step 2: Upload file to presigned URL (POST with FormData or PUT fallback)
+          let response: Response;
+          if ("fields" in urlResult && urlResult.fields) {
+            const formData = new FormData();
+            for (const [key, value] of Object.entries(urlResult.fields)) {
+              formData.append(key, value);
+            }
+            const fileBlob = input.file instanceof Blob ? input.file : new Blob([input.file]);
+            formData.append("file", fileBlob);
+            response = await fetch(urlResult.uploadUrl, {
+              method: "POST",
+              body: formData,
+            });
+          } else {
+            response = await fetch(urlResult.uploadUrl, {
+              method: "PUT",
+              body: input.file,
+              headers: { "Content-Type": input.mimeType },
+            });
+          }
 
           if (!response.ok) {
             throw new Error(`Upload failed with status ${String(response.status)}`);

@@ -53,7 +53,13 @@ export interface PresignedDownloadParams {
  * return `{ supported: false }` since they have no concept of presigned URLs.
  */
 export type PresignedUrlResult =
-  | { readonly supported: true; readonly url: string; readonly expiresAt: UnixMillis }
+  | {
+      readonly supported: true;
+      readonly url: string;
+      readonly expiresAt: UnixMillis;
+      /** Form fields required for POST-based presigned uploads (S3 POST policy). */
+      readonly fields?: Readonly<Record<string, string>>;
+    }
   | { readonly supported: false };
 
 /**
