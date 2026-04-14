@@ -11,7 +11,9 @@
  * PK exports are typically small (tens of KB to a few MB for large systems),
  * so this is acceptable.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+
+import { MAX_IMPORT_FILE_BYTES } from "@pluralscape/import-core";
 
 import { PKPayloadSchema } from "../validators/pk-payload.js";
 
@@ -22,13 +24,22 @@ import type { ImportDataSource, SourceEvent } from "@pluralscape/import-core";
 
 export interface PkFileImportSourceArgs {
   readonly filePath: string;
+  /** Override the byte limit — for testing only. Defaults to MAX_IMPORT_FILE_BYTES. */
+  readonly _maxBytes?: number;
 }
 
 export function createPkFileImportSource(args: PkFileImportSourceArgs): ImportDataSource {
+  const maxBytes = args._maxBytes ?? MAX_IMPORT_FILE_BYTES;
   let parsed: PKPayload | null = null;
 
   function parse(): PKPayload {
     if (parsed !== null) return parsed;
+    const { size } = statSync(args.filePath);
+    if (size > maxBytes) {
+      throw new Error(
+        `Import file exceeds maximum size of ${String(maxBytes)} bytes (file is ${String(size)} bytes)`,
+      );
+    }
     const raw = readFileSync(args.filePath, "utf-8");
     const json: unknown = JSON.parse(raw);
     parsed = PKPayloadSchema.parse(json);

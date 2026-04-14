@@ -144,6 +144,37 @@ describe("file-source true streaming", () => {
     expect(cols).toContain("unknownCollection");
   });
 
+  it("rejects files exceeding the size limit", async () => {
+    // Use a small _maxBytes override to avoid allocating 250 MB in tests.
+    const testLimit = 1_024; // 1 KB
+    const chunkSize = 512;
+    const prefix = new TextEncoder().encode('{"members":[');
+    const padding = new Uint8Array(chunkSize).fill(0x20); // spaces = valid JSON whitespace
+
+    function makeOversizedStream(): ReadableStream<Uint8Array> {
+      let bytesEnqueued = 0;
+      return new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (bytesEnqueued === 0) {
+            controller.enqueue(prefix);
+            bytesEnqueued += prefix.byteLength;
+          } else if (bytesEnqueued <= testLimit + chunkSize) {
+            controller.enqueue(padding);
+            bytesEnqueued += chunkSize;
+          } else {
+            controller.close();
+          }
+        },
+      });
+    }
+
+    const source = createFileImportSource({ stream: makeOversizedStream(), _maxBytes: testLimit });
+    await expect(source.listCollections()).rejects.toThrow(FileSourceParseError);
+    // Verify fresh source yields the expected message
+    const source2 = createFileImportSource({ stream: makeOversizedStream(), _maxBytes: testLimit });
+    await expect(source2.listCollections()).rejects.toThrow(/exceeds maximum size/);
+  });
+
   it("yields documents from multiple collections", async () => {
     const payload = JSON.stringify({
       members: [{ _id: "sp_m_1", name: "Alex" }],
