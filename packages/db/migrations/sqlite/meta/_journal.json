@@ -15,6 +15,13 @@
       "when": 1776175255889,
       "tag": "0001_minor_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776176962009,
+      "tag": "0002_modern_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }
