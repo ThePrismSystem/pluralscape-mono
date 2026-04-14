@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
+import { createInMemoryPersister } from "@pluralscape/import-core/testing";
 import { describe, it, expect, beforeAll } from "vitest";
 
 import { runImport } from "../../engine/import-engine.js";
@@ -13,12 +14,11 @@ import {
   loadManifest,
   makeInitialCheckpoint,
 } from "./helpers.js";
-import { createRecordingPersister } from "./recording-persister.js";
 
 import type { Manifest, ManifestCollectionKey } from "./manifest.types.js";
-import type { RecordingSnapshot } from "./recording-persister.js";
 import type { MappedMember } from "../../mappers/member.mapper.js";
 import type { ImportDataSource } from "../../sources/source.types.js";
+import type { InMemoryPersisterSnapshot } from "@pluralscape/import-core/testing";
 import type { ImportCheckpointState } from "@pluralscape/types";
 
 const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../../..");
@@ -49,7 +49,7 @@ function hasExportFixtures(): boolean {
 // ---------------------------------------------------------------------------
 
 function assertEntityCounts(
-  snap: RecordingSnapshot,
+  snap: InMemoryPersisterSnapshot,
   manifest: Manifest,
   skipCollections?: ReadonlySet<ManifestCollectionKey>,
 ): void {
@@ -67,17 +67,19 @@ function assertEntityCounts(
     // imported.
     if (entityType === "privacy-bucket") {
       expect(
-        snap.count(entityType),
+        snap.countByType(entityType),
         `${entityType}: imported count must cover every manifest entry`,
       ).toBeGreaterThanOrEqual(manifest[key].length);
       continue;
     }
-    expect(snap.count(entityType), `count mismatch for ${entityType}`).toBe(manifest[key].length);
+    expect(snap.countByType(entityType), `count mismatch for ${entityType}`).toBe(
+      manifest[key].length,
+    );
   }
 }
 
 function assertAllEntitiesPresent(
-  snap: RecordingSnapshot,
+  snap: InMemoryPersisterSnapshot,
   manifest: Manifest,
   skipCollections?: ReadonlySet<ManifestCollectionKey>,
 ): void {
@@ -110,7 +112,7 @@ function memberName(payload: unknown): string | undefined {
 }
 
 function assertPayloadSpotChecks(
-  snap: RecordingSnapshot,
+  snap: InMemoryPersisterSnapshot,
   manifest: Manifest,
   mode: "minimal" | "adversarial",
   skipCollections?: ReadonlySet<ManifestCollectionKey>,
@@ -207,24 +209,24 @@ function defineImportSuite(
 ): void {
   describe(label, () => {
     let manifest: Manifest;
-    let snap: RecordingSnapshot;
+    let snap: InMemoryPersisterSnapshot;
     let outcome: string;
     let fatalErrors: number;
 
     beforeAll(async () => {
       manifest = await loadManifest(mode);
       const source = await sourceFactory(mode, manifest);
-      const recorder = createRecordingPersister();
+      const { persister, snapshot: getSnapshot } = createInMemoryPersister();
       const result = await runImport({
         source,
-        persister: recorder.persister,
+        persister,
         initialCheckpoint: makeInitialCheckpoint(),
         options: { selectedCategories: {}, avatarMode: "skip" },
         onProgress: noopProgress,
       });
       outcome = result.outcome;
       fatalErrors = result.errors.filter((e) => e.fatal).length;
-      snap = recorder.snapshot();
+      snap = getSnapshot();
     });
 
     it("completes without aborting", () => {
@@ -316,12 +318,12 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
   it("resumes from an aborted checkpoint and completes", async () => {
     const manifest = await loadManifest("minimal");
     const source = await createFileSource("minimal", manifest);
-    const recorder = createRecordingPersister();
+    const { persister } = createInMemoryPersister();
 
     // First: run a full import to establish baseline.
     const fullResult = await runImport({
       source: await createFileSource("minimal", manifest),
-      persister: recorder.persister,
+      persister,
       initialCheckpoint: makeInitialCheckpoint(),
       options: { selectedCategories: {}, avatarMode: "skip" },
       onProgress: noopProgress,
@@ -334,10 +336,10 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
     const ABORT_AFTER_PROGRESS = 3;
     let abortedCheckpoint: ImportCheckpointState | undefined;
 
-    const abortRecorder = createRecordingPersister();
+    const { persister: abortPersister } = createInMemoryPersister();
     const abortResult = await runImport({
       source: await createFileSource("minimal", manifest),
-      persister: abortRecorder.persister,
+      persister: abortPersister,
       initialCheckpoint: makeInitialCheckpoint(),
       options: { selectedCategories: {}, avatarMode: "skip" },
       onProgress: (state) => {
@@ -357,10 +359,10 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
     }
 
     // Third: resume from the aborted checkpoint.
-    const resumeRecorder = createRecordingPersister();
+    const { persister: resumePersister } = createInMemoryPersister();
     const resumeResult = await runImport({
       source,
-      persister: resumeRecorder.persister,
+      persister: resumePersister,
       initialCheckpoint: abortedCheckpoint,
       options: { selectedCategories: {}, avatarMode: "skip" },
       onProgress: noopProgress,

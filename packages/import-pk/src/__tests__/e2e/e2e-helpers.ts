@@ -1,11 +1,16 @@
 /**
  * E2E test helpers for import-pk.
  *
- * For file-source tests (in-memory persister), provides fixture file
- * resolution and a convenience wrapper that runs the full PK import
- * pipeline. For server-backed tests, provides a PK-specific E2E persister
- * that encrypts payloads and persists through tRPC.
+ * Provides account registration, tRPC client creation, manifest loading,
+ * source factories, and a persister wired to the real Pluralscape API
+ * server on port 10099. The persister encrypts all payloads with a test
+ * master key and persists through tRPC, matching the same data path the
+ * mobile app takes in production.
+ *
+ * Generic helpers are imported from @pluralscape/test-utils/e2e.
+ * This file contains only PK-specific entity dispatch and source wiring.
  */
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import {
@@ -14,7 +19,7 @@ import {
   initSodium,
   serializeEncryptedBlob,
 } from "@pluralscape/crypto";
-import { createInMemoryPersister } from "@pluralscape/import-core/testing";
+import { emptyCheckpointState } from "@pluralscape/import-core";
 import {
   API_BASE_URL,
   createBaseE2EPersister,
@@ -22,23 +27,34 @@ import {
   registerTestAccount,
 } from "@pluralscape/test-utils/e2e";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import { z } from "zod/v4";
 
-import { runPkImport } from "../../run-pk-import.js";
+import { pkCollectionToEntityType } from "../../engine/entity-type-map.js";
+import { createPkApiImportSource } from "../../sources/pk-api-source.js";
 import { createPkFileImportSource } from "../../sources/pk-file-source.js";
 
+import type { PkManifest } from "../integration/manifest.types.js";
 import type { AppRouter } from "@pluralscape/api/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { ImportRunResult } from "@pluralscape/import-core";
-import type { InMemoryPersisterSnapshot } from "@pluralscape/import-core/testing";
+import type { ImportDataSource } from "@pluralscape/import-core";
 import type {
   CryptoDeps,
   E2EPersisterContext,
   GenericPersistableEntity,
   HandleCreateContext,
 } from "@pluralscape/test-utils/e2e";
-import type { SystemId, T1EncryptedBlob } from "@pluralscape/types";
+import type { ImportCheckpointState, SystemId, T1EncryptedBlob } from "@pluralscape/types";
 
-// ── tRPC client factory (local to avoid circular dep) ─────────────────
+// ── Re-exports for test convenience ─────────────────────────────────
+
+export { getSystemId, registerTestAccount };
+export type { E2EPersisterContext };
+
+// ── Path constants ──────────────────────────────────────────────────
+
+const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../../..");
+
+// ── tRPC client factory ─────────────────────────────────────────────
 
 const TRPC_URL = `${API_BASE_URL}/v1/trpc`;
 const MAX_URL_LENGTH = 2_083;
@@ -59,15 +75,7 @@ export function makeTrpcClient(token: string): TRPCClient {
   });
 }
 
-// ── Crypto helpers (local to avoid circular dep) ──────────────────────
-
-let cryptoReady = false;
-
-async function ensureCryptoReady(): Promise<void> {
-  if (cryptoReady) return;
-  await initSodium();
-  cryptoReady = true;
-}
+// ── Crypto helpers ──────────────────────────────────────────────────
 
 function encryptForApi(data: unknown, masterKey: KdfMasterKey): string {
   const blob: T1EncryptedBlob = encryptTier1(data, masterKey);
@@ -76,67 +84,36 @@ function encryptForApi(data: unknown, masterKey: KdfMasterKey): string {
 }
 
 const cryptoDeps: CryptoDeps<KdfMasterKey> = {
-  ensureCryptoReady,
+  ensureCryptoReady: initSodium,
   generateMasterKey,
   encryptForApi,
 };
 
-export { getSystemId, registerTestAccount };
+// ── E2E type aliases ────────────────────────────────────────────────
 
-/** E2E persister context parameterized with the real master key type. */
 export type E2EPersisterCtx = E2EPersisterContext<KdfMasterKey>;
 
-/** Resolved path to the fixtures directory. */
-export const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures");
+// ── Entity dispatch (PK-specific) ───────────────────────────────────
 
-/** Build an absolute path to a fixture file. */
-export function fixturePath(filename: string): string {
-  return path.join(FIXTURES_DIR, filename);
-}
-
-/** No-op progress callback for tests that do not need progress tracking. */
-function noopProgress(): Promise<void> {
-  return Promise.resolve();
-}
-
-/** Result returned by {@link runFileImport}. */
-export interface FileImportResult {
-  readonly result: ImportRunResult;
-  readonly snapshot: InMemoryPersisterSnapshot;
-}
-
-/**
- * Run a full PK import from a JSON export file using an in-memory persister.
- *
- * Creates the file source and in-memory persister, runs the engine, and
- * returns both the run result and a snapshot of persisted entities.
- */
-export async function runFileImport(filePath: string): Promise<FileImportResult> {
-  const source = createPkFileImportSource({ filePath });
-  const { persister, snapshot } = createInMemoryPersister();
-
-  const result = await runPkImport({
-    source,
-    persister,
-    options: { selectedCategories: {}, avatarMode: "skip" },
-    onProgress: noopProgress,
-  });
-
-  return { result, snapshot: snapshot() };
-}
-
-// ── Server-backed E2E Persister (PK-specific) ──────────────────────
-
-/** Entity types the PK import engine produces. */
 type PkEntityType = "member" | "group" | "fronting-session" | "privacy-bucket";
 
 const PK_ENTITY_TYPES = new Set<string>(["member", "group", "fronting-session", "privacy-bucket"]);
 
-/**
- * Dispatch a PK entity create to the correct tRPC procedure.
- *
- * PK supports 4 entity types: member, group, fronting-session, privacy-bucket.
- */
+function assertPayloadShape<T extends Record<string, unknown>>(
+  payload: unknown,
+  entityType: string,
+  requiredKeys: readonly (keyof T)[],
+): asserts payload is T {
+  if (!payload || typeof payload !== "object") {
+    throw new Error(`Expected object payload for ${entityType}, got ${typeof payload}`);
+  }
+  for (const key of requiredKeys) {
+    if (!((key as string) in (payload as Record<string, unknown>))) {
+      throw new Error(`Missing required key "${String(key)}" in ${entityType} payload`);
+    }
+  }
+}
+
 async function handleCreate(
   entity: GenericPersistableEntity,
   ctx: HandleCreateContext<TRPCClient, KdfMasterKey>,
@@ -149,28 +126,27 @@ async function handleCreate(
   const entityType = entity.entityType as PkEntityType;
 
   switch (entityType) {
-    case "member":
+    case "member": {
+      assertPayloadShape<{ encrypted: unknown }>(entity.payload, "member", ["encrypted"]);
       return trpc.member.create.mutate({
         systemId,
-        encryptedData: encryptForApi(
-          (entity.payload as { encrypted: unknown }).encrypted,
-          masterKey,
-        ),
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
       });
+    }
     case "group": {
-      const payload = entity.payload as {
+      assertPayloadShape<{
         encrypted: unknown;
         parentGroupId: string | null;
         sortOrder: number;
         memberIds: readonly string[];
-      };
+      }>(entity.payload, "group", ["encrypted", "parentGroupId", "sortOrder", "memberIds"]);
       const result = await trpc.group.create.mutate({
         systemId,
-        encryptedData: encryptForApi(payload.encrypted, masterKey),
-        parentGroupId: payload.parentGroupId,
-        sortOrder: payload.sortOrder,
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+        parentGroupId: entity.payload.parentGroupId,
+        sortOrder: entity.payload.sortOrder,
       });
-      for (const memberId of payload.memberIds) {
+      for (const memberId of entity.payload.memberIds) {
         await trpc.group.addMember.mutate({
           systemId,
           groupId: result.id,
@@ -180,32 +156,31 @@ async function handleCreate(
       return result;
     }
     case "fronting-session": {
-      const payload = entity.payload as {
+      assertPayloadShape<{
         encrypted: unknown;
         startTime: number;
         endTime: number | null;
         memberId: string | undefined;
         customFrontId: string | undefined;
         structureEntityId: string | undefined;
-      };
+      }>(entity.payload, "fronting-session", ["encrypted", "startTime"]);
       return trpc.frontingSession.create.mutate({
         systemId,
-        encryptedData: encryptForApi(payload.encrypted, masterKey),
-        startTime: payload.startTime,
-        endTime: payload.endTime ?? undefined,
-        memberId: payload.memberId,
-        customFrontId: payload.customFrontId,
-        structureEntityId: payload.structureEntityId,
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+        startTime: entity.payload.startTime,
+        endTime: entity.payload.endTime ?? undefined,
+        memberId: entity.payload.memberId,
+        customFrontId: entity.payload.customFrontId,
+        structureEntityId: entity.payload.structureEntityId,
       });
     }
-    case "privacy-bucket":
+    case "privacy-bucket": {
+      assertPayloadShape<{ encrypted: unknown }>(entity.payload, "privacy-bucket", ["encrypted"]);
       return trpc.bucket.create.mutate({
         systemId,
-        encryptedData: encryptForApi(
-          (entity.payload as { encrypted: unknown }).encrypted,
-          masterKey,
-        ),
+        encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
       });
+    }
     default: {
       const _exhaustive: never = entityType;
       throw new Error(`Unsupported PK entity type: ${String(_exhaustive)}`);
@@ -213,9 +188,8 @@ async function handleCreate(
   }
 }
 
-/**
- * Create an E2E persister for PK import backed by real tRPC calls.
- */
+// ── E2E persister factory ───────────────────────────────────────────
+
 export async function createPkE2EPersister(
   trpcClient: TRPCClient,
   systemId: SystemId,
@@ -229,31 +203,88 @@ export async function createPkE2EPersister(
   });
 }
 
-/**
- * Result of a server-backed import run.
- */
-export interface ServerImportResult {
-  readonly result: ImportRunResult;
-  readonly ctx: E2EPersisterContext<KdfMasterKey>;
+// ── Manifest loading ────────────────────────────────────────────────
+
+const PkManifestSchema = z.object({
+  token: z.string(),
+  systemId: z.string(),
+  mode: z.enum(["minimal", "adversarial"]),
+  expectedSessionCount: z.number().int().nonnegative(),
+  members: z.array(
+    z.object({
+      ref: z.string(),
+      sourceId: z.string(),
+      fields: z.object({ name: z.string() }),
+    }),
+  ),
+  groups: z.array(
+    z.object({
+      ref: z.string(),
+      sourceId: z.string(),
+      fields: z.object({ name: z.string() }),
+    }),
+  ),
+  switches: z.array(
+    z.object({
+      ref: z.string(),
+      sourceId: z.string(),
+      fields: z.object({ timestamp: z.string() }),
+    }),
+  ),
+});
+
+export function loadManifest(mode: "minimal" | "adversarial"): PkManifest {
+  const filePath = path.join(MONOREPO_ROOT, `scripts/.pk-seed-${mode}-manifest.json`);
+  const raw = readFileSync(filePath, "utf-8");
+  return PkManifestSchema.parse(JSON.parse(raw));
 }
 
-/**
- * Run a full PK import from a JSON export file using a server-backed persister.
- */
-export async function runServerFileImport(
-  filePath: string,
-  trpcClient: TRPCClient,
-  systemId: SystemId,
-): Promise<ServerImportResult> {
-  const source = createPkFileImportSource({ filePath });
-  const ctx = await createPkE2EPersister(trpcClient, systemId);
+// ── Source factories ────────────────────────────────────────────────
 
-  const result = await runPkImport({
-    source,
-    persister: ctx.persister,
-    options: { selectedCategories: {}, avatarMode: "skip" },
-    onProgress: noopProgress,
+export function createFileSource(mode: "minimal" | "adversarial"): ImportDataSource {
+  const filePath = path.join(MONOREPO_ROOT, `scripts/.pk-test-${mode}-export.json`);
+  return createPkFileImportSource({ filePath });
+}
+
+export function createApiSource(
+  _mode: "minimal" | "adversarial",
+  manifest: PkManifest,
+): ImportDataSource {
+  return createPkApiImportSource({ token: manifest.token });
+}
+
+// ── Checkpoint factory ──────────────────────────────────────────────
+
+export function makeInitialCheckpoint(): ImportCheckpointState {
+  return emptyCheckpointState({
+    firstEntityType: pkCollectionToEntityType("member"),
+    selectedCategories: {},
+    avatarMode: "skip",
   });
+}
 
-  return { result, ctx };
+// ── Fixture file detection ──────────────────────────────────────────
+
+export function hasExportFixtures(): boolean {
+  return (
+    existsSync(path.join(MONOREPO_ROOT, "scripts/.pk-test-minimal-export.json")) &&
+    existsSync(path.join(MONOREPO_ROOT, "scripts/.pk-test-adversarial-export.json"))
+  );
+}
+
+export function hasManifests(): boolean {
+  return (
+    existsSync(path.join(MONOREPO_ROOT, "scripts/.pk-seed-minimal-manifest.json")) &&
+    existsSync(path.join(MONOREPO_ROOT, "scripts/.pk-seed-adversarial-manifest.json"))
+  );
+}
+
+export function hasLiveApiEnabled(): boolean {
+  return (
+    process.env["PK_TEST_LIVE_API"] === "true" &&
+    typeof process.env["PK_TOKEN_MINIMAL"] === "string" &&
+    process.env["PK_TOKEN_MINIMAL"].length > 0 &&
+    typeof process.env["PK_TOKEN_ADVERSARIAL"] === "string" &&
+    process.env["PK_TOKEN_ADVERSARIAL"].length > 0
+  );
 }

@@ -59,6 +59,7 @@ interface WritableManifest {
   token: string;
   systemId: string;
   mode: PkMode;
+  expectedSessionCount: number;
   members: ManifestEntry[];
   groups: ManifestEntry[];
   switches: ManifestEntry[];
@@ -81,19 +82,74 @@ export async function executePlan(
   writeManifestAtomic(mode, working as Manifest);
 
   for (const entry of plan.create) {
-    const sourceId = await createEntity(client, fixtures, entry, refMap);
-    refMap.set(entry.ref, sourceId);
+    const created = await createEntity(client, fixtures, entry, refMap);
+    refMap.set(entry.ref, created.sourceId);
 
     const manifestEntry: ManifestEntry = {
       ref: entry.ref,
-      sourceId,
-      fields: {},
+      sourceId: created.sourceId,
+      fields: created.fields,
     };
     working[entry.entityType].push(manifestEntry);
     writeManifestAtomic(mode, working as Manifest);
   }
 
+  // Compute expected session count by running the same mapper the import
+  // engine uses, so the manifest stays accurate if fixtures change.
+  working.expectedSessionCount = computeExpectedSessionCount(fixtures, refMap);
+  writeManifestAtomic(mode, working as Manifest);
+
   return working as Manifest;
+}
+
+/**
+ * Simulate the switch-to-session co-front diffing algorithm to compute how
+ * many fronting sessions the import mapper will produce.
+ *
+ * This mirrors the logic in `packages/import-pk/src/mappers/switch.mapper.ts`
+ * without importing it (the scripts tsconfig can't resolve workspace packages).
+ */
+function computeExpectedSessionCount(
+  fixtures: EntityFixtures,
+  refMap: ReadonlyMap<string, string>,
+): number {
+  // Resolve and sort switches by timestamp
+  const resolved = fixtures.switches.map((sw) => ({
+    timestampMs: Date.parse(resolveTimestamp(sw.timestamp)),
+    members: new Set(
+      sw.members.map((memberRef) => {
+        const id = refMap.get(memberRef);
+        if (id === undefined) throw new UnresolvedRefError(memberRef);
+        return id;
+      }),
+    ),
+  }));
+  resolved.sort((a, b) => a.timestampMs - b.timestampMs);
+
+  // Track active fronters and count sessions produced
+  const activeFronters = new Map<string, number>();
+  let sessionCount = 0;
+
+  for (const sw of resolved) {
+    // Close sessions for members no longer fronting
+    for (const [memberId] of activeFronters) {
+      if (!sw.members.has(memberId)) {
+        sessionCount += 1;
+        activeFronters.delete(memberId);
+      }
+    }
+    // Start sessions for newly-fronting members
+    for (const memberId of sw.members) {
+      if (!activeFronters.has(memberId)) {
+        activeFronters.set(memberId, sw.timestampMs);
+      }
+    }
+  }
+
+  // Remaining active fronters become open sessions (endTime = null)
+  sessionCount += activeFronters.size;
+
+  return sessionCount;
 }
 
 async function createEntity(
@@ -101,7 +157,7 @@ async function createEntity(
   fixtures: EntityFixtures,
   entry: { entityType: EntityTypeKey; ref: string },
   refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   switch (entry.entityType) {
     case "members":
       return createMember(client, fixtures, entry.ref, refMap);
@@ -121,7 +177,7 @@ async function createMember(
   fixtures: EntityFixtures,
   ref: string,
   _refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   const fixture = fixtures.members.find((m) => m.ref === ref);
   if (!fixture) throw new Error(`member fixture not found: ${ref}`);
 
@@ -133,7 +189,10 @@ async function createMember(
     await client.patchMember(memberId, { privacy: fixture.privacy });
   }
 
-  return memberId;
+  return {
+    sourceId: memberId,
+    fields: { name: fixture.body.name },
+  };
 }
 
 async function createGroup(
@@ -141,7 +200,7 @@ async function createGroup(
   fixtures: EntityFixtures,
   ref: string,
   refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   const fixture = fixtures.groups.find((g) => g.ref === ref);
   if (!fixture) throw new Error(`group fixture not found: ${ref}`);
 
@@ -158,7 +217,10 @@ async function createGroup(
     await client.addGroupMembers(groupId, resolvedMemberIds);
   }
 
-  return groupId;
+  return {
+    sourceId: groupId,
+    fields: { name: fixture.body.name },
+  };
 }
 
 async function createSwitch(
@@ -166,7 +228,7 @@ async function createSwitch(
   fixtures: EntityFixtures,
   ref: string,
   refMap: ReadonlyMap<string, string>,
-): Promise<string> {
+): Promise<{ sourceId: string; fields: Record<string, unknown> }> {
   const fixture = fixtures.switches.find((s) => s.ref === ref);
   if (!fixture) throw new Error(`switch fixture not found: ${ref}`);
 
@@ -179,7 +241,10 @@ async function createSwitch(
 
   const timestamp = resolveTimestamp(fixture.timestamp);
   const result = await client.createSwitch({ members: resolvedMembers, timestamp });
-  return result.id;
+  return {
+    sourceId: result.id,
+    fields: { timestamp },
+  };
 }
 
 function buildWorkingManifest(
@@ -193,6 +258,7 @@ function buildWorkingManifest(
     token,
     systemId,
     mode,
+    expectedSessionCount: 0,
     members: [],
     groups: [],
     switches: [],

@@ -30,6 +30,7 @@ bun.lockb
 .env.*
 !.env.example
 !.env.sp-test.example
+!.env.pk-test.example
 *.pem
 *.key
 
@@ -85,8 +86,10 @@ ui-design-local/
 .env.sp-test-*
 scripts/.sp-test-*.json
 
-# PK import test artifacts (seeded account manifests)
+# PK import test artifacts (seeded account manifests, export fixtures, env)
 scripts/.pk-seed-*.json
+scripts/.pk-test-*.json
+.env.pk-test
 
 # OS
 .tmp

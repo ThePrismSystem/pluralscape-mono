@@ -198,10 +198,11 @@ describe("mapSwitchBatch", () => {
     const results = mapSwitchBatch(docs, ctx);
     const sessions = results.filter((r) => r.result.status === "mapped");
 
-    // A: [T1, T1) — closed immediately by the second switch
+    // A: [T1, T1+1ms) — closed immediately by the second switch; bumped by 1 ms
+    // to avoid zero-duration rejection by the API
     const aSession = findSession(sessions, "ps_A");
     expect(aSession.startTime).toBe(Date.parse(t1));
-    expect(aSession.endTime).toBe(Date.parse(t1));
+    expect(aSession.endTime).toBe(Date.parse(t1) + 1);
 
     // B: [T1, null) — still active
     const bSession = findSession(sessions, "ps_B");

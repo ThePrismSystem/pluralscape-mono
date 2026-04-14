@@ -119,6 +119,18 @@ describe("PK Import — minimal fixture", () => {
     expect(payload.encrypted.colors).toEqual([]);
   });
 
+  it("maps Bob with no avatar", () => {
+    const bob = snap.find("member", "bob02");
+    const payload = bob?.payload as PkMappedMember;
+    expect(payload.encrypted.avatarSource).toBeNull();
+  });
+
+  it("maps Charlie with no avatar", () => {
+    const charlie = snap.find("member", "charl");
+    const payload = charlie?.payload as PkMappedMember;
+    expect(payload.encrypted.avatarSource).toBeNull();
+  });
+
   it("creates correct group count", () => {
     expect(snap.countByType("group")).toBe(2);
   });
@@ -170,6 +182,13 @@ describe("PK Import — minimal fixture", () => {
     expect(snap.countByType("privacy-bucket")).toBe(1);
     const bucket = snap.find("privacy-bucket", "synthetic:pk-private");
     expect(bucket).toBeDefined();
+  });
+
+  it("PK Private bucket payload contains correct name", () => {
+    const bucket = snap.find("privacy-bucket", "synthetic:pk-private");
+    expect(bucket).toBeDefined();
+    const payload = bucket?.payload as { encrypted: { name: string } };
+    expect(payload.encrypted.name).toBe("PK Private");
   });
 
   it("no warnings about skipped members", () => {
@@ -317,5 +336,12 @@ describe("PK Import — adversarial fixture", () => {
   it("produces zero fatal errors", () => {
     const fatalCount = result.errors.filter((e) => e.fatal).length;
     expect(fatalCount).toBe(0);
+  });
+
+  it("PK Private bucket payload contains correct name", () => {
+    const bucket = snap.find("privacy-bucket", "synthetic:pk-private");
+    expect(bucket).toBeDefined();
+    const payload = bucket?.payload as { encrypted: { name: string } };
+    expect(payload.encrypted.name).toBe("PK Private");
   });
 });

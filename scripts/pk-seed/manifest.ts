@@ -29,13 +29,14 @@ export interface Manifest {
   readonly token: string;
   readonly systemId: string;
   readonly mode: PkMode;
+  readonly expectedSessionCount: number;
   readonly members: ManifestEntry[];
   readonly groups: ManifestEntry[];
   readonly switches: ManifestEntry[];
 }
 
 export function emptyManifest(token: string, systemId: string, mode: PkMode): Manifest {
-  return { token, systemId, mode, members: [], groups: [], switches: [] };
+  return { token, systemId, mode, expectedSessionCount: 0, members: [], groups: [], switches: [] };
 }
 
 export function loadManifest(mode: PkMode): Manifest | undefined {

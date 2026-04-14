@@ -114,7 +114,7 @@ export const SWITCHES = [
 // ── Privacy scan data ───────────────────────────────────────────────
 
 export const PRIVACY_SCAN_MEMBERS = [
-  { pkMemberId: "elise1" },
+  { pkMemberId: "elise1", privacy: { visibility: "private" } },
   { pkMemberId: "cjk01" },
   { pkMemberId: "empty1" },
   { pkMemberId: "sigma1" },

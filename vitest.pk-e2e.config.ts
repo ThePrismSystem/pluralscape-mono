@@ -20,5 +20,6 @@ export default defineConfig({
     restoreMocks: true,
     testTimeout: 120_000,
     hookTimeout: 60_000,
+    setupFiles: ["src/__tests__/e2e/setup-env.ts"],
   },
 });
