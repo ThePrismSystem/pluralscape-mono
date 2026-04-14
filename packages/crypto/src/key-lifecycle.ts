@@ -87,9 +87,6 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
       this.deps.sodium.memzero(passwordKey);
     }
 
-    // Zero the encrypted master key ciphertext — no longer needed after unwrap
-    this.deps.sodium.memzero(encryptedMasterKey.ciphertext);
-
     const identityKeys = this.deps.deriveIdentityKeys(masterKey);
 
     try {
