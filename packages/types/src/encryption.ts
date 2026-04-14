@@ -115,6 +115,16 @@ declare const __encStr: unique symbol;
 /** Branded string to prevent accidental logging or display of ciphertext. */
 export type EncryptedString = string & { readonly [__encStr]: true };
 
+// ── ServerSecret ───────────────────────────────────────────────
+
+declare const __serverSecret: unique symbol;
+
+/**
+ * Branded type for server-held HMAC signing secrets. These are raw binary keys
+ * the server reads to sign webhook deliveries — NOT E2E encrypted data.
+ */
+export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
+
 // ── Server/Client variant pattern ──────────────────────────────
 // Server types carry EncryptedBlob; Client types have flat decrypted fields.
 // Only defined for completed domain modules.
