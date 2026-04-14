@@ -141,12 +141,15 @@ export async function createTimerConfig(
   // Compute initial nextCheckInAt if the timer is enabled with a valid interval
   const nextCheckInAt =
     isEnabled && intervalMinutes !== null
-      ? computeNextCheckInAt({
-          intervalMinutes,
-          wakingHoursOnly: parsed.wakingHoursOnly ?? null,
-          wakingStart: parsed.wakingStart ?? null,
-          wakingEnd: parsed.wakingEnd ?? null,
-        })
+      ? computeNextCheckInAt(
+          {
+            intervalMinutes,
+            wakingHoursOnly: parsed.wakingHoursOnly ?? null,
+            wakingStart: parsed.wakingStart ?? null,
+            wakingEnd: parsed.wakingEnd ?? null,
+          },
+          Date.now(),
+        )
       : null;
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -315,12 +318,15 @@ export async function updateTimerConfig(
         const effectiveInterval = parsed.intervalMinutes ?? current.intervalMinutes;
 
         if (effectiveEnabled && effectiveInterval !== null) {
-          setClause.nextCheckInAt = computeNextCheckInAt({
-            intervalMinutes: effectiveInterval,
-            wakingHoursOnly: parsed.wakingHoursOnly ?? current.wakingHoursOnly,
-            wakingStart: parsed.wakingStart ?? current.wakingStart,
-            wakingEnd: parsed.wakingEnd ?? current.wakingEnd,
-          });
+          setClause.nextCheckInAt = computeNextCheckInAt(
+            {
+              intervalMinutes: effectiveInterval,
+              wakingHoursOnly: parsed.wakingHoursOnly ?? current.wakingHoursOnly,
+              wakingStart: parsed.wakingStart ?? current.wakingStart,
+              wakingEnd: parsed.wakingEnd ?? current.wakingEnd,
+            },
+            Date.now(),
+          );
         } else {
           setClause.nextCheckInAt = null;
         }

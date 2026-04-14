@@ -160,12 +160,15 @@ export function createCheckInGenerateHandler(
           await db
             .update(timerConfigs)
             .set({
-              nextCheckInAt: computeNextCheckInAt({
-                intervalMinutes: config.intervalMinutes,
-                wakingHoursOnly: config.wakingHoursOnly,
-                wakingStart: config.wakingStart,
-                wakingEnd: config.wakingEnd,
-              }),
+              nextCheckInAt: computeNextCheckInAt(
+                {
+                  intervalMinutes: config.intervalMinutes,
+                  wakingHoursOnly: config.wakingHoursOnly,
+                  wakingStart: config.wakingStart,
+                  wakingEnd: config.wakingEnd,
+                },
+                nowMs,
+              ),
             })
             .where(eq(timerConfigs.id, config.id));
         } catch (error: unknown) {
