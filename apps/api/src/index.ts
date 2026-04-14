@@ -233,6 +233,12 @@ async function start(): Promise<void> {
     } else {
       logger.warn("Sync WebSocket pub/sub failed — cross-instance broadcast disabled");
     }
+  } else if (env.NODE_ENV === "production") {
+    logger.warn(
+      "VALKEY_URL not configured — rate limiting and login throttling use in-memory stores. " +
+        "In multi-instance deployments, limits are per-process and can be bypassed " +
+        "by distributing requests across instances.",
+    );
   }
 
   let httpServer: { stop(): Promise<void> | void } | null = null;
