@@ -169,6 +169,31 @@ describe("subscribeToEntityChanges", () => {
     if (unsubscribe) await unsubscribe();
   });
 
+  it("skips valid JSON with invalid entity type and logs an error", async () => {
+    const mock = createInMemoryPubSub();
+    setNotificationPubSub(mock.pubsub);
+
+    const loggerMock = await import("../logger.js");
+    const errorSpy = vi.spyOn(loggerMock.logger, "error").mockImplementation(() => undefined);
+    const received: EntityChangeEvent[] = [];
+
+    const unsubscribe = await subscribeToEntityChanges(SYSTEM_ID, "message", (evt) => {
+      received.push(evt);
+    });
+
+    // Valid JSON but fails Zod schema — "unknown" is not a valid entity discriminant
+    mock.deliver(
+      `entity-change:${SYSTEM_ID}:message`,
+      JSON.stringify({ entity: "unknown", type: "foo" }),
+    );
+
+    expect(received).toHaveLength(0);
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+    if (unsubscribe) await unsubscribe();
+  });
+
   it("returns null when pubsub is not configured", async () => {
     const result = await subscribeToEntityChanges(SYSTEM_ID, "message", () => undefined);
     expect(result).toBeNull();
