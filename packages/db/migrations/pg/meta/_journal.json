@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775467856630,
-      "tag": "0000_old_lady_vermin",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1775654716161,
-      "tag": "0002_pretty_anthem",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1775729222733,
-      "tag": "0003_chubby_ikaris",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1775768155444,
-      "tag": "0004_oval_domino",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1775706041210,
-      "tag": "0004_nasty_redwing",
+      "when": 1776161385560,
+      "tag": "0000_aspiring_romulus",
       "breakpoints": true
     }
   ]
