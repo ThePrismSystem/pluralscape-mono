@@ -49,6 +49,13 @@ const StoredJobDataSchema = z.object({
   error: z.string().nullable(),
   result: z.unknown().nullable(),
   createdAt: z.number(),
+  startedAt: z.number().nullable(),
+  completedAt: z.number().nullable(),
+  idempotencyKey: z.string().nullable(),
+  lastHeartbeatAt: z.number().nullable(),
+  timeoutMs: z.number(),
+  scheduledFor: z.number().nullable(),
+  priority: z.number(),
 });
 
 /**
@@ -422,7 +429,7 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store first
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      const parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
+      const parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
       if (parsed.status !== "dead-letter") {
         throw new InvalidJobTransitionError(jobId, parsed.status as JobStatus, "retry");
       }
@@ -464,7 +471,7 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store — already cancelled
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      const parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
+      const parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
       if (parsed.status === "completed") {
         throw new InvalidJobTransitionError(jobId, "completed", "cancel");
       }
@@ -500,10 +507,7 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      return fromStoredData(
-        jobId,
-        StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData,
-      );
+      return fromStoredData(jobId, StoredJobDataSchema.parse(JSON.parse(cancelledRaw)));
     }
 
     return null;
@@ -524,9 +528,7 @@ export class BullMQJobQueue implements JobQueue {
         const raw = await this.redis.get(key);
         if (raw !== null) {
           const id = key.replace(`${this.prefix}:cancelled:`, "") as JobId;
-          allJobs.push(
-            fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw)) as StoredJobData),
-          );
+          allJobs.push(fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw))));
         }
       }
     }
