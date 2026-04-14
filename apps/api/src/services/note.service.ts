@@ -17,6 +17,7 @@ import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_NOTES_PER_SYSTEM } from "../quota.constants.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -36,9 +37,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-/** Maximum non-archived notes per system. */
-const MAX_NOTES_PER_SYSTEM = 5_000;
 
 // ── Types ───────────────────────────────────────────────────────────
 

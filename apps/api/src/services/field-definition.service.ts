@@ -22,6 +22,7 @@ import { QueryCache } from "../lib/query-cache.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_FIELD_DEFINITIONS_PER_SYSTEM } from "../quota.constants.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -67,17 +68,6 @@ export function clearFieldDefCache(): void {
 }
 
 // ── Constants ───────────────────────────────────────────────────────
-
-/**
- * Maximum number of custom field definitions allowed per system (hard cap).
- *
- * Enforced at creation time — returns 409 Conflict when exceeded.
- * Prevents unbounded schema growth that could degrade query performance
- * and complicate client-side rendering of member profiles.
- *
- * See also: `docs/api-limits.md`
- */
-const MAX_FIELD_DEFINITIONS_PER_SYSTEM = 200;
 
 /** Maximum size of encrypted field definition data in bytes after base64 decode (32 KiB). */
 const MAX_ENCRYPTED_FIELD_DATA_BYTES = 32_768;

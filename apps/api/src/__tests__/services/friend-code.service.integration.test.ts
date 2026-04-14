@@ -15,7 +15,7 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
   clearWebhookConfigCache: vi.fn(),
 }));
 
-import { MAX_FRIEND_CODES_PER_ACCOUNT } from "../../services/friend-code.constants.js";
+import { MAX_FRIEND_CODES_PER_ACCOUNT } from "../../quota.constants.js";
 import {
   archiveFriendCode,
   generateFriendCode,

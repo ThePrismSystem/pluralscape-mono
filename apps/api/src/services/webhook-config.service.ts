@@ -26,12 +26,12 @@ import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 import { sendSignedWebhookRequest } from "../lib/webhook-fetch.js";
+import { MAX_WEBHOOK_CONFIGS_PER_SYSTEM } from "../quota.constants.js";
 import {
   DEFAULT_PAGE_LIMIT,
   HTTP_SUCCESS_MAX,
   HTTP_SUCCESS_MIN,
   MAX_PAGE_LIMIT,
-  MAX_WEBHOOK_CONFIGS_PER_SYSTEM,
   MS_PER_SECOND,
   WEBHOOK_REQUIRED_PROTOCOL,
   WEBHOOK_SECRET_BYTES,

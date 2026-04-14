@@ -4,6 +4,7 @@ import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { withTenantRead } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_ANALYTICS_SESSIONS } from "../quota.constants.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -20,15 +21,6 @@ import type {
   SystemStructureEntityId,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/**
- * Maximum number of sessions to fetch for analytics computation.
- * Analytics queries operate over a time range; this cap prevents
- * runaway reads on extremely active systems.
- */
-const MAX_ANALYTICS_SESSIONS = 10_000;
 
 // ── Types ────────────────────────────────────────────────────────────
 

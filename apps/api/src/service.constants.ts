@@ -33,9 +33,6 @@ export const MAX_ACTIVE_SESSIONS = 200;
 /** Maximum number of IDs in a single SQL IN clause to avoid parameter limits. */
 export const MAX_IN_CLAUSE_SIZE = 500;
 
-/** Maximum number of non-archived webhook configs per system. */
-export const MAX_WEBHOOK_CONFIGS_PER_SYSTEM = 25;
-
 /** Number of random bytes for webhook HMAC signing secrets (32 bytes = 256-bit). */
 export const WEBHOOK_SECRET_BYTES = 32;
 

@@ -12,7 +12,7 @@ import { createId, ID_PREFIXES, now } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { MAX_BUCKETS_PER_SYSTEM } from "../../services/bucket.constants.js";
+import { MAX_BUCKETS_PER_SYSTEM } from "../../quota.constants.js";
 import {
   archiveBucket,
   createBucket,

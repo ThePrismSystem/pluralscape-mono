@@ -16,6 +16,7 @@ import { assertOccUpdated } from "../lib/occ-update.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_GROUPS_PER_SYSTEM } from "../quota.constants.js";
 
 import { createHierarchyService } from "./hierarchy-service-factory.js";
 import { mapBaseFields } from "./hierarchy-service-helpers.js";
@@ -68,9 +69,6 @@ function toGroupResult(row: {
     sortOrder: row.sortOrder,
   };
 }
-
-/** Maximum non-archived groups per system. */
-const MAX_GROUPS_PER_SYSTEM = 200;
 
 // ── Shared hierarchy service ────────────────────────────────────────
 

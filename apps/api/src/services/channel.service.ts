@@ -12,6 +12,7 @@ import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_CHANNELS_PER_SYSTEM } from "../quota.constants.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -19,9 +20,6 @@ import {
 } from "../service.constants.js";
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
-
-/** Maximum non-archived channels per system (includes categories). */
-const MAX_CHANNELS_PER_SYSTEM = 50;
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";

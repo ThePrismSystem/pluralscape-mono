@@ -34,6 +34,7 @@ import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_MEMBERS_PER_SYSTEM } from "../quota.constants.js";
 import {
   DEFAULT_MEMBER_LIMIT,
   MAX_ENCRYPTED_MEMBER_DATA_BYTES,
@@ -41,9 +42,6 @@ import {
 } from "../routes/members/members.constants.js";
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
-
-/** Maximum non-archived members per system. */
-const MAX_MEMBERS_PER_SYSTEM = 5_000;
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";

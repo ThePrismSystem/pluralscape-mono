@@ -12,6 +12,7 @@ import { buildCompositePaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { MAX_PHOTOS_PER_MEMBER, MAX_PHOTOS_PER_SYSTEM } from "../quota.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -28,10 +29,6 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const MAX_PHOTOS_PER_MEMBER = 5;
-
-/** Maximum non-archived photos across all members in a system. */
-const MAX_PHOTOS_PER_SYSTEM = 500;
 const MAX_ENCRYPTED_PHOTO_DATA_BYTES = 131_072;
 
 /** Default page size for photo list. */
