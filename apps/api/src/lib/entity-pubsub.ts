@@ -5,7 +5,7 @@ import { getNotificationPubSub } from "./notification-pubsub.js";
 
 import type { EntityChangeEvent, SystemId } from "@pluralscape/types";
 
-const EntityChangeEventSchema = z.union([
+export const EntityChangeEventSchema = z.union([
   z.object({
     entity: z.literal("message"),
     type: z.enum(["created", "updated", "archived", "deleted"]),
