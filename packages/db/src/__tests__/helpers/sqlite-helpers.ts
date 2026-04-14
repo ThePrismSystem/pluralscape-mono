@@ -1169,6 +1169,7 @@ export const SQLITE_DDL = {
       waking_hours_only INTEGER,
       waking_start TEXT,
       waking_end TEXT,
+      next_check_in_at INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -1199,7 +1200,9 @@ export const SQLITE_DDL = {
     )
   `,
   timerConfigsIndexes: `
-    CREATE INDEX timer_configs_system_archived_idx ON timer_configs (system_id, archived)
+    CREATE INDEX timer_configs_system_archived_idx ON timer_configs (system_id, archived);
+    CREATE INDEX timer_configs_next_check_in_idx ON timer_configs (next_check_in_at) WHERE enabled = 1 AND archived_at IS NULL;
+    CREATE INDEX timer_configs_enabled_active_idx ON timer_configs (enabled) WHERE archived_at IS NULL
   `,
   checkInRecords: `
     CREATE TABLE check_in_records (

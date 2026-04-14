@@ -1,1 +1,0 @@
-ALTER TABLE "accounts" ALTER COLUMN "encrypted_master_key" SET NOT NULL;

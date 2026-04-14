@@ -12,15 +12,8 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1776175251173,
-      "tag": "0001_workable_madrox",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1776176959963,
-      "tag": "0002_lean_inhumans",
+      "when": 1776177534866,
+      "tag": "0001_furry_mentallo",
       "breakpoints": true
     }
   ]

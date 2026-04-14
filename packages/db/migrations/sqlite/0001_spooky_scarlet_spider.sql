@@ -20,4 +20,7 @@ INSERT INTO `__new_accounts`("id", "account_type", "email_hash", "email_salt", "
 DROP TABLE `accounts`;--> statement-breakpoint
 ALTER TABLE `__new_accounts` RENAME TO `accounts`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
-CREATE UNIQUE INDEX `accounts_email_hash_idx` ON `accounts` (`email_hash`);
+CREATE UNIQUE INDEX `accounts_email_hash_idx` ON `accounts` (`email_hash`);--> statement-breakpoint
+ALTER TABLE `timer_configs` ADD `next_check_in_at` integer;--> statement-breakpoint
+CREATE INDEX `timer_configs_next_check_in_idx` ON `timer_configs` (`next_check_in_at`) WHERE "timer_configs"."enabled" = 1 AND "timer_configs"."archived_at" IS NULL;--> statement-breakpoint
+CREATE INDEX `timer_configs_enabled_active_idx` ON `timer_configs` (`enabled`) WHERE "timer_configs"."archived_at" IS NULL;

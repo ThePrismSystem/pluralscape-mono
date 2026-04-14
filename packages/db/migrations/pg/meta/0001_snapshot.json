@@ -1,5 +1,5 @@
 {
-  "id": "da60f6f9-a808-49b6-a88b-1710468500dc",
+  "id": "b53a021c-6c89-4ee3-980c-5df5bbbe8e4b",
   "prevId": "783582d1-b263-4660-aa31-f9bbd6555488",
   "version": "7",
   "dialect": "postgresql",
@@ -164,7 +164,7 @@
           "name": "encrypted_master_key",
           "type": "bytea",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "encrypted_email": {
           "name": "encrypted_email",

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1cee1c91-de03-48ba-a897-072705de912e",
+  "id": "60be80f5-e2f3-47c0-94f6-7f5a643b99ad",
   "prevId": "b344807a-7de2-4d75-beae-d11164a01e88",
   "tables": {
     "account_purge_requests": {
@@ -155,7 +155,7 @@
           "name": "encrypted_master_key",
           "type": "blob",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "encrypted_email": {

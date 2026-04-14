@@ -12,15 +12,8 @@
     {
       "idx": 1,
       "version": "6",
-      "when": 1776175255889,
-      "tag": "0001_minor_scorpion",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1776176962009,
-      "tag": "0002_modern_mikhail_rasputin",
+      "when": 1776177539545,
+      "tag": "0001_spooky_scarlet_spider",
       "breakpoints": true
     }
   ]

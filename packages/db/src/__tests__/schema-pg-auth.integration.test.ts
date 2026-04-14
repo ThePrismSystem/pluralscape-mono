@@ -963,8 +963,15 @@ describe("PG auth schema", () => {
       const exactId = "a".repeat(50);
 
       await client.query(
-        `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), 1)`,
-        [exactId, `hash_${crypto.randomUUID()}`, `salt_${crypto.randomUUID()}`, "pw_hash", "kdf"],
+        `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, encrypted_master_key, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), 1)`,
+        [
+          exactId,
+          `hash_${crypto.randomUUID()}`,
+          `salt_${crypto.randomUUID()}`,
+          "pw_hash",
+          "kdf",
+          new Uint8Array(72),
+        ],
       );
 
       const result = await client.query<{ id: string }>(`SELECT id FROM accounts WHERE id = $1`, [
