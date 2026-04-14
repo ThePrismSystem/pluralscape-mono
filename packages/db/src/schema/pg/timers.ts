@@ -38,6 +38,7 @@ export const timerConfigs = pgTable(
     wakingHoursOnly: boolean("waking_hours_only"),
     wakingStart: varchar("waking_start", { length: 255 }),
     wakingEnd: varchar("waking_end", { length: 255 }),
+    nextCheckInAt: pgTimestamp("next_check_in_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -50,6 +51,12 @@ export const timerConfigs = pgTable(
     check("timer_configs_waking_start_format", pgTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", pgTimeFormatCheck(t.wakingEnd)),
     archivableConsistencyCheckFor("timer_configs", t.archived, t.archivedAt),
+    index("timer_configs_next_check_in_idx")
+      .on(t.nextCheckInAt)
+      .where(sql`${t.enabled} = true AND ${t.archivedAt} IS NULL`),
+    index("timer_configs_enabled_active_idx")
+      .on(t.enabled)
+      .where(sql`${t.archivedAt} IS NULL`),
   ],
 );
 

@@ -16,6 +16,7 @@ import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { computeNextCheckInAt } from "../lib/timer-scheduling.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -134,6 +135,19 @@ export async function createTimerConfig(
 
   const timerId = createId(ID_PREFIXES.timer);
   const timestamp = now();
+  const isEnabled = parsed.enabled ?? true;
+  const intervalMinutes = parsed.intervalMinutes ?? null;
+
+  // Compute initial nextCheckInAt if the timer is enabled with a valid interval
+  const nextCheckInAt =
+    isEnabled && intervalMinutes !== null
+      ? computeNextCheckInAt({
+          intervalMinutes,
+          wakingHoursOnly: parsed.wakingHoursOnly ?? null,
+          wakingStart: parsed.wakingStart ?? null,
+          wakingEnd: parsed.wakingEnd ?? null,
+        })
+      : null;
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
@@ -141,11 +155,12 @@ export async function createTimerConfig(
       .values({
         id: timerId,
         systemId,
-        enabled: parsed.enabled ?? true,
-        intervalMinutes: parsed.intervalMinutes ?? null,
+        enabled: isEnabled,
+        intervalMinutes,
         wakingHoursOnly: parsed.wakingHoursOnly ?? null,
         wakingStart: parsed.wakingStart ?? null,
         wakingEnd: parsed.wakingEnd ?? null,
+        nextCheckInAt,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -272,6 +287,44 @@ export async function updateTimerConfig(
     }
     if (parsed.wakingEnd !== undefined) {
       setClause.wakingEnd = parsed.wakingEnd;
+    }
+
+    // Recompute nextCheckInAt when scheduling-related fields change
+    if (
+      parsed.enabled !== undefined ||
+      parsed.intervalMinutes !== undefined ||
+      parsed.wakingHoursOnly !== undefined ||
+      parsed.wakingStart !== undefined ||
+      parsed.wakingEnd !== undefined
+    ) {
+      // We need the current config to merge with updated fields
+      const [current] = await tx
+        .select()
+        .from(timerConfigs)
+        .where(
+          and(
+            eq(timerConfigs.id, timerId),
+            eq(timerConfigs.systemId, systemId),
+            eq(timerConfigs.archived, false),
+          ),
+        )
+        .limit(1);
+
+      if (current) {
+        const effectiveEnabled = parsed.enabled ?? current.enabled;
+        const effectiveInterval = parsed.intervalMinutes ?? current.intervalMinutes;
+
+        if (effectiveEnabled && effectiveInterval !== null) {
+          setClause.nextCheckInAt = computeNextCheckInAt({
+            intervalMinutes: effectiveInterval,
+            wakingHoursOnly: parsed.wakingHoursOnly ?? current.wakingHoursOnly,
+            wakingStart: parsed.wakingStart ?? current.wakingStart,
+            wakingEnd: parsed.wakingEnd ?? current.wakingEnd,
+          });
+        } else {
+          setClause.nextCheckInAt = null;
+        }
+      }
     }
 
     // The `.set()` object uses `as Record<string, unknown>` to satisfy Drizzle's

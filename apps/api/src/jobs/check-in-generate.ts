@@ -1,9 +1,10 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId } from "@pluralscape/types";
 import { parseTimeToMinutes } from "@pluralscape/validation";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lte } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
+import { computeNextCheckInAt } from "../lib/timer-scheduling.js";
 
 import { CHECK_IN_GENERATE_BATCH_SIZE } from "./jobs.constants.js";
 
@@ -94,7 +95,11 @@ export function createCheckInGenerateHandler(
     do {
       if (isAborted(ctx.signal)) return;
 
-      const conditions = [eq(timerConfigs.enabled, true), eq(timerConfigs.archived, false)];
+      const conditions = [
+        eq(timerConfigs.enabled, true),
+        isNull(timerConfigs.archivedAt),
+        lte(timerConfigs.nextCheckInAt, nowMs),
+      ];
       if (cursor !== null) {
         conditions.push(gt(timerConfigs.id, cursor));
       }
@@ -150,6 +155,19 @@ export function createCheckInGenerateHandler(
               idempotencyKey,
             })
             .onConflictDoNothing();
+
+          // Advance nextCheckInAt so this config is not picked up again until due
+          await db
+            .update(timerConfigs)
+            .set({
+              nextCheckInAt: computeNextCheckInAt({
+                intervalMinutes: config.intervalMinutes,
+                wakingHoursOnly: config.wakingHoursOnly,
+                wakingStart: config.wakingStart,
+                wakingEnd: config.wakingEnd,
+              }),
+            })
+            .where(eq(timerConfigs.id, config.id));
         } catch (error: unknown) {
           errorCount++;
           logger.warn("Failed to process timer config for check-in generation", {

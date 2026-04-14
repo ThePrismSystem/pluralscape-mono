@@ -36,6 +36,7 @@ export const timerConfigs = sqliteTable(
     wakingHoursOnly: integer("waking_hours_only", { mode: "boolean" }),
     wakingStart: text("waking_start"),
     wakingEnd: text("waking_end"),
+    nextCheckInAt: sqliteTimestamp("next_check_in_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -48,6 +49,12 @@ export const timerConfigs = sqliteTable(
     check("timer_configs_waking_start_format", sqliteTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", sqliteTimeFormatCheck(t.wakingEnd)),
     archivableConsistencyCheckFor("timer_configs", t.archived, t.archivedAt),
+    index("timer_configs_next_check_in_idx")
+      .on(t.nextCheckInAt)
+      .where(sql`${t.enabled} = 1 AND ${t.archivedAt} IS NULL`),
+    index("timer_configs_enabled_active_idx")
+      .on(t.enabled)
+      .where(sql`${t.archivedAt} IS NULL`),
   ],
 );
 
