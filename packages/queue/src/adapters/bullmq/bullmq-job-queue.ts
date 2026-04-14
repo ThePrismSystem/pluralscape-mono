@@ -429,7 +429,12 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store first
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      const parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+      let parsed: z.output<typeof StoredJobDataSchema>;
+      try {
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+      } catch {
+        throw new Error(`Corrupt stored data for job ${jobId}`);
+      }
       if (parsed.status !== "dead-letter") {
         throw new InvalidJobTransitionError(jobId, parsed.status as JobStatus, "retry");
       }
@@ -471,7 +476,12 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store — already cancelled
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      const parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+      let parsed: z.output<typeof StoredJobDataSchema>;
+      try {
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+      } catch {
+        throw new Error(`Corrupt stored data for job ${jobId}`);
+      }
       if (parsed.status === "completed") {
         throw new InvalidJobTransitionError(jobId, "completed", "cancel");
       }
@@ -507,7 +517,13 @@ export class BullMQJobQueue implements JobQueue {
     // Check cancelled store
     const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
     if (cancelledRaw !== null) {
-      return fromStoredData(jobId, StoredJobDataSchema.parse(JSON.parse(cancelledRaw)));
+      let parsed: z.output<typeof StoredJobDataSchema>;
+      try {
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
+      } catch {
+        throw new Error(`Corrupt stored data for job ${jobId}`);
+      }
+      return fromStoredData(jobId, parsed);
     }
 
     return null;
@@ -528,7 +544,11 @@ export class BullMQJobQueue implements JobQueue {
         const raw = await this.redis.get(key);
         if (raw !== null) {
           const id = key.replace(`${this.prefix}:cancelled:`, "") as JobId;
-          allJobs.push(fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw))));
+          try {
+            allJobs.push(fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw))));
+          } catch {
+            this.logger.warn("Corrupt cancelled job data, skipping", { jobId: id });
+          }
         }
       }
     }
