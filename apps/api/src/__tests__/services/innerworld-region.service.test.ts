@@ -221,6 +221,33 @@ describe("createRegion", () => {
       createRegion(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
   });
+
+  it("allows creation when region count is below maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 99 }]); // quota count -> below limit
+    chain.returning.mockResolvedValueOnce([makeRegionRow()]);
+
+    const result = await createRegion(
+      db,
+      SYSTEM_ID,
+      { encryptedData: VALID_BLOB_BASE64 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe(REGION_ID);
+  });
+
+  it("acquires FOR UPDATE lock on system row during quota check", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([makeRegionRow()]);
+
+    await createRegion(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit);
+
+    expect(chain.for).toHaveBeenCalledWith("update");
+  });
 });
 
 describe("listRegions", () => {

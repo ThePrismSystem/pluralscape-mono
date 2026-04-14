@@ -216,6 +216,33 @@ describe("createEntity", () => {
       createEntity(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
   });
+
+  it("allows creation when entity count is below maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 499 }]); // quota count -> below limit
+    chain.returning.mockResolvedValueOnce([makeEntityRow()]);
+
+    const result = await createEntity(
+      db,
+      SYSTEM_ID,
+      { encryptedData: VALID_BLOB_BASE64 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe(ENTITY_ID);
+  });
+
+  it("acquires FOR UPDATE lock on system row during quota check", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([makeEntityRow()]);
+
+    await createEntity(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit);
+
+    expect(chain.for).toHaveBeenCalledWith("update");
+  });
 });
 
 describe("listEntities", () => {
