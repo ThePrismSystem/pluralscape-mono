@@ -167,7 +167,7 @@ export async function listEntityTypes(
 export async function getEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityTypeId: string,
+  entityTypeId: SystemStructureEntityTypeId,
   auth: AuthContext,
 ): Promise<EntityTypeResult> {
   assertSystemOwnership(systemId, auth);
@@ -196,7 +196,7 @@ export async function getEntityType(
 export async function updateEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityTypeId: string,
+  entityTypeId: SystemStructureEntityTypeId,
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -263,7 +263,7 @@ export async function updateEntityType(
 export async function archiveEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityTypeId: string,
+  entityTypeId: SystemStructureEntityTypeId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
@@ -273,7 +273,7 @@ export async function archiveEntityType(
 export async function restoreEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityTypeId: string,
+  entityTypeId: SystemStructureEntityTypeId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityTypeResult> {
@@ -285,7 +285,7 @@ export async function restoreEntityType(
 export async function deleteEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityTypeId: string,
+  entityTypeId: SystemStructureEntityTypeId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {

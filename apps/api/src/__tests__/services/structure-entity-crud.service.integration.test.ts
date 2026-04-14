@@ -193,8 +193,10 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for nonexistent entity", async () => {
+      const missingId =
+        `ste_${crypto.randomUUID()}` as import("@pluralscape/types").SystemStructureEntityId;
       await assertApiError(
-        getStructureEntity(asDb(db), systemId, `ste_${crypto.randomUUID()}`, auth),
+        getStructureEntity(asDb(db), systemId, missingId, auth),
         "NOT_FOUND",
         404,
       );
@@ -450,8 +452,10 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for nonexistent entity", async () => {
+      const missingId =
+        `ste_${crypto.randomUUID()}` as import("@pluralscape/types").SystemStructureEntityId;
       await assertApiError(
-        deleteStructureEntity(asDb(db), systemId, `ste_${crypto.randomUUID()}`, auth, noopAudit),
+        deleteStructureEntity(asDb(db), systemId, missingId, auth, noopAudit),
         "NOT_FOUND",
         404,
       );

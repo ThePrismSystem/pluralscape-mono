@@ -408,24 +408,6 @@ describe("account service", () => {
       expect(mockMemzero).toHaveBeenCalledTimes(3);
     });
 
-    it("does not call memzero when encryptedMasterKey is null", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: null,
-          version: 1,
-        },
-      ]);
-
-      await expect(
-        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
-      ).rejects.toThrow("Account missing encrypted master key");
-
-      expect(mockMemzero).toHaveBeenCalledTimes(0);
-    });
-
     it("throws ZodError on invalid Zod input", async () => {
       const { db } = mockDb();
       await expect(

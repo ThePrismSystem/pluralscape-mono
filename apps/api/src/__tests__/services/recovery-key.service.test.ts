@@ -229,24 +229,6 @@ describe("recovery-key service", () => {
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
-    it("throws when account has no encrypted master key", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: null,
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([
-        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
-      ]);
-
-      await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
-      ).rejects.toThrow("Account missing encrypted master key");
-    });
-
     it("throws on invalid KDF salt length", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([

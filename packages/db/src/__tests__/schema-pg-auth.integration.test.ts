@@ -52,6 +52,7 @@ describe("PG auth schema", () => {
       emailSalt: overrides.emailSalt ?? `salt_${crypto.randomUUID()}`,
       passwordHash: overrides.passwordHash ?? `$argon2id$${crypto.randomUUID()}`,
       kdfSalt: overrides.kdfSalt ?? `kdf_${crypto.randomUUID()}`,
+      encryptedMasterKey: new Uint8Array(72),
       createdAt: overrides.createdAt ?? now,
       updatedAt: overrides.updatedAt ?? now,
     };

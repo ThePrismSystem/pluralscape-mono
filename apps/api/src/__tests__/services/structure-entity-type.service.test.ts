@@ -257,9 +257,9 @@ describe("structure-entity-type service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
 
-      await expect(getEntityType(db, SYSTEM_ID, "set_missing", AUTH)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-      );
+      await expect(
+        getEntityType(db, SYSTEM_ID, "set_missing" as SystemStructureEntityTypeId, AUTH),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
     it("throws 404 on ownership failure", async () => {
@@ -325,7 +325,14 @@ describe("structure-entity-type service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        updateEntityType(db, SYSTEM_ID, "set_missing", validUpdate, AUTH, mockAudit),
+        updateEntityType(
+          db,
+          SYSTEM_ID,
+          "set_missing" as SystemStructureEntityTypeId,
+          validUpdate,
+          AUTH,
+          mockAudit,
+        ),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -434,9 +441,15 @@ describe("structure-entity-type service", () => {
       chain.limit.mockReturnValueOnce(chain);
       chain.for.mockResolvedValueOnce([]);
 
-      await expect(deleteEntityType(db, SYSTEM_ID, "set_missing", AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-      );
+      await expect(
+        deleteEntityType(
+          db,
+          SYSTEM_ID,
+          "set_missing" as SystemStructureEntityTypeId,
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
     it("throws HAS_DEPENDENTS when entity type has entities", async () => {
