@@ -173,7 +173,7 @@ Epics:
 
 ## Milestone 10: UI/UX Design
 
-Goal: Stitch-generated HTML mockups for every screen family, establishing visual language, interaction patterns, and layout decisions before React Native code is written.
+Goal: Mockups for every screen family, establishing visual language, interaction patterns, and layout decisions before React Native code is written.
 
 Epics:
 
@@ -190,7 +190,7 @@ Epics:
 
 ## Milestone 11: UI/UX Buildout
 
-Goal: Translate Stitch HTML mockups into React Native/Expo components with placeholder data. Every screen navigable and visually complete, but not wired to real data.
+Goal: Translate mockups into React Native/Expo components with placeholder data. Every screen navigable and visually complete, but not wired to real data.
 
 Epics:
 
