@@ -4,17 +4,25 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  accountBidirectionalRlsPolicy,
   accountFkRlsPolicy,
   accountRlsPolicy,
   dualTenantRlsPolicy,
   enableRls,
   generateRlsStatements,
   RLS_TABLE_POLICIES,
+  systemFkRlsPolicy,
   systemRlsPolicy,
 } from "../rls/policies.js";
 import { members } from "../schema/pg/members.js";
 
-import { pgInsertAccount, pgInsertSystem, pgInsertMember, testBlob } from "./helpers/pg-helpers.js";
+import {
+  createPgSyncTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  pgInsertMember,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -90,12 +98,41 @@ describe("RLS policy SQL generation", () => {
   });
 
   it("accountFkRlsPolicy generates subquery-based policy", () => {
-    const result = accountFkRlsPolicy("biometric_tokens", "session_id", "sessions", "account_id");
+    const result = accountFkRlsPolicy(
+      "biometric_tokens",
+      "session_id",
+      "sessions",
+      "id",
+      "account_id",
+    );
     expect(result).toContain("CREATE POLICY biometric_tokens_account_isolation");
     expect(result).toContain("session_id IN (SELECT id FROM sessions WHERE account_id =");
     expect(result).toContain("USING");
     expect(result).toContain("WITH CHECK");
     expect(result).toContain("NULLIF(current_setting('app.current_account_id', true), '')");
+  });
+
+  it("systemFkRlsPolicy generates subquery-based policy for sync tables", () => {
+    const result = systemFkRlsPolicy(
+      "sync_changes",
+      "document_id",
+      "sync_documents",
+      "document_id",
+      "system_id",
+    );
+    expect(result).toContain("CREATE POLICY sync_changes_system_isolation");
+    expect(result).toContain(
+      "document_id IN (SELECT document_id FROM sync_documents WHERE system_id =",
+    );
+    expect(result).toContain("USING");
+    expect(result).toContain("WITH CHECK");
+    expect(result).toContain("NULLIF(current_setting('app.current_system_id', true), '')");
+  });
+
+  it("RLS_TABLE_POLICIES covers sync child tables", () => {
+    expect(RLS_TABLE_POLICIES).toHaveProperty("sync_changes", "system-fk");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("sync_snapshots", "system-fk");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("sync_conflicts", "system-fk");
   });
 
   it("generateRlsStatements for system-scoped table returns enable + policy", () => {
@@ -1204,7 +1241,7 @@ describe("RLS cross-tenant isolation — account-fk scope (PGlite)", () => {
       await client.query(stmt);
     }
     await client.query(
-      accountFkRlsPolicy("biometric_tokens", "session_id", "sessions", "account_id"),
+      accountFkRlsPolicy("biometric_tokens", "session_id", "sessions", "id", "account_id"),
     );
 
     await client.query(`SET ROLE ${APP_ROLE}`);
@@ -1561,5 +1598,383 @@ describe("RLS cross-tenant isolation — import_entity_refs (PGlite)", () => {
     await setSessionSystemId(db, systemIdB);
     const result = await db.execute(sql`SELECT * FROM import_entity_refs WHERE id = ${refIdB}`);
     expect(result.rows).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RLS cross-tenant isolation — system-fk scope (sync tables, PGlite)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — system-fk scope (sync tables, PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const systemIdA = crypto.randomUUID();
+  const systemIdB = crypto.randomUUID();
+  const docIdA = `doc-${crypto.randomUUID()}`;
+  const docIdB = `doc-${crypto.randomUUID()}`;
+  const changeIdA = crypto.randomUUID();
+  const changeIdB = crypto.randomUUID();
+  const conflictIdA = crypto.randomUUID();
+  const conflictIdB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await createPgSyncTables(client);
+
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+    await pgInsertSystem(db, accountIdA, systemIdA);
+    await pgInsertSystem(db, accountIdB, systemIdB);
+
+    // Insert sync_documents
+    const now = new Date().toISOString();
+    await client.query(
+      `INSERT INTO sync_documents (document_id, system_id, doc_type, created_at, updated_at, key_type) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [docIdA, systemIdA, "system-core", now, now, "derived"],
+    );
+    await client.query(
+      `INSERT INTO sync_documents (document_id, system_id, doc_type, created_at, updated_at, key_type) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [docIdB, systemIdB, "system-core", now, now, "derived"],
+    );
+
+    // Insert sync_changes
+    await client.query(
+      `INSERT INTO sync_changes (id, document_id, seq, encrypted_payload, author_public_key, nonce, signature, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        changeIdA,
+        docIdA,
+        1,
+        new Uint8Array([1]),
+        new Uint8Array([2]),
+        new Uint8Array([3]),
+        new Uint8Array([4]),
+        now,
+      ],
+    );
+    await client.query(
+      `INSERT INTO sync_changes (id, document_id, seq, encrypted_payload, author_public_key, nonce, signature, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        changeIdB,
+        docIdB,
+        1,
+        new Uint8Array([5]),
+        new Uint8Array([6]),
+        new Uint8Array([7]),
+        new Uint8Array([8]),
+        now,
+      ],
+    );
+
+    // Insert sync_snapshots
+    await client.query(
+      `INSERT INTO sync_snapshots (document_id, snapshot_version, encrypted_payload, author_public_key, nonce, signature, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        docIdA,
+        1,
+        new Uint8Array([10]),
+        new Uint8Array([11]),
+        new Uint8Array([12]),
+        new Uint8Array([13]),
+        now,
+      ],
+    );
+    await client.query(
+      `INSERT INTO sync_snapshots (document_id, snapshot_version, encrypted_payload, author_public_key, nonce, signature, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        docIdB,
+        1,
+        new Uint8Array([14]),
+        new Uint8Array([15]),
+        new Uint8Array([16]),
+        new Uint8Array([17]),
+        now,
+      ],
+    );
+
+    // Insert sync_conflicts
+    await client.query(
+      `INSERT INTO sync_conflicts (id, document_id, entity_type, entity_id, resolution, detected_at, summary, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [conflictIdA, docIdA, "member", "mem-1", "lww-field", now, "test conflict A", now],
+    );
+    await client.query(
+      `INSERT INTO sync_conflicts (id, document_id, entity_type, entity_id, resolution, detected_at, summary, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [conflictIdB, docIdB, "member", "mem-2", "lww-field", now, "test conflict B", now],
+    );
+
+    // Create role and apply RLS
+    await client.query(`CREATE ROLE app_user`);
+    await client.query(`GRANT ALL ON sync_documents TO app_user`);
+    await client.query(`GRANT ALL ON sync_changes TO app_user`);
+    await client.query(`GRANT ALL ON sync_snapshots TO app_user`);
+    await client.query(`GRANT ALL ON sync_conflicts TO app_user`);
+
+    // Apply RLS to sync_documents (system scope)
+    for (const stmt of enableRls("sync_documents")) {
+      await client.query(stmt);
+    }
+    await client.query(systemRlsPolicy("sync_documents"));
+
+    // Apply RLS to sync child tables (system-fk scope)
+    for (const tableName of ["sync_changes", "sync_snapshots", "sync_conflicts"] as const) {
+      for (const stmt of enableRls(tableName)) {
+        await client.query(stmt);
+      }
+      await client.query(
+        systemFkRlsPolicy(tableName, "document_id", "sync_documents", "document_id", "system_id"),
+      );
+    }
+
+    await client.query(`SET ROLE app_user`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("sync_changes: only sees rows for current system via FK join", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM sync_changes`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(changeIdA);
+  });
+
+  it("sync_changes: returns empty when context cleared (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM sync_changes`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("sync_snapshots: only sees rows for current system via FK join", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM sync_snapshots`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["document_id"]).toBe(docIdA);
+  });
+
+  it("sync_conflicts: only sees rows for current system via FK join", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM sync_conflicts`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(conflictIdA);
+  });
+
+  it("sync_changes: cross-tenant INSERT blocked", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const now = new Date().toISOString();
+    await expect(
+      client.query(
+        `INSERT INTO sync_changes (id, document_id, seq, encrypted_payload, author_public_key, nonce, signature, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          crypto.randomUUID(),
+          docIdB,
+          2,
+          new Uint8Array([99]),
+          new Uint8Array([99]),
+          new Uint8Array([99]),
+          new Uint8Array([99]),
+          now,
+        ],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("sync_changes: cross-tenant UPDATE affects 0 rows", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`UPDATE sync_changes SET seq = 99 WHERE id = ${changeIdB}`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("sync_changes: cross-tenant DELETE affects 0 rows", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    await db.execute(sql`DELETE FROM sync_changes WHERE id = ${changeIdB}`);
+
+    // Verify row still exists under system B
+    await setSessionSystemId(db, systemIdB);
+    const result = await db.execute(sql`SELECT * FROM sync_changes WHERE id = ${changeIdB}`);
+    expect(result.rows).toHaveLength(1);
+  });
+
+  it("switching system context switches visible sync rows", async () => {
+    await setSessionSystemId(db, systemIdA);
+    const rowsA = await db.execute(sql`SELECT * FROM sync_changes`);
+    expect(rowsA.rows).toHaveLength(1);
+
+    await setSessionSystemId(db, systemIdB);
+    const rowsB = await db.execute(sql`SELECT * FROM sync_changes`);
+    expect(rowsB.rows).toHaveLength(1);
+    expect((rowsB.rows[0] as Record<string, unknown>)["id"]).toBe(changeIdB);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RLS cross-tenant isolation — account-bidirectional (friend_connections, PGlite)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — account-bidirectional (friend_connections, PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const accountIdC = crypto.randomUUID();
+  const connIdAtoB = crypto.randomUUID();
+  const connIdBtoA = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await client.query(`
+      CREATE TABLE accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        email_hash VARCHAR(255) NOT NULL UNIQUE,
+        email_salt VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
+        encrypted_master_key BYTEA,
+        encrypted_email BYTEA,
+        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE friend_connections (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        friend_account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        status VARCHAR(50) NOT NULL DEFAULT 'pending',
+        encrypted_data BYTEA,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
+      )
+    `);
+
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+    await pgInsertAccount(db, accountIdC);
+
+    // A sends request to B
+    const now = new Date().toISOString();
+    await client.query(
+      `INSERT INTO friend_connections (id, account_id, friend_account_id, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [connIdAtoB, accountIdA, accountIdB, "pending", now, now],
+    );
+    // B sends request to A (separate directional entry)
+    await client.query(
+      `INSERT INTO friend_connections (id, account_id, friend_account_id, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [connIdBtoA, accountIdB, accountIdA, "accepted", now, now],
+    );
+
+    await client.query(`CREATE ROLE app_user`);
+    await client.query(`GRANT ALL ON friend_connections TO app_user`);
+
+    for (const stmt of enableRls("friend_connections")) {
+      await client.query(stmt);
+    }
+    for (const policy of accountBidirectionalRlsPolicy("friend_connections")) {
+      await client.query(policy);
+    }
+
+    await client.query(`SET ROLE app_user`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("sender can read their own outgoing connection", async () => {
+    await setSessionAccountId(db, accountIdA);
+
+    const result = await db.execute(sql`SELECT * FROM friend_connections WHERE id = ${connIdAtoB}`);
+    expect(result.rows).toHaveLength(1);
+  });
+
+  it("recipient can read incoming connection (bidirectional read)", async () => {
+    await setSessionAccountId(db, accountIdB);
+
+    // B is the friend_account_id on connIdAtoB — should be visible via bidirectional SELECT
+    const result = await db.execute(sql`SELECT * FROM friend_connections WHERE id = ${connIdAtoB}`);
+    expect(result.rows).toHaveLength(1);
+  });
+
+  it("unrelated account cannot see connections between A and B", async () => {
+    await setSessionAccountId(db, accountIdC);
+
+    const result = await db.execute(sql`SELECT * FROM friend_connections`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("account A sees both connections (as sender of one, recipient of another)", async () => {
+    await setSessionAccountId(db, accountIdA);
+
+    const result = await db.execute(sql`SELECT * FROM friend_connections`);
+    expect(result.rows).toHaveLength(2);
+  });
+
+  it("INSERT restricted to own account_id", async () => {
+    await setSessionAccountId(db, accountIdA);
+
+    const now = new Date().toISOString();
+    await expect(
+      client.query(
+        `INSERT INTO friend_connections (id, account_id, friend_account_id, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [crypto.randomUUID(), accountIdB, accountIdC, "pending", now, now],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("UPDATE restricted to own connections (sender only)", async () => {
+    await setSessionAccountId(db, accountIdA);
+
+    // A can update their own outgoing connection
+    const updateOwn = await db.execute(
+      sql`UPDATE friend_connections SET status = 'accepted' WHERE id = ${connIdAtoB} RETURNING id`,
+    );
+    expect(updateOwn.rows).toHaveLength(1);
+
+    // A cannot update B's outgoing connection (even though A is the recipient)
+    const updateOther = await db.execute(
+      sql`UPDATE friend_connections SET status = 'blocked' WHERE id = ${connIdBtoA} RETURNING id`,
+    );
+    expect(updateOther.rows).toHaveLength(0);
+  });
+
+  it("recipient can delete connection they received", async () => {
+    // B can delete the connection A sent to them
+    await setSessionAccountId(db, accountIdB);
+
+    // First verify B can see it
+    const before = await db.execute(sql`SELECT * FROM friend_connections WHERE id = ${connIdAtoB}`);
+    expect(before.rows).toHaveLength(1);
+
+    await db.execute(sql`DELETE FROM friend_connections WHERE id = ${connIdAtoB}`);
+
+    const after = await db.execute(sql`SELECT * FROM friend_connections WHERE id = ${connIdAtoB}`);
+    expect(after.rows).toHaveLength(0);
+  });
+
+  it("returns empty when no account context (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM friend_connections`);
+    expect(result.rows).toHaveLength(0);
   });
 });

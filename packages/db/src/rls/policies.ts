@@ -12,7 +12,9 @@ export type RlsScopeType =
   | "system-pk"
   | "account-pk"
   | "dual"
-  | "account-fk";
+  | "account-fk"
+  | "system-fk"
+  | "account-bidirectional";
 
 /**
  * Returns a SQL expression for reading a GUC variable fail-closed.
@@ -70,14 +72,48 @@ export function dualTenantRlsPolicy(tableName: string): string {
   );
 }
 
+/** FK mapping type: fkColumn is the child column, fkTable is the parent, parentIdColumn is the parent PK, fkTenantColumn is the tenant column in parent. */
+interface FkMapping {
+  readonly fkColumn: string;
+  readonly fkTable: string;
+  readonly parentIdColumn: string;
+  readonly fkTenantColumn: string;
+}
+
 /**
  * FK-to-tenant column mappings for account-fk scoped tables.
- * Key: table name, Value: { fkColumn, fkTable, fkTenantColumn }
  */
-const ACCOUNT_FK_MAPPING: Readonly<
-  Record<string, { fkColumn: string; fkTable: string; fkTenantColumn: string }>
-> = {
-  biometric_tokens: { fkColumn: "session_id", fkTable: "sessions", fkTenantColumn: "account_id" },
+const ACCOUNT_FK_MAPPING: Readonly<Record<string, FkMapping>> = {
+  biometric_tokens: {
+    fkColumn: "session_id",
+    fkTable: "sessions",
+    parentIdColumn: "id",
+    fkTenantColumn: "account_id",
+  },
+};
+
+/**
+ * FK-to-tenant column mappings for system-fk scoped tables.
+ */
+const SYSTEM_FK_MAPPING: Readonly<Record<string, FkMapping>> = {
+  sync_changes: {
+    fkColumn: "document_id",
+    fkTable: "sync_documents",
+    parentIdColumn: "document_id",
+    fkTenantColumn: "system_id",
+  },
+  sync_snapshots: {
+    fkColumn: "document_id",
+    fkTable: "sync_documents",
+    parentIdColumn: "document_id",
+    fkTenantColumn: "system_id",
+  },
+  sync_conflicts: {
+    fkColumn: "document_id",
+    fkTable: "sync_documents",
+    parentIdColumn: "document_id",
+    fkTenantColumn: "system_id",
+  },
 };
 
 /**
@@ -88,15 +124,51 @@ export function accountFkRlsPolicy(
   tableName: string,
   fkColumn: string,
   fkTable: string,
+  parentIdColumn: string,
   fkTenantColumn: string,
 ): string {
   const policyName = `${tableName}_account_isolation`;
   const setting = currentSettingSql("app.current_account_id");
   return (
     `CREATE POLICY ${policyName} ON ${tableName} ` +
-    `USING (${fkColumn} IN (SELECT id FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting})) ` +
-    `WITH CHECK (${fkColumn} IN (SELECT id FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting}))`
+    `USING (${fkColumn} IN (SELECT ${parentIdColumn} FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting})) ` +
+    `WITH CHECK (${fkColumn} IN (SELECT ${parentIdColumn} FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting}))`
   );
+}
+
+/**
+ * Creates an RLS policy scoped via a foreign key to a system-tenant parent table.
+ * Uses a subquery to verify the FK references a row belonging to the current system.
+ */
+export function systemFkRlsPolicy(
+  tableName: string,
+  fkColumn: string,
+  fkTable: string,
+  parentIdColumn: string,
+  fkTenantColumn: string,
+): string {
+  const policyName = `${tableName}_system_isolation`;
+  const setting = currentSettingSql("app.current_system_id");
+  return (
+    `CREATE POLICY ${policyName} ON ${tableName} ` +
+    `USING (${fkColumn} IN (SELECT ${parentIdColumn} FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting})) ` +
+    `WITH CHECK (${fkColumn} IN (SELECT ${parentIdColumn} FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting}))`
+  );
+}
+
+/**
+ * Creates per-operation RLS policies for bidirectional account tables.
+ * SELECT/DELETE: visible to both account_id and friend_account_id.
+ * INSERT/UPDATE: restricted to account_id (sender) only.
+ */
+export function accountBidirectionalRlsPolicy(tableName: string): string[] {
+  const setting = currentSettingSql("app.current_account_id");
+  return [
+    `CREATE POLICY ${tableName}_read ON ${tableName} FOR SELECT USING (account_id = ${setting} OR friend_account_id = ${setting})`,
+    `CREATE POLICY ${tableName}_write ON ${tableName} FOR INSERT WITH CHECK (account_id = ${setting})`,
+    `CREATE POLICY ${tableName}_update ON ${tableName} FOR UPDATE USING (account_id = ${setting}) WITH CHECK (account_id = ${setting})`,
+    `CREATE POLICY ${tableName}_delete ON ${tableName} FOR DELETE USING (account_id = ${setting} OR friend_account_id = ${setting})`,
+  ];
 }
 
 /** Tables where system-pk scope uses `id` instead of `system_id`. */
@@ -171,7 +243,7 @@ export const RLS_TABLE_POLICIES = {
   poll_votes: "system",
   acknowledgements: "system",
   buckets: "system",
-  friend_connections: "account",
+  friend_connections: "account-bidirectional",
   friend_codes: "account",
   groups: "system",
   group_memberships: "system",
@@ -207,9 +279,12 @@ export const RLS_TABLE_POLICIES = {
   // Search
   search_index: "system",
 
-  // Sync — sync_changes and sync_snapshots lack system_id; access control
-  // flows via FK to sync_documents which has system_id.
+  // Sync — sync_changes, sync_snapshots, sync_conflicts lack system_id;
+  // access control flows via FK to sync_documents which has system_id.
   sync_documents: "system",
+  sync_changes: "system-fk",
+  sync_snapshots: "system-fk",
+  sync_conflicts: "system-fk",
 } as const satisfies Record<string, RlsScopeType>;
 
 /** Type-safe table names that have RLS policies. */
@@ -246,8 +321,35 @@ export function generateRlsStatements(tableName: RlsTableName): string[] {
         throw new Error(`No FK mapping for account-fk table: ${tableName}`);
       }
       statements.push(
-        accountFkRlsPolicy(tableName, mapping.fkColumn, mapping.fkTable, mapping.fkTenantColumn),
+        accountFkRlsPolicy(
+          tableName,
+          mapping.fkColumn,
+          mapping.fkTable,
+          mapping.parentIdColumn,
+          mapping.fkTenantColumn,
+        ),
       );
+      break;
+    }
+    case "system-fk": {
+      const mapping = SYSTEM_FK_MAPPING[tableName];
+      if (!mapping) {
+        throw new Error(`No FK mapping for system-fk table: ${tableName}`);
+      }
+      statements.push(
+        systemFkRlsPolicy(
+          tableName,
+          mapping.fkColumn,
+          mapping.fkTable,
+          mapping.parentIdColumn,
+          mapping.fkTenantColumn,
+        ),
+      );
+      break;
+    }
+    case "account-bidirectional": {
+      const policies = accountBidirectionalRlsPolicy(tableName);
+      statements.push(...policies);
       break;
     }
     default: {
