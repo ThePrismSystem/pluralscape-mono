@@ -563,8 +563,8 @@ importers:
         specifier: ^7.0.0
         version: 7.5.1
       zod:
-        specifier: ^3.25.0
-        version: 3.25.76
+        specifier: ^4.0.0
+        version: 4.3.6
     devDependencies:
       '@pluralscape/api':
         specifier: workspace:*
