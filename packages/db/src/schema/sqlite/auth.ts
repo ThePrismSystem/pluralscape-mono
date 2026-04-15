@@ -37,6 +37,10 @@ export const accounts = sqliteTable(
     uniqueIndex("accounts_email_hash_idx").on(t.emailHash),
     check("accounts_account_type_check", enumCheck(t.accountType, ACCOUNT_TYPES)),
     versionCheckFor("accounts", t.version),
+    check(
+      "accounts_challenge_nonce_paired",
+      sql`(${t.challengeNonce} IS NULL) = (${t.challengeExpiresAt} IS NULL)`,
+    ),
   ],
 );
 
@@ -104,6 +108,10 @@ export const recoveryKeys = sqliteTable(
     index("recovery_keys_revoked_at_idx")
       .on(t.revokedAt)
       .where(sql`${t.revokedAt} IS NULL`),
+    check(
+      "recovery_keys_hash_required",
+      sql`${t.recoveryKeyHash} IS NOT NULL OR ${t.revokedAt} IS NOT NULL`,
+    ),
   ],
 );
 
