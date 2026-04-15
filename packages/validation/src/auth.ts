@@ -106,6 +106,7 @@ export const PasswordResetViaRecoveryKeySchema = z
     newKdfSalt: kdfSaltHex,
     newEncryptedMasterKey: encryptedBlobHex,
     newRecoveryEncryptedMasterKey: encryptedBlobHex,
+    recoveryKeyHash: recoveryKeyHashHex,
     newRecoveryKeyHash: recoveryKeyHashHex,
   })
   .readonly();

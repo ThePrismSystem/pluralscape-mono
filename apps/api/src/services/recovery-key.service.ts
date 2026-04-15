@@ -180,10 +180,7 @@ export async function resetPasswordWithRecoveryKey(
   }
 
   const storedRecoveryHash = ensureUint8Array(activeKey.recoveryKeyHash);
-  const recoveryKeyValid = verifyRecoveryKey(
-    fromHex(parsed.newRecoveryKeyHash),
-    storedRecoveryHash,
-  );
+  const recoveryKeyValid = verifyRecoveryKey(fromHex(parsed.recoveryKeyHash), storedRecoveryHash);
   if (!recoveryKeyValid) {
     await equalizeAntiEnumTiming(startTime);
     return null;
