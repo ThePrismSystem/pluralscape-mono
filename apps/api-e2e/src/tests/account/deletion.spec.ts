@@ -1,5 +1,3 @@
-import crypto from "node:crypto";
-
 import { assertErrorShape, assertRequiresAuth } from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import {
@@ -7,32 +5,23 @@ import {
   HTTP_NO_CONTENT,
   HTTP_UNAUTHORIZED,
 } from "../../fixtures/http.constants.js";
+import { registerAccount } from "../../helpers/register.js";
 
 import type { APIRequestContext } from "@playwright/test";
 
 /**
- * Register a "viewer" account which has no auto-created system.
- *
- * The account deletion CASCADE interacts with RLS on the systems table,
- * so we use a viewer account (no systems) to test the happy path cleanly.
+ * Register a fresh account and return credentials including the derived authKey.
  */
-async function registerViewerAccount(
+async function registerDeletableAccount(
   request: APIRequestContext,
-): Promise<{ email: string; password: string; sessionToken: string }> {
-  const uuid = crypto.randomUUID();
-  const email = `e2e-del-${uuid}@test.pluralscape.local`;
-  const password = `E2E-Pass-${uuid}`;
-  const res = await request.post("/v1/auth/register", {
-    data: { email, password, recoveryKeyBackupConfirmed: true, accountType: "viewer" },
-  });
-  expect(res.ok()).toBe(true);
-  const body = (await res.json()) as { data: { sessionToken: string } };
-  return { email, password, sessionToken: body.data.sessionToken };
+): Promise<{ email: string; authKeyHex: string; sessionToken: string }> {
+  const acct = await registerAccount(request, { emailPrefix: "e2e-del" });
+  return { email: acct.email, authKeyHex: acct.authKeyHex, sessionToken: acct.sessionToken };
 }
 
 test.describe("Account deletion", () => {
-  test("DELETE /v1/account deletes account with password confirmation", async ({ request }) => {
-    const acct = await registerViewerAccount(request);
+  test("DELETE /v1/account deletes account with authKey confirmation", async ({ request }) => {
+    const acct = await registerDeletableAccount(request);
     const headers = { Authorization: `Bearer ${acct.sessionToken}` };
 
     const before = await request.get("/v1/account", { headers });
@@ -40,7 +29,7 @@ test.describe("Account deletion", () => {
 
     const res = await request.delete("/v1/account", {
       headers,
-      data: { password: acct.password },
+      data: { authKey: acct.authKeyHex },
     });
     expect(res.status()).toBe(HTTP_NO_CONTENT);
 
@@ -48,16 +37,16 @@ test.describe("Account deletion", () => {
     expect(after.status()).toBe(HTTP_UNAUTHORIZED);
   });
 
-  test("DELETE /v1/account rejects wrong password", async ({ request, authHeaders }) => {
+  test("DELETE /v1/account rejects wrong authKey", async ({ request, authHeaders }) => {
     const res = await request.delete("/v1/account", {
       headers: authHeaders,
-      data: { password: "wrong-password-here" },
+      data: { authKey: "0".repeat(64) },
     });
     expect(res.status()).toBe(HTTP_BAD_REQUEST);
     await assertErrorShape(res);
   });
 
-  test("DELETE /v1/account rejects missing password", async ({ request, authHeaders }) => {
+  test("DELETE /v1/account rejects missing authKey", async ({ request, authHeaders }) => {
     const res = await request.delete("/v1/account", {
       headers: authHeaders,
       data: {},
@@ -71,17 +60,18 @@ test.describe("Account deletion", () => {
   });
 
   test("DELETE /v1/account cascades to auth data", async ({ request }) => {
-    const acct = await registerViewerAccount(request);
+    const acct = await registerDeletableAccount(request);
     const headers = { Authorization: `Bearer ${acct.sessionToken}` };
 
     const del = await request.delete("/v1/account", {
       headers,
-      data: { password: acct.password },
+      data: { authKey: acct.authKeyHex },
     });
     expect(del.status()).toBe(HTTP_NO_CONTENT);
 
+    // Login with authKey should fail after account deletion
     const login = await request.post("/v1/auth/login", {
-      data: { email: acct.email, password: acct.password },
+      data: { email: acct.email, authKey: acct.authKeyHex },
     });
     expect(login.status()).toBe(HTTP_UNAUTHORIZED);
   });

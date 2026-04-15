@@ -5,26 +5,15 @@
  * from account A, and redeems it from account B to establish a bidirectional
  * friend connection.
  */
-import crypto from "node:crypto";
-
 import { test as base, expect, type APIRequestContext } from "@playwright/test";
+
+import { registerAccount as registerTwoPhase } from "../helpers/register.js";
 
 import { HTTP_CREATED, asAuthHeaders } from "./http.constants.js";
 
 import type { AuthHeaders } from "./http.constants.js";
 
 // ── Types ────────────────────────────────────────────────────────────
-
-interface RegisterData {
-  sessionToken: string;
-  recoveryKey: string;
-  accountId: string;
-  accountType: string;
-}
-
-interface RegisterResponse {
-  data: RegisterData;
-}
 
 interface AccountContext {
   readonly accountId: string;
@@ -69,31 +58,14 @@ interface FriendFixtures {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-async function registerAccount(request: APIRequestContext): Promise<AccountContext> {
-  const uuid = crypto.randomUUID();
-  const email = `e2e-friend-${uuid}@test.pluralscape.local`;
-  const password = `E2E-FriendPass-${uuid}`;
-
-  const res = await request.post("/v1/auth/register", {
-    data: {
-      email,
-      password,
-      recoveryKeyBackupConfirmed: true,
-    },
-  });
-
-  if (!res.ok()) {
-    const body = await res.text();
-    throw new Error(`Registration failed (${String(res.status())}): ${body}`);
-  }
-
-  const envelope = (await res.json()) as RegisterResponse;
+async function createAccountContext(request: APIRequestContext): Promise<AccountContext> {
+  const acct = await registerTwoPhase(request, { emailPrefix: "e2e-friend" });
   return {
-    accountId: envelope.data.accountId,
-    sessionToken: envelope.data.sessionToken,
-    email,
-    password,
-    headers: asAuthHeaders({ Authorization: `Bearer ${envelope.data.sessionToken}` }),
+    accountId: acct.accountId,
+    sessionToken: acct.sessionToken,
+    email: acct.email,
+    password: acct.password,
+    headers: asAuthHeaders({ Authorization: `Bearer ${acct.sessionToken}` }),
   };
 }
 
@@ -102,8 +74,8 @@ async function registerAccount(request: APIRequestContext): Promise<AccountConte
 export const test = base.extend<FriendFixtures>({
   friendAccounts: async ({ request }, use) => {
     // 1. Register two independent accounts
-    const accountA = await registerAccount(request);
-    const accountB = await registerAccount(request);
+    const accountA = await createAccountContext(request);
+    const accountB = await createAccountContext(request);
 
     // 2. Account A generates a friend code
     const codeRes = await request.post("/v1/account/friend-codes", {

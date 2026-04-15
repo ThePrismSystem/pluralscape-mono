@@ -47,7 +47,8 @@ test.describe("tRPC auth router", () => {
     });
 
     await test.step("commit registration with crypto material", async () => {
-      const initResult = await anonTrpc.auth.registrationInitiate.mutate({ email: email + ".2" });
+      const commitEmail = `trpc-e2e-commit-${uuid}@test.pluralscape.local`;
+      const initResult = await anonTrpc.auth.registrationInitiate.mutate({ email: commitEmail });
 
       await initSodium();
       const passwordBytes = new TextEncoder().encode(password);
@@ -85,9 +86,9 @@ test.describe("tRPC auth router", () => {
     });
 
     await test.step("login with registered credentials", async () => {
-      const commitEmail = email + ".2";
+      const loginEmail = `trpc-e2e-commit-${uuid}@test.pluralscape.local`;
       const loginResult = await anonTrpc.auth.login.mutate({
-        email: commitEmail,
+        email: loginEmail,
         authKey: authKeyHex,
       });
       expect(loginResult).toHaveProperty("sessionToken");

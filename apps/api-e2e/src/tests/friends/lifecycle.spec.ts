@@ -1,9 +1,8 @@
-import crypto from "node:crypto";
-
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createBucket, getSystemId } from "../../fixtures/entity-helpers.js";
 import { expect, test } from "../../fixtures/friend.fixture.js";
 import { HTTP_CREATED, HTTP_NO_CONTENT, HTTP_OK } from "../../fixtures/http.constants.js";
+import { registerAccount } from "../../helpers/register.js";
 
 /** Dummy encrypted bucket key for assignment tests. */
 const DUMMY_ENCRYPTED_BUCKET_KEY = "dGVzdC1lbmNyeXB0ZWQta2V5";
@@ -270,27 +269,11 @@ test.describe("Friend lifecycle", () => {
   });
 
   test("reject a pending friend connection", async ({ request }) => {
-    const uuid1 = crypto.randomUUID();
-    const uuid2 = crypto.randomUUID();
-    const regA = await request.post("/v1/auth/register", {
-      data: {
-        email: `e2e-reject-a-${uuid1}@test.pluralscape.local`,
-        password: `E2E-Pass-${uuid1}`,
-        recoveryKeyBackupConfirmed: true,
-      },
-    });
-    const acctA = (await regA.json()) as { data: { sessionToken: string } };
-    const headersA = { Authorization: `Bearer ${acctA.data.sessionToken}` };
+    const acctA = await registerAccount(request, { emailPrefix: "e2e-reject-a" });
+    const headersA = { Authorization: `Bearer ${acctA.sessionToken}` };
 
-    const regB = await request.post("/v1/auth/register", {
-      data: {
-        email: `e2e-reject-b-${uuid2}@test.pluralscape.local`,
-        password: `E2E-Pass-${uuid2}`,
-        recoveryKeyBackupConfirmed: true,
-      },
-    });
-    const acctB = (await regB.json()) as { data: { sessionToken: string } };
-    const headersB = { Authorization: `Bearer ${acctB.data.sessionToken}` };
+    const acctB = await registerAccount(request, { emailPrefix: "e2e-reject-b" });
+    const headersB = { Authorization: `Bearer ${acctB.sessionToken}` };
 
     const codeRes = await request.post("/v1/account/friend-codes", { headers: headersA });
     const codeBody = (await codeRes.json()) as { data: { code: string } };

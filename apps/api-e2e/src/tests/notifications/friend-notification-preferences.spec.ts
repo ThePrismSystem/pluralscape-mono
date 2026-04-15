@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { HTTP_CREATED, HTTP_NOT_FOUND } from "../../fixtures/http.constants.js";
+import { registerAccount } from "../../helpers/register.js";
 
 import type { APIRequestContext } from "@playwright/test";
 
@@ -52,18 +53,8 @@ test.describe("Friend notification preferences", () => {
     authHeaders,
   }) => {
     // Need a second account for the friend connection
-    const regRes = await request.post("/v1/auth/register", {
-      data: {
-        email: `e2e-notif-${crypto.randomUUID()}@test.pluralscape.local`,
-        password: `E2E-TestPass-${crypto.randomUUID()}`,
-        recoveryKeyBackupConfirmed: true,
-      },
-    });
-    expect(regRes.ok()).toBe(true);
-    const {
-      data: { sessionToken },
-    } = (await regRes.json()) as { data: { sessionToken: string } };
-    const headersB = { Authorization: `Bearer ${sessionToken}` };
+    const acctB = await registerAccount(request, { emailPrefix: "e2e-notif" });
+    const headersB = { Authorization: `Bearer ${acctB.sessionToken}` };
 
     const connectionId = await createFriendConnection(request, authHeaders, headersB);
 

@@ -53,6 +53,8 @@ interface AccountInfo extends CommitData {
   email: string;
   password: string;
   recoveryKey: string;
+  /** The account's Ed25519 signing keypair (for sync envelope signing). */
+  signingKeypair: { publicKey: Uint8Array; secretKey: Uint8Array };
 }
 
 export interface AuthFixtures {
@@ -138,6 +140,10 @@ async function registerUniqueAccount(request: APIRequestContext): Promise<Accoun
     email,
     password,
     recoveryKey: recovery.displayKey,
+    signingKeypair: {
+      publicKey: signing.publicKey,
+      secretKey: signing.secretKey,
+    },
   };
 }
 

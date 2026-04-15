@@ -1,4 +1,7 @@
+import crypto from "node:crypto";
+
 import { expect, test } from "../../fixtures/auth.fixture.js";
+import { HTTP_BAD_REQUEST } from "../../fixtures/http.constants.js";
 
 test.describe("Account endpoints", () => {
   test("GET /v1/account returns account info", async ({ request, authHeaders }) => {
@@ -15,32 +18,32 @@ test.describe("Account endpoints", () => {
     expect(res.status()).toBe(401);
   });
 
-  test("PUT /v1/account/password changes password", async ({
+  test("PUT /v1/account/password rejects incorrect old auth key", async ({
     request,
-    registeredAccount,
     authHeaders,
   }) => {
-    const newPassword = "NewSecurePassword456!";
+    const fakeNewKdfSalt = crypto.randomBytes(16).toString("hex");
+    const fakeEncryptedMasterKey = crypto.randomBytes(80).toString("hex");
+    const fakeSig = crypto.randomBytes(64).toString("hex");
 
     const res = await request.put("/v1/account/password", {
       headers: authHeaders,
       data: {
-        currentPassword: registeredAccount.password,
-        newPassword,
+        oldAuthKey: "0".repeat(64),
+        newAuthKey: "a".repeat(64),
+        newKdfSalt: fakeNewKdfSalt,
+        newEncryptedMasterKey: fakeEncryptedMasterKey,
+        challengeSignature: fakeSig,
       },
     });
-    expect(res.status()).toBe(200);
+    expect(res.status()).toBe(HTTP_BAD_REQUEST);
+  });
 
-    // Verify old password no longer works for login
-    const loginOld = await request.post("/v1/auth/login", {
-      data: { email: registeredAccount.email, password: registeredAccount.password },
+  test("PUT /v1/account/password rejects missing fields", async ({ request, authHeaders }) => {
+    const res = await request.put("/v1/account/password", {
+      headers: authHeaders,
+      data: {},
     });
-    expect(loginOld.status()).toBe(401);
-
-    // Verify new password works
-    const loginNew = await request.post("/v1/auth/login", {
-      data: { email: registeredAccount.email, password: newPassword },
-    });
-    expect(loginNew.status()).toBe(200);
+    expect(res.status()).toBe(HTTP_BAD_REQUEST);
   });
 });

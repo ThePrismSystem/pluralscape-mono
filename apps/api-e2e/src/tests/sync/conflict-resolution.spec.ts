@@ -7,7 +7,7 @@
 import { test, expect } from "../../fixtures/auth.fixture.js";
 import {
   makeSignedChange,
-  createSyncCryptoContext,
+  createAccountSyncContext,
   asSyncDocId,
 } from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
@@ -44,7 +44,7 @@ test.describe("Sync conflict resolution E2E", () => {
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
       // Client 1 submits a change
-      const ctx = await createSyncCryptoContext();
+      const ctx = await createAccountSyncContext(registeredAccount.signingKeypair);
       const change1 = await makeSignedChange(docId, ctx);
       const accepted1 = await ws1.submitChange(docId, change1);
       expect(accepted1.type).toBe("ChangeAccepted");
@@ -108,7 +108,8 @@ test.describe("Sync conflict resolution E2E", () => {
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
       // Client 1 submits a change (simulating an archive operation)
-      const archiveChange = await makeSignedChange(docId);
+      const ctx = await createAccountSyncContext(registeredAccount.signingKeypair);
+      const archiveChange = await makeSignedChange(docId, ctx);
       const accepted = await ws1.submitChange(docId, archiveChange);
       expect(accepted.type).toBe("ChangeAccepted");
 

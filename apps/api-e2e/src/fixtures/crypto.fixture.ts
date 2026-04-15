@@ -83,6 +83,29 @@ export async function createSyncCryptoContext(): Promise<SyncCryptoContext> {
   };
 }
 
+/**
+ * Create a sync crypto context using an account's registered signing keypair.
+ *
+ * The signing keys must match those stored in the server's auth_keys table
+ * for key ownership verification to pass.
+ */
+export async function createAccountSyncContext(signingKeypair: {
+  publicKey: Uint8Array;
+  secretKey: Uint8Array;
+}): Promise<SyncCryptoContext> {
+  const sodium = await getOrInitSodium();
+  return {
+    sodium,
+    keys: {
+      encryptionKey: sodium.aeadKeygen(),
+      signingKeys: {
+        publicKey: signingKeypair.publicKey as import("@pluralscape/crypto").SignPublicKey,
+        secretKey: signingKeypair.secretKey as import("@pluralscape/crypto").SignSecretKey,
+      },
+    },
+  };
+}
+
 /** Wire-format change payload with base64url-encoded binary fields. */
 export interface WireChangePayload {
   ciphertext: string;
