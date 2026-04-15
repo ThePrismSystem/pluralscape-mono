@@ -182,7 +182,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
       }),
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const body = (await res.json()) as { data: { ok: boolean } };
     expect(body.data.ok).toBe(true);
   });
@@ -310,7 +310,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
       }),
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
@@ -379,7 +379,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
       }),
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
   });
 
   it("re-throws unknown errors from regenerateRecoveryKeyBackup", async () => {
