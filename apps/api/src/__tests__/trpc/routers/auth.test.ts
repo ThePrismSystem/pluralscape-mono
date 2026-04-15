@@ -182,6 +182,8 @@ describe("auth router", () => {
       accountId: MOCK_AUTH.accountId,
       systemId: MOCK_SYSTEM_ID,
       accountType: "system" as const,
+      encryptedMasterKey: "deadbeef",
+      kdfSalt: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
     };
 
     it("returns result when credentials are valid", async () => {

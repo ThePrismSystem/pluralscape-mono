@@ -127,15 +127,12 @@ function mockDb(publicKeys: Uint8Array[] = []): PostgresJsDatabase {
       where: vi.fn().mockResolvedValue(rows),
     }),
   };
-  const db: Partial<PostgresJsDatabase> & {
-    execute?: ReturnType<typeof vi.fn>;
-    transaction?: unknown;
-  } = {
+  const db = {
     select: vi.fn().mockReturnValue(chain),
     execute: vi.fn().mockResolvedValue(undefined),
+    transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(db)),
   };
-  db.transaction = vi.fn(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db));
-  return db as PostgresJsDatabase;
+  return db as never as PostgresJsDatabase;
 }
 
 function brandedBytes(size: number, fill: number) {

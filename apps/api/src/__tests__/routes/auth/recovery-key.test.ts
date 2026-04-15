@@ -79,14 +79,18 @@ describe("Cache-Control", () => {
 
   it("sets Cache-Control: no-store on POST /auth/recovery-key/regenerate", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+      ok: true as const,
     });
 
     const app = createAuthApp();
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -162,23 +166,25 @@ describe("POST /auth/recovery-key/regenerate", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns recovery key on success", async () => {
+  it("returns ok on success", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+      ok: true as const,
     });
 
     const app = createApp();
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as { data: { recoveryKey: string } };
-    expect(body.data.recoveryKey).toBe(
-      "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
-    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { ok: boolean } };
+    expect(body.data.ok).toBe(true);
   });
 
   it("returns 400 on ValidationError", async () => {
@@ -190,7 +196,11 @@ describe("POST /auth/recovery-key/regenerate", () => {
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "wrong", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     expect(res.status).toBe(400);
@@ -207,7 +217,11 @@ describe("POST /auth/recovery-key/regenerate", () => {
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     expect(res.status).toBe(404);
@@ -238,7 +252,11 @@ describe("POST /auth/recovery-key/regenerate", () => {
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     expect(res.status).toBe(400);
@@ -248,20 +266,24 @@ describe("POST /auth/recovery-key/regenerate", () => {
 
   it("passes account ID and audit writer to service", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+      ok: true as const,
     });
 
     const app = createApp();
     await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     expect(vi.mocked(regenerateRecoveryKeyBackup)).toHaveBeenCalledWith(
       {},
       "acct_test001",
-      { currentPassword: "password123", confirmed: true },
+      { authKey: "a".repeat(64), newRecoveryEncryptedMasterKey: "deadbeef", confirmed: true },
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
@@ -272,7 +294,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
 
   it("succeeds even when getQueue() returns null (queue disabled branch)", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+      ok: true as const,
     });
     mockGetQueue.mockReturnValueOnce(null);
     mockEnqueue.mockClear();
@@ -281,16 +303,20 @@ describe("POST /auth/recovery-key/regenerate", () => {
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
     expect(mockEnqueue).not.toHaveBeenCalled();
   });
 
   it("enqueues email notification with user-agent when present", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+      ok: true as const,
     });
     mockEnqueue.mockClear();
 
@@ -298,7 +324,11 @@ describe("POST /auth/recovery-key/regenerate", () => {
     await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json", "User-Agent": "test-agent/1.0" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
@@ -310,7 +340,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
 
   it("falls back to 'Unknown device' when user-agent header is absent", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+      ok: true as const,
     });
     mockEnqueue.mockClear();
 
@@ -318,7 +348,11 @@ describe("POST /auth/recovery-key/regenerate", () => {
     await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
@@ -330,7 +364,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
 
   it("does not fail the request when queue.enqueue rejects", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+      ok: true as const,
     });
     mockEnqueue.mockRejectedValueOnce(new Error("queue down"));
 
@@ -338,10 +372,14 @@ describe("POST /auth/recovery-key/regenerate", () => {
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
   });
 
   it("re-throws unknown errors from regenerateRecoveryKeyBackup", async () => {
@@ -352,7 +390,11 @@ describe("POST /auth/recovery-key/regenerate", () => {
     const res = await app.request("/auth/recovery-key/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+      body: JSON.stringify({
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "deadbeef",
+        confirmed: true,
+      }),
     });
 
     // Re-thrown errors surface as 500 from the global error handler
