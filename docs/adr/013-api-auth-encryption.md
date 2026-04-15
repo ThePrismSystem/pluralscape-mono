@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Pluralscape's public REST API must coexist with E2E encryption (ADR 006). The server is zero-knowledge — it stores ciphertext only. This creates a fundamental tension: standard API tokens prove identity to the server but cannot decrypt data.
+Pluralscape's public REST API must coexist with E2E encryption (ADR 006). The server is zero-knowledge — it stores ciphertext only, and never sees raw passwords, master keys, or private keys. This creates a fundamental tension: standard API tokens prove identity to the server but cannot decrypt data.
 
 The API must support:
 
@@ -71,6 +71,47 @@ The UI must be approachable for non-technical users:
 - **Confirmation for high-access keys:** creating a full-access crypto key requires explicit acknowledgment ("This key can read all your data. Anyone with this key has the same access as you.")
 - **Key lifecycle dashboard:** list all active keys, last used timestamp, scope summary, one-click revoke
 - **No jargon in the UI:** "encryption key" → "data access key", "tier 3 metadata" → "activity info (times and events only)", "MasterKey" → avoid entirely in UI
+
+## Zero-Knowledge Registration and Auth Protocol
+
+### Two-Phase Registration
+
+Registration is split across two endpoints to enforce the challenge-response binding:
+
+1. **`POST /auth/register/initiate`** — client sends `email` (and optional `accountType`). Server reserves an account slot, generates a `kdfSalt` and a `challengeNonce`, returns `{ accountId, kdfSalt, challengeNonce }`.
+
+2. **`POST /auth/register/commit`** — client:
+   - Derives `auth_key || password_key` from password using the returned `kdfSalt` via Argon2id (64 MiB, 4 iterations)
+   - Generates a random 256-bit master key
+   - Wraps master key with `password_key` → `encryptedMasterKey`
+   - Derives Ed25519 and X25519 keypairs from master key via BLAKE2B KDF sub-keys
+   - Wraps each private key with the master key → `encryptedSigningPrivateKey`, `encryptedEncryptionPrivateKey`
+   - Generates a recovery key, wraps master key with it → `recoveryEncryptedMasterKey`
+   - Signs `challengeNonce` with the Ed25519 signing key → `challengeSignature`
+   - Sends all blobs plus `authKey` and public keys to the server
+
+   The server stores the BLAKE2B hash of `authKey` for future verification. It stores the encrypted blobs opaquely. No raw password or master key ever reaches the server.
+
+### Auth Key Verification
+
+All endpoints that previously accepted a `password` field now accept `authKey` — a hex-encoded 32-byte value derived from the password via Argon2id. The server verifies by recomputing `BLAKE2B(authKey)` and comparing to the stored hash.
+
+### Salt Fetch (Anti-Enumeration)
+
+`POST /auth/salt` returns a KDF salt for the given email. To prevent account existence probing, the response is indistinguishable for registered and unregistered emails (same format, equalized timing). The client must always call this before login or key-change operations.
+
+### Password Change and Reset Flows
+
+All credential-changing operations (`PUT /account/password`, `POST /auth/password-reset/recovery-key`) accept pre-encrypted blobs:
+
+- The client derives new keys locally, re-wraps the master key, and submits:
+  `{ newAuthKey, newKdfSalt, newEncryptedMasterKey, challengeSignature }`
+- The `challengeSignature` (Ed25519 over a server-issued nonce) proves the client holds the signing key bound to the account — preventing credential substitution attacks.
+- The server atomically replaces the stored blobs. At no point does it handle raw passwords or plaintext key material.
+
+### Recovery Key Regeneration
+
+`POST /auth/recovery-key/regenerate` accepts `{ authKey, newRecoveryEncryptedMasterKey, confirmed }`. The client generates a new recovery key locally, wraps the master key with it, and submits the encrypted blob. The old blob is discarded atomically.
 
 ## Consequences
 

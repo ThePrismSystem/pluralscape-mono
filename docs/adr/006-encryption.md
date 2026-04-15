@@ -25,14 +25,15 @@ Evaluated: Signal Protocol, Matrix/Olm/Megolm, MLS (RFC 9420), libsodium, Web Cr
 
 ### Cryptographic Primitives
 
-| Purpose                   | Primitive                            | Algorithm                             |
-| ------------------------- | ------------------------------------ | ------------------------------------- |
-| Symmetric encryption      | `crypto_aead_xchacha20poly1305_ietf` | XChaCha20-Poly1305                    |
-| Asymmetric encryption     | `crypto_box`                         | X25519 + XSalsa20-Poly1305            |
-| Signing                   | `crypto_sign`                        | Ed25519                               |
-| Key derivation (password) | `crypto_pwhash`                      | Argon2id (256MB memory, 3 iterations) |
-| Sub-key derivation        | `crypto_kdf`                         | BLAKE2B                               |
-| Local DB encryption       | SQLCipher                            | AES-256                               |
+| Purpose                   | Primitive                            | Algorithm                              |
+| ------------------------- | ------------------------------------ | -------------------------------------- |
+| Symmetric encryption      | `crypto_aead_xchacha20poly1305_ietf` | XChaCha20-Poly1305                     |
+| Asymmetric encryption     | `crypto_box`                         | X25519 + XSalsa20-Poly1305             |
+| Signing                   | `crypto_sign`                        | Ed25519                                |
+| Key derivation (password) | `crypto_pwhash`                      | Argon2id (64 MiB memory, 4 iterations) |
+| Sub-key derivation        | `crypto_kdf`                         | BLAKE2B                                |
+| Auth key hashing          | `crypto_generichash`                 | BLAKE2B (server-side verification)     |
+| Local DB encryption       | SQLCipher                            | AES-256                                |
 
 ### Privacy Bucket Model
 
@@ -44,19 +45,36 @@ Per-bucket symmetric keys distributed via asymmetric encryption (same pattern as
 4. Friend's device fetches the key grant → decrypts BucketKey with their private key → decrypts bucket content
 5. On friend removal → BucketKey is rotated, all bucket content re-encrypted, remaining friends get new key grants
 
+### Split Key Derivation (Zero-Knowledge Protocol)
+
+A single Argon2id pass over the password produces a 64-byte output split into two independent 32-byte keys:
+
+```
+User Password + KDF Salt
+  → Argon2id (64 MiB, 4 iterations) → 64 bytes
+      ├── auth_key   (bytes 0–31)  → BLAKE2B hash → stored on server for verification
+      └── password_key (bytes 32–63) → wraps master key (never leaves client)
+```
+
+This is the **zero-knowledge guarantee**: the server stores only a BLAKE2B hash of the auth key. It never sees the raw password, the auth key itself, or the master key.
+
 ### Key Hierarchy
 
 ```
-User Password
-  → Argon2id → Master Key (256-bit)
-    → Identity Key Pair (X25519 + Ed25519)
-    → Per-Bucket Keys (XChaCha20-Poly1305)
-    → Per-Device Auth Keys
+User Password + KDF Salt
+  → Argon2id → auth_key (sent to server, BLAKE2B-hashed for storage)
+             → password_key (client-only, wraps master key)
+
+Master Key (random 256-bit, generated at registration)
+  → Stored server-side as encryptedMasterKey (wrapped with password_key)
+  → Stored server-side as recoveryEncryptedMasterKey (wrapped with recovery key)
+  → Identity Key Pair (X25519 + Ed25519) — derived via KDF sub-keys
+  → Per-Bucket Keys (XChaCha20-Poly1305)
 ```
 
 ### Multi-Device
 
-Password-derived Master Key is deterministic — any device with the password can derive it. No device-to-device key transfer needed (unlike Matrix cross-signing). Mobile: Master Key cached in Keychain/Keystore behind biometrics. Web: re-derived from password each session, held in memory only.
+The master key is randomly generated at registration and stored encrypted on the server. Any device with the password can derive the password key, fetch the encrypted master key from the server, and unwrap it locally. No device-to-device key transfer needed. Mobile: Master Key cached in Keychain/Keystore behind biometrics. Web: decrypted from the server blob each session, held in memory only.
 
 ### Why Not Etebase Directly
 
@@ -76,6 +94,8 @@ Etebase's Collection/key model maps well to Privacy Buckets, and its crypto choi
 - The server sees metadata (timestamps, bucket membership graphs, activity patterns) even with E2E encryption — accept for V1, consider "Maximum Privacy" mode later
 - Web clients are inherently weaker (no hardware-backed key storage, JS tamperable by compromised server)
 - Bucket key rotation on friend removal is O(bucket_size) — mitigated by lazy rotation protocol (ADR 014)
+- The split key derivation doubles Argon2id output size but requires only one KDF call — no performance cost relative to a single-key derivation at the same parameters
+- The server never has enough information to perform an offline brute-force attack: it holds only a BLAKE2B hash of the auth key, not the key itself or anything that can unwrap the master key
 
 Full encryption architecture documented in `docs/planning/encryption-research.md`.
 
@@ -96,6 +116,18 @@ Rationale:
 - Independent derivation is cryptographically sound (BLAKE2B-based KDF with distinct sub-key IDs)
 - Simpler implementation with no cross-algorithm dependency
 - Both keypairs remain deterministically derivable from the Master Key
+
+Note: although keypairs are deterministically derivable from the master key, they are also stored server-side as encrypted blobs (`encryptedSigningPrivateKey`, `encryptedEncryptionPrivateKey`). This allows future support for non-deterministic or rotated keypairs without a protocol break.
+
+### Addendum: Unified KDF Profile
+
+All Argon2id password-to-key derivations use a single profile:
+
+- Memory: 64 MiB (`memlimit = 67108864`)
+- Iterations: 4 (`opslimit = 4`)
+- Output: 64 bytes (split into `auth_key` || `password_key`)
+
+A single KDF call produces both keys. The profile is stored in `packages/crypto/src/crypto.constants.ts`.
 
 ### License
 

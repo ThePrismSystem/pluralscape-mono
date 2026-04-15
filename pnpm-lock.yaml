@@ -854,6 +854,9 @@ importers:
       '@electric-sql/pglite':
         specifier: ^0.4.4
         version: 0.4.4
+      '@pluralscape/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@pluralscape/types':
         specifier: workspace:*
         version: link:../../packages/types

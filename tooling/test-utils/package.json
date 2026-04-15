@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.4.4",
+    "@pluralscape/crypto": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },

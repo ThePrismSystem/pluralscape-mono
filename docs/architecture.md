@@ -242,7 +242,9 @@ Per-bucket symmetric keys are derived client-side. The server never holds T1 key
 
 ### Zero-Knowledge Server
 
-The server stores only T1 ciphertext. It cannot read member profiles, journal entries, front logs, or messages. Key material is never transmitted to the server.
+The server stores only T1 ciphertext. It cannot read member profiles, journal entries, front logs, or messages. Raw passwords and master keys never reach the server.
+
+Authentication uses a split key derivation protocol (ADR 006): a single Argon2id pass over the password produces an `auth_key` (sent to the server, stored as a BLAKE2B hash) and a `password_key` (client-only, used to unwrap the master key). The server verifies a hash of the auth key — it cannot derive the password key or the master key from what it stores.
 
 Per-bucket symmetric keys are generated client-side and exchanged between devices via encrypted key bundles (X25519 ECDH). Key rotation is lazy: triggered on device removal or compromise, not on every write.
 

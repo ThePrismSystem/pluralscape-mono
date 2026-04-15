@@ -3,21 +3,44 @@
  */
 import crypto from "node:crypto";
 
+import {
+  assertPwhashSalt,
+  deriveAuthAndPasswordKeys,
+  encryptPrivateKey,
+  fromHex,
+  generateIdentityKeypair,
+  generateMasterKey,
+  generateRecoveryKey,
+  initSodium,
+  serializePublicKey,
+  signChallenge,
+  toHex,
+  wrapMasterKey,
+} from "@pluralscape/crypto";
+
 import { API_BASE_URL } from "./api-server.js";
 
+import type { EncryptedPayload } from "@pluralscape/crypto";
 import type { SystemId } from "@pluralscape/types";
 
 // ── Registration ─────────────────────────────────────────────────────
 
-interface RegisterData {
+interface InitiateResponse {
+  data: {
+    accountId: string;
+    kdfSalt: string;
+    challengeNonce: string;
+  };
+}
+
+interface CommitData {
   sessionToken: string;
-  recoveryKey: string;
   accountId: string;
   accountType: string;
 }
 
-interface RegisterResponse {
-  data: RegisterData;
+interface CommitResponse {
+  data: CommitData;
 }
 
 export interface RegisteredAccount {
@@ -28,6 +51,13 @@ export interface RegisteredAccount {
   password: string;
 }
 
+function serializePayloadHex(payload: EncryptedPayload): string {
+  const buf = new Uint8Array(payload.nonce.length + payload.ciphertext.length);
+  buf.set(payload.nonce, 0);
+  buf.set(payload.ciphertext, payload.nonce.length);
+  return toHex(buf);
+}
+
 /**
  * Register a fresh test account against the E2E API server.
  */
@@ -36,24 +66,69 @@ export async function registerTestAccount(): Promise<RegisteredAccount> {
   const email = `e2e-import-${uuid}@test.pluralscape.local`;
   const password = `E2E-ImportTest-${uuid}`;
 
-  const res = await fetch(`${API_BASE_URL}/v1/auth/register`, {
+  // Phase 1: initiate
+  const initiateRes = await fetch(`${API_BASE_URL}/v1/auth/register/initiate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!initiateRes.ok) {
+    const body = await initiateRes.text();
+    throw new Error(`Registration initiate failed (${String(initiateRes.status)}): ${body}`);
+  }
+
+  const initiateEnvelope = (await initiateRes.json()) as InitiateResponse;
+  const { accountId, kdfSalt, challengeNonce } = initiateEnvelope.data;
+
+  // Phase 2: client-side crypto
+  await initSodium();
+
+  const passwordBytes = new TextEncoder().encode(password);
+  const saltBytes = fromHex(kdfSalt);
+  assertPwhashSalt(saltBytes);
+  const { authKey, passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, saltBytes);
+
+  const masterKey = generateMasterKey();
+  const encryptedMasterKey = wrapMasterKey(masterKey, passwordKey);
+
+  const { encryption, signing } = generateIdentityKeypair(masterKey);
+  const encryptedSigningPrivateKey = encryptPrivateKey(signing.secretKey, masterKey);
+  const encryptedEncryptionPrivateKey = encryptPrivateKey(encryption.secretKey, masterKey);
+
+  const recovery = generateRecoveryKey(masterKey);
+
+  const nonceBytes = fromHex(challengeNonce);
+  const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
+
+  // Phase 3: commit
+  const commitRes = await fetch(`${API_BASE_URL}/v1/auth/register/commit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      email,
-      password,
+      accountId,
+      authKey: toHex(authKey),
+      encryptedMasterKey: serializePayloadHex(encryptedMasterKey),
+      encryptedSigningPrivateKey: serializePayloadHex(encryptedSigningPrivateKey),
+      encryptedEncryptionPrivateKey: serializePayloadHex(encryptedEncryptionPrivateKey),
+      publicSigningKey: serializePublicKey(signing.publicKey),
+      publicEncryptionKey: serializePublicKey(encryption.publicKey),
+      recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
+      challengeSignature: toHex(challengeSignature),
       recoveryKeyBackupConfirmed: true,
     }),
   });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Registration failed (${String(res.status)}): ${body}`);
+  if (!commitRes.ok) {
+    const body = await commitRes.text();
+    throw new Error(`Registration commit failed (${String(commitRes.status)}): ${body}`);
   }
 
-  const envelope = (await res.json()) as RegisterResponse;
+  const commitEnvelope = (await commitRes.json()) as CommitResponse;
   return {
-    ...envelope.data,
+    sessionToken: commitEnvelope.data.sessionToken,
+    recoveryKey: recovery.displayKey,
+    accountId: commitEnvelope.data.accountId,
     email,
     password,
   };

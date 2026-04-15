@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-  "/auth/register": {
+  "/auth/register/initiate": {
     parameters: {
       query?: never;
       header?: never;
@@ -14,21 +14,83 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Register a new account
-     * @description Creates a new account with email/password authentication.
+     * Initiate account registration
+     * @description Phase 1 of two-phase registration. Reserves an account slot and returns
+     *     a KDF salt and challenge nonce.
      *
-     *     **Crypto flow**: The server hashes the password with Argon2id to create
-     *     the account credential. The client derives the master encryption key from
-     *     the same password using Argon2id (with a different salt/context) and wraps
-     *     it for server-side storage. A recovery key is generated that can decrypt
-     *     the master key independently of the password.
-     *
-     *     The recovery key must be stored securely by the client — it is the **only**
-     *     way to recover the master encryption key if the password is forgotten.
+     *     **Crypto flow**: The client uses the returned `kdfSalt` to derive the
+     *     auth key and password key from the user's password via Argon2id. The
+     *     `challengeNonce` must be signed with the client's Ed25519 signing key
+     *     and included in the commit phase to bind the keypair to this registration.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
-    post: operations["register"];
+    post: operations["registerInitiate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/register/commit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Commit account registration
+     * @description Phase 2 of two-phase registration. Submits all cryptographic material
+     *     and creates the account.
+     *
+     *     **Crypto flow**: The client derives the auth key and password key via
+     *     Argon2id using the `kdfSalt` from the initiate phase. The auth key is
+     *     sent as the credential. The master key is randomly generated client-side
+     *     and stored wrapped with the password key (`encryptedMasterKey`). The
+     *     recovery key independently wraps the master key (`recoveryEncryptedMasterKey`).
+     *     Identity keypairs are derived from the master key and their private keys
+     *     are stored encrypted (`encryptedSigningPrivateKey`,
+     *     `encryptedEncryptionPrivateKey`). The `challengeSignature` proves
+     *     ownership of the Ed25519 signing key by signing the nonce from the
+     *     initiate phase.
+     *
+     *     The recovery key must be stored securely by the client — it is the
+     *     **only** way to recover the master encryption key if the password is
+     *     forgotten.
+     *
+     *     Rate limit: 5 req/min (authHeavy)
+     */
+    post: operations["registerCommit"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/salt": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Fetch KDF salt for an email address
+     * @description Returns the Argon2id KDF salt for the given email address, enabling the
+     *     client to derive the auth key before sending credentials.
+     *
+     *     **Anti-enumeration**: The response is identical (valid salt format,
+     *     equalized timing) whether or not the email is registered, preventing
+     *     account existence probing.
+     *
+     *     Rate limit: 5 req/min (authHeavy)
+     */
+    post: operations["getKdfSalt"];
     delete?: never;
     options?: never;
     head?: never;
@@ -45,13 +107,18 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Log in with email and password
-     * @description Authenticates with email/password and returns a session token.
+     * Log in with email and auth key
+     * @description Authenticates with email and a pre-derived auth key, returning a session
+     *     token and the encrypted master key for client-side decryption.
+     *
+     *     **Crypto flow**: The client first fetches the KDF salt via `POST /auth/salt`,
+     *     derives the auth key from the password via Argon2id, then submits it here.
+     *     The server verifies the BLAKE2B hash of the auth key. On success, the
+     *     encrypted master key is returned so the client can unwrap it with the
+     *     password key (also derived locally). The server never sees the raw password.
      *
      *     **Security**: Timing is equalized across success and failure paths to
-     *     prevent user-enumeration attacks. The password is verified against an
-     *     Argon2id hash. Password length is capped at 1024 bytes to prevent
-     *     Argon2 DoS on this unauthenticated endpoint.
+     *     prevent user-enumeration attacks.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -75,11 +142,16 @@ export interface paths {
      * Reset password using recovery key
      * @description Resets the account password using the recovery key.
      *
-     *     **Crypto flow**: The recovery key decrypts the master encryption key,
-     *     which is then re-wrapped with the new password-derived key. A new
-     *     recovery key is generated (the old one is invalidated). All existing
-     *     encrypted data remains accessible because the underlying master key is
-     *     unchanged — only its wrapping changes.
+     *     **Crypto flow**: The client uses the recovery key to decrypt the master
+     *     key locally, then re-wraps it with a new password key derived from the
+     *     new password (using `newKdfSalt`). The new auth key, new KDF salt, and
+     *     two fresh encrypted master key blobs (`newEncryptedMasterKey` for
+     *     password-based access, `newRecoveryEncryptedMasterKey` for the new
+     *     recovery key) are all submitted pre-computed. The server replaces the
+     *     stored blobs atomically. All existing encrypted data remains accessible
+     *     because the underlying master key is unchanged — only its wrapping
+     *     changes. The `challengeSignature` proves the client holds the signing
+     *     key bound to this account.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -255,11 +327,14 @@ export interface paths {
     put?: never;
     /**
      * Regenerate recovery key
-     * @description Regenerates the recovery key. Requires current password and explicit confirmation.
+     * @description Regenerates the recovery key. Requires current auth key and explicit
+     *     confirmation.
      *
-     *     **Crypto flow**: The current password verifies identity and decrypts the
-     *     master key. A new recovery key is generated and used to create a fresh
-     *     encrypted copy of the master key. The old recovery key and its encrypted
+     *     **Crypto flow**: The client decrypts the master key locally using the
+     *     current password key, wraps it with a fresh recovery key to produce
+     *     `newRecoveryEncryptedMasterKey`, then submits the new blob along with the
+     *     auth key for identity verification. The `challengeSignature` proves the
+     *     client holds the signing key. The old recovery key and its encrypted
      *     master key copy are permanently invalidated.
      *
      *     Rate limit: 5 req/min (authHeavy)
@@ -290,7 +365,7 @@ export interface paths {
     /**
      * Delete account
      * @description Permanently deletes the authenticated account and all associated data.
-     *     Requires the current password for confirmation. This action is
+     *     Requires the current auth key for confirmation. This action is
      *     irreversible — all systems, members, sessions, keys, and dependent data
      *     are cascade-deleted.
      *
@@ -312,7 +387,7 @@ export interface paths {
     get?: never;
     /**
      * Change account email
-     * @description Changes the account email. Requires current password for verification.
+     * @description Changes the account email. Requires current auth key for verification.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -334,7 +409,14 @@ export interface paths {
     get?: never;
     /**
      * Change account password
-     * @description Changes the account password. Requires current password for verification.
+     * @description Changes the account password. Requires current auth key for verification.
+     *
+     *     **Crypto flow**: The client derives the new auth key and new password key
+     *     from the new password using `newKdfSalt`. The master key is re-wrapped
+     *     with the new password key to produce `newEncryptedMasterKey`. All blobs
+     *     are submitted pre-computed; the server never sees the raw password or the
+     *     master key. The `challengeSignature` proves the client holds the Ed25519
+     *     signing key bound to this account.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -1044,7 +1126,7 @@ export interface paths {
     /**
      * Permanently purge a system
      * @description Hard-deletes a system and all dependent data via CASCADE. The system must
-     *     be archived (soft-deleted) first. Password confirmation is required to
+     *     be archived (soft-deleted) first. Auth key confirmation is required to
      *     prevent accidental purge.
      *
      *     Rate limit: 60 req/min (write)
@@ -5383,6 +5465,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/systems/{systemId}/import-entity-refs/lookup-batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Batch look up entity refs by source IDs
+     * @description Looks up many import entity refs in a single round-trip. Returns a map of
+     *     `sourceEntityId -> pluralscapeEntityId` for matching rows. Missing source IDs
+     *     are absent from the map.
+     *
+     *     POST is used (not GET) because the payload array may exceed query-string limits.
+     *
+     *     Rate limit: 60 req/min (readDefault)
+     */
+    post: operations["lookupImportEntityRefBatch"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/systems/{systemId}/import-entity-refs/upsert-batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Batch upsert entity refs
+     * @description Insert or update many import entity refs in a single round-trip. Idempotent:
+     *     re-running with the same payload updates `pluralscapeEntityId` on conflict.
+     *
+     *     Returns counts of upserted vs unchanged rows.
+     *
+     *     Rate limit: 30 req/min (write)
+     */
+    post: operations["upsertImportEntityRefBatch"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5496,13 +5629,28 @@ export interface components {
        */
       archivedAt?: number | null;
     };
+    SaltRequest: {
+      /**
+       * Format: email
+       * @example user@example.com
+       */
+      email: string;
+    };
+    SaltResponse: {
+      /**
+       * @description Hex-encoded 16-byte Argon2id salt for password key derivation
+       * @example a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
+       */
+      kdfSalt: string;
+    };
     LoginRequest: {
       /**
        * Format: email
        * @example user@example.com
        */
       email: string;
-      password: string;
+      /** @description Hex-encoded 32-byte auth key derived from the password via Argon2id */
+      authKey: string;
     };
     LoginResponse: {
       /**
@@ -5516,24 +5664,59 @@ export interface components {
       systemId?: string | null;
       /** @enum {string} */
       accountType: "system" | "viewer";
+      /** @description Base64-encoded master key wrapped with the password key (XChaCha20-Poly1305) */
+      encryptedMasterKey: string;
+      /** @description Hex-encoded 16-byte Argon2id salt used to derive the password key */
+      kdfSalt: string;
     };
-    RegistrationRequest: {
+    RegistrationInitiateRequest: {
       /** Format: email */
       email: string;
-      password: string;
-      /** @constant */
-      recoveryKeyBackupConfirmed: true;
       /**
        * @default system
        * @enum {string}
        */
       accountType: "system" | "viewer";
     };
-    RegistrationResponse: {
+    RegistrationInitiateResponse: {
+      /**
+       * @description Reserved account ID to reference in the commit phase
+       * @example acc_abc123
+       */
+      accountId: string;
+      /**
+       * @description Hex-encoded 16-byte Argon2id salt generated by the server for this account
+       * @example a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
+       */
+      kdfSalt: string;
+      /** @description Hex-encoded 32-byte nonce to be signed with the Ed25519 signing key in the commit phase */
+      challengeNonce: string;
+    };
+    RegistrationCommitRequest: {
+      /** @description Account ID from the initiate phase */
+      accountId: string;
+      /** @description Hex-encoded 32-byte auth key derived from the password via Argon2id */
+      authKey: string;
+      /** @description Base64-encoded master key wrapped with the password key (XChaCha20-Poly1305) */
+      encryptedMasterKey: string;
+      /** @description Base64-encoded Ed25519 signing private key encrypted with the master key */
+      encryptedSigningPrivateKey: string;
+      /** @description Base64-encoded X25519 encryption private key encrypted with the master key */
+      encryptedEncryptionPrivateKey: string;
+      /** @description Hex-encoded Ed25519 public signing key */
+      publicSigningKey: string;
+      /** @description Hex-encoded X25519 public encryption key */
+      publicEncryptionKey: string;
+      /** @description Base64-encoded master key wrapped with the recovery key (XChaCha20-Poly1305) */
+      recoveryEncryptedMasterKey: string;
+      /** @description Hex-encoded Ed25519 signature of the challenge nonce from the initiate phase */
+      challengeSignature: string;
+      /** @constant */
+      recoveryKeyBackupConfirmed: true;
+    };
+    RegistrationCommitResponse: {
       /** @description 32-byte hex-encoded session token */
       sessionToken: string;
-      /** @description Recovery key for master key recovery — must be stored securely by the client */
-      recoveryKey: string;
       accountId: string;
       /** @enum {string} */
       accountType: "system" | "viewer";
@@ -5541,13 +5724,19 @@ export interface components {
     PasswordResetViaRecoveryKeyRequest: {
       /** Format: email */
       email: string;
-      recoveryKey: string;
-      newPassword: string;
+      /** @description Hex-encoded 32-byte auth key derived from the new password via Argon2id */
+      newAuthKey: string;
+      /** @description Hex-encoded 16-byte Argon2id salt used to derive the new auth key and password key */
+      newKdfSalt: string;
+      /** @description Base64-encoded master key re-wrapped with the new password key */
+      newEncryptedMasterKey: string;
+      /** @description Base64-encoded master key wrapped with the new recovery key */
+      newRecoveryEncryptedMasterKey: string;
+      /** @description Hex-encoded Ed25519 signature proving ownership of the account signing key */
+      challengeSignature: string;
     };
     PasswordResetResponse: {
       sessionToken: string;
-      /** @description New recovery key (old one is invalidated) */
-      recoveryKey: string;
       accountId: string;
     };
     BiometricTokenRequest: {
@@ -5592,7 +5781,10 @@ export interface components {
       hasMore: boolean;
     };
     RegenerateRecoveryKeyRequest: {
-      currentPassword: string;
+      /** @description Hex-encoded 32-byte auth key derived from the current password */
+      authKey: string;
+      /** @description Base64-encoded master key wrapped with the newly generated recovery key */
+      newRecoveryEncryptedMasterKey: string;
       /** @constant */
       confirmed: true;
     };
@@ -5651,11 +5843,20 @@ export interface components {
        * @example user@example.com
        */
       email: string;
-      currentPassword: string;
+      /** @description Hex-encoded 32-byte auth key derived from the current password */
+      authKey: string;
     };
     ChangePasswordRequest: {
-      currentPassword: string;
-      newPassword: string;
+      /** @description Hex-encoded 32-byte auth key derived from the current password */
+      oldAuthKey: string;
+      /** @description Hex-encoded 32-byte auth key derived from the new password */
+      newAuthKey: string;
+      /** @description Hex-encoded 16-byte Argon2id salt used to derive the new auth key and password key */
+      newKdfSalt: string;
+      /** @description Base64-encoded master key re-wrapped with the new password key */
+      newEncryptedMasterKey: string;
+      /** @description Hex-encoded Ed25519 signature proving ownership of the account signing key */
+      challengeSignature: string;
     };
     AuditLogQuery: {
       /** @description Filter by event type */
@@ -5713,8 +5914,8 @@ export interface components {
       version: number;
     };
     DeleteAccountRequest: {
-      /** @description Current account password for confirmation */
-      password: string;
+      /** @description Hex-encoded 32-byte auth key derived from the current password for confirmation */
+      authKey: string;
     };
     VerifyPinResponse: {
       /** @enum {boolean} */
@@ -5793,8 +5994,8 @@ export interface components {
       sourceSnapshotId: string;
     };
     PurgeSystemRequest: {
-      /** @description Account password for confirmation */
-      password: string;
+      /** @description Hex-encoded 32-byte auth key derived from the current password for confirmation */
+      authKey: string;
     };
     /** @description A member (headmate) within a system. Extends EncryptedEntity with the server-visible `archived` field. */
     MemberResponse: components["schemas"]["EncryptedEntity"];
@@ -8348,16 +8549,25 @@ export interface components {
     ImportEntityType:
       | "member"
       | "group"
+      | "custom-front"
       | "fronting-session"
+      | "fronting-comment"
       | "switch"
       | "custom-field"
+      | "field-definition"
+      | "field-value"
       | "note"
+      | "journal-entry"
       | "chat-message"
       | "board-message"
+      | "channel-category"
+      | "channel"
       | "poll"
       | "timer"
       | "privacy-bucket"
       | "friend"
+      | "system-profile"
+      | "system-settings"
       | "unknown";
     ImportErrorNonFatal: {
       entityType: components["schemas"]["ImportEntityType"];
@@ -8526,7 +8736,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  register: {
+  registerInitiate: {
     parameters: {
       query?: never;
       header?: never;
@@ -8535,7 +8745,34 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RegistrationRequest"];
+        "application/json": components["schemas"]["RegistrationInitiateRequest"];
+      };
+    };
+    responses: {
+      /** @description Registration initiated */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RegistrationInitiateResponse"];
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      409: components["responses"]["Conflict"];
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  registerCommit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegistrationCommitRequest"];
       };
     };
     responses: {
@@ -8545,11 +8782,37 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RegistrationResponse"];
+          "application/json": components["schemas"]["RegistrationCommitResponse"];
         };
       };
       400: components["responses"]["ValidationError"];
       409: components["responses"]["Conflict"];
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  getKdfSalt: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SaltRequest"];
+      };
+    };
+    responses: {
+      /** @description KDF salt returned */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SaltResponse"];
+        };
+      };
+      400: components["responses"]["ValidationError"];
       429: components["responses"]["RateLimited"];
     };
   };
@@ -8778,14 +9041,15 @@ export interface operations {
       };
     };
     responses: {
-      /** @description New recovery key generated */
-      201: {
+      /** @description Recovery key regenerated */
+      200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
           "application/json": {
-            recoveryKey: string;
+            /** @constant */
+            ok: true;
           };
         };
       };
@@ -17552,6 +17816,100 @@ export interface operations {
         content?: never;
       };
       404: components["responses"]["NotFound"];
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  lookupImportEntityRefBatch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          source: components["schemas"]["ImportSource"];
+          sourceEntityType: components["schemas"]["ImportEntityType"];
+          sourceEntityIds: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description Map of sourceEntityId to pluralscapeEntityId */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: {
+              [key: string]: string;
+            };
+          };
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  upsertImportEntityRefBatch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          source: components["schemas"]["ImportSource"];
+          entries: {
+            sourceEntityType: components["schemas"]["ImportEntityType"];
+            sourceEntityId: string;
+            pluralscapeEntityId: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description Upsert result counts */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: {
+              upserted: number;
+              unchanged: number;
+            };
+          };
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       429: components["responses"]["RateLimited"];
     };
   };
