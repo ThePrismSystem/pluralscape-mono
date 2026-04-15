@@ -1,12 +1,10 @@
-import { KDF_KEY_BYTES, MIN_PASSWORD_LENGTH } from "./crypto.constants.js";
-import { InvalidInputError } from "./errors.js";
-import { PROFILE_PARAMS, type PwhashProfile } from "./master-key.js";
+import { KDF_KEY_BYTES } from "./crypto.constants.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";
-import { assertAeadKey, assertKdfMasterKey } from "./validation.js";
+import { assertKdfMasterKey } from "./validation.js";
 
 import type { EncryptedPayload } from "./symmetric.js";
-import type { AeadKey, KdfMasterKey, PwhashSalt } from "./types.js";
+import type { AeadKey, KdfMasterKey } from "./types.js";
 
 /**
  * Generate a random persistent MasterKey (32 bytes).
@@ -20,35 +18,6 @@ export function generateMasterKey(): KdfMasterKey {
   const raw = adapter.randomBytes(KDF_KEY_BYTES);
   assertKdfMasterKey(raw);
   return raw;
-}
-
-/**
- * Derive a password key (KEK) from a password + salt using Argon2id.
- *
- * Returns an AeadKey (not a KdfMasterKey) to make the distinction explicit:
- * this key is used only as a wrapper key for the MasterKey, never for data derivation.
- * Returns a Promise for API compatibility — pwhash may be offloaded to a WebWorker.
- */
-export function derivePasswordKey(
-  password: string,
-  salt: PwhashSalt,
-  profile: PwhashProfile,
-): Promise<AeadKey> {
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new InvalidInputError(
-      `Password must be at least ${String(MIN_PASSWORD_LENGTH)} characters.`,
-    );
-  }
-  const adapter = getSodium();
-  const passwordBytes = new TextEncoder().encode(password);
-  try {
-    const { opsLimit, memLimit } = PROFILE_PARAMS[profile];
-    const derived = adapter.pwhash(KDF_KEY_BYTES, passwordBytes, salt, opsLimit, memLimit);
-    assertAeadKey(derived);
-    return Promise.resolve(derived);
-  } finally {
-    adapter.memzero(passwordBytes);
-  }
 }
 
 /**

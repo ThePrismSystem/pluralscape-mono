@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { deriveAuthAndPasswordKeys } from "../auth-key.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
-import { derivePasswordKey, generateMasterKey, unwrapMasterKey } from "../master-key-wrap.js";
+import { generateMasterKey, unwrapMasterKey } from "../master-key-wrap.js";
 import { resetPasswordViaRecoveryKey } from "../password-reset.js";
 import { serializeRecoveryBackup } from "../recovery-backup.js";
 import { recoverMasterKey } from "../recovery.js";
@@ -31,7 +32,6 @@ describe("resetPasswordViaRecoveryKey", () => {
       displayKey,
       encryptedBackup,
       newPassword: "new-secure-password",
-      pwhashProfile: "mobile",
     });
 
     expect(result.masterKey).toEqual(masterKey);
@@ -45,13 +45,12 @@ describe("resetPasswordViaRecoveryKey", () => {
       displayKey,
       encryptedBackup,
       newPassword: "wrap-verify-password",
-      pwhashProfile: "mobile",
     });
 
-    const newPasswordKey = await derivePasswordKey(
-      "wrap-verify-password",
+    const passwordBytes = new TextEncoder().encode("wrap-verify-password");
+    const { passwordKey: newPasswordKey } = await deriveAuthAndPasswordKeys(
+      passwordBytes,
       result.newSalt,
-      "mobile",
     );
     const unwrapped = unwrapMasterKey(result.wrappedMasterKey, newPasswordKey);
     expect(unwrapped).toEqual(masterKey);
@@ -65,7 +64,6 @@ describe("resetPasswordViaRecoveryKey", () => {
       displayKey,
       encryptedBackup,
       newPassword: "recovery-backup-test",
-      pwhashProfile: "mobile",
     });
 
     // The new recovery key should be different
@@ -79,6 +77,20 @@ describe("resetPasswordViaRecoveryKey", () => {
     expect(recoveredFromNew).toEqual(masterKey);
   });
 
+  it("returns an authKey as a 32-byte Uint8Array", async () => {
+    const masterKey = generateMasterKey();
+    const { displayKey, encryptedBackup } = await makeBackup(masterKey);
+
+    const result = await resetPasswordViaRecoveryKey({
+      displayKey,
+      encryptedBackup,
+      newPassword: "authkey-check-pw",
+    });
+
+    expect(result.authKey).toBeInstanceOf(Uint8Array);
+    expect(result.authKey.length).toBe(32);
+  });
+
   it("invalid recovery key format throws InvalidInputError", async () => {
     const masterKey = generateMasterKey();
     const { encryptedBackup } = await makeBackup(masterKey);
@@ -88,7 +100,6 @@ describe("resetPasswordViaRecoveryKey", () => {
         displayKey: "not-a-valid-key" as RecoveryKeyDisplay,
         encryptedBackup,
         newPassword: "new-password",
-        pwhashProfile: "mobile",
       }),
     ).rejects.toThrow(InvalidInputError);
   });
@@ -107,7 +118,6 @@ describe("resetPasswordViaRecoveryKey", () => {
         displayKey: wrongDisplayKey,
         encryptedBackup,
         newPassword: "new-password",
-        pwhashProfile: "mobile",
       }),
     ).rejects.toThrow(DecryptionFailedError);
   });
@@ -121,7 +131,6 @@ describe("resetPasswordViaRecoveryKey", () => {
         displayKey,
         encryptedBackup,
         newPassword: "",
-        pwhashProfile: "mobile",
       }),
     ).rejects.toThrow(InvalidInputError);
   });
@@ -136,7 +145,6 @@ describe("resetPasswordViaRecoveryKey", () => {
         displayKey,
         encryptedBackup: tampered,
         newPassword: "test",
-        pwhashProfile: "mobile",
       }),
     ).rejects.toThrow(DecryptionFailedError);
   });
@@ -150,8 +158,7 @@ describe("resetPasswordViaRecoveryKey", () => {
     await resetPasswordViaRecoveryKey({
       displayKey,
       encryptedBackup,
-      newPassword: "memzero-test",
-      pwhashProfile: "mobile",
+      newPassword: "memzero-test-pw",
     });
 
     // memzero called at least once (password key + recovery key bytes from recoverMasterKey)

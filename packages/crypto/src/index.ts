@@ -64,10 +64,8 @@ export {
   KDF_CONTEXT_BYTES,
   KDF_KEY_BYTES,
   PWHASH_MEMLIMIT_INTERACTIVE,
-  PWHASH_MEMLIMIT_MOBILE,
   PWHASH_MEMLIMIT_MODERATE,
   PWHASH_OPSLIMIT_INTERACTIVE,
-  PWHASH_OPSLIMIT_MOBILE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_OPSLIMIT_SENSITIVE,
   PWHASH_SALT_BYTES,
@@ -88,22 +86,24 @@ export { fromHex, toHex } from "./hex.js";
 export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
 
 // ── Master key ──────────────────────────────────────────────────────
-export type { PwhashProfile } from "./master-key.js";
 export { generateSalt } from "./master-key.js";
 
-// ── Password hashing (string-based) ────────────────────────────────
-export { hashPassword, verifyPassword } from "./password.js";
+// ── Auth key (split key derivation) ────────────────────────────────
+export type { SplitKeyResult } from "./auth-key.js";
+export {
+  deriveAuthAndPasswordKeys,
+  generateChallengeNonce,
+  hashAuthKey,
+  signChallenge,
+  verifyAuthKey,
+  verifyChallenge,
+} from "./auth-key.js";
 
 // ── PIN hashing (string-based) ─────────────────────────────────────
 export { hashPin, MIN_PIN_LENGTH, verifyPin } from "./pin.js";
 
 // ── Master key wrap (KEK/DEK two-layer architecture) ─────────────────
-export {
-  derivePasswordKey,
-  generateMasterKey,
-  unwrapMasterKey,
-  wrapMasterKey,
-} from "./master-key-wrap.js";
+export { generateMasterKey, unwrapMasterKey, wrapMasterKey } from "./master-key-wrap.js";
 
 // ── Blob codec ──────────────────────────────────────────────────────
 export { deserializeEncryptedBlob, serializeEncryptedBlob } from "./blob-codec.js";
