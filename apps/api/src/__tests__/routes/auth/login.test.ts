@@ -42,7 +42,7 @@ const createAuthApp = () => createRouteApp("/auth", authRoutes);
 
 const VALID_CREDENTIALS = {
   email: "test@example.com",
-  password: "strongpassword123",
+  authKey: "ab".repeat(32),
 };
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -62,6 +62,8 @@ describe("POST /login", () => {
       accountId: "acct_456",
       systemId: "sys_789",
       accountType: "system",
+      encryptedMasterKey: "aabb",
+      kdfSalt: "ccdd",
     });
 
     const app = createApp();
@@ -69,12 +71,21 @@ describe("POST /login", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { sessionToken: string; accountId: string; systemId: string; accountType: string };
+      data: {
+        sessionToken: string;
+        accountId: string;
+        systemId: string;
+        accountType: string;
+        encryptedMasterKey: string;
+        kdfSalt: string;
+      };
     };
     expect(body.data.sessionToken).toBe("tok_login");
     expect(body.data.accountId).toBe("acct_456");
     expect(body.data.systemId).toBe("sys_789");
     expect(body.data.accountType).toBe("system");
+    expect(body.data.encryptedMasterKey).toBe("aabb");
+    expect(body.data.kdfSalt).toBe("ccdd");
     // Login is unauthenticated — createAuditWriter should be called without auth
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything());
   });
@@ -88,7 +99,7 @@ describe("POST /login", () => {
     expect(res.status).toBe(401);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("UNAUTHENTICATED");
-    expect(body.error.message).toBe("Invalid email or password");
+    expect(body.error.message).toBe("Invalid email or credentials");
   });
 
   it("returns 400 VALIDATION_ERROR on ZodError (via global handler)", async () => {
@@ -170,6 +181,8 @@ describe("POST /login", () => {
         accountId: "acct_cc",
         systemId: "sys_cc",
         accountType: "system",
+        encryptedMasterKey: "aabb",
+        kdfSalt: "ccdd",
       });
 
       const app = createAuthApp();

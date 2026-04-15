@@ -70,7 +70,7 @@ describe("auth.service login anti-enum timing", () => {
   const authPath = resolve(import.meta.dirname, "../../services/auth.service.ts");
   const authSource = readFileSync(authPath, "utf8");
 
-  it("uses dummy hash verification on not-found path", () => {
-    expect(authSource).toContain("verifyPassword(DUMMY_ARGON2_HASH, parsed.password)");
+  it("uses dummy hash computation on not-found path", () => {
+    expect(authSource).toContain("hashAuthKey(getSodium().randomBytes(AUTH_KEY_HASH_BYTES))");
   });
 });

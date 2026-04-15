@@ -6,7 +6,7 @@
 // ── Auth Configuration ─────────────────────────────────────────────
 
 /** Generic error message for login failures — prevents user enumeration. */
-export const AUTH_GENERIC_LOGIN_ERROR = "Invalid email or password";
+export const AUTH_GENERIC_LOGIN_ERROR = "Invalid email or credentials";
 
 /** Header name for client platform hints (web/mobile). */
 export const CLIENT_PLATFORM_HEADER = "x-client-platform";
@@ -20,15 +20,14 @@ export type ClientPlatform = (typeof VALID_PLATFORMS)[number];
 /** Default platform when header is missing or unrecognized. */
 export const DEFAULT_PLATFORM = "web" as const satisfies ClientPlatform;
 
-/**
- * Dummy Argon2id hash for anti-timing attacks on login.
- * Used when the email is not found — we run verification against this
- * to equalize timing with real account lookups.
- * Parameters must match the current server profile (t=4, m=65536, p=1).
- * Generated with: hashPassword("dummypasswordfiller", "server")
- */
-export const DUMMY_ARGON2_HASH =
-  "$argon2id$v=19$m=65536,t=4,p=1$R8XiCuEH7Vp0dU/c3DPG7g$DsumexqNIgHFu2dhin/zZci/+LwXFjSIpq2OienfAd4";
+/** Environment variable name for the anti-enumeration salt secret. */
+export const ANTI_ENUM_SALT_SECRET_ENV = "ANTI_ENUM_SALT_SECRET";
+
+/** Default anti-enumeration secret for development/test. */
+export const ANTI_ENUM_SALT_SECRET_DEFAULT = "pluralscape-dev-anti-enum-secret-do-not-use-in-prod";
+
+/** Challenge nonce TTL in milliseconds (5 minutes). */
+export const CHALLENGE_NONCE_TTL_MS = 5 * 60 * 1_000;
 
 /** Length of random email salt in bytes. */
 export const EMAIL_SALT_BYTES = 16;

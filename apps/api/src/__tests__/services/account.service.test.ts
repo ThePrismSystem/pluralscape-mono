@@ -12,25 +12,30 @@ const mockMemzero = vi.fn();
 
 vi.mock("@pluralscape/crypto", () => ({
   AEAD_KEY_BYTES: 32,
+  AUTH_KEY_HASH_BYTES: 32,
   PWHASH_SALT_BYTES: 16,
   AEAD_NONCE_BYTES: 24,
   AEAD_TAG_BYTES: 16,
   assertAeadNonce: () => undefined,
+  assertSignPublicKey: () => undefined,
+  assertSignature: () => undefined,
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
     memzero: mockMemzero,
     genericHash: () => new Uint8Array(32),
   }),
-  hashPassword: () => "$argon2id$fake$newhash",
-  verifyPassword: (hash: string) => hash === "$argon2id$fake$valid",
+  hashAuthKey: () => new Uint8Array(32),
+  verifyAuthKey: (_authKey: Uint8Array, storedHash: Uint8Array) =>
+    storedHash.every((b) => b === 0xab),
   generateSalt: () => new Uint8Array(16),
-  derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
+  generateChallengeNonce: () => new Uint8Array(32),
   generateMasterKey: () => new Uint8Array(32),
   wrapMasterKey: () => ({
     ciphertext: new Uint8Array(48),
     nonce: new Uint8Array(24),
   }),
   unwrapMasterKey: () => new Uint8Array(32),
+  serializePublicKey: () => "base64-encoded-key",
 }));
 
 vi.mock("../../lib/audit-log.js", () => ({

@@ -9,27 +9,43 @@ import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { ValidationError, registerAccount } from "../../services/auth.service.js";
+import {
+  ValidationError,
+  commitRegistration,
+  initiateRegistration,
+} from "../../services/auth.service.js";
 
 export const registerRoute = new Hono();
 
 registerRoute.use("*", createCategoryRateLimiter("authHeavy"));
-registerRoute.use("*", createIdempotencyMiddleware());
 
-registerRoute.post("/", async (c) => {
+registerRoute.post("/initiate", async (c) => {
+  const body = await parseJsonBody(c);
+  const db = await getDb();
+
+  const result = await initiateRegistration(db, body);
+  return c.json(
+    envelope({
+      accountId: result.accountId,
+      kdfSalt: result.kdfSalt,
+      challengeNonce: result.challengeNonce,
+    }),
+    HTTP_CREATED,
+  );
+});
+
+registerRoute.post("/commit", createIdempotencyMiddleware(), async (c) => {
   const body = await parseJsonBody(c);
 
   const platform = extractPlatform(c);
   const audit = createAuditWriter(c);
-
   const db = await getDb();
 
   try {
-    const result = await registerAccount(db, body, platform, audit);
+    const result = await commitRegistration(db, body, platform, audit);
     return c.json(
       envelope({
         sessionToken: result.sessionToken,
-        recoveryKey: result.recoveryKey,
         accountId: result.accountId,
         accountType: result.accountType,
       }),

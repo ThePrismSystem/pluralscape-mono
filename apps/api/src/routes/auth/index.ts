@@ -5,6 +5,7 @@ import { loginRoute } from "./login.js";
 import { passwordResetRoute } from "./password-reset.js";
 import { recoveryKeyRoutes } from "./recovery-key.js";
 import { registerRoute } from "./register.js";
+import { saltRoute } from "./salt.js";
 import { sessionsRoute } from "./sessions.js";
 
 export const authRoutes = new Hono();
@@ -17,6 +18,7 @@ authRoutes.use("*", async (c, next) => {
 
 authRoutes.route("/register", registerRoute);
 authRoutes.route("/login", loginRoute);
+authRoutes.route("/salt", saltRoute);
 authRoutes.route("/biometric", biometricRoute);
 authRoutes.route("/password-reset", passwordResetRoute);
 authRoutes.route("/recovery-key", recoveryKeyRoutes);
