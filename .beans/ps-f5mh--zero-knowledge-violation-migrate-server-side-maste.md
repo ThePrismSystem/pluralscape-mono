@@ -5,7 +5,7 @@ status: completed
 type: bug
 priority: critical
 created_at: 2026-04-15T07:34:35Z
-updated_at: 2026-04-15T10:47:20Z
+updated_at: 2026-04-15T23:31:20Z
 ---
 
 The server generates and handles plaintext master key material in 4 code paths (registration, password change, recovery key regeneration, password reset). This violates the stated zero-knowledge architecture. All key generation and derivation must move to the client, with the server only storing opaque encrypted blobs.
@@ -35,3 +35,13 @@ Refactored all remaining password hashing references in the API:
 - Updated E2E test infrastructure with client-side crypto
 - Updated ADRs 006 and 013, architecture docs
 - All 12,065 unit tests and 2,764 integration tests pass
+
+## Summary of Round 2 Review Fixes
+
+15 findings from multi-agent PR review, all resolved:
+
+**Critical (3):** Recovery key hash now stored at all creation points — registration commit, password reset, and recovery key regeneration. tRPC recovery reset schema aligned with validation layer.
+
+**Important (7):** Domain types updated for zero-knowledge auth (LoginCredentials, RegistrationInput, RecoveryKey). Password bytes zeroed at all call sites. Character-count validation for multi-byte passwords. Public keys hex-validated at 32 bytes. challengeSignature removed from recovery reset (industry standard — recovery key hash is sole proof). Recursion guard on placeholder cleanup. Check constraints for recovery key hash and challenge nonce pairing.
+
+**Suggestions (5):** RN memcmp throws on length mismatch. authKey zeroing documented. Error message corrected. Paired check constraint for challenge fields. accountId validated with acct\_ prefix.
