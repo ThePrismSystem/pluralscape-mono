@@ -24,7 +24,7 @@ vi.mock("node:worker_threads", () => {
 
 // Dynamic import so the mock is in place before module evaluation.
 const { hashPinOffload, verifyPinOffload, _shutdownPool } =
-  await import("../../lib/pwhash-offload.js");
+  await import("../../lib/kdf-offload.js");
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -133,19 +133,33 @@ describe("pwhash-offload", () => {
   });
 
   describe("worker error event", () => {
-    it("rejects all pending requests when a worker emits an error", async () => {
+    it("rejects only the crashed worker's pending requests, not other workers'", async () => {
+      // Dispatch one request; find which worker received it.
       const p1 = hashPinOffload("1111");
-      const p2 = hashPinOffload("2222");
+      expect(mockWorkers).toHaveLength(2);
 
-      // Fire error on all workers to ensure both pending requests are rejected.
-      const workerError = new Error("Worker crashed");
-      for (const worker of mockWorkers) {
-        const errorHandler = getHandler(worker, "error");
-        errorHandler(workerError);
-      }
+      const { worker: crashedWorker, sentMsg: msg1 } = findDispatchedWorker();
 
+      // Identify the sibling worker (the one that did NOT receive p1).
+      const siblingWorker = mockWorkers.find((w) => w !== crashedWorker);
+      if (!siblingWorker) throw new Error("Expected a sibling worker");
+
+      // Crash only the worker that holds p1 — p1 must reject.
+      getHandler(crashedWorker, "error")(new Error("Worker crashed"));
       await expect(p1).rejects.toThrow("Worker crashed");
-      await expect(p2).rejects.toThrow("Worker crashed");
+
+      // Verify msg1 was consumed so findDispatchedWorker works for p2.
+      crashedWorker.postMessage.mockClear();
+
+      // The sibling worker is unaffected — it can still accept and resolve a request.
+      const p2 = hashPinOffload("2222");
+      const { worker: w2, sentMsg: msg2 } = findDispatchedWorker();
+      // p2 should be on one of the workers (may be either due to round-robin).
+      getHandler(w2, "message")({ id: msg2["id"], ok: true, value: "hash-2222" });
+      await expect(p2).resolves.toBe("hash-2222");
+
+      // Suppress unused-variable lint; msg1 id was consumed by the error path.
+      void msg1;
     });
   });
 

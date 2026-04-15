@@ -29,7 +29,7 @@ vi.mock("@pluralscape/crypto", () => ({
 
 // Dynamic import triggers main() which calls initSodium() and registers
 // the message handler on parentPort.
-await import("../../lib/pwhash-worker-thread.js");
+await import("../../lib/kdf-worker-thread.js");
 
 // ── Helpers ────────────────────────────────────────────────────────────
 /** Get the message handler registered by the worker. */
@@ -57,7 +57,7 @@ afterEach(() => {
 });
 
 // ── Tests ──────────────────────────────────────────────────────────────
-describe("pwhash-worker-thread", () => {
+describe("kdf-worker-thread", () => {
   describe("hash operation", () => {
     it("calls hashPin and posts back the result", () => {
       const handler = getMessageHandler();

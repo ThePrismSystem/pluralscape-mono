@@ -16,7 +16,7 @@ vi.mock("@pluralscape/db/pg", () => ({
   },
 }));
 
-vi.mock("../../lib/pwhash-offload.js", () => ({
+vi.mock("../../lib/kdf-offload.js", () => ({
   hashPinOffload: vi.fn().mockResolvedValue("$argon2id$hashed-pin"),
   verifyPinOffload: vi.fn().mockResolvedValue(true),
 }));
@@ -72,7 +72,7 @@ wireChain();
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { hashPinOffload, verifyPinOffload } = await import("../../lib/pwhash-offload.js");
+const { hashPinOffload, verifyPinOffload } = await import("../../lib/kdf-offload.js");
 const { setAccountPin, removeAccountPin, verifyAccountPin } =
   await import("../../services/account-pin.service.js");
 

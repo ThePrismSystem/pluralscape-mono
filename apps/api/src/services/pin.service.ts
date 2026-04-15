@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { hashPinOffload, verifyPinOffload } from "../lib/pwhash-offload.js";
+import { hashPinOffload, verifyPinOffload } from "../lib/kdf-offload.js";
 import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";

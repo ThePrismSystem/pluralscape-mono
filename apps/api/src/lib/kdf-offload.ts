@@ -1,5 +1,5 @@
 /**
- * Async wrapper around the pwhash worker thread pool.
+ * Async wrapper around the KDF worker thread pool.
  *
  * Provides non-blocking hashPin/verifyPin/deriveTransferKey
  * by dispatching work to a small pool of worker threads that run
@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker as _Worker } from "node:worker_threads";
 
-/** Thrown when the pwhash worker pool fails (timeout, crash, or error response). */
+/** Thrown when the KDF worker pool fails (timeout, crash, or error response). */
 export class WorkerError extends Error {
   override readonly name = "WorkerError" as const;
 }
@@ -42,23 +42,26 @@ interface WorkerResponse {
 let pool: NodeWorker[] | null = null;
 let nextId = 0;
 let roundRobin = 0;
-const pending = new Map<number, PendingRequest>();
+const pendingByWorker = new Map<number, Map<number, PendingRequest>>();
 
 function getWorkerPath(): string {
   const currentDir = dirname(fileURLToPath(import.meta.url));
-  return join(currentDir, "pwhash-worker-thread.js");
+  return join(currentDir, "kdf-worker-thread.js");
 }
 
 function initPool(): NodeWorker[] {
   if (pool) return pool;
 
   const workerPath = getWorkerPath();
-  pool = Array.from({ length: POOL_SIZE }, () => {
+  pool = Array.from({ length: POOL_SIZE }, (_, workerIndex) => {
+    const workerPending = new Map<number, PendingRequest>();
+    pendingByWorker.set(workerIndex, workerPending);
+
     const worker = new Worker(workerPath);
     worker.on("message", (msg: WorkerResponse) => {
-      const req = pending.get(msg.id);
+      const req = workerPending.get(msg.id);
       if (!req) return;
-      pending.delete(msg.id);
+      workerPending.delete(msg.id);
       if (msg.ok) {
         req.resolve(msg.value);
       } else {
@@ -66,10 +69,9 @@ function initPool(): NodeWorker[] {
       }
     });
     worker.on("error", (err: Error) => {
-      // Reject all pending requests on this worker
-      for (const [id, req] of pending) {
+      for (const [id, req] of workerPending) {
         req.reject(err);
-        pending.delete(id);
+        workerPending.delete(id);
       }
     });
     return worker;
@@ -84,16 +86,19 @@ const DISPATCH_TIMEOUT_MS = 30_000;
 function dispatch(message: Record<string, unknown>): Promise<unknown> {
   const workers = initPool();
   const id = nextId++;
-  const worker = workers[roundRobin % workers.length] as NodeWorker;
+  const workerIndex = roundRobin % workers.length;
+  const worker = workers[workerIndex] as NodeWorker;
   roundRobin++;
+
+  const workerPending = pendingByWorker.get(workerIndex) ?? new Map<number, PendingRequest>();
 
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      pending.delete(id);
+      workerPending.delete(id);
       reject(new WorkerError("pwhash worker timeout"));
     }, DISPATCH_TIMEOUT_MS);
 
-    pending.set(id, {
+    workerPending.set(id, {
       resolve: (value) => {
         clearTimeout(timer);
         resolve(value);
@@ -133,5 +138,5 @@ export async function _shutdownPool(): Promise<void> {
   if (!pool) return;
   await Promise.all(pool.map((w) => w.terminate()));
   pool = null;
-  pending.clear();
+  pendingByWorker.clear();
 }

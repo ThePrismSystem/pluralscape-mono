@@ -26,16 +26,16 @@ import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 import type { AccountId, SessionId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-// ── Mock the pwhash worker offload ────────────────────────────────────
+// ── Mock the KDF worker offload ───────────────────────────────────────
 // deriveTransferKeyOffload uses a worker thread pool that requires the
-// compiled pwhash-worker-thread.js file. In vitest/Node integration tests
+// compiled kdf-worker-thread.js file. In vitest/Node integration tests
 // the worker path resolution fails, so we mock the offload to return a
 // deterministic 32-byte key. The real Argon2id derivation is covered by
 // the crypto package's own tests and the unit test mocks.
 
 const mockDeriveTransferKeyOffload = vi.fn(() => Promise.resolve(new Uint8Array(32)));
 
-vi.mock("../../lib/pwhash-offload.js", () => ({
+vi.mock("../../lib/kdf-offload.js", () => ({
   deriveTransferKeyOffload: () => mockDeriveTransferKeyOffload(),
   WorkerError: class WorkerError extends Error {
     override readonly name = "WorkerError" as const;

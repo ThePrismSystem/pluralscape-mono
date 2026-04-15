@@ -13,7 +13,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 
 import { deserializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
-import { WorkerError, deriveTransferKeyOffload } from "../lib/pwhash-offload.js";
+import { WorkerError, deriveTransferKeyOffload } from "../lib/kdf-offload.js";
 import { withAccountTransaction } from "../lib/rls-context.js";
 import { MAX_TRANSFER_CODE_ATTEMPTS } from "../routes/account/device-transfer.constants.js";
 

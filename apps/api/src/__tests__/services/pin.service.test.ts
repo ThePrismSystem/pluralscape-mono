@@ -9,7 +9,7 @@ import type { SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
-vi.mock("../../lib/pwhash-offload.js", () => ({
+vi.mock("../../lib/kdf-offload.js", () => ({
   hashPinOffload: vi.fn().mockResolvedValue("$argon2id$fake$hash"),
   verifyPinOffload: vi.fn().mockResolvedValue(true),
 }));
@@ -45,7 +45,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { SetPinBodySchema, RemovePinBodySchema, VerifyPinBodySchema } =
   await import("@pluralscape/validation");
-const { hashPinOffload, verifyPinOffload } = await import("../../lib/pwhash-offload.js");
+const { hashPinOffload, verifyPinOffload } = await import("../../lib/kdf-offload.js");
 const { setPin, removePin, verifyPinCode } = await import("../../services/pin.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
