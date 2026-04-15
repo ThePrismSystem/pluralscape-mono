@@ -2438,19 +2438,21 @@ describe("normalizeFrontingSessions: additional edge cases", () => {
       d.sessions[sessionId] = {
         id: s(sessionId),
         systemId: s("sys_1"),
-        memberId: null,
+        memberId: s("mem_placeholder"),
         customFrontId: s("cf_1"),
-        structureEntityId: null,
+        structureEntityId: s(""),
         startTime: 1000,
         endTime: 5000,
-        comment: null,
-        positionality: null,
-        outtrigger: null,
-        outtriggerSentiment: null,
+        comment: s(""),
+        positionality: s(""),
+        outtrigger: s(""),
+        outtriggerSentiment: s(""),
         archived: false,
         createdAt: 1000,
         updatedAt: 1000,
       };
+      // Null out memberId to exercise the customFrontId-only path
+      d.sessions[sessionId].memberId = null;
     });
 
     const { count, notifications } = normalizeFrontingSessions(session);
@@ -2474,19 +2476,22 @@ describe("normalizeFrontingSessions: additional edge cases", () => {
       d.sessions[sessionId] = {
         id: s(sessionId),
         systemId: s("sys_1"),
-        memberId: null,
-        customFrontId: null,
+        memberId: s("mem_placeholder"),
+        customFrontId: s("cf_placeholder"),
         structureEntityId: s("ste_1"),
         startTime: 1000,
         endTime: 5000,
-        comment: null,
-        positionality: null,
-        outtrigger: null,
-        outtriggerSentiment: null,
+        comment: s(""),
+        positionality: s(""),
+        outtrigger: s(""),
+        outtriggerSentiment: s(""),
         archived: false,
         createdAt: 1000,
         updatedAt: 1000,
       };
+      // Null out memberId and customFrontId to exercise structureEntityId-only path
+      d.sessions[sessionId].memberId = null;
+      d.sessions[sessionId].customFrontId = null;
     });
 
     const { count, notifications } = normalizeFrontingSessions(session);
