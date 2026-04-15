@@ -69,4 +69,9 @@ export class WasmSodiumAdapter extends BaseSodiumAdapter {
     const sodium = this.lib();
     sodium.memzero(buffer);
   }
+
+  memcmp(a: Uint8Array, b: Uint8Array): boolean {
+    const sodium = this.lib();
+    return sodium.memcmp(a, b);
+  }
 }

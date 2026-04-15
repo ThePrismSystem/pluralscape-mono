@@ -160,6 +160,21 @@ describe("generateChallengeNonce", () => {
   });
 });
 
+describe("adapter.memcmp (constant-time comparison)", () => {
+  it("returns true for identical buffers", () => {
+    const adapter = getSodium();
+    const buf = adapter.randomBytes(32);
+    expect(adapter.memcmp(buf, new Uint8Array(buf))).toBe(true);
+  });
+
+  it("returns false for different buffers", () => {
+    const adapter = getSodium();
+    const a = adapter.randomBytes(32);
+    const b = adapter.randomBytes(32);
+    expect(adapter.memcmp(a, b)).toBe(false);
+  });
+});
+
 describe("signChallenge / verifyChallenge", () => {
   it("roundtrip: signed nonce verifies with the correct public key", () => {
     const adapter = getSodium();
