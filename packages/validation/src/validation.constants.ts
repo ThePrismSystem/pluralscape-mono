@@ -27,6 +27,9 @@ export const RECOVERY_KEY_HASH_BYTE_LENGTH = 32;
 /** Minimum byte length for encrypted blob fields (nonce 24B + tag 16B = 40B → 80 hex chars). */
 export const ENCRYPTED_BLOB_MIN_BYTE_LENGTH = 40;
 
+/** Byte length of Ed25519/X25519 public keys (32 bytes → 64 hex chars). */
+export const PUBLIC_KEY_BYTE_LENGTH = 32;
+
 /**
  * Maximum base64-encoded string length for encrypted data fields.
  * Equals Math.ceil(65_536 * 4/3) = 87_382 — the base64 encoding of 64 KiB,

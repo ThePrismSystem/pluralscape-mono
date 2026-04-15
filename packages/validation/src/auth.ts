@@ -5,6 +5,7 @@ import {
   CHALLENGE_SIGNATURE_BYTE_LENGTH,
   ENCRYPTED_BLOB_MIN_BYTE_LENGTH,
   KDF_SALT_BYTE_LENGTH,
+  PUBLIC_KEY_BYTE_LENGTH,
   RECOVERY_KEY_HASH_BYTE_LENGTH,
 } from "./validation.constants.js";
 
@@ -26,6 +27,8 @@ const encryptedBlobHex = z
   .regex(/^[0-9a-f]+$/i)
   .min(ENCRYPTED_BLOB_MIN_BYTE_LENGTH * 2);
 
+const publicKeyHex = hexBytes(PUBLIC_KEY_BYTE_LENGTH);
+
 /** Phase 1: client sends email to initiate registration. */
 export const RegistrationInitiateSchema = z
   .object({
@@ -37,16 +40,17 @@ export const RegistrationInitiateSchema = z
 /** Phase 2: client sends all encrypted blobs + auth key. */
 export const RegistrationCommitSchema = z
   .object({
-    accountId: z.string().min(1),
+    accountId: z.string().startsWith("acct_"),
     authKey: authKeyHex,
     encryptedMasterKey: encryptedBlobHex,
     encryptedSigningPrivateKey: encryptedBlobHex,
     encryptedEncryptionPrivateKey: encryptedBlobHex,
-    publicSigningKey: z.string().min(1),
-    publicEncryptionKey: z.string().min(1),
+    publicSigningKey: publicKeyHex,
+    publicEncryptionKey: publicKeyHex,
     recoveryEncryptedMasterKey: encryptedBlobHex,
     challengeSignature: challengeSigHex,
     recoveryKeyBackupConfirmed: z.boolean(),
+    recoveryKeyHash: recoveryKeyHashHex,
   })
   .readonly();
 
@@ -102,8 +106,7 @@ export const PasswordResetViaRecoveryKeySchema = z
     newKdfSalt: kdfSaltHex,
     newEncryptedMasterKey: encryptedBlobHex,
     newRecoveryEncryptedMasterKey: encryptedBlobHex,
-    recoveryKeyHash: recoveryKeyHashHex,
-    challengeSignature: challengeSigHex,
+    newRecoveryKeyHash: recoveryKeyHashHex,
   })
   .readonly();
 
