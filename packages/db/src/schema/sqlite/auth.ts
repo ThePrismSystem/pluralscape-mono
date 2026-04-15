@@ -16,10 +16,14 @@ export const accounts = sqliteTable(
     accountType: text("account_type").notNull().default("system").$type<AccountType>(),
     emailHash: text("email_hash").notNull(),
     emailSalt: text("email_salt").notNull(),
-    passwordHash: text("password_hash").notNull(),
+    authKeyHash: sqliteBinary("auth_key_hash").notNull(),
     kdfSalt: text("kdf_salt").notNull(),
     /** Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key. */
     encryptedMasterKey: sqliteBinary("encrypted_master_key").notNull(),
+    /** Challenge nonce for two-phase registration. Cleared after successful commit. */
+    challengeNonce: sqliteBinary("challenge_nonce"),
+    /** Expiry time for the challenge nonce (5 minutes after creation). */
+    challengeExpiresAt: sqliteTimestamp("challenge_expires_at"),
     /** Server-side encrypted email for operational communication (ADR 029). Null for pre-migration accounts. */
     encryptedEmail: sqliteBinary("encrypted_email"),
     /** When true, IP address and user-agent are persisted in audit log entries. Default off (ADR 028). */

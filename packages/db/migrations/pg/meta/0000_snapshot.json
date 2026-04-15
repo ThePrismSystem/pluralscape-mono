@@ -1,5 +1,5 @@
 {
-  "id": "59ec05bc-9a21-40b0-a8fc-5c8b8e9d2fda",
+  "id": "183ead15-9c10-446f-adac-0244de50a501",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -148,9 +148,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "password_hash": {
-          "name": "password_hash",
-          "type": "varchar(255)",
+        "auth_key_hash": {
+          "name": "auth_key_hash",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
@@ -165,6 +165,18 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
+        },
+        "challenge_nonce": {
+          "name": "challenge_nonce",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "challenge_expires_at": {
+          "name": "challenge_expires_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         },
         "encrypted_email": {
           "name": "encrypted_email",

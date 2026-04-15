@@ -20,10 +20,14 @@ export const accounts = pgTable(
       .$type<AccountType>(),
     emailHash: varchar("email_hash", { length: 255 }).notNull(),
     emailSalt: varchar("email_salt", { length: 255 }).notNull(),
-    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+    authKeyHash: pgBinary("auth_key_hash").notNull(),
     kdfSalt: varchar("kdf_salt", { length: 255 }).notNull(),
     /** Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key. */
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
+    /** Challenge nonce for two-phase registration. Cleared after successful commit. */
+    challengeNonce: pgBinary("challenge_nonce"),
+    /** Expiry time for the challenge nonce (5 minutes after creation). */
+    challengeExpiresAt: pgTimestamp("challenge_expires_at"),
     /** Server-side encrypted email for operational communication (ADR 029). Null for pre-migration accounts. */
     encryptedEmail: pgBinary("encrypted_email"),
     /** When true, IP address and user-agent are persisted in audit log entries. Default off (ADR 028). */

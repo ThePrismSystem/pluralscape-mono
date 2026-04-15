@@ -353,7 +353,7 @@ export async function pgInsertAccount(
     id: resolvedId,
     emailHash: `hash_${crypto.randomUUID()}`,
     emailSalt: `salt_${crypto.randomUUID()}`,
-    passwordHash: `$argon2id$${crypto.randomUUID()}`,
+    authKeyHash: new Uint8Array(32),
     kdfSalt: `kdf_${crypto.randomUUID()}`,
     encryptedMasterKey: new Uint8Array(72),
     createdAt: now,
