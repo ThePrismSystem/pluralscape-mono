@@ -125,6 +125,7 @@ async function registerUniqueAccount(request: APIRequestContext): Promise<Accoun
       recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
       challengeSignature: toHex(challengeSignature),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: toHex(recovery.recoveryKeyHash),
     },
   });
 

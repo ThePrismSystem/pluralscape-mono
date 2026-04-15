@@ -76,6 +76,7 @@ test.describe("tRPC auth router", () => {
         recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
         challengeSignature: toHex(challengeSignature),
         recoveryKeyBackupConfirmed: true,
+        recoveryKeyHash: toHex(recovery.recoveryKeyHash),
       });
       expect(commitResult).toHaveProperty("sessionToken");
       expect(commitResult).toHaveProperty("accountId");
@@ -140,6 +141,7 @@ test.describe("tRPC auth router", () => {
       recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
       challengeSignature: toHex(challengeSignature),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: toHex(recovery.recoveryKeyHash),
     });
 
     const wrongAuthKey = "0".repeat(64);

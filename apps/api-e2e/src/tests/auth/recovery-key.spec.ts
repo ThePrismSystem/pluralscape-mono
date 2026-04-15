@@ -191,14 +191,14 @@ test.describe("POST /v1/auth/recovery-key/regenerate", () => {
 });
 
 test.describe("POST /v1/auth/password-reset/recovery-key", () => {
-  // KDF salt is 16 bytes = 32 hex chars; auth key 32 bytes = 64 hex; sig 64 bytes = 128 hex
+  // KDF salt is 16 bytes = 32 hex chars; auth key 32 bytes = 64 hex; recovery key hash 32 bytes = 64 hex
   test("returns 401 for unknown email (anti-enumeration)", async ({ request }) => {
     const unknownEmail = `unknown-${crypto.randomUUID()}@test.pluralscape.local`;
     const newSaltHex = crypto.randomBytes(16).toString("hex");
     const fakeEncryptedMasterKey = crypto.randomBytes(80).toString("hex");
     const fakeRecoveryEncryptedMasterKey = crypto.randomBytes(80).toString("hex");
     const fakeRecoveryKeyHashHex = crypto.randomBytes(32).toString("hex");
-    const fakeSigHex = crypto.randomBytes(64).toString("hex");
+    const fakeNewRecoveryKeyHashHex = crypto.randomBytes(32).toString("hex");
 
     const res = await request.post("/v1/auth/password-reset/recovery-key", {
       data: {
@@ -208,7 +208,7 @@ test.describe("POST /v1/auth/password-reset/recovery-key", () => {
         newEncryptedMasterKey: fakeEncryptedMasterKey,
         newRecoveryEncryptedMasterKey: fakeRecoveryEncryptedMasterKey,
         recoveryKeyHash: fakeRecoveryKeyHashHex,
-        challengeSignature: fakeSigHex,
+        newRecoveryKeyHash: fakeNewRecoveryKeyHashHex,
       },
     });
 
@@ -220,7 +220,7 @@ test.describe("POST /v1/auth/password-reset/recovery-key", () => {
     const newSaltHex = crypto.randomBytes(16).toString("hex");
     const fakeEncryptedMasterKey = crypto.randomBytes(80).toString("hex");
     const fakeRecoveryEncryptedMasterKey = crypto.randomBytes(80).toString("hex");
-    const fakeSigHex = crypto.randomBytes(64).toString("hex");
+    const fakeNewRecoveryKeyHashHex = crypto.randomBytes(32).toString("hex");
 
     const res = await request.post("/v1/auth/password-reset/recovery-key", {
       data: {
@@ -229,7 +229,7 @@ test.describe("POST /v1/auth/password-reset/recovery-key", () => {
         newKdfSalt: newSaltHex,
         newEncryptedMasterKey: fakeEncryptedMasterKey,
         newRecoveryEncryptedMasterKey: fakeRecoveryEncryptedMasterKey,
-        challengeSignature: fakeSigHex,
+        newRecoveryKeyHash: fakeNewRecoveryKeyHashHex,
         // recoveryKeyHash intentionally omitted
       },
     });
@@ -241,7 +241,7 @@ test.describe("POST /v1/auth/password-reset/recovery-key", () => {
     const fakeEmail = `test-${crypto.randomUUID()}@test.pluralscape.local`;
     const newSaltHex = crypto.randomBytes(16).toString("hex");
     const fakeRecoveryKeyHashHex = crypto.randomBytes(32).toString("hex");
-    const fakeSigHex = crypto.randomBytes(64).toString("hex");
+    const fakeNewRecoveryKeyHashHex = crypto.randomBytes(32).toString("hex");
 
     const res = await request.post("/v1/auth/password-reset/recovery-key", {
       data: {
@@ -251,7 +251,7 @@ test.describe("POST /v1/auth/password-reset/recovery-key", () => {
         newEncryptedMasterKey: "aabb", // < 80 hex chars minimum
         newRecoveryEncryptedMasterKey: "ccdd", // < 80 hex chars minimum
         recoveryKeyHash: fakeRecoveryKeyHashHex,
-        challengeSignature: fakeSigHex,
+        newRecoveryKeyHash: fakeNewRecoveryKeyHashHex,
       },
     });
 

@@ -70,6 +70,7 @@ export const authRouter = router({
         recoveryEncryptedMasterKey: z.string().min(1),
         challengeSignature: z.string().min(1),
         recoveryKeyBackupConfirmed: z.boolean(),
+        recoveryKeyHash: z.string().min(1),
         platform: PlatformSchema,
       }),
     )

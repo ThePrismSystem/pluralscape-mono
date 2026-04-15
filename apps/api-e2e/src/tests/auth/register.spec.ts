@@ -70,6 +70,7 @@ test.describe("Two-phase registration", () => {
         recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
         challengeSignature: toHex(challengeSignature),
         recoveryKeyBackupConfirmed: true,
+        recoveryKeyHash: toHex(recovery.recoveryKeyHash),
       },
     });
 
@@ -128,6 +129,7 @@ test.describe("Two-phase registration", () => {
         recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
         challengeSignature: toHex(challengeSignature),
         recoveryKeyBackupConfirmed: true,
+        recoveryKeyHash: toHex(recovery.recoveryKeyHash),
       },
     });
     expect(commit1.status()).toBe(201);
