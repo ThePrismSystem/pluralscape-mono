@@ -102,6 +102,8 @@ export const recoveryKeys = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
+    /** BLAKE2b hash of the raw recovery key for server-side verification. */
+    recoveryKeyHash: pgBinary("recovery_key_hash"),
     createdAt: pgTimestamp("created_at").notNull(),
     revokedAt: pgTimestamp("revoked_at"),
   },

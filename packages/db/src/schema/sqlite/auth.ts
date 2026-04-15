@@ -94,6 +94,8 @@ export const recoveryKeys = sqliteTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: sqliteBinary("encrypted_master_key").notNull(),
+    /** BLAKE2b hash of the raw recovery key for server-side verification. */
+    recoveryKeyHash: sqliteBinary("recovery_key_hash"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     revokedAt: sqliteTimestamp("revoked_at"),
   },

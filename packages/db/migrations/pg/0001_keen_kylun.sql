@@ -1,0 +1,1 @@
+ALTER TABLE "recovery_keys" ADD COLUMN "recovery_key_hash" "bytea";

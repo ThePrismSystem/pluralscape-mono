@@ -101,6 +101,7 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_master_key BLOB NOT NULL,
+      recovery_key_hash BLOB,
       created_at INTEGER NOT NULL,
       revoked_at INTEGER
     )

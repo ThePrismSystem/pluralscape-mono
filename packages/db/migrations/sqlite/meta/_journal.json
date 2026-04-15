@@ -8,6 +8,13 @@
       "when": 1776241333408,
       "tag": "0000_boring_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776278872056,
+      "tag": "0001_daffy_sage",
+      "breakpoints": true
     }
   ]
 }
