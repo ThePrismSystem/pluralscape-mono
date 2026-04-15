@@ -413,10 +413,10 @@ describe("account router", () => {
     };
 
     it("calls regenerateRecoveryKeyBackup and returns recovery key", async () => {
-      vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValue({ recoveryKey: "AAAA-BBBB-CCCC" });
+      vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValue({ ok: true });
       const caller = createCaller();
       const result = await caller.account.regenerateRecoveryKey(input);
-      expect(result).toEqual({ recoveryKey: "AAAA-BBBB-CCCC" });
+      expect(result).toEqual({ ok: true });
       expect(vi.mocked(regenerateRecoveryKeyBackup)).toHaveBeenCalledWith(
         expect.anything(),
         MOCK_AUTH.accountId,
