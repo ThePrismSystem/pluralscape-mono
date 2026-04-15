@@ -242,7 +242,8 @@ export type {
   DeviceInfo,
   RecoveryKey,
   LoginCredentials,
-  RegistrationInput,
+  RegistrationInitiateInput,
+  RegistrationCommitInput,
   DeviceTransferRequest,
   DeviceTransferPayload,
 } from "./auth.js";

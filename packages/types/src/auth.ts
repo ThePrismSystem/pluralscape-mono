@@ -64,6 +64,7 @@ export interface RecoveryKey {
   readonly id: RecoveryKeyId;
   readonly accountId: AccountId;
   readonly encryptedMasterKey: Uint8Array;
+  readonly recoveryKeyHash: Uint8Array | null;
   readonly createdAt: UnixMillis;
   readonly revokedAt: UnixMillis | null;
 }
@@ -71,15 +72,28 @@ export interface RecoveryKey {
 /** Input type for login. */
 export interface LoginCredentials {
   readonly email: string;
-  readonly password: string;
+  readonly authKey: string;
 }
 
-/** Input type for registration. */
-export interface RegistrationInput {
+/** Input for registration phase 1: initiate. */
+export interface RegistrationInitiateInput {
   readonly email: string;
-  readonly password: string;
-  readonly recoveryKeyBackupConfirmed: boolean;
   readonly accountType: AccountType;
+}
+
+/** Input for registration phase 2: commit. */
+export interface RegistrationCommitInput {
+  readonly accountId: string;
+  readonly authKey: string;
+  readonly encryptedMasterKey: string;
+  readonly encryptedSigningPrivateKey: string;
+  readonly encryptedEncryptionPrivateKey: string;
+  readonly publicSigningKey: string;
+  readonly publicEncryptionKey: string;
+  readonly recoveryEncryptedMasterKey: string;
+  readonly challengeSignature: string;
+  readonly recoveryKeyBackupConfirmed: boolean;
+  readonly recoveryKeyHash: string;
 }
 
 /** A request to transfer encryption keys from one device to another. */

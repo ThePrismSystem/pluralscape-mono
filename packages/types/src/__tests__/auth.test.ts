@@ -2,7 +2,6 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
   Account,
-  AccountType,
   AuthKey,
   AuthKeyType,
   DeviceInfo,
@@ -11,7 +10,6 @@ import type {
   DeviceTransferStatus,
   LoginCredentials,
   RecoveryKey,
-  RegistrationInput,
   Session,
 } from "../auth.js";
 import type {
@@ -101,7 +99,9 @@ describe("RecoveryKey", () => {
     expectTypeOf<RecoveryKey["id"]>().toEqualTypeOf<RecoveryKeyId>();
     expectTypeOf<RecoveryKey["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<RecoveryKey["encryptedMasterKey"]>().toEqualTypeOf<Uint8Array>();
+    expectTypeOf<RecoveryKey["recoveryKeyHash"]>().toEqualTypeOf<Uint8Array | null>();
     expectTypeOf<RecoveryKey["createdAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<RecoveryKey["revokedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 });
 
@@ -113,16 +113,7 @@ describe("LoginCredentials", () => {
 
   it("has expected fields", () => {
     expectTypeOf<LoginCredentials["email"]>().toEqualTypeOf<string>();
-    expectTypeOf<LoginCredentials["password"]>().toEqualTypeOf<string>();
-  });
-});
-
-describe("RegistrationInput", () => {
-  it("has expected fields", () => {
-    expectTypeOf<RegistrationInput["email"]>().toEqualTypeOf<string>();
-    expectTypeOf<RegistrationInput["password"]>().toEqualTypeOf<string>();
-    expectTypeOf<RegistrationInput["recoveryKeyBackupConfirmed"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<RegistrationInput["accountType"]>().toEqualTypeOf<AccountType>();
+    expectTypeOf<LoginCredentials["authKey"]>().toEqualTypeOf<string>();
   });
 });
 
