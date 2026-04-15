@@ -33,7 +33,7 @@ describe("Account", () => {
     expectTypeOf<Account["id"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<Account["emailHash"]>().toEqualTypeOf<string>();
     expectTypeOf<Account["emailSalt"]>().toEqualTypeOf<string>();
-    expectTypeOf<Account["passwordHash"]>().toEqualTypeOf<string>();
+    expectTypeOf<Account["authKeyHash"]>().toEqualTypeOf<Uint8Array>();
   });
 });
 

@@ -3,7 +3,9 @@ import { z } from "zod/v4";
 import {
   AUTH_KEY_BYTE_LENGTH,
   CHALLENGE_SIGNATURE_BYTE_LENGTH,
+  ENCRYPTED_BLOB_MIN_BYTE_LENGTH,
   KDF_SALT_BYTE_LENGTH,
+  RECOVERY_KEY_HASH_BYTE_LENGTH,
 } from "./validation.constants.js";
 
 /** Hex-encoded binary field of exact byte length. */
@@ -16,6 +18,13 @@ const hexBytes = (byteLen: number) =>
 const authKeyHex = hexBytes(AUTH_KEY_BYTE_LENGTH);
 const kdfSaltHex = hexBytes(KDF_SALT_BYTE_LENGTH);
 const challengeSigHex = hexBytes(CHALLENGE_SIGNATURE_BYTE_LENGTH);
+const recoveryKeyHashHex = hexBytes(RECOVERY_KEY_HASH_BYTE_LENGTH);
+
+/** Hex-encoded encrypted blob: at least nonce (24B) + tag (16B) = 40 bytes. */
+const encryptedBlobHex = z
+  .string()
+  .regex(/^[0-9a-f]+$/i)
+  .min(ENCRYPTED_BLOB_MIN_BYTE_LENGTH * 2);
 
 /** Phase 1: client sends email to initiate registration. */
 export const RegistrationInitiateSchema = z
@@ -30,12 +39,12 @@ export const RegistrationCommitSchema = z
   .object({
     accountId: z.string().min(1),
     authKey: authKeyHex,
-    encryptedMasterKey: z.string().min(1),
-    encryptedSigningPrivateKey: z.string().min(1),
-    encryptedEncryptionPrivateKey: z.string().min(1),
+    encryptedMasterKey: encryptedBlobHex,
+    encryptedSigningPrivateKey: encryptedBlobHex,
+    encryptedEncryptionPrivateKey: encryptedBlobHex,
     publicSigningKey: z.string().min(1),
     publicEncryptionKey: z.string().min(1),
-    recoveryEncryptedMasterKey: z.string().min(1),
+    recoveryEncryptedMasterKey: encryptedBlobHex,
     challengeSignature: challengeSigHex,
     recoveryKeyBackupConfirmed: z.boolean(),
   })
@@ -62,7 +71,7 @@ export const ChangePasswordSchema = z
     oldAuthKey: authKeyHex,
     newAuthKey: authKeyHex,
     newKdfSalt: kdfSaltHex,
-    newEncryptedMasterKey: z.string().min(1),
+    newEncryptedMasterKey: encryptedBlobHex,
     challengeSignature: challengeSigHex,
   })
   .readonly();
@@ -79,7 +88,8 @@ export const ChangeEmailSchema = z
 export const RegenerateRecoveryKeySchema = z
   .object({
     authKey: authKeyHex,
-    newRecoveryEncryptedMasterKey: z.string().min(1),
+    newRecoveryEncryptedMasterKey: encryptedBlobHex,
+    recoveryKeyHash: recoveryKeyHashHex,
     confirmed: z.literal(true),
   })
   .readonly();
@@ -90,8 +100,9 @@ export const PasswordResetViaRecoveryKeySchema = z
     email: z.email(),
     newAuthKey: authKeyHex,
     newKdfSalt: kdfSaltHex,
-    newEncryptedMasterKey: z.string().min(1),
-    newRecoveryEncryptedMasterKey: z.string().min(1),
+    newEncryptedMasterKey: encryptedBlobHex,
+    newRecoveryEncryptedMasterKey: encryptedBlobHex,
+    recoveryKeyHash: recoveryKeyHashHex,
     challengeSignature: challengeSigHex,
   })
   .readonly();

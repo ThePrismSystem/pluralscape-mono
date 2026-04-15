@@ -16,7 +16,9 @@ import {
 const AUTH_KEY = "a".repeat(64); // 32 bytes → 64 hex chars
 const KDF_SALT = "b".repeat(32); // 16 bytes → 32 hex chars
 const CHALLENGE_SIG = "c".repeat(128); // 64 bytes → 128 hex chars
-const BLOB = "encryptedblob";
+const RECOVERY_KEY_HASH = "d".repeat(64); // 32 bytes → 64 hex chars
+// Encrypted blob: min 40 bytes → 80 hex chars (nonce 24B + tag 16B overhead)
+const BLOB = "e".repeat(80);
 
 // ── RegistrationInitiateSchema ────────────────────────────────────────
 
@@ -68,8 +70,8 @@ describe("RegistrationCommitSchema", () => {
     encryptedMasterKey: BLOB,
     encryptedSigningPrivateKey: BLOB,
     encryptedEncryptionPrivateKey: BLOB,
-    publicSigningKey: BLOB,
-    publicEncryptionKey: BLOB,
+    publicSigningKey: "pubkey",
+    publicEncryptionKey: "pubkey",
     recoveryEncryptedMasterKey: BLOB,
     challengeSignature: CHALLENGE_SIG,
     recoveryKeyBackupConfirmed: true,
@@ -108,6 +110,14 @@ describe("RegistrationCommitSchema", () => {
 
   it("rejects empty encryptedMasterKey", () => {
     const result = RegistrationCommitSchema.safeParse({ ...valid, encryptedMasterKey: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["encryptedMasterKey"]);
+    }
+  });
+
+  it("rejects encryptedMasterKey that is too short", () => {
+    const result = RegistrationCommitSchema.safeParse({ ...valid, encryptedMasterKey: "ab" });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0]?.path).toEqual(["encryptedMasterKey"]);
@@ -324,6 +334,7 @@ describe("RegenerateRecoveryKeySchema", () => {
   const valid = {
     authKey: AUTH_KEY,
     newRecoveryEncryptedMasterKey: BLOB,
+    recoveryKeyHash: RECOVERY_KEY_HASH,
     confirmed: true as const,
   };
 
@@ -347,10 +358,33 @@ describe("RegenerateRecoveryKeySchema", () => {
     }
   });
 
+  it("rejects recoveryKeyHash of wrong length", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      ...valid,
+      recoveryKeyHash: "d".repeat(32),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["recoveryKeyHash"]);
+    }
+  });
+
+  it("rejects non-hex recoveryKeyHash", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      ...valid,
+      recoveryKeyHash: "z".repeat(64),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["recoveryKeyHash"]);
+    }
+  });
+
   it("rejects missing confirmed", () => {
     const result = RegenerateRecoveryKeySchema.safeParse({
       authKey: valid.authKey,
       newRecoveryEncryptedMasterKey: valid.newRecoveryEncryptedMasterKey,
+      recoveryKeyHash: valid.recoveryKeyHash,
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -388,6 +422,7 @@ describe("PasswordResetViaRecoveryKeySchema", () => {
     newKdfSalt: KDF_SALT,
     newEncryptedMasterKey: BLOB,
     newRecoveryEncryptedMasterKey: BLOB,
+    recoveryKeyHash: RECOVERY_KEY_HASH,
     challengeSignature: CHALLENGE_SIG,
   };
 
@@ -444,6 +479,17 @@ describe("PasswordResetViaRecoveryKeySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0]?.path).toEqual(["newEncryptedMasterKey"]);
+    }
+  });
+
+  it("rejects recoveryKeyHash of wrong length", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...valid,
+      recoveryKeyHash: "d".repeat(32),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["recoveryKeyHash"]);
     }
   });
 

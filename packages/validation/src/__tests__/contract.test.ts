@@ -67,7 +67,8 @@ describe("RegistrationCommitSchema contract", () => {
   });
 
   it("parses a valid commit value (runtime)", () => {
-    const blob = "encryptedblob";
+    // Encrypted blob: min 40 bytes → 80 hex chars (nonce 24B + tag 16B overhead)
+    const blob = "e".repeat(80);
     const input = {
       accountId: "acc-123",
       authKey: "a".repeat(64),

@@ -23,7 +23,7 @@ export interface Account extends AuditMetadata {
   readonly accountType: AccountType;
   readonly emailHash: string;
   readonly emailSalt: string;
-  readonly passwordHash: string;
+  readonly authKeyHash: Uint8Array;
   readonly kdfSalt: string;
   /** Persistent random MasterKey wrapped by the password-derived key (KEK/DEK pattern). */
   readonly encryptedMasterKey: Uint8Array;
