@@ -2451,8 +2451,12 @@ describe("normalizeFrontingSessions: additional edge cases", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      // Null out memberId to exercise the customFrontId-only path
-      d.sessions[sessionId].memberId = null;
+    });
+    // Null out memberId to exercise the customFrontId-only path
+    session.change((d) => {
+      const target = d.sessions[sessionId];
+      // @ts-expect-error -- deliberately setting to null to simulate CRDT merge state
+      if (target) target.memberId = null;
     });
 
     const { count, notifications } = normalizeFrontingSessions(session);
@@ -2489,9 +2493,13 @@ describe("normalizeFrontingSessions: additional edge cases", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      // Null out memberId and customFrontId to exercise structureEntityId-only path
-      d.sessions[sessionId].memberId = null;
-      d.sessions[sessionId].customFrontId = null;
+    });
+    // Null out memberId and customFrontId to exercise structureEntityId-only path
+    session.change((d) => {
+      const target = d.sessions[sessionId];
+      // @ts-expect-error -- deliberately setting to null to simulate CRDT merge state
+      if (target) target.memberId = null;
+      if (target) target.customFrontId = null;
     });
 
     const { count, notifications } = normalizeFrontingSessions(session);
