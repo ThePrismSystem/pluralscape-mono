@@ -9,7 +9,7 @@
  * the end-to-end flow as a single cohesive scenario.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { asSyncDocId } from "../../fixtures/crypto.fixture.js";
+import { asSyncDocId, createAccountSyncContext } from "../../fixtures/crypto.fixture.js";
 import { createAuthenticatedWsClient, makeSignedChange } from "../../fixtures/ws-sync.fixture.js";
 
 import type { ServerMessage } from "@pluralscape/sync";
@@ -27,6 +27,7 @@ test.describe("WebSocket sync vertical slice", () => {
     registeredAccount,
     request,
   }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     // Set up two authenticated clients for the same account
     const client1 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
     const client2 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
@@ -53,8 +54,8 @@ test.describe("WebSocket sync vertical slice", () => {
       ]);
       assertMessageType(sub2, "SubscribeResponse");
 
-      // Client 1 submits a properly signed change
-      const change = await makeSignedChange(docId);
+      // Client 1 submits a change signed with the account's registered keys
+      const change = await makeSignedChange(docId, syncCtx);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
       expect(accepted.assignedSeq).toBe(1);
@@ -83,6 +84,7 @@ test.describe("WebSocket sync vertical slice", () => {
     registeredAccount,
     request,
   }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     const client1 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
     const client2 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
 
@@ -108,7 +110,7 @@ test.describe("WebSocket sync vertical slice", () => {
       ]);
 
       // Client 1 submits a change
-      const change = await makeSignedChange(docId);
+      const change = await makeSignedChange(docId, syncCtx);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
 
@@ -124,6 +126,7 @@ test.describe("WebSocket sync vertical slice", () => {
     registeredAccount,
     request,
   }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     const client1 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
 
     const docId = asSyncDocId(`e2e-catchup-${crypto.randomUUID()}`);
@@ -132,7 +135,7 @@ test.describe("WebSocket sync vertical slice", () => {
       // Subscribe and submit a change
       await client1.ws.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      const change = await makeSignedChange(docId);
+      const change = await makeSignedChange(docId, syncCtx);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
     } finally {
@@ -160,6 +163,7 @@ test.describe("WebSocket sync vertical slice", () => {
     registeredAccount,
     request,
   }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     const client1 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
     const client2 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
     const client3 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
@@ -176,7 +180,7 @@ test.describe("WebSocket sync vertical slice", () => {
       client2.ws.close();
 
       // Client 1 submits a change
-      const change = await makeSignedChange(docId);
+      const change = await makeSignedChange(docId, syncCtx);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
 
