@@ -17,6 +17,7 @@ import { commitRegistration, initiateRegistration } from "../../services/auth.se
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { RegistrationCommitResult } from "../../services/auth.service.js";
+import type { SignSecretKey } from "@pluralscape/crypto";
 import type * as schema from "@pluralscape/db/pg";
 import type {
   AccountId,
@@ -104,7 +105,9 @@ export async function registerTestAccount(
     audit?: AuditWriter;
     platform?: "web" | "mobile";
   } = {},
-): Promise<RegistrationCommitResult & { authKeyHex: string; email: string }> {
+): Promise<
+  RegistrationCommitResult & { authKeyHex: string; email: string; signingSecretKey: SignSecretKey }
+> {
   const email = opts.email ?? `test-${crypto.randomUUID()}@test.local`;
   const accountType = opts.accountType ?? "system";
   const audit = opts.audit ?? noopAudit;
@@ -148,7 +151,7 @@ export async function registerTestAccount(
     audit,
   );
 
-  return { ...commitResult, authKeyHex, email };
+  return { ...commitResult, authKeyHex, email, signingSecretKey: signingKp.secretKey };
 }
 
 /**

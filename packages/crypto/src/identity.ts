@@ -105,40 +105,6 @@ const B64_SHIFT_2 = 2;
 const B64_SHIFT_6 = 6;
 const B64_GROUP_SIZE = 3;
 
-/** Number of bits encoded per base64url character. */
-const B64_BITS_PER_CHAR = 6;
-
-/** Bits per byte. */
-const B64_BITS_PER_BYTE = 8;
-
-/** Mask to extract the low byte. */
-const B64_BYTE_MASK = 0xff;
-
-/**
- * Deserialize a base64url-encoded (no padding) string back to raw bytes.
- * Mirrors the encoding performed by `serializePublicKey`.
- */
-export function deserializePublicKey(encoded: string): Uint8Array {
-  const bytes: number[] = [];
-  let buffer = 0;
-  let bitsCollected = 0;
-
-  for (const char of encoded) {
-    const val = BASE64URL_CHARS.indexOf(char);
-    if (val < 0) {
-      throw new Error(`Invalid base64url character: '${char}'`);
-    }
-    buffer = (buffer << B64_BITS_PER_CHAR) | val;
-    bitsCollected += B64_BITS_PER_CHAR;
-    if (bitsCollected >= B64_BITS_PER_BYTE) {
-      bitsCollected -= B64_BITS_PER_BYTE;
-      bytes.push((buffer >> bitsCollected) & B64_BYTE_MASK);
-    }
-  }
-
-  return new Uint8Array(bytes);
-}
-
 /** Serialize a public key to base64url (no padding) for server/directory storage. */
 export function serializePublicKey(key: BoxPublicKey | SignPublicKey): string {
   let result = "";

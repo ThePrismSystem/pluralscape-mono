@@ -141,7 +141,6 @@ export {
 export type { EncryptedPrivateKey, IdentityKeypair } from "./identity.js";
 export {
   decryptPrivateKey,
-  deserializePublicKey,
   encryptPrivateKey,
   generateIdentityKeypair,
   serializePublicKey,

@@ -2,7 +2,6 @@ import {
   AUTH_KEY_HASH_BYTES,
   assertSignPublicKey,
   assertSignature,
-  deserializePublicKey,
   generateChallengeNonce,
   generateSalt,
   getSodium,
@@ -190,7 +189,7 @@ export async function commitRegistration(
   }
 
   // Verify challenge signature against the provided public signing key
-  const publicSigningKeyBytes = deserializePublicKey(parsed.publicSigningKey);
+  const publicSigningKeyBytes = fromHex(parsed.publicSigningKey);
   assertSignPublicKey(publicSigningKeyBytes);
 
   const signatureBytes = fromHex(parsed.challengeSignature);
@@ -212,7 +211,7 @@ export async function commitRegistration(
   const encryptedMasterKeyBytes = fromHex(parsed.encryptedMasterKey);
   const encSignPrivKeyBytes = fromHex(parsed.encryptedSigningPrivateKey);
   const encEncPrivKeyBytes = fromHex(parsed.encryptedEncryptionPrivateKey);
-  const publicEncKeyBytes = deserializePublicKey(parsed.publicEncryptionKey);
+  const publicEncKeyBytes = fromHex(parsed.publicEncryptionKey);
   const recoveryEncMasterKeyBytes = fromHex(parsed.recoveryEncryptedMasterKey);
 
   const sessionId = createId(ID_PREFIXES.session);

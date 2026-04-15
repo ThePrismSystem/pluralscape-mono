@@ -88,7 +88,6 @@ vi.mock("@pluralscape/crypto", () => ({
   verifyChallenge: (nonce: Uint8Array, signature: Uint8Array, publicKey: Uint8Array) =>
     mockVerifyChallenge(nonce, signature, publicKey),
   serializePublicKey: () => "base64-encoded-key",
-  deserializePublicKey: () => new Uint8Array(32),
 }));
 
 vi.mock("../../lib/audit-log.js", () => ({

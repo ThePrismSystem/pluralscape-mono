@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { initSodium } from "@pluralscape/crypto";
+import { fromHex, hashAuthKey, initSodium, signChallenge, toHex } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
@@ -33,8 +33,15 @@ const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
 const DUMMY_BLOB = "aa".repeat(48);
 /** Dummy KDF salt hex (16 bytes = 32 hex chars). */
 const DUMMY_KDF_SALT = "bb".repeat(16);
-/** Dummy challenge signature hex (64 bytes). */
-const DUMMY_SIG = "cc".repeat(64);
+/** Sign the new auth key hash with the account's signing key (for changePassword). */
+function signNewAuthKey(
+  newAuthKeyHex: string,
+  signingSecretKey: Parameters<typeof signChallenge>[1],
+): string {
+  const newAuthKeyHash = hashAuthKey(fromHex(newAuthKeyHex));
+  const sig = signChallenge(newAuthKeyHash, signingSecretKey);
+  return toHex(sig);
+}
 
 describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
   let client: PGlite;
@@ -99,6 +106,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       const audit = spyAudit();
       const newAuthKey = "dd".repeat(32);
+      const challengeSignature = signNewAuthKey(newAuthKey, reg.signingSecretKey);
 
       const result = await changePassword(
         asDb(db),
@@ -108,7 +116,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
           newAuthKey,
           newKdfSalt: DUMMY_KDF_SALT,
           newEncryptedMasterKey: DUMMY_BLOB,
-          challengeSignature: DUMMY_SIG,
+          challengeSignature,
         },
         audit,
       );
@@ -122,6 +130,8 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
     it("throws ValidationError with wrong current auth key", async () => {
       const reg = await registerTestAccount(asDb(db));
+      const newAuthKey = "ee".repeat(32);
+      const challengeSignature = signNewAuthKey(newAuthKey, reg.signingSecretKey);
 
       await expect(
         changePassword(
@@ -129,10 +139,10 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
           reg.accountId as AccountId,
           {
             oldAuthKey: "ff".repeat(32),
-            newAuthKey: "ee".repeat(32),
+            newAuthKey,
             newKdfSalt: DUMMY_KDF_SALT,
             newEncryptedMasterKey: DUMMY_BLOB,
-            challengeSignature: DUMMY_SIG,
+            challengeSignature,
           },
           noopAudit,
         ),
