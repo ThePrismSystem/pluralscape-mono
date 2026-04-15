@@ -341,8 +341,9 @@ paths:
         recovery key) are all submitted pre-computed. The server replaces the
         stored blobs atomically. All existing encrypted data remains accessible
         because the underlying master key is unchanged — only its wrapping
-        changes. The `challengeSignature` proves the client holds the signing
-        key bound to this account.
+        changes. The `recoveryKeyHash` authenticates the request by proving
+        the client holds the current recovery key; `newRecoveryKeyHash` records
+        the replacement recovery key hash.
 
         Rate limit: 5 req/min (authHeavy)
       security: []
@@ -11916,6 +11917,7 @@ components:
         - recoveryEncryptedMasterKey
         - challengeSignature
         - recoveryKeyBackupConfirmed
+        - recoveryKeyHash
       properties:
         accountId:
           type: string
@@ -11937,10 +11939,16 @@ components:
           description: Base64-encoded X25519 encryption private key encrypted with the master key
         publicSigningKey:
           type: string
-          description: Hex-encoded Ed25519 public signing key
+          description: Hex-encoded Ed25519 public signing key (64 hex chars, 32 bytes)
+          minLength: 64
+          maxLength: 64
+          pattern: "^[0-9a-f]{64}$"
         publicEncryptionKey:
           type: string
-          description: Hex-encoded X25519 public encryption key
+          description: Hex-encoded X25519 public encryption key (64 hex chars, 32 bytes)
+          minLength: 64
+          maxLength: 64
+          pattern: "^[0-9a-f]{64}$"
         recoveryEncryptedMasterKey:
           type: string
           description: Base64-encoded master key wrapped with the recovery key (XChaCha20-Poly1305)
@@ -11950,6 +11958,12 @@ components:
         recoveryKeyBackupConfirmed:
           type: boolean
           const: true
+        recoveryKeyHash:
+          type: string
+          description: Hex-encoded 32-byte BLAKE2b hash of the raw recovery key (64 hex chars)
+          minLength: 64
+          maxLength: 64
+          pattern: "^[0-9a-f]{64}$"
     RegistrationCommitResponse:
       type: object
       required:
@@ -11975,7 +11989,8 @@ components:
         - newKdfSalt
         - newEncryptedMasterKey
         - newRecoveryEncryptedMasterKey
-        - challengeSignature
+        - recoveryKeyHash
+        - newRecoveryKeyHash
       properties:
         email:
           type: string
@@ -11995,9 +12010,18 @@ components:
         newRecoveryEncryptedMasterKey:
           type: string
           description: Base64-encoded master key wrapped with the new recovery key
-        challengeSignature:
+        recoveryKeyHash:
           type: string
-          description: Hex-encoded Ed25519 signature proving ownership of the account signing key
+          description: Hex-encoded 32-byte BLAKE2b hash of the current recovery key used to authenticate this reset (64 hex chars)
+          minLength: 64
+          maxLength: 64
+          pattern: "^[0-9a-f]{64}$"
+        newRecoveryKeyHash:
+          type: string
+          description: Hex-encoded 32-byte BLAKE2b hash of the new recovery key replacing the current one (64 hex chars)
+          minLength: 64
+          maxLength: 64
+          pattern: "^[0-9a-f]{64}$"
     PasswordResetResponse:
       type: object
       required:

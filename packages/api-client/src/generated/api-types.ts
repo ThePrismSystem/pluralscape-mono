@@ -150,8 +150,9 @@ export interface paths {
      *     recovery key) are all submitted pre-computed. The server replaces the
      *     stored blobs atomically. All existing encrypted data remains accessible
      *     because the underlying master key is unchanged — only its wrapping
-     *     changes. The `challengeSignature` proves the client holds the signing
-     *     key bound to this account.
+     *     changes. The `recoveryKeyHash` authenticates the request by proving
+     *     the client holds the current recovery key; `newRecoveryKeyHash` records
+     *     the replacement recovery key hash.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -5703,9 +5704,9 @@ export interface components {
       encryptedSigningPrivateKey: string;
       /** @description Base64-encoded X25519 encryption private key encrypted with the master key */
       encryptedEncryptionPrivateKey: string;
-      /** @description Hex-encoded Ed25519 public signing key */
+      /** @description Hex-encoded Ed25519 public signing key (64 hex chars, 32 bytes) */
       publicSigningKey: string;
-      /** @description Hex-encoded X25519 public encryption key */
+      /** @description Hex-encoded X25519 public encryption key (64 hex chars, 32 bytes) */
       publicEncryptionKey: string;
       /** @description Base64-encoded master key wrapped with the recovery key (XChaCha20-Poly1305) */
       recoveryEncryptedMasterKey: string;
@@ -5713,6 +5714,8 @@ export interface components {
       challengeSignature: string;
       /** @constant */
       recoveryKeyBackupConfirmed: true;
+      /** @description Hex-encoded 32-byte BLAKE2b hash of the raw recovery key (64 hex chars) */
+      recoveryKeyHash: string;
     };
     RegistrationCommitResponse: {
       /** @description 32-byte hex-encoded session token */
@@ -5732,8 +5735,10 @@ export interface components {
       newEncryptedMasterKey: string;
       /** @description Base64-encoded master key wrapped with the new recovery key */
       newRecoveryEncryptedMasterKey: string;
-      /** @description Hex-encoded Ed25519 signature proving ownership of the account signing key */
-      challengeSignature: string;
+      /** @description Hex-encoded 32-byte BLAKE2b hash of the current recovery key used to authenticate this reset (64 hex chars) */
+      recoveryKeyHash: string;
+      /** @description Hex-encoded 32-byte BLAKE2b hash of the new recovery key replacing the current one (64 hex chars) */
+      newRecoveryKeyHash: string;
     };
     PasswordResetResponse: {
       sessionToken: string;
