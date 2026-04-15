@@ -16,7 +16,7 @@ import type {
 } from "../mapper-dispatch.js";
 import type { SourceEvent, ImportDataSource } from "../source.types.js";
 import type { FakeSourceData } from "../testing/fake-source.js";
-import type { ImportCollectionType } from "@pluralscape/types";
+import type { ImportCheckpointState, ImportCollectionType } from "@pluralscape/types";
 
 // ---------------------------------------------------------------------------
 // Shared test helpers
@@ -1536,6 +1536,552 @@ describe("runImportEngine", () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]?.message).toBe("bad name");
       expect(snapshot().countByType("member")).toBe(2);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Custom classifyError injection
+  // -----------------------------------------------------------------------
+
+  describe("custom classifyError injection", () => {
+    it("aborts when classifyError marks all errors as fatal", async () => {
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "Aria" },
+          { _id: "m2", name: "Blake" },
+        ],
+      });
+      const { persister, snapshot } = createInMemoryPersister({
+        throwOn: [
+          {
+            entityType: "member",
+            sourceEntityId: "m1",
+            error: new Error("transient db error"),
+            fatal: false,
+            once: true,
+          },
+        ],
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        classifyError: (thrown, ctx) => ({
+          entityType: ctx.entityType,
+          entityId: ctx.entityId,
+          message: thrown instanceof Error ? thrown.message : String(thrown),
+          fatal: true,
+        }),
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.fatal).toBe(true);
+      expect(result.errors[0]?.message).toBe("transient db error");
+      // m1 failed fatally, m2 never reached
+      expect(snapshot().countByType("member")).toBe(0);
+    });
+
+    it("aborts batch path when classifyError marks persister error as fatal", async () => {
+      const batchEntry: BatchMapperEntry = {
+        entityType: "member",
+        batch: true,
+        mapBatch: (documents: readonly SourceDocument[]): readonly BatchMapperOutput[] =>
+          documents.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+      };
+
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "doc", collection: "items", sourceId: "b1", document: { _id: "b1" } };
+          yield { kind: "doc", collection: "items", sourceId: "b2", document: { _id: "b2" } };
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister, snapshot } = createInMemoryPersister({
+        throwOn: [
+          {
+            entityType: "member",
+            sourceEntityId: "b1",
+            error: new Error("db down"),
+            fatal: false,
+            once: true,
+          },
+        ],
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: { items: batchEntry },
+        dependencyOrder: ["items"],
+        collectionToEntityType: () => "member",
+        classifyError: (thrown, ctx) => ({
+          entityType: ctx.entityType,
+          entityId: ctx.entityId,
+          message: thrown instanceof Error ? thrown.message : String(thrown),
+          fatal: true,
+        }),
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors[0]?.fatal).toBe(true);
+      expect(snapshot().countByType("member")).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Fatal persister error in single mapper via classifyError
+  // -----------------------------------------------------------------------
+
+  describe("fatal persister error in single mapper", () => {
+    it("aborts when persister throws and classifyError returns fatal", async () => {
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "Aria" },
+          { _id: "m2", name: "Blake" },
+          { _id: "m3", name: "Cass" },
+        ],
+      });
+      // Use SyntaxError which the default classifier treats as fatal
+      const { persister, snapshot } = createInMemoryPersister({
+        throwOn: [
+          {
+            entityType: "member",
+            sourceEntityId: "m2",
+            error: new SyntaxError("corrupt payload"),
+            fatal: true,
+          },
+        ],
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.fatal).toBe(true);
+      expect(result.errors[0]?.message).toBe("corrupt payload");
+      // m1 succeeded, m2 was fatal, m3 never reached
+      expect(snapshot().countByType("member")).toBe(1);
+      expect(snapshot().find("member", "m1")).toBeDefined();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // selectedCategories opt-out advances checkpoint for non-last collection
+  // -----------------------------------------------------------------------
+
+  describe("selectedCategories opt-out advances checkpoint for non-last collection", () => {
+    it("marks opted-out first collection as completed and processes the second", async () => {
+      const source = createFakeImportSource(makeSimpleData());
+      const { persister, snapshot } = createInMemoryPersister();
+      const progressStates: ImportCheckpointState[] = [];
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: { member: false }, avatarMode: "skip" },
+        onProgress: (state) => {
+          progressStates.push(state);
+          return Promise.resolve();
+        },
+      });
+
+      expect(result.outcome).toBe("completed");
+      // Members were skipped entirely
+      expect(snapshot().countByType("member")).toBe(0);
+      // Groups should have been processed (but FK misses will fail them)
+      expect(result.finalState.checkpoint.completedCollections).toContain("member");
+      expect(result.finalState.checkpoint.completedCollections).toContain("group");
+      // onProgress called at least once for the skipped collection
+      expect(progressStates.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // beforeCollection hook abort on first collection
+  // -----------------------------------------------------------------------
+
+  describe("beforeCollection abort on first collection", () => {
+    it("aborts immediately when beforeCollection returns abort on first collection", async () => {
+      const source = createFakeImportSource(makeSimpleData());
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        beforeCollection: (): Promise<BeforeCollectionResult> => {
+          // Abort on the very first collection
+          return Promise.resolve({
+            state: emptyCheckpointState({
+              firstEntityType: "member",
+              selectedCategories: {},
+              avatarMode: "skip",
+            }),
+            abort: true,
+          });
+        },
+      });
+
+      expect(result.outcome).toBe("aborted");
+      // Nothing should have been persisted
+      expect(snapshot().countByType("member")).toBe(0);
+      expect(snapshot().countByType("group")).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // source.close() error produces warning even on aborted run
+  // -----------------------------------------------------------------------
+
+  describe("source.close() error on aborted run", () => {
+    it("produces a warning when source.close() throws during an aborted run", async () => {
+      const controller = new AbortController();
+      controller.abort(); // Pre-abort
+      const source = createFakeImportSource(makeSimpleData());
+      source.close = () => Promise.reject(new Error("close leaked handle"));
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        abortSignal: controller.signal,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      const closeWarning = result.warnings.find((w) => w.key === "source-close-error");
+      expect(closeWarning).toBeDefined();
+      expect(closeWarning?.message).toContain("close leaked handle");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // supplyParentIds NOT called when persistedSourceIds is empty
+  // -----------------------------------------------------------------------
+
+  describe("supplyParentIds with empty persisted IDs", () => {
+    it("does NOT call supplyParentIds when all entities in a collection fail", async () => {
+      const suppliedParentIds: { collection: string; ids: readonly string[] }[] = [];
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "bad" },
+          { _id: "m2", name: "bad" },
+        ],
+      });
+      source.supplyParentIds = (collection: string, ids: readonly string[]) => {
+        suppliedParentIds.push({ collection, ids: [...ids] });
+      };
+      const { persister } = createInMemoryPersister();
+
+      await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: {
+            entityType: "member",
+            map: () => failed({ kind: "validation-failed", message: "always fail" }),
+          },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      // supplyParentIds should NOT be called when no entities were persisted
+      expect(suppliedParentIds).toHaveLength(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // source-missing-collection warning
+  // -----------------------------------------------------------------------
+
+  describe("source-missing-collection warning", () => {
+    it("emits a warning when dependencyOrder has a collection not in source", async () => {
+      // Source only has "members" but dependency order expects "members" and "groups"
+      const source = createFakeImportSource({
+        members: [{ _id: "m1", name: "Aria" }],
+      });
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      const missingWarning = result.warnings.find(
+        (w) => w.key === "source-missing-collection:groups",
+      );
+      expect(missingWarning).toBeDefined();
+      expect(missingWarning?.message).toContain("groups");
+      expect(missingWarning?.message).toContain("not reported by the source");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Batch mapper resume cutoff behaviour
+  // -----------------------------------------------------------------------
+
+  describe("batch mapper resume from checkpoint", () => {
+    it("skips documents before the resume cutoff in batch path", async () => {
+      const batchEntry: BatchMapperEntry = {
+        entityType: "member",
+        batch: true,
+        mapBatch: (documents: readonly SourceDocument[]): readonly BatchMapperOutput[] =>
+          documents.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+      };
+
+      // Use a drop event to create a checkpoint mid-collection, since drops
+      // advance lastSourceId during batch accumulation (unlike abort which
+      // returns immediately without advancing).
+      const source1: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "drop", collection: "items", sourceId: "b1", reason: "bad" };
+          yield { kind: "doc", collection: "items", sourceId: "b2", document: { _id: "b2" } };
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister: persister1 } = createInMemoryPersister();
+
+      const result1 = await runImportEngine({
+        source: source1,
+        persister: persister1,
+        sourceFormat: "simply-plural",
+        mapperDispatch: { items: batchEntry },
+        dependencyOrder: ["items"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      // First run completes — b1 dropped, b2 persisted. Now build a
+      // checkpoint that says we left off at b2 mid-collection.
+      expect(result1.outcome).toBe("completed");
+
+      // Simulate a checkpoint mid-collection pointing at b2 as the cutoff.
+      // We need currentCollection === entityType AND lastSourceId set.
+      const baseState = emptyCheckpointState({
+        firstEntityType: "member",
+        selectedCategories: {},
+        avatarMode: "skip",
+      });
+      const resumeCheckpoint: ImportCheckpointState = {
+        ...baseState,
+        checkpoint: {
+          ...baseState.checkpoint,
+          currentCollection: "member",
+          currentCollectionLastSourceId: "b2",
+        },
+      };
+
+      // Second run: resume from the fabricated checkpoint
+      const source2: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          yield { kind: "doc", collection: "items", sourceId: "b1", document: { _id: "b1" } };
+          yield { kind: "doc", collection: "items", sourceId: "b2", document: { _id: "b2" } };
+          yield { kind: "doc", collection: "items", sourceId: "b3", document: { _id: "b3" } };
+          yield { kind: "doc", collection: "items", sourceId: "b4", document: { _id: "b4" } };
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister: persister2, snapshot: snapshot2 } = createInMemoryPersister();
+
+      const result2 = await runImportEngine({
+        source: source2,
+        persister: persister2,
+        sourceFormat: "simply-plural",
+        mapperDispatch: { items: batchEntry },
+        dependencyOrder: ["items"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        initialCheckpoint: resumeCheckpoint,
+      });
+
+      expect(result2.outcome).toBe("completed");
+      const snap = snapshot2();
+      // b1 and b2 should be skipped (before/at the cutoff)
+      expect(snap.find("member", "b1")).toBeUndefined();
+      expect(snap.find("member", "b2")).toBeUndefined();
+      // b3 and b4 should be persisted (after the cutoff)
+      expect(snap.find("member", "b3")).toBeDefined();
+      expect(snap.find("member", "b4")).toBeDefined();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Abort signal fires before collection iteration
+  // -----------------------------------------------------------------------
+
+  describe("abort signal before collection iteration", () => {
+    it("aborts before processing any collection when signal is already aborted", async () => {
+      const controller = new AbortController();
+      controller.abort(); // Pre-abort
+
+      const source = createFakeImportSource(makeSimpleData());
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+        abortSignal: controller.signal,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(snapshot().countByType("member")).toBe(0);
+      expect(snapshot().countByType("group")).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Source iteration throw classified as non-fatal gets overridden to fatal
+  // -----------------------------------------------------------------------
+
+  describe("source iteration throw with non-fatal classifier override", () => {
+    it("forces fatal:true even when classifyError returns non-fatal for iteration throw", async () => {
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          throw new Error("network down");
+        },
+        listCollections: () => Promise.resolve(["members"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        // Classifier that always returns non-fatal — engine should override
+        classifyError: (thrown, ctx) => ({
+          entityType: ctx.entityType,
+          entityId: ctx.entityId,
+          message: thrown instanceof Error ? thrown.message : String(thrown),
+          fatal: false,
+        }),
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors).toHaveLength(1);
+      // The engine must override the classifier to make iteration throws fatal
+      expect(result.errors[0]?.fatal).toBe(true);
+      expect(result.errors[0]?.message).toBe("network down");
+    });
+
+    it("forces fatal:true for batch path iteration throw even when classifier says non-fatal", async () => {
+      const batchEntry: BatchMapperEntry = {
+        entityType: "member",
+        batch: true,
+        mapBatch: (documents: readonly SourceDocument[]): readonly BatchMapperOutput[] =>
+          documents.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
+      };
+
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          throw new Error("batch network down");
+        },
+        listCollections: () => Promise.resolve(["items"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: { items: batchEntry },
+        dependencyOrder: ["items"],
+        collectionToEntityType: () => "member",
+        classifyError: (thrown, ctx) => ({
+          entityType: ctx.entityType,
+          entityId: ctx.entityId,
+          message: thrown instanceof Error ? thrown.message : String(thrown),
+          fatal: false,
+        }),
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors[0]?.fatal).toBe(true);
+      expect(result.errors[0]?.message).toBe("batch network down");
+      // Should have recoverable flag since classifier returned non-fatal
+      const error = result.errors[0];
+      if (error && "recoverable" in error) {
+        expect(error["recoverable"]).toBe(true);
+      }
     });
   });
 });
