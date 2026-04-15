@@ -12,19 +12,23 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.4.4",
-    "@pluralscape/crypto": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
+    "@pluralscape/crypto": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@types/node": "^25.6.0",
     "typescript": "^6.0.0"
   },
   "peerDependencies": {
+    "@pluralscape/crypto": "workspace:*",
     "vitest": ">=4.0.0"
   },
   "peerDependenciesMeta": {
+    "@pluralscape/crypto": {
+      "optional": false
+    },
     "vitest": {
       "optional": true
     }
