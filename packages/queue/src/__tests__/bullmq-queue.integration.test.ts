@@ -409,6 +409,28 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
 
   // ── listJobs: bullmqStates empty (status = 'cancelled') ──
 
+  it("listJobs with status=cancelled skips corrupt cancelled entries without crashing", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    // Enqueue a valid job and cancel it so there's at least one good entry
+    const validJob = await q.enqueue(makeJobParams());
+    await q.cancel(validJob.id);
+
+    // Inject a corrupt cancelled job — missing required fields for StoredJobDataSchema
+    const corruptId = `job_corrupt_${crypto.randomUUID()}`;
+    await redis.set(`psq:${q.name}:cancelled:${corruptId}`, JSON.stringify({ type: "test" }));
+
+    // listJobs should skip the corrupt entry and still return the valid one
+    const list = await q.listJobs({ status: "cancelled" });
+    expect(list.some((j) => j.id === validJob.id)).toBe(true);
+    expect(list.every((j) => j.id !== corruptId)).toBe(true);
+
+    // Clean up the injected key
+    await redis.del(`psq:${q.name}:cancelled:${corruptId}`);
+  });
+
   it("listJobs with status=cancelled skips BullMQ states and reads cancelled store", async () => {
     const q = createQueue();
     activeQueues.push(q);

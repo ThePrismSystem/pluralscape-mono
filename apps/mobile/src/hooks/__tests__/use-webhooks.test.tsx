@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
 import type {
-  EncryptedString,
+  ServerSecret,
   UnixMillis,
   WebhookConfig,
   WebhookDelivery,
@@ -178,7 +178,7 @@ function makeWebhookConfig(id: string): WebhookConfig {
     id: id as WebhookId,
     systemId: TEST_SYSTEM_ID,
     url: `https://example.com/webhook/${id}`,
-    secret: "enc_secret_value" as EncryptedString,
+    secret: new Uint8Array([1, 2, 3]) as ServerSecret,
     eventTypes: ["member.created", "fronting.started"],
     enabled: true,
     cryptoKeyId: null,

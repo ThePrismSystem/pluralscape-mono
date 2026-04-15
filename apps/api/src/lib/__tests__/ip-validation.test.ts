@@ -1,6 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { resolve4, resolve6 } from "node:dns/promises";
 
-import { buildIpPinnedFetchArgs, isPrivateIp, isValidIpFormat } from "../ip-validation.js";
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  buildIpPinnedFetchArgs,
+  isPrivateIp,
+  isValidIpFormat,
+  resolveAndValidateUrl,
+} from "../ip-validation.js";
+
+vi.mock("node:dns/promises", () => ({
+  resolve4: vi.fn(),
+  resolve6: vi.fn(),
+}));
+
+const mockResolve4 = vi.mocked(resolve4);
+const mockResolve6 = vi.mocked(resolve6);
 
 // ── isValidIpFormat ──────────────────────────────────────────────────
 
@@ -263,5 +278,75 @@ describe("buildIpPinnedFetchArgs", () => {
     const result = buildIpPinnedFetchArgs("https://example.com/", "2001:db8::1");
     expect(result.pinnedUrl).toContain("[2001:db8::1]");
     expect(result.hostHeader).toBe("example.com");
+  });
+});
+
+// ── resolveAndValidateUrl ───────────────────────────────────────────
+
+describe("resolveAndValidateUrl", () => {
+  it("returns resolved IPv4 addresses for a public hostname", async () => {
+    mockResolve4.mockResolvedValueOnce(["93.184.216.34"]);
+    mockResolve6.mockRejectedValueOnce(new Error("ENODATA"));
+
+    const ips = await resolveAndValidateUrl("https://example.com/path");
+    expect(ips).toEqual(["93.184.216.34"]);
+  });
+
+  it("returns resolved IPv6 addresses when only AAAA records exist", async () => {
+    mockResolve4.mockRejectedValueOnce(new Error("ENODATA"));
+    mockResolve6.mockResolvedValueOnce(["2606:2800:220:1:248:1893:25c8:1946"]);
+
+    const ips = await resolveAndValidateUrl("https://example.com");
+    expect(ips).toEqual(["2606:2800:220:1:248:1893:25c8:1946"]);
+  });
+
+  it("returns both v4 and v6 when both resolve", async () => {
+    mockResolve4.mockResolvedValueOnce(["93.184.216.34"]);
+    mockResolve6.mockResolvedValueOnce(["2606:2800:220:1:248:1893:25c8:1946"]);
+
+    const ips = await resolveAndValidateUrl("https://example.com");
+    expect(ips).toHaveLength(2);
+    expect(ips).toContain("93.184.216.34");
+    expect(ips).toContain("2606:2800:220:1:248:1893:25c8:1946");
+  });
+
+  it("throws when all resolved IPs are private", async () => {
+    mockResolve4.mockResolvedValueOnce(["10.0.0.1"]);
+    mockResolve6.mockRejectedValueOnce(new Error("ENODATA"));
+
+    await expect(resolveAndValidateUrl("https://internal.test")).rejects.toThrow(
+      "private or reserved",
+    );
+  });
+
+  it("throws when DNS resolution returns no IPs", async () => {
+    mockResolve4.mockRejectedValueOnce(new Error("ENOTFOUND"));
+    mockResolve6.mockRejectedValueOnce(new Error("ENOTFOUND"));
+
+    await expect(resolveAndValidateUrl("https://nonexistent.test")).rejects.toThrow(
+      "could not be resolved",
+    );
+  });
+
+  it("throws for an invalid URL", async () => {
+    await expect(resolveAndValidateUrl("not-a-url")).rejects.toThrow("not a valid URL");
+  });
+
+  it("throws when any resolved IP is private among mixed results", async () => {
+    mockResolve4.mockResolvedValueOnce(["93.184.216.34", "10.0.0.1"]);
+    mockResolve6.mockRejectedValueOnce(new Error("ENODATA"));
+
+    await expect(resolveAndValidateUrl("https://mixed.test")).rejects.toThrow(
+      "private or reserved",
+    );
+  });
+
+  it("throws for loopback 127.0.0.1 resolution", async () => {
+    mockResolve4.mockResolvedValueOnce(["127.0.0.1"]);
+    mockResolve6.mockRejectedValueOnce(new Error("ENODATA"));
+
+    await expect(resolveAndValidateUrl("https://loopback.test")).rejects.toThrow(
+      "private or reserved",
+    );
   });
 });

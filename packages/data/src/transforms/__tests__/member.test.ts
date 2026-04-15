@@ -130,6 +130,170 @@ describe("decryptMember", () => {
   });
 });
 
+describe("assertMemberEncryptedFields validation", () => {
+  it("throws when description is a number instead of string or null", () => {
+    const fields = { ...makeEncryptedFields(), description: 42 };
+    const raw = { ...makeServerMember(), encryptedData: encryptAndEncodeT1(fields, masterKey) };
+    expect(() => decryptMember(raw, masterKey)).toThrow("description must be string or null");
+  });
+
+  it("throws when suppressFriendFrontNotification is missing", () => {
+    const {
+      name,
+      pronouns,
+      description,
+      avatarSource,
+      colors,
+      saturationLevel,
+      tags,
+      boardMessageNotificationOnFront,
+    } = makeEncryptedFields();
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: encryptAndEncodeT1(
+        {
+          name,
+          pronouns,
+          description,
+          avatarSource,
+          colors,
+          saturationLevel,
+          tags,
+          boardMessageNotificationOnFront,
+        },
+        masterKey,
+      ),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("suppressFriendFrontNotification");
+  });
+
+  it("throws when boardMessageNotificationOnFront is missing", () => {
+    const {
+      name,
+      pronouns,
+      description,
+      avatarSource,
+      colors,
+      saturationLevel,
+      tags,
+      suppressFriendFrontNotification,
+    } = makeEncryptedFields();
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: encryptAndEncodeT1(
+        {
+          name,
+          pronouns,
+          description,
+          avatarSource,
+          colors,
+          saturationLevel,
+          tags,
+          suppressFriendFrontNotification,
+        },
+        masterKey,
+      ),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("boardMessageNotificationOnFront");
+  });
+
+  it("throws when avatarSource is missing (undefined)", () => {
+    const {
+      name,
+      pronouns,
+      description,
+      colors,
+      saturationLevel,
+      tags,
+      suppressFriendFrontNotification,
+      boardMessageNotificationOnFront,
+    } = makeEncryptedFields();
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: encryptAndEncodeT1(
+        {
+          name,
+          pronouns,
+          description,
+          colors,
+          saturationLevel,
+          tags,
+          suppressFriendFrontNotification,
+          boardMessageNotificationOnFront,
+        },
+        masterKey,
+      ),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("avatarSource");
+  });
+
+  it("throws when colors is missing (undefined)", () => {
+    const {
+      name,
+      pronouns,
+      description,
+      avatarSource,
+      saturationLevel,
+      tags,
+      suppressFriendFrontNotification,
+      boardMessageNotificationOnFront,
+    } = makeEncryptedFields();
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: encryptAndEncodeT1(
+        {
+          name,
+          pronouns,
+          description,
+          avatarSource,
+          saturationLevel,
+          tags,
+          suppressFriendFrontNotification,
+          boardMessageNotificationOnFront,
+        },
+        masterKey,
+      ),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("colors");
+  });
+
+  it("throws when saturationLevel is missing (undefined)", () => {
+    const {
+      name,
+      pronouns,
+      description,
+      avatarSource,
+      colors,
+      tags,
+      suppressFriendFrontNotification,
+      boardMessageNotificationOnFront,
+    } = makeEncryptedFields();
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: encryptAndEncodeT1(
+        {
+          name,
+          pronouns,
+          description,
+          avatarSource,
+          colors,
+          tags,
+          suppressFriendFrontNotification,
+          boardMessageNotificationOnFront,
+        },
+        masterKey,
+      ),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("saturationLevel");
+  });
+
+  it("throws when tags is not an array", () => {
+    const fields = { ...makeEncryptedFields(), tags: "not-an-array" };
+    const raw = { ...makeServerMember(), encryptedData: encryptAndEncodeT1(fields, masterKey) };
+    expect(() => decryptMember(raw, masterKey)).toThrow("tags");
+  });
+});
+
 describe("decryptMemberPage", () => {
   it("decrypts all items and preserves cursor", () => {
     const data = [makeServerMember(), makeServerMember()];

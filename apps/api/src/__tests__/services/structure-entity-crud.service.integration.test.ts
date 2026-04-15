@@ -165,7 +165,8 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
 
     it("rejects cross-system access", async () => {
       const otherAccountId = genAccountId();
-      const otherAuth = makeAuth(otherAccountId, systemId);
+      const otherSystemId = `sys_${crypto.randomUUID()}` as SystemId;
+      const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
       await assertApiError(
         createStructureEntity(asDb(db), systemId, entityParams(), otherAuth, noopAudit),
@@ -193,8 +194,10 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for nonexistent entity", async () => {
+      const missingId =
+        `ste_${crypto.randomUUID()}` as import("@pluralscape/types").SystemStructureEntityId;
       await assertApiError(
-        getStructureEntity(asDb(db), systemId, `ste_${crypto.randomUUID()}`, auth),
+        getStructureEntity(asDb(db), systemId, missingId, auth),
         "NOT_FOUND",
         404,
       );
@@ -450,8 +453,10 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for nonexistent entity", async () => {
+      const missingId =
+        `ste_${crypto.randomUUID()}` as import("@pluralscape/types").SystemStructureEntityId;
       await assertApiError(
-        deleteStructureEntity(asDb(db), systemId, `ste_${crypto.randomUUID()}`, auth, noopAudit),
+        deleteStructureEntity(asDb(db), systemId, missingId, auth, noopAudit),
         "NOT_FOUND",
         404,
       );

@@ -8,6 +8,7 @@ import { RotationWorker } from "../rotation-worker.js";
 import type {
   CompletionItem,
   RotationApiClient,
+  RotationSodium,
   RotationWorkerConfig,
   VersionedEncryptedPayload,
 } from "../types.js";
@@ -21,9 +22,12 @@ import type {
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+const mockMemzero = vi.fn();
+
 vi.mock("@pluralscape/crypto", () => ({
   encrypt: vi.fn(),
   decrypt: vi.fn(),
+  getSodium: () => ({ memzero: mockMemzero }),
   DecryptionFailedError: class DecryptionFailedError extends Error {
     constructor(message: string) {
       super(message);
@@ -365,6 +369,27 @@ describe("processChunk", () => {
     );
     expect(results).toEqual([]);
   });
+
+  it("zeros plaintext after re-encryption", async () => {
+    const item = makeItem("1");
+    apiClient.fetchEntityBlob.mockResolvedValue({
+      payload: makePayload(),
+      keyVersion: OLD_KEY_VERSION,
+    });
+    mockMemzero.mockClear();
+
+    await processChunk(
+      [item],
+      apiClient,
+      OLD_KEY,
+      OLD_KEY_VERSION,
+      NEW_KEY,
+      NEW_KEY_VERSION,
+      signal,
+    );
+
+    expect(mockMemzero).toHaveBeenCalledWith(plaintext);
+  });
 });
 
 // ── RotationWorker ────────────────────────────────────────────────────────────
@@ -384,6 +409,8 @@ describe("RotationWorker", () => {
     };
   }
 
+  const mockSodium: RotationSodium = { memzero: vi.fn() };
+
   function makeConfig(overrides?: Partial<RotationWorkerConfig>): RotationWorkerConfig {
     return {
       apiClient: apiClient as RotationApiClient,
@@ -394,6 +421,7 @@ describe("RotationWorker", () => {
       newKey: NEW_KEY,
       newKeyVersion: NEW_KEY_VERSION,
       chunkSize: 5,
+      sodium: mockSodium,
       ...overrides,
     };
   }
@@ -599,5 +627,30 @@ describe("RotationWorker", () => {
 
     expect(apiClient.claimChunk).toHaveBeenCalledTimes(3);
     expect(apiClient.completeChunk).toHaveBeenCalledTimes(2);
+  });
+
+  it("zeros oldKey and newKey after successful completion", async () => {
+    apiClient.claimChunk.mockResolvedValue({ data: [], rotationState: "migrating" });
+    const sodiumSpy = vi.fn();
+    const sodium: RotationSodium = { memzero: sodiumSpy };
+
+    const worker = new RotationWorker(makeConfig({ sodium }));
+    await worker.start();
+
+    expect(sodiumSpy).toHaveBeenCalledWith(OLD_KEY);
+    expect(sodiumSpy).toHaveBeenCalledWith(NEW_KEY);
+    expect(sodiumSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("zeros keys even when start() throws", async () => {
+    apiClient.claimChunk.mockRejectedValue(httpError(500));
+    const sodiumSpy = vi.fn();
+    const sodium: RotationSodium = { memzero: sodiumSpy };
+
+    const worker = new RotationWorker(makeConfig({ sodium }));
+    await expect(worker.start()).rejects.toMatchObject({ status: 500 });
+
+    expect(sodiumSpy).toHaveBeenCalledWith(OLD_KEY);
+    expect(sodiumSpy).toHaveBeenCalledWith(NEW_KEY);
   });
 });

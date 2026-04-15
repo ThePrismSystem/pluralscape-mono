@@ -405,6 +405,10 @@ importers:
       react:
         specifier: '>=19.0.0'
         version: 19.2.5
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
 
   packages/db:
     dependencies:
@@ -663,6 +667,9 @@ importers:
       ioredis:
         specifier: 5.10.1
         version: 5.10.1
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*

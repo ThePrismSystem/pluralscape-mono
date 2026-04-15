@@ -25,7 +25,7 @@ The MasterKey is derived from the user's password exactly **once** during initia
 
 1. **Initial login** — `Argon2id(password, salt)` with mobile parameters (32 MiB memory, 2 iterations — reduced from the server 64 MiB/4 iterations to accommodate mobile RAM constraints). Store result in expo-secure-store.
 
-**Mobile parameter justification**: the 32 MiB / 2 iteration parameters (`PWHASH_MEMLIMIT_MOBILE` / `PWHASH_OPSLIMIT_MOBILE`) target the OWASP Mobile minimum while avoiding OOM kills on low-end devices (2–4 GB RAM). The server profile (`PWHASH_OPSLIMIT_SENSITIVE` / `PWHASH_MEMLIMIT_INTERACTIVE`, 64 MiB / 4 iterations) is infeasible on low-memory mobile devices. These constants are defined in `packages/crypto/src/crypto.constants.ts`. The derivation function is `deriveMasterKey(password, salt, "mobile")` in `packages/crypto/src/master-key.ts`.
+**Mobile parameter justification**: the 32 MiB / 2 iteration parameters (`PWHASH_MEMLIMIT_MOBILE` / `PWHASH_OPSLIMIT_MOBILE`) target the OWASP Mobile minimum while avoiding OOM kills on low-end devices (2–4 GB RAM). The server profile (`PWHASH_OPSLIMIT_SENSITIVE` / `PWHASH_MEMLIMIT_INTERACTIVE`, 64 MiB / 4 iterations) is infeasible on low-memory mobile devices. These constants are defined in `packages/crypto/src/crypto.constants.ts`. Password key derivation uses `derivePasswordKey(password, salt, "mobile")` in `packages/crypto/src/master-key-wrap.ts`, which returns a wrapping key used to unwrap the encrypted MasterKey blob.
 
 2. **Cold start with biometric** — Retrieve from expo-secure-store via biometric prompt. No derivation.
 3. **Password change** — Re-wrap the same MasterKey under a new password-derived key. Update expo-secure-store entry. The MasterKey itself does not change.
@@ -348,7 +348,8 @@ class BiometricFailedError extends Error {
 - `packages/crypto/src/key-lifecycle.ts` — `MobileKeyLifecycleManager`, `SECURITY_PRESETS`
 - `packages/crypto/src/key-storage.ts` — `SecureKeyStorage` interface
 - `packages/crypto/src/bucket-key-cache.ts` — `BucketKeyCache`, `createBucketKeyCache`
-- `packages/crypto/src/master-key.ts` — `deriveMasterKey`, `PwhashProfile`, `PROFILE_PARAMS`
+- `packages/crypto/src/master-key.ts` — `generateSalt`, `PwhashProfile`, `PROFILE_PARAMS`
+- `packages/crypto/src/master-key-wrap.ts` — `derivePasswordKey`, `generateMasterKey`, `wrapMasterKey`, `unwrapMasterKey`
 - `packages/crypto/src/identity.ts` — `generateIdentityKeypair`, `IdentityKeypair`
 - `packages/crypto/src/bucket-keys.ts` — `encryptBucketKey`, `decryptBucketKey`, `rotateBucketKey`
 - `packages/crypto/src/device-transfer.ts` — `generateTransferCode`, `deriveTransferKey`, transfer flow

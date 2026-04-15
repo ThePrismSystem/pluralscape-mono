@@ -1,4 +1,4 @@
-import type { EncryptedString } from "./encryption.js";
+import type { ServerSecret } from "./encryption.js";
 import type {
   AccountId,
   AcknowledgementId,
@@ -255,7 +255,7 @@ export interface WebhookConfig extends AuditMetadata {
   readonly id: WebhookId;
   readonly systemId: SystemId;
   readonly url: string;
-  readonly secret: EncryptedString;
+  readonly secret: ServerSecret;
   readonly eventTypes: readonly WebhookEventType[];
   readonly enabled: boolean;
   /** Crypto key for encrypted webhook payloads. Null for plaintext delivery. */

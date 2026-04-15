@@ -91,6 +91,9 @@ export class RotationWorker {
     } finally {
       this.running = false;
       this.abortController = null;
+      // Zero key material after rotation completes
+      this.config.sodium.memzero(oldKey);
+      this.config.sodium.memzero(newKey);
     }
   }
 

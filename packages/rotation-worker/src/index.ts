@@ -6,6 +6,7 @@ export type {
   ItemProcessResult,
   RotationApiClient,
   RotationProgressCallback,
+  RotationSodium,
   RotationWorkerConfig,
   VersionedEncryptedPayload,
 } from "./types.js";

@@ -259,6 +259,68 @@ describe("useStartImport", () => {
     expect(result.current.error?.message).toBe("network failure");
   });
 
+  it("startWithToken throws when masterKey is null", async () => {
+    const { result } = renderHookWithProviders(() => useStartImport(), { masterKey: null });
+
+    await expect(
+      act(async () => {
+        await result.current.startWithToken({
+          token: "test-token",
+          options: { selectedCategories: {}, avatarMode: "skip" },
+        });
+      }),
+    ).rejects.toThrow("useStartImport requires an unlocked crypto provider");
+  });
+
+  it("startWithFile throws when masterKey is null", async () => {
+    const { result } = renderHookWithProviders(() => useStartImport(), { masterKey: null });
+
+    await expect(
+      act(async () => {
+        await result.current.startWithFile({
+          jsonAsset: { uri: "file:///sp.json", name: "sp.json" },
+          zipAsset: null,
+          options: { selectedCategories: {}, avatarMode: "skip" },
+        });
+      }),
+    ).rejects.toThrow("useStartImport requires an unlocked crypto provider");
+  });
+
+  it("coerces non-Error rejection from startWithToken to an Error instance", async () => {
+    runSpImportMock.mockRejectedValueOnce("string rejection");
+    const { result } = renderHookWithProviders(() => useStartImport());
+
+    await act(async () => {
+      await result.current.startWithToken({
+        token: "test-token",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
+    expect(result.current.error?.message).toBe("string rejection");
+  });
+
+  it("coerces non-Error rejection from startWithFile to an Error instance", async () => {
+    runSpImportMock.mockRejectedValueOnce(42);
+    const { result } = renderHookWithProviders(() => useStartImport());
+
+    await act(async () => {
+      await result.current.startWithFile({
+        jsonAsset: { uri: "file:///sp.json", name: "sp.json" },
+        zipAsset: null,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
+    expect(result.current.error?.message).toBe("42");
+  });
+
   it("populates abortControllerRef after start", async () => {
     const { result } = renderHookWithProviders(() => useStartImport());
 
@@ -370,6 +432,31 @@ describe("useImportProgress", () => {
       status: "importing",
     });
   });
+
+  it("derives zero totals when checkpointState is null", async () => {
+    const job = makeJob("ij_null_cp", "importing");
+    fixtures.set("importJob.get", {
+      ...job,
+      checkpointState: null,
+      errorLog: null,
+    });
+
+    const { result } = renderHookWithProviders(() =>
+      useImportProgress("ij_null_cp" as ImportJobId),
+    );
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+    expect(result.current).toEqual({
+      progressPercent: 0,
+      currentCollection: null,
+      processedItems: 0,
+      totalItems: 0,
+      errorCount: 0,
+      status: "importing",
+    });
+  });
 });
 
 // ── useImportSummary ─────────────────────────────────────────────────
@@ -424,6 +511,27 @@ describe("useImportSummary", () => {
       skipped: 0,
       failed: 0,
     });
+  });
+
+  it("returns empty perCollection and errors when checkpointState is null", async () => {
+    const job = makeJob("ij_sum_null", "failed");
+    fixtures.set("importJob.get", {
+      ...job,
+      checkpointState: null,
+      errorLog: null,
+    });
+
+    const { result } = renderHookWithProviders(() =>
+      useImportSummary("ij_sum_null" as ImportJobId),
+    );
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+    expect(result.current?.perCollection).toEqual({});
+    expect(result.current?.errors).toEqual([]);
+    expect(result.current?.status).toBe("failed");
+    expect(result.current?.completedAt).toBeNull();
   });
 });
 
@@ -521,6 +629,69 @@ describe("useResumeActiveImport", () => {
 
     expect(result.current.error).toBeInstanceOf(Error);
     expect(result.current.error?.message).toBe("resume failure");
+  });
+
+  it("resume() throws when masterKey is null", async () => {
+    const job = {
+      ...makeJob("ij_active", "importing"),
+      checkpointState: null,
+    };
+    fixtures.set("importJob.list", { data: [job], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useResumeActiveImport(), {
+      masterKey: null,
+    });
+    await waitFor(() => {
+      expect(result.current.activeJob).not.toBeNull();
+    });
+
+    await expect(
+      act(async () => {
+        await result.current.resume();
+      }),
+    ).rejects.toThrow("useResumeActiveImport requires an unlocked crypto provider");
+  });
+
+  it("coerces non-Error rejection during resume to an Error instance", async () => {
+    runSpImportMock.mockRejectedValueOnce("plain string error");
+    const job = {
+      ...makeJob("ij_active", "importing"),
+      checkpointState: null,
+    };
+    fixtures.set("importJob.list", { data: [job], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+    await waitFor(() => {
+      expect(result.current.activeJob).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.resume();
+    });
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toBe("plain string error");
+  });
+
+  it("resume() omits initialCheckpoint when checkpointState is null", async () => {
+    const job = {
+      ...makeJob("ij_active", "importing"),
+      checkpointState: null,
+    };
+    fixtures.set("importJob.list", { data: [job], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+    await waitFor(() => {
+      expect(result.current.activeJob).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.resume();
+    });
+
+    expect(runSpImportMock).toHaveBeenCalledTimes(1);
+    const callArgs = runSpImportMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(callArgs).not.toHaveProperty("initialCheckpoint");
   });
 });
 

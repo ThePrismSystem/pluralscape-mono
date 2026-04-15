@@ -7,7 +7,7 @@ import {
   rotateBucketKey,
 } from "../bucket-keys.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
-import { deriveMasterKey, generateSalt } from "../master-key.js";
+import { generateMasterKey } from "../master-key-wrap.js";
 import { getSodium } from "../sodium.js";
 import { encrypt } from "../symmetric.js";
 
@@ -20,9 +20,8 @@ let masterKey2: KdfMasterKey;
 
 beforeAll(async () => {
   await setupSodium();
-  const salt = generateSalt();
-  masterKey = await deriveMasterKey("test-password", salt, "mobile");
-  masterKey2 = await deriveMasterKey("different-password", salt, "mobile");
+  masterKey = generateMasterKey();
+  masterKey2 = generateMasterKey();
 });
 
 afterAll(teardownSodium);

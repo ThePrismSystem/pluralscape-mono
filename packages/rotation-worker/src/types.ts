@@ -42,6 +42,11 @@ export interface RotationApiClient {
   ): Promise<void>;
 }
 
+/** Minimal sodium adapter for key zeroing. */
+export interface RotationSodium {
+  memzero(buf: Uint8Array): void;
+}
+
 /** Configuration for the rotation worker. */
 export interface RotationWorkerConfig {
   readonly apiClient: RotationApiClient;
@@ -52,6 +57,7 @@ export interface RotationWorkerConfig {
   readonly newKey: AeadKey;
   readonly newKeyVersion: number;
   readonly chunkSize?: number;
+  readonly sodium: RotationSodium;
 }
 
 /** Status callback for progress reporting. */

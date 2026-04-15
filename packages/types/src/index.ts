@@ -257,6 +257,7 @@ export type {
   T1EncryptedBlob,
   T2EncryptedBlob,
   EncryptedString,
+  ServerSecret,
   ServerMember,
   ClientMember,
   ServerFrontingSession,

@@ -47,7 +47,7 @@ export const deviceTokens = pgTable(
     platform: varchar("platform", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<DeviceTokenPlatform>(),
-    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    tokenHash: varchar("token_hash", { length: 128 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
     lastActiveAt: pgTimestamp("last_active_at"),
     revokedAt: pgTimestamp("revoked_at"),

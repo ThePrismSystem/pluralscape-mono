@@ -16,9 +16,8 @@ import * as Automerge from "@automerge/automerge";
 import {
   configureSodium,
   createBucketKeyCache,
-  deriveMasterKey,
   generateIdentityKeypair,
-  generateSalt,
+  generateMasterKey,
   initSodium,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
@@ -57,8 +56,7 @@ beforeAll(async () => {
   configureSodium(sodium);
   await initSodium();
 
-  const salt = generateSalt();
-  masterKey = await deriveMasterKey("typed-roundtrip-test-pass", salt, "mobile");
+  masterKey = generateMasterKey();
   const identity = generateIdentityKeypair(masterKey);
   signingKeys = identity.signing;
   bucketKeyCache = createBucketKeyCache();

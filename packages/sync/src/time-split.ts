@@ -17,6 +17,7 @@ import type { FrontingDocument } from "./schemas/fronting.js";
 import type { JournalDocument } from "./schemas/journal.js";
 import type { NoteDocument } from "./schemas/notes.js";
 import type { TimeSplitConfig, TimeSplitUnit } from "./types.js";
+import type { FrontingSessionId } from "@pluralscape/types";
 
 /** Result of splitting a time-based document into a new period. */
 export type TimeSplitResult =
@@ -116,7 +117,9 @@ function isFrontingDocument(doc: unknown): doc is FrontingDocument {
 
 /**
  * Creates a new time-period document from an existing document.
- * For fronting documents, active sessions (endTime === null) are migrated.
+ * For fronting documents, active sessions (endTime === null) and their
+ * associated comments are migrated. Check-in records are not session-scoped
+ * and remain in the original document.
  * For chat/journal, the new document starts empty.
  */
 export function splitDocument<T>(
@@ -147,9 +150,19 @@ export function splitDocument<T>(
       );
 
       if (activeEntries.length > 0) {
+        const activeSessionIds = new Set(activeEntries.map(([id]) => id));
+
         const migrated = Automerge.change(newDoc, (d) => {
+          // Migrate active sessions
           for (const [id, fs] of activeEntries) {
             d.sessions[id] = fs;
+          }
+
+          // Migrate comments belonging to active sessions
+          for (const [id, comment] of entityEntries(currentDoc.comments)) {
+            if (activeSessionIds.has(comment.frontingSessionId.toString() as FrontingSessionId)) {
+              d.comments[id] = comment;
+            }
           }
         });
         return { documentType: "fronting", newDocId, newDoc: migrated };

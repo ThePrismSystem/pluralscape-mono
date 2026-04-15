@@ -1,7 +1,37 @@
+import { z } from "zod";
+
 import { logger } from "./logger.js";
 import { getNotificationPubSub } from "./notification-pubsub.js";
 
 import type { EntityChangeEvent, SystemId } from "@pluralscape/types";
+
+export const EntityChangeEventSchema = z.union([
+  z.object({
+    entity: z.literal("message"),
+    type: z.enum(["created", "updated", "archived", "deleted"]),
+    messageId: z.string(),
+    channelId: z.string(),
+  }),
+  z.object({
+    entity: z.literal("boardMessage"),
+    type: z.enum(["created", "updated", "archived", "deleted", "pinned", "unpinned"]),
+    boardMessageId: z.string(),
+  }),
+  z.object({
+    entity: z.literal("boardMessage"),
+    type: z.literal("reordered"),
+  }),
+  z.object({
+    entity: z.literal("poll"),
+    type: z.enum(["created", "updated", "closed", "voteCast", "archived", "deleted"]),
+    pollId: z.string(),
+  }),
+  z.object({
+    entity: z.literal("acknowledgement"),
+    type: z.enum(["created", "updated", "confirmed", "archived", "deleted"]),
+    ackId: z.string(),
+  }),
+]);
 
 /**
  * Publish an entity change event to the Valkey pub/sub channel for a system.
@@ -32,7 +62,7 @@ export async function subscribeToEntityChanges(
   const messageHandler = (message: string): void => {
     let parsed: EntityChangeEvent;
     try {
-      parsed = JSON.parse(message) as EntityChangeEvent;
+      parsed = EntityChangeEventSchema.parse(JSON.parse(message)) as EntityChangeEvent;
     } catch {
       logger.error(`[entity-pubsub] Malformed JSON on channel ${channel}:`, { message });
       return;

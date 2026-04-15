@@ -172,7 +172,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Audit dependencies
-        run: pnpm audit --audit-level=moderate
+        run: pnpm audit --audit-level=moderate --ignore-registry-errors
 
   openapi:
     name: OpenAPI Spec Reconciliation

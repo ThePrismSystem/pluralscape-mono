@@ -44,7 +44,9 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       });
       expect(result.supported).toBe(true);
       if (result.supported) {
-        expect(result.url).toContain("X-Amz-Signature");
+        // POST-based presigned uploads put the signature in fields, not the URL
+        expect(result.fields).toBeDefined();
+        expect(result.fields?.["X-Amz-Signature"]).toBeDefined();
         expect(result.expiresAt).toBeGreaterThan(Date.now());
       }
     });

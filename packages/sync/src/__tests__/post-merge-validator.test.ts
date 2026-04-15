@@ -1947,3 +1947,675 @@ describe("normalizeTimerConfig: no timers field branch", () => {
     expect(result.notifications).toHaveLength(0);
   });
 });
+
+// ── Self-referencing parent cycle ─────────────────────────────────────
+
+describe("detectHierarchyCycles: self-referencing parent", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("breaks a self-referencing group cycle (parentId points to itself)", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-self-cycle"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.groups[asGroupId("grpSelf")] = makeGroup("grpSelf", 1, {
+        parentGroupId: "grpSelf",
+      });
+    });
+
+    const { breaks } = detectHierarchyCycles(session);
+
+    expect(breaks).toHaveLength(1);
+    expect(breaks[0]?.entityId).toBe("grpSelf");
+    expect(breaks[0]?.formerParentId).toBe("grpSelf");
+    expect(session.document.groups[asGroupId("grpSelf")]?.parentGroupId).toBeNull();
+  });
+
+  it("breaks a self-referencing inner world region cycle", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-self-cycle-region"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.innerWorldRegions[asInnerWorldRegionId("rg_self")] = makeRegion("rg_self", "rg_self");
+    });
+
+    const { breaks } = detectHierarchyCycles(session);
+
+    expect(breaks).toHaveLength(1);
+    expect(breaks[0]?.entityId).toBe("rg_self");
+    expect(
+      session.document.innerWorldRegions[asInnerWorldRegionId("rg_self")]?.parentRegionId,
+    ).toBeNull();
+  });
+});
+
+// ── normalizeTimerConfig: edge cases ──────────────────────────────────
+
+describe("normalizeTimerConfig: edge case branches", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("disables timer when intervalMinutes is 0", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-zero-interval"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_zero")] = {
+        id: s("tmr_zero"),
+        systemId: s("sys_1"),
+        intervalMinutes: 0,
+        wakingHoursOnly: false,
+        wakingStart: null,
+        wakingEnd: null,
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications } = normalizeTimerConfig(session);
+
+    expect(count).toBe(1);
+    expect(session.document.timers[asTimerId("tmr_zero")]?.enabled).toBe(false);
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]?.fieldName).toBe("intervalMinutes");
+    expect(notifications[0]?.summary).toContain("0");
+  });
+
+  it("disables timer when intervalMinutes is negative", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-neg-interval"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_neg")] = {
+        id: s("tmr_neg"),
+        systemId: s("sys_1"),
+        intervalMinutes: -10,
+        wakingHoursOnly: false,
+        wakingStart: null,
+        wakingEnd: null,
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications } = normalizeTimerConfig(session);
+
+    expect(count).toBe(1);
+    expect(session.document.timers[asTimerId("tmr_neg")]?.enabled).toBe(false);
+    expect(notifications[0]?.fieldName).toBe("intervalMinutes");
+  });
+
+  it("disables timer when wakingStart equals wakingEnd (same time)", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-same-waking"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_same")] = {
+        id: s("tmr_same"),
+        systemId: s("sys_1"),
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: s("08:00"),
+        wakingEnd: s("08:00"),
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications } = normalizeTimerConfig(session);
+
+    expect(count).toBe(1);
+    expect(session.document.timers[asTimerId("tmr_same")]?.enabled).toBe(false);
+    expect(notifications[0]?.fieldName).toBe("wakingHours");
+    expect(notifications[0]?.summary).toContain("08:00");
+  });
+
+  it("disables timer when wakingHoursOnly is true but wakingStart is null", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-null-start"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_nullstart")] = {
+        id: s("tmr_nullstart"),
+        systemId: s("sys_1"),
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: null,
+        wakingEnd: s("22:00"),
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications } = normalizeTimerConfig(session);
+
+    expect(count).toBe(1);
+    expect(session.document.timers[asTimerId("tmr_nullstart")]?.enabled).toBe(false);
+    expect(notifications[0]?.fieldName).toBe("wakingHours");
+    expect(notifications[0]?.summary).toContain("null");
+  });
+
+  it("disables timer when wakingHoursOnly is true but wakingEnd is null", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-null-end"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_nullend")] = {
+        id: s("tmr_nullend"),
+        systemId: s("sys_1"),
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: s("08:00"),
+        wakingEnd: null,
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications } = normalizeTimerConfig(session);
+
+    expect(count).toBe(1);
+    expect(session.document.timers[asTimerId("tmr_nullend")]?.enabled).toBe(false);
+    expect(notifications[0]?.fieldName).toBe("wakingHours");
+  });
+
+  it("disables timer when wakingHoursOnly is true but both start and end are null", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-both-null"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_bothnull")] = {
+        id: s("tmr_bothnull"),
+        systemId: s("sys_1"),
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: null,
+        wakingEnd: null,
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications } = normalizeTimerConfig(session);
+
+    expect(count).toBe(1);
+    expect(session.document.timers[asTimerId("tmr_bothnull")]?.enabled).toBe(false);
+    expect(notifications[0]?.fieldName).toBe("wakingHours");
+  });
+
+  it("skips archived timers even if they have invalid intervalMinutes", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-archived-skip"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_arch")] = {
+        id: s("tmr_arch"),
+        systemId: s("sys_1"),
+        intervalMinutes: -5,
+        wakingHoursOnly: false,
+        wakingStart: null,
+        wakingEnd: null,
+        promptText: s("Test"),
+        enabled: true,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications } = normalizeTimerConfig(session);
+
+    expect(count).toBe(0);
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("does not disable a valid timer (positive interval, valid waking hours)", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-valid"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_ok")] = {
+        id: s("tmr_ok"),
+        systemId: s("sys_1"),
+        intervalMinutes: 60,
+        wakingHoursOnly: true,
+        wakingStart: s("08:00"),
+        wakingEnd: s("22:00"),
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, envelope } = normalizeTimerConfig(session);
+
+    expect(count).toBe(0);
+    expect(envelope).toBeNull();
+    expect(session.document.timers[asTimerId("tmr_ok")]?.enabled).toBe(true);
+  });
+});
+
+// ── normalizeWebhookConfigs: additional edge cases ────────────────────
+
+describe("normalizeWebhookConfigs: object/number eventType and protocol edge cases", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("generates notification for non-string non-object eventType (number hits null branch)", () => {
+    const session = makeWebhookSession(keys, "doc-wh-num-evttype", sodium);
+
+    session.change((d) => {
+      d.webhookConfigs["wh_numevt"] = {
+        url: s("https://example.com/hook"),
+        // @ts-expect-error -- number eventType to hit the else branch (val=null)
+        eventTypes: [42],
+        enabled: true,
+      };
+    });
+
+    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications).toHaveLength(1);
+    expect(result.notifications[0]?.fieldName).toBe("eventTypes");
+    expect(result.notifications[0]?.summary).toContain("null");
+  });
+
+  it("generates notification for boolean eventType (non-string non-object-with-val)", () => {
+    const session = makeWebhookSession(keys, "doc-wh-bool-evttype", sodium);
+
+    session.change((d) => {
+      d.webhookConfigs["wh_boolevt"] = {
+        url: s("https://example.com/hook"),
+        // @ts-expect-error -- boolean eventType to hit the else branch (val=null)
+        eventTypes: [true],
+        enabled: true,
+      };
+    });
+
+    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications).toHaveLength(1);
+    expect(result.notifications[0]?.summary).toContain("null");
+  });
+
+  it("generates notification for non-HTTP(S) URL protocol (ftp://)", () => {
+    const session = makeWebhookSession(keys, "doc-wh-ftp-url", sodium);
+
+    session.change((d) => {
+      d.webhookConfigs["wh_ftp"] = {
+        url: s("ftp://example.com/hook"),
+        eventTypes: [s("member.created")],
+        enabled: true,
+      };
+    });
+
+    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications).toHaveLength(1);
+    expect(result.notifications[0]?.fieldName).toBe("url");
+    expect(result.notifications[0]?.summary).toContain("non-HTTP(S)");
+  });
+
+  it("generates notification for invalid URL format (malformed string)", () => {
+    const session = makeWebhookSession(keys, "doc-wh-bad-url", sodium);
+
+    session.change((d) => {
+      d.webhookConfigs["wh_badurl"] = {
+        url: s("not a valid url at all"),
+        eventTypes: [s("member.created")],
+        enabled: true,
+      };
+    });
+
+    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications).toHaveLength(1);
+    expect(result.notifications[0]?.fieldName).toBe("url");
+    expect(result.notifications[0]?.summary).toContain("invalid URL format");
+  });
+
+  it("generates notification for object eventType without val property (val=null)", () => {
+    const session = makeWebhookSession(keys, "doc-wh-obj-no-val", sodium);
+
+    session.change((d) => {
+      d.webhookConfigs["wh_objnoval"] = {
+        url: s("https://example.com/hook"),
+        // @ts-expect-error -- object without val property to hit typeof=object but no 'val' branch
+        eventTypes: [{ something: "else" }],
+        enabled: true,
+      };
+    });
+
+    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications).toHaveLength(1);
+    expect(result.notifications[0]?.fieldName).toBe("eventTypes");
+  });
+});
+
+// ── normalizeFrontingSessions: additional branch coverage ─────────────
+
+describe("normalizeFrontingSessions: additional edge cases", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("nulls endTime when endTime exactly equals startTime", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-eq-endtime"),
+      sodium,
+    });
+
+    const sessionId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+    session.change((d) => {
+      d.sessions[sessionId] = {
+        id: s(sessionId),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        startTime: 3000,
+        endTime: 3000,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications, envelope } = normalizeFrontingSessions(session);
+
+    expect(count).toBe(1);
+    expect(envelope).not.toBeNull();
+    expect(session.document.sessions[sessionId]?.endTime).toBeNull();
+    expect(notifications.some((n) => n.resolution === "post-merge-endtime-normalize")).toBe(true);
+  });
+
+  it("emits orphan notification for session with only customFrontId set (no member/structureEntity)", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-custom-only"),
+      sodium,
+    });
+
+    const sessionId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+    session.change((d) => {
+      d.sessions[sessionId] = {
+        id: s(sessionId),
+        systemId: s("sys_1"),
+        memberId: s("mem_placeholder"),
+        customFrontId: s("cf_1"),
+        structureEntityId: s(""),
+        startTime: 1000,
+        endTime: 5000,
+        comment: s(""),
+        positionality: s(""),
+        outtrigger: s(""),
+        outtriggerSentiment: s(""),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    // Null out memberId to exercise the customFrontId-only path
+    session.change((d) => {
+      const target = d.sessions[sessionId];
+      // @ts-expect-error -- deliberately setting to null to simulate CRDT merge state
+      if (target) target.memberId = null;
+    });
+
+    const { count, notifications } = normalizeFrontingSessions(session);
+
+    // customFrontId is set so subject constraint is satisfied — no notification
+    expect(count).toBe(0);
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("emits orphan notification for session with only structureEntityId set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-entity-only"),
+      sodium,
+    });
+
+    const sessionId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+    session.change((d) => {
+      d.sessions[sessionId] = {
+        id: s(sessionId),
+        systemId: s("sys_1"),
+        memberId: s("mem_placeholder"),
+        customFrontId: s("cf_placeholder"),
+        structureEntityId: s("ste_1"),
+        startTime: 1000,
+        endTime: 5000,
+        comment: s(""),
+        positionality: s(""),
+        outtrigger: s(""),
+        outtriggerSentiment: s(""),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    // Null out memberId and customFrontId to exercise structureEntityId-only path
+    session.change((d) => {
+      const target = d.sessions[sessionId];
+      // @ts-expect-error -- deliberately setting to null to simulate CRDT merge state
+      if (target) target.memberId = null;
+      if (target) target.customFrontId = null;
+    });
+
+    const { count, notifications } = normalizeFrontingSessions(session);
+
+    // structureEntityId is set so subject constraint is satisfied — no notification
+    expect(count).toBe(0);
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("handles both endTime violation and orphan subject on the same session", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-both-violations"),
+      sodium,
+    });
+
+    const sessionId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+    session.change((d) => {
+      d.sessions[sessionId] = {
+        id: s(sessionId),
+        systemId: s("sys_1"),
+        memberId: s("mem_placeholder"),
+        customFrontId: null,
+        structureEntityId: null,
+        startTime: 5000,
+        endTime: 2000,
+        comment: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    // Null out memberId to make it an orphan too
+    session.change((d) => {
+      const target = d.sessions[sessionId];
+      // @ts-expect-error -- deliberately setting to null to simulate invalid CRDT merge state
+      if (target) target.memberId = null;
+    });
+
+    const { count, notifications } = normalizeFrontingSessions(session);
+
+    expect(count).toBe(1);
+    // Should have both an endTime notification and a subject notification
+    const endTimeNotif = notifications.filter(
+      (n) => n.resolution === "post-merge-endtime-normalize",
+    );
+    const subjectNotif = notifications.filter((n) => n.resolution === "notification-only");
+    expect(endTimeNotif).toHaveLength(1);
+    expect(subjectNotif).toHaveLength(1);
+  });
+});
+
+// ── runAllValidations: onError callback ─────────────────────────────
+
+describe("runAllValidations: onError callback invocation", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("dispatches webhook config validation via runAllValidations and reports issues", () => {
+    const session = makeWebhookSession(keys, "doc-run-webhook-dispatch", sodium);
+
+    session.change((d) => {
+      d.webhookConfigs["wh_dispatch"] = {
+        url: s("ftp://bad-protocol.example.com"),
+        eventTypes: [s("member.created")],
+        enabled: true,
+      };
+    });
+
+    const result = runAllValidations(session as EncryptedSyncSession<unknown>);
+
+    expect(result.webhookConfigIssues).toBe(1);
+    expect(result.notifications.some((n) => n.fieldName === "url")).toBe(true);
+  });
+
+  it("dispatches timer config validation via runAllValidations for waking-hours edge case", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-run-timer-waking"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers[asTimerId("tmr_waking")] = {
+        id: s("tmr_waking"),
+        systemId: s("sys_1"),
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: s("10:00"),
+        wakingEnd: s("10:00"),
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const errorMessages: string[] = [];
+    const result = runAllValidations(session, (msg) => {
+      errorMessages.push(msg);
+    });
+
+    expect(result.timerConfigNormalizations).toBe(1);
+    expect(result.notifications.some((n) => n.fieldName === "wakingHours")).toBe(true);
+    // No errors on successful validation
+    expect(errorMessages).toHaveLength(0);
+  });
+});

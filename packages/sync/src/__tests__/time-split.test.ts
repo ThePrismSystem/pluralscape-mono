@@ -12,8 +12,9 @@ import {
   splitDocument,
 } from "../time-split.js";
 
-import { asFrontingSessionId, asSyncDocId } from "./test-crypto-helpers.js";
+import { asFrontingCommentId, asFrontingSessionId, asSyncDocId } from "./test-crypto-helpers.js";
 
+import type { CrdtFrontingComment } from "../schemas/fronting.js";
 import type { FrontingDocument } from "../schemas/fronting.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -24,6 +25,21 @@ function makeKeys(s: SodiumAdapter): DocumentKeys {
   return {
     encryptionKey: s.aeadKeygen(),
     signingKeys: s.signKeypair(),
+  };
+}
+
+function makeComment(id: string, frontingSessionId: string, systemId: string): CrdtFrontingComment {
+  return {
+    id: new Automerge.ImmutableString(id),
+    frontingSessionId: new Automerge.ImmutableString(frontingSessionId),
+    systemId: new Automerge.ImmutableString(systemId),
+    memberId: null,
+    customFrontId: null,
+    structureEntityId: null,
+    content: new Automerge.ImmutableString("test comment"),
+    archived: false,
+    createdAt: 1000,
+    updatedAt: 1000,
   };
 }
 
@@ -381,6 +397,196 @@ describe("splitDocument", () => {
     if (result.documentType === "fronting") {
       // No active sessions migrated → newDoc.sessions is empty
       expect(Object.keys(result.newDoc.sessions)).toHaveLength(0);
+    }
+  });
+
+  it("fronting: comments migrate with active session", () => {
+    const keys = makeKeys(sodium);
+    let doc = createFrontingDocument();
+
+    doc = Automerge.change(doc, (d) => {
+      d.sessions[asFrontingSessionId("active_s")] = {
+        id: new Automerge.ImmutableString("active_s"),
+        systemId: new Automerge.ImmutableString("sys_test"),
+        memberId: new Automerge.ImmutableString("mem_a"),
+        startTime: 1000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.comments[asFrontingCommentId("comment_1")] = makeComment(
+        "comment_1",
+        "active_s",
+        "sys_test",
+      );
+    });
+
+    const session = new EncryptedSyncSession<FrontingDocument>({
+      doc,
+      keys,
+      documentId: asSyncDocId("fronting-sys_test"),
+      sodium,
+    });
+
+    const result = splitDocument("fronting-sys_test", session, Date.UTC(2026, 3, 1));
+    expect(result.documentType).toBe("fronting");
+    if (result.documentType === "fronting") {
+      expect(Object.keys(result.newDoc.sessions)).toContain("active_s");
+      expect(Object.keys(result.newDoc.comments)).toContain("comment_1");
+    }
+  });
+
+  it("fronting: comments on closed sessions stay behind", () => {
+    const keys = makeKeys(sodium);
+    let doc = createFrontingDocument();
+
+    doc = Automerge.change(doc, (d) => {
+      d.sessions[asFrontingSessionId("closed_s")] = {
+        id: new Automerge.ImmutableString("closed_s"),
+        systemId: new Automerge.ImmutableString("sys_test"),
+        memberId: new Automerge.ImmutableString("mem_a"),
+        startTime: 500,
+        endTime: 900,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 500,
+        updatedAt: 900,
+      };
+      d.comments[asFrontingCommentId("comment_closed")] = makeComment(
+        "comment_closed",
+        "closed_s",
+        "sys_test",
+      );
+    });
+
+    const session = new EncryptedSyncSession<FrontingDocument>({
+      doc,
+      keys,
+      documentId: asSyncDocId("fronting-sys_test"),
+      sodium,
+    });
+
+    const result = splitDocument("fronting-sys_test", session, Date.UTC(2026, 3, 1));
+    expect(result.documentType).toBe("fronting");
+    if (result.documentType === "fronting") {
+      expect(Object.keys(result.newDoc.sessions)).toHaveLength(0);
+      expect(Object.keys(result.newDoc.comments)).toHaveLength(0);
+    }
+  });
+
+  it("fronting: mixed — only active session comments migrate", () => {
+    const keys = makeKeys(sodium);
+    let doc = createFrontingDocument();
+
+    doc = Automerge.change(doc, (d) => {
+      d.sessions[asFrontingSessionId("active_m")] = {
+        id: new Automerge.ImmutableString("active_m"),
+        systemId: new Automerge.ImmutableString("sys_test"),
+        memberId: new Automerge.ImmutableString("mem_a"),
+        startTime: 1000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.sessions[asFrontingSessionId("closed_m")] = {
+        id: new Automerge.ImmutableString("closed_m"),
+        systemId: new Automerge.ImmutableString("sys_test"),
+        memberId: new Automerge.ImmutableString("mem_b"),
+        startTime: 500,
+        endTime: 900,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 500,
+        updatedAt: 900,
+      };
+      d.comments[asFrontingCommentId("comment_active")] = makeComment(
+        "comment_active",
+        "active_m",
+        "sys_test",
+      );
+      d.comments[asFrontingCommentId("comment_closed")] = makeComment(
+        "comment_closed",
+        "closed_m",
+        "sys_test",
+      );
+    });
+
+    const session = new EncryptedSyncSession<FrontingDocument>({
+      doc,
+      keys,
+      documentId: asSyncDocId("fronting-sys_test"),
+      sodium,
+    });
+
+    const result = splitDocument("fronting-sys_test", session, Date.UTC(2026, 3, 1));
+    expect(result.documentType).toBe("fronting");
+    if (result.documentType === "fronting") {
+      expect(Object.keys(result.newDoc.sessions)).toContain("active_m");
+      expect(Object.keys(result.newDoc.sessions)).not.toContain("closed_m");
+      expect(Object.keys(result.newDoc.comments)).toContain("comment_active");
+      expect(Object.keys(result.newDoc.comments)).not.toContain("comment_closed");
+    }
+  });
+
+  it("fronting: active session with no comments — comments map is empty", () => {
+    const keys = makeKeys(sodium);
+    let doc = createFrontingDocument();
+
+    doc = Automerge.change(doc, (d) => {
+      d.sessions[asFrontingSessionId("active_no_comments")] = {
+        id: new Automerge.ImmutableString("active_no_comments"),
+        systemId: new Automerge.ImmutableString("sys_test"),
+        memberId: new Automerge.ImmutableString("mem_a"),
+        startTime: 1000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const session = new EncryptedSyncSession<FrontingDocument>({
+      doc,
+      keys,
+      documentId: asSyncDocId("fronting-sys_test"),
+      sodium,
+    });
+
+    const result = splitDocument("fronting-sys_test", session, Date.UTC(2026, 3, 1));
+    expect(result.documentType).toBe("fronting");
+    if (result.documentType === "fronting") {
+      expect(Object.keys(result.newDoc.sessions)).toContain("active_no_comments");
+      expect(Object.keys(result.newDoc.comments)).toHaveLength(0);
     }
   });
 });

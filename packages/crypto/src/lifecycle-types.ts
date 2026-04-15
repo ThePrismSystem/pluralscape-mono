@@ -1,3 +1,4 @@
+import type { EncryptedPayload } from "./symmetric.js";
 import type { AeadKey, BoxKeypair, KdfMasterKey, PwhashSalt, SignKeypair } from "./types.js";
 import type { BucketId } from "@pluralscape/types";
 
@@ -12,8 +13,12 @@ export interface KeyLifecycleManager {
   /** Current lifecycle state. */
   readonly state: KeyLifecycleState;
 
-  /** Derive MasterKey from password + salt, store in secure storage, transition to unlocked. */
-  unlockWithPassword(password: string, salt: PwhashSalt): Promise<void>;
+  /** Unwrap MasterKey from encrypted blob via password, store in secure storage, transition to unlocked. */
+  unlockWithPassword(
+    password: string,
+    salt: PwhashSalt,
+    encryptedMasterKey: EncryptedPayload,
+  ): Promise<void>;
 
   /** Retrieve MasterKey from secure storage via biometric, transition to unlocked. */
   unlockWithBiometric(): Promise<void>;

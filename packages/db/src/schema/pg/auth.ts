@@ -22,9 +22,8 @@ export const accounts = pgTable(
     emailSalt: varchar("email_salt", { length: 255 }).notNull(),
     passwordHash: varchar("password_hash", { length: 255 }).notNull(),
     kdfSalt: varchar("kdf_salt", { length: 255 }).notNull(),
-    // Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key.
-    // Null for legacy accounts that have not yet migrated to the two-layer architecture.
-    encryptedMasterKey: pgBinary("encrypted_master_key"),
+    /** Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key. */
+    encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
     /** Server-side encrypted email for operational communication (ADR 029). Null for pre-migration accounts. */
     encryptedEmail: pgBinary("encrypted_email"),
     /** When true, IP address and user-agent are persisted in audit log entries. Default off (ADR 028). */

@@ -211,9 +211,6 @@ export async function changePassword(
   try {
     // Deserialize stored encrypted master key
     const encMasterKeyBytes = account.encryptedMasterKey;
-    if (!encMasterKeyBytes) {
-      throw new Error("Account missing encrypted master key");
-    }
     const payload = deserializeEncryptedPayload(
       encMasterKeyBytes instanceof Uint8Array
         ? encMasterKeyBytes

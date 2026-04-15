@@ -2,12 +2,7 @@ import { toUnixMillis } from "@pluralscape/types";
 import { parseTimeToMinutes } from "@pluralscape/validation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createCheckInGenerateHandler } from "../jobs/check-in-generate.js";
-import {
-  computeIdempotencyKey,
-  getCurrentMinutesUtc,
-  isWithinWakingHours,
-} from "../jobs/check-in-generate.js";
+import { computeIdempotencyKey, createCheckInGenerateHandler } from "../jobs/check-in-generate.js";
 
 import { mockDb } from "./helpers/mock-db.js";
 
@@ -38,75 +33,6 @@ describe("parseTimeToMinutes", () => {
 
   it("returns null for out-of-range hours", () => {
     expect(parseTimeToMinutes("25:00")).toBeNull();
-  });
-});
-
-describe("isWithinWakingHours", () => {
-  it("returns true when within window", () => {
-    // 10:00 is within 08:00-22:00
-    expect(isWithinWakingHours(600, 480, 1320)).toBe(true);
-  });
-
-  it("returns false when before window", () => {
-    // 06:00 is before 08:00-22:00
-    expect(isWithinWakingHours(360, 480, 1320)).toBe(false);
-  });
-
-  it("returns false when after window", () => {
-    // 23:00 is after 08:00-22:00
-    expect(isWithinWakingHours(1380, 480, 1320)).toBe(false);
-  });
-
-  it("returns true at exact start", () => {
-    expect(isWithinWakingHours(480, 480, 1320)).toBe(true);
-  });
-
-  it("returns false at exact end", () => {
-    expect(isWithinWakingHours(1320, 480, 1320)).toBe(false);
-  });
-
-  // Overnight range tests (start > end, e.g. 22:00-06:00 = 1320-360)
-  it("returns true during late night in overnight range", () => {
-    // 23:00 (1380) is within 22:00-06:00 (1320-360)
-    expect(isWithinWakingHours(1380, 1320, 360)).toBe(true);
-  });
-
-  it("returns true during early morning in overnight range", () => {
-    // 03:00 (180) is within 22:00-06:00 (1320-360)
-    expect(isWithinWakingHours(180, 1320, 360)).toBe(true);
-  });
-
-  it("returns false during daytime in overnight range", () => {
-    // 12:00 (720) is outside 22:00-06:00 (1320-360)
-    expect(isWithinWakingHours(720, 1320, 360)).toBe(false);
-  });
-
-  it("returns true at exact start of overnight range", () => {
-    // 22:00 (1320) is within 22:00-06:00 (1320-360)
-    expect(isWithinWakingHours(1320, 1320, 360)).toBe(true);
-  });
-
-  it("returns false at exact end of overnight range", () => {
-    // 06:00 (360) is outside 22:00-06:00 (1320-360)
-    expect(isWithinWakingHours(360, 1320, 360)).toBe(false);
-  });
-});
-
-describe("getCurrentMinutesUtc", () => {
-  it("returns minutes since midnight for a given timestamp", () => {
-    // 2024-01-01T10:30:00Z = 630 minutes
-    const timestamp = new Date("2024-01-01T10:30:00Z").getTime();
-    expect(getCurrentMinutesUtc(timestamp)).toBe(630);
-  });
-
-  it("returns 0 for midnight", () => {
-    const timestamp = new Date("2024-01-01T00:00:00Z").getTime();
-    expect(getCurrentMinutesUtc(timestamp)).toBe(0);
-  });
-
-  it("returns 1439 for 23:59", () => {
-    const timestamp = new Date("2024-01-01T23:59:00Z").getTime();
-    expect(getCurrentMinutesUtc(timestamp)).toBe(1439);
   });
 });
 
@@ -248,26 +174,6 @@ describe("createCheckInGenerateHandler", () => {
     expect(chain.insert).not.toHaveBeenCalled();
   });
 
-  it("skips config outside waking hours", async () => {
-    vi.useFakeTimers();
-    // Set system time to 08:00 UTC — outside the 22:00–23:00 waking window
-    vi.setSystemTime(new Date("2024-01-01T08:00:00Z"));
-
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValue([
-      makeConfig({
-        wakingHoursOnly: true,
-        wakingStart: "22:00",
-        wakingEnd: "23:00",
-      }),
-    ]);
-    const handler = createCheckInGenerateHandler(db);
-
-    await handler(stubJob(), stubCtx());
-
-    expect(chain.insert).not.toHaveBeenCalled();
-  });
-
   it("creates check-in record with idempotency key", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2024-01-01T08:00:00Z"));
@@ -368,30 +274,6 @@ describe("createCheckInGenerateHandler", () => {
     // Only first config should have been processed — heartbeat fires,
     // then abort check at top of next iteration stops processing
     expect(ctx.heartbeat.heartbeat).toHaveBeenCalledOnce();
-  });
-
-  it("warns on unparseable waking time and skips config", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2024-01-01T10:00:00Z"));
-
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValue([
-      makeConfig({
-        wakingHoursOnly: true,
-        wakingStart: "8:30", // invalid — single digit hour
-        wakingEnd: "22:00",
-      }),
-    ]);
-    const handler = createCheckInGenerateHandler(db);
-
-    await handler(stubJob(), stubCtx());
-
-    expect(chain.insert).not.toHaveBeenCalled();
-    expect(loggerWarnMock).toHaveBeenCalledOnce();
-    expect(loggerWarnMock).toHaveBeenCalledWith(
-      "Timer config has unparseable waking time, skipping",
-      expect.objectContaining({ timerConfigId: "tmr_test-1" }),
-    );
   });
 
   it("throws when configs fail during processing", async () => {

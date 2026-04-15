@@ -13,6 +13,7 @@ import {
 
 import type {
   SystemId,
+  WebhookDeliveryId,
   WebhookEventPayloadMap,
   WebhookEventType,
   WebhookId,
@@ -54,7 +55,7 @@ async function executeDispatch<K extends WebhookEventType>(
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
   inTransaction: boolean,
-): Promise<readonly string[]> {
+): Promise<readonly WebhookDeliveryId[]> {
   // Check cache first; fall back to DB query on miss
   const cached = webhookConfigCache.get(systemId);
   let configs: readonly CachedWebhookConfig[];
@@ -92,13 +93,13 @@ async function executeDispatch<K extends WebhookEventType>(
   }
 
   const timestamp = now();
-  const deliveryIds: string[] = [];
+  const deliveryIds: WebhookDeliveryId[] = [];
   const payloadJson = JSON.stringify({ ...payload, systemId });
   const encryptionKey = getWebhookPayloadEncryptionKey();
 
   try {
     const values = matchingConfigs.map((config) => {
-      const deliveryId = createId(ID_PREFIXES.webhookDelivery);
+      const deliveryId = createId(ID_PREFIXES.webhookDelivery) as WebhookDeliveryId;
       deliveryIds.push(deliveryId);
       const base = {
         id: deliveryId,
@@ -144,7 +145,7 @@ export async function dispatchWebhookEvent<K extends WebhookEventType>(
   systemId: SystemId,
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
-): Promise<readonly string[]> {
+): Promise<readonly WebhookDeliveryId[]> {
   if (isTransaction(db)) {
     return executeDispatch(db, systemId, eventType, payload, true);
   }

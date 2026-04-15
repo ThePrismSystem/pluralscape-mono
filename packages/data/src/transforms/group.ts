@@ -73,6 +73,9 @@ function assertGroupEncryptedFields(raw: unknown): asserts raw is GroupEncrypted
   if (obj["emoji"] !== null && typeof obj["emoji"] !== "string") {
     throw new Error("Decrypted group blob: emoji must be string or null");
   }
+  if (obj["imageSource"] !== null && typeof obj["imageSource"] !== "object") {
+    throw new Error("Decrypted group blob: imageSource must be object or null");
+  }
 }
 
 // ── Group transforms ──────────────────────────────────────────────────

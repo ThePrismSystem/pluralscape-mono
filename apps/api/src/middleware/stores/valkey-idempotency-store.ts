@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { logger } from "../../lib/logger.js";
 import {
   IDEMPOTENCY_CACHE_TTL_SEC,
@@ -7,6 +9,11 @@ import {
 } from "../idempotency.constants.js";
 
 import type { CachedResponse, IdempotencyStore } from "../idempotency-store.js";
+
+const CachedResponseSchema = z.object({
+  statusCode: z.number(),
+  body: z.string(),
+});
 
 interface ValkeyClient {
   get(key: string): Promise<string | null>;
@@ -49,7 +56,7 @@ export class ValkeyIdempotencyStore implements IdempotencyStore {
     const raw = await this.client.get(this.cacheKey(accountId, key));
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as CachedResponse;
+      return CachedResponseSchema.parse(JSON.parse(raw));
     } catch {
       logger.warn("Corrupt idempotency cache entry, deleting", { accountId, key });
       await this.client.del(this.cacheKey(accountId, key));

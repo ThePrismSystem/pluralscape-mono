@@ -1,0 +1,4 @@
+ALTER TABLE "accounts" ALTER COLUMN "encrypted_master_key" SET NOT NULL;--> statement-breakpoint
+ALTER TABLE "timer_configs" ADD COLUMN "next_check_in_at" timestamptz;--> statement-breakpoint
+CREATE INDEX "timer_configs_next_check_in_idx" ON "timer_configs" USING btree ("next_check_in_at") WHERE "timer_configs"."enabled" = true AND "timer_configs"."archived_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "timer_configs_enabled_active_idx" ON "timer_configs" USING btree ("enabled") WHERE "timer_configs"."archived_at" IS NULL;

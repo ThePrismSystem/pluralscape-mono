@@ -48,6 +48,31 @@ function assertMemberEncryptedFields(raw: unknown): asserts raw is MemberEncrypt
   if (!Array.isArray(obj["pronouns"])) {
     throw new Error("Decrypted member blob missing required array field: pronouns");
   }
+  if (obj["description"] !== null && typeof obj["description"] !== "string") {
+    throw new Error("Decrypted member blob: description must be string or null");
+  }
+  if (typeof obj["suppressFriendFrontNotification"] !== "boolean") {
+    throw new Error(
+      "Decrypted member blob missing required boolean field: suppressFriendFrontNotification",
+    );
+  }
+  if (typeof obj["boardMessageNotificationOnFront"] !== "boolean") {
+    throw new Error(
+      "Decrypted member blob missing required boolean field: boardMessageNotificationOnFront",
+    );
+  }
+  if (obj["avatarSource"] === undefined) {
+    throw new Error("Decrypted member blob missing field: avatarSource");
+  }
+  if (obj["colors"] === undefined) {
+    throw new Error("Decrypted member blob missing field: colors");
+  }
+  if (obj["saturationLevel"] === undefined) {
+    throw new Error("Decrypted member blob missing field: saturationLevel");
+  }
+  if (!Array.isArray(obj["tags"])) {
+    throw new Error("Decrypted member blob missing required array field: tags");
+  }
 }
 
 // ── Member transforms ────────────────────────────────────────────────

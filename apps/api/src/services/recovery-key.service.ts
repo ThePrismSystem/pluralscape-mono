@@ -124,9 +124,6 @@ export async function regenerateRecoveryKeyBackup(
       }
 
       const encMasterKeyBytes = account.encryptedMasterKey;
-      if (!encMasterKeyBytes) {
-        throw new Error("Account missing encrypted master key");
-      }
       const payload = deserializeEncryptedPayload(
         encMasterKeyBytes instanceof Uint8Array
           ? encMasterKeyBytes

@@ -3,7 +3,11 @@
  * Domain: schema validation rules shared across packages.
  */
 
-import type { DeviceTokenPlatform, FriendNotificationEventType } from "@pluralscape/types";
+import type {
+  DeviceTokenPlatform,
+  FriendNotificationEventType,
+  WebhookEventType,
+} from "@pluralscape/types";
 
 /** Minimum password length enforced at the validation layer (mirrors crypto MIN_PASSWORD_LENGTH). */
 export const AUTH_MIN_PASSWORD_LENGTH = 8;
@@ -138,6 +142,9 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "friend.bucket-assigned",
   "friend.bucket-unassigned",
 ] as const;
+
+// Compile-time check: every value must be a valid WebhookEventType
+WEBHOOK_EVENT_TYPE_VALUES satisfies readonly WebhookEventType[];
 
 /** Maximum length for Pluralscape entity IDs in import entity refs. Matches DB ID_MAX_LENGTH (50). */
 export const MAX_PLURALSCAPE_ENTITY_ID_LENGTH = 50;

@@ -177,7 +177,7 @@ export async function listStructureEntities(
     cursor?: string;
     limit?: number;
     includeArchived?: boolean;
-    entityTypeId?: string;
+    entityTypeId?: SystemStructureEntityTypeId;
   },
 ): Promise<PaginatedResult<StructureEntityResult>> {
   assertSystemOwnership(systemId, auth);
@@ -213,7 +213,7 @@ export async function listStructureEntities(
 export async function getStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityId: string,
+  entityId: SystemStructureEntityId,
   auth: AuthContext,
 ): Promise<StructureEntityResult> {
   assertSystemOwnership(systemId, auth);
@@ -242,7 +242,7 @@ export async function getStructureEntity(
 export async function updateStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityId: string,
+  entityId: SystemStructureEntityId,
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -309,7 +309,7 @@ export async function updateStructureEntity(
 export async function archiveStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityId: string,
+  entityId: SystemStructureEntityId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
@@ -319,7 +319,7 @@ export async function archiveStructureEntity(
 export async function restoreStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityId: string,
+  entityId: SystemStructureEntityId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureEntityResult> {
@@ -331,7 +331,7 @@ export async function restoreStructureEntity(
 export async function deleteStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityId: string,
+  entityId: SystemStructureEntityId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {

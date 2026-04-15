@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../helpers/mock-db.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { SystemId } from "@pluralscape/types";
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -65,6 +69,10 @@ const {
 // ── Fixtures ─────────────────────────────────────────────────────────
 
 const SYSTEM_ID = "sys_test-system" as SystemId;
+const ENTITY_TYPE_ID = "set_test-entity-type" as SystemStructureEntityTypeId;
+const MISSING_ENTITY_TYPE_ID = "set_missing" as SystemStructureEntityTypeId;
+const ENTITY_ID = "sse_test-entity" as SystemStructureEntityId;
+const MISSING_ENTITY_ID = "sse_missing" as SystemStructureEntityId;
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -95,7 +103,7 @@ function makeStructureEntityRow(overrides: Record<string, unknown> = {}): Record
   return {
     id: "sse_test-entity",
     systemId: SYSTEM_ID,
-    entityTypeId: "set_test-entity-type",
+    entityTypeId: ENTITY_TYPE_ID,
     sortOrder: 0,
     encryptedData: new Uint8Array([1, 2, 3]),
     version: 1,
@@ -270,7 +278,7 @@ describe("getEntityType", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([makeEntityTypeRow()]);
 
-    const result = await getEntityType(db, SYSTEM_ID, "set_test-entity-type", AUTH);
+    const result = await getEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, AUTH);
 
     expect(result.id).toBe("set_test-entity-type");
   });
@@ -279,7 +287,7 @@ describe("getEntityType", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await expect(getEntityType(db, SYSTEM_ID, "set_missing", AUTH)).rejects.toThrow(
+    await expect(getEntityType(db, SYSTEM_ID, MISSING_ENTITY_TYPE_ID, AUTH)).rejects.toThrow(
       "Structure entity type not found",
     );
   });
@@ -297,7 +305,7 @@ describe("updateEntityType", () => {
     const result = await updateEntityType(
       db,
       SYSTEM_ID,
-      "set_test-entity-type",
+      ENTITY_TYPE_ID,
       { encryptedData: VALID_BLOB_BASE64, sortOrder: 1, version: 1 },
       AUTH,
       mockAudit,
@@ -311,7 +319,7 @@ describe("updateEntityType", () => {
     const { db } = mockDb();
 
     await expect(
-      updateEntityType(db, SYSTEM_ID, "set_test-entity-type", {}, AUTH, mockAudit),
+      updateEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, {}, AUTH, mockAudit),
     ).rejects.toThrow("Invalid update payload");
   });
 
@@ -326,7 +334,7 @@ describe("updateEntityType", () => {
       updateEntityType(
         db,
         SYSTEM_ID,
-        "set_test-entity-type",
+        ENTITY_TYPE_ID,
         { encryptedData: VALID_BLOB_BASE64, sortOrder: 1, version: 1 },
         AUTH,
         mockAudit,
@@ -345,7 +353,7 @@ describe("updateEntityType", () => {
       updateEntityType(
         db,
         SYSTEM_ID,
-        "set_missing",
+        MISSING_ENTITY_TYPE_ID,
         { encryptedData: VALID_BLOB_BASE64, sortOrder: 1, version: 1 },
         AUTH,
         mockAudit,
@@ -369,7 +377,7 @@ describe("archiveEntityType", () => {
     ]);
 
     await expect(
-      archiveEntityType(db, SYSTEM_ID, "set_test-entity-type", AUTH, mockAudit),
+      archiveEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, AUTH, mockAudit),
     ).resolves.toBeUndefined();
   });
 });
@@ -388,7 +396,7 @@ describe("restoreEntityType", () => {
       makeEntityTypeRow({ archived: false, archivedAt: null, version: 2 }),
     ]);
 
-    const result = await restoreEntityType(db, SYSTEM_ID, "set_test-entity-type", AUTH, mockAudit);
+    const result = await restoreEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, AUTH, mockAudit);
 
     expect(result.id).toBe("set_test-entity-type");
     expect(result.archived).toBe(false);
@@ -410,7 +418,7 @@ describe("deleteEntityType", () => {
     chain.where.mockResolvedValueOnce([{ count: 0 }]);
 
     await expect(
-      deleteEntityType(db, SYSTEM_ID, "set_test-entity-type", AUTH, mockAudit),
+      deleteEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, AUTH, mockAudit),
     ).resolves.toBeUndefined();
     expect(mockAudit).toHaveBeenCalled();
   });
@@ -422,9 +430,9 @@ describe("deleteEntityType", () => {
     chain.limit.mockReturnValueOnce(chain);
     chain.for.mockResolvedValueOnce([]);
 
-    await expect(deleteEntityType(db, SYSTEM_ID, "set_missing", AUTH, mockAudit)).rejects.toThrow(
-      "Structure entity type not found",
-    );
+    await expect(
+      deleteEntityType(db, SYSTEM_ID, MISSING_ENTITY_TYPE_ID, AUTH, mockAudit),
+    ).rejects.toThrow("Structure entity type not found");
   });
 
   it("throws HAS_DEPENDENTS when entity type has entities", async () => {
@@ -436,9 +444,9 @@ describe("deleteEntityType", () => {
     // Entity count query — terminal where
     chain.where.mockResolvedValueOnce([{ count: 3 }]);
 
-    await expect(
-      deleteEntityType(db, SYSTEM_ID, "set_test-entity-type", AUTH, mockAudit),
-    ).rejects.toThrow("Structure entity type has 3 entity(s)");
+    await expect(deleteEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity type has 3 entity(s)",
+    );
   });
 });
 
@@ -577,7 +585,7 @@ describe("listStructureEntities", () => {
     chain.limit.mockResolvedValueOnce([makeStructureEntityRow()]);
 
     const result = await listStructureEntities(db, SYSTEM_ID, AUTH, {
-      entityTypeId: "set_test-entity-type",
+      entityTypeId: ENTITY_TYPE_ID,
     });
 
     expect(result.data).toHaveLength(1);
@@ -629,7 +637,7 @@ describe("getStructureEntity", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([makeStructureEntityRow()]);
 
-    const result = await getStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH);
+    const result = await getStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH);
 
     expect(result.id).toBe("sse_test-entity");
     expect(result.entityTypeId).toBe("set_test-entity-type");
@@ -639,7 +647,7 @@ describe("getStructureEntity", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await expect(getStructureEntity(db, SYSTEM_ID, "sse_missing", AUTH)).rejects.toThrow(
+    await expect(getStructureEntity(db, SYSTEM_ID, MISSING_ENTITY_ID, AUTH)).rejects.toThrow(
       "Structure entity not found",
     );
   });
@@ -657,7 +665,7 @@ describe("updateStructureEntity", () => {
     const result = await updateStructureEntity(
       db,
       SYSTEM_ID,
-      "sse_test-entity",
+      ENTITY_ID,
       {
         encryptedData: VALID_BLOB_BASE64,
         parentEntityId: null,
@@ -676,7 +684,7 @@ describe("updateStructureEntity", () => {
     const { db } = mockDb();
 
     await expect(
-      updateStructureEntity(db, SYSTEM_ID, "sse_test-entity", {}, AUTH, mockAudit),
+      updateStructureEntity(db, SYSTEM_ID, ENTITY_ID, {}, AUTH, mockAudit),
     ).rejects.toThrow("Invalid update payload");
   });
 
@@ -690,7 +698,7 @@ describe("updateStructureEntity", () => {
       updateStructureEntity(
         db,
         SYSTEM_ID,
-        "sse_test-entity",
+        ENTITY_ID,
         { encryptedData: VALID_BLOB_BASE64, parentEntityId: null, sortOrder: 1, version: 1 },
         AUTH,
         mockAudit,
@@ -707,7 +715,7 @@ describe("updateStructureEntity", () => {
       updateStructureEntity(
         db,
         SYSTEM_ID,
-        "sse_missing",
+        MISSING_ENTITY_ID,
         { encryptedData: VALID_BLOB_BASE64, parentEntityId: null, sortOrder: 1, version: 1 },
         AUTH,
         mockAudit,
@@ -729,7 +737,7 @@ describe("archiveStructureEntity", () => {
     ]);
 
     await expect(
-      archiveStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit),
+      archiveStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit),
     ).resolves.toBeUndefined();
   });
 });
@@ -748,7 +756,7 @@ describe("restoreStructureEntity", () => {
       makeStructureEntityRow({ archived: false, archivedAt: null, version: 2 }),
     ]);
 
-    const result = await restoreStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit);
+    const result = await restoreStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit);
 
     expect(result.id).toBe("sse_test-entity");
     expect(result.archived).toBe(false);
@@ -773,7 +781,7 @@ describe("deleteStructureEntity", () => {
       .mockResolvedValueOnce([{ count: 0 }]); // associations
 
     await expect(
-      deleteStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit),
+      deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit),
     ).resolves.toBeUndefined();
     expect(mockAudit).toHaveBeenCalled();
   });
@@ -785,7 +793,7 @@ describe("deleteStructureEntity", () => {
     chain.for.mockResolvedValueOnce([]);
 
     await expect(
-      deleteStructureEntity(db, SYSTEM_ID, "sse_missing", AUTH, mockAudit),
+      deleteStructureEntity(db, SYSTEM_ID, MISSING_ENTITY_ID, AUTH, mockAudit),
     ).rejects.toThrow("Structure entity not found");
   });
 
@@ -799,9 +807,9 @@ describe("deleteStructureEntity", () => {
       .mockResolvedValueOnce([{ count: 0 }]) // member links
       .mockResolvedValueOnce([{ count: 0 }]); // associations
 
-    await expect(
-      deleteStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit),
-    ).rejects.toThrow("Structure entity has dependents");
+    await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity has dependents",
+    );
   });
 
   it("throws HAS_DEPENDENTS when entity has member links", async () => {
@@ -814,9 +822,9 @@ describe("deleteStructureEntity", () => {
       .mockResolvedValueOnce([{ count: 1 }]) // member links
       .mockResolvedValueOnce([{ count: 0 }]); // associations
 
-    await expect(
-      deleteStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit),
-    ).rejects.toThrow("Structure entity has dependents");
+    await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity has dependents",
+    );
   });
 
   it("throws HAS_DEPENDENTS when entity has associations", async () => {
@@ -829,9 +837,9 @@ describe("deleteStructureEntity", () => {
       .mockResolvedValueOnce([{ count: 0 }]) // member links
       .mockResolvedValueOnce([{ count: 5 }]); // associations
 
-    await expect(
-      deleteStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit),
-    ).rejects.toThrow("Structure entity has dependents");
+    await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity has dependents",
+    );
   });
 
   it("throws HAS_DEPENDENTS with multiple dependent types", async () => {
@@ -844,9 +852,9 @@ describe("deleteStructureEntity", () => {
       .mockResolvedValueOnce([{ count: 2 }]) // member links
       .mockResolvedValueOnce([{ count: 3 }]); // associations
 
-    await expect(
-      deleteStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit),
-    ).rejects.toThrow("Structure entity has dependents");
+    await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity has dependents",
+    );
   });
 });
 

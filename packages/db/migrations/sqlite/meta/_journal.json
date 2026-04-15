@@ -8,6 +8,13 @@
       "when": 1776163020895,
       "tag": "0000_absent_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776177539545,
+      "tag": "0001_spooky_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

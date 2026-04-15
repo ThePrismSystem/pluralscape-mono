@@ -170,6 +170,58 @@ describe("createTimerConfig", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
+  it("computes nextCheckInAt when enabled with intervalMinutes", async () => {
+    const row = makeTimerRow({ intervalMinutes: 15 });
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([row]);
+
+    const result = await createTimerConfig(
+      db,
+      SYSTEM_ID,
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        intervalMinutes: 15,
+      },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.intervalMinutes).toBe(15);
+    expect(result.enabled).toBe(true);
+    // values() receives the insert payload including a computed nextCheckInAt
+    const insertPayload = chain.values.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(insertPayload.nextCheckInAt).toBeTypeOf("number");
+  });
+
+  it("computes nextCheckInAt with waking hours in create", async () => {
+    const row = makeTimerRow({
+      intervalMinutes: 30,
+      wakingHoursOnly: true,
+      wakingStart: "08:00",
+      wakingEnd: "22:00",
+    });
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([row]);
+
+    const result = await createTimerConfig(
+      db,
+      SYSTEM_ID,
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: "08:00",
+        wakingEnd: "22:00",
+      },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.intervalMinutes).toBe(30);
+    const insertPayload = chain.values.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(insertPayload.nextCheckInAt).toBeTypeOf("number");
+  });
+
   it("throws when INSERT returns no rows", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
@@ -546,6 +598,92 @@ describe("updateTimerConfig", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("recomputes nextCheckInAt when scheduling fields change", async () => {
+    const { db, chain } = mockDb();
+    // First select (current row lookup) returns a row with enabled + interval
+    chain.limit.mockResolvedValueOnce([makeTimerRow({ enabled: true, intervalMinutes: 30 })]);
+    // update().set().where().returning() returns the updated row
+    chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2, intervalMinutes: 60 })]);
+
+    const result = await updateTimerConfig(
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        version: 1,
+        intervalMinutes: 60,
+      },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.intervalMinutes).toBe(60);
+    expect(result.version).toBe(2);
+  });
+
+  it("clears nextCheckInAt when disabling timer in update", async () => {
+    const { db, chain } = mockDb();
+    // Current row has enabled=true, interval set
+    chain.limit.mockResolvedValueOnce([makeTimerRow({ enabled: true, intervalMinutes: 30 })]);
+    // update returns updated row with enabled=false
+    chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2, enabled: false })]);
+
+    const result = await updateTimerConfig(
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        version: 1,
+        enabled: false,
+      },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.enabled).toBe(false);
+  });
+
+  it("recomputes nextCheckInAt with waking hours in update", async () => {
+    const { db, chain } = mockDb();
+    // Current row has enabled=true, interval set, and waking hours
+    chain.limit.mockResolvedValueOnce([
+      makeTimerRow({
+        enabled: true,
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: "08:00",
+        wakingEnd: "22:00",
+      }),
+    ]);
+    chain.returning.mockResolvedValueOnce([
+      makeTimerRow({
+        version: 2,
+        wakingHoursOnly: true,
+        wakingStart: "09:00",
+        wakingEnd: "21:00",
+      }),
+    ]);
+
+    const result = await updateTimerConfig(
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        version: 1,
+        wakingStart: "09:00",
+        wakingEnd: "21:00",
+      },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.wakingStart).toBe("09:00");
+    expect(result.wakingEnd).toBe("21:00");
   });
 
   it("applies partial updates with only enabled field", async () => {

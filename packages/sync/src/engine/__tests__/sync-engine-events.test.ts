@@ -343,9 +343,8 @@ describe("SyncEngine event bus integration", () => {
       const {
         configureSodium,
         createBucketKeyCache,
-        deriveMasterKey,
         generateIdentityKeypair,
-        generateSalt,
+        generateMasterKey,
         initSodium,
       } = await import("@pluralscape/crypto");
       const { WasmSodiumAdapter } = await import("@pluralscape/crypto/wasm");
@@ -358,8 +357,7 @@ describe("SyncEngine event bus integration", () => {
       configureSodium(sodium);
       await initSodium();
 
-      const salt = generateSalt();
-      const masterKey = await deriveMasterKey("event-test-password", salt, "mobile");
+      const masterKey = generateMasterKey();
       const identity = generateIdentityKeypair(masterKey);
       const bucketKeyCache = createBucketKeyCache();
 

@@ -1,7 +1,7 @@
 import { decryptBucketKey } from "./bucket-keys.js";
 import { AEAD_NONCE_BYTES } from "./crypto.constants.js";
 import { InvalidStateTransitionError, KeysLockedError } from "./errors.js";
-import { deriveMasterKey } from "./master-key.js";
+import { derivePasswordKey, unwrapMasterKey } from "./master-key-wrap.js";
 import { assertKdfMasterKey, validateKeyVersion } from "./validation.js";
 
 import type { WrappedBucketKey } from "./bucket-keys.js";
@@ -14,6 +14,7 @@ import type {
   SecurityPresetLevel,
   TimerHandle,
 } from "./lifecycle-types.js";
+import type { EncryptedPayload } from "./symmetric.js";
 import type {
   AeadKey,
   AeadNonce,
@@ -71,10 +72,24 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
 
   // ── Unlock ──────────────────────────────────────────────────────────
 
-  async unlockWithPassword(password: string, salt: PwhashSalt): Promise<void> {
+  async unlockWithPassword(
+    password: string,
+    salt: PwhashSalt,
+    encryptedMasterKey: EncryptedPayload,
+  ): Promise<void> {
     this.assertUnlockable();
 
-    const masterKey = await deriveMasterKey(password, salt, "mobile");
+    const passwordKey = await derivePasswordKey(password, salt, "mobile");
+    let masterKey: KdfMasterKey;
+    try {
+      masterKey = unwrapMasterKey(encryptedMasterKey, passwordKey);
+    } finally {
+      this.deps.sodium.memzero(passwordKey);
+    }
+
+    // Zero the encrypted master key ciphertext — no longer needed after unwrap
+    this.deps.sodium.memzero(encryptedMasterKey.ciphertext);
+
     const identityKeys = this.deps.deriveIdentityKeys(masterKey);
 
     try {
