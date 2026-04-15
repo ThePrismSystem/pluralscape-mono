@@ -4,6 +4,7 @@ import { SaltFetchSchema } from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 
+import { equalizeAntiEnumTiming } from "../../lib/anti-enum-timing.js";
 import { getDb } from "../../lib/db.js";
 import { hashEmail } from "../../lib/email-hash.js";
 import { toHex } from "../../lib/hex.js";
@@ -18,6 +19,7 @@ export const saltRoute = new Hono();
 saltRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 saltRoute.post("/", async (c) => {
+  const startTime = performance.now();
   const body = await parseJsonBody(c);
   const parsed = SaltFetchSchema.parse(body);
 
@@ -31,6 +33,7 @@ saltRoute.post("/", async (c) => {
     .limit(1);
 
   if (account) {
+    await equalizeAntiEnumTiming(startTime);
     return c.json(envelope({ kdfSalt: account.kdfSalt }));
   }
 
@@ -42,5 +45,6 @@ saltRoute.post("/", async (c) => {
   const emailBytes = new TextEncoder().encode(parsed.email.toLowerCase().trim());
 
   const fakeSalt = adapter.genericHash(PWHASH_SALT_BYTES, emailBytes, secretBytes);
+  await equalizeAntiEnumTiming(startTime);
   return c.json(envelope({ kdfSalt: toHex(fakeSalt) }));
 });

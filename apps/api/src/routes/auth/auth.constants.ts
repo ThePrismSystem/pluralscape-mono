@@ -63,3 +63,10 @@ export const ANTI_ENUM_TARGET_MS = 500;
 
 /** Expected length of EMAIL_HASH_PEPPER hex string (32 bytes = 64 hex chars). */
 export const PEPPER_HEX_LENGTH = 64;
+
+// Fail-closed: refuse to start in production without anti-enum salt secret
+if (process.env["NODE_ENV"] === "production" && !process.env[ANTI_ENUM_SALT_SECRET_ENV]) {
+  throw new Error(
+    `${ANTI_ENUM_SALT_SECRET_ENV} must be set in production to prevent email enumeration`,
+  );
+}
