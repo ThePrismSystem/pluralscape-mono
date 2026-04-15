@@ -42,7 +42,7 @@ export async function setPin(
 
   assertSystemOwnership(systemId, auth);
 
-  const pinHash = await hashPinOffload(parsed.data.pin, "server");
+  const pinHash = await hashPinOffload(parsed.data.pin);
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx

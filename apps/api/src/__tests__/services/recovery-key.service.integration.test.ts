@@ -220,7 +220,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
         row.encryptedMasterKey instanceof Uint8Array
           ? row.encryptedMasterKey
           : new Uint8Array(row.encryptedMasterKey);
-      expect(stored).toEqual(newBlob);
+      expect(stored).toEqual(new Uint8Array(newBlob));
     });
 
     it("throws ValidationError on wrong authKey", async () => {
@@ -383,7 +383,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
         rkRow.encryptedMasterKey instanceof Uint8Array
           ? rkRow.encryptedMasterKey
           : new Uint8Array(rkRow.encryptedMasterKey);
-      expect(stored).toEqual(newBlob);
+      expect(stored).toEqual(new Uint8Array(newBlob));
     });
 
     it("creates a new session with mobile platform timeouts", async () => {

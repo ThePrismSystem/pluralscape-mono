@@ -100,7 +100,7 @@ describe("setAccountPin", () => {
 
     await setAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit);
 
-    expect(vi.mocked(hashPinOffload)).toHaveBeenCalledWith(VALID_PIN, "server");
+    expect(vi.mocked(hashPinOffload)).toHaveBeenCalledWith(VALID_PIN);
     expect(mockAudit).toHaveBeenCalledWith(
       mockTx,
       expect.objectContaining({ eventType: "settings.pin-set" }),

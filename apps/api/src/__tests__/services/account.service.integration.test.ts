@@ -21,13 +21,20 @@ import {
   getAccountInfo,
   updateAccountSettings,
 } from "../../services/account.service.js";
-import { registerAccount, ValidationError } from "../../services/auth.service.js";
-import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
+import { ValidationError } from "../../services/auth.service.js";
+import { asDb, noopAudit, registerTestAccount, spyAudit } from "../helpers/integration-setup.js";
 
 import type { AccountId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
+
+/** Dummy encrypted blob hex (48 bytes) — content irrelevant for account service tests. */
+const DUMMY_BLOB = "aa".repeat(48);
+/** Dummy KDF salt hex (16 bytes = 32 hex chars). */
+const DUMMY_KDF_SALT = "bb".repeat(16);
+/** Dummy challenge signature hex (64 bytes). */
+const DUMMY_SIG = "cc".repeat(64);
 
 describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
   let client: PGlite;
@@ -58,40 +65,16 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     await db.delete(accounts);
   });
 
-  /** Register a fresh account and return its ID plus the password used. */
-  async function registerTestAccount(
-    overrides: { email?: string; password?: string } = {},
-  ): Promise<{ accountId: AccountId; password: string; sessionToken: string }> {
-    const email = overrides.email ?? `test-${crypto.randomUUID()}@example.com`;
-    const password = overrides.password ?? `P@ssw0rd!${crypto.randomUUID()}`;
-    const result = await registerAccount(
-      asDb(db),
-      {
-        email,
-        password,
-        recoveryKeyBackupConfirmed: true,
-        accountType: "system",
-      },
-      "web",
-      noopAudit,
-    );
-    return {
-      accountId: result.accountId as AccountId,
-      password,
-      sessionToken: result.sessionToken,
-    };
-  }
-
   // ── getAccountInfo ──────────────────────────────────────────────
 
   describe("getAccountInfo", () => {
     it("returns account info for a registered account", async () => {
-      const { accountId } = await registerTestAccount();
+      const reg = await registerTestAccount(asDb(db));
 
-      const info = await getAccountInfo(asDb(db), accountId);
+      const info = await getAccountInfo(asDb(db), reg.accountId as AccountId);
 
       expect(info).not.toBeNull();
-      expect(info?.accountId).toBe(accountId);
+      expect(info?.accountId).toBe(reg.accountId);
       expect(info?.accountType).toBe("system");
       expect(info?.systemId).toMatch(/^sys_/);
       expect(typeof info?.createdAt).toBe("number");
@@ -111,16 +94,22 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
   // ── changePassword ──────────────────────────────────────────────
 
   describe("changePassword", () => {
-    it("succeeds with correct current password", async () => {
-      const { accountId, password } = await registerTestAccount();
+    it("succeeds with correct current auth key", async () => {
+      const reg = await registerTestAccount(asDb(db));
 
       const audit = spyAudit();
-      const newPassword = `NewP@ss!${crypto.randomUUID()}`;
+      const newAuthKey = "dd".repeat(32);
 
       const result = await changePassword(
         asDb(db),
-        accountId,
-        { currentPassword: password, newPassword },
+        reg.accountId as AccountId,
+        {
+          oldAuthKey: reg.authKeyHex,
+          newAuthKey,
+          newKdfSalt: DUMMY_KDF_SALT,
+          newEncryptedMasterKey: DUMMY_BLOB,
+          challengeSignature: DUMMY_SIG,
+        },
         audit,
       );
 
@@ -131,14 +120,20 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       expect(audit.calls[0]?.eventType).toBe("auth.password-changed");
     });
 
-    it("throws ValidationError with wrong current password", async () => {
-      const { accountId } = await registerTestAccount();
+    it("throws ValidationError with wrong current auth key", async () => {
+      const reg = await registerTestAccount(asDb(db));
 
       await expect(
         changePassword(
           asDb(db),
-          accountId,
-          { currentPassword: "WrongPassword123!", newPassword: "AnotherP@ss1" },
+          reg.accountId as AccountId,
+          {
+            oldAuthKey: "ff".repeat(32),
+            newAuthKey: "ee".repeat(32),
+            newKdfSalt: DUMMY_KDF_SALT,
+            newEncryptedMasterKey: DUMMY_BLOB,
+            challengeSignature: DUMMY_SIG,
+          },
           noopAudit,
         ),
       ).rejects.toThrow(ValidationError);
@@ -148,16 +143,16 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
   // ── changeEmail ──────────────────────────────────────────────────
 
   describe("changeEmail", () => {
-    it("succeeds with correct password and new email", async () => {
-      const { accountId, password } = await registerTestAccount();
+    it("succeeds with correct auth key and new email", async () => {
+      const reg = await registerTestAccount(asDb(db));
 
       const audit = spyAudit();
       const newEmail = `changed-${crypto.randomUUID()}@example.com`;
 
       const result = await changeEmail(
         asDb(db),
-        accountId,
-        { email: newEmail, currentPassword: password },
+        reg.accountId as AccountId,
+        { email: newEmail, authKey: reg.authKeyHex },
         audit,
       );
 
@@ -166,14 +161,14 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       expect(audit.calls[0]?.eventType).toBe("auth.email-changed");
     });
 
-    it("throws ValidationError with wrong password", async () => {
-      const { accountId } = await registerTestAccount();
+    it("throws ValidationError with wrong auth key", async () => {
+      const reg = await registerTestAccount(asDb(db));
 
       await expect(
         changeEmail(
           asDb(db),
-          accountId,
-          { email: `new-${crypto.randomUUID()}@example.com`, currentPassword: "WrongPassword!" },
+          reg.accountId as AccountId,
+          { email: `new-${crypto.randomUUID()}@example.com`, authKey: "ff".repeat(32) },
           noopAudit,
         ),
       ).rejects.toThrow(ValidationError);
@@ -184,12 +179,12 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
   describe("updateAccountSettings", () => {
     it("enables audit log IP tracking", async () => {
-      const { accountId } = await registerTestAccount();
+      const reg = await registerTestAccount(asDb(db));
 
       const audit = spyAudit();
       const result = await updateAccountSettings(
         asDb(db),
-        accountId,
+        reg.accountId as AccountId,
         { auditLogIpTracking: true, version: 1 },
         audit,
       );
@@ -202,12 +197,12 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     });
 
     it("throws ConcurrencyError on version mismatch", async () => {
-      const { accountId } = await registerTestAccount();
+      const reg = await registerTestAccount(asDb(db));
 
       await expect(
         updateAccountSettings(
           asDb(db),
-          accountId,
+          reg.accountId as AccountId,
           { auditLogIpTracking: true, version: 99 },
           noopAudit,
         ),
@@ -215,11 +210,11 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     });
 
     it("roundtrips enable then disable", async () => {
-      const { accountId } = await registerTestAccount();
+      const reg = await registerTestAccount(asDb(db));
 
       const r1 = await updateAccountSettings(
         asDb(db),
-        accountId,
+        reg.accountId as AccountId,
         { auditLogIpTracking: true, version: 1 },
         noopAudit,
       );
@@ -228,14 +223,14 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       const r2 = await updateAccountSettings(
         asDb(db),
-        accountId,
+        reg.accountId as AccountId,
         { auditLogIpTracking: false, version: 2 },
         noopAudit,
       );
       expect(r2.auditLogIpTracking).toBe(false);
       expect(r2.version).toBe(3);
 
-      const info = await getAccountInfo(asDb(db), accountId);
+      const info = await getAccountInfo(asDb(db), reg.accountId as AccountId);
       expect(info?.auditLogIpTracking).toBe(false);
       expect(info?.version).toBe(3);
     });

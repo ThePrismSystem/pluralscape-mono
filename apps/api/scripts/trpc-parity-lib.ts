@@ -577,7 +577,8 @@ export function normalizePath(p: string): string {
 /** Manual overrides for routes that don't follow conventions. */
 const MAPPING_OVERRIDES: Record<string, string> = {
   // Auth routes
-  "POST /v1/auth/register": "auth.register",
+  "POST /v1/auth/register/initiate": "auth.registrationInitiate",
+  "POST /v1/auth/register/commit": "auth.registrationCommit",
   "POST /v1/auth/login": "auth.login",
   "POST /v1/auth/logout": "auth.logout",
   "GET /v1/auth/sessions": "auth.session.list",

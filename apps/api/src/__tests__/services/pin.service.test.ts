@@ -88,7 +88,7 @@ describe("pin service", () => {
 
       await setPin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit);
 
-      expect(vi.mocked(hashPinOffload)).toHaveBeenCalledWith("1234", "server");
+      expect(vi.mocked(hashPinOffload)).toHaveBeenCalledWith("1234");
       expect(mockAudit).toHaveBeenCalledWith(
         db,
         expect.objectContaining({ eventType: "settings.pin-set" }),

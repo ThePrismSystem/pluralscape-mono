@@ -88,7 +88,7 @@ export const authRouter = router({
     .input(
       z.object({
         email: z.email(),
-        password: z.string().min(1),
+        authKey: z.string().min(1),
         platform: PlatformSchema,
       }),
     )

@@ -49,7 +49,7 @@ describe("DELETE /account", () => {
     const res = await app.request("/account", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: "mypassword123" }),
+      body: JSON.stringify({ authKey: "aa".repeat(32) }),
     });
 
     expect(res.status).toBe(204);
@@ -63,12 +63,12 @@ describe("DELETE /account", () => {
     await app.request("/account", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: "mypassword123" }),
+      body: JSON.stringify({ authKey: "aa".repeat(32) }),
     });
 
     expect(vi.mocked(deleteAccount)).toHaveBeenCalledWith(
       {},
-      { password: "mypassword123" },
+      { authKey: "aa".repeat(32) },
       expect.objectContaining({ accountId: "acct_test001" }),
       expect.any(Function),
     );

@@ -56,7 +56,7 @@ export async function setAccountPin(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  const pinHash = await hashPinOffload(parsed.data.pin, "server");
+  const pinHash = await hashPinOffload(parsed.data.pin);
 
   await withAccountTransaction(db, accountId, async (tx) => {
     const systemId = await resolveSystemId(tx, accountId);

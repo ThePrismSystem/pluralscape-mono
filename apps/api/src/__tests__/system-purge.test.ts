@@ -8,11 +8,12 @@ import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ───────────────────────────────────────────────────────────
 
-const mockVerifyPassword = vi.fn<(hash: string, password: string) => Promise<boolean>>();
+const mockVerifyAuthKey = vi.fn<(authKey: Uint8Array, storedHash: Uint8Array) => boolean>();
 
-vi.mock("../lib/pwhash-offload.js", () => ({
-  verifyPasswordOffload: (hash: string, password: string): Promise<boolean> =>
-    mockVerifyPassword(hash, password),
+vi.mock("@pluralscape/crypto", () => ({
+  fromHex: vi.fn((hex: string) => new TextEncoder().encode(hex)),
+  verifyAuthKey: (authKey: Uint8Array, storedHash: Uint8Array): boolean =>
+    mockVerifyAuthKey(authKey, storedHash),
 }));
 
 vi.mock("../lib/rls-context.js", () => ({
@@ -64,7 +65,7 @@ describe("purgeSystem", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { password: "test123" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
     ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND", message: "System not found" }));
   });
 
@@ -73,7 +74,7 @@ describe("purgeSystem", () => {
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: false }]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { password: "test123" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
     ).rejects.toThrow(
       expect.objectContaining({
         code: "NOT_ARCHIVED",
@@ -82,14 +83,14 @@ describe("purgeSystem", () => {
     );
   });
 
-  it("throws VALIDATION_ERROR when password is incorrect", async () => {
+  it("throws VALIDATION_ERROR when auth key is incorrect", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: true }]);
-    chain.limit.mockResolvedValueOnce([{ passwordHash: "hashed" }]);
-    mockVerifyPassword.mockReturnValue(Promise.resolve(false));
+    chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(32) }]);
+    mockVerifyAuthKey.mockReturnValue(false);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { password: "wrong" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "wrong" }, stubAuth(), stubAudit()),
     ).rejects.toThrow(
       expect.objectContaining({ code: "VALIDATION_ERROR", message: "Incorrect password" }),
     );
@@ -101,7 +102,7 @@ describe("purgeSystem", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { password: "test123" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
     ).rejects.toThrow(
       expect.objectContaining({ code: "VALIDATION_ERROR", message: "Account not found" }),
     );
@@ -110,12 +111,12 @@ describe("purgeSystem", () => {
   it("deletes system and writes audit on success", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: true }]);
-    chain.limit.mockResolvedValueOnce([{ passwordHash: "hashed" }]);
-    mockVerifyPassword.mockReturnValue(Promise.resolve(true));
+    chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(32) }]);
+    mockVerifyAuthKey.mockReturnValue(true);
     chain.returning.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
 
     const audit = stubAudit();
-    await purgeSystem(db, SYSTEM_ID, { password: "correct" }, stubAuth(), audit);
+    await purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), audit);
 
     expect(audit).toHaveBeenCalledWith(db, expect.objectContaining({ eventType: "system.purged" }));
     expect(chain.delete).toHaveBeenCalled();
@@ -124,16 +125,16 @@ describe("purgeSystem", () => {
   it("throws NOT_FOUND when delete returns no rows", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: true }]);
-    chain.limit.mockResolvedValueOnce([{ passwordHash: "hashed" }]);
-    mockVerifyPassword.mockReturnValue(Promise.resolve(true));
+    chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(32) }]);
+    mockVerifyAuthKey.mockReturnValue(true);
     chain.returning.mockResolvedValueOnce([]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { password: "correct" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
     ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
   });
 
-  it("rejects invalid body (missing password)", async () => {
+  it("rejects invalid body (missing authKey)", async () => {
     const { db } = mockDb();
 
     await expect(purgeSystem(db, SYSTEM_ID, {}, stubAuth(), stubAudit())).rejects.toThrow();

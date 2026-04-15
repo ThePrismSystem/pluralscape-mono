@@ -519,7 +519,7 @@ describe("account router", () => {
   // ── deleteAccount ─────────────────────────────────────────────────
 
   describe("account.deleteAccount", () => {
-    const input = { password: "MyPassword1!", confirmed: true as const };
+    const input = { authKey: "aa".repeat(32) };
 
     it("calls deleteAccount service and returns success", async () => {
       const { deleteAccount: deleteAccountSvc } =

@@ -11,11 +11,17 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-// Mock password verification — real Argon2id requires worker threads
-vi.mock("../../lib/pwhash-offload.js", () => ({
-  verifyPasswordOffload: (_hash: string, password: string): Promise<boolean> =>
-    Promise.resolve(password === "correct-password"),
-}));
+// Mock auth key verification — real Argon2id/sodium requires worker threads
+const mockVerifyAuthKey = vi.fn<() => boolean>().mockReturnValue(true);
+
+vi.mock("@pluralscape/crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/crypto")>();
+  return {
+    ...actual,
+    fromHex: actual.fromHex,
+    verifyAuthKey: (): boolean => mockVerifyAuthKey(),
+  };
+});
 
 import { purgeSystem } from "../../services/system-purge.service.js";
 import {
@@ -139,7 +145,7 @@ describe("system-purge.service (PGlite integration)", () => {
       const { systemId, auth } = await setupSystemWithDependents();
       const audit = spyAudit();
 
-      await purgeSystem(asDb(db), systemId, { password: "correct-password" }, auth, audit);
+      await purgeSystem(asDb(db), systemId, { authKey: "aabbccdd" }, auth, audit);
 
       // Verify system is gone
       const systemRows = await db
@@ -187,7 +193,7 @@ describe("system-purge.service (PGlite integration)", () => {
       const otherMemberId = await pgInsertMember(db, otherSystemId);
 
       // Purge the first system
-      await purgeSystem(asDb(db), systemId, { password: "correct-password" }, auth, noopAudit);
+      await purgeSystem(asDb(db), systemId, { authKey: "aabbccdd" }, auth, noopAudit);
 
       // Other system and its members are still present
       const otherSystemRows = await db
@@ -209,18 +215,19 @@ describe("system-purge.service (PGlite integration)", () => {
       const auth = makeAuth(accountId, systemId);
 
       await assertApiError(
-        purgeSystem(asDb(db), systemId, { password: "correct-password" }, auth, noopAudit),
+        purgeSystem(asDb(db), systemId, { authKey: "aabbccdd" }, auth, noopAudit),
         "NOT_ARCHIVED",
         409,
         "must be archived",
       );
     });
 
-    it("rejects purge with incorrect password", async () => {
+    it("rejects purge with incorrect auth key", async () => {
       const { systemId, auth } = await setupSystemWithDependents();
+      mockVerifyAuthKey.mockReturnValueOnce(false);
 
       await assertApiError(
-        purgeSystem(asDb(db), systemId, { password: "wrong-password" }, auth, noopAudit),
+        purgeSystem(asDb(db), systemId, { authKey: "ff".repeat(32) }, auth, noopAudit),
         "VALIDATION_ERROR",
         400,
         "Incorrect password",
@@ -233,7 +240,7 @@ describe("system-purge.service (PGlite integration)", () => {
       const auth = makeAuth(accountId, fakeSystemId);
 
       await assertApiError(
-        purgeSystem(asDb(db), fakeSystemId, { password: "correct-password" }, auth, noopAudit),
+        purgeSystem(asDb(db), fakeSystemId, { authKey: "aabbccdd" }, auth, noopAudit),
         "NOT_FOUND",
         404,
       );

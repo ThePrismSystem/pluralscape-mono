@@ -175,7 +175,7 @@ describe("auth router", () => {
   // ── login ─────────────────────────────────────────────────────────
 
   describe("auth.login", () => {
-    const loginInput = { email: "test@example.com", password: "SuperSecret123!" };
+    const loginInput = { email: "test@example.com", authKey: "aa".repeat(32) };
 
     const loginResult = {
       sessionToken: "tok_xyz",
@@ -275,7 +275,7 @@ describe("auth router", () => {
       vi.mocked(loginAccount).mockRejectedValue(new Error("unexpected db failure"));
       const caller = createCaller(null);
       await expect(
-        caller.auth.login({ email: "test@example.com", password: "Secret123!" }),
+        caller.auth.login({ email: "test@example.com", authKey: "aa".repeat(32) }),
       ).rejects.toThrow(expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }));
     });
   });

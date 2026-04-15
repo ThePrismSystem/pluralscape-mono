@@ -1,3 +1,4 @@
+import { fromHex, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, sessions } from "@pluralscape/db/pg";
 import { DeleteAccountBodySchema } from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
@@ -5,7 +6,6 @@ import { eq } from "drizzle-orm";
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { verifyPasswordOffload } from "../lib/pwhash-offload.js";
 import { withAccountTransaction } from "../lib/rls-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -17,7 +17,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  *
  * The DB schema uses CASCADE on account_id for most tables, so deleting the
  * account row removes systems, members, sessions, keys, and all dependent data.
- * Password confirmation prevents accidental or unauthorized purges.
+ * Auth key confirmation prevents accidental or unauthorized purges.
  */
 export async function deleteAccount(
   db: PostgresJsDatabase,
@@ -25,14 +25,14 @@ export async function deleteAccount(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  const { password } = DeleteAccountBodySchema.parse(params);
+  const parsed = DeleteAccountBodySchema.parse(params);
 
   assertAccountOwnership(auth.accountId, auth);
 
   await withAccountTransaction(db, auth.accountId, async (tx) => {
-    // Fetch password hash for verification
+    // Fetch auth key hash for verification
     const [account] = await tx
-      .select({ passwordHash: accounts.passwordHash })
+      .select({ authKeyHash: accounts.authKeyHash })
       .from(accounts)
       .where(eq(accounts.id, auth.accountId))
       .limit(1);
@@ -41,7 +41,11 @@ export async function deleteAccount(
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Account not found");
     }
 
-    const valid = await verifyPasswordOffload(account.passwordHash, password);
+    const authKeyHash =
+      account.authKeyHash instanceof Uint8Array
+        ? account.authKeyHash
+        : new Uint8Array(account.authKeyHash);
+    const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
     if (!valid) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect password");
     }

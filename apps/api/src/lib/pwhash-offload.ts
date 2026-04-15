@@ -1,7 +1,7 @@
 /**
  * Async wrapper around the pwhash worker thread pool.
  *
- * Provides non-blocking hashPin/verifyPin/hashPassword/verifyPassword
+ * Provides non-blocking hashPin/verifyPin/deriveTransferKey
  * by dispatching work to a small pool of worker threads that run
  * libsodium's Argon2id.
  */
@@ -107,8 +107,8 @@ function dispatch(message: Record<string, unknown>): Promise<unknown> {
   });
 }
 
-export async function hashPinOffload(pin: string, profile: "server"): Promise<string> {
-  return dispatch({ op: "hash", pin, profile }) as Promise<string>;
+export async function hashPinOffload(pin: string): Promise<string> {
+  return dispatch({ op: "hash", pin }) as Promise<string>;
 }
 
 export async function verifyPinOffload(hash: string, pin: string): Promise<boolean> {
@@ -121,14 +121,6 @@ export async function verifyPinOffload(hash: string, pin: string): Promise<boole
  * The branded AeadKey type is lost across the structured-clone boundary —
  * callers must re-assert via assertAeadKey.
  */
-export async function hashPasswordOffload(password: string, profile: "server"): Promise<string> {
-  return dispatch({ op: "hashPassword", password, profile }) as Promise<string>;
-}
-
-export async function verifyPasswordOffload(hash: string, password: string): Promise<boolean> {
-  return dispatch({ op: "verifyPassword", hash, password }) as Promise<boolean>;
-}
-
 export async function deriveTransferKeyOffload(
   code: string,
   salt: Uint8Array,

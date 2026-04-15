@@ -1,10 +1,10 @@
+import { fromHex, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, systems } from "@pluralscape/db/pg";
 import { PurgeSystemBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { verifyPasswordOffload } from "../lib/pwhash-offload.js";
 import { withTenantTransaction } from "../lib/rls-context.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
@@ -18,7 +18,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  *
  * Preconditions:
  * - System must be archived (soft-deleted) first
- * - Password confirmation required to prevent accidental purge
+ * - Auth key confirmation required to prevent accidental purge
  *
  * CASCADE on system_id FKs handles all dependent data removal.
  */
@@ -29,7 +29,7 @@ export async function purgeSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  const { password } = PurgeSystemBodySchema.parse(params);
+  const parsed = PurgeSystemBodySchema.parse(params);
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify system exists and belongs to account
@@ -52,9 +52,9 @@ export async function purgeSystem(
       );
     }
 
-    // Verify password
+    // Verify auth key
     const [account] = await tx
-      .select({ passwordHash: accounts.passwordHash })
+      .select({ authKeyHash: accounts.authKeyHash })
       .from(accounts)
       .where(eq(accounts.id, auth.accountId))
       .limit(1);
@@ -63,7 +63,11 @@ export async function purgeSystem(
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Account not found");
     }
 
-    const valid = await verifyPasswordOffload(account.passwordHash, password);
+    const authKeyHash =
+      account.authKeyHash instanceof Uint8Array
+        ? account.authKeyHash
+        : new Uint8Array(account.authKeyHash);
+    const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
     if (!valid) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect password");
     }
