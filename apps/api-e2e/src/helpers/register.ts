@@ -77,7 +77,11 @@ export async function registerAccount(
   const passwordBytes = new TextEncoder().encode(password);
   const saltBytes = fromHex(initData.kdfSalt);
   assertPwhashSalt(saltBytes);
-  const { authKey, passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, saltBytes);
+  const { authKey, passwordKey } = await deriveAuthAndPasswordKeys(
+    passwordBytes,
+    saltBytes,
+    password.length,
+  );
   const authKeyHex = toHex(authKey);
 
   const masterKey = generateMasterKey();
@@ -86,6 +90,7 @@ export async function registerAccount(
   const encryptedSigningPrivateKey = encryptPrivateKey(signing.secretKey, masterKey);
   const encryptedEncryptionPrivateKey = encryptPrivateKey(encryption.secretKey, masterKey);
   const recovery = generateRecoveryKey(masterKey);
+  const recoveryKeyHashHex = toHex(recovery.recoveryKeyHash);
   const nonceBytes = fromHex(initData.challengeNonce);
   const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
@@ -102,6 +107,7 @@ export async function registerAccount(
       recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
       challengeSignature: toHex(challengeSignature),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: recoveryKeyHashHex,
     },
   });
   if (!commitRes.ok()) {

@@ -12,7 +12,6 @@ import {
   generateMasterKey,
   generateRecoveryKey,
   initSodium,
-  serializePublicKey,
   signChallenge,
   toHex,
   wrapMasterKey,
@@ -87,7 +86,11 @@ export async function registerTestAccount(): Promise<RegisteredAccount> {
   const passwordBytes = new TextEncoder().encode(password);
   const saltBytes = fromHex(kdfSalt);
   assertPwhashSalt(saltBytes);
-  const { authKey, passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, saltBytes);
+  const { authKey, passwordKey } = await deriveAuthAndPasswordKeys(
+    passwordBytes,
+    saltBytes,
+    password.length,
+  );
 
   const masterKey = generateMasterKey();
   const encryptedMasterKey = wrapMasterKey(masterKey, passwordKey);
@@ -97,6 +100,7 @@ export async function registerTestAccount(): Promise<RegisteredAccount> {
   const encryptedEncryptionPrivateKey = encryptPrivateKey(encryption.secretKey, masterKey);
 
   const recovery = generateRecoveryKey(masterKey);
+  const recoveryKeyHashHex = toHex(recovery.recoveryKeyHash);
 
   const nonceBytes = fromHex(challengeNonce);
   const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
@@ -111,11 +115,12 @@ export async function registerTestAccount(): Promise<RegisteredAccount> {
       encryptedMasterKey: serializePayloadHex(encryptedMasterKey),
       encryptedSigningPrivateKey: serializePayloadHex(encryptedSigningPrivateKey),
       encryptedEncryptionPrivateKey: serializePayloadHex(encryptedEncryptionPrivateKey),
-      publicSigningKey: serializePublicKey(signing.publicKey),
-      publicEncryptionKey: serializePublicKey(encryption.publicKey),
+      publicSigningKey: toHex(signing.publicKey),
+      publicEncryptionKey: toHex(encryption.publicKey),
       recoveryEncryptedMasterKey: serializePayloadHex(recovery.encryptedMasterKey),
       challengeSignature: toHex(challengeSignature),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: recoveryKeyHashHex,
     }),
   });
 
