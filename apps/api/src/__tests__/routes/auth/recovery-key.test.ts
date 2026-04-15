@@ -88,7 +88,8 @@ describe("Cache-Control", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -177,7 +178,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -198,7 +200,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -219,7 +222,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -254,7 +258,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -275,7 +280,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -283,7 +289,12 @@ describe("POST /auth/recovery-key/regenerate", () => {
     expect(vi.mocked(regenerateRecoveryKeyBackup)).toHaveBeenCalledWith(
       {},
       "acct_test001",
-      { authKey: "a".repeat(64), newRecoveryEncryptedMasterKey: "deadbeef", confirmed: true },
+      {
+        authKey: "a".repeat(64),
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
+        confirmed: true,
+      },
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
@@ -305,7 +316,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -326,7 +338,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json", "User-Agent": "test-agent/1.0" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -350,7 +363,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -374,7 +388,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });
@@ -392,7 +407,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         authKey: "a".repeat(64),
-        newRecoveryEncryptedMasterKey: "deadbeef",
+        newRecoveryEncryptedMasterKey: "bb".repeat(72),
+        recoveryKeyHash: "dd".repeat(32),
         confirmed: true,
       }),
     });

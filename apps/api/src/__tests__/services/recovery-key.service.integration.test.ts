@@ -1,7 +1,7 @@
 import nodeCrypto from "node:crypto";
 
 import { PGlite } from "@electric-sql/pglite";
-import { hashAuthKey, initSodium } from "@pluralscape/crypto";
+import { hashAuthKey, hashRecoveryKey, initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { and, eq, isNull } from "drizzle-orm";
@@ -70,13 +70,15 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
   /**
    * Insert a minimal test account directly into the DB using real crypto.
-   * Returns ids, email, and the raw authKey hex (so tests can pass it in params).
+   * Returns ids, email, the raw authKey hex, and recoveryKeyHex (so tests
+   * can derive the matching recoveryKeyHash for requests).
    */
   async function insertTestAccount(overrides: { email?: string } = {}): Promise<{
     accountId: AccountId;
     email: string;
     authKeyHex: string;
     recoveryKeyId: string;
+    recoveryKeyHex: string;
   }> {
     const email = overrides.email ?? `test-${crypto.randomUUID()}@example.com`;
     const accountId = `acct_${crypto.randomUUID()}` as AccountId;
@@ -86,6 +88,8 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     const encryptedMasterKey = randBytes(72);
     const emailHash = hashEmail(email);
     const recoveryEncMasterKey = randBytes(72);
+    const recoveryKeyBytes = randBytes(32);
+    const recoveryKeyHashBytes = hashRecoveryKey(recoveryKeyBytes);
     const timestamp = Date.now();
     const recoveryKeyId = `rk_${crypto.randomUUID()}`;
 
@@ -104,6 +108,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       id: recoveryKeyId,
       accountId,
       encryptedMasterKey: recoveryEncMasterKey,
+      recoveryKeyHash: recoveryKeyHashBytes,
       createdAt: timestamp,
     });
 
@@ -112,16 +117,24 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       email,
       authKeyHex: toHex(authKeyBytes),
       recoveryKeyId,
+      recoveryKeyHex: toHex(recoveryKeyBytes),
     };
   }
 
-  /** Generate valid new-blob params for resetPasswordWithRecoveryKey. */
-  function makeResetParams(email: string): {
+  /**
+   * Generate valid new-blob params for resetPasswordWithRecoveryKey.
+   * `recoveryKeyHex` is the raw recovery key — its BLAKE2b hash is sent as `recoveryKeyHash`.
+   */
+  function makeResetParams(
+    email: string,
+    recoveryKeyHex: string,
+  ): {
     email: string;
     newAuthKey: string;
     newKdfSalt: string;
     newEncryptedMasterKey: string;
     newRecoveryEncryptedMasterKey: string;
+    recoveryKeyHash: string;
     challengeSignature: string;
   } {
     return {
@@ -130,6 +143,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       newKdfSalt: toHex(randBytes(16)),
       newEncryptedMasterKey: toHex(randBytes(72)),
       newRecoveryEncryptedMasterKey: toHex(randBytes(72)),
+      recoveryKeyHash: recoveryKeyHex,
       challengeSignature: toHex(randBytes(64)),
     };
   }
@@ -161,12 +175,13 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("returns ok:true on success", async () => {
       const { accountId, authKeyHex } = await insertTestAccount();
       const newRecoveryEncryptedMasterKey = toHex(randBytes(72));
+      const recoveryKeyHash = toHex(hashRecoveryKey(randBytes(32)));
 
       const audit = spyAudit();
       const result = await regenerateRecoveryKeyBackup(
         asDb(db),
         accountId,
-        { authKey: authKeyHex, newRecoveryEncryptedMasterKey, confirmed: true },
+        { authKey: authKeyHex, newRecoveryEncryptedMasterKey, recoveryKeyHash, confirmed: true },
         audit,
       );
 
@@ -178,6 +193,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("revokes the old key and creates a new one", async () => {
       const { accountId, authKeyHex } = await insertTestAccount();
       const newRecoveryEncryptedMasterKey = toHex(randBytes(72));
+      const recoveryKeyHash = toHex(hashRecoveryKey(randBytes(32)));
 
       const statusBefore = await getRecoveryKeyStatus(asDb(db), accountId);
       expect(statusBefore.hasActiveKey).toBe(true);
@@ -186,7 +202,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       await regenerateRecoveryKeyBackup(
         asDb(db),
         accountId,
-        { authKey: authKeyHex, newRecoveryEncryptedMasterKey, confirmed: true },
+        { authKey: authKeyHex, newRecoveryEncryptedMasterKey, recoveryKeyHash, confirmed: true },
         noopAudit,
       );
 
@@ -199,11 +215,12 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       const { accountId, authKeyHex } = await insertTestAccount();
       const newBlob = randBytes(72);
       const newRecoveryEncryptedMasterKey = toHex(newBlob);
+      const recoveryKeyHash = toHex(hashRecoveryKey(randBytes(32)));
 
       await regenerateRecoveryKeyBackup(
         asDb(db),
         accountId,
-        { authKey: authKeyHex, newRecoveryEncryptedMasterKey, confirmed: true },
+        { authKey: authKeyHex, newRecoveryEncryptedMasterKey, recoveryKeyHash, confirmed: true },
         noopAudit,
       );
 
@@ -227,12 +244,18 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       const { accountId } = await insertTestAccount();
       const wrongAuthKey = toHex(randBytes(32));
       const newRecoveryEncryptedMasterKey = toHex(randBytes(72));
+      const recoveryKeyHash = toHex(hashRecoveryKey(randBytes(32)));
 
       await expect(
         regenerateRecoveryKeyBackup(
           asDb(db),
           accountId,
-          { authKey: wrongAuthKey, newRecoveryEncryptedMasterKey, confirmed: true },
+          {
+            authKey: wrongAuthKey,
+            newRecoveryEncryptedMasterKey,
+            recoveryKeyHash,
+            confirmed: true,
+          },
           noopAudit,
         ),
       ).rejects.toThrow("Incorrect password");
@@ -250,6 +273,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
           {
             authKey: authKeyHex,
             newRecoveryEncryptedMasterKey: toHex(randBytes(72)),
+            recoveryKeyHash: toHex(hashRecoveryKey(randBytes(32))),
             confirmed: true,
           },
           noopAudit,
@@ -264,8 +288,8 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     createMockLogger();
 
     it("resets password and returns new session token and accountId", async () => {
-      const { email, accountId } = await insertTestAccount();
-      const resetParams = makeResetParams(email);
+      const { email, accountId, recoveryKeyHex } = await insertTestAccount();
+      const resetParams = makeResetParams(email, recoveryKeyHex);
 
       const audit = spyAudit();
       const result = await resetPasswordWithRecoveryKey(asDb(db), resetParams, "web", audit);
@@ -279,9 +303,12 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     });
 
     it("stores the new authKeyHash derived from newAuthKey", async () => {
-      const { email } = await insertTestAccount();
+      const { email, recoveryKeyHex } = await insertTestAccount();
       const newAuthKeyBytes = randBytes(32);
-      const resetParams = { ...makeResetParams(email), newAuthKey: toHex(newAuthKeyBytes) };
+      const resetParams = {
+        ...makeResetParams(email, recoveryKeyHex),
+        newAuthKey: toHex(newAuthKeyBytes),
+      };
 
       await resetPasswordWithRecoveryKey(asDb(db), resetParams, "web", noopAudit);
 
@@ -300,9 +327,10 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     });
 
     it("returns null for nonexistent email (anti-enumeration)", async () => {
+      const dummyRecoveryKeyHex = toHex(randBytes(32));
       const result = await resetPasswordWithRecoveryKey(
         asDb(db),
-        makeResetParams(`nonexistent-${crypto.randomUUID()}@example.com`),
+        makeResetParams(`nonexistent-${crypto.randomUUID()}@example.com`, dummyRecoveryKeyHex),
         "web",
         noopAudit,
       );
@@ -311,17 +339,22 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     });
 
     it("throws NoActiveRecoveryKeyError when no active key exists", async () => {
-      const { email } = await insertTestAccount();
+      const { email, recoveryKeyHex } = await insertTestAccount();
 
       await db.update(recoveryKeys).set({ revokedAt: Date.now() });
 
       await expect(
-        resetPasswordWithRecoveryKey(asDb(db), makeResetParams(email), "web", noopAudit),
+        resetPasswordWithRecoveryKey(
+          asDb(db),
+          makeResetParams(email, recoveryKeyHex),
+          "web",
+          noopAudit,
+        ),
       ).rejects.toThrow(NoActiveRecoveryKeyError);
     });
 
     it("revokes old sessions after password reset", async () => {
-      const { email, accountId } = await insertTestAccount();
+      const { email, accountId, recoveryKeyHex } = await insertTestAccount();
 
       const timestamp = Date.now();
       await db.insert(sessions).values({
@@ -339,7 +372,12 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       );
       expect(Number(before.rows[0]?.count)).toBeGreaterThan(0);
 
-      await resetPasswordWithRecoveryKey(asDb(db), makeResetParams(email), "web", noopAudit);
+      await resetPasswordWithRecoveryKey(
+        asDb(db),
+        makeResetParams(email, recoveryKeyHex),
+        "web",
+        noopAudit,
+      );
 
       const after = await client.query<{ count: string }>(
         "SELECT COUNT(*) as count FROM sessions WHERE account_id = $1 AND revoked = false",
@@ -349,10 +387,10 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     });
 
     it("stores the new recovery key blob from client", async () => {
-      const { email } = await insertTestAccount();
+      const { email, recoveryKeyHex } = await insertTestAccount();
       const newBlob = randBytes(72);
       const resetParams = {
-        ...makeResetParams(email),
+        ...makeResetParams(email, recoveryKeyHex),
         newRecoveryEncryptedMasterKey: toHex(newBlob),
       };
 
@@ -387,11 +425,11 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     });
 
     it("creates a new session with mobile platform timeouts", async () => {
-      const { email } = await insertTestAccount();
+      const { email, recoveryKeyHex } = await insertTestAccount();
 
       const result = await resetPasswordWithRecoveryKey(
         asDb(db),
-        makeResetParams(email),
+        makeResetParams(email, recoveryKeyHex),
         "mobile",
         noopAudit,
       );

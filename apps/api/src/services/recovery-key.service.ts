@@ -1,4 +1,4 @@
-import { hashAuthKey, verifyAuthKey } from "@pluralscape/crypto";
+import { hashAuthKey, verifyAuthKey, verifyRecoveryKey } from "@pluralscape/crypto";
 import { accounts, recoveryKeys, sessions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
@@ -98,6 +98,7 @@ export async function regenerateRecoveryKeyBackup(
     }
 
     const newRecoveryEncryptedMasterKeyBytes = fromHex(parsed.newRecoveryEncryptedMasterKey);
+    const recoveryKeyHashBytes = fromHex(parsed.recoveryKeyHash);
     const timestamp = now();
     const newId = createId(ID_PREFIXES.recoveryKey);
 
@@ -115,6 +116,7 @@ export async function regenerateRecoveryKeyBackup(
       id: newId,
       accountId,
       encryptedMasterKey: newRecoveryEncryptedMasterKeyBytes,
+      recoveryKeyHash: recoveryKeyHashBytes,
       createdAt: timestamp,
     });
 
@@ -161,7 +163,7 @@ export async function resetPasswordWithRecoveryKey(
   // Fetch active recovery key (account-scoped read)
   const activeKey = await withAccountRead(db, account.id as AccountId, async (tx) => {
     const [row] = await tx
-      .select({ id: recoveryKeys.id })
+      .select({ id: recoveryKeys.id, recoveryKeyHash: recoveryKeys.recoveryKeyHash })
       .from(recoveryKeys)
       .where(and(eq(recoveryKeys.accountId, account.id), isNull(recoveryKeys.revokedAt)))
       .limit(1);
@@ -171,6 +173,22 @@ export async function resetPasswordWithRecoveryKey(
   if (!activeKey) {
     await equalizeAntiEnumTiming(startTime);
     throw new NoActiveRecoveryKeyError("No active recovery key found");
+  }
+
+  // Verify recovery key hash — reject if no hash stored or hash doesn't match
+  if (!activeKey.recoveryKeyHash) {
+    await equalizeAntiEnumTiming(startTime);
+    return null;
+  }
+
+  const storedRecoveryHash =
+    activeKey.recoveryKeyHash instanceof Uint8Array
+      ? activeKey.recoveryKeyHash
+      : new Uint8Array(activeKey.recoveryKeyHash);
+  const recoveryKeyValid = verifyRecoveryKey(fromHex(parsed.recoveryKeyHash), storedRecoveryHash);
+  if (!recoveryKeyValid) {
+    await equalizeAntiEnumTiming(startTime);
+    return null;
   }
 
   try {
