@@ -56,6 +56,7 @@ export interface RegistrationInitiateResult {
 export async function initiateRegistration(
   db: PostgresJsDatabase,
   params: unknown,
+  retried = false,
 ): Promise<RegistrationInitiateResult> {
   const startTime = performance.now();
 
@@ -117,10 +118,10 @@ export async function initiateRegistration(
         const isExpired =
           existing.challengeExpiresAt !== null && existing.challengeExpiresAt < now();
 
-        if (isPlaceholder && isExpired) {
-          // Delete the abandoned placeholder and retry
+        if (isPlaceholder && isExpired && !retried) {
+          // Delete the abandoned placeholder and retry (at most once)
           await db.delete(accounts).where(eq(accounts.id, existing.id));
-          return initiateRegistration(db, params);
+          return initiateRegistration(db, params, true);
         }
       }
 
@@ -272,6 +273,7 @@ export async function commitRegistration(
       id: createId(ID_PREFIXES.recoveryKey),
       accountId: account.id,
       encryptedMasterKey: recoveryEncMasterKeyBytes,
+      recoveryKeyHash: fromHex(parsed.recoveryKeyHash),
       createdAt: timestamp,
     });
 

@@ -54,7 +54,7 @@ export async function deleteAccount(
     const authKeyHash = ensureUint8Array(account.authKeyHash);
     const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
     if (!valid) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect password");
+      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect auth key");
     }
 
     // Revoke all sessions before deleting the account

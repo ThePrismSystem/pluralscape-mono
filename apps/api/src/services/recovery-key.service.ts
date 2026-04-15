@@ -227,6 +227,7 @@ export async function resetPasswordWithRecoveryKey(
         id: newRecoveryKeyId,
         accountId: account.id,
         encryptedMasterKey: newRecoveryEncryptedMasterKeyBytes,
+        recoveryKeyHash: fromHex(parsed.newRecoveryKeyHash),
         createdAt: timestamp,
       });
 
