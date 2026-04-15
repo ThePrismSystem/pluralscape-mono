@@ -1,0 +1,129 @@
+import {
+  AUTH_KEY_BYTES,
+  AUTH_KEY_HASH_BYTES,
+  CHALLENGE_NONCE_BYTES,
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_KEY_BYTES,
+  PWHASH_MEMLIMIT_UNIFIED,
+  PWHASH_OPSLIMIT_UNIFIED,
+  SPLIT_KEY_BYTES,
+} from "./crypto.constants.js";
+import { InvalidInputError } from "./errors.js";
+import { getSodium } from "./sodium.js";
+import { assertAeadKey } from "./validation.js";
+
+import type { AeadKey, PwhashSalt, Signature, SignPublicKey, SignSecretKey } from "./types.js";
+
+/** Result of split key derivation from a password. */
+export interface SplitKeyResult {
+  /** First 32 bytes of derivation — used for server-side auth (never stored). */
+  readonly authKey: Uint8Array;
+  /** Last 32 bytes of derivation — used as AEAD key-encryption key on device. */
+  readonly passwordKey: AeadKey;
+}
+
+/**
+ * Derive an auth key and a password key from a single Argon2id derivation.
+ *
+ * Runs `Argon2id(password, salt, opsLimit=4, memLimit=64 MiB)` producing 64 bytes,
+ * then splits: bytes [0..31] → authKey, bytes [32..63] → passwordKey (AeadKey).
+ * The 64-byte derivation buffer is zeroed before return.
+ *
+ * @param password - UTF-8 encoded password bytes. Must be ≥ MIN_PASSWORD_LENGTH.
+ * @param salt     - 16-byte Argon2id salt (PwhashSalt brand).
+ */
+export function deriveAuthAndPasswordKeys(
+  password: Uint8Array,
+  salt: PwhashSalt,
+): Promise<SplitKeyResult> {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new InvalidInputError(
+      `Password must be at least ${String(MIN_PASSWORD_LENGTH)} characters.`,
+    );
+  }
+
+  const adapter = getSodium();
+  const derived = adapter.pwhash(
+    SPLIT_KEY_BYTES,
+    password,
+    salt,
+    PWHASH_OPSLIMIT_UNIFIED,
+    PWHASH_MEMLIMIT_UNIFIED,
+  );
+
+  // Split: copy out both halves before zeroing the source buffer.
+  const authKey = derived.slice(0, AUTH_KEY_BYTES);
+  const passwordKeyBytes = derived.slice(AUTH_KEY_BYTES, AUTH_KEY_BYTES + PASSWORD_KEY_BYTES);
+  assertAeadKey(passwordKeyBytes);
+
+  adapter.memzero(derived);
+
+  // Returns a Promise for API compatibility — pwhash may be offloaded to a WebWorker.
+  return Promise.resolve({ authKey, passwordKey: passwordKeyBytes });
+}
+
+/**
+ * Hash an auth key with BLAKE2b to produce a 32-byte digest.
+ *
+ * The hash is stored server-side so the raw authKey never leaves the client.
+ */
+export function hashAuthKey(authKey: Uint8Array): Uint8Array {
+  const adapter = getSodium();
+  return adapter.genericHash(AUTH_KEY_HASH_BYTES, authKey);
+}
+
+/**
+ * Constant-time comparison of `authKey` against a stored BLAKE2b hash.
+ *
+ * Computes the hash of `authKey`, compares it byte-by-byte in constant time
+ * against `storedHash`, then zeros the computed hash before returning.
+ *
+ * @returns true if `authKey` produces the same hash as `storedHash`.
+ */
+export function verifyAuthKey(authKey: Uint8Array, storedHash: Uint8Array): boolean {
+  const adapter = getSodium();
+  const computed = adapter.genericHash(AUTH_KEY_HASH_BYTES, authKey);
+
+  // Constant-time comparison: XOR all bytes and accumulate differences.
+  // Both buffers are AUTH_KEY_HASH_BYTES long.
+  let diff = 0;
+  for (let i = 0; i < AUTH_KEY_HASH_BYTES; i++) {
+    diff |= (computed[i] ?? 0) ^ (storedHash[i] ?? 0);
+  }
+
+  adapter.memzero(computed);
+  return diff === 0;
+}
+
+/**
+ * Generate a 32-byte random challenge nonce for authentication.
+ */
+export function generateChallengeNonce(): Uint8Array {
+  const adapter = getSodium();
+  return adapter.randomBytes(CHALLENGE_NONCE_BYTES);
+}
+
+/**
+ * Sign a challenge nonce with an Ed25519 signing key.
+ *
+ * @param nonce      - The challenge nonce to sign.
+ * @param signingKey - The Ed25519 secret key.
+ */
+export function signChallenge(nonce: Uint8Array, signingKey: SignSecretKey): Signature {
+  const adapter = getSodium();
+  return adapter.signDetached(nonce, signingKey);
+}
+
+/**
+ * Verify a challenge signature against the expected nonce and public key.
+ *
+ * @returns true if the signature is valid for this nonce and public key.
+ */
+export function verifyChallenge(
+  nonce: Uint8Array,
+  signature: Signature,
+  publicKey: SignPublicKey,
+): boolean {
+  const adapter = getSodium();
+  return adapter.signVerifyDetached(signature, nonce, publicKey);
+}

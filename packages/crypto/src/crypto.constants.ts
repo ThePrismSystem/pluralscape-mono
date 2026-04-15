@@ -71,6 +71,27 @@ export const PWHASH_OPSLIMIT_MOBILE = 2;
 /** Mobile memory limit in bytes (32 MiB — OWASP Mobile minimum). */
 export const PWHASH_MEMLIMIT_MOBILE = 32 * 1_024 * 1_024;
 
+/** Unified Argon2id ops limit — OWASP Sensitive tier (t=4). All clients use this. */
+export const PWHASH_OPSLIMIT_UNIFIED = 4;
+
+/** Unified Argon2id memory limit in bytes (64 MiB). All clients use this. */
+export const PWHASH_MEMLIMIT_UNIFIED = 64 * 1_024 * 1_024;
+
+/** Output length for split key derivation: auth_key (32B) + password_key (32B). */
+export const SPLIT_KEY_BYTES = 64;
+
+/** Size of auth_key in bytes (first half of split derivation). */
+export const AUTH_KEY_BYTES = 32;
+
+/** Size of password_key in bytes (second half of split derivation). */
+export const PASSWORD_KEY_BYTES = 32;
+
+/** BLAKE2B output length for auth key hashing (256 bits). */
+export const AUTH_KEY_HASH_BYTES = 32;
+
+/** Size of challenge nonce in bytes (256 bits). */
+export const CHALLENGE_NONCE_BYTES = 32;
+
 // ── KDF (BLAKE2B) ───────────────────────────────────────────────────
 
 /** KDF key size in bytes. */
@@ -151,4 +172,11 @@ export const SODIUM_CONSTANTS = Object.freeze({
   KDF_BYTES_MAX,
   GENERIC_HASH_BYTES_MIN,
   GENERIC_HASH_BYTES_MAX,
+  PWHASH_OPSLIMIT_UNIFIED,
+  PWHASH_MEMLIMIT_UNIFIED,
+  SPLIT_KEY_BYTES,
+  AUTH_KEY_BYTES,
+  PASSWORD_KEY_BYTES,
+  AUTH_KEY_HASH_BYTES,
+  CHALLENGE_NONCE_BYTES,
 } as const);
