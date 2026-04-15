@@ -4,15 +4,18 @@ import {
   deriveAuthAndPasswordKeys,
   generateChallengeNonce,
   hashAuthKey,
+  hashRecoveryKey,
   signChallenge,
   verifyAuthKey,
   verifyChallenge,
+  verifyRecoveryKey,
 } from "../auth-key.js";
 import {
   AUTH_KEY_BYTES,
   AUTH_KEY_HASH_BYTES,
   CHALLENGE_NONCE_BYTES,
   PASSWORD_KEY_BYTES,
+  RECOVERY_KEY_HASH_BYTES,
 } from "../crypto.constants.js";
 import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
@@ -145,6 +148,14 @@ describe("verifyAuthKey", () => {
     const zeroKey = new Uint8Array(AUTH_KEY_BYTES);
     expect(verifyAuthKey(zeroKey, stored)).toBe(false);
   });
+
+  it("throws InvalidInputError for wrong-length storedHash", async () => {
+    const adapter = getSodium();
+    const salt = adapter.randomBytes(16) as PwhashSalt;
+    const { authKey } = await deriveAuthAndPasswordKeys(toBytes("validpassword"), salt);
+    const tooShort = new Uint8Array(16);
+    expect(() => verifyAuthKey(authKey, tooShort)).toThrow(InvalidInputError);
+  });
 });
 
 describe("generateChallengeNonce", () => {
@@ -172,6 +183,52 @@ describe("adapter.memcmp (constant-time comparison)", () => {
     const a = adapter.randomBytes(32);
     const b = adapter.randomBytes(32);
     expect(adapter.memcmp(a, b)).toBe(false);
+  });
+});
+
+describe("hashRecoveryKey", () => {
+  it("produces a hash of RECOVERY_KEY_HASH_BYTES length", () => {
+    const adapter = getSodium();
+    const rawKey = adapter.randomBytes(32);
+    const hash = hashRecoveryKey(rawKey);
+    expect(hash.length).toBe(RECOVERY_KEY_HASH_BYTES);
+  });
+
+  it("is deterministic for the same key", () => {
+    const adapter = getSodium();
+    const rawKey = adapter.randomBytes(32);
+    expect(hashRecoveryKey(rawKey)).toEqual(hashRecoveryKey(rawKey));
+  });
+
+  it("produces different hashes for different keys", () => {
+    const adapter = getSodium();
+    const a = adapter.randomBytes(32);
+    const b = adapter.randomBytes(32);
+    expect(hashRecoveryKey(a)).not.toEqual(hashRecoveryKey(b));
+  });
+});
+
+describe("verifyRecoveryKey", () => {
+  it("returns true for the correct recovery key", () => {
+    const adapter = getSodium();
+    const rawKey = adapter.randomBytes(32);
+    const stored = hashRecoveryKey(rawKey);
+    expect(verifyRecoveryKey(rawKey, stored)).toBe(true);
+  });
+
+  it("returns false for a wrong recovery key", () => {
+    const adapter = getSodium();
+    const rawKey = adapter.randomBytes(32);
+    const stored = hashRecoveryKey(rawKey);
+    const wrongKey = adapter.randomBytes(32);
+    expect(verifyRecoveryKey(wrongKey, stored)).toBe(false);
+  });
+
+  it("throws InvalidInputError for wrong-length storedHash", () => {
+    const adapter = getSodium();
+    const rawKey = adapter.randomBytes(32);
+    const tooShort = new Uint8Array(16);
+    expect(() => verifyRecoveryKey(rawKey, tooShort)).toThrow(InvalidInputError);
   });
 });
 

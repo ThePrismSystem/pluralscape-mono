@@ -6,6 +6,7 @@ import {
   PASSWORD_KEY_BYTES,
   PWHASH_MEMLIMIT_UNIFIED,
   PWHASH_OPSLIMIT_UNIFIED,
+  RECOVERY_KEY_HASH_BYTES,
   SPLIT_KEY_BYTES,
 } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
@@ -81,18 +82,50 @@ export function hashAuthKey(authKey: Uint8Array): Uint8Array {
  * @returns true if `authKey` produces the same hash as `storedHash`.
  */
 export function verifyAuthKey(authKey: Uint8Array, storedHash: Uint8Array): boolean {
+  if (storedHash.length !== AUTH_KEY_HASH_BYTES) {
+    throw new InvalidInputError(
+      `storedHash must be ${String(AUTH_KEY_HASH_BYTES)} bytes, got ${String(storedHash.length)}`,
+    );
+  }
+
   const adapter = getSodium();
   const computed = adapter.genericHash(AUTH_KEY_HASH_BYTES, authKey);
 
-  // Constant-time comparison: XOR all bytes and accumulate differences.
-  // Both buffers are AUTH_KEY_HASH_BYTES long.
-  let diff = 0;
-  for (let i = 0; i < AUTH_KEY_HASH_BYTES; i++) {
-    diff |= (computed[i] ?? 0) ^ (storedHash[i] ?? 0);
-  }
+  const equal = adapter.memcmp(computed, storedHash);
 
   adapter.memzero(computed);
-  return diff === 0;
+  return equal;
+}
+
+/**
+ * Hash a recovery key with BLAKE2b to produce a 32-byte digest.
+ *
+ * The hash is stored server-side so the raw recovery key never leaves the client.
+ */
+export function hashRecoveryKey(rawKey: Uint8Array): Uint8Array {
+  const adapter = getSodium();
+  return adapter.genericHash(RECOVERY_KEY_HASH_BYTES, rawKey);
+}
+
+/**
+ * Constant-time comparison of `rawKey` against a stored BLAKE2b hash.
+ *
+ * @returns true if `rawKey` produces the same hash as `storedHash`.
+ */
+export function verifyRecoveryKey(rawKey: Uint8Array, storedHash: Uint8Array): boolean {
+  if (storedHash.length !== RECOVERY_KEY_HASH_BYTES) {
+    throw new InvalidInputError(
+      `storedHash must be ${String(RECOVERY_KEY_HASH_BYTES)} bytes, got ${String(storedHash.length)}`,
+    );
+  }
+
+  const adapter = getSodium();
+  const computed = adapter.genericHash(RECOVERY_KEY_HASH_BYTES, rawKey);
+
+  const equal = adapter.memcmp(computed, storedHash);
+
+  adapter.memzero(computed);
+  return equal;
 }
 
 /**
