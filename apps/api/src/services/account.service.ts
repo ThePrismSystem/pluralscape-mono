@@ -15,6 +15,7 @@ import {
 } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
+import { ensureUint8Array } from "../lib/binary.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { fromHex, toHex } from "../lib/hex.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
@@ -109,10 +110,7 @@ export async function changeEmail(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const authKeyHash =
-    account.authKeyHash instanceof Uint8Array
-      ? account.authKeyHash
-      : new Uint8Array(account.authKeyHash);
+  const authKeyHash = ensureUint8Array(account.authKeyHash);
   const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
   if (!valid) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
@@ -193,10 +191,7 @@ export async function changePassword(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const authKeyHash =
-    account.authKeyHash instanceof Uint8Array
-      ? account.authKeyHash
-      : new Uint8Array(account.authKeyHash);
+  const authKeyHash = ensureUint8Array(account.authKeyHash);
   const valid = verifyAuthKey(fromHex(parsed.oldAuthKey), authKeyHash);
   if (!valid) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
@@ -221,10 +216,7 @@ export async function changePassword(
     throw new ValidationError("No signing key found");
   }
 
-  const sigPublicKey =
-    signingKey.publicKey instanceof Uint8Array
-      ? signingKey.publicKey
-      : new Uint8Array(signingKey.publicKey);
+  const sigPublicKey = ensureUint8Array(signingKey.publicKey);
   assertSignPublicKey(sigPublicKey);
 
   const signatureBytes = fromHex(parsed.challengeSignature);

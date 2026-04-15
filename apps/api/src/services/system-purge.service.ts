@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { ensureUint8Array } from "../lib/binary.js";
 import { withTenantTransaction } from "../lib/rls-context.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
@@ -63,10 +64,7 @@ export async function purgeSystem(
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Account not found");
     }
 
-    const authKeyHash =
-      account.authKeyHash instanceof Uint8Array
-        ? account.authKeyHash
-        : new Uint8Array(account.authKeyHash);
+    const authKeyHash = ensureUint8Array(account.authKeyHash);
     const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
     if (!valid) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect password");

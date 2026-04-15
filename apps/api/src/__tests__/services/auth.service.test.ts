@@ -13,18 +13,12 @@ import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { fromCursor } from "../../lib/pagination.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { MAX_SESSIONS_PER_ACCOUNT } from "../../quota.constants.js";
-import {
-  CLIENT_PLATFORM_HEADER,
-  DEFAULT_PLATFORM,
-  RECOVERY_KEY_GROUP_COUNT,
-  RECOVERY_KEY_GROUP_SIZE,
-} from "../../routes/auth/auth.constants.js";
+import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
 import {
   LoginThrottledError,
   ValidationError,
   cleanupExpiredRegistrations,
   commitRegistration,
-  generateFakeRecoveryKey,
   initiateRegistration,
   isDuplicateEmailError,
   listSessions,
@@ -1351,32 +1345,6 @@ describe("auth service", () => {
         (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
       );
       expect(revocationCall).toBeUndefined();
-    });
-  });
-
-  // ── generateFakeRecoveryKey format ──────────────────────────────────
-
-  describe("generateFakeRecoveryKey format", () => {
-    it("fake recovery key has exactly RECOVERY_KEY_GROUP_COUNT groups", () => {
-      const key = generateFakeRecoveryKey();
-      const groups = key.split("-");
-      expect(groups).toHaveLength(RECOVERY_KEY_GROUP_COUNT);
-    });
-
-    it("each group has exactly RECOVERY_KEY_GROUP_SIZE characters", () => {
-      const key = generateFakeRecoveryKey();
-      const groups = key.split("-");
-      for (const group of groups) {
-        expect(group).toHaveLength(RECOVERY_KEY_GROUP_SIZE);
-      }
-    });
-
-    it("each group uses only base32 alphabet (A-Z, 2-7)", () => {
-      const key = generateFakeRecoveryKey();
-      const groups = key.split("-");
-      for (const group of groups) {
-        expect(group).toMatch(/^[A-Z2-7]+$/);
-      }
     });
   });
 });

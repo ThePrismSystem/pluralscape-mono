@@ -34,8 +34,6 @@ import {
   DEFAULT_SESSION_LIMIT,
   EMAIL_SALT_BYTES,
   MAX_SESSION_LIMIT,
-  RECOVERY_KEY_GROUP_COUNT,
-  RECOVERY_KEY_GROUP_SIZE,
 } from "../routes/auth/auth.constants.js";
 
 import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
@@ -670,28 +668,3 @@ export function isDuplicateEmailError(error: unknown): boolean {
       (e as { constraint_name: string }).constraint_name === "accounts_email_hash_idx",
   );
 }
-
-/**
- * Generate a fake recovery key that looks like a real one for anti-enumeration.
- * Uses byte % chars.length which has zero modulo bias since 256 divides evenly by 32 (chars.length).
- */
-function generateFakeRecoveryKey(): string {
-  const adapter = getSodium();
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const totalChars = RECOVERY_KEY_GROUP_COUNT * RECOVERY_KEY_GROUP_SIZE;
-  const randomBytes = adapter.randomBytes(totalChars);
-
-  const groups: string[] = [];
-  for (let g = 0; g < RECOVERY_KEY_GROUP_COUNT; g++) {
-    let group = "";
-    for (let c = 0; c < RECOVERY_KEY_GROUP_SIZE; c++) {
-      const byteVal = randomBytes[g * RECOVERY_KEY_GROUP_SIZE + c] ?? 0;
-      group += chars[byteVal % chars.length] ?? "A";
-    }
-    groups.push(group);
-  }
-  return groups.join("-");
-}
-
-// Keep generateFakeRecoveryKey accessible for anti-enumeration in other services
-export { generateFakeRecoveryKey };

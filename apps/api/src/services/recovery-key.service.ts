@@ -8,6 +8,7 @@ import {
 import { and, eq, isNull } from "drizzle-orm";
 
 import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
+import { ensureUint8Array } from "../lib/binary.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { fromHex } from "../lib/hex.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
@@ -76,10 +77,7 @@ export async function regenerateRecoveryKeyBackup(
       throw new ValidationError(INCORRECT_PASSWORD_ERROR);
     }
 
-    const storedHash =
-      account.authKeyHash instanceof Uint8Array
-        ? account.authKeyHash
-        : new Uint8Array(account.authKeyHash);
+    const storedHash = ensureUint8Array(account.authKeyHash);
     const valid = verifyAuthKey(fromHex(parsed.authKey), storedHash);
     if (!valid) {
       throw new ValidationError(INCORRECT_PASSWORD_ERROR);
@@ -181,10 +179,7 @@ export async function resetPasswordWithRecoveryKey(
     return null;
   }
 
-  const storedRecoveryHash =
-    activeKey.recoveryKeyHash instanceof Uint8Array
-      ? activeKey.recoveryKeyHash
-      : new Uint8Array(activeKey.recoveryKeyHash);
+  const storedRecoveryHash = ensureUint8Array(activeKey.recoveryKeyHash);
   const recoveryKeyValid = verifyRecoveryKey(fromHex(parsed.recoveryKeyHash), storedRecoveryHash);
   if (!recoveryKeyValid) {
     await equalizeAntiEnumTiming(startTime);
