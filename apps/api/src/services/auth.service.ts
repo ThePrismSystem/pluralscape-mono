@@ -1,4 +1,5 @@
 import {
+  AUTH_KEY_HASH_BYTES,
   assertSignPublicKey,
   assertSignature,
   generateChallengeNonce,
@@ -15,7 +16,7 @@ import {
   RegistrationCommitSchema,
   RegistrationInitiateSchema,
 } from "@pluralscape/validation";
-import { and, asc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
 import { encryptEmail, getEmailEncryptionKey } from "../lib/email-encrypt.js";
@@ -38,9 +39,6 @@ import {
 } from "../routes/auth/auth.constants.js";
 
 import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
-
-/** BLAKE2b output length for auth key hashing (32 bytes). Mirrors crypto.constants. */
-const AUTH_KEY_HASH_BYTES = 32;
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AppLogger } from "../lib/logger.js";
@@ -104,8 +102,31 @@ export async function initiateRegistration(
       });
     });
   } catch (error: unknown) {
-    // Anti-enumeration: if email already exists, return fake data
     if (isDuplicateEmailError(error)) {
+      // Check if the existing account is an abandoned placeholder
+      const [existing] = await db
+        .select({
+          id: accounts.id,
+          authKeyHash: accounts.authKeyHash,
+          challengeExpiresAt: accounts.challengeExpiresAt,
+        })
+        .from(accounts)
+        .where(eq(accounts.emailHash, emailHash))
+        .limit(1);
+
+      if (existing) {
+        const isPlaceholder = existing.authKeyHash.every((b) => b === 0);
+        const isExpired =
+          existing.challengeExpiresAt !== null && existing.challengeExpiresAt < now();
+
+        if (isPlaceholder && isExpired) {
+          // Delete the abandoned placeholder and retry
+          await db.delete(accounts).where(eq(accounts.id, existing.id));
+          return initiateRegistration(db, params);
+        }
+      }
+
+      // Real account or unexpired placeholder — anti-enum fake response
       await equalizeAntiEnumTiming(startTime);
       return {
         accountId: createId(ID_PREFIXES.account),
@@ -116,6 +137,7 @@ export async function initiateRegistration(
     throw error;
   }
 
+  await equalizeAntiEnumTiming(startTime);
   return {
     accountId,
     kdfSalt: kdfSaltHex,
@@ -203,7 +225,8 @@ export async function commitRegistration(
 
   await withAccountTransaction(db, account.id as AccountId, async (tx) => {
     // Fill in the account shell with real crypto data
-    await tx
+    // TOCTOU guard: isNotNull(challengeNonce) ensures concurrent commits can't both succeed
+    const updated = await tx
       .update(accounts)
       .set({
         authKeyHash,
@@ -212,7 +235,12 @@ export async function commitRegistration(
         challengeExpiresAt: null,
         updatedAt: timestamp,
       })
-      .where(eq(accounts.id, account.id));
+      .where(and(eq(accounts.id, account.id), isNotNull(accounts.challengeNonce)))
+      .returning({ id: accounts.id });
+
+    if (updated.length === 0) {
+      throw new ValidationError("Registration already completed");
+    }
 
     if (account.accountType === "system") {
       await tx.insert(systems).values({
@@ -588,6 +616,26 @@ export async function logoutCurrentSession(
       detail: "Logged out",
     });
   });
+}
+
+// ── Cleanup ──────────────────────────────────────────────────────
+
+/**
+ * Delete abandoned registration placeholders.
+ *
+ * An abandoned placeholder has an all-zero authKeyHash (never committed)
+ * and an expired challenge nonce. Safe to call on a schedule.
+ */
+export async function cleanupExpiredRegistrations(db: PostgresJsDatabase): Promise<number> {
+  const threshold = now();
+  const zeroes = new Uint8Array(AUTH_KEY_HASH_BYTES);
+
+  const deleted = await db
+    .delete(accounts)
+    .where(and(eq(accounts.authKeyHash, zeroes), lt(accounts.challengeExpiresAt, threshold)))
+    .returning({ id: accounts.id });
+
+  return deleted.length;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────

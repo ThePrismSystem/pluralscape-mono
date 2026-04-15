@@ -22,6 +22,7 @@ import {
 import {
   LoginThrottledError,
   ValidationError,
+  cleanupExpiredRegistrations,
   commitRegistration,
   generateFakeRecoveryKey,
   initiateRegistration,
@@ -32,7 +33,7 @@ import {
   revokeAllSessions,
   revokeSession,
 } from "../../services/auth.service.js";
-import { mockDb } from "../helpers/mock-db.js";
+import { mockDb, type MockChain } from "../helpers/mock-db.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { AccountId } from "@pluralscape/types";
@@ -409,6 +410,89 @@ describe("auth service", () => {
       await initiateRegistration(db, validParams);
       expect(mockEncryptEmail).not.toHaveBeenCalled();
     });
+
+    it("deletes abandoned placeholder and retries on duplicate email", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+
+      // Select finds expired placeholder (consumed after the first transaction rejects)
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_abandoned",
+          authKeyHash: new Uint8Array(32), // all zeros = placeholder
+          challengeExpiresAt: Date.now() - 60_000, // expired
+        },
+      ]);
+
+      // First call rejects (duplicate email), second call succeeds (retry)
+      let txCallCount = 0;
+      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) => {
+        txCallCount++;
+        if (txCallCount === 1) return Promise.reject(pgError);
+        return fn(chain);
+      });
+
+      const result = await initiateRegistration(db, validParams);
+      expect(result).toHaveProperty("accountId");
+      expect(chain.delete).toHaveBeenCalled();
+      expect(txCallCount).toBe(2);
+    });
+
+    it("returns fake data when placeholder exists but is not expired", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+      // Select finds unexpired placeholder
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_pending",
+          authKeyHash: new Uint8Array(32), // all zeros = placeholder
+          challengeExpiresAt: Date.now() + 300_000, // not expired
+        },
+      ]);
+
+      const result = await initiateRegistration(db, validParams);
+      expect(result).toHaveProperty("accountId");
+      expect(chain.delete).not.toHaveBeenCalled();
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("returns fake data when existing account is fully registered", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+      // Select finds a completed account (non-zero authKeyHash)
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_real",
+          authKeyHash: new Uint8Array(32).fill(0xff), // non-zero = completed
+          challengeExpiresAt: null,
+        },
+      ]);
+
+      const result = await initiateRegistration(db, validParams);
+      expect(result).toHaveProperty("accountId");
+      expect(chain.delete).not.toHaveBeenCalled();
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("calls equalizeAntiEnumTiming on success path", async () => {
+      const { db } = mockDb();
+      await initiateRegistration(db, validParams);
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
   });
 
   // ── commitRegistration ────────────────────────────────────────────
@@ -512,6 +596,8 @@ describe("auth service", () => {
           challengeExpiresAt: Date.now() + 300_000,
         },
       ]);
+      // TOCTOU guard: UPDATE ... RETURNING must return the updated row
+      chain.returning.mockResolvedValueOnce([{ id: "acct_test123" }]);
 
       const result = await commitRegistration(db, validCommitParams, "web", mockAudit);
       expect(result).toHaveProperty("sessionToken");
@@ -520,6 +606,46 @@ describe("auth service", () => {
       expect(result.accountId).toBe("acct_test123");
       expect(result.accountType).toBe("system");
       expect(result.sessionToken).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("throws ValidationError on TOCTOU race (concurrent commit)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_test123",
+          accountType: "system",
+          authKeyHash: new Uint8Array(32),
+          challengeNonce: new Uint8Array(32),
+          challengeExpiresAt: Date.now() + 300_000,
+        },
+      ]);
+      // UPDATE ... WHERE ... isNotNull(challengeNonce) returns 0 rows
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
+        "Registration already completed",
+      );
+    });
+  });
+
+  // ── cleanupExpiredRegistrations ──────────────────────────────────
+
+  describe("cleanupExpiredRegistrations", () => {
+    it("returns count of deleted abandoned placeholders", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ id: "acct_1" }, { id: "acct_2" }]);
+
+      const count = await cleanupExpiredRegistrations(db);
+      expect(count).toBe(2);
+      expect(chain.delete).toHaveBeenCalled();
+    });
+
+    it("returns 0 when no expired placeholders exist", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([]);
+
+      const count = await cleanupExpiredRegistrations(db);
+      expect(count).toBe(0);
     });
   });
 
