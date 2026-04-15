@@ -507,6 +507,7 @@ describe("auth service", () => {
       recoveryEncryptedMasterKey: hexFilled(48),
       challengeSignature: hexFilled(64),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: hexFilled(32),
     };
 
     it("throws ValidationError when recoveryKeyBackupConfirmed is false", async () => {

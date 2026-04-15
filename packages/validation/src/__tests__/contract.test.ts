@@ -70,16 +70,17 @@ describe("RegistrationCommitSchema contract", () => {
     // Encrypted blob: min 40 bytes → 80 hex chars (nonce 24B + tag 16B overhead)
     const blob = "e".repeat(80);
     const input = {
-      accountId: "acc-123",
+      accountId: "acct_123",
       authKey: "a".repeat(64),
       encryptedMasterKey: blob,
       encryptedSigningPrivateKey: blob,
       encryptedEncryptionPrivateKey: blob,
-      publicSigningKey: blob,
-      publicEncryptionKey: blob,
+      publicSigningKey: "a".repeat(64),
+      publicEncryptionKey: "b".repeat(64),
       recoveryEncryptedMasterKey: blob,
       challengeSignature: "c".repeat(128),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: "d".repeat(64),
     };
     const result = RegistrationCommitSchema.safeParse(input);
     expect(result.success).toBe(true);

@@ -131,14 +131,15 @@ describe("auth router", () => {
     const commitInput = {
       accountId: MOCK_AUTH.accountId,
       authKey: "a".repeat(64),
-      encryptedMasterKey: "emk",
-      encryptedSigningPrivateKey: "espk",
-      encryptedEncryptionPrivateKey: "eepk",
-      publicSigningKey: "psk",
-      publicEncryptionKey: "pek",
-      recoveryEncryptedMasterKey: "remk",
+      encryptedMasterKey: "ab".repeat(40),
+      encryptedSigningPrivateKey: "ab".repeat(40),
+      encryptedEncryptionPrivateKey: "ab".repeat(40),
+      publicSigningKey: "a".repeat(64),
+      publicEncryptionKey: "b".repeat(64),
+      recoveryEncryptedMasterKey: "ab".repeat(40),
       challengeSignature: "c".repeat(128),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: "a".repeat(64),
     };
 
     const commitResult = {
@@ -228,9 +229,10 @@ describe("auth router", () => {
       email: "test@example.com",
       newAuthKey: "a".repeat(64),
       newKdfSalt: "b".repeat(32),
-      newEncryptedMasterKey: "encryptedblob",
-      newRecoveryEncryptedMasterKey: "encryptedblob",
-      challengeSignature: "c".repeat(128),
+      newEncryptedMasterKey: "ab".repeat(40),
+      newRecoveryEncryptedMasterKey: "ab".repeat(40),
+      recoveryKeyHash: "a".repeat(64),
+      newRecoveryKeyHash: "b".repeat(64),
     };
 
     const resetResult = {

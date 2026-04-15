@@ -65,16 +65,17 @@ describe("RegistrationInitiateSchema", () => {
 
 describe("RegistrationCommitSchema", () => {
   const valid = {
-    accountId: "acc-123",
+    accountId: "acct_123",
     authKey: AUTH_KEY,
     encryptedMasterKey: BLOB,
     encryptedSigningPrivateKey: BLOB,
     encryptedEncryptionPrivateKey: BLOB,
-    publicSigningKey: "pubkey",
-    publicEncryptionKey: "pubkey",
+    publicSigningKey: "a".repeat(64),
+    publicEncryptionKey: "b".repeat(64),
     recoveryEncryptedMasterKey: BLOB,
     challengeSignature: CHALLENGE_SIG,
     recoveryKeyBackupConfirmed: true,
+    recoveryKeyHash: RECOVERY_KEY_HASH,
   };
 
   it("accepts valid input", () => {
@@ -423,7 +424,7 @@ describe("PasswordResetViaRecoveryKeySchema", () => {
     newEncryptedMasterKey: BLOB,
     newRecoveryEncryptedMasterKey: BLOB,
     recoveryKeyHash: RECOVERY_KEY_HASH,
-    challengeSignature: CHALLENGE_SIG,
+    newRecoveryKeyHash: RECOVERY_KEY_HASH,
   };
 
   it("accepts valid input", () => {
@@ -460,14 +461,14 @@ describe("PasswordResetViaRecoveryKeySchema", () => {
     }
   });
 
-  it("rejects non-hex challengeSignature", () => {
+  it("rejects non-hex newRecoveryKeyHash", () => {
     const result = PasswordResetViaRecoveryKeySchema.safeParse({
       ...valid,
-      challengeSignature: "z".repeat(128),
+      newRecoveryKeyHash: "z".repeat(64),
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0]?.path).toEqual(["challengeSignature"]);
+      expect(result.error.issues[0]?.path).toEqual(["newRecoveryKeyHash"]);
     }
   });
 

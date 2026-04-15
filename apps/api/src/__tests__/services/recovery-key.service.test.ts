@@ -85,8 +85,6 @@ const VALID_KDF_SALT = "ef".repeat(16);
 const VALID_ENC_MASTER_KEY = "aa".repeat(72);
 /** Hex-encoded dummy recovery-encrypted master key blob. */
 const VALID_RECOVERY_ENC_KEY = "bb".repeat(72);
-/** 128-char hex string representing a valid challenge signature (64 bytes). */
-const VALID_CHALLENGE_SIG = "cc".repeat(64);
 /** 64-char hex string representing a valid recovery key hash (32 bytes). */
 const VALID_RECOVERY_KEY_HASH = "dd".repeat(32);
 
@@ -271,7 +269,7 @@ describe("recovery-key service", () => {
       newEncryptedMasterKey: VALID_ENC_MASTER_KEY,
       newRecoveryEncryptedMasterKey: VALID_RECOVERY_ENC_KEY,
       recoveryKeyHash: VALID_RECOVERY_KEY_HASH,
-      challengeSignature: VALID_CHALLENGE_SIG,
+      newRecoveryKeyHash: VALID_RECOVERY_KEY_HASH,
     };
 
     it("returns session token and accountId on success", async () => {
