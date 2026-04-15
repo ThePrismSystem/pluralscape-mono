@@ -146,7 +146,7 @@ describe("account router", () => {
   describe("account.changeEmail", () => {
     const input = {
       email: "new@example.com",
-      currentPassword: "OldPassword1!",
+      authKey: "ab".repeat(32),
     };
 
     it("calls changeEmail and returns ok", async () => {
@@ -171,9 +171,9 @@ describe("account router", () => {
 
     it("rejects invalid email format", async () => {
       const caller = createCaller();
-      await expect(caller.account.changeEmail({ ...input, email: "not-an-email" })).rejects.toThrow(
-        expect.objectContaining({ code: "BAD_REQUEST" }),
-      );
+      await expect(
+        caller.account.changeEmail({ email: "not-an-email", authKey: "ab".repeat(32) }),
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -181,8 +181,11 @@ describe("account router", () => {
 
   describe("account.changePassword", () => {
     const input = {
-      currentPassword: "OldPassword1!",
-      newPassword: "NewPassword1!",
+      oldAuthKey: "ab".repeat(32),
+      newAuthKey: "cd".repeat(32),
+      newKdfSalt: "ef".repeat(16),
+      newEncryptedMasterKey: "11".repeat(72),
+      challengeSignature: "22".repeat(64),
     };
 
     const changePasswordResult = {
@@ -403,7 +406,11 @@ describe("account router", () => {
   // ── regenerateRecoveryKey ─────────────────────────────────────────
 
   describe("account.regenerateRecoveryKey", () => {
-    const input = { currentPassword: "MyPassword1!", confirmed: true as const };
+    const input = {
+      authKey: "ab".repeat(32),
+      newRecoveryEncryptedMasterKey: "cc".repeat(72),
+      confirmed: true as const,
+    };
 
     it("calls regenerateRecoveryKeyBackup and returns recovery key", async () => {
       vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValue({ recoveryKey: "AAAA-BBBB-CCCC" });
@@ -504,8 +511,7 @@ describe("account router", () => {
     const caller = createCaller();
     await assertProcedureRateLimited(
       vi.mocked(checkRateLimit),
-      () =>
-        caller.account.changeEmail({ email: "new@example.com", currentPassword: "OldPassword1!" }),
+      () => caller.account.changeEmail({ email: "new@example.com", authKey: "ab".repeat(32) }),
       "authHeavy",
     );
   });
