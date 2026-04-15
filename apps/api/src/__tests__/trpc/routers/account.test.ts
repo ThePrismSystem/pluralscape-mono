@@ -409,6 +409,7 @@ describe("account router", () => {
     const input = {
       authKey: "ab".repeat(32),
       newRecoveryEncryptedMasterKey: "cc".repeat(72),
+      recoveryKeyHash: "dd".repeat(32),
       confirmed: true as const,
     };
 

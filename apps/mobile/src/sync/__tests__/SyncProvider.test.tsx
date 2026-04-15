@@ -150,6 +150,7 @@ const mockSodium: PlatformContext["crypto"] = {
   kdfDeriveFromKey: vi.fn(),
   kdfKeygen: vi.fn(),
   genericHash: vi.fn(),
+  memcmp: vi.fn(),
 };
 
 // ── Mock SyncEngine ─────────────────────────────────────────────────

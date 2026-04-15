@@ -63,6 +63,7 @@ function mockSodium(): SodiumAdapter {
     genericHash: unimplemented,
     randomBytes: unimplemented,
     memzero: vi.fn(),
+    memcmp: vi.fn(),
   } satisfies SodiumAdapter;
 }
 
