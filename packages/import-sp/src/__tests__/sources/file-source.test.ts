@@ -227,4 +227,118 @@ describe("createFileImportSource", () => {
     }).rejects.toThrow(FileSourceParseError);
     await source.close();
   });
+
+  it("throws FileSourceParseError with null position when stream exceeds _maxBytes", async () => {
+    const json = buildExportJson({ members: [{ _id: "m1", name: "Alice" }] });
+    const source = createFileImportSource({
+      stream: stringToStream(json),
+      _maxBytes: 4, // well below the actual payload size
+    });
+    const err = await (async () => {
+      try {
+        for await (const e of source.iterate("members")) {
+          void e;
+        }
+        return null;
+      } catch (thrown) {
+        return thrown;
+      }
+    })();
+    expect(err).toBeInstanceOf(FileSourceParseError);
+    const parseErr = err as InstanceType<typeof FileSourceParseError>;
+    expect(parseErr.position).toBeNull();
+    expect(parseErr.message).toMatch(/exceeds maximum size/);
+  });
+
+  it("reuses the cached prescan on subsequent iterate() calls", async () => {
+    const json = buildExportJson({
+      members: [{ _id: "m1", name: "A" }],
+      groups: [{ _id: "g1", name: "G" }],
+    });
+    const source = createFileImportSource({ stream: stringToStream(json) });
+
+    // First pass: listCollections triggers the prescan.
+    const collections = await source.listCollections();
+    expect(collections).toContain("members");
+
+    // Second pass: iterate reuses the cached prescan (prescan !== null branch).
+    const events: SourceEvent[] = [];
+    for await (const e of source.iterate("groups")) {
+      events.push(e);
+    }
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("doc");
+    await source.close();
+  });
+
+  it("drops a document with an empty string _id", async () => {
+    const json = buildExportJson({ members: [{ _id: "", name: "Empty" }] });
+    const source = createFileImportSource({ stream: stringToStream(json) });
+    const events: SourceEvent[] = [];
+    for await (const e of source.iterate("members")) {
+      events.push(e);
+    }
+    await source.close();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("drop");
+    if (events[0]?.kind === "drop") {
+      expect(events[0].sourceId).toBeNull();
+      expect(events[0].reason).toMatch(/_id/);
+    }
+  });
+
+  it("drops a document with a numeric _id", async () => {
+    const json = JSON.stringify({ members: [{ _id: 123, name: "Numeric" }] });
+    const source = createFileImportSource({ stream: stringToStream(json) });
+    const events: SourceEvent[] = [];
+    for await (const e of source.iterate("members")) {
+      events.push(e);
+    }
+    await source.close();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("drop");
+    if (events[0]?.kind === "drop") {
+      expect(events[0].sourceId).toBeNull();
+      expect(events[0].reason).toMatch(/_id/);
+    }
+  });
+
+  it("throws FileSourceParseError for truncated JSON with a numeric position", async () => {
+    // Truncated JSON — opening brace with a key but no closing brace.
+    const source = createFileImportSource({
+      stream: stringToStream('{"members": [{"_id": "m1"'),
+    });
+    const err = await (async () => {
+      try {
+        for await (const e of source.iterate("members")) {
+          void e;
+        }
+        return null;
+      } catch (thrown) {
+        return thrown;
+      }
+    })();
+    expect(err).toBeInstanceOf(FileSourceParseError);
+    const parseErr = err as InstanceType<typeof FileSourceParseError>;
+    expect(typeof parseErr.position).toBe("number");
+  });
+
+  it("includes the collection name in the non-array SP collection error message", async () => {
+    const source = createFileImportSource({
+      stream: stringToStream(JSON.stringify({ members: "not-an-array" })),
+    });
+    const err = await (async () => {
+      try {
+        for await (const e of source.iterate("members")) {
+          void e;
+        }
+        return null;
+      } catch (thrown) {
+        return thrown;
+      }
+    })();
+    expect(err).toBeInstanceOf(FileSourceParseError);
+    const parseErr = err as InstanceType<typeof FileSourceParseError>;
+    expect(parseErr.message).toContain('Collection "members" had a non-array value');
+  });
 });
