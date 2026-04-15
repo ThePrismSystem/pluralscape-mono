@@ -9,6 +9,7 @@ import { EncryptedRelay } from "@pluralscape/sync";
 import { eq, inArray } from "drizzle-orm";
 
 import { getDb } from "../lib/db.js";
+import { withTenantRead } from "../lib/rls-context.js";
 
 import { handleAuthenticate } from "./auth-handler.js";
 import { broadcastDocumentUpdateWithSync } from "./broadcast.js";
@@ -172,14 +173,17 @@ async function checkAccess(
   let owner = ownership.get(docId);
 
   // Cache miss — check DB for persisted ownership
-  if (owner === undefined) {
+  if (owner === undefined && state.auth) {
     try {
       const db = await getDb();
-      const [row] = await db
-        .select({ systemId: syncDocuments.systemId })
-        .from(syncDocuments)
-        .where(eq(syncDocuments.documentId, docId))
-        .limit(1);
+      const rows = await withTenantRead(db, { systemId, accountId: state.auth.accountId }, (tx) =>
+        tx
+          .select({ systemId: syncDocuments.systemId })
+          .from(syncDocuments)
+          .where(eq(syncDocuments.documentId, docId))
+          .limit(1),
+      );
+      const row = rows[0];
       if (row) {
         owner = row.systemId as SystemId;
         ownership.set(docId, owner);
@@ -388,13 +392,18 @@ export async function routeMessage(
       if (uncachedDocIds.length > 0) {
         try {
           const db = await getDb();
-          const rows = await db
-            .select({
-              documentId: syncDocuments.documentId,
-              systemId: syncDocuments.systemId,
-            })
-            .from(syncDocuments)
-            .where(inArray(syncDocuments.documentId, uncachedDocIds));
+          const rows = await withTenantRead(
+            db,
+            { systemId: state.systemId, accountId: state.auth.accountId },
+            (tx) =>
+              tx
+                .select({
+                  documentId: syncDocuments.documentId,
+                  systemId: syncDocuments.systemId,
+                })
+                .from(syncDocuments)
+                .where(inArray(syncDocuments.documentId, uncachedDocIds)),
+          );
           for (const row of rows) {
             documentOwnership.set(row.documentId, row.systemId as SystemId);
           }
