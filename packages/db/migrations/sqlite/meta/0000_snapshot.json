@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d384230d-0d85-4d7a-aeff-d21a9ea439bb",
+  "id": "18ab0e76-a4ff-4336-a650-a5aad377346b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -228,6 +228,10 @@
         "accounts_version_check": {
           "name": "accounts_version_check",
           "value": "\"accounts\".\"version\" >= 1"
+        },
+        "accounts_challenge_nonce_paired": {
+          "name": "accounts_challenge_nonce_paired",
+          "value": "(\"accounts\".\"challenge_nonce\" IS NULL) = (\"accounts\".\"challenge_expires_at\" IS NULL)"
         }
       }
     },
@@ -6197,6 +6201,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "recovery_key_hash": {
+          "name": "recovery_key_hash",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -6238,7 +6249,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "recovery_keys_hash_required": {
+          "name": "recovery_keys_hash_required",
+          "value": "\"recovery_keys\".\"recovery_key_hash\" IS NOT NULL OR \"recovery_keys\".\"revoked_at\" IS NOT NULL"
+        }
+      }
     },
     "relationships": {
       "name": "relationships",

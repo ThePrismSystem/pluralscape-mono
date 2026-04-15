@@ -1,1 +1,0 @@
-ALTER TABLE `recovery_keys` ADD `recovery_key_hash` blob;

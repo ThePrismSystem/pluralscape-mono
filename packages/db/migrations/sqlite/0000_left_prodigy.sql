@@ -30,7 +30,8 @@ CREATE TABLE `accounts` (
 	`updated_at` integer NOT NULL,
 	`version` integer DEFAULT 1 NOT NULL,
 	CONSTRAINT "accounts_account_type_check" CHECK("accounts"."account_type" IS NULL OR "accounts"."account_type" IN ('system', 'viewer')),
-	CONSTRAINT "accounts_version_check" CHECK("accounts"."version" >= 1)
+	CONSTRAINT "accounts_version_check" CHECK("accounts"."version" >= 1),
+	CONSTRAINT "accounts_challenge_nonce_paired" CHECK(("accounts"."challenge_nonce" IS NULL) = ("accounts"."challenge_expires_at" IS NULL))
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `accounts_email_hash_idx` ON `accounts` (`email_hash`);--> statement-breakpoint
@@ -990,9 +991,11 @@ CREATE TABLE `recovery_keys` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
 	`encrypted_master_key` blob NOT NULL,
+	`recovery_key_hash` blob,
 	`created_at` integer NOT NULL,
 	`revoked_at` integer,
-	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "recovery_keys_hash_required" CHECK("recovery_keys"."recovery_key_hash" IS NOT NULL OR "recovery_keys"."revoked_at" IS NOT NULL)
 );
 --> statement-breakpoint
 CREATE INDEX `recovery_keys_account_id_idx` ON `recovery_keys` (`account_id`);--> statement-breakpoint
