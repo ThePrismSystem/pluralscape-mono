@@ -3,358 +3,377 @@ import { describe, expect, it } from "vitest";
 import {
   ChangeEmailSchema,
   ChangePasswordSchema,
-  LoginCredentialsSchema,
+  LoginSchema,
   PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
-  RegistrationInputSchema,
+  RegistrationCommitSchema,
+  RegistrationInitiateSchema,
+  SaltFetchSchema,
   UpdateAccountSettingsSchema,
 } from "../auth.js";
-import {
-  AUTH_MIN_PASSWORD_LENGTH,
-  MAX_PASSWORD_LENGTH,
-  MAX_RECOVERY_KEY_LENGTH,
-} from "../validation.constants.js";
 
-// ── RegistrationInputSchema ──────────────────────────────────────────
+// Valid hex strings of required lengths
+const AUTH_KEY = "a".repeat(64); // 32 bytes → 64 hex chars
+const KDF_SALT = "b".repeat(32); // 16 bytes → 32 hex chars
+const CHALLENGE_SIG = "c".repeat(128); // 64 bytes → 128 hex chars
+const BLOB = "encryptedblob";
 
-describe("RegistrationInputSchema", () => {
-  it("rejects password shorter than AUTH_MIN_PASSWORD_LENGTH", () => {
-    const result = RegistrationInputSchema.safeParse({
-      email: "user@example.com",
-      password: "1234567", // 7 chars, below the 8-char minimum
-      recoveryKeyBackupConfirmed: true,
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["password"]);
+// ── RegistrationInitiateSchema ────────────────────────────────────────
+
+describe("RegistrationInitiateSchema", () => {
+  it("accepts valid email", () => {
+    const result = RegistrationInitiateSchema.safeParse({ email: "user@example.com" });
+    expect(result.success).toBe(true);
+  });
+
+  it("defaults accountType to system", () => {
+    const result = RegistrationInitiateSchema.safeParse({ email: "user@example.com" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.accountType).toBe("system");
     }
   });
 
-  it("accepts password at exactly AUTH_MIN_PASSWORD_LENGTH", () => {
-    const result = RegistrationInputSchema.safeParse({
+  it("accepts accountType viewer", () => {
+    const result = RegistrationInitiateSchema.safeParse({
       email: "user@example.com",
-      password: "12345678", // exactly 8 chars
-      recoveryKeyBackupConfirmed: true,
+      accountType: "viewer",
     });
     expect(result.success).toBe(true);
-  });
-
-  it("rejects password exceeding MAX_PASSWORD_LENGTH", () => {
-    const result = RegistrationInputSchema.safeParse({
-      email: "user@example.com",
-      password: "a".repeat(MAX_PASSWORD_LENGTH + 1),
-      recoveryKeyBackupConfirmed: true,
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["password"]);
+    if (result.success) {
+      expect(result.data.accountType).toBe("viewer");
     }
-  });
-
-  it("accepts password at exactly MAX_PASSWORD_LENGTH", () => {
-    const result = RegistrationInputSchema.safeParse({
-      email: "user@example.com",
-      password: "a".repeat(MAX_PASSWORD_LENGTH),
-      recoveryKeyBackupConfirmed: true,
-    });
-    expect(result.success).toBe(true);
-  });
-});
-
-// ── LoginCredentialsSchema ────────────────────────────────────────────
-
-describe("LoginCredentialsSchema", () => {
-  it("parses valid input", () => {
-    const result = LoginCredentialsSchema.safeParse({
-      email: "user@example.com",
-      password: "anypassword",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects empty password", () => {
-    const result = LoginCredentialsSchema.safeParse({
-      email: "user@example.com",
-      password: "",
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["password"]);
-    }
-  });
-
-  it("rejects password exceeding MAX_PASSWORD_LENGTH", () => {
-    const result = LoginCredentialsSchema.safeParse({
-      email: "user@example.com",
-      password: "a".repeat(MAX_PASSWORD_LENGTH + 1),
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["password"]);
-    }
-  });
-
-  it("accepts password at exactly MAX_PASSWORD_LENGTH", () => {
-    const result = LoginCredentialsSchema.safeParse({
-      email: "user@example.com",
-      password: "a".repeat(MAX_PASSWORD_LENGTH),
-    });
-    expect(result.success).toBe(true);
-  });
-});
-
-// ── ChangeEmailSchema ───────────────────────────────────────────────
-
-describe("ChangeEmailSchema", () => {
-  it("parses valid input", () => {
-    const result = ChangeEmailSchema.safeParse({
-      email: "user@example.com",
-      currentPassword: "password123",
-    });
-    expect(result.success).toBe(true);
   });
 
   it("rejects invalid email", () => {
-    const result = ChangeEmailSchema.safeParse({
-      email: "not-an-email",
-      currentPassword: "password123",
-    });
+    const result = RegistrationInitiateSchema.safeParse({ email: "not-an-email" });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["email"]);
+      expect(result.error.issues[0]?.path).toEqual(["email"]);
     }
   });
 
   it("rejects missing email", () => {
-    const result = ChangeEmailSchema.safeParse({
-      currentPassword: "password123",
-    });
+    const result = RegistrationInitiateSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+});
+
+// ── RegistrationCommitSchema ──────────────────────────────────────────
+
+describe("RegistrationCommitSchema", () => {
+  const valid = {
+    accountId: "acc-123",
+    authKey: AUTH_KEY,
+    encryptedMasterKey: BLOB,
+    encryptedSigningPrivateKey: BLOB,
+    encryptedEncryptionPrivateKey: BLOB,
+    publicSigningKey: BLOB,
+    publicEncryptionKey: BLOB,
+    recoveryEncryptedMasterKey: BLOB,
+    challengeSignature: CHALLENGE_SIG,
+    recoveryKeyBackupConfirmed: true,
+  };
+
+  it("accepts valid input", () => {
+    expect(RegistrationCommitSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects authKey of wrong length", () => {
+    const result = RegistrationCommitSchema.safeParse({ ...valid, authKey: "a".repeat(62) });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["email"]);
+      expect(result.error.issues[0]?.path).toEqual(["authKey"]);
     }
   });
 
-  it("rejects empty currentPassword", () => {
-    const result = ChangeEmailSchema.safeParse({
-      email: "user@example.com",
-      currentPassword: "",
+  it("rejects non-hex authKey", () => {
+    const result = RegistrationCommitSchema.safeParse({ ...valid, authKey: "z".repeat(64) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["authKey"]);
+    }
+  });
+
+  it("rejects challengeSignature of wrong length", () => {
+    const result = RegistrationCommitSchema.safeParse({
+      ...valid,
+      challengeSignature: "c".repeat(64),
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["currentPassword"]);
+      expect(result.error.issues[0]?.path).toEqual(["challengeSignature"]);
     }
+  });
+
+  it("rejects empty encryptedMasterKey", () => {
+    const result = RegistrationCommitSchema.safeParse({ ...valid, encryptedMasterKey: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["encryptedMasterKey"]);
+    }
+  });
+
+  it("rejects missing accountId", () => {
+    const result = RegistrationCommitSchema.safeParse({
+      authKey: valid.authKey,
+      encryptedMasterKey: valid.encryptedMasterKey,
+      encryptedSigningPrivateKey: valid.encryptedSigningPrivateKey,
+      encryptedEncryptionPrivateKey: valid.encryptedEncryptionPrivateKey,
+      publicSigningKey: valid.publicSigningKey,
+      publicEncryptionKey: valid.publicEncryptionKey,
+      recoveryEncryptedMasterKey: valid.recoveryEncryptedMasterKey,
+      challengeSignature: valid.challengeSignature,
+      recoveryKeyBackupConfirmed: valid.recoveryKeyBackupConfirmed,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ── SaltFetchSchema ───────────────────────────────────────────────────
+
+describe("SaltFetchSchema", () => {
+  it("accepts valid email", () => {
+    expect(SaltFetchSchema.safeParse({ email: "user@example.com" }).success).toBe(true);
+  });
+
+  it("rejects invalid email", () => {
+    const result = SaltFetchSchema.safeParse({ email: "not-an-email" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["email"]);
+    }
+  });
+});
+
+// ── LoginSchema ───────────────────────────────────────────────────────
+
+describe("LoginSchema", () => {
+  it("accepts valid email and authKey", () => {
+    const result = LoginSchema.safeParse({ email: "user@example.com", authKey: AUTH_KEY });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid email", () => {
+    const result = LoginSchema.safeParse({ email: "not-an-email", authKey: AUTH_KEY });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["email"]);
+    }
+  });
+
+  it("rejects authKey of wrong length", () => {
+    const result = LoginSchema.safeParse({ email: "user@example.com", authKey: "a".repeat(32) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["authKey"]);
+    }
+  });
+
+  it("rejects non-hex authKey", () => {
+    const result = LoginSchema.safeParse({
+      email: "user@example.com",
+      authKey: "z".repeat(64),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["authKey"]);
+    }
+  });
+
+  it("rejects missing authKey", () => {
+    const result = LoginSchema.safeParse({ email: "user@example.com" });
+    expect(result.success).toBe(false);
   });
 
   it("strips unknown properties", () => {
-    const result = ChangeEmailSchema.safeParse({
+    const result = LoginSchema.safeParse({
       email: "user@example.com",
-      currentPassword: "password123",
+      authKey: AUTH_KEY,
       admin: true,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({
-        email: "user@example.com",
-        currentPassword: "password123",
-      });
       expect("admin" in result.data).toBe(false);
     }
   });
 });
 
-// ── ChangePasswordSchema ────────────────────────────────────────────
+// ── ChangeEmailSchema ─────────────────────────────────────────────────
 
-describe("ChangePasswordSchema", () => {
-  it("parses valid input", () => {
-    const result = ChangePasswordSchema.safeParse({
-      currentPassword: "oldpassword",
-      newPassword: "newpassword123",
-    });
+describe("ChangeEmailSchema", () => {
+  it("accepts valid input", () => {
+    const result = ChangeEmailSchema.safeParse({ email: "new@example.com", authKey: AUTH_KEY });
     expect(result.success).toBe(true);
   });
 
-  it("rejects empty currentPassword", () => {
-    const result = ChangePasswordSchema.safeParse({
-      currentPassword: "",
-      newPassword: "newpassword123",
-    });
+  it("rejects invalid email", () => {
+    const result = ChangeEmailSchema.safeParse({ email: "not-an-email", authKey: AUTH_KEY });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["currentPassword"]);
+      expect(result.error.issues[0]?.path).toEqual(["email"]);
     }
   });
 
-  it("rejects empty newPassword", () => {
-    const result = ChangePasswordSchema.safeParse({
-      currentPassword: "oldpassword",
-      newPassword: "",
+  it("rejects missing email", () => {
+    const result = ChangeEmailSchema.safeParse({ authKey: AUTH_KEY });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["email"]);
+    }
+  });
+
+  it("rejects authKey of wrong length", () => {
+    const result = ChangeEmailSchema.safeParse({
+      email: "new@example.com",
+      authKey: "a".repeat(32),
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["newPassword"]);
+      expect(result.error.issues[0]?.path).toEqual(["authKey"]);
+    }
+  });
+
+  it("strips unknown properties", () => {
+    const result = ChangeEmailSchema.safeParse({
+      email: "new@example.com",
+      authKey: AUTH_KEY,
+      admin: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect("admin" in result.data).toBe(false);
+    }
+  });
+});
+
+// ── ChangePasswordSchema ──────────────────────────────────────────────
+
+describe("ChangePasswordSchema", () => {
+  const valid = {
+    oldAuthKey: AUTH_KEY,
+    newAuthKey: AUTH_KEY,
+    newKdfSalt: KDF_SALT,
+    newEncryptedMasterKey: BLOB,
+    challengeSignature: CHALLENGE_SIG,
+  };
+
+  it("accepts valid input", () => {
+    expect(ChangePasswordSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects oldAuthKey of wrong length", () => {
+    const result = ChangePasswordSchema.safeParse({ ...valid, oldAuthKey: "a".repeat(32) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["oldAuthKey"]);
+    }
+  });
+
+  it("rejects newAuthKey of wrong length", () => {
+    const result = ChangePasswordSchema.safeParse({ ...valid, newAuthKey: "a".repeat(32) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["newAuthKey"]);
+    }
+  });
+
+  it("rejects newKdfSalt of wrong length", () => {
+    const result = ChangePasswordSchema.safeParse({ ...valid, newKdfSalt: "b".repeat(16) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["newKdfSalt"]);
+    }
+  });
+
+  it("rejects non-hex challengeSignature", () => {
+    const result = ChangePasswordSchema.safeParse({
+      ...valid,
+      challengeSignature: "z".repeat(128),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["challengeSignature"]);
+    }
+  });
+
+  it("rejects empty newEncryptedMasterKey", () => {
+    const result = ChangePasswordSchema.safeParse({ ...valid, newEncryptedMasterKey: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["newEncryptedMasterKey"]);
     }
   });
 
   it("rejects missing fields", () => {
-    const result = ChangePasswordSchema.safeParse({});
-    expect(result.success).toBe(false);
-  });
-
-  it(`rejects newPassword shorter than ${String(AUTH_MIN_PASSWORD_LENGTH)} characters`, () => {
-    const result = ChangePasswordSchema.safeParse({
-      currentPassword: "oldpassword",
-      newPassword: "short",
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["newPassword"]);
-    }
-  });
-
-  it("rejects newPassword exceeding MAX_PASSWORD_LENGTH", () => {
-    const result = ChangePasswordSchema.safeParse({
-      currentPassword: "oldpassword",
-      newPassword: "a".repeat(MAX_PASSWORD_LENGTH + 1),
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["newPassword"]);
-    }
-  });
-
-  it("accepts newPassword at exactly MAX_PASSWORD_LENGTH", () => {
-    const result = ChangePasswordSchema.safeParse({
-      currentPassword: "oldpassword",
-      newPassword: "a".repeat(MAX_PASSWORD_LENGTH),
-    });
-    expect(result.success).toBe(true);
+    expect(ChangePasswordSchema.safeParse({}).success).toBe(false);
   });
 
   it("strips unknown properties", () => {
-    const result = ChangePasswordSchema.safeParse({
-      currentPassword: "oldpassword",
-      newPassword: "newpassword123",
-      admin: true,
-    });
+    const result = ChangePasswordSchema.safeParse({ ...valid, admin: true });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({
-        currentPassword: "oldpassword",
-        newPassword: "newpassword123",
-      });
       expect("admin" in result.data).toBe(false);
     }
   });
 });
 
-// ── RegenerateRecoveryKeySchema ─────────────────────────────────────
+// ── RegenerateRecoveryKeySchema ───────────────────────────────────────
 
 describe("RegenerateRecoveryKeySchema", () => {
-  it("parses valid input", () => {
-    const result = RegenerateRecoveryKeySchema.safeParse({
-      currentPassword: "password123",
-      confirmed: true,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual({
-        currentPassword: "password123",
-        confirmed: true,
-      });
-    }
+  const valid = {
+    authKey: AUTH_KEY,
+    newRecoveryEncryptedMasterKey: BLOB,
+    confirmed: true as const,
+  };
+
+  it("accepts valid input", () => {
+    expect(RegenerateRecoveryKeySchema.safeParse(valid).success).toBe(true);
   });
 
   it("rejects when confirmed is false", () => {
-    const result = RegenerateRecoveryKeySchema.safeParse({
-      currentPassword: "password123",
-      confirmed: false,
-    });
+    const result = RegenerateRecoveryKeySchema.safeParse({ ...valid, confirmed: false });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["confirmed"]);
+      expect(result.error.issues[0]?.path).toEqual(["confirmed"]);
     }
   });
 
-  it("rejects empty currentPassword", () => {
-    const result = RegenerateRecoveryKeySchema.safeParse({
-      currentPassword: "",
-      confirmed: true,
-    });
+  it("rejects authKey of wrong length", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({ ...valid, authKey: "a".repeat(32) });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["currentPassword"]);
+      expect(result.error.issues[0]?.path).toEqual(["authKey"]);
     }
   });
 
   it("rejects missing confirmed", () => {
     const result = RegenerateRecoveryKeySchema.safeParse({
-      currentPassword: "password123",
+      authKey: valid.authKey,
+      newRecoveryEncryptedMasterKey: valid.newRecoveryEncryptedMasterKey,
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["confirmed"]);
+      expect(result.error.issues[0]?.path).toEqual(["confirmed"]);
     }
   });
 
   it("rejects non-boolean confirmed", () => {
-    const result = RegenerateRecoveryKeySchema.safeParse({
-      currentPassword: "password123",
-      confirmed: "true",
-    });
+    const result = RegenerateRecoveryKeySchema.safeParse({ ...valid, confirmed: "true" });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["confirmed"]);
+      expect(result.error.issues[0]?.path).toEqual(["confirmed"]);
     }
   });
 
   it("rejects missing fields", () => {
-    const result = RegenerateRecoveryKeySchema.safeParse({});
-    expect(result.success).toBe(false);
+    expect(RegenerateRecoveryKeySchema.safeParse({}).success).toBe(false);
   });
 
   it("strips unknown properties", () => {
-    const result = RegenerateRecoveryKeySchema.safeParse({
-      currentPassword: "password123",
-      confirmed: true,
-      admin: true,
-    });
+    const result = RegenerateRecoveryKeySchema.safeParse({ ...valid, admin: true });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({
-        currentPassword: "password123",
-        confirmed: true,
-      });
       expect("admin" in result.data).toBe(false);
     }
   });
@@ -363,103 +382,79 @@ describe("RegenerateRecoveryKeySchema", () => {
 // ── PasswordResetViaRecoveryKeySchema ─────────────────────────────────
 
 describe("PasswordResetViaRecoveryKeySchema", () => {
-  const validInput = {
+  const valid = {
     email: "user@example.com",
-    recoveryKey: "ABCD-EFGH-IJKL-MNOP",
-    newPassword: "newstrongpassword123",
+    newAuthKey: AUTH_KEY,
+    newKdfSalt: KDF_SALT,
+    newEncryptedMasterKey: BLOB,
+    newRecoveryEncryptedMasterKey: BLOB,
+    challengeSignature: CHALLENGE_SIG,
   };
 
-  it("parses valid input", () => {
-    const result = PasswordResetViaRecoveryKeySchema.safeParse(validInput);
-    expect(result.success).toBe(true);
+  it("accepts valid input", () => {
+    expect(PasswordResetViaRecoveryKeySchema.safeParse(valid).success).toBe(true);
   });
 
   it("rejects invalid email", () => {
-    const result = PasswordResetViaRecoveryKeySchema.safeParse({
-      ...validInput,
-      email: "not-an-email",
-    });
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({ ...valid, email: "not-an-email" });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["email"]);
+      expect(result.error.issues[0]?.path).toEqual(["email"]);
     }
   });
 
-  it("rejects empty recoveryKey", () => {
+  it("rejects newAuthKey of wrong length", () => {
     const result = PasswordResetViaRecoveryKeySchema.safeParse({
-      ...validInput,
-      recoveryKey: "",
+      ...valid,
+      newAuthKey: "a".repeat(32),
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["recoveryKey"]);
+      expect(result.error.issues[0]?.path).toEqual(["newAuthKey"]);
     }
   });
 
-  it("rejects recoveryKey exceeding MAX_RECOVERY_KEY_LENGTH", () => {
+  it("rejects newKdfSalt of wrong length", () => {
     const result = PasswordResetViaRecoveryKeySchema.safeParse({
-      ...validInput,
-      recoveryKey: "a".repeat(MAX_RECOVERY_KEY_LENGTH + 1),
+      ...valid,
+      newKdfSalt: "b".repeat(16),
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["recoveryKey"]);
+      expect(result.error.issues[0]?.path).toEqual(["newKdfSalt"]);
     }
   });
 
-  it("rejects newPassword shorter than AUTH_MIN_PASSWORD_LENGTH", () => {
+  it("rejects non-hex challengeSignature", () => {
     const result = PasswordResetViaRecoveryKeySchema.safeParse({
-      ...validInput,
-      newPassword: "short",
+      ...valid,
+      challengeSignature: "z".repeat(128),
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["newPassword"]);
+      expect(result.error.issues[0]?.path).toEqual(["challengeSignature"]);
     }
   });
 
-  it("rejects newPassword exceeding MAX_PASSWORD_LENGTH", () => {
+  it("rejects empty newEncryptedMasterKey", () => {
     const result = PasswordResetViaRecoveryKeySchema.safeParse({
-      ...validInput,
-      newPassword: "a".repeat(MAX_PASSWORD_LENGTH + 1),
+      ...valid,
+      newEncryptedMasterKey: "",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["newPassword"]);
+      expect(result.error.issues[0]?.path).toEqual(["newEncryptedMasterKey"]);
     }
-  });
-
-  it("accepts newPassword at exactly MAX_PASSWORD_LENGTH", () => {
-    const result = PasswordResetViaRecoveryKeySchema.safeParse({
-      ...validInput,
-      newPassword: "a".repeat(MAX_PASSWORD_LENGTH),
-    });
-    expect(result.success).toBe(true);
   });
 
   it("rejects missing fields", () => {
-    const result = PasswordResetViaRecoveryKeySchema.safeParse({});
-    expect(result.success).toBe(false);
+    expect(PasswordResetViaRecoveryKeySchema.safeParse({}).success).toBe(false);
   });
 
   it("strips unknown properties", () => {
-    const result = PasswordResetViaRecoveryKeySchema.safeParse({
-      ...validInput,
-      admin: true,
-    });
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({ ...valid, admin: true });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual(validInput);
       expect("admin" in result.data).toBe(false);
     }
   });
@@ -480,9 +475,7 @@ describe("UpdateAccountSettingsSchema", () => {
     const result = UpdateAccountSettingsSchema.safeParse({ version: 1 });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["auditLogIpTracking"]);
+      expect(result.error.issues[0]?.path).toEqual(["auditLogIpTracking"]);
     }
   });
 
@@ -490,9 +483,7 @@ describe("UpdateAccountSettingsSchema", () => {
     const result = UpdateAccountSettingsSchema.safeParse({ auditLogIpTracking: true });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["version"]);
+      expect(result.error.issues[0]?.path).toEqual(["version"]);
     }
   });
 
@@ -503,9 +494,7 @@ describe("UpdateAccountSettingsSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["auditLogIpTracking"]);
+      expect(result.error.issues[0]?.path).toEqual(["auditLogIpTracking"]);
     }
   });
 
@@ -516,9 +505,7 @@ describe("UpdateAccountSettingsSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["version"]);
+      expect(result.error.issues[0]?.path).toEqual(["version"]);
     }
   });
 
@@ -529,9 +516,7 @@ describe("UpdateAccountSettingsSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["version"]);
+      expect(result.error.issues[0]?.path).toEqual(["version"]);
     }
   });
 
@@ -542,9 +527,7 @@ describe("UpdateAccountSettingsSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["version"]);
+      expect(result.error.issues[0]?.path).toEqual(["version"]);
     }
   });
 
