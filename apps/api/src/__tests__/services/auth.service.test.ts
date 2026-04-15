@@ -20,7 +20,9 @@ import {
   RECOVERY_KEY_GROUP_SIZE,
 } from "../../routes/auth/auth.constants.js";
 import {
+  LoginThrottledError,
   ValidationError,
+  isDuplicateEmailError,
   listSessions,
   logoutCurrentSession,
   loginAccount,
@@ -116,6 +118,28 @@ vi.mock("../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
 
+const mockGetEmailEncryptionKey = vi.fn<() => Uint8Array | null>();
+const mockEncryptEmail = vi.fn<(email: string) => Uint8Array>();
+vi.mock("../../lib/email-encrypt.js", () => ({
+  getEmailEncryptionKey: () => mockGetEmailEncryptionKey(),
+  encryptEmail: (email: string) => mockEncryptEmail(email),
+}));
+
+const mockLoginStoreCheck =
+  vi.fn<(key: string) => Promise<{ throttled: boolean; windowResetAt: number }>>();
+const mockLoginStoreRecordFailure =
+  vi.fn<
+    (key: string) => Promise<{ throttled: boolean; failedAttempts: number; windowResetAt: number }>
+  >();
+const mockLoginStoreReset = vi.fn<(key: string) => Promise<void>>();
+vi.mock("../../middleware/stores/account-login-store.js", () => ({
+  getAccountLoginStore: () => ({
+    check: (key: string) => mockLoginStoreCheck(key),
+    recordFailure: (key: string) => mockLoginStoreRecordFailure(key),
+    reset: (key: string) => mockLoginStoreReset(key),
+  }),
+}));
+
 const mockEqualizeAntiEnumTiming = vi.fn<(startTime: number) => Promise<void>>();
 vi.mock("../../lib/anti-enum-timing.js", () => ({
   equalizeAntiEnumTiming: (startTime: number) => mockEqualizeAntiEnumTiming(startTime),
@@ -139,7 +163,20 @@ describe("auth service", () => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
     mockVerifyPassword.mockClear();
+    mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
     mockEqualizeAntiEnumTiming.mockClear();
+    mockGetEmailEncryptionKey.mockReturnValue(null);
+    mockEncryptEmail.mockReturnValue(new Uint8Array(56));
+    mockLoginStoreCheck.mockResolvedValue({
+      throttled: false,
+      windowResetAt: Date.now() + 900_000,
+    });
+    mockLoginStoreRecordFailure.mockResolvedValue({
+      throttled: false,
+      failedAttempts: 1,
+      windowResetAt: Date.now() + 900_000,
+    });
+    mockLoginStoreReset.mockResolvedValue(undefined);
     logMethods.error.mockClear();
     logMethods.warn.mockClear();
     logMethods.info.mockClear();
@@ -431,6 +468,23 @@ describe("auth service", () => {
         expect(group).toMatch(/^[A-Z2-7]+$/);
       }
     });
+
+    it("calls encryptEmail when getEmailEncryptionKey returns a key", async () => {
+      const fakeKey = new Uint8Array(32).fill(0xab);
+      mockGetEmailEncryptionKey.mockReturnValue(fakeKey);
+      mockEncryptEmail.mockReturnValue(new Uint8Array(56));
+      const { db } = mockDb();
+      await registerAccount(db, validParams, "web", mockAudit);
+      expect(mockEncryptEmail).toHaveBeenCalledWith("test@example.com");
+    });
+
+    it("does not call encryptEmail when getEmailEncryptionKey returns null", async () => {
+      mockGetEmailEncryptionKey.mockReturnValue(null);
+      mockEncryptEmail.mockClear();
+      const { db } = mockDb();
+      await registerAccount(db, validParams, "web", mockAudit);
+      expect(mockEncryptEmail).not.toHaveBeenCalled();
+    });
   });
 
   // ── loginAccount ───────────────────────────────────────────────────
@@ -648,6 +702,291 @@ describe("auth service", () => {
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(mockEqualizeAntiEnumTiming).not.toHaveBeenCalled();
+    });
+
+    it("throws LoginThrottledError when account is throttled", async () => {
+      const { db } = mockDb();
+      mockLoginStoreCheck.mockResolvedValueOnce({
+        throttled: true,
+        windowResetAt: 1_700_000_000_000,
+      });
+
+      await expect(loginAccount(db, credentials, "web", mockAudit, mockLogger)).rejects.toThrow(
+        LoginThrottledError,
+      );
+    });
+
+    it("logs error when verifyPassword throws during anti-enumeration (Error instance)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+      mockVerifyPassword.mockImplementation(() => {
+        throw new Error("sodium failure");
+      });
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(logMethods.error).toHaveBeenCalledWith(
+        "Unexpected verifyPassword error during anti-enumeration",
+        { err: expect.any(Error) },
+      );
+    });
+
+    it("logs error when verifyPassword throws a TypeError during anti-enumeration", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+      mockVerifyPassword.mockImplementation(() => {
+        throw new TypeError("sodium type error");
+      });
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(logMethods.error).toHaveBeenCalledWith(
+        "Unexpected verifyPassword error during anti-enumeration",
+        { err: expect.any(TypeError) },
+      );
+    });
+
+    it("logs error when recordFailure throws in not-found path (Error instance)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+      mockLoginStoreRecordFailure.mockRejectedValueOnce(new Error("valkey down"));
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(logMethods.error).toHaveBeenCalledWith("Failed to record login failure for throttle", {
+        err: expect.any(Error),
+      });
+    });
+
+    it("logs error when recordFailure throws in not-found path (non-Error)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+      mockLoginStoreRecordFailure.mockRejectedValueOnce("valkey-string");
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(logMethods.error).toHaveBeenCalledWith("Failed to record login failure for throttle", {
+        error: "valkey-string",
+      });
+    });
+
+    it("logs non-Error audit failure in not-found path", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+      mockAudit.mockRejectedValueOnce("non-error-audit");
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      await vi.waitFor(() => {
+        expect(logMethods.error).toHaveBeenCalledWith(
+          "[audit] Failed to write auth.login-failed:",
+          { err: { message: "non-error-audit" } },
+        );
+      });
+    });
+
+    it("logs error when recordFailure throws in wrong-password path (Error instance)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+      mockLoginStoreRecordFailure.mockRejectedValueOnce(new Error("valkey down"));
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(logMethods.error).toHaveBeenCalledWith("Failed to record login failure for throttle", {
+        err: expect.any(Error),
+      });
+    });
+
+    it("logs error when recordFailure throws in wrong-password path (non-Error)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+      mockLoginStoreRecordFailure.mockRejectedValueOnce(42);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(logMethods.error).toHaveBeenCalledWith("Failed to record login failure for throttle", {
+        error: "42",
+      });
+    });
+
+    it("logs String(err) when audit rejects with non-Error in wrong-password path", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+      mockAudit.mockRejectedValueOnce("string-audit-err");
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      await vi.waitFor(() => {
+        expect(logMethods.error).toHaveBeenCalledWith(
+          "Failed to write auth.login-failed audit event",
+          { error: "string-audit-err" },
+        );
+      });
+    });
+
+    it("logs error when throttle reset throws after successful login (Error)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_123",
+            emailHash: "hashed_test@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        .mockResolvedValueOnce([{ total: 0 }]);
+      mockLoginStoreReset.mockRejectedValueOnce(new Error("valkey reset fail"));
+
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(result).not.toBeNull();
+      expect(logMethods.error).toHaveBeenCalledWith(
+        "Failed to reset login throttle after successful login",
+        { err: expect.any(Error) },
+      );
+    });
+
+    it("logs error when throttle reset throws after successful login (non-Error)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_123",
+            emailHash: "hashed_test@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        .mockResolvedValueOnce([{ total: 0 }]);
+      mockLoginStoreReset.mockRejectedValueOnce("reset-string");
+
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(result).not.toBeNull();
+      expect(logMethods.error).toHaveBeenCalledWith(
+        "Failed to reset login throttle after successful login",
+        { error: "reset-string" },
+      );
+    });
+
+    it("triggers fire-and-forget rehash when password hash has low iterations", async () => {
+      const { db, chain } = mockDb();
+      // Hash with t=1 triggers needsRehash, and mockVerifyPassword accepts it
+      const lowIterHash = "$argon2id$v=19$m=65536,t=1,p=1$c2FsdA$aGFzaA";
+      mockVerifyPassword.mockImplementation((hash) => hash === lowIterHash);
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_123",
+            emailHash: "hashed_test@example.com",
+            passwordHash: lowIterHash,
+            accountType: "caregiver",
+          },
+        ])
+        .mockResolvedValueOnce([{ total: 0 }]);
+
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(result).not.toBeNull();
+
+      // Wait for the fire-and-forget rehash to settle
+      await vi.waitFor(() => {
+        expect(logMethods.info).toHaveBeenCalledWith("Rehashed password to current params", {
+          accountId: "acct_123",
+        });
+      });
+    });
+
+    it("logs error when fire-and-forget rehash fails (Error)", async () => {
+      const { db, chain } = mockDb();
+      const lowIterHash = "$argon2id$v=19$m=65536,t=1,p=1$c2FsdA$aGFzaA";
+      mockVerifyPassword.mockImplementation((hash) => hash === lowIterHash);
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_123",
+            emailHash: "hashed_test@example.com",
+            passwordHash: lowIterHash,
+            accountType: "caregiver",
+          },
+        ])
+        .mockResolvedValueOnce([{ total: 0 }]);
+      // The fire-and-forget rehash calls db.transaction first (not awaited),
+      // then the login session tx is the second call (awaited).
+      let txCallCount = 0;
+      chain.transaction = vi.fn<(fn: (tx: typeof chain) => Promise<void>) => Promise<void>>(
+        (fn) => {
+          txCallCount++;
+          if (txCallCount === 1) return Promise.reject(new Error("rehash db error"));
+          return fn(chain);
+        },
+      );
+
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(result).not.toBeNull();
+
+      await vi.waitFor(() => {
+        expect(logMethods.error).toHaveBeenCalledWith("Failed to rehash password on login", {
+          err: expect.any(Error),
+        });
+      });
+    });
+
+    it("returns null systemId when system lookup returns empty for system account", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_sys",
+            emailHash: "hashed_test@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "system",
+          },
+        ])
+        .mockResolvedValueOnce([{ total: 0 }])
+        // System lookup returns empty
+        .mockResolvedValueOnce([]);
+
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(result).not.toBeNull();
+      expect(result?.systemId).toBeNull();
+    });
+
+    it("skips eviction when lock query returns no oldest session (skipLocked)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_evict",
+            emailHash: "hashed_test@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        // Session count: at capacity
+        .mockResolvedValueOnce([{ total: MAX_SESSIONS_PER_ACCOUNT }])
+        // Lock query: all sessions locked by other transactions
+        .mockResolvedValueOnce([]);
+
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(result).not.toBeNull();
+      // No revocation set call should happen for eviction
+      const setCalls = chain.set.mock.calls;
+      const revocationCall = setCalls.find(
+        (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
+      );
+      expect(revocationCall).toBeUndefined();
     });
   });
 
@@ -1022,5 +1361,64 @@ describe("needsRehash", () => {
 
   it("returns false for bcrypt-style hash (no argon2id match)", () => {
     expect(needsRehash("$2b$10$somesaltandhashthatislongenough")).toBe(false);
+  });
+});
+
+// ── isDuplicateEmailError ───────────────────────────────────────────
+
+describe("isDuplicateEmailError", () => {
+  it("returns false for non-Error objects that are not unique violations", () => {
+    expect(isDuplicateEmailError("string-error")).toBe(false);
+    expect(isDuplicateEmailError(42)).toBe(false);
+    expect(isDuplicateEmailError(null)).toBe(false);
+  });
+
+  it("returns false for non-Error objects (isPgErrorCode requires Error)", () => {
+    const fakeError = { code: PG_UNIQUE_VIOLATION, constraint_name: "accounts_email_hash_idx" };
+    expect(isDuplicateEmailError(fakeError)).toBe(false);
+  });
+
+  it("returns true when constraint_name is directly on the Error", () => {
+    const err = new Error("duplicate key value violates unique constraint");
+    Object.assign(err, { code: PG_UNIQUE_VIOLATION, constraint_name: "accounts_email_hash_idx" });
+    expect(isDuplicateEmailError(err)).toBe(true);
+  });
+
+  it("returns true when constraint_name is on error.cause (DrizzleQueryError wrapper)", () => {
+    const inner = new Error("driver error");
+    Object.assign(inner, { code: PG_UNIQUE_VIOLATION, constraint_name: "accounts_email_hash_idx" });
+    const outer = new Error("query failed");
+    Object.assign(outer, { code: PG_UNIQUE_VIOLATION, cause: inner });
+    expect(isDuplicateEmailError(outer)).toBe(true);
+  });
+
+  it("returns false when constraint_name does not match", () => {
+    const err = new Error("duplicate key");
+    Object.assign(err, { code: PG_UNIQUE_VIOLATION, constraint_name: "other_constraint" });
+    expect(isDuplicateEmailError(err)).toBe(false);
+  });
+});
+
+// ── LoginThrottledError ─────────────────────────────────────────────
+
+describe("LoginThrottledError", () => {
+  it("has name set to LoginThrottledError", () => {
+    const err = new LoginThrottledError(1000);
+    expect(err.name).toBe("LoginThrottledError");
+  });
+
+  it("exposes windowResetAt as UnixMillis", () => {
+    const err = new LoginThrottledError(1_700_000_000_000);
+    expect(err.windowResetAt).toBe(1_700_000_000_000);
+  });
+
+  it("has the expected error message", () => {
+    const err = new LoginThrottledError(1000);
+    expect(err.message).toBe("Too many failed login attempts");
+  });
+
+  it("extends Error", () => {
+    const err = new LoginThrottledError(1000);
+    expect(err).toBeInstanceOf(Error);
   });
 });
