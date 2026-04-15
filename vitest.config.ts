@@ -269,7 +269,13 @@ export default defineConfig({
         // import-core: test utilities are helpers, not production code
         "packages/import-core/src/testing/**/*.ts",
       ],
-      reporter: ["text", "json-summary", "lcov", "html"],
+      reporter: [
+        "text",
+        ["json-summary", { file: "coverage-summary.json" }],
+        ["json", { file: "coverage-final.json" }],
+        "lcov",
+        "html",
+      ],
       reportsDirectory: "./coverage",
       // packages/db has only integration tests currently; unit coverage
       // will be enforced when db schema code (db-2je4) is added

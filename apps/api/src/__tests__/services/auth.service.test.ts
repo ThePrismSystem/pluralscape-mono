@@ -24,6 +24,7 @@ import {
   listSessions,
   logoutCurrentSession,
   loginAccount,
+  needsRehash,
   registerAccount,
   revokeAllSessions,
   revokeSession,
@@ -66,6 +67,7 @@ mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid")
 vi.mock("@pluralscape/crypto", () => ({
   AEAD_KEY_BYTES: 32,
   AEAD_NONCE_BYTES: 24,
+  PWHASH_OPSLIMIT_SENSITIVE: 4,
   assertAeadNonce: () => undefined,
   GENERIC_HASH_BYTES_MAX: 64,
   getSodium: () => ({
@@ -988,5 +990,37 @@ describe("auth service", () => {
         expect(group).toMatch(/^[A-Z2-7]+$/);
       }
     });
+  });
+});
+
+// ── needsRehash ──────────────────────────────────────────────────────
+
+describe("needsRehash", () => {
+  it("returns true when iterations are below PWHASH_OPSLIMIT_SENSITIVE (4)", () => {
+    const lowOps = "$argon2id$v=19$m=65536,t=1,p=1$c2FsdA$aGFzaA";
+    expect(needsRehash(lowOps)).toBe(true);
+  });
+
+  it("returns true when iterations equal 3 (still below threshold)", () => {
+    const hash = "$argon2id$v=19$m=65536,t=3,p=1$c2FsdA$aGFzaA";
+    expect(needsRehash(hash)).toBe(true);
+  });
+
+  it("returns false when iterations meet the threshold (t=4)", () => {
+    const hash = "$argon2id$v=19$m=65536,t=4,p=1$c2FsdA$aGFzaA";
+    expect(needsRehash(hash)).toBe(false);
+  });
+
+  it("returns false when iterations exceed the threshold (t=8)", () => {
+    const hash = "$argon2id$v=19$m=65536,t=8,p=1$c2FsdA$aGFzaA";
+    expect(needsRehash(hash)).toBe(false);
+  });
+
+  it("returns false when hash format does not match argon2id pattern", () => {
+    expect(needsRehash("not-a-hash")).toBe(false);
+  });
+
+  it("returns false for bcrypt-style hash (no argon2id match)", () => {
+    expect(needsRehash("$2b$10$somesaltandhashthatislongenough")).toBe(false);
   });
 });
