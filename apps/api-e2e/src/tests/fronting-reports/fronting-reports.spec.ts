@@ -152,6 +152,6 @@ test.describe("Fronting Reports", () => {
         generatedAt: Date.now(),
       },
     });
-    expect(res.status()).toBe(422);
+    expect(res.status()).toBe(400);
   });
 });

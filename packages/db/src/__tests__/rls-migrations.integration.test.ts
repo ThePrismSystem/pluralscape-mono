@@ -72,7 +72,7 @@ describe("RLS migration bootstrap", () => {
   });
 
   it("migration file matches regenerated output (sync guard)", () => {
-    const migrationPath = resolve(__dirname, "../../migrations/pg/0002_rls_all_tables.sql");
+    const migrationPath = resolve(__dirname, "../../migrations/pg/0001_rls_all_tables.sql");
     const onDisk = readFileSync(migrationPath, "utf-8");
 
     // Regenerate using the same logic as generate-rls-migration.ts
