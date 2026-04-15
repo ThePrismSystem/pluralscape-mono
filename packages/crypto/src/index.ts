@@ -68,7 +68,9 @@ export {
   PWHASH_OPSLIMIT_INTERACTIVE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_OPSLIMIT_SENSITIVE,
+  AUTH_KEY_HASH_BYTES,
   PWHASH_SALT_BYTES,
+  RECOVERY_KEY_HASH_BYTES,
   SAFETY_NUMBER_HASH_BYTES,
   SAFETY_NUMBER_ITERATIONS,
   SAFETY_NUMBER_VERSION,
@@ -94,9 +96,11 @@ export {
   deriveAuthAndPasswordKeys,
   generateChallengeNonce,
   hashAuthKey,
+  hashRecoveryKey,
   signChallenge,
   verifyAuthKey,
   verifyChallenge,
+  verifyRecoveryKey,
 } from "./auth-key.js";
 
 // ── PIN hashing (string-based) ─────────────────────────────────────

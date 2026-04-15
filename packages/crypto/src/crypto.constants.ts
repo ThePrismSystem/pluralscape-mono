@@ -83,6 +83,9 @@ export const PASSWORD_KEY_BYTES = 32;
 /** BLAKE2B output length for auth key hashing (256 bits). */
 export const AUTH_KEY_HASH_BYTES = 32;
 
+/** BLAKE2B output length for recovery key hashing (256 bits). */
+export const RECOVERY_KEY_HASH_BYTES = 32;
+
 /** Size of challenge nonce in bytes (256 bits). */
 export const CHALLENGE_NONCE_BYTES = 32;
 
@@ -170,5 +173,6 @@ export const SODIUM_CONSTANTS = Object.freeze({
   AUTH_KEY_BYTES,
   PASSWORD_KEY_BYTES,
   AUTH_KEY_HASH_BYTES,
+  RECOVERY_KEY_HASH_BYTES,
   CHALLENGE_NONCE_BYTES,
 } as const);
