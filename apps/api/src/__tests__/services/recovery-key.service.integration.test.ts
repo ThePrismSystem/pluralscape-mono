@@ -135,7 +135,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     newEncryptedMasterKey: string;
     newRecoveryEncryptedMasterKey: string;
     recoveryKeyHash: string;
-    challengeSignature: string;
+    newRecoveryKeyHash: string;
   } {
     return {
       email,
@@ -144,7 +144,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       newEncryptedMasterKey: toHex(randBytes(72)),
       newRecoveryEncryptedMasterKey: toHex(randBytes(72)),
       recoveryKeyHash: recoveryKeyHex,
-      challengeSignature: toHex(randBytes(64)),
+      newRecoveryKeyHash: toHex(randBytes(32)),
     };
   }
 

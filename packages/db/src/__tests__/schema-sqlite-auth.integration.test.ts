@@ -520,6 +520,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           encryptedMasterKey: masterKey,
+          recoveryKeyHash: new Uint8Array(32),
           createdAt: Date.now(),
         })
         .run();
@@ -538,6 +539,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           encryptedMasterKey: new Uint8Array([1, 2, 3]),
+          recoveryKeyHash: new Uint8Array(32),
           createdAt: Date.now(),
         })
         .run();
@@ -574,6 +576,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           encryptedMasterKey: new Uint8Array([1]),
+          recoveryKeyHash: new Uint8Array(32),
           createdAt: Date.now(),
         })
         .run();
@@ -591,6 +594,7 @@ describe("SQLite auth schema", () => {
             id: crypto.randomUUID(),
             accountId: "nonexistent",
             encryptedMasterKey: new Uint8Array([1]),
+            recoveryKeyHash: new Uint8Array(32),
             createdAt: Date.now(),
           })
           .run(),
@@ -606,6 +610,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           encryptedMasterKey: new Uint8Array([1, 2, 3]),
+          recoveryKeyHash: new Uint8Array(32),
           createdAt: Date.now(),
         })
         .run();

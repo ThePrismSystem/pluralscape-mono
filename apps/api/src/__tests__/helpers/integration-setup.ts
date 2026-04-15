@@ -146,6 +146,7 @@ export async function registerTestAccount(
       recoveryEncryptedMasterKey: dummyBlob,
       challengeSignature: toHex(challengeSignature),
       recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: toHex(sodium.randomBytes(32)),
     },
     platform,
     audit,
