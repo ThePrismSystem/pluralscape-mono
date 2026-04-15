@@ -16,11 +16,18 @@ const FAKE_SYSTEM_ID = "sys_00000000-0000-0000-0000-000000000000";
 /**
  * Request a presigned upload URL and return the blob ID and upload URL.
  */
+interface UploadUrlResponse {
+  blobId: string;
+  uploadUrl: string;
+  expiresAt: string;
+  fields?: Record<string, string>;
+}
+
 async function requestUploadUrl(
   request: APIRequestContext,
   authHeaders: Record<string, string>,
   systemId: string,
-): Promise<{ blobId: string; uploadUrl: string; expiresAt: string }> {
+): Promise<UploadUrlResponse> {
   const res = await request.post(`/v1/systems/${systemId}/blobs/upload-url`, {
     headers: authHeaders,
     data: {
@@ -31,13 +38,34 @@ async function requestUploadUrl(
     },
   });
   expect(res.status()).toBe(201);
-  const json = (await res.json()) as {
-    data: { blobId: string; uploadUrl: string; expiresAt: string };
-  };
+  const json = (await res.json()) as { data: UploadUrlResponse };
   expect(json.data).toHaveProperty("blobId");
   expect(json.data).toHaveProperty("uploadUrl");
   expect(json.data).toHaveProperty("expiresAt");
   return json.data;
+}
+
+/**
+ * Upload a blob to a presigned POST URL using multipart form data.
+ * Uses native fetch instead of Playwright's request context to avoid
+ * the global Content-Type: application/json header interfering with
+ * the multipart/form-data encoding required by S3 POST policy.
+ */
+async function postToPresignedUrl(
+  uploadUrl: string,
+  fields: Record<string, string> | undefined,
+): Promise<void> {
+  const formData = new FormData();
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) {
+      formData.append(key, value);
+    }
+  }
+  // S3 POST policy requires the file field to be last
+  formData.append("file", new Blob([Buffer.alloc(BLOB_SIZE_BYTES, 0x42)], { type: "image/png" }));
+
+  const res = await fetch(uploadUrl, { method: "POST", body: formData });
+  expect(res.ok).toBe(true);
 }
 
 /**
@@ -47,16 +75,11 @@ async function uploadAndConfirmBlob(
   request: APIRequestContext,
   authHeaders: Record<string, string>,
   systemId: string,
-  blobId: string,
-  uploadUrl: string,
+  upload: UploadUrlResponse,
 ): Promise<void> {
-  const uploadRes = await request.put(uploadUrl, {
-    data: Buffer.alloc(BLOB_SIZE_BYTES, 0x42),
-    headers: { "Content-Type": "image/png" },
-  });
-  expect(uploadRes.ok()).toBe(true);
+  await postToPresignedUrl(upload.uploadUrl, upload.fields);
 
-  const confirmRes = await request.post(`/v1/systems/${systemId}/blobs/${blobId}/confirm`, {
+  const confirmRes = await request.post(`/v1/systems/${systemId}/blobs/${upload.blobId}/confirm`, {
     headers: authHeaders,
     data: { checksum: DUMMY_CHECKSUM },
   });
@@ -76,17 +99,10 @@ test.describe("Blobs CRUD", () => {
     const blobsUrl = `/v1/systems/${systemId}/blobs`;
     let blobId: string;
 
-    await test.step("get upload url", async () => {
-      const body = await requestUploadUrl(request, authHeaders, systemId);
-      blobId = body.blobId;
-
-      await test.step("upload file to presigned URL", async () => {
-        const uploadRes = await request.put(body.uploadUrl, {
-          data: Buffer.alloc(BLOB_SIZE_BYTES, 0x42),
-          headers: { "Content-Type": "image/png" },
-        });
-        expect(uploadRes.ok()).toBe(true);
-      });
+    await test.step("get upload url and upload file", async () => {
+      const upload = await requestUploadUrl(request, authHeaders, systemId);
+      blobId = upload.blobId;
+      await postToPresignedUrl(upload.uploadUrl, upload.fields);
     });
 
     await test.step("confirm upload", async () => {
@@ -148,10 +164,10 @@ test.describe("Blobs CRUD", () => {
     const blobsUrl = `/v1/systems/${systemId}/blobs`;
 
     const first = await requestUploadUrl(request, authHeaders, systemId);
-    await uploadAndConfirmBlob(request, authHeaders, systemId, first.blobId, first.uploadUrl);
+    await uploadAndConfirmBlob(request, authHeaders, systemId, first);
 
     const second = await requestUploadUrl(request, authHeaders, systemId);
-    await uploadAndConfirmBlob(request, authHeaders, systemId, second.blobId, second.uploadUrl);
+    await uploadAndConfirmBlob(request, authHeaders, systemId, second);
 
     const listRes = await request.get(blobsUrl, { headers: authHeaders });
     expect(listRes.status()).toBe(200);

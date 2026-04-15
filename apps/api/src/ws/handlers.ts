@@ -15,6 +15,7 @@ import {
 import { eq } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
+import { withAccountRead } from "../lib/rls-context.js";
 
 import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
@@ -247,10 +248,12 @@ export async function verifyKeyOwnership(
   correlationId: string | null,
   docId: SyncDocumentId,
 ): Promise<SyncError | null> {
-  const rows = await db
-    .select({ publicKey: authKeys.publicKey })
-    .from(authKeys)
-    .where(eq(authKeys.accountId, accountId));
+  const rows = await withAccountRead(db, accountId, (tx) =>
+    tx
+      .select({ publicKey: authKeys.publicKey })
+      .from(authKeys)
+      .where(eq(authKeys.accountId, accountId)),
+  );
 
   const keyBytes =
     authorPublicKey instanceof Uint8Array ? authorPublicKey : new Uint8Array(authorPublicKey);

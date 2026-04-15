@@ -33,7 +33,7 @@ test.describe("Device tokens", () => {
       const body = (await res.json()) as { data: DeviceTokenResponse };
       expect(body.data.id).toMatch(/^dt_/);
       expect(body.data.platform).toBe("ios");
-      expect(body.data.tokenHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(body.data.tokenHash).toMatch(/^[0-9a-f]{128}$/);
       expect(body.data.systemId).toBe(systemId);
       tokenId = body.data.id;
     });
