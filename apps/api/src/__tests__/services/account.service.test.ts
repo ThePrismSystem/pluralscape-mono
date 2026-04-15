@@ -23,6 +23,7 @@ vi.mock("@pluralscape/crypto", () => ({
   hashAuthKey: () => new Uint8Array(32),
   verifyAuthKey: (_authKey: Uint8Array, storedHash: Uint8Array) =>
     storedHash.every((b) => b === 0xab),
+  verifyChallenge: vi.fn().mockReturnValue(true),
   generateSalt: () => new Uint8Array(16),
   generateChallengeNonce: () => new Uint8Array(32),
   generateMasterKey: () => new Uint8Array(32),
@@ -53,6 +54,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 const { getAccountInfo, changeEmail, changePassword, updateAccountSettings, ConcurrencyError } =
   await import("../../services/account.service.js");
+const { verifyChallenge } = await import("@pluralscape/crypto");
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -62,6 +64,8 @@ const VALID_AUTH_KEY_HEX = "ab".repeat(32);
 const INVALID_AUTH_KEY_HEX = "00".repeat(32);
 /** Stored authKeyHash where every byte is 0xab — matches VALID_AUTH_KEY_HEX in the mock. */
 const VALID_AUTH_KEY_HASH = new Uint8Array(32).fill(0xab);
+/** A valid signing public key (32 bytes). */
+const VALID_SIGN_PUBLIC_KEY = new Uint8Array(32).fill(0x11);
 
 const VALID_CHANGE_PASSWORD_PARAMS = {
   oldAuthKey: VALID_AUTH_KEY_HEX,
@@ -346,12 +350,14 @@ describe("account service", () => {
 
     it("returns ok and revokedSessionCount on success", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          authKeyHash: VALID_AUTH_KEY_HASH,
-          version: 1,
-        },
-      ]);
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
       chain.returning
         .mockResolvedValueOnce([{ id: "acct_123" }])
         .mockResolvedValueOnce([{ id: "sess_1" }, { id: "sess_2" }, { id: "sess_3" }]);
@@ -367,27 +373,31 @@ describe("account service", () => {
 
     it("calls transaction during password change", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          authKeyHash: VALID_AUTH_KEY_HASH,
-          version: 1,
-        },
-      ]);
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
       chain.returning.mockResolvedValueOnce([{ id: "acct_123" }]).mockResolvedValueOnce([]);
 
       await changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit);
-      // Two transaction calls: withAccountRead (read) + withAccountTransaction (write)
-      expect(chain.transaction).toHaveBeenCalledTimes(2);
+      // Three transaction calls: withAccountRead (account) + withAccountRead (signing key) + withAccountTransaction (write)
+      expect(chain.transaction).toHaveBeenCalledTimes(3);
     });
 
     it("throws on optimistic lock failure", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          authKeyHash: VALID_AUTH_KEY_HASH,
-          version: 1,
-        },
-      ]);
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
@@ -400,6 +410,40 @@ describe("account service", () => {
       await expect(
         changePassword(db, "acct_123" as AccountId, { oldAuthKey: "" }, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
+    });
+
+    it("rejects when no signing key found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      await expect(
+        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+      ).rejects.toThrow("No signing key found");
+    });
+
+    it("rejects with invalid challenge signature", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
+
+      vi.mocked(verifyChallenge).mockReturnValueOnce(false);
+
+      await expect(
+        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+      ).rejects.toThrow("Invalid challenge signature");
     });
   });
 

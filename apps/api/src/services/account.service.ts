@@ -1,5 +1,12 @@
-import { getSodium, hashAuthKey, verifyAuthKey } from "@pluralscape/crypto";
-import { accounts, sessions, systems } from "@pluralscape/db/pg";
+import {
+  assertSignPublicKey,
+  assertSignature,
+  getSodium,
+  hashAuthKey,
+  verifyAuthKey,
+  verifyChallenge,
+} from "@pluralscape/crypto";
+import { accounts, authKeys, sessions, systems } from "@pluralscape/db/pg";
 import { now, toUnixMillis } from "@pluralscape/types";
 import {
   ChangeEmailSchema,
@@ -201,9 +208,33 @@ export async function changePassword(
   // Client sends the re-wrapped master key blob; server stores it opaquely
   const newEncMasterKeyBytes = fromHex(parsed.newEncryptedMasterKey);
 
-  // TODO: verify challengeSignature against the account's stored signing public key
-  // once per-account signing keys are persisted. The schema includes it so the client
-  // always sends it; skip verification until signing keys are stored server-side.
+  // Look up the signing public key for challenge verification
+  const [signingKey] = await withAccountRead(db, accountId, async (tx) => {
+    return tx
+      .select({ publicKey: authKeys.publicKey })
+      .from(authKeys)
+      .where(and(eq(authKeys.accountId, accountId), eq(authKeys.keyType, "signing")))
+      .limit(1);
+  });
+
+  if (!signingKey) {
+    throw new ValidationError("No signing key found");
+  }
+
+  const sigPublicKey =
+    signingKey.publicKey instanceof Uint8Array
+      ? signingKey.publicKey
+      : new Uint8Array(signingKey.publicKey);
+  assertSignPublicKey(sigPublicKey);
+
+  const signatureBytes = fromHex(parsed.challengeSignature);
+  assertSignature(signatureBytes);
+
+  // Client signs the new auth key hash as proof of key derivation
+  const signatureValid = verifyChallenge(newAuthKeyHash, signatureBytes, sigPublicKey);
+  if (!signatureValid) {
+    throw new ValidationError("Invalid challenge signature");
+  }
 
   const timestamp = now();
 
