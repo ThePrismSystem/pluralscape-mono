@@ -130,7 +130,8 @@ export const authRouter = router({
         newKdfSalt: z.string().min(1),
         newEncryptedMasterKey: z.string().min(1),
         newRecoveryEncryptedMasterKey: z.string().min(1),
-        challengeSignature: z.string().min(1),
+        recoveryKeyHash: z.string().min(1),
+        newRecoveryKeyHash: z.string().min(1),
         platform: PlatformSchema,
       }),
     )
