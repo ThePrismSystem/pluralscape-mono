@@ -31,7 +31,8 @@ vi.mock("../../../services/recovery-key.service.js", () => ({
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
-  registerAccount: vi.fn(),
+  initiateRegistration: vi.fn(),
+  commitRegistration: vi.fn(),
   loginAccount: vi.fn(),
   logoutCurrentSession: vi.fn(),
   listSessions: vi.fn(),
@@ -51,7 +52,8 @@ vi.mock("../../../services/auth.service.js", () => ({
 }));
 
 const {
-  registerAccount,
+  initiateRegistration,
+  commitRegistration,
   loginAccount,
   logoutCurrentSession,
   listSessions,
@@ -60,12 +62,8 @@ const {
   LoginThrottledError,
 } = await import("../../../services/auth.service.js");
 
-const {
-  resetPasswordWithRecoveryKey,
-  NoActiveRecoveryKeyError,
-  DecryptionFailedError,
-  InvalidInputError,
-} = await import("../../../services/recovery-key.service.js");
+const { resetPasswordWithRecoveryKey, NoActiveRecoveryKeyError } =
+  await import("../../../services/recovery-key.service.js");
 
 const { authRouter } = await import("../../../trpc/routers/auth.js");
 
@@ -78,69 +76,99 @@ describe("auth router", () => {
     vi.clearAllMocks();
   });
 
-  // ── register ──────────────────────────────────────────────────────
+  // ── registrationInitiate ─────────────────────────────────────────
 
-  describe("auth.register", () => {
-    const registrationInput = {
+  describe("auth.registrationInitiate", () => {
+    const initiateInput = {
       email: "test@example.com",
-      password: "SuperSecret123!",
-      recoveryKeyBackupConfirmed: true,
     };
 
-    const registrationResult = {
-      sessionToken: "tok_abc",
-      recoveryKey: "XXXX-YYYY-ZZZZ",
+    const initiateResult = {
       accountId: MOCK_AUTH.accountId,
-      accountType: "system" as const,
+      kdfSalt: "b".repeat(32),
+      challengeNonce: "n".repeat(64),
     };
 
-    it("calls registerAccount and defaults platform to 'web'", async () => {
-      vi.mocked(registerAccount).mockResolvedValue(registrationResult);
+    it("calls initiateRegistration and returns initiate result", async () => {
+      vi.mocked(initiateRegistration).mockResolvedValue(initiateResult);
       const caller = createCaller();
-      const result = await caller.auth.register(registrationInput);
+      const result = await caller.auth.registrationInitiate(initiateInput);
 
-      expect(vi.mocked(registerAccount)).toHaveBeenCalledOnce();
-      expect(vi.mocked(registerAccount).mock.calls[0]?.[2]).toBe("web");
-      expect(result).toEqual(registrationResult);
-    });
-
-    it("accepts explicit platform override", async () => {
-      vi.mocked(registerAccount).mockResolvedValue(registrationResult);
-      const caller = createCaller();
-      await caller.auth.register({ ...registrationInput, platform: "mobile" });
-
-      expect(vi.mocked(registerAccount).mock.calls[0]?.[2]).toBe("mobile");
+      expect(vi.mocked(initiateRegistration)).toHaveBeenCalledOnce();
+      expect(result).toEqual(initiateResult);
     });
 
     it("does not require authentication", async () => {
-      vi.mocked(registerAccount).mockResolvedValue(registrationResult);
+      vi.mocked(initiateRegistration).mockResolvedValue(initiateResult);
       const caller = createCaller(null);
-      await expect(caller.auth.register(registrationInput)).resolves.toEqual(registrationResult);
+      await expect(caller.auth.registrationInitiate(initiateInput)).resolves.toEqual(
+        initiateResult,
+      );
     });
 
     it("rejects invalid email format", async () => {
       const caller = createCaller();
-      await expect(
-        caller.auth.register({ ...registrationInput, email: "not-an-email" }),
-      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
-    });
-
-    it("rejects empty password", async () => {
-      const caller = createCaller();
-      await expect(caller.auth.register({ ...registrationInput, password: "" })).rejects.toThrow(
+      await expect(caller.auth.registrationInitiate({ email: "not-an-email" })).rejects.toThrow(
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
     });
 
     it("applies authHeavy rate limiting", async () => {
       const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-      vi.mocked(registerAccount).mockResolvedValue(registrationResult);
+      vi.mocked(initiateRegistration).mockResolvedValue(initiateResult);
       const caller = createCaller(null);
       await assertProcedureRateLimited(
         vi.mocked(checkRateLimit),
-        () => caller.auth.register(registrationInput),
+        () => caller.auth.registrationInitiate(initiateInput),
         "authHeavy",
       );
+    });
+  });
+
+  // ── registrationCommit ────────────────────────────────────────────
+
+  describe("auth.registrationCommit", () => {
+    const commitInput = {
+      accountId: MOCK_AUTH.accountId,
+      authKey: "a".repeat(64),
+      encryptedMasterKey: "emk",
+      encryptedSigningPrivateKey: "espk",
+      encryptedEncryptionPrivateKey: "eepk",
+      publicSigningKey: "psk",
+      publicEncryptionKey: "pek",
+      recoveryEncryptedMasterKey: "remk",
+      challengeSignature: "c".repeat(128),
+      recoveryKeyBackupConfirmed: true,
+    };
+
+    const commitResult = {
+      sessionToken: "tok_abc",
+      accountId: MOCK_AUTH.accountId,
+      accountType: "system" as const,
+    };
+
+    it("calls commitRegistration and defaults platform to 'web'", async () => {
+      vi.mocked(commitRegistration).mockResolvedValue(commitResult);
+      const caller = createCaller();
+      const result = await caller.auth.registrationCommit(commitInput);
+
+      expect(vi.mocked(commitRegistration)).toHaveBeenCalledOnce();
+      expect(vi.mocked(commitRegistration).mock.calls[0]?.[2]).toBe("web");
+      expect(result).toEqual(commitResult);
+    });
+
+    it("accepts explicit platform override", async () => {
+      vi.mocked(commitRegistration).mockResolvedValue(commitResult);
+      const caller = createCaller();
+      await caller.auth.registrationCommit({ ...commitInput, platform: "mobile" });
+
+      expect(vi.mocked(commitRegistration).mock.calls[0]?.[2]).toBe("mobile");
+    });
+
+    it("does not require authentication", async () => {
+      vi.mocked(commitRegistration).mockResolvedValue(commitResult);
+      const caller = createCaller(null);
+      await expect(caller.auth.registrationCommit(commitInput)).resolves.toEqual(commitResult);
     });
   });
 
@@ -196,13 +224,15 @@ describe("auth router", () => {
   describe("auth.resetPasswordWithRecoveryKey", () => {
     const resetInput = {
       email: "test@example.com",
-      recoveryKey: "AAAA-BBBB-CCCC-DDDD",
-      newPassword: "NewSecret123!",
+      newAuthKey: "a".repeat(64),
+      newKdfSalt: "b".repeat(32),
+      newEncryptedMasterKey: "encryptedblob",
+      newRecoveryEncryptedMasterKey: "encryptedblob",
+      challengeSignature: "c".repeat(128),
     };
 
     const resetResult = {
       sessionToken: "sess_550e8400-e29b-41d4-a716-446655440099" as SessionId,
-      recoveryKey: "NEW-RECOVERY-KEY",
       accountId: MOCK_AUTH.accountId,
     };
 
@@ -223,22 +253,6 @@ describe("auth router", () => {
 
     it("throws UNAUTHORIZED when NoActiveRecoveryKeyError is thrown", async () => {
       vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValue(new NoActiveRecoveryKeyError());
-      const caller = createCaller(null);
-      await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
-        expect.objectContaining({ code: "UNAUTHORIZED" }),
-      );
-    });
-
-    it("throws UNAUTHORIZED when DecryptionFailedError is thrown", async () => {
-      vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValue(new DecryptionFailedError());
-      const caller = createCaller(null);
-      await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
-        expect.objectContaining({ code: "UNAUTHORIZED" }),
-      );
-    });
-
-    it("throws UNAUTHORIZED when InvalidInputError is thrown", async () => {
-      vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValue(new InvalidInputError());
       const caller = createCaller(null);
       await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),

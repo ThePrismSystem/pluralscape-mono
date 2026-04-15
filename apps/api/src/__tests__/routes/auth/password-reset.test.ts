@@ -23,12 +23,6 @@ vi.mock("../../../services/recovery-key.service.js", () => ({
   NoActiveRecoveryKeyError: class extends Error {
     override name = "NoActiveRecoveryKeyError" as const;
   },
-  DecryptionFailedError: class extends Error {
-    override name = "DecryptionFailedError" as const;
-  },
-  InvalidInputError: class extends Error {
-    override name = "InvalidInputError" as const;
-  },
 }));
 
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -43,12 +37,8 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 }));
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  resetPasswordWithRecoveryKey,
-  NoActiveRecoveryKeyError,
-  DecryptionFailedError,
-  InvalidInputError,
-} = await import("../../../services/recovery-key.service.js");
+const { resetPasswordWithRecoveryKey, NoActiveRecoveryKeyError } =
+  await import("../../../services/recovery-key.service.js");
 const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
 const { passwordResetRoute } = await import("../../../routes/auth/password-reset.js");
 
@@ -66,8 +56,11 @@ async function postJSON(app: Hono, body: unknown): Promise<Response> {
 
 const VALID_BODY = {
   email: "test@example.com",
-  recoveryKey: "ABCD-EFGH-IJKL-MNOP",
-  newPassword: "newstrongpassword123",
+  newAuthKey: "a".repeat(64),
+  newKdfSalt: "b".repeat(32),
+  newEncryptedMasterKey: "encryptedblob",
+  newRecoveryEncryptedMasterKey: "encryptedblob",
+  challengeSignature: "c".repeat(128),
 };
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -84,7 +77,6 @@ describe("POST /password-reset/recovery-key", () => {
   it("returns 200 with session data on successful reset", async () => {
     vi.mocked(resetPasswordWithRecoveryKey).mockResolvedValueOnce({
       sessionToken: "sess_new" as SessionId,
-      recoveryKey: "NEW-RECOVERY-KEY",
       accountId: "acct_123" as AccountId,
     });
 
@@ -93,10 +85,9 @@ describe("POST /password-reset/recovery-key", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { sessionToken: string; recoveryKey: string; accountId: string };
+      data: { sessionToken: string; accountId: string };
     };
     expect(body.data.sessionToken).toBe("sess_new");
-    expect(body.data.recoveryKey).toBe("NEW-RECOVERY-KEY");
     expect(body.data.accountId).toBe("acct_123");
   });
 
@@ -151,32 +142,6 @@ describe("POST /password-reset/recovery-key", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
-  });
-
-  it("returns 401 for DecryptionFailedError (bad recovery key)", async () => {
-    vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValueOnce(
-      new DecryptionFailedError("Decryption failed"),
-    );
-
-    const app = createApp();
-    const res = await postJSON(app, VALID_BODY);
-
-    expect(res.status).toBe(401);
-    const body = (await res.json()) as ApiErrorResponse;
-    expect(body.error.code).toBe("UNAUTHENTICATED");
-  });
-
-  it("returns 401 for InvalidInputError (malformed recovery key)", async () => {
-    vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValueOnce(
-      new InvalidInputError("Invalid recovery key format"),
-    );
-
-    const app = createApp();
-    const res = await postJSON(app, VALID_BODY);
-
-    expect(res.status).toBe(401);
-    const body = (await res.json()) as ApiErrorResponse;
-    expect(body.error.code).toBe("UNAUTHENTICATED");
   });
 
   it("returns 429 when per-account recovery rate limit is exceeded", async () => {
