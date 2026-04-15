@@ -11,7 +11,7 @@
  *
  * @see https://github.com/nicolo-ribaudo/react-native-libsodium
  */
-import { CryptoNotReadyError, UnsupportedOperationError } from "../errors.js";
+import { CryptoNotReadyError, InvalidInputError, UnsupportedOperationError } from "../errors.js";
 
 import { BaseSodiumAdapter } from "./base-adapter.js";
 
@@ -104,7 +104,11 @@ export class ReactNativeSodiumAdapter extends BaseSodiumAdapter {
     // react-native-libsodium does not expose memcmp in its type declarations.
     // Use a manual constant-time XOR comparison — acceptable on RN because
     // Hermes does not apply the JIT optimisations that V8/JSC might.
-    if (a.length !== b.length) return false;
+    if (a.length !== b.length) {
+      throw new InvalidInputError(
+        `memcmp: buffers must be same length (got ${String(a.length)} and ${String(b.length)})`,
+      );
+    }
     let diff = 0;
     for (let i = 0; i < a.length; i++) {
       diff |= (a[i] ?? 0) ^ (b[i] ?? 0);

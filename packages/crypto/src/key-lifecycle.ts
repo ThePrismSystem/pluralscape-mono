@@ -81,7 +81,8 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     this.assertUnlockable();
 
     const passwordBytes = new TextEncoder().encode(password);
-    const { passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, salt);
+    const { passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, salt, password.length);
+    this.deps.sodium.memzero(passwordBytes);
     let masterKey: KdfMasterKey;
     try {
       masterKey = unwrapMasterKey(encryptedMasterKey, passwordKey);

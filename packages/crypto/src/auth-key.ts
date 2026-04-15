@@ -30,14 +30,19 @@ export interface SplitKeyResult {
  * then splits: bytes [0..31] → authKey, bytes [32..63] → passwordKey (AeadKey).
  * The 64-byte derivation buffer is zeroed before return.
  *
- * @param password - UTF-8 encoded password bytes. Must be ≥ MIN_PASSWORD_LENGTH.
- * @param salt     - 16-byte Argon2id salt (PwhashSalt brand).
+ * @param password       - UTF-8 encoded password bytes. Must be ≥ MIN_PASSWORD_LENGTH.
+ * @param salt           - 16-byte Argon2id salt (PwhashSalt brand).
+ * @param characterCount - Optional character count for length validation. When provided,
+ *                         this is used instead of `password.length` (bytes) so that
+ *                         multi-byte Unicode passwords are validated by character count.
  */
 export function deriveAuthAndPasswordKeys(
   password: Uint8Array,
   salt: PwhashSalt,
+  characterCount?: number,
 ): Promise<SplitKeyResult> {
-  if (password.length < MIN_PASSWORD_LENGTH) {
+  const lengthToCheck = characterCount ?? password.length;
+  if (lengthToCheck < MIN_PASSWORD_LENGTH) {
     throw new InvalidInputError(
       `Password must be at least ${String(MIN_PASSWORD_LENGTH)} characters.`,
     );

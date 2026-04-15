@@ -30,7 +30,7 @@ export interface PasswordResetResult {
   readonly wrappedMasterKey: EncryptedPayload;
   /** Fresh recovery key — the old one was consumed and must be replaced. */
   readonly newRecoveryKey: RecoveryKeyResult;
-  /** Auth key for server-side verification — send to server, never store. */
+  /** Auth key for server-side verification — send to server, never store. Caller must zero after use. */
   readonly authKey: Uint8Array;
 }
 
@@ -58,12 +58,17 @@ export async function resetPasswordViaRecoveryKey(
 
   const newSalt = generateSalt();
   const passwordBytes = new TextEncoder().encode(newPassword);
-  const { authKey, passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, newSalt);
+  const { authKey, passwordKey } = await deriveAuthAndPasswordKeys(
+    passwordBytes,
+    newSalt,
+    newPassword.length,
+  );
   try {
     const wrappedMasterKey = wrapMasterKey(masterKey, passwordKey);
     const newRecoveryKey = generateRecoveryKey(masterKey);
     return { masterKey, newSalt, wrappedMasterKey, newRecoveryKey, authKey };
   } finally {
     adapter.memzero(passwordKey);
+    adapter.memzero(passwordBytes);
   }
 }
