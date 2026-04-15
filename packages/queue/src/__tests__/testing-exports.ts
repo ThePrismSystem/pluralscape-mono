@@ -5,3 +5,6 @@ export { runJobWorkerContract } from "./job-worker.contract.js";
 export { InMemoryJobQueue } from "./mock-queue.js";
 export { InMemoryJobWorker } from "./mock-worker.js";
 export { makeJobParams, testSystemId, delay, dequeueOrFail } from "./helpers.js";
+export { ensureValkey } from "./valkey-container.js";
+
+export type { ValkeyTestContext } from "./valkey-container.js";
