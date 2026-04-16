@@ -137,7 +137,9 @@ export async function deleteSearchEntry(
   systemId: SystemId,
   entityType: SearchableEntityType,
   entityId: string,
+  deploymentMode?: DeploymentMode,
 ): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(
     sql`DELETE FROM search_index
         WHERE system_id = ${systemId} AND entity_type = ${entityType} AND entity_id = ${entityId}`,
@@ -173,7 +175,9 @@ export async function searchEntries(
   systemId: SystemId,
   query: string,
   opts?: PgSearchOptions,
+  deploymentMode?: DeploymentMode,
 ): Promise<PgSearchIndexResult[]> {
+  assertSelfHosted(deploymentMode);
   const trimmed = query.trim();
   if (trimmed.length === 0) {
     return [];

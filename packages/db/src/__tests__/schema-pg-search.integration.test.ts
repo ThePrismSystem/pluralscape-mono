@@ -369,6 +369,18 @@ describe("PG search_index hosted-mode guard", () => {
     );
   });
 
+  it("rejects deleteSearchEntry in hosted mode", async () => {
+    await expect(
+      deleteSearchEntry(db, "sys-1" as SystemId, "member", "ent-1", "hosted"),
+    ).rejects.toThrow("Plaintext search_index is not available in hosted mode");
+  });
+
+  it("rejects searchEntries in hosted mode", async () => {
+    await expect(
+      searchEntries(db, "sys-1" as SystemId, "test query", undefined, "hosted"),
+    ).rejects.toThrow("Plaintext search_index is not available in hosted mode");
+  });
+
   it("allows operations in self-hosted mode (explicit param)", async () => {
     const accountId = await pgInsertAccount(db);
     const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
