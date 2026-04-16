@@ -60,16 +60,33 @@ export default async function globalSetup(): Promise<void> {
 
   // Patch the inline `new Worker(new URL("./opfs-worker.ts", ...))` reference.
   // esbuild leaves the literal string unchanged when bundling; we swap the
-  // extension so the harness server can serve it.
+  // extension so the harness server can serve it. Assert exactly one match —
+  // an unintended hit (a comment, a log line, an unrelated file with the same
+  // string) would silently corrupt the bundle.
   const controllerPath = resolve(dist, "controller.js");
   const controllerSrc = readFileSync(controllerPath, "utf8");
-  const patched = controllerSrc.replace(/"\.\/opfs-worker\.ts"/g, '"./opfs-worker.js"');
-  writeFileSync(controllerPath, patched);
+  const workerRefPattern = /"\.\/opfs-worker\.ts"/g;
+  const matches = controllerSrc.match(workerRefPattern) ?? [];
+  if (matches.length !== 1) {
+    throw new Error(
+      `global-setup: expected exactly 1 occurrence of "./opfs-worker.ts" in bundled ` +
+        `controller.js, found ${String(matches.length)}. The string-patch step is no ` +
+        `longer safe — investigate whether esbuild now bundles workers natively, or ` +
+        `narrow the pattern.`,
+    );
+  }
+  writeFileSync(controllerPath, controllerSrc.replace(workerRefPattern, '"./opfs-worker.js"'));
 
   // wa-sqlite ships its WASM payload as a sibling of `wa-sqlite.mjs`. The
   // Emscripten `locateFile` resolves relative to the importer's `import.meta.url`,
   // which after bundling becomes the worker bundle. Copy the wasm next to the
   // worker so the runtime fetch resolves correctly.
+  //
+  // NOTE: wa-sqlite ships several variants (wa-sqlite-async.wasm, wa-sqlite-jspi,
+  // mc-wa-sqlite, libpowersync-async, etc.). Only `wa-sqlite.wasm` is copied
+  // because the worker imports `dist/wa-sqlite.mjs`. If `opfs-worker.ts` ever
+  // switches to the async or jspi build (likely needed for full OPFS sync access
+  // in some browsers), add the matching wasm file here.
   cpSync(resolveWaSqliteAsset("wa-sqlite.wasm"), resolve(dist, "wa-sqlite.wasm"));
 
   cpSync(resolve(here, "harness/index.html"), resolve(dist, "index.html"));
