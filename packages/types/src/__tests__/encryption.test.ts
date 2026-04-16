@@ -10,6 +10,7 @@ import type {
   Poll,
   PollVote,
 } from "../communication.js";
+import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
   ClientAcknowledgementRequest,
@@ -415,7 +416,7 @@ describe("DecryptFn and EncryptFn", () => {
     type Fn = DecryptFn<ServerMember, ClientMember>;
     expectTypeOf<Fn>().toBeFunction();
     expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<ServerMember>();
-    expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<Uint8Array>();
+    expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<KdfMasterKey>();
     expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<ClientMember>();
   });
 
@@ -423,7 +424,7 @@ describe("DecryptFn and EncryptFn", () => {
     type Fn = EncryptFn<ClientMember, ServerMember>;
     expectTypeOf<Fn>().toBeFunction();
     expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<ClientMember>();
-    expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<Uint8Array>();
+    expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<KdfMasterKey>();
     expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<ServerMember>();
   });
 });

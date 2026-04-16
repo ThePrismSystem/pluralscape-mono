@@ -1,5 +1,8 @@
 // @pluralscape/types — shared TypeScript domain types
 
+// ── Crypto key brands ────────────────────────────────────────────────
+export type { KdfMasterKey } from "./crypto-keys.js";
+
 // ── IDs ─────────────────────────────────────────────────────────────
 export type {
   Brand,

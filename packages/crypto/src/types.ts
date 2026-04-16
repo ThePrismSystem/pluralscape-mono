@@ -1,7 +1,6 @@
-// ── Branded type infrastructure ──────────────────────────────────────
-declare const __cryptoBrand: unique symbol;
-type CryptoBrand<B extends string> = Uint8Array & { readonly [__cryptoBrand]: B };
+import type { CryptoBrand, KdfMasterKey } from "@pluralscape/types/crypto-keys";
 
+// ── Branded type infrastructure ──────────────────────────────────────
 declare const __numericBrand: unique symbol;
 type NumericBrand<B extends string> = number & { readonly [__numericBrand]: B };
 
@@ -17,7 +16,7 @@ export type BoxNonce = CryptoBrand<"BoxNonce">;
 export type SignPublicKey = CryptoBrand<"SignPublicKey">;
 export type SignSecretKey = CryptoBrand<"SignSecretKey">;
 export type Signature = CryptoBrand<"Signature">;
-export type KdfMasterKey = CryptoBrand<"KdfMasterKey">;
+export type { KdfMasterKey };
 export type PwhashSalt = CryptoBrand<"PwhashSalt">;
 export type EncryptedKeyGrant = CryptoBrand<"EncryptedKeyGrant">;
 export type AuthKey = CryptoBrand<"AuthKey">;
