@@ -300,5 +300,38 @@ describe("createOpfsSqliteDriver", () => {
       driver.exec("SELECT 1");
       await expect(driver.flush()).resolves.toBeUndefined();
     });
+
+    it("calls onDroppedError when an earlier error is overwritten", async () => {
+      const onDroppedError = vi.fn<(err: Error) => void>();
+      const driverWithHook = await createOpfsSqliteDriver({ onDroppedError });
+
+      // Use a manually-resolved reject so we control exactly when the .catch fires
+      let rejectFirst!: (err: Error) => void;
+      let rejectSecond!: (err: Error) => void;
+      const firstPromise = new Promise<number>((_res, rej) => {
+        rejectFirst = rej;
+      });
+      const secondPromise = new Promise<number>((_res, rej) => {
+        rejectSecond = rej;
+      });
+
+      mockExec
+        .mockImplementationOnce(() => firstPromise)
+        .mockImplementationOnce(() => secondPromise);
+
+      // Fire both execs synchronously so neither checkLastError call sees a stored error
+      driverWithHook.exec("FIRST");
+      driverWithHook.exec("SECOND");
+
+      // Now reject both — first lands, then second triggers the overwrite path
+      rejectFirst(new Error("first"));
+      rejectSecond(new Error("second"));
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(onDroppedError).toHaveBeenCalledWith(expect.objectContaining({ message: "first" }));
+
+      // Drain the lastError so other tests start clean
+      await driverWithHook.flush().catch(() => undefined);
+    });
   });
 });

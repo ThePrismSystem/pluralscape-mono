@@ -29,7 +29,14 @@ const DB_NAME = "pluralscape-sync.db";
  * Production deployments MUST run this driver inside a dedicated Web Worker where
  * Atomics.wait is available for blocking synchronous behaviour.
  */
-export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush(): Promise<void> }> {
+export interface OpfsSqliteDriverOptions {
+  /** Called when a pending error is silently overwritten by a new one. */
+  onDroppedError?: (dropped: Error) => void;
+}
+
+export async function createOpfsSqliteDriver(
+  options: OpfsSqliteDriverOptions = {},
+): Promise<SqliteDriver & { flush(): Promise<void> }> {
   // Dynamic imports keep wa-sqlite out of native bundles
   const [{ default: SQLiteESMFactory }, SQLite, { OPFSCoopSyncVFS }] = await Promise.all([
     import("@journeyapps/wa-sqlite/dist/wa-sqlite.mjs"),
@@ -48,6 +55,14 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
   let lastExecPromise: Promise<number> = Promise.resolve(0);
   let lastError: Error | null = null;
 
+  function setLastError(err: unknown): void {
+    const next = err instanceof Error ? err : new Error(String(err));
+    if (lastError !== null) {
+      options.onDroppedError?.(lastError);
+    }
+    lastError = next;
+  }
+
   function trackExec(
     sql: string,
     callback?: (row: (WaSqliteCompatibleType | null)[], columns: string[]) => void,
@@ -56,7 +71,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
     const promise = callback ? sqlite3.exec(db, sql, callback) : sqlite3.exec(db, sql);
     lastExecPromise = promise;
     promise.catch((err: unknown) => {
-      lastError = err instanceof Error ? err : new Error(String(err));
+      setLastError(err);
     });
   }
 
@@ -80,7 +95,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
 
     lastExecPromise = promise;
     promise.catch((err: unknown) => {
-      lastError = err instanceof Error ? err : new Error(String(err));
+      setLastError(err);
     });
   }
 
@@ -177,7 +192,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
       const closePromise = sqlite3.close(db);
       lastExecPromise = closePromise;
       closePromise.catch((err: unknown) => {
-        lastError = err instanceof Error ? err : new Error(String(err));
+        setLastError(err);
       });
     },
 
