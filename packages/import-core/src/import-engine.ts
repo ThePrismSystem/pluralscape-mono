@@ -215,6 +215,94 @@ export async function runImportEngine<TCollection extends string>(
   const ctx = createMappingContext({ sourceMode: source.mode });
   const errors: ImportError[] = [];
 
+  /**
+   * Process a single mapper result (skipped/failed/mapped) through the
+   * persist-and-checkpoint pipeline. Shared by both the batch and single
+   * mapper paths to eliminate duplicated error-handling and upsert logic.
+   *
+   * Returns `true` when a fatal error aborted the collection.
+   */
+  async function persistMapperResult(
+    result:
+      | { readonly status: "skipped"; readonly kind: string; readonly reason: string }
+      | { readonly status: "failed"; readonly kind: string; readonly message: string }
+      | { readonly status: "mapped"; readonly payload: unknown },
+    sourceEntityId: string,
+    entityType: ImportCollectionType,
+    persistedSourceIds: string[],
+    stateRef: { current: ImportCheckpointState },
+  ): Promise<boolean> {
+    if (result.status === "skipped") {
+      stateRef.current = advanceWithinCollection(stateRef.current, {
+        entityType,
+        lastSourceId: sourceEntityId,
+        delta: delta("skipped"),
+      });
+      return false;
+    }
+
+    if (result.status === "failed") {
+      const error: ImportError = {
+        entityType,
+        entityId: sourceEntityId,
+        message: result.message,
+        kind: result.kind,
+        fatal: false,
+      };
+      errors.push(error);
+      await persister.recordError(error);
+      stateRef.current = advanceWithinCollection(stateRef.current, {
+        entityType,
+        lastSourceId: sourceEntityId,
+        delta: delta("failed"),
+      });
+      return false;
+    }
+
+    // status === "mapped"
+    try {
+      const upsert = await persister.upsertEntity(
+        buildPersistableEntity(entityType, sourceEntityId, sourceFormat, result.payload),
+      );
+      ctx.register(entityType, sourceEntityId, upsert.pluralscapeEntityId);
+      persistedSourceIds.push(sourceEntityId);
+      let upsertDelta: AdvanceDelta;
+      switch (upsert.action) {
+        case "created":
+          upsertDelta = delta("imported");
+          break;
+        case "updated":
+          upsertDelta = delta("updated");
+          break;
+        case "skipped":
+          upsertDelta = delta("skipped");
+          break;
+        default: {
+          const _exhaustive: never = upsert.action;
+          throw new Error(`Unhandled upsert action: ${String(_exhaustive)}`);
+        }
+      }
+      stateRef.current = advanceWithinCollection(stateRef.current, {
+        entityType,
+        lastSourceId: sourceEntityId,
+        delta: upsertDelta,
+      });
+    } catch (thrown) {
+      const error = classify(thrown, { entityType, entityId: sourceEntityId });
+      errors.push(error);
+      await persister.recordError(error);
+      if (isFatalError(error)) {
+        return true;
+      }
+      stateRef.current = advanceWithinCollection(stateRef.current, {
+        entityType,
+        lastSourceId: sourceEntityId,
+        delta: delta("failed"),
+      });
+    }
+    return false;
+  }
+
   /** Set of collection names the engine iterates. Computed once per run. */
   const knownDependencyOrderSet = new Set<string>(dependencyOrder);
 
@@ -388,94 +476,35 @@ export async function runImportEngine<TCollection extends string>(
           // Process all accumulated documents in a single batch call.
           const batchResults = entry.mapBatch(accumulated, ctx);
 
+          const stateRef = { current: state };
           for (const batchItem of batchResults) {
             if (isAborted(args.abortSignal)) {
+              state = stateRef.current;
               return abortedResult(state, ctx, errors);
             }
 
-            const result = batchItem.result;
-
-            if (result.status === "skipped") {
-              state = advanceWithinCollection(state, {
-                entityType,
-                lastSourceId: batchItem.sourceEntityId,
-                delta: delta("skipped"),
-              });
-            } else if (result.status === "failed") {
-              const error: ImportError = {
-                entityType,
-                entityId: batchItem.sourceEntityId,
-                message: result.message,
-                kind: result.kind,
-                fatal: false,
-              };
-              errors.push(error);
-              await persister.recordError(error);
-              state = advanceWithinCollection(state, {
-                entityType,
-                lastSourceId: batchItem.sourceEntityId,
-                delta: delta("failed"),
-              });
-            } else {
-              // status === "mapped"
-              try {
-                const upsert = await persister.upsertEntity(
-                  buildPersistableEntity(
-                    entityType,
-                    batchItem.sourceEntityId,
-                    sourceFormat,
-                    result.payload,
-                  ),
-                );
-                ctx.register(entityType, batchItem.sourceEntityId, upsert.pluralscapeEntityId);
-                persistedSourceIds.push(batchItem.sourceEntityId);
-                let upsertDelta: AdvanceDelta;
-                switch (upsert.action) {
-                  case "created":
-                    upsertDelta = delta("imported");
-                    break;
-                  case "updated":
-                    upsertDelta = delta("updated");
-                    break;
-                  case "skipped":
-                    upsertDelta = delta("skipped");
-                    break;
-                  default: {
-                    const _exhaustive: never = upsert.action;
-                    throw new Error(`Unhandled upsert action: ${String(_exhaustive)}`);
-                  }
-                }
-                state = advanceWithinCollection(state, {
-                  entityType,
-                  lastSourceId: batchItem.sourceEntityId,
-                  delta: upsertDelta,
-                });
-              } catch (thrown) {
-                const error = classify(thrown, {
-                  entityType,
-                  entityId: batchItem.sourceEntityId,
-                });
-                errors.push(error);
-                await persister.recordError(error);
-                if (isFatalError(error)) {
-                  collectionAborted = true;
-                  break;
-                }
-                state = advanceWithinCollection(state, {
-                  entityType,
-                  lastSourceId: batchItem.sourceEntityId,
-                  delta: delta("failed"),
-                });
-              }
+            const fatal = await persistMapperResult(
+              batchItem.result,
+              batchItem.sourceEntityId,
+              entityType,
+              persistedSourceIds,
+              stateRef,
+            );
+            if (fatal) {
+              collectionAborted = true;
+              state = stateRef.current;
+              break;
             }
 
             docsSinceCheckpoint += 1;
             if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
+              state = stateRef.current;
               await persister.flush();
               await onProgress(state);
               docsSinceCheckpoint = 0;
             }
           }
+          state = stateRef.current;
         } catch (thrown) {
           // Source iteration itself threw — always fatal.
           const classified = classify(thrown, { entityType, entityId: null });
@@ -538,73 +567,19 @@ export async function runImportEngine<TCollection extends string>(
 
             const doc = event;
             const result = entry.map(doc.document, ctx);
+            const singleStateRef = { current: state };
 
-            if (result.status === "skipped") {
-              state = advanceWithinCollection(state, {
-                entityType,
-                lastSourceId: doc.sourceId,
-                delta: delta("skipped"),
-              });
-            } else if (result.status === "failed") {
-              const error: ImportError = {
-                entityType,
-                entityId: doc.sourceId,
-                message: result.message,
-                kind: result.kind,
-                fatal: false,
-              };
-              errors.push(error);
-              await persister.recordError(error);
-              state = advanceWithinCollection(state, {
-                entityType,
-                lastSourceId: doc.sourceId,
-                delta: delta("failed"),
-              });
-            } else {
-              // status === "mapped"
-              try {
-                const upsert = await persister.upsertEntity(
-                  buildPersistableEntity(entityType, doc.sourceId, sourceFormat, result.payload),
-                );
-                ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
-                persistedSourceIds.push(doc.sourceId);
-                let upsertDelta: AdvanceDelta;
-                switch (upsert.action) {
-                  case "created":
-                    upsertDelta = delta("imported");
-                    break;
-                  case "updated":
-                    upsertDelta = delta("updated");
-                    break;
-                  case "skipped":
-                    upsertDelta = delta("skipped");
-                    break;
-                  default: {
-                    const _exhaustive: never = upsert.action;
-                    throw new Error(`Unhandled upsert action: ${String(_exhaustive)}`);
-                  }
-                }
-                state = advanceWithinCollection(state, {
-                  entityType,
-                  lastSourceId: doc.sourceId,
-                  delta: upsertDelta,
-                });
-              } catch (thrown) {
-                const error = classify(thrown, { entityType, entityId: doc.sourceId });
-                errors.push(error);
-                await persister.recordError(error);
-                if (isFatalError(error)) {
-                  collectionAborted = true;
-                  break;
-                }
-                // Non-fatal persister failure: record and continue with this
-                // doc marked as failed in the checkpoint.
-                state = advanceWithinCollection(state, {
-                  entityType,
-                  lastSourceId: doc.sourceId,
-                  delta: delta("failed"),
-                });
-              }
+            const fatal = await persistMapperResult(
+              result,
+              doc.sourceId,
+              entityType,
+              persistedSourceIds,
+              singleStateRef,
+            );
+            state = singleStateRef.current;
+            if (fatal) {
+              collectionAborted = true;
+              break;
             }
 
             docsSinceCheckpoint += 1;
