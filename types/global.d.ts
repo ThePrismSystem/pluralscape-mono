@@ -27,75 +27,14 @@ declare class TextDecoder {
 
 // ── @journeyapps/wa-sqlite type augmentations ──────────────────────────────────
 //
-// wa-sqlite ships global ambient declarations for SQLiteAPI, SQLiteVFS, etc. in
-// its index.d.ts, but they are only pulled in when the package is statically
-// imported. Since opfs-sqlite-driver.ts uses dynamic imports, we augment the
-// module declarations here to give the driver proper types without `any` leakage.
-
-/**
- * Opaque type for the Emscripten WASM module object returned by
- * @journeyapps/wa-sqlite factory functions. Typed as an opaque branded interface
- * to avoid `any` propagation through the strict lint rules.
- */
-declare interface WaSqliteModule {
-  readonly _brand: unique symbol;
-}
-
-/**
- * Minimal SQLite compatible value type mirrored from @journeyapps/wa-sqlite.
- * Defined locally to avoid depending on the package's global ambient declarations
- * which are only resolved when the package is statically imported.
- */
-type WaSqliteCompatibleType = number | string | Uint8Array | number[] | bigint | null;
-
-/** Minimal SQLite API surface used by opfs-sqlite-driver.ts. */
-declare interface WaSqliteAPI {
-  vfs_register(vfs: object, makeDefault?: boolean): number;
-  open_v2(zFilename: string, iFlags?: number, zVfs?: string): Promise<number>;
-  exec(
-    db: number,
-    zSQL: string,
-    callback?: (row: (WaSqliteCompatibleType | null)[], columns: string[]) => void,
-  ): Promise<number>;
-  close(db: number): Promise<number>;
-
-  // ── Prepared statement API ──────────────────────────────────────────
-  /** Compile SQL into an async iterator of prepared statement handles. */
-  statements(db: number, sql: string): AsyncIterable<number>;
-  /**
-   * Bind an array of values to a prepared statement (positional `?` parameters).
-   * Returns 0 on success; non-zero is a SQLite result code indicating failure.
-   * The upstream wa-sqlite API also accepts `{[name]: value}` for named-parameter
-   * SQL (`:name`/`@name`/`$name`); this local declaration intentionally narrows
-   * to the array form because the sync adapters only emit positional `?` SQL.
-   */
-  bind_collection(stmt: number, bindings: ReadonlyArray<WaSqliteCompatibleType | null>): number;
-  /** Evaluate one step of a prepared statement. Resolves to SQLITE_ROW or SQLITE_DONE. */
-  step(stmt: number): Promise<number>;
-  /** Retrieve all column values for the current row (copies blobs). */
-  row(stmt: number): (WaSqliteCompatibleType | null)[];
-  /** Retrieve all column names for a prepared statement. */
-  column_names(stmt: number): string[];
-}
-
-/** @journeyapps/wa-sqlite module augmentations. */
-declare module "@journeyapps/wa-sqlite/dist/wa-sqlite.mjs" {
-  function ModuleFactory(config?: object): Promise<WaSqliteModule>;
-  export = ModuleFactory;
-}
-
-declare module "@journeyapps/wa-sqlite" {
-  export function Factory(Module: WaSqliteModule): WaSqliteAPI;
-}
-
-/** OPFSCoopSyncVFS instance — the object returned by OPFSCoopSyncVFS.create(). */
-declare interface OPFSCoopSyncVFSInstance {
-  readonly _opfsBrand: unique symbol;
-}
+// The package ships ambient declarations for `SQLiteAPI`, `SQLiteVFS`, and
+// `SQLiteCompatibleType` via its own `types/index.d.ts`. Those are the source
+// of truth for the driver. The only gap we augment here is `OPFSCoopSyncVFS`,
+// which is an example module the package does not declare types for.
 
 /** OPFSCoopSyncVFS — no upstream TypeScript declarations provided by the package. */
 declare module "@journeyapps/wa-sqlite/src/examples/OPFSCoopSyncVFS.js" {
   export const OPFSCoopSyncVFS: {
-    create(name: string, module: WaSqliteModule): Promise<OPFSCoopSyncVFSInstance>;
+    create(name: string, module: unknown): Promise<SQLiteVFS>;
   };
 }
