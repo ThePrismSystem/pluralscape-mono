@@ -34,23 +34,41 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
     type: "module",
   });
 
-  const pending = new Map<number, { resolve: (r: Res) => void; reject: (e: Error) => void }>();
+  interface PendingSlot {
+    resolve: (r: Res) => void;
+    reject: (e: Error) => void;
+    timer?: ReturnType<typeof setTimeout>;
+  }
+  const pending = new Map<number, PendingSlot>();
   let nextId = 1;
   let terminated = false;
   // Promise-based mutex: transaction() acquires this chain before sending
-  // BEGIN; releases after COMMIT/ROLLBACK resolves.
+  // BEGIN; releases after COMMIT/ROLLBACK resolves. The chain is built from
+  // resolve-only promises (release() is the resolver), so `await prev` never
+  // throws — load-bearing assumption for the unwrapped await on line ~157.
   let transactionLock: Promise<void> = Promise.resolve();
+
+  function settleSlot(slot: PendingSlot): void {
+    if (slot.timer !== undefined) clearTimeout(slot.timer);
+  }
 
   worker.addEventListener("message", (ev: MessageEvent<Res>) => {
     const slot = pending.get(ev.data.id);
     if (slot === undefined) return;
     pending.delete(ev.data.id);
+    settleSlot(slot);
     slot.resolve(ev.data);
   });
 
   worker.addEventListener("error", (ev: ErrorEvent) => {
+    // Mark the driver dead so subsequent send() calls reject synchronously
+    // instead of allocating an id and hanging on a worker that won't reply.
+    terminated = true;
     const err = new Error(`OPFS worker error: ${ev.message}`);
-    for (const slot of pending.values()) slot.reject(err);
+    for (const slot of pending.values()) {
+      settleSlot(slot);
+      slot.reject(err);
+    }
     pending.clear();
   });
 
@@ -60,11 +78,12 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
     }
     const id = nextId++;
     return new Promise<Res>((resolve, reject) => {
-      pending.set(id, { resolve, reject });
+      const slot: PendingSlot = { resolve, reject };
+      pending.set(id, slot);
       const full = { ...req, id } as Req;
       worker.postMessage(full);
       if (timeoutMs !== undefined) {
-        setTimeout(() => {
+        slot.timer = setTimeout(() => {
           if (pending.has(id)) {
             pending.delete(id);
             reject(new OpfsDriverUnavailableError(`OPFS worker: ${req.kind} timed out`));
@@ -171,6 +190,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
         terminated = true;
         worker.terminate();
         for (const slot of pending.values()) {
+          settleSlot(slot);
           slot.reject(new WorkerTerminatedError());
         }
         pending.clear();
