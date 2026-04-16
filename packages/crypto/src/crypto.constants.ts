@@ -65,6 +65,9 @@ export const PWHASH_MEMLIMIT_MODERATE = 256 * 1_024 * 1_024;
 /** Sensitive ops limit (OWASP minimum for server-side password hashing). */
 export const PWHASH_OPSLIMIT_SENSITIVE = 4;
 
+/** Sensitive memory limit in bytes (1 GiB). */
+export const PWHASH_MEMLIMIT_SENSITIVE = 1_073_741_824;
+
 /** Unified Argon2id ops limit — OWASP Sensitive tier (t=4). All clients use this. */
 export const PWHASH_OPSLIMIT_UNIFIED = 4;
 
@@ -164,6 +167,7 @@ export const SODIUM_CONSTANTS = Object.freeze({
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_MEMLIMIT_MODERATE,
   PWHASH_OPSLIMIT_SENSITIVE,
+  PWHASH_MEMLIMIT_SENSITIVE,
   KDF_KEY_BYTES,
   KDF_CONTEXT_BYTES,
   KDF_BYTES_MIN,

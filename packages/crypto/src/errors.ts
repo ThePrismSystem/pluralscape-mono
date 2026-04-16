@@ -2,7 +2,7 @@ import type { KeyLifecycleState } from "./lifecycle-types.js";
 
 /** Base error class for all crypto-related errors. */
 export class CryptoError extends Error {
-  override readonly name = "CryptoError" as const;
+  override readonly name: string = "CryptoError";
 
   constructor(message = "An error occurred in the crypto layer.", options?: ErrorOptions) {
     super(message, options);
