@@ -14,9 +14,9 @@ import {
 } from "@pluralscape/sync";
 import { eq } from "drizzle-orm";
 
-import { logger } from "../lib/logger.js";
 import { withAccountRead } from "../lib/rls-context.js";
 
+import * as envelopeVerificationConfig from "./envelope-verification-config.js";
 import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
@@ -209,7 +209,7 @@ export function verifyEnvelopeOrError(
   correlationId: string | null,
   docId: SyncDocumentId,
 ): SyncError | null {
-  if (!shouldVerifyEnvelopeSignatures()) return null;
+  if (!envelopeVerificationConfig.shouldVerifyEnvelopeSignatures()) return null;
   try {
     const sodium = getSodium();
     const valid = verifyEnvelopeSignature({ ...envelope, documentId: docId, seq: 0 }, sodium);
@@ -464,22 +464,5 @@ async function collectAllEnvelopes(
   return all;
 }
 
-/**
- * Whether to verify envelope signatures server-side.
- * Configurable via VERIFY_ENVELOPE_SIGNATURES env var for performance tuning.
- * Defaults to true (secure by default).
- */
-let envelopeVerificationWarningLogged = false;
-export function shouldVerifyEnvelopeSignatures(): boolean {
-  const envVal = process.env["VERIFY_ENVELOPE_SIGNATURES"];
-  if (envVal === undefined) return true;
-  const enabled = envVal !== "false" && envVal !== "0";
-  if (!enabled && !envelopeVerificationWarningLogged) {
-    envelopeVerificationWarningLogged = true;
-    logger.warn(
-      "VERIFY_ENVELOPE_SIGNATURES is disabled — server will accept unsigned sync envelopes. " +
-        "This weakens E2E encryption integrity. Only disable for performance profiling.",
-    );
-  }
-  return enabled;
-}
+export const shouldVerifyEnvelopeSignatures =
+  envelopeVerificationConfig.shouldVerifyEnvelopeSignatures;

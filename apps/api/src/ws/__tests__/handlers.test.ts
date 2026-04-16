@@ -2,9 +2,7 @@
  * Branch coverage for apps/api/src/ws/handlers.ts.
  *
  * Covers all branches not reached by the message-router integration path:
- *   - shouldVerifyEnvelopeSignatures: undefined env (default true)
- *   - shouldVerifyEnvelopeSignatures: "false"/"0" (disabled, warning logged once)
- *   - shouldVerifyEnvelopeSignatures: warning dedup (second call skips log)
+ *   - shouldVerifyEnvelopeSignatures: mock control (false default, override to true)
  *   - handleSubmitChange: verification disabled path (no-verify fast path)
  *   - handleSubmitChange: InvalidInputError from getSodium → SyncError
  *   - handleSubmitChange: verifyEnvelopeSignature returns false → SyncError
@@ -42,6 +40,12 @@ import {
   SnapshotVersionConflictError,
 } from "@pluralscape/sync";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+// Disable envelope signature verification before module load.
+// The IIFE in envelope-verification-config.ts reads this at import time.
+vi.hoisted(() => {
+  process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+});
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../connection-manager.js";
@@ -201,44 +205,28 @@ function makeConnectionState(connectionId: string) {
 
 // ── Test setup ────────────────────────────────────────────────────────
 
-const savedEnvValue = process.env["VERIFY_ENVELOPE_SIGNATURES"];
+const configMod = await import("../envelope-verification-config.js");
+
+function enableVerification(): void {
+  vi.spyOn(configMod, "shouldVerifyEnvelopeSignatures").mockReturnValue(true);
+}
 
 beforeAll(async () => {
   await initSodium();
 });
 
 afterEach(() => {
-  if (savedEnvValue === undefined) {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
-  } else {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = savedEnvValue;
-  }
   vi.restoreAllMocks();
 });
 
 // ── shouldVerifyEnvelopeSignatures ────────────────────────────────────
+// The real startup-cached IIFE is tested in the integration test file
+// (apps/api/src/__tests__/ws/handlers.test.ts). Here we only verify
+// that the mock controls the verification bypass correctly.
 
-describe("shouldVerifyEnvelopeSignatures", () => {
-  it("returns true when env var is undefined (secure default)", () => {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
-    expect(shouldVerifyEnvelopeSignatures()).toBe(true);
-  });
-
-  it("returns false and logs warning when set to 'false'", () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
-    // Reset the module-level flag by reimporting or mutating via repeated calls
-    // The flag is module-level — reset it by calling with enabled first then disabling
+describe("shouldVerifyEnvelopeSignatures (startup-cached)", () => {
+  it("returns false because VERIFY_ENVELOPE_SIGNATURES=false was set before module load", () => {
     expect(shouldVerifyEnvelopeSignatures()).toBe(false);
-  });
-
-  it("returns false when set to '0'", () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "0";
-    expect(shouldVerifyEnvelopeSignatures()).toBe(false);
-  });
-
-  it("returns true for an arbitrary non-false/non-0 value", () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
-    expect(shouldVerifyEnvelopeSignatures()).toBe(true);
   });
 });
 
@@ -383,7 +371,7 @@ describe("handleSubmitChange", () => {
   const validKeyBytes = new Uint8Array(32).fill(1);
 
   it("skips verification and returns SubmitChangeResult when verification disabled", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay, submit } = mockRelay();
     submit.mockResolvedValue(42);
     const db = mockDb([validKeyBytes]);
@@ -401,7 +389,7 @@ describe("handleSubmitChange", () => {
   });
 
   it("returns SyncError INVALID_ENVELOPE when InvalidInputError thrown by getSodium", async () => {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    enableVerification();
 
     // Mock getSodium to throw InvalidInputError
     const cryptoModule = await import("@pluralscape/crypto");
@@ -424,7 +412,7 @@ describe("handleSubmitChange", () => {
   });
 
   it("rethrows non-InvalidInputError thrown by getSodium", async () => {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    enableVerification();
 
     const cryptoModule = await import("@pluralscape/crypto");
     vi.spyOn(cryptoModule, "getSodium").mockImplementation(() => {
@@ -439,7 +427,7 @@ describe("handleSubmitChange", () => {
   });
 
   it("returns SyncError INVALID_ENVELOPE when verifyEnvelopeSignature returns false", async () => {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    enableVerification();
 
     const syncModule = await import("@pluralscape/sync");
     vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(false);
@@ -459,7 +447,7 @@ describe("handleSubmitChange", () => {
   });
 
   it("returns SyncError UNAUTHORIZED_KEY when authorPublicKey does not match account keys", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay } = mockRelay();
     // DB returns a different key than the one in the envelope
     const differentKey = new Uint8Array(32).fill(99);
@@ -478,7 +466,7 @@ describe("handleSubmitChange", () => {
   });
 
   it("returns SyncError UNAUTHORIZED_KEY when account has no keys", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay } = mockRelay();
     const db = mockDb([]);
 
@@ -495,7 +483,7 @@ describe("handleSubmitChange", () => {
   });
 
   it("returns SyncError QUOTA_EXCEEDED when relay.submit throws EnvelopeLimitExceededError", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay, submit } = mockRelay();
     submit.mockRejectedValue(new EnvelopeLimitExceededError("doc-sc-quota", 1000));
     const db = mockDb([validKeyBytes]);
@@ -513,7 +501,7 @@ describe("handleSubmitChange", () => {
   });
 
   it("rethrows unknown errors from relay.submit", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay, submit } = mockRelay();
     submit.mockRejectedValue(new Error("unexpected relay error"));
     const db = mockDb([validKeyBytes]);
@@ -548,7 +536,7 @@ describe("handleSubmitSnapshot", () => {
   }
 
   it("returns SnapshotAccepted on success", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay } = mockRelay();
     const db = mockDb([validSnapshotKeyBytes]);
     const result = await handleSubmitSnapshot(
@@ -564,7 +552,7 @@ describe("handleSubmitSnapshot", () => {
   });
 
   it("returns SyncError INVALID_ENVELOPE when snapshot signature is invalid", async () => {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    enableVerification();
 
     const syncModule = await import("@pluralscape/sync");
     vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(false);
@@ -584,7 +572,7 @@ describe("handleSubmitSnapshot", () => {
   });
 
   it("returns SyncError UNAUTHORIZED_KEY when snapshot authorPublicKey does not match account", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay } = mockRelay();
     const differentKey = new Uint8Array(32).fill(99);
     const db = mockDb([differentKey]);
@@ -602,7 +590,7 @@ describe("handleSubmitSnapshot", () => {
   });
 
   it("returns SyncError VERSION_CONFLICT on SnapshotVersionConflictError", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay, submitSnapshot } = mockRelay();
     submitSnapshot.mockRejectedValue(new SnapshotVersionConflictError(6, 5));
     const db = mockDb([validSnapshotKeyBytes]);
@@ -620,7 +608,7 @@ describe("handleSubmitSnapshot", () => {
   });
 
   it("returns SyncError QUOTA_EXCEEDED on SnapshotSizeLimitExceededError", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay, submitSnapshot } = mockRelay();
     submitSnapshot.mockRejectedValue(new SnapshotSizeLimitExceededError("doc-ss-size", 2000, 1000));
     const db = mockDb([validSnapshotKeyBytes]);
@@ -638,7 +626,7 @@ describe("handleSubmitSnapshot", () => {
   });
 
   it("rethrows unknown errors from relay.submitSnapshot", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { relay, submitSnapshot } = mockRelay();
     submitSnapshot.mockRejectedValue(new Error("unexpected snapshot error"));
     const db = mockDb([validSnapshotKeyBytes]);
@@ -839,7 +827,7 @@ describe("handleDocumentLoad", () => {
 
 describe("verifyEnvelopeOrError", () => {
   it("returns null when verification is disabled", () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+    vi.restoreAllMocks();
     const { nonce, sig, key, ct } = brandedBytes(32, 1);
     const result = verifyEnvelopeOrError(
       { authorPublicKey: key, nonce, signature: sig, ciphertext: ct },
@@ -850,7 +838,7 @@ describe("verifyEnvelopeOrError", () => {
   });
 
   it("returns SyncError INVALID_ENVELOPE when signature is invalid", async () => {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    enableVerification();
     const syncModule = await import("@pluralscape/sync");
     vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(false);
 
@@ -865,7 +853,7 @@ describe("verifyEnvelopeOrError", () => {
   });
 
   it("returns null when signature is valid", async () => {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    enableVerification();
     const syncModule = await import("@pluralscape/sync");
     vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(true);
 

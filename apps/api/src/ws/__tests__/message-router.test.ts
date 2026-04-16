@@ -16,6 +16,11 @@ import { initSodium } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+// Disable envelope signature verification — mock data has invalid signatures.
+vi.mock("../envelope-verification-config.js", () => ({
+  shouldVerifyEnvelopeSignatures: vi.fn(() => false),
+}));
+
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import { createRouterContext, routeMessage } from "../../ws/message-router.js";
@@ -154,18 +159,11 @@ function makeAuthenticatedState(
 
 // ── Test setup ───────────────────────────────────────────────────────
 
-const savedEnvValue = process.env["VERIFY_ENVELOPE_SIGNATURES"];
-
 beforeAll(async () => {
   await initSodium();
 });
 
 afterEach(() => {
-  if (savedEnvValue === undefined) {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
-  } else {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = savedEnvValue;
-  }
   sent.length = 0;
   mockValidateSession.mockRestore();
   mockLimit.mockReset();
@@ -184,8 +182,6 @@ afterEach(() => {
 describe("message-router branch coverage", () => {
   describe("createRouterContext onEvict callback", () => {
     it("deletes documentOwnership and removes subscriptions when relay evicts a doc", async () => {
-      process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
-
       // maxDocuments=1 forces eviction when the second distinct doc is submitted
       const manager = new ConnectionManager();
       const ctx = createRouterContext(1, manager);
@@ -417,8 +413,6 @@ describe("message-router branch coverage", () => {
 
   describe("SubmitChangeRequest syncPublished===false", () => {
     it("logs warning when Valkey publish returns false", async () => {
-      process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
-
       const ws = mockWs();
       const log = mockLog();
       const manager = new ConnectionManager();

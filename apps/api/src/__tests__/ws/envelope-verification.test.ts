@@ -1,11 +1,10 @@
 /**
  * Tests for shouldVerifyEnvelopeSignatures warning behaviour.
  *
- * The function reads VERIFY_ENVELOPE_SIGNATURES from process.env and logs
- * a one-time warning via the module-level `envelopeVerificationWarningLogged`
- * flag when verification is disabled.
+ * The function reads VERIFY_ENVELOPE_SIGNATURES from process.env once at module
+ * load via an IIFE and logs a warning when verification is disabled.
  *
- * Each test uses `vi.resetModules()` so the memoisation flag resets on re-import.
+ * Each test uses `vi.resetModules()` so the IIFE re-evaluates on re-import.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,28 +19,15 @@ vi.mock("../../lib/logger.js", () => ({
   },
 }));
 
-// handlers.ts imports these — mock to prevent actual crypto initialisation
-vi.mock("@pluralscape/crypto", () => ({
-  getSodium: vi.fn(),
-  InvalidInputError: class InvalidInputError extends Error {},
-}));
-
-vi.mock("@pluralscape/sync", () => ({
-  verifyEnvelopeSignature: vi.fn(),
-  EnvelopeLimitExceededError: class EnvelopeLimitExceededError extends Error {},
-  SnapshotSizeLimitExceededError: class SnapshotSizeLimitExceededError extends Error {},
-  SnapshotVersionConflictError: class SnapshotVersionConflictError extends Error {},
-}));
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
  * Dynamically import shouldVerifyEnvelopeSignatures after env var is configured.
- * Requires vi.resetModules() to have been called first so the module-level
- * memoisation flag in handlers.ts is fresh.
+ * Requires vi.resetModules() to have been called first so the IIFE in
+ * envelope-verification-config.ts re-evaluates with the new env.
  */
 async function importShouldVerify(): Promise<() => boolean> {
-  const mod = await import("../../ws/handlers.js");
+  const mod = await import("../../ws/envelope-verification-config.js");
   return mod.shouldVerifyEnvelopeSignatures;
 }
 
@@ -85,7 +71,7 @@ describe("shouldVerifyEnvelopeSignatures — warning behaviour", () => {
     );
   });
 
-  it("logs the warning only once across multiple calls (memoisation)", async () => {
+  it("returns the cached value across multiple calls (IIFE evaluates once)", async () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
 
     const shouldVerify = await importShouldVerify();
@@ -94,6 +80,7 @@ describe("shouldVerifyEnvelopeSignatures — warning behaviour", () => {
     shouldVerify();
     shouldVerify();
 
+    // Warning is logged once by the IIFE, not per call
     expect(mockWarn).toHaveBeenCalledOnce();
   });
 
