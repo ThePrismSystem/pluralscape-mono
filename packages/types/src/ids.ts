@@ -229,6 +229,14 @@ export interface IdPrefixBrandMap {
   bt_: "BiometricTokenId";
 }
 
+// Compile-time check: every ID_PREFIXES value must appear as a key in IdPrefixBrandMap.
+// Adding a prefix to ID_PREFIXES without a matching entry in IdPrefixBrandMap is a type error.
+export type AssertAllPrefixesMapped = {
+  [K in keyof typeof ID_PREFIXES as (typeof ID_PREFIXES)[K]]: (typeof ID_PREFIXES)[K] extends keyof IdPrefixBrandMap
+    ? true
+    : `Missing prefix mapping for "${(typeof ID_PREFIXES)[K]}"`;
+};
+
 // ── EntityType union ────────────────────────────────────────────────
 
 export type EntityType =
