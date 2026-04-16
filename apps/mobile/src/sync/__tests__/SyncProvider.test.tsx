@@ -645,4 +645,69 @@ describe("SyncProvider", () => {
       expect(result.current.isBootstrapped).toBe(true);
     });
   });
+
+  describe("pipeline initialization", () => {
+    it("cleans up resources when unmounted mid-adapter-creation", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      // Hold the adapter create() in a pending state so we can unmount first
+      let resolveAdapter!: (value: unknown) => void;
+      MockSqliteStorageAdapter.create.mockImplementationOnce(
+        () =>
+          new Promise((res) => {
+            resolveAdapter = res;
+          }),
+      );
+
+      const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+      // IIFE starts — bucketKeyCache is created, then awaits storage adapter
+      await act(() => Promise.resolve());
+
+      unmount();
+
+      // Resolve the adapter after unmount; cancellation branch should run
+      resolveAdapter({
+        loadSnapshot: vi.fn(),
+        saveSnapshot: vi.fn(),
+        loadChanges: vi.fn(),
+        appendChange: vi.fn(),
+        pruneChanges: vi.fn(),
+        listDocuments: vi.fn(() => []),
+        deleteDocument: vi.fn(),
+      });
+      await act(() => Promise.resolve());
+
+      // Engine never instantiated — cancellation caught the branch after await
+      expect(MockSyncEngine).not.toHaveBeenCalled();
+      // bucketKeyCache was allocated pre-await, so it should be disposed
+      expect(mockClearAll).toHaveBeenCalledTimes(1);
+      // wsManager was not yet created, so disconnect should not be called
+      expect(mockWsDisconnect).not.toHaveBeenCalled();
+    });
+
+    it("emits sync:error when storage-adapter initialization rejects", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      const initError = new Error("storage adapter create failed");
+      MockSqliteStorageAdapter.create.mockRejectedValueOnce(initError);
+
+      const emitted: import("@pluralscape/sync").SyncErrorEvent[] = [];
+      mockEventBus.on("sync:error", (event) => {
+        emitted.push(event);
+      });
+
+      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+      await act(() => Promise.resolve());
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0]?.message).toContain("initialization failed");
+      expect(emitted[0]?.error).toBe(initError);
+      expect(MockSyncEngine).not.toHaveBeenCalled();
+      expect(result.current.engine).toBeNull();
+    });
+  });
 });

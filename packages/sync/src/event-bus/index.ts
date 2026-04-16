@@ -1,6 +1,7 @@
 export { createEventBus } from "./event-bus.js";
 export type { EventBus, EventBusOptions } from "./event-bus.js";
 export type {
+  DataErrorEvent,
   DataLayerEvent,
   DataLayerEventMap,
   DataLayerEventType,
