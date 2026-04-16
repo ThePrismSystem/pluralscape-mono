@@ -1,20 +1,30 @@
 ---
 # ps-0azs
 title: "OPFS wa-sqlite driver: implement parameterized query support via prepare/bind/step API"
-status: done
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-01T04:13:11Z
-updated_at: 2026-04-16T07:15:14Z
+updated_at: 2026-04-16T16:23:47Z
 parent: ps-0enb
+blocked_by:
+  - mobile-shr0
 ---
 
 The current opfs-sqlite-driver.ts uses wa-sqlite's exec() which doesn't support bind parameters. The run()/all()/get() methods currently ignore params. Implement the lower-level prepare/bind/step API for parameterized queries needed by SqliteStorageAdapter and SqliteOfflineQueueAdapter. Required before the OPFS path can fully replace IndexedDB fallback.
 
-## Summary of Changes
+## Partial Implementation (Scoped Down)
 
-- Added `trackPrepared()` helper using wa-sqlite's prepared statement API: `statements()` -> `bind_collection()` -> `step()` loop -> `row()`/`column_names()`
-- Updated `run()`, `all()`, `get()` to delegate to `trackPrepared()` when params are provided, keeping the existing `exec()` path for non-parameterized calls
-- Added `toBindParams()` to safely cast unknown params to wa-sqlite compatible types
-- Extended `WaSqliteAPI` interface with `statements`, `bind_collection`, `step`, `row`, `column_names` methods and `SQLITE_ROW` constant
-- Added 7 new test cases covering: parameterized INSERT/SELECT, multiple params, NULL values, empty results, and `get()` delegation
+PR #459 review (multi-agent) found that the original implementation silently violated the synchronous `SqliteStatement` contract for parameterized reads (`.all()`/`.get()`): rows populated asynchronously after the method returned. Tests passed only because they captured the array reference and asserted after `flush()`.
+
+Scoped down to keep what works:
+
+- Parameterized writes (`run(...params)`) implemented via `prepare/bind/step` API — store-and-check pattern is correct here because `run()` returns void
+- Parameterized reads (`.all(...params)` / `.get(...params)`) deferred — both throw an explicit error pointing at mobile-shr0 for the Worker + Atomics.wait bridge
+- `toBindParams` strict: rejects Date, plain object, function, etc. with helpful errors
+- `bind_collection` return code now checked
+- `close()` chains after pending work
+- `trackPrepared` finalizes the statements iterator on throw
+- Single-slot `lastError` overwrites now log via `console.error`
+
+Will be marked completed once mobile-shr0 lands and parameterized reads return correct rows synchronously.
