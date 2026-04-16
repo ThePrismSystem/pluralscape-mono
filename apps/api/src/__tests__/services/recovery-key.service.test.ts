@@ -8,54 +8,38 @@ import type { AccountId } from "@pluralscape/types";
 
 // ── Mock external dependencies ───────────────────────────────────────
 
-const mockMemzero = vi.fn();
-const mockVerifyPassword = vi.fn<(hash: string, password: string) => boolean>();
-mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
+const mockHashAuthKey = vi.fn<(authKey: Uint8Array) => Uint8Array>();
+mockHashAuthKey.mockImplementation(() => new Uint8Array(64));
 
-vi.mock("@pluralscape/crypto", () => ({
-  AEAD_KEY_BYTES: 32,
-  PWHASH_SALT_BYTES: 16,
-  AEAD_NONCE_BYTES: 24,
-  AEAD_TAG_BYTES: 16,
-  GENERIC_HASH_BYTES_MAX: 64,
-  assertAeadNonce: () => undefined,
-  getSodium: () => ({
-    randomBytes: (n: number) => new Uint8Array(n),
-    memzero: mockMemzero,
-    genericHash: () => new Uint8Array(64),
-  }),
-  verifyPassword: (hash: string, password: string) => mockVerifyPassword(hash, password),
-  derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
-  unwrapMasterKey: () => new Uint8Array(32),
-  hashPassword: () => "$argon2id$fake$newhash",
-  regenerateRecoveryKey: () => ({
-    newRecoveryKey: {
-      displayKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
-      encryptedMasterKey: {
-        ciphertext: new Uint8Array(48),
-        nonce: new Uint8Array(24),
-      },
-    },
-    serializedBackup: new Uint8Array(72),
-  }),
-  resetPasswordViaRecoveryKey: () =>
-    Promise.resolve({
-      masterKey: new Uint8Array(32),
-      newSalt: new Uint8Array(16),
-      wrappedMasterKey: {
-        ciphertext: new Uint8Array(48),
-        nonce: new Uint8Array(24),
-      },
-      newRecoveryKey: {
-        displayKey: "NEW-RKEY-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL",
-        encryptedMasterKey: {
-          ciphertext: new Uint8Array(48),
-          nonce: new Uint8Array(24),
-        },
+const mockVerifyAuthKey = vi.fn<(authKey: Uint8Array, storedHash: Uint8Array) => boolean>();
+mockVerifyAuthKey.mockImplementation(() => true);
+
+const mockVerifyRecoveryKey = vi.fn<(rawKey: Uint8Array, storedHash: Uint8Array) => boolean>();
+mockVerifyRecoveryKey.mockImplementation(() => true);
+
+vi.mock("@pluralscape/crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/crypto")>();
+  return {
+    ...actual,
+    getSodium: () => ({
+      randomBytes: (n: number) => new Uint8Array(n),
+      genericHash: (_outLen: number, data: Uint8Array) => {
+        // deterministic stub: XOR each byte with 0xa5 repeated, truncated to outLen
+        const out = new Uint8Array(64);
+        for (let i = 0; i < out.length; i++) out[i] = (data[i % data.length] ?? 0) ^ 0xa5;
+        return out;
       },
     }),
-  serializeRecoveryBackup: () => new Uint8Array(72),
-}));
+    hashAuthKey: (authKey: Uint8Array) => mockHashAuthKey(authKey),
+    verifyAuthKey: (authKey: Uint8Array, storedHash: Uint8Array) =>
+      mockVerifyAuthKey(authKey, storedHash),
+    verifyRecoveryKey: (rawKey: Uint8Array, storedHash: Uint8Array) =>
+      mockVerifyRecoveryKey(rawKey, storedHash),
+    assertAuthKey: vi.fn(),
+    assertAuthKeyHash: vi.fn(),
+    assertRecoveryKeyHash: vi.fn(),
+  };
+});
 
 vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
@@ -92,15 +76,29 @@ const {
 
 // ── Tests ────────────────────────────────────────────────────────────
 
-const { logger: mockLogger, methods: logMethods } = createMockLogger();
+const { methods: logMethods } = createMockLogger();
+
+/** 64-char hex string representing a valid authKey (32 bytes). */
+const VALID_AUTH_KEY = "ab".repeat(32);
+/** 64-char hex string representing a valid newAuthKey (32 bytes). */
+const VALID_NEW_AUTH_KEY = "cd".repeat(32);
+/** 32-char hex string representing a valid kdfSalt (16 bytes). */
+const VALID_KDF_SALT = "ef".repeat(16);
+/** Hex-encoded dummy encrypted master key blob. */
+const VALID_ENC_MASTER_KEY = "aa".repeat(72);
+/** Hex-encoded dummy recovery-encrypted master key blob. */
+const VALID_RECOVERY_ENC_KEY = "bb".repeat(72);
+/** 64-char hex string representing a valid recovery key hash (32 bytes). */
+const VALID_RECOVERY_KEY_HASH = "dd".repeat(32);
 
 describe("recovery-key service", () => {
   const mockAudit = vi.fn().mockResolvedValue(undefined);
 
   afterEach(() => {
     vi.restoreAllMocks();
-    mockMemzero.mockClear();
-    mockVerifyPassword.mockClear();
+    mockHashAuthKey.mockClear();
+    mockVerifyAuthKey.mockClear();
+    mockVerifyRecoveryKey.mockClear();
     mockAudit.mockClear();
     logMethods.error.mockClear();
     logMethods.warn.mockClear();
@@ -134,25 +132,21 @@ describe("recovery-key service", () => {
 
   describe("regenerateRecoveryKeyBackup", () => {
     const validParams = {
-      currentPassword: "password123",
-      confirmed: true,
+      authKey: VALID_AUTH_KEY,
+      newRecoveryEncryptedMasterKey: VALID_RECOVERY_ENC_KEY,
+      recoveryKeyHash: VALID_RECOVERY_KEY_HASH,
+      confirmed: true as const,
     };
 
-    it("returns a new display key on success", async () => {
+    it("returns ok:true on success", async () => {
       const { db, chain } = mockDb();
       // Account lookup
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
+      chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(64) }]);
       // Active recovery key lookup
       chain.limit.mockResolvedValueOnce([
         { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
       ]);
-      // Transaction: revoke returning + insert returning
+      // Revoke returning
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
       const result = await regenerateRecoveryKeyBackup(
@@ -161,20 +155,28 @@ describe("recovery-key service", () => {
         validParams,
         mockAudit,
       );
-      expect(result.recoveryKey).toBe(
-        "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
-      );
+      expect(result).toEqual({ ok: true });
     });
 
-    it("throws ValidationError on wrong password", async () => {
+    it("calls verifyAuthKey with parsed authKey and stored hash", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$invalid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
+      const storedHash = new Uint8Array(64).fill(0xff);
+      chain.limit.mockResolvedValueOnce([{ authKeyHash: storedHash }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old" }]);
+      chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
+
+      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit);
+
+      expect(mockVerifyAuthKey).toHaveBeenCalledOnce();
+      // Second arg should be the stored hash (or a Uint8Array copy of it)
+      const [, passedHash] = mockVerifyAuthKey.mock.calls[0] as [Uint8Array, Uint8Array];
+      expect(passedHash).toBeInstanceOf(Uint8Array);
+    });
+
+    it("throws ValidationError on wrong authKey", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(64) }]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
 
       await expect(
         regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
@@ -197,7 +199,7 @@ describe("recovery-key service", () => {
         regenerateRecoveryKeyBackup(
           db,
           "acct_123" as AccountId,
-          { currentPassword: "password123", confirmed: false },
+          { ...validParams, confirmed: false },
           mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
@@ -205,14 +207,7 @@ describe("recovery-key service", () => {
 
     it("throws NoActiveRecoveryKeyError when no active key to revoke", async () => {
       const { db, chain } = mockDb();
-      // Account lookup
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
+      chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(64) }]);
       // No active recovery key
       chain.limit.mockResolvedValueOnce([]);
 
@@ -229,109 +224,22 @@ describe("recovery-key service", () => {
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
-    it("throws on invalid KDF salt length", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(8),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([
-        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
-      ]);
-
-      await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
-      ).rejects.toThrow("Stored KDF salt has invalid length");
-
-      // KEK not derived yet, no crypto material to zero
-      expect(mockMemzero).toHaveBeenCalledTimes(0);
-    });
-
     it("throws when recovery key revoked concurrently (TOCTOU)", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([
-        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
-      ]);
-      // Revoke returns empty (concurrent revocation)
+      chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(64) }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old" }]);
+      // Concurrent revocation
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
         regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Recovery key not found during revocation");
-
-      // Crypto material still zeroed despite transaction failure
-      expect(mockMemzero).toHaveBeenCalledTimes(5);
-    });
-
-    it("calls memzero on KEK and master key even on transaction failure", async () => {
-      const { db, chain } = mockDb();
-      // Account lookup (inside withAccountTransaction callback)
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      // Active recovery key lookup (inside withAccountTransaction callback)
-      chain.limit.mockResolvedValueOnce([
-        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
-      ]);
-      // Revoke returns success so callback completes
-      chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
-      // Transaction runs the callback then rejects (simulating DB commit failure).
-      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) =>
-        fn(chain).then(() => Promise.reject(new Error("DB error"))),
-      );
-
-      await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
-      ).rejects.toThrow("DB error");
-
-      expect(mockMemzero).toHaveBeenCalledTimes(5);
-    });
-
-    it("calls memzero on success", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([
-        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
-      ]);
-      chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
-
-      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit);
-
-      expect(mockMemzero).toHaveBeenCalledTimes(5);
     });
 
     it("uses a transaction for the revoke+insert+audit", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([
-        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
-      ]);
+      chain.limit.mockResolvedValueOnce([{ authKeyHash: new Uint8Array(64) }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old" }]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
       await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit);
@@ -359,214 +267,171 @@ describe("recovery-key service", () => {
   describe("resetPasswordWithRecoveryKey", () => {
     const validResetParams = {
       email: "test@example.com",
-      recoveryKey: "ABCD-EFGH-IJKL-MNOP",
-      newPassword: "newstrongpassword123",
+      newAuthKey: VALID_NEW_AUTH_KEY,
+      newKdfSalt: VALID_KDF_SALT,
+      newEncryptedMasterKey: VALID_ENC_MASTER_KEY,
+      newRecoveryEncryptedMasterKey: VALID_RECOVERY_ENC_KEY,
+      recoveryKeyHash: VALID_RECOVERY_KEY_HASH,
+      newRecoveryKeyHash: VALID_RECOVERY_KEY_HASH,
     };
 
-    it("returns session token and new recovery key on success", async () => {
+    it("returns session token and accountId on success", async () => {
       const { db, chain } = mockDb();
       // Account lookup by emailHash
-      chain.limit.mockResolvedValueOnce([
-        {
-          id: "acct_123",
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      // Active recovery key lookup
-      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      // Active recovery key lookup (includes recoveryKeyHash)
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: new Uint8Array(64) }]);
       // Recovery key revocation returns success
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      const result = await resetPasswordWithRecoveryKey(
-        db,
-        validResetParams,
-        "web",
-        mockAudit,
-        mockLogger,
-      );
+      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
 
       expect(result).not.toBeNull();
       const r = result as NonNullable<typeof result>;
       expect(r.sessionToken).toBeTruthy();
-      expect(r.recoveryKey).toBe("NEW-RKEY-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL");
       expect(r.accountId).toBe("acct_123");
+      // recoveryKey is no longer returned
+      expect(r).not.toHaveProperty("recoveryKey");
+    });
+
+    it("calls hashAuthKey with the new auth key", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: new Uint8Array(64) }]);
+      chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
+
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      expect(mockHashAuthKey).toHaveBeenCalledOnce();
     });
 
     it("returns null when account not found (anti-enumeration)", async () => {
       const { db, chain } = mockDb();
-      // No account found
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await resetPasswordWithRecoveryKey(
-        db,
-        validResetParams,
-        "web",
-        mockAudit,
-        mockLogger,
-      );
+      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
 
       expect(result).toBeNull();
     });
 
-    it("calls verifyPassword for timing equalization when no active recovery key", async () => {
+    it("calls equalizeAntiEnumTiming when account is not found", async () => {
       const { db, chain } = mockDb();
-      // Account found
-      chain.limit.mockResolvedValueOnce([
-        {
-          id: "acct_123",
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      // No active recovery key
+      chain.limit.mockResolvedValueOnce([]);
+      mockEqualizeAntiEnumTiming.mockClear();
+
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("throws NoActiveRecoveryKeyError when no active recovery key", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger),
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
+      ).rejects.toThrow(NoActiveRecoveryKeyError);
+    });
+
+    it("calls equalizeAntiEnumTiming when no active recovery key", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([]);
+      mockEqualizeAntiEnumTiming.mockClear();
+
+      await expect(
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
       ).rejects.toThrow(NoActiveRecoveryKeyError);
 
-      // verifyPassword should have been called with DUMMY_ARGON2_HASH for timing equalization
-      expect(mockVerifyPassword).toHaveBeenCalledWith(
-        expect.stringContaining("$argon2id$"),
-        validResetParams.newPassword,
-      );
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
     });
 
     it("throws ZodError on invalid input", async () => {
       const { db } = mockDb();
 
       await expect(
-        resetPasswordWithRecoveryKey(db, { email: "bad" }, "web", mockAudit, mockLogger),
+        resetPasswordWithRecoveryKey(db, { email: "bad" }, "web", mockAudit),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("uses a transaction for the atomic update", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          id: "acct_123",
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: new Uint8Array(64) }]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
 
       // Two transaction calls: withAccountRead (recovery key lookup) + withAccountTransaction (atomic update)
       expect(chain.transaction).toHaveBeenCalledTimes(2);
     });
 
-    it("calls memzero on all crypto material after success", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          id: "acct_123",
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
-      // Recovery key revocation returns success
-      chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
-
-      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
-
-      // masterKey, newSalt, wrappedMasterKeyBytes, newRecoveryBackupBytes,
-      // newRecoveryKey.ciphertext, newRecoveryKey.nonce
-      expect(mockMemzero).toHaveBeenCalledTimes(6);
-    });
-
     it("throws when recovery key revoked concurrently (TOCTOU)", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          id: "acct_123",
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
-      // Recovery key revocation returns empty (concurrent revocation)
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: new Uint8Array(64) }]);
+      // Concurrent revocation
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger),
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
       ).rejects.toThrow("Recovery key not found during revocation");
-
-      // Crypto material still zeroed despite transaction failure
-      expect(mockMemzero).toHaveBeenCalledTimes(6);
-    });
-
-    // ── Anti-timing equalization ──────────────────────────────────────
-
-    it("calls equalizeAntiEnumTiming when account is not found", async () => {
-      const { db, chain } = mockDb();
-      // No account found
-      chain.limit.mockResolvedValueOnce([]);
-      mockEqualizeAntiEnumTiming.mockClear();
-
-      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
-
-      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
-    });
-
-    it("calls equalizeAntiEnumTiming when crypto throws", async () => {
-      const { db, chain } = mockDb();
-      // Account found
-      chain.limit.mockResolvedValueOnce([
-        {
-          id: "acct_123",
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      // Active recovery key found (inside withAccountRead transaction)
-      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
-      mockEqualizeAntiEnumTiming.mockClear();
-
-      // First transaction (withAccountRead) succeeds normally,
-      // second transaction (withAccountTransaction) fails to simulate crypto failure
-      let txCallCount = 0;
-      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) => {
-        txCallCount++;
-        if (txCallCount === 2) return Promise.reject(new Error("crypto failure"));
-        return fn(chain);
-      });
-
-      await expect(
-        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger),
-      ).rejects.toThrow("crypto failure");
-
-      // equalizeAntiEnumTiming must still run in the finally block
-      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
     });
 
     it("calls equalizeAntiEnumTiming on the success path", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          id: "acct_123",
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-        },
-      ]);
-      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: new Uint8Array(64) }]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
       mockEqualizeAntiEnumTiming.mockClear();
 
-      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
 
       expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("calls equalizeAntiEnumTiming when transaction throws", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: new Uint8Array(64) }]);
+      mockEqualizeAntiEnumTiming.mockClear();
+
+      let txCallCount = 0;
+      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) => {
+        txCallCount++;
+        if (txCallCount === 2) return Promise.reject(new Error("tx failure"));
+        return fn(chain);
+      });
+
+      await expect(
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
+      ).rejects.toThrow("tx failure");
+
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("rejects when recoveryKeyHash doesn't match stored hash", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: new Uint8Array(64) }]);
+      mockVerifyRecoveryKey.mockReturnValueOnce(false);
+
+      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      expect(result).toBeNull();
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalled();
+    });
+
+    it("rejects when recovery key has no stored hash", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", recoveryKeyHash: null }]);
+
+      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      expect(result).toBeNull();
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalled();
     });
   });
 });

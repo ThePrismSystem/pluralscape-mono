@@ -73,6 +73,8 @@ const mockWhere = vi.fn(() => ({
 }));
 const mockDb = {
   select: vi.fn().mockReturnValue({ from: vi.fn().mockReturnValue({ where: mockWhere }) }),
+  execute: vi.fn().mockResolvedValue(undefined),
+  transaction: vi.fn(async (fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb)),
 };
 
 vi.mock("../../lib/db.js", () => ({

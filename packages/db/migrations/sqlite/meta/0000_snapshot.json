@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f6fcf210-0204-4d6d-a980-cae9f5f0b638",
-  "prevId": "60be80f5-e2f3-47c0-94f6-7f5a643b99ad",
+  "id": "18ab0e76-a4ff-4336-a650-a5aad377346b",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
       "name": "account_purge_requests",
@@ -137,9 +137,9 @@
           "notNull": true,
           "autoincrement": false
         },
-        "password_hash": {
-          "name": "password_hash",
-          "type": "text",
+        "auth_key_hash": {
+          "name": "auth_key_hash",
+          "type": "blob",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -156,6 +156,20 @@
           "type": "blob",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "challenge_nonce": {
+          "name": "challenge_nonce",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "challenge_expires_at": {
+          "name": "challenge_expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "encrypted_email": {
@@ -214,6 +228,10 @@
         "accounts_version_check": {
           "name": "accounts_version_check",
           "value": "\"accounts\".\"version\" >= 1"
+        },
+        "accounts_challenge_nonce_paired": {
+          "name": "accounts_challenge_nonce_paired",
+          "value": "(\"accounts\".\"challenge_nonce\" IS NULL) = (\"accounts\".\"challenge_expires_at\" IS NULL)"
         }
       }
     },
@@ -6183,6 +6201,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "recovery_key_hash": {
+          "name": "recovery_key_hash",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -6224,7 +6249,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "recovery_keys_hash_required": {
+          "name": "recovery_keys_hash_required",
+          "value": "\"recovery_keys\".\"recovery_key_hash\" IS NOT NULL OR \"recovery_keys\".\"revoked_at\" IS NOT NULL"
+        }
+      }
     },
     "relationships": {
       "name": "relationships",

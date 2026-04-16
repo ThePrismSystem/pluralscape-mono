@@ -1,3 +1,4 @@
+import { RECOVERY_KEY_HASH_BYTES } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";
@@ -13,6 +14,8 @@ export interface RecoveryKeyResult {
   readonly displayKey: RecoveryKeyDisplay;
   /** The master key encrypted under the recovery key bytes. */
   readonly encryptedMasterKey: EncryptedPayload;
+  /** BLAKE2b hash of the raw recovery key bytes, for server-side verification. */
+  readonly recoveryKeyHash: Uint8Array;
 }
 
 // ── Base32 (RFC 4648, A-Z + 2-7, no padding) ──────────────────────
@@ -134,7 +137,9 @@ export function generateRecoveryKey(masterKey: KdfMasterKey): RecoveryKeyResult 
     const displayKey = groups.join("-") as RecoveryKeyDisplay;
     assertAeadKey(recoveryKeyBytes);
     const encryptedMasterKey = encrypt(masterKey, recoveryKeyBytes);
-    return { displayKey, encryptedMasterKey };
+    // Hash before zeroing so callers can store the hash server-side
+    const recoveryKeyHash = adapter.genericHash(RECOVERY_KEY_HASH_BYTES, recoveryKeyBytes);
+    return { displayKey, encryptedMasterKey, recoveryKeyHash };
   } finally {
     adapter.memzero(recoveryKeyBytes);
   }

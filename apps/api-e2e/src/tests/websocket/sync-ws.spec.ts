@@ -9,6 +9,7 @@ import {
   makeSignedChange,
   makeSignedSnapshot,
   asSyncDocId,
+  createAccountSyncContext,
 } from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
@@ -78,6 +79,7 @@ test.describe("WebSocket sync server", () => {
   });
 
   test("subscribe and submit change flow", async ({ registeredAccount, request }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
@@ -103,8 +105,8 @@ test.describe("WebSocket sync server", () => {
 
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      // ws1 submits a properly signed change
-      const change = await makeSignedChange(docId);
+      // ws1 submits a properly signed change using account's registered keys
+      const change = await makeSignedChange(docId, syncCtx);
       const accepted = await ws1.submitChange(docId, change);
       expect(accepted.type).toBe("ChangeAccepted");
 
@@ -197,6 +199,7 @@ test.describe("WebSocket sync server", () => {
   });
 
   test("snapshot submit flow", async ({ registeredAccount, request }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
@@ -210,7 +213,7 @@ test.describe("WebSocket sync server", () => {
       await ws.authenticate(registeredAccount.sessionToken, systemId);
 
       const docId = asSyncDocId(`e2e-snap-${crypto.randomUUID()}`);
-      const snapshot = await makeSignedSnapshot(docId, 1);
+      const snapshot = await makeSignedSnapshot(docId, 1, syncCtx);
       const response = await ws.submitSnapshot(docId, snapshot);
 
       expect(response.type).toBe("SnapshotAccepted");

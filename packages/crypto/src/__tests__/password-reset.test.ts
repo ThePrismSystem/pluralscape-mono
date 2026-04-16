@@ -1,14 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { deriveAuthAndPasswordKeys } from "../auth-key.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
-import { derivePasswordKey, generateMasterKey, unwrapMasterKey } from "../master-key-wrap.js";
-import { resetPasswordViaRecoveryKey } from "../password-reset.js";
+import { generateMasterKey, unwrapMasterKey } from "../master-key-wrap.js";
+import { withPasswordResetResult } from "../password-reset.js";
 import { serializeRecoveryBackup } from "../recovery-backup.js";
 import { recoverMasterKey } from "../recovery.js";
 import { getSodium } from "../sodium.js";
 
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
+import type { PasswordResetResult } from "../password-reset.js";
 import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 beforeAll(setupSodium);
@@ -22,16 +24,39 @@ async function makeBackup(masterKey: ReturnType<typeof generateMasterKey>) {
   return { displayKey, encryptedBackup };
 }
 
-describe("resetPasswordViaRecoveryKey", () => {
+/** Helper: run withPasswordResetResult and capture the result snapshot. */
+async function captureResetResult(params: {
+  displayKey: RecoveryKeyDisplay;
+  encryptedBackup: Uint8Array;
+  newPassword: string;
+}): Promise<PasswordResetResult> {
+  let captured: PasswordResetResult | undefined;
+  await withPasswordResetResult(params, (result) => {
+    // Snapshot the result — authKey will be zeroed after this callback returns
+    captured = {
+      masterKey: result.masterKey,
+      newSalt: result.newSalt,
+      wrappedMasterKey: result.wrappedMasterKey,
+      newRecoveryKey: result.newRecoveryKey,
+      authKey: new Uint8Array(result.authKey) as typeof result.authKey,
+    };
+    return Promise.resolve();
+  });
+  if (!captured) {
+    throw new Error("withPasswordResetResult callback was not invoked");
+  }
+  return captured;
+}
+
+describe("withPasswordResetResult", () => {
   it("full round-trip: recovered masterKey matches original", async () => {
     const masterKey = generateMasterKey();
     const { displayKey, encryptedBackup } = await makeBackup(masterKey);
 
-    const result = await resetPasswordViaRecoveryKey({
+    const result = await captureResetResult({
       displayKey,
       encryptedBackup,
       newPassword: "new-secure-password",
-      pwhashProfile: "mobile",
     });
 
     expect(result.masterKey).toEqual(masterKey);
@@ -41,17 +66,16 @@ describe("resetPasswordViaRecoveryKey", () => {
     const masterKey = generateMasterKey();
     const { displayKey, encryptedBackup } = await makeBackup(masterKey);
 
-    const result = await resetPasswordViaRecoveryKey({
+    const result = await captureResetResult({
       displayKey,
       encryptedBackup,
       newPassword: "wrap-verify-password",
-      pwhashProfile: "mobile",
     });
 
-    const newPasswordKey = await derivePasswordKey(
-      "wrap-verify-password",
+    const passwordBytes = new TextEncoder().encode("wrap-verify-password");
+    const { passwordKey: newPasswordKey } = await deriveAuthAndPasswordKeys(
+      passwordBytes,
       result.newSalt,
-      "mobile",
     );
     const unwrapped = unwrapMasterKey(result.wrappedMasterKey, newPasswordKey);
     expect(unwrapped).toEqual(masterKey);
@@ -61,11 +85,10 @@ describe("resetPasswordViaRecoveryKey", () => {
     const masterKey = generateMasterKey();
     const { displayKey, encryptedBackup } = await makeBackup(masterKey);
 
-    const result = await resetPasswordViaRecoveryKey({
+    const result = await captureResetResult({
       displayKey,
       encryptedBackup,
       newPassword: "recovery-backup-test",
-      pwhashProfile: "mobile",
     });
 
     // The new recovery key should be different
@@ -79,17 +102,33 @@ describe("resetPasswordViaRecoveryKey", () => {
     expect(recoveredFromNew).toEqual(masterKey);
   });
 
+  it("returns an authKey as a 32-byte Uint8Array", async () => {
+    const masterKey = generateMasterKey();
+    const { displayKey, encryptedBackup } = await makeBackup(masterKey);
+
+    const result = await captureResetResult({
+      displayKey,
+      encryptedBackup,
+      newPassword: "authkey-check-pw",
+    });
+
+    expect(result.authKey).toBeInstanceOf(Uint8Array);
+    expect(result.authKey.length).toBe(32);
+  });
+
   it("invalid recovery key format throws InvalidInputError", async () => {
     const masterKey = generateMasterKey();
     const { encryptedBackup } = await makeBackup(masterKey);
 
     await expect(
-      resetPasswordViaRecoveryKey({
-        displayKey: "not-a-valid-key" as RecoveryKeyDisplay,
-        encryptedBackup,
-        newPassword: "new-password",
-        pwhashProfile: "mobile",
-      }),
+      withPasswordResetResult(
+        {
+          displayKey: "not-a-valid-key" as RecoveryKeyDisplay,
+          encryptedBackup,
+          newPassword: "new-password",
+        },
+        async () => {},
+      ),
     ).rejects.toThrow(InvalidInputError);
   });
 
@@ -103,12 +142,14 @@ describe("resetPasswordViaRecoveryKey", () => {
     const { displayKey: wrongDisplayKey } = generateRecoveryKey(wrongKey);
 
     await expect(
-      resetPasswordViaRecoveryKey({
-        displayKey: wrongDisplayKey,
-        encryptedBackup,
-        newPassword: "new-password",
-        pwhashProfile: "mobile",
-      }),
+      withPasswordResetResult(
+        {
+          displayKey: wrongDisplayKey,
+          encryptedBackup,
+          newPassword: "new-password",
+        },
+        async () => {},
+      ),
     ).rejects.toThrow(DecryptionFailedError);
   });
 
@@ -117,12 +158,14 @@ describe("resetPasswordViaRecoveryKey", () => {
     const { displayKey, encryptedBackup } = await makeBackup(masterKey);
 
     await expect(
-      resetPasswordViaRecoveryKey({
-        displayKey,
-        encryptedBackup,
-        newPassword: "",
-        pwhashProfile: "mobile",
-      }),
+      withPasswordResetResult(
+        {
+          displayKey,
+          encryptedBackup,
+          newPassword: "",
+        },
+        async () => {},
+      ),
     ).rejects.toThrow(InvalidInputError);
   });
 
@@ -132,29 +175,29 @@ describe("resetPasswordViaRecoveryKey", () => {
     const tampered = new Uint8Array(encryptedBackup);
     tampered[tampered.length - 1] = (tampered[tampered.length - 1] ?? 0) ^ 0xff;
     await expect(
-      resetPasswordViaRecoveryKey({
-        displayKey,
-        encryptedBackup: tampered,
-        newPassword: "test",
-        pwhashProfile: "mobile",
-      }),
+      withPasswordResetResult(
+        {
+          displayKey,
+          encryptedBackup: tampered,
+          newPassword: "test",
+        },
+        async () => {},
+      ),
     ).rejects.toThrow(DecryptionFailedError);
   });
 
-  it("memzeros the intermediate password key", async () => {
+  it("zeros the authKey after callback completes", async () => {
     const masterKey = generateMasterKey();
     const { displayKey, encryptedBackup } = await makeBackup(masterKey);
     const sodium = getSodium();
     const memzeroSpy = vi.spyOn(sodium, "memzero");
 
-    await resetPasswordViaRecoveryKey({
-      displayKey,
-      encryptedBackup,
-      newPassword: "memzero-test",
-      pwhashProfile: "mobile",
-    });
+    await withPasswordResetResult(
+      { displayKey, encryptedBackup, newPassword: "memzero-test-pw" },
+      async () => {},
+    );
 
-    // memzero called at least once (password key + recovery key bytes from recoverMasterKey)
+    // memzero called for: passwordKey, passwordBytes, and authKey
     expect(memzeroSpy).toHaveBeenCalled();
     memzeroSpy.mockRestore();
   });

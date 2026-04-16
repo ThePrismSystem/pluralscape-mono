@@ -6,16 +6,15 @@ import { requireSession } from "../../lib/auth-context.js";
 import { logger } from "../../lib/logger.js";
 import {
   LoginThrottledError,
+  commitRegistration,
+  initiateRegistration,
   listSessions,
   loginAccount,
   logoutCurrentSession,
-  registerAccount,
   revokeAllSessions,
   revokeSession,
 } from "../../services/auth.service.js";
 import {
-  DecryptionFailedError,
-  InvalidInputError,
   NoActiveRecoveryKeyError,
   resetPasswordWithRecoveryKey,
 } from "../../services/recovery-key.service.js";
@@ -37,24 +36,48 @@ const PlatformSchema = z.enum(["web", "mobile"]).optional().default("web");
 
 export const authRouter = router({
   /**
-   * Register a new account. Public — no session required.
-   * Platform defaults to "web" since tRPC cannot read Hono headers.
+   * Registration phase 1: create account shell, returns KDF salt + challenge nonce.
+   * Public — no session required.
    */
-  register: errorMapProcedure
+  registrationInitiate: errorMapProcedure
     .use(authHeavyLimiter)
     .input(
       z.object({
         email: z.email(),
-        password: z.string().min(1),
+        accountType: z.enum(["system", "viewer"]).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      return initiateRegistration(ctx.db, input);
+    }),
+
+  /**
+   * Registration phase 2: commit encrypted blobs + auth key, creates session.
+   * Public — no session required.
+   * Platform defaults to "web" since tRPC cannot read Hono headers.
+   */
+  registrationCommit: errorMapProcedure
+    .use(authHeavyLimiter)
+    .input(
+      z.object({
+        accountId: z.string().min(1),
+        authKey: z.string().min(1),
+        encryptedMasterKey: z.string().min(1),
+        encryptedSigningPrivateKey: z.string().min(1),
+        encryptedEncryptionPrivateKey: z.string().min(1),
+        publicSigningKey: z.string().min(1),
+        publicEncryptionKey: z.string().min(1),
+        recoveryEncryptedMasterKey: z.string().min(1),
+        challengeSignature: z.string().min(1),
         recoveryKeyBackupConfirmed: z.boolean(),
-        accountType: z.string().optional(),
+        recoveryKeyHash: z.string().min(1),
         platform: PlatformSchema,
       }),
     )
     .mutation(async ({ input, ctx }) => {
       const { platform, ...params } = input;
       const audit = ctx.createAudit(null);
-      return registerAccount(ctx.db, params, platform, audit);
+      return commitRegistration(ctx.db, params, platform, audit);
     }),
 
   /**
@@ -66,7 +89,7 @@ export const authRouter = router({
     .input(
       z.object({
         email: z.email(),
-        password: z.string().min(1),
+        authKey: z.string().min(1),
         platform: PlatformSchema,
       }),
     )
@@ -104,8 +127,12 @@ export const authRouter = router({
     .input(
       z.object({
         email: z.email(),
-        recoveryKey: z.string().min(1),
-        newPassword: z.string().min(1),
+        newAuthKey: z.string().min(1),
+        newKdfSalt: z.string().min(1),
+        newEncryptedMasterKey: z.string().min(1),
+        newRecoveryEncryptedMasterKey: z.string().min(1),
+        recoveryKeyHash: z.string().min(1),
+        newRecoveryKeyHash: z.string().min(1),
         platform: PlatformSchema,
       }),
     )
@@ -114,13 +141,9 @@ export const authRouter = router({
       const audit = ctx.createAudit(null);
       let result;
       try {
-        result = await resetPasswordWithRecoveryKey(ctx.db, params, platform, audit, logger);
+        result = await resetPasswordWithRecoveryKey(ctx.db, params, platform, audit);
       } catch (err) {
-        if (
-          err instanceof NoActiveRecoveryKeyError ||
-          err instanceof DecryptionFailedError ||
-          err instanceof InvalidInputError
-        ) {
+        if (err instanceof NoActiveRecoveryKeyError) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "Invalid email or recovery key",

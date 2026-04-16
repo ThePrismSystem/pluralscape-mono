@@ -127,9 +127,12 @@ function mockDb(publicKeys: Uint8Array[] = []): PostgresJsDatabase {
       where: vi.fn().mockResolvedValue(rows),
     }),
   };
-  return {
+  const db = {
     select: vi.fn().mockReturnValue(chain),
-  } as never;
+    execute: vi.fn().mockResolvedValue(undefined),
+    transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(db)),
+  };
+  return db as never as PostgresJsDatabase;
 }
 
 function brandedBytes(size: number, fill: number) {

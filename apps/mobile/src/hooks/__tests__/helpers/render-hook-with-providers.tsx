@@ -71,6 +71,7 @@ const STUB_SODIUM: SodiumAdapter = {
   genericHash: vi.fn(),
   randomBytes: vi.fn(),
   memzero: vi.fn(),
+  memcmp: vi.fn(),
 };
 
 const STUB_REMOTE_PLATFORM: PlatformContext = {

@@ -67,10 +67,14 @@ T1 is the default tier for sensitive data. T2 extends T1 by allowing controlled 
 
 All auth routes are under `/v1/auth/`. Auth responses include `Cache-Control: no-store` to prevent caching of tokens and key material.
 
-### 2.1 Registration
+### 2.1 Registration (Two-Phase)
+
+Registration uses a two-phase protocol where the server never sees the password.
+
+#### Phase 1: Initiate
 
 ```
-POST /v1/auth/register
+POST /v1/auth/register/initiate
 ```
 
 **Request body:**
@@ -78,26 +82,57 @@ POST /v1/auth/register
 ```json
 {
   "email": "user@example.com",
-  "password": "strongpassword123",
-  "recoveryKeyBackupConfirmed": true,
   "accountType": "system"
 }
 ```
 
-- `password`: minimum 8 characters, maximum length enforced to prevent Argon2 DoS.
-- `recoveryKeyBackupConfirmed`: must be `true` -- the client must display the recovery key and confirm the user has saved it before submitting.
-- `accountType`: `"system"` (default) or `"viewer"`. A `"system"` account creates a system entity alongside the account.
+**Response (200 OK):**
 
-**Server-side processing:**
+```json
+{
+  "data": {
+    "accountId": "acct_...",
+    "kdfSalt": "hex-encoded-16-bytes",
+    "challengeNonce": "hex-encoded-32-bytes"
+  }
+}
+```
 
-1. Hash the email with BLAKE2b (peppered) for lookup.
-2. Hash the password with Argon2id (server profile: 4 iterations, 64 MiB).
-3. Generate a random 256-bit master key (not derived from password).
-4. Derive a password key (KEK) from the password via Argon2id, wrap the master key.
-5. Derive identity keypairs (X25519 + Ed25519) from the master key.
-6. Encrypt identity private keys under the master key.
-7. Generate a 256-bit recovery key, encrypt the master key under it.
-8. Store everything in a single transaction.
+The client uses the `kdfSalt` to derive auth and password keys from the user's password via Argon2id (split key derivation — 64 bytes split into auth key + password key), then uses the `challengeNonce` to produce a challenge signature with a freshly generated Ed25519 signing key.
+
+#### Phase 2: Commit
+
+```
+POST /v1/auth/register/commit
+```
+
+**Request body:**
+
+```json
+{
+  "accountId": "acct_...",
+  "authKey": "hex-encoded-32-bytes",
+  "encryptedMasterKey": "hex-encoded-encrypted-blob",
+  "encryptedSigningPrivateKey": "hex-encoded-encrypted-blob",
+  "encryptedEncryptionPrivateKey": "hex-encoded-encrypted-blob",
+  "publicSigningKey": "hex-encoded-32-bytes",
+  "publicEncryptionKey": "hex-encoded-32-bytes",
+  "recoveryEncryptedMasterKey": "hex-encoded-encrypted-blob",
+  "challengeSignature": "hex-encoded-64-bytes",
+  "recoveryKeyBackupConfirmed": true
+}
+```
+
+All cryptographic operations happen client-side:
+
+1. Derive 64 bytes from the password via Argon2id using the `kdfSalt` from phase 1.
+2. Split into `authKey` (first 32 bytes — sent to server, hashed with BLAKE2b for storage) and `passwordKey` (last 32 bytes — used to wrap the master key, never sent).
+3. Generate a random 256-bit master key.
+4. Wrap the master key with the `passwordKey` (XChaCha20-Poly1305).
+5. Generate identity keypairs (Ed25519 + X25519) and encrypt private keys under the master key.
+6. Generate a recovery key and encrypt the master key under it.
+7. Sign the `challengeNonce` with the Ed25519 signing key.
+8. Submit everything to the server.
 
 **Response (201 Created):**
 
@@ -105,20 +140,21 @@ POST /v1/auth/register
 {
   "data": {
     "sessionToken": "ps_sess_...",
-    "recoveryKey": "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
     "accountId": "acct_...",
     "accountType": "system"
   }
 }
 ```
 
-The `recoveryKey` is displayed exactly once. The client must present it to the user for offline storage. It is 52 base32 characters in 13 groups of 4, separated by dashes.
+The recovery key is generated and stored client-side. The client must present it to the user for offline storage before calling commit (`recoveryKeyBackupConfirmed: true`).
 
 **Anti-enumeration:** duplicate email registrations return a fake success response with identical shape and timing to prevent email harvesting.
 
-**Rate limiting:** `authHeavy` category. Idempotency middleware is active.
+**Rate limiting:** `authHeavy` category.
 
-### 2.2 Login
+### 2.2 Login (Zero-Knowledge)
+
+Login uses the zero-knowledge protocol where the server never sees the password.
 
 ```
 POST /v1/auth/login
@@ -129,9 +165,11 @@ POST /v1/auth/login
 ```json
 {
   "email": "user@example.com",
-  "password": "strongpassword123"
+  "authKey": "hex-encoded-32-bytes"
 }
 ```
+
+The client derives the `authKey` from the user's password via Argon2id using the stored account `kdfSalt` (obtained from the account lookup on the client side via `GET /v1/auth/account-salt/:email`), splits the 64-byte derivation, and sends only the auth key portion.
 
 **Response (200 OK):**
 
@@ -141,17 +179,21 @@ POST /v1/auth/login
     "sessionToken": "ps_sess_...",
     "accountId": "acct_...",
     "systemId": "sys_...",
-    "accountType": "system"
+    "accountType": "system",
+    "encryptedMasterKey": "hex-encoded-encrypted-blob",
+    "kdfSalt": "hex-encoded-16-bytes"
   }
 }
 ```
 
+The client decrypts the master key client-side using the password-derived key (the password key portion of the 64-byte derivation).
+
 **Failure responses:**
 
-- `401 UNAUTHENTICATED`: generic "Invalid email or password" (no user enumeration).
+- `401 UNAUTHENTICATED`: generic "Invalid credentials" (no user enumeration).
 - `429 LOGIN_THROTTLED`: too many failed attempts for this account. Response includes `Retry-After` header.
 
-**Anti-timing:** when an email is not found, the server verifies the password against a dummy Argon2id hash to equalize response times with real accounts.
+**Anti-timing:** when an email is not found, the server performs a dummy auth key verification to equalize response times with real accounts.
 
 **Rate limiting:** `authHeavy` category. Per-account login attempt tracking with lockout window.
 
@@ -208,10 +250,25 @@ POST /v1/auth/password-reset/recovery-key
 ```json
 {
   "email": "user@example.com",
-  "recoveryKey": "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
-  "newPassword": "newstrongpassword456"
+  "recoveryKeyHash": "hex-encoded-recovery-key-hash",
+  "newAuthKey": "hex-encoded-32-bytes",
+  "newKdfSalt": "hex-encoded-16-bytes",
+  "newEncryptedMasterKey": "hex-encoded-encrypted-blob",
+  "newRecoveryEncryptedMasterKey": "hex-encoded-encrypted-blob",
+  "challengeSignature": "hex-encoded-64-bytes"
 }
 ```
+
+All cryptographic operations happen client-side:
+
+1. The user provides the recovery key they stored at registration.
+2. Client hashes the recovery key with BLAKE2b.
+3. Client derives the new password via Argon2id using a new random `newKdfSalt`, splits into new auth key and password key.
+4. Client decrypts the old master key using the recovery key.
+5. Client re-encrypts the master key with the new password key.
+6. Client generates a new recovery key and encrypts the master key under it.
+7. Client signs a challenge with its Ed25519 signing key.
+8. Client sends all new cryptographic material to the server.
 
 **Response (200 OK):**
 
@@ -219,13 +276,12 @@ POST /v1/auth/password-reset/recovery-key
 {
   "data": {
     "sessionToken": "ps_sess_...",
-    "recoveryKey": "NEW-RECO-VERY-KEY-...",
     "accountId": "acct_..."
   }
 }
 ```
 
-The server decrypts the master key using the recovery key, re-wraps it under the new password-derived key, generates a new recovery key, and returns a new session. The old recovery key is invalidated.
+The server decrypts the old master key using the provided recovery key, verifies the challenge signature, then stores the new auth key hash, KDF salt, encrypted master key, and recovery key. The old recovery key is invalidated.
 
 **Failure:** returns `401 UNAUTHENTICATED` for any error (wrong email, wrong recovery key, no active recovery key) to prevent enumeration.
 
@@ -233,12 +289,49 @@ The server decrypts the master key using the recovery key, re-wraps it under the
 
 Requires an active session.
 
+**Get status:**
+
 ```
-GET  /v1/auth/recovery-key/status       Check if a recovery key exists
-POST /v1/auth/recovery-key/regenerate   Generate a new recovery key (requires current password)
+GET /v1/auth/recovery-key/status
 ```
 
-Regeneration invalidates the previous recovery key and sends an email notification (fire-and-forget).
+Returns whether an active recovery key exists (used to determine if the user can reset their password via recovery).
+
+**Regenerate recovery key:**
+
+```
+POST /v1/auth/recovery-key/regenerate
+```
+
+**Request body:**
+
+```json
+{
+  "authKey": "hex-encoded-32-bytes",
+  "recoveryKeyHash": "hex-encoded-recovery-key-hash",
+  "newRecoveryEncryptedMasterKey": "hex-encoded-encrypted-blob",
+  "confirmed": true
+}
+```
+
+The client:
+
+1. Derives the `authKey` from the current password using the account's `kdfSalt`.
+2. Hashes the current recovery key with BLAKE2b.
+3. Generates a new recovery key and encrypts the master key under it.
+4. Sends the auth key (to verify account ownership), current recovery key hash, and new encrypted blob.
+
+**Response (201 Created):**
+
+```json
+{
+  "data": {
+    "ok": true
+  }
+}
+```
+
+Regeneration invalidates the previous recovery key and sends an email notification (fire-and-forget). The new recovery key must be stored by the client/user.
 
 ### 2.7 Device Transfer
 

@@ -10,14 +10,11 @@ import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { hashEmail } from "../../lib/email-hash.js";
-import { getContextLogger } from "../../lib/logger.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { checkRateLimit, createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
-  DecryptionFailedError,
-  InvalidInputError,
   NoActiveRecoveryKeyError,
   resetPasswordWithRecoveryKey,
 } from "../../services/recovery-key.service.js";
@@ -52,11 +49,10 @@ passwordResetRoute.post("/recovery-key", async (c) => {
 
   const platform = extractPlatform(c);
   const audit = createAuditWriter(c);
-  const log = getContextLogger(c);
   const db = await getDb();
 
   try {
-    const result = await resetPasswordWithRecoveryKey(db, body, platform, audit, log);
+    const result = await resetPasswordWithRecoveryKey(db, body, platform, audit);
     if (!result) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
     }
@@ -64,17 +60,12 @@ passwordResetRoute.post("/recovery-key", async (c) => {
     return c.json(
       envelope({
         sessionToken: result.sessionToken,
-        recoveryKey: result.recoveryKey,
         accountId: result.accountId,
       }),
     );
   } catch (error: unknown) {
     if (error instanceof ApiHttpError) throw error;
-    if (
-      error instanceof NoActiveRecoveryKeyError ||
-      error instanceof DecryptionFailedError ||
-      error instanceof InvalidInputError
-    ) {
+    if (error instanceof NoActiveRecoveryKeyError) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
     }
     throw error;

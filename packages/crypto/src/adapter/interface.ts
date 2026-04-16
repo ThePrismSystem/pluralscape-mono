@@ -145,4 +145,7 @@ export interface SodiumAdapter {
 
   /** Zero out a buffer. Best-effort on platforms without secure memzero. */
   memzero(buffer: Uint8Array): void;
+
+  /** Constant-time comparison of two buffers. Returns true if equal. */
+  memcmp(a: Uint8Array, b: Uint8Array): boolean;
 }

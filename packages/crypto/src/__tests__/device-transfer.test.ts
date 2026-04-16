@@ -51,30 +51,30 @@ describe("generateTransferCode", () => {
 describe("deriveTransferKey", () => {
   it("same code + salt produces same key (deterministic)", () => {
     const { verificationCode, codeSalt } = generateTransferCode();
-    const k1 = deriveTransferKey(verificationCode, codeSalt, "mobile");
-    const k2 = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const k1 = deriveTransferKey(verificationCode, codeSalt);
+    const k2 = deriveTransferKey(verificationCode, codeSalt);
     expect(k1).toEqual(k2);
   });
 
   it("different codes produce different keys", () => {
     const { verificationCode: c1, codeSalt } = generateTransferCode();
     const { verificationCode: c2 } = generateTransferCode();
-    const k1 = deriveTransferKey(c1, codeSalt, "mobile");
-    const k2 = deriveTransferKey(c2, codeSalt, "mobile");
+    const k1 = deriveTransferKey(c1, codeSalt);
+    const k2 = deriveTransferKey(c2, codeSalt);
     expect(k1).not.toEqual(k2);
   });
 
   it("different salts produce different keys", () => {
     const { verificationCode, codeSalt: s1 } = generateTransferCode();
     const { codeSalt: s2 } = generateTransferCode();
-    const k1 = deriveTransferKey(verificationCode, s1, "mobile");
-    const k2 = deriveTransferKey(verificationCode, s2, "mobile");
+    const k1 = deriveTransferKey(verificationCode, s1);
+    const k2 = deriveTransferKey(verificationCode, s2);
     expect(k1).not.toEqual(k2);
   });
 
   it("invalid transfer code throws InvalidInputError", () => {
     const { codeSalt } = generateTransferCode();
-    expect(() => deriveTransferKey("notacode", codeSalt, "mobile")).toThrow(InvalidInputError);
+    expect(() => deriveTransferKey("notacode", codeSalt)).toThrow(InvalidInputError);
   });
 });
 
@@ -84,11 +84,11 @@ describe("encryptForTransfer / decryptFromTransfer", () => {
     const { verificationCode, codeSalt } = generateTransferCode();
 
     // Source: derive key + encrypt
-    const transferKeySource = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const transferKeySource = deriveTransferKey(verificationCode, codeSalt);
     const payload = encryptForTransfer(masterKey, transferKeySource);
 
     // Target: derive same key + decrypt
-    const transferKeyTarget = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const transferKeyTarget = deriveTransferKey(verificationCode, codeSalt);
     const recovered = decryptFromTransfer(payload, transferKeyTarget);
     expect(recovered).toEqual(masterKey);
   });
@@ -98,24 +98,24 @@ describe("encryptForTransfer / decryptFromTransfer", () => {
     const { verificationCode: c1, codeSalt } = generateTransferCode();
     const { verificationCode: c2 } = generateTransferCode();
 
-    const keyForEncrypt = deriveTransferKey(c1, codeSalt, "mobile");
+    const keyForEncrypt = deriveTransferKey(c1, codeSalt);
     const payload = encryptForTransfer(masterKey, keyForEncrypt);
 
-    const wrongKey = deriveTransferKey(c2, codeSalt, "mobile");
+    const wrongKey = deriveTransferKey(c2, codeSalt);
     expect(() => decryptFromTransfer(payload, wrongKey)).toThrow(DecryptionFailedError);
   });
 
   it("tampered ciphertext throws DecryptionFailedError", () => {
     const masterKey = generateMasterKey();
     const { verificationCode, codeSalt } = generateTransferCode();
-    const transferKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const transferKey = deriveTransferKey(verificationCode, codeSalt);
     const payload = encryptForTransfer(masterKey, transferKey);
 
     const tampered = new Uint8Array(payload.ciphertext);
     tampered[0] = (tampered[0] ?? 0) ^ 0xff;
 
     // Need a fresh transfer key since the original was memzeroed
-    const freshKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const freshKey = deriveTransferKey(verificationCode, codeSalt);
     expect(() => decryptFromTransfer({ ...payload, ciphertext: tampered }, freshKey)).toThrow(
       DecryptionFailedError,
     );
@@ -194,7 +194,7 @@ describe("memzero behavior", () => {
     const sodium = (await import("../sodium.js")).getSodium();
     const memzeroSpy = vi.spyOn(sodium, "memzero");
     const { verificationCode, codeSalt } = generateTransferCode();
-    deriveTransferKey(verificationCode, codeSalt, "mobile");
+    deriveTransferKey(verificationCode, codeSalt);
     expect(memzeroSpy).toHaveBeenCalled();
     memzeroSpy.mockRestore();
   });
@@ -204,7 +204,7 @@ describe("memzero behavior", () => {
     const memzeroSpy = vi.spyOn(sodium, "memzero");
     const masterKey = generateMasterKey();
     const { verificationCode, codeSalt } = generateTransferCode();
-    const transferKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const transferKey = deriveTransferKey(verificationCode, codeSalt);
     encryptForTransfer(masterKey, transferKey);
     // memzero called for codeBytes in deriveTransferKey + transferKey in encryptForTransfer
     expect(memzeroSpy).toHaveBeenCalledTimes(2);
@@ -216,10 +216,10 @@ describe("memzero behavior", () => {
     const memzeroSpy = vi.spyOn(sodium, "memzero");
     const masterKey = generateMasterKey();
     const { verificationCode, codeSalt } = generateTransferCode();
-    const encKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const encKey = deriveTransferKey(verificationCode, codeSalt);
     const payload = encryptForTransfer(masterKey, encKey);
     memzeroSpy.mockClear();
-    const decKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const decKey = deriveTransferKey(verificationCode, codeSalt);
     memzeroSpy.mockClear();
     decryptFromTransfer(payload, decKey);
     // memzero called for transferKey in decryptFromTransfer

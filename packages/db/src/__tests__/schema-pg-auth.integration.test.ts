@@ -31,7 +31,7 @@ describe("PG auth schema", () => {
       id: string;
       emailHash: string;
       emailSalt: string;
-      passwordHash: string;
+      authKeyHash: Uint8Array;
       kdfSalt: string;
       createdAt: number;
       updatedAt: number;
@@ -40,7 +40,7 @@ describe("PG auth schema", () => {
     id: string;
     emailHash: string;
     emailSalt: string;
-    passwordHash: string;
+    authKeyHash: Uint8Array;
     kdfSalt: string;
     createdAt: number;
     updatedAt: number;
@@ -50,7 +50,7 @@ describe("PG auth schema", () => {
       id: overrides.id ?? crypto.randomUUID(),
       emailHash: overrides.emailHash ?? `hash_${crypto.randomUUID()}`,
       emailSalt: overrides.emailSalt ?? `salt_${crypto.randomUUID()}`,
-      passwordHash: overrides.passwordHash ?? `$argon2id$${crypto.randomUUID()}`,
+      authKeyHash: overrides.authKeyHash ?? new Uint8Array(32),
       kdfSalt: overrides.kdfSalt ?? `kdf_${crypto.randomUUID()}`,
       encryptedMasterKey: new Uint8Array(72),
       createdAt: overrides.createdAt ?? now,
@@ -93,7 +93,7 @@ describe("PG auth schema", () => {
       expect(rows[0]?.id).toBe(account.id);
       expect(rows[0]?.emailHash).toBe(account.emailHash);
       expect(rows[0]?.emailSalt).toBe(account.emailSalt);
-      expect(rows[0]?.passwordHash).toBe(account.passwordHash);
+      expect(rows[0]?.authKeyHash).toEqual(account.authKeyHash);
       expect(rows[0]?.kdfSalt).toBe(account.kdfSalt);
       expect(rows[0]?.createdAt).toBe(account.createdAt);
       expect(rows[0]?.updatedAt).toBe(account.updatedAt);
@@ -134,12 +134,12 @@ describe("PG auth schema", () => {
       const now = Date.now();
       await expect(
         client.query(
-          "INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, NULL, $5, $6, 1)",
+          "INSERT INTO accounts (id, email_hash, email_salt, auth_key_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, NULL, $5, $6, 1)",
           [
             crypto.randomUUID(),
             `hash_${crypto.randomUUID()}`,
             `salt_${crypto.randomUUID()}`,
-            `$argon2id$${crypto.randomUUID()}`,
+            new Uint8Array(32),
             now,
             now,
           ],
@@ -476,6 +476,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         encryptedMasterKey: masterKey,
+        recoveryKeyHash: new Uint8Array(32),
         createdAt: Date.now(),
       });
 
@@ -492,6 +493,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         encryptedMasterKey: new Uint8Array([1, 2, 3]),
+        recoveryKeyHash: new Uint8Array(32),
         createdAt: Date.now(),
       });
 
@@ -524,6 +526,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         encryptedMasterKey: new Uint8Array([1]),
+        recoveryKeyHash: new Uint8Array(32),
         createdAt: Date.now(),
       });
 
@@ -538,6 +541,7 @@ describe("PG auth schema", () => {
           id: crypto.randomUUID(),
           accountId: "nonexistent",
           encryptedMasterKey: new Uint8Array([1]),
+          recoveryKeyHash: new Uint8Array(32),
           createdAt: Date.now(),
         }),
       ).rejects.toThrow();
@@ -551,6 +555,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         encryptedMasterKey: new Uint8Array([1, 2, 3]),
+        recoveryKeyHash: new Uint8Array(32),
         createdAt: Date.now(),
       });
 
@@ -953,8 +958,15 @@ describe("PG auth schema", () => {
 
       await expect(
         client.query(
-          `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), 1)`,
-          [longId, `hash_${crypto.randomUUID()}`, `salt_${crypto.randomUUID()}`, "pw_hash", "kdf"],
+          `INSERT INTO accounts (id, email_hash, email_salt, auth_key_hash, kdf_salt, encrypted_master_key, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), 1)`,
+          [
+            longId,
+            `hash_${crypto.randomUUID()}`,
+            `salt_${crypto.randomUUID()}`,
+            new Uint8Array(32),
+            "kdf",
+            new Uint8Array(72),
+          ],
         ),
       ).rejects.toThrow();
     });
@@ -963,12 +975,12 @@ describe("PG auth schema", () => {
       const exactId = "a".repeat(50);
 
       await client.query(
-        `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, encrypted_master_key, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), 1)`,
+        `INSERT INTO accounts (id, email_hash, email_salt, auth_key_hash, kdf_salt, encrypted_master_key, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), 1)`,
         [
           exactId,
           `hash_${crypto.randomUUID()}`,
           `salt_${crypto.randomUUID()}`,
-          "pw_hash",
+          new Uint8Array(32),
           "kdf",
           new Uint8Array(72),
         ],

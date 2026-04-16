@@ -1,27 +1,30 @@
 import {
-  PWHASH_OPSLIMIT_SENSITIVE,
-  derivePasswordKey,
-  encryptPrivateKey,
-  generateIdentityKeypair,
-  generateMasterKey,
-  generateRecoveryKey,
+  AUTH_KEY_HASH_BYTES,
+  assertAuthKey,
+  assertAuthKeyHash,
+  assertSignPublicKey,
+  assertSignature,
+  generateChallengeNonce,
   generateSalt,
   getSodium,
-  hashPassword,
-  serializePublicKey,
-  verifyPassword,
-  wrapMasterKey,
+  hashAuthKey,
+  verifyAuthKey,
+  verifyChallenge,
 } from "@pluralscape/crypto";
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
-import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
-import { and, asc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
+import {
+  LoginSchema,
+  RegistrationCommitSchema,
+  RegistrationInitiateSchema,
+} from "@pluralscape/validation";
+import { and, asc, eq, gt, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
+import { ensureUint8Array } from "../lib/binary.js";
 import { encryptEmail, getEmailEncryptionKey } from "../lib/email-encrypt.js";
 import { hashEmail } from "../lib/email-hash.js";
-import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
-import { toHex } from "../lib/hex.js";
+import { fromHex, toHex } from "../lib/hex.js";
 import { toCursor } from "../lib/pagination.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
@@ -30,12 +33,10 @@ import { isUniqueViolation } from "../lib/unique-violation.js";
 import { getAccountLoginStore } from "../middleware/stores/account-login-store.js";
 import { MAX_SESSIONS_PER_ACCOUNT } from "../quota.constants.js";
 import {
+  CHALLENGE_NONCE_TTL_MS,
   DEFAULT_SESSION_LIMIT,
-  DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
   MAX_SESSION_LIMIT,
-  RECOVERY_KEY_GROUP_COUNT,
-  RECOVERY_KEY_GROUP_SIZE,
 } from "../routes/auth/auth.constants.js";
 
 import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
@@ -43,79 +44,48 @@ import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
+import type { AuthKey, AuthKeyHash, ChallengeNonce } from "@pluralscape/crypto";
 import type { PaginationCursor } from "@pluralscape/types";
 import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-// ── Registration ───────────────────────────────────────────────────
+// ── Registration Phase 1: Initiate ────────────────────────────────
 
-export interface RegistrationResult {
-  readonly sessionToken: string;
-  readonly recoveryKey: string;
+export interface RegistrationInitiateResult {
   readonly accountId: string;
-  readonly accountType: AccountType;
+  readonly kdfSalt: string;
+  readonly challengeNonce: string;
 }
 
-export async function registerAccount(
+export async function initiateRegistration(
   db: PostgresJsDatabase,
   params: unknown,
-  platform: ClientPlatform,
-  audit: AuditWriter,
-): Promise<RegistrationResult> {
+  retried = false,
+): Promise<RegistrationInitiateResult> {
   const startTime = performance.now();
 
-  const parsed = RegistrationInputSchema.parse(params);
-
-  if (!parsed.recoveryKeyBackupConfirmed) {
-    throw new ValidationError("Recovery key backup must be confirmed");
-  }
+  const parsed = RegistrationInitiateSchema.parse(params);
 
   const accountType = parsed.accountType;
   const emailHash = hashEmail(parsed.email);
   const adapter = getSodium();
 
-  // Generate all cryptographic material
   const emailSalt = toHex(adapter.randomBytes(EMAIL_SALT_BYTES));
   const kdfSalt = generateSalt();
-  const passwordHash = hashPassword(parsed.password, "server");
-  const masterKey = generateMasterKey();
+  const challengeNonce = generateChallengeNonce();
+  const challengeExpiresAt = now() + CHALLENGE_NONCE_TTL_MS;
 
-  let passwordKey: Awaited<ReturnType<typeof derivePasswordKey>> | undefined;
-  let keypair: ReturnType<typeof generateIdentityKeypair> | undefined;
-  let encryptedMasterKey, encryptedEncPrivateKey, encryptedSignPrivateKey, recovery;
-  try {
-    passwordKey = await derivePasswordKey(parsed.password, kdfSalt, "server");
-    encryptedMasterKey = wrapMasterKey(masterKey, passwordKey);
-    keypair = generateIdentityKeypair(masterKey);
-    encryptedEncPrivateKey = encryptPrivateKey(keypair.encryption.secretKey, masterKey);
-    encryptedSignPrivateKey = encryptPrivateKey(keypair.signing.secretKey, masterKey);
-    recovery = generateRecoveryKey(masterKey);
-  } finally {
-    adapter.memzero(masterKey);
-    if (passwordKey) adapter.memzero(passwordKey);
-    if (keypair) {
-      adapter.memzero(keypair.encryption.secretKey);
-      adapter.memzero(keypair.signing.secretKey);
-    }
-  }
+  // Placeholder: 32 zero bytes indicate incomplete registration
+  const placeholderAuthKeyHash = new Uint8Array(AUTH_KEY_HASH_BYTES);
+  // Empty encrypted master key placeholder
+  const placeholderEncryptedMasterKey = new Uint8Array(0);
 
   // Encrypt email for server-side storage (null if key not configured)
   const encryptedEmailBytes = getEmailEncryptionKey() ? encryptEmail(parsed.email) : null;
 
-  // Serialize keys for DB storage
-  const kdfSaltHex = toHex(kdfSalt);
-  const encMasterKeyBytes = serializeEncryptedPayload(encryptedMasterKey);
-  const encEncPrivKeyBytes = serializeEncryptedPayload(encryptedEncPrivateKey);
-  const encSignPrivKeyBytes = serializeEncryptedPayload(encryptedSignPrivateKey);
-  const recoveryEncMasterKeyBytes = serializeEncryptedPayload(recovery.encryptedMasterKey);
-
   const accountId = createId(ID_PREFIXES.account);
-  const sessionId = createId(ID_PREFIXES.session);
-  const rawToken = generateSessionToken();
-  const tokenHash = hashSessionToken(rawToken);
+  const kdfSaltHex = toHex(kdfSalt);
   const timestamp = now();
-  const timeouts = SESSION_TIMEOUTS[platform];
-  const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
   try {
     await withAccountTransaction(db, accountId as AccountId, async (tx) => {
@@ -124,86 +94,217 @@ export async function registerAccount(
         accountType,
         emailHash,
         emailSalt,
-        passwordHash,
+        authKeyHash: placeholderAuthKeyHash,
         kdfSalt: kdfSaltHex,
-        encryptedMasterKey: encMasterKeyBytes,
+        encryptedMasterKey: placeholderEncryptedMasterKey,
+        challengeNonce,
+        challengeExpiresAt,
         encryptedEmail: encryptedEmailBytes,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
-
-      if (accountType === "system") {
-        await tx.insert(systems).values({
-          id: createId(ID_PREFIXES.system),
-          accountId,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
-      }
-
-      await tx.insert(authKeys).values([
-        {
-          id: createId(ID_PREFIXES.authKey),
-          accountId,
-          encryptedPrivateKey: encEncPrivKeyBytes,
-          publicKey: new TextEncoder().encode(serializePublicKey(keypair.encryption.publicKey)),
-          keyType: "encryption",
-          createdAt: timestamp,
-        },
-        {
-          id: createId(ID_PREFIXES.authKey),
-          accountId,
-          encryptedPrivateKey: encSignPrivKeyBytes,
-          publicKey: new TextEncoder().encode(serializePublicKey(keypair.signing.publicKey)),
-          keyType: "signing",
-          createdAt: timestamp,
-        },
-      ]);
-
-      await tx.insert(recoveryKeys).values({
-        id: createId(ID_PREFIXES.recoveryKey),
-        accountId,
-        encryptedMasterKey: recoveryEncMasterKeyBytes,
-        createdAt: timestamp,
-      });
-
-      await tx.insert(sessions).values({
-        id: sessionId,
-        accountId,
-        tokenHash,
-        createdAt: timestamp,
-        lastActive: timestamp,
-        expiresAt,
-      });
-
-      await audit(tx, {
-        eventType: "auth.register",
-        actor: { kind: "account", id: accountId },
-        detail: "Account registered",
-        accountId: accountId as AccountId,
-      });
     });
   } catch (error: unknown) {
-    // Anti-enumeration: if email already exists (unique constraint), return a fake success
     if (isDuplicateEmailError(error)) {
+      // Check if the existing account is an abandoned placeholder
+      const [existing] = await db
+        .select({
+          id: accounts.id,
+          authKeyHash: accounts.authKeyHash,
+          challengeExpiresAt: accounts.challengeExpiresAt,
+        })
+        .from(accounts)
+        .where(eq(accounts.emailHash, emailHash))
+        .for("update", { skipLocked: true })
+        .limit(1);
+
+      if (existing) {
+        const isPlaceholder = existing.authKeyHash.every((b) => b === 0);
+        const isExpired =
+          existing.challengeExpiresAt !== null && existing.challengeExpiresAt < now();
+
+        if (isPlaceholder && isExpired && !retried) {
+          // Delete the abandoned placeholder and retry (at most once)
+          await db.delete(accounts).where(eq(accounts.id, existing.id));
+          return initiateRegistration(db, params, true);
+        }
+      }
+
+      // Real account or unexpired placeholder — anti-enum fake response
       await equalizeAntiEnumTiming(startTime);
-      const fakeToken = generateSessionToken();
-      hashSessionToken(fakeToken); // match timing of real path
       return {
-        sessionToken: fakeToken,
-        recoveryKey: generateFakeRecoveryKey(),
         accountId: createId(ID_PREFIXES.account),
-        accountType,
+        kdfSalt: toHex(generateSalt()),
+        challengeNonce: toHex(generateChallengeNonce()),
       };
     }
     throw error;
   }
 
+  await equalizeAntiEnumTiming(startTime);
+  return {
+    accountId,
+    kdfSalt: kdfSaltHex,
+    challengeNonce: toHex(challengeNonce),
+  };
+}
+
+// ── Registration Phase 2: Commit ──────────────────────────────────
+
+export interface RegistrationCommitResult {
+  readonly sessionToken: string;
+  readonly accountId: string;
+  readonly accountType: AccountType;
+}
+
+export async function commitRegistration(
+  db: PostgresJsDatabase,
+  params: unknown,
+  platform: ClientPlatform,
+  audit: AuditWriter,
+): Promise<RegistrationCommitResult> {
+  const parsed = RegistrationCommitSchema.parse(params);
+
+  if (!parsed.recoveryKeyBackupConfirmed) {
+    throw new ValidationError("Recovery key backup must be confirmed");
+  }
+
+  // Look up the account shell created in phase 1
+  const [account] = await db
+    .select()
+    .from(accounts)
+    .where(eq(accounts.id, parsed.accountId))
+    .limit(1);
+
+  if (!account) {
+    throw new ValidationError("Invalid or expired registration");
+  }
+
+  // Verify registration is still in phase 1 (placeholder auth key hash = all zeros)
+  const isPlaceholder = account.authKeyHash.every((b) => b === 0);
+  if (!isPlaceholder) {
+    throw new ValidationError("Invalid or expired registration");
+  }
+
+  // Verify challenge nonce hasn't expired
+  if (!account.challengeNonce || !account.challengeExpiresAt) {
+    throw new ValidationError("Invalid or expired registration");
+  }
+  if (account.challengeExpiresAt < now()) {
+    throw new ValidationError("Invalid or expired registration");
+  }
+
+  // Verify challenge signature against the provided public signing key
+  const publicSigningKeyBytes = fromHex(parsed.publicSigningKey);
+  assertSignPublicKey(publicSigningKeyBytes);
+
+  const signatureBytes = fromHex(parsed.challengeSignature);
+  assertSignature(signatureBytes);
+
+  const signatureValid = verifyChallenge(
+    account.challengeNonce as ChallengeNonce,
+    signatureBytes,
+    publicSigningKeyBytes,
+  );
+  if (!signatureValid) {
+    throw new ValidationError("Invalid or expired registration");
+  }
+
+  // Hash the auth key for storage
+  const authKeyRaw = fromHex(parsed.authKey);
+  assertAuthKey(authKeyRaw);
+  const authKeyHash = hashAuthKey(authKeyRaw);
+
+  // Decode all encrypted blobs from hex; public keys are base64url-encoded
+  const encryptedMasterKeyBytes = fromHex(parsed.encryptedMasterKey);
+  const encSignPrivKeyBytes = fromHex(parsed.encryptedSigningPrivateKey);
+  const encEncPrivKeyBytes = fromHex(parsed.encryptedEncryptionPrivateKey);
+  const publicEncKeyBytes = fromHex(parsed.publicEncryptionKey);
+  const recoveryEncMasterKeyBytes = fromHex(parsed.recoveryEncryptedMasterKey);
+
+  const sessionId = createId(ID_PREFIXES.session);
+  const rawToken = generateSessionToken();
+  const tokenHash = hashSessionToken(rawToken);
+  const timestamp = now();
+  const timeouts = SESSION_TIMEOUTS[platform];
+  const expiresAt = timestamp + timeouts.absoluteTtlMs;
+
+  await withAccountTransaction(db, account.id as AccountId, async (tx) => {
+    // Fill in the account shell with real crypto data
+    // TOCTOU guard: isNotNull(challengeNonce) ensures concurrent commits can't both succeed
+    const updated = await tx
+      .update(accounts)
+      .set({
+        authKeyHash,
+        encryptedMasterKey: encryptedMasterKeyBytes,
+        challengeNonce: null,
+        challengeExpiresAt: null,
+        updatedAt: timestamp,
+      })
+      .where(and(eq(accounts.id, account.id), isNotNull(accounts.challengeNonce)))
+      .returning({ id: accounts.id });
+
+    if (updated.length === 0) {
+      throw new ValidationError("Invalid or expired registration");
+    }
+
+    if (account.accountType === "system") {
+      await tx.insert(systems).values({
+        id: createId(ID_PREFIXES.system),
+        accountId: account.id,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    }
+
+    await tx.insert(authKeys).values([
+      {
+        id: createId(ID_PREFIXES.authKey),
+        accountId: account.id,
+        encryptedPrivateKey: encEncPrivKeyBytes,
+        publicKey: publicEncKeyBytes,
+        keyType: "encryption",
+        createdAt: timestamp,
+      },
+      {
+        id: createId(ID_PREFIXES.authKey),
+        accountId: account.id,
+        encryptedPrivateKey: encSignPrivKeyBytes,
+        publicKey: publicSigningKeyBytes,
+        keyType: "signing",
+        createdAt: timestamp,
+      },
+    ]);
+
+    await tx.insert(recoveryKeys).values({
+      id: createId(ID_PREFIXES.recoveryKey),
+      accountId: account.id,
+      encryptedMasterKey: recoveryEncMasterKeyBytes,
+      recoveryKeyHash: fromHex(parsed.recoveryKeyHash),
+      createdAt: timestamp,
+    });
+
+    await tx.insert(sessions).values({
+      id: sessionId,
+      accountId: account.id,
+      tokenHash,
+      createdAt: timestamp,
+      lastActive: timestamp,
+      expiresAt,
+    });
+
+    await audit(tx, {
+      eventType: "auth.register",
+      actor: { kind: "account", id: account.id },
+      detail: "Account registered",
+      accountId: account.id as AccountId,
+    });
+  });
+
   return {
     sessionToken: rawToken,
-    recoveryKey: recovery.displayKey,
-    accountId,
-    accountType,
+    accountId: account.id,
+    accountType: account.accountType,
   };
 }
 
@@ -214,6 +315,9 @@ export interface LoginResult {
   readonly accountId: string;
   readonly systemId: string | null;
   readonly accountType: AccountType;
+  /** Hex-encoded encrypted master key blob — opaque E2E-encrypted data the server cannot read. */
+  readonly encryptedMasterKey: string;
+  readonly kdfSalt: string;
 }
 
 export async function loginAccount(
@@ -224,7 +328,7 @@ export async function loginAccount(
   log: AppLogger,
 ): Promise<LoginResult | null> {
   const startTime = performance.now();
-  const parsed = LoginCredentialsSchema.parse(credentials);
+  const parsed = LoginSchema.parse(credentials);
   const emailHash = hashEmail(parsed.email);
 
   // Check throttle BEFORE DB lookup, keyed on emailHash (not account.id)
@@ -237,23 +341,25 @@ export async function loginAccount(
 
   // Pre-auth lookup by emailHash — intentionally outside RLS (no accountId known yet)
   const [account] = await db
-    .select()
+    .select({
+      id: accounts.id,
+      emailHash: accounts.emailHash,
+      authKeyHash: accounts.authKeyHash,
+      accountType: accounts.accountType,
+      encryptedMasterKey: accounts.encryptedMasterKey,
+      kdfSalt: accounts.kdfSalt,
+      auditLogIpTracking: accounts.auditLogIpTracking,
+    })
     .from(accounts)
     .where(eq(accounts.emailHash, emailHash))
     .limit(1);
 
   if (!account) {
-    // Anti-enumeration: run verification against dummy hash to equalize crypto timing
-    try {
-      verifyPassword(DUMMY_ARGON2_HASH, parsed.password);
-    } catch (err: unknown) {
-      log.error(
-        "Unexpected verifyPassword error during anti-enumeration",
-        err instanceof Error ? { err } : { error: String(err) },
-      );
-    }
-    // Record failure for throttling — try/catch keeps timing symmetric with the
-    // valid-account path. Both paths tolerate Valkey outages gracefully.
+    // Anti-enumeration: compute a dummy verify to equalize timing
+    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKey;
+    const dummyHash = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyHash;
+    verifyAuthKey(dummyKey, dummyHash);
+    // Record failure for throttling
     try {
       await loginStore.recordFailure(emailHash);
     } catch (throttleErr: unknown) {
@@ -262,8 +368,7 @@ export async function loginAccount(
         throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
       );
     }
-    // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
-    // Uses a zeroed account ID since no real account exists for this email.
+    // Fire-and-forget audit
     void audit(db, {
       eventType: "auth.login-failed",
       actor: { kind: "account", id: ANTI_ENUM_SENTINEL_ACCOUNT_ID },
@@ -273,16 +378,45 @@ export async function loginAccount(
         err: auditError instanceof Error ? auditError : { message: String(auditError) },
       });
     });
-    // Pad total elapsed time so attackers cannot distinguish "not found" from
-    // "wrong password" via request duration differences.
     await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
-  const valid = verifyPassword(account.passwordHash, parsed.password);
+  // Reject placeholder accounts (phase 1 registrations that never completed)
+  const isLoginPlaceholder = account.authKeyHash.every((b) => b === 0);
+  if (isLoginPlaceholder) {
+    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKey;
+    const dummyHash = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyHash;
+    verifyAuthKey(dummyKey, dummyHash);
+    try {
+      await loginStore.recordFailure(emailHash);
+    } catch (throttleErr: unknown) {
+      log.error(
+        "Failed to record login failure for throttle",
+        throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
+      );
+    }
+    void audit(db, {
+      eventType: "auth.login-failed",
+      actor: { kind: "account", id: ANTI_ENUM_SENTINEL_ACCOUNT_ID },
+      detail: "Account not found",
+    }).catch((auditError: unknown) => {
+      log.error("[audit] Failed to write auth.login-failed:", {
+        err: auditError instanceof Error ? auditError : { message: String(auditError) },
+      });
+    });
+    await equalizeAntiEnumTiming(startTime);
+    return null;
+  }
+
+  // Verify auth key: BLAKE2B(auth_key) vs stored hash
+  const authKeyBytes = fromHex(parsed.authKey);
+  assertAuthKey(authKeyBytes);
+  const storedHash = ensureUint8Array(account.authKeyHash);
+  assertAuthKeyHash(storedHash);
+  const valid = verifyAuthKey(authKeyBytes, storedHash);
   if (!valid) {
-    // Record failed attempt — symmetric try/catch with the non-existent path
-    // so both paths behave identically during Valkey outages.
+    // Record failed attempt
     try {
       await loginStore.recordFailure(emailHash);
     } catch (throttleErr: unknown) {
@@ -292,11 +426,11 @@ export async function loginAccount(
       );
     }
 
-    // Fire-and-forget: we don't block the response on audit writes for failed attempts.
+    // Fire-and-forget audit
     void audit(db, {
       eventType: "auth.login-failed",
       actor: { kind: "account", id: account.id },
-      detail: "Invalid password",
+      detail: "Invalid auth key",
       accountId: account.id as AccountId,
       overrideTrackIp: account.auditLogIpTracking,
     }).catch((auditError: unknown) => {
@@ -305,14 +439,11 @@ export async function loginAccount(
         auditError instanceof Error ? { err: auditError } : { error: String(auditError) },
       );
     });
-    // Pad total elapsed time so attackers cannot distinguish "wrong password"
-    // from "not found" via request duration differences.
     await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
   // Successful login: reset the throttle counter.
-  // try/catch keeps this symmetric with the failure paths — both tolerate Valkey outages.
   try {
     await loginStore.reset(emailHash);
   } catch (throttleErr: unknown) {
@@ -320,26 +451,6 @@ export async function loginAccount(
       "Failed to reset login throttle after successful login",
       throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
     );
-  }
-
-  // Fire-and-forget: rehash password if it uses old params (inside RLS context)
-  if (needsRehash(account.passwordHash)) {
-    const newHash = hashPassword(parsed.password, "server");
-    void withAccountTransaction(db, account.id as AccountId, async (tx) => {
-      await tx
-        .update(accounts)
-        .set({ passwordHash: newHash, updatedAt: now() })
-        .where(and(eq(accounts.id, account.id), eq(accounts.passwordHash, account.passwordHash)));
-    })
-      .then(() => {
-        log.info("Rehashed password to current params", { accountId: account.id });
-      })
-      .catch((rehashErr: unknown) => {
-        log.error(
-          "Failed to rehash password on login",
-          rehashErr instanceof Error ? { err: rehashErr } : { error: String(rehashErr) },
-        );
-      });
   }
 
   const sessionId = createId(ID_PREFIXES.session);
@@ -417,6 +528,8 @@ export async function loginAccount(
     accountId: account.id,
     systemId,
     accountType: account.accountType,
+    encryptedMasterKey: toHex(account.encryptedMasterKey),
+    kdfSalt: account.kdfSalt,
   };
 }
 
@@ -554,6 +667,26 @@ export async function logoutCurrentSession(
   });
 }
 
+// ── Cleanup ──────────────────────────────────────────────────────
+
+/**
+ * Delete abandoned registration placeholders.
+ *
+ * An abandoned placeholder has an all-zero authKeyHash (never committed)
+ * and an expired challenge nonce. Safe to call on a schedule.
+ */
+export async function cleanupExpiredRegistrations(db: PostgresJsDatabase): Promise<number> {
+  const threshold = now();
+  const zeroes = new Uint8Array(AUTH_KEY_HASH_BYTES);
+
+  const deleted = await db
+    .delete(accounts)
+    .where(and(eq(accounts.authKeyHash, zeroes), lt(accounts.challengeExpiresAt, threshold)))
+    .returning({ id: accounts.id });
+
+  return deleted.length;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
 class ValidationError extends Error {
@@ -585,38 +718,4 @@ export function isDuplicateEmailError(error: unknown): boolean {
       "constraint_name" in e &&
       (e as { constraint_name: string }).constraint_name === "accounts_email_hash_idx",
   );
-}
-
-/**
- * Check whether an Argon2id hash needs rehashing because it was produced
- * with fewer iterations than the current server profile requires.
- * Parses the `t=N` parameter from the standard `$argon2id$v=19$m=...,t=N,...` format.
- */
-export function needsRehash(hash: string): boolean {
-  const match = /\$argon2id\$v=\d+\$m=\d+,t=(\d+),/.exec(hash);
-  if (!match) return false;
-  const iterations = Number(match[1]);
-  return iterations < PWHASH_OPSLIMIT_SENSITIVE;
-}
-
-/**
- * Generate a fake recovery key that looks like a real one for anti-enumeration.
- * Uses byte % chars.length which has zero modulo bias since 256 divides evenly by 32 (chars.length).
- */
-function generateFakeRecoveryKey(): string {
-  const adapter = getSodium();
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const totalChars = RECOVERY_KEY_GROUP_COUNT * RECOVERY_KEY_GROUP_SIZE;
-  const randomBytes = adapter.randomBytes(totalChars);
-
-  const groups: string[] = [];
-  for (let g = 0; g < RECOVERY_KEY_GROUP_COUNT; g++) {
-    let group = "";
-    for (let c = 0; c < RECOVERY_KEY_GROUP_SIZE; c++) {
-      const byteVal = randomBytes[g * RECOVERY_KEY_GROUP_SIZE + c] ?? 0;
-      group += chars[byteVal % chars.length] ?? "A";
-    }
-    groups.push(group);
-  }
-  return groups.join("-");
 }

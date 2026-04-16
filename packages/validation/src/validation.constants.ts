@@ -12,6 +12,24 @@ import type {
 /** Minimum password length enforced at the validation layer (mirrors crypto MIN_PASSWORD_LENGTH). */
 export const AUTH_MIN_PASSWORD_LENGTH = 8;
 
+/** Byte length of the auth key (BLAKE2b-256 output: 32 bytes → 64 hex chars). */
+export const AUTH_KEY_BYTE_LENGTH = 32;
+
+/** Byte length of the KDF salt (random 16 bytes → 32 hex chars). */
+export const KDF_SALT_BYTE_LENGTH = 16;
+
+/** Byte length of an Ed25519 signature (64 bytes → 128 hex chars). */
+export const CHALLENGE_SIGNATURE_BYTE_LENGTH = 64;
+
+/** Byte length of a recovery key hash (BLAKE2b-256: 32 bytes → 64 hex chars). */
+export const RECOVERY_KEY_HASH_BYTE_LENGTH = 32;
+
+/** Minimum byte length for encrypted blob fields (nonce 24B + tag 16B = 40B → 80 hex chars). */
+export const ENCRYPTED_BLOB_MIN_BYTE_LENGTH = 40;
+
+/** Byte length of Ed25519/X25519 public keys (32 bytes → 64 hex chars). */
+export const PUBLIC_KEY_BYTE_LENGTH = 32;
+
 /**
  * Maximum base64-encoded string length for encrypted data fields.
  * Equals Math.ceil(65_536 * 4/3) = 87_382 — the base64 encoding of 64 KiB,

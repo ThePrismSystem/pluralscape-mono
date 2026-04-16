@@ -1,116 +1,88 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { LoginCredentialsSchema, RegistrationInputSchema } from "../auth.js";
+import { LoginSchema, RegistrationCommitSchema, RegistrationInitiateSchema } from "../auth.js";
 
-import type { LoginCredentials, RegistrationInput } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 // ── Compile-time contract tests ──────────────────────────────────────
-// These verify that z.infer<Schema> is assignable to/from the canonical type.
-// A schema that drifts from the TypeScript interface will cause a type error here.
+// Verify that z.infer produces the expected structural shape.
 
-describe("LoginCredentials contract", () => {
-  it("schema infers the correct type (compile-time)", () => {
-    expectTypeOf<z.infer<typeof LoginCredentialsSchema>>().toEqualTypeOf<LoginCredentials>();
+describe("LoginSchema contract", () => {
+  it("infers email and authKey string fields", () => {
+    expectTypeOf<z.infer<typeof LoginSchema>["email"]>().toEqualTypeOf<string>();
+    expectTypeOf<z.infer<typeof LoginSchema>["authKey"]>().toEqualTypeOf<string>();
   });
 
-  it("parses a valid LoginCredentials value (runtime)", () => {
-    const input: LoginCredentials = { email: "user@example.com", password: "hunter2!" };
-    const result = LoginCredentialsSchema.safeParse(input);
+  it("parses a valid login value (runtime)", () => {
+    const input = { email: "user@example.com", authKey: "a".repeat(64) };
+    const result = LoginSchema.safeParse(input);
     expect(result.success).toBe(true);
   });
 
   it("rejects an invalid email", () => {
-    const result = LoginCredentialsSchema.safeParse({ email: "not-an-email", password: "x" });
+    const result = LoginSchema.safeParse({ email: "not-an-email", authKey: "a".repeat(64) });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["email"]);
-    }
-  });
-
-  it("rejects a missing password", () => {
-    const result = LoginCredentialsSchema.safeParse({ email: "user@example.com" });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["password"]);
+      expect(result.error.issues[0]?.path).toEqual(["email"]);
     }
   });
 
   it("strips unknown properties", () => {
-    const result = LoginCredentialsSchema.safeParse({
+    const result = LoginSchema.safeParse({
       email: "user@example.com",
-      password: "hunter2!",
-      admin: true,
+      authKey: "a".repeat(64),
+      extra: true,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({ email: "user@example.com", password: "hunter2!" });
-      expect("admin" in result.data).toBe(false);
+      expect("extra" in result.data).toBe(false);
     }
   });
 });
 
-describe("RegistrationInput contract", () => {
-  it("schema infers the correct type (compile-time)", () => {
-    expectTypeOf<z.infer<typeof RegistrationInputSchema>>().toEqualTypeOf<RegistrationInput>();
+describe("RegistrationInitiateSchema contract", () => {
+  it("infers email and accountType fields", () => {
+    expectTypeOf<z.infer<typeof RegistrationInitiateSchema>["email"]>().toEqualTypeOf<string>();
+    expectTypeOf<z.infer<typeof RegistrationInitiateSchema>["accountType"]>().toEqualTypeOf<
+      "system" | "viewer"
+    >();
   });
 
-  it("parses a valid RegistrationInput value (runtime)", () => {
-    const input: RegistrationInput = {
-      email: "user@example.com",
-      password: "hunter2!",
+  it("parses a valid initiate value (runtime)", () => {
+    const result = RegistrationInitiateSchema.safeParse({ email: "user@example.com" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.accountType).toBe("system");
+    }
+  });
+});
+
+describe("RegistrationCommitSchema contract", () => {
+  it("infers accountId, authKey, and recoveryKeyBackupConfirmed fields", () => {
+    expectTypeOf<z.infer<typeof RegistrationCommitSchema>["accountId"]>().toEqualTypeOf<string>();
+    expectTypeOf<z.infer<typeof RegistrationCommitSchema>["authKey"]>().toEqualTypeOf<string>();
+    expectTypeOf<
+      z.infer<typeof RegistrationCommitSchema>["recoveryKeyBackupConfirmed"]
+    >().toEqualTypeOf<boolean>();
+  });
+
+  it("parses a valid commit value (runtime)", () => {
+    // Encrypted blob: min 40 bytes → 80 hex chars (nonce 24B + tag 16B overhead)
+    const blob = "e".repeat(80);
+    const input = {
+      accountId: "acct_123",
+      authKey: "a".repeat(64),
+      encryptedMasterKey: blob,
+      encryptedSigningPrivateKey: blob,
+      encryptedEncryptionPrivateKey: blob,
+      publicSigningKey: "a".repeat(64),
+      publicEncryptionKey: "b".repeat(64),
+      recoveryEncryptedMasterKey: blob,
+      challengeSignature: "c".repeat(128),
       recoveryKeyBackupConfirmed: true,
-      accountType: "system",
+      recoveryKeyHash: "d".repeat(64),
     };
-    const result = RegistrationInputSchema.safeParse(input);
+    const result = RegistrationCommitSchema.safeParse(input);
     expect(result.success).toBe(true);
-  });
-
-  it("accepts recoveryKeyBackupConfirmed as false", () => {
-    const result = RegistrationInputSchema.safeParse({
-      email: "user@example.com",
-      password: "hunter2!",
-      recoveryKeyBackupConfirmed: false,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.recoveryKeyBackupConfirmed).toBe(false);
-    }
-  });
-
-  it("rejects missing recoveryKeyBackupConfirmed", () => {
-    const result = RegistrationInputSchema.safeParse({
-      email: "user@example.com",
-      password: "hunter2!",
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
-      expect(issue?.path).toEqual(["recoveryKeyBackupConfirmed"]);
-    }
-  });
-
-  it("strips unknown properties", () => {
-    const result = RegistrationInputSchema.safeParse({
-      email: "user@example.com",
-      password: "hunter2!",
-      recoveryKeyBackupConfirmed: true,
-      admin: true,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toEqual({
-        email: "user@example.com",
-        password: "hunter2!",
-        recoveryKeyBackupConfirmed: true,
-        accountType: "system",
-      });
-      expect("admin" in result.data).toBe(false);
-    }
   });
 });

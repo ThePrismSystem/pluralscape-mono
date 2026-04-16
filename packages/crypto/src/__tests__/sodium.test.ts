@@ -34,6 +34,7 @@ function stubAdapter(overrides: Partial<SodiumAdapter> = {}): SodiumAdapter {
     genericHash: noop,
     randomBytes: noop,
     memzero: noop,
+    memcmp: noop,
     ...overrides,
   };
 }

@@ -123,7 +123,12 @@ function mockDb(authorPublicKey: Uint8Array = pubkey(10)) {
   const whereFn = vi.fn().mockReturnValue(whereResult);
   const fromFn = vi.fn().mockReturnValue({ where: whereFn });
   const selectFn = vi.fn().mockReturnValue({ from: fromFn });
-  return { select: selectFn } as never;
+  const db = {
+    select: selectFn,
+    execute: vi.fn().mockResolvedValue(undefined),
+    transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(db)),
+  };
+  return db as never;
 }
 
 // Disable envelope signature verification for handler tests that use mock data.

@@ -1,14 +1,24 @@
 /**
  * Shared setup helpers for API service integration tests (PGlite).
  */
-import { serializeEncryptedBlob } from "@pluralscape/crypto";
+import {
+  assertChallengeNonce,
+  fromHex,
+  getSodium,
+  serializeEncryptedBlob,
+  signChallenge,
+  toHex,
+} from "@pluralscape/crypto";
 import { testBlob } from "@pluralscape/db/test-helpers/pg-helpers";
 import { expect } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
+import { commitRegistration, initiateRegistration } from "../../services/auth.service.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { RegistrationCommitResult } from "../../services/auth.service.js";
+import type { SignSecretKey } from "@pluralscape/crypto";
 import type * as schema from "@pluralscape/db/pg";
 import type {
   AccountId,
@@ -44,9 +54,13 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export { testBlob };
 
-/** Cast PGlite DB to PostgresJsDatabase for service functions. Centralizes the type bridge. */
+/**
+ * Cast PGlite DB to PostgresJsDatabase for service functions.
+ * Both are PgDatabase subclasses with identical query APIs; this bridge
+ * is only valid in tests where the query result HKT difference is irrelevant.
+ */
 export function asDb(db: PgliteDatabase<typeof schema>): PostgresJsDatabase {
-  return db as never;
+  return db as never as PostgresJsDatabase;
 }
 
 /**
@@ -77,6 +91,71 @@ export const noopAudit: AuditWriter = async () => {};
 
 // Re-export spyAudit from its canonical location alongside SpyAudit type.
 export { spyAudit } from "./audit-assertions.js";
+
+/**
+ * Register a test account via the two-phase flow (initiate + commit) using real
+ * libsodium crypto. Requires `initSodium()` to have been called in `beforeAll`.
+ *
+ * Returns the commit result plus the raw authKey hex for login tests.
+ */
+export async function registerTestAccount(
+  db: PostgresJsDatabase,
+  opts: {
+    email?: string;
+    accountType?: "system" | "viewer";
+    audit?: AuditWriter;
+    platform?: "web" | "mobile";
+  } = {},
+): Promise<
+  RegistrationCommitResult & { authKeyHex: string; email: string; signingSecretKey: SignSecretKey }
+> {
+  const email = opts.email ?? `test-${crypto.randomUUID()}@test.local`;
+  const accountType = opts.accountType ?? "system";
+  const audit = opts.audit ?? noopAudit;
+  const platform = opts.platform ?? "web";
+
+  const sodium = getSodium();
+
+  // Phase 1: initiate — get accountId + challengeNonce
+  const initResult = await initiateRegistration(db, { email, accountType });
+
+  // Generate signing and encryption keypairs
+  const signingKp = sodium.signKeypair();
+  const boxKp = sodium.boxKeypair();
+
+  // Sign the challenge nonce with the signing secret key
+  const challengeNonceBytes = fromHex(initResult.challengeNonce);
+  assertChallengeNonce(challengeNonceBytes);
+  const challengeSignature = signChallenge(challengeNonceBytes, signingKp.secretKey);
+
+  // Random auth key (32 bytes → hex)
+  const authKeyHex = toHex(sodium.randomBytes(32));
+
+  // Dummy encrypted blobs (content irrelevant for integration tests)
+  const dummyBlob = toHex(sodium.randomBytes(48));
+
+  // Phase 2: commit
+  const commitResult = await commitRegistration(
+    db,
+    {
+      accountId: initResult.accountId,
+      authKey: authKeyHex,
+      encryptedMasterKey: dummyBlob,
+      encryptedSigningPrivateKey: dummyBlob,
+      encryptedEncryptionPrivateKey: dummyBlob,
+      publicSigningKey: toHex(signingKp.publicKey),
+      publicEncryptionKey: toHex(boxKp.publicKey),
+      recoveryEncryptedMasterKey: dummyBlob,
+      challengeSignature: toHex(challengeSignature),
+      recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: toHex(sodium.randomBytes(32)),
+    },
+    platform,
+    audit,
+  );
+
+  return { ...commitResult, authKeyHex, email, signingSecretKey: signingKp.secretKey };
+}
 
 /**
  * Assert that a promise rejects with an ApiHttpError carrying the expected

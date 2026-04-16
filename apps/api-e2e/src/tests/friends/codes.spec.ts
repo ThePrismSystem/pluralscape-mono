@@ -1,7 +1,6 @@
-import crypto from "node:crypto";
-
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { HTTP_CONFLICT, HTTP_CREATED, HTTP_NO_CONTENT } from "../../fixtures/http.constants.js";
+import { registerAccount } from "../../helpers/register.js";
 
 /** Expected friend code format: XXXX-XXXX uppercase alphanumeric. */
 const FRIEND_CODE_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
@@ -127,34 +126,11 @@ test.describe("Friend codes", () => {
 
   test("redeem returns 409 when already friends", async ({ request }) => {
     // Register two accounts
-    const uuidA = crypto.randomUUID();
-    const uuidB = crypto.randomUUID();
+    const acctA = await registerAccount(request, { emailPrefix: "e2e-dup" });
+    const headersA = { Authorization: `Bearer ${acctA.sessionToken}` };
 
-    const regA = await request.post("/v1/auth/register", {
-      data: {
-        email: `e2e-dup-${uuidA}@test.pluralscape.local`,
-        password: `E2E-Pass-${uuidA}`,
-        recoveryKeyBackupConfirmed: true,
-      },
-    });
-    expect(regA.ok()).toBe(true);
-    const accountAEnv = (await regA.json()) as {
-      data: { sessionToken: string; accountId: string };
-    };
-    const headersA = { Authorization: `Bearer ${accountAEnv.data.sessionToken}` };
-
-    const regB = await request.post("/v1/auth/register", {
-      data: {
-        email: `e2e-dup-${uuidB}@test.pluralscape.local`,
-        password: `E2E-Pass-${uuidB}`,
-        recoveryKeyBackupConfirmed: true,
-      },
-    });
-    expect(regB.ok()).toBe(true);
-    const accountBEnv = (await regB.json()) as {
-      data: { sessionToken: string; accountId: string };
-    };
-    const headersB = { Authorization: `Bearer ${accountBEnv.data.sessionToken}` };
+    const acctB = await registerAccount(request, { emailPrefix: "e2e-dup" });
+    const headersB = { Authorization: `Bearer ${acctB.sessionToken}` };
 
     // Account A generates a code, Account B redeems it (they become friends)
     const codeResA = await request.post("/v1/account/friend-codes", {
@@ -185,34 +161,11 @@ test.describe("Friend codes", () => {
 
   test("redeem between two accounts creates bidirectional connection", async ({ request }) => {
     // Register two accounts
-    const uuidA = crypto.randomUUID();
-    const uuidB = crypto.randomUUID();
+    const acctA = await registerAccount(request, { emailPrefix: "e2e-codes" });
+    const headersA = { Authorization: `Bearer ${acctA.sessionToken}` };
 
-    const regA = await request.post("/v1/auth/register", {
-      data: {
-        email: `e2e-codes-${uuidA}@test.pluralscape.local`,
-        password: `E2E-Pass-${uuidA}`,
-        recoveryKeyBackupConfirmed: true,
-      },
-    });
-    expect(regA.ok()).toBe(true);
-    const accountAEnv = (await regA.json()) as {
-      data: { sessionToken: string; accountId: string };
-    };
-    const headersA = { Authorization: `Bearer ${accountAEnv.data.sessionToken}` };
-
-    const regB = await request.post("/v1/auth/register", {
-      data: {
-        email: `e2e-codes-${uuidB}@test.pluralscape.local`,
-        password: `E2E-Pass-${uuidB}`,
-        recoveryKeyBackupConfirmed: true,
-      },
-    });
-    expect(regB.ok()).toBe(true);
-    const accountBEnv = (await regB.json()) as {
-      data: { sessionToken: string; accountId: string };
-    };
-    const headersB = { Authorization: `Bearer ${accountBEnv.data.sessionToken}` };
+    const acctB = await registerAccount(request, { emailPrefix: "e2e-codes" });
+    const headersB = { Authorization: `Bearer ${acctB.sessionToken}` };
 
     // Account A generates a code
     const codeRes = await request.post("/v1/account/friend-codes", {

@@ -270,7 +270,7 @@ describe("system router", () => {
       const caller = createCaller();
       const result = await caller.system.purge({
         systemId: MOCK_SYSTEM_ID,
-        password: "correct-password",
+        authKey: "aa".repeat(32),
       });
 
       expect(result).toEqual({ success: true });
@@ -284,7 +284,7 @@ describe("system router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.system.purge({ systemId: MOCK_SYSTEM_ID, password: "wrong-password" }),
+        caller.system.purge({ systemId: MOCK_SYSTEM_ID, authKey: "bb".repeat(32) }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
@@ -294,7 +294,7 @@ describe("system router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.system.purge({ systemId: MOCK_SYSTEM_ID, password: "password" }),
+        caller.system.purge({ systemId: MOCK_SYSTEM_ID, authKey: "cc".repeat(32) }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
   });

@@ -5,15 +5,20 @@ export type {
   AeadKey,
   AeadNonce,
   AeadResult,
+  AuthKey,
+  AuthKeyHash,
   BoxKeypair,
   BoxNonce,
   BoxPublicKey,
   BoxSecretKey,
+  ChallengeNonce,
   CryptoKeypair,
+  EncryptedBlob,
   EncryptedKeyGrant,
   KdfMasterKey,
   KeyVersion,
   PwhashSalt,
+  RecoveryKeyHash,
   Signature,
   SignKeypair,
   SignPublicKey,
@@ -64,13 +69,14 @@ export {
   KDF_CONTEXT_BYTES,
   KDF_KEY_BYTES,
   PWHASH_MEMLIMIT_INTERACTIVE,
-  PWHASH_MEMLIMIT_MOBILE,
   PWHASH_MEMLIMIT_MODERATE,
   PWHASH_OPSLIMIT_INTERACTIVE,
-  PWHASH_OPSLIMIT_MOBILE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_OPSLIMIT_SENSITIVE,
+  AUTH_KEY_HASH_BYTES,
   PWHASH_SALT_BYTES,
+  ENCRYPTED_BLOB_MIN_BYTES,
+  RECOVERY_KEY_HASH_BYTES,
   SAFETY_NUMBER_HASH_BYTES,
   SAFETY_NUMBER_ITERATIONS,
   SAFETY_NUMBER_VERSION,
@@ -88,22 +94,26 @@ export { fromHex, toHex } from "./hex.js";
 export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
 
 // ── Master key ──────────────────────────────────────────────────────
-export type { PwhashProfile } from "./master-key.js";
 export { generateSalt } from "./master-key.js";
 
-// ── Password hashing (string-based) ────────────────────────────────
-export { hashPassword, verifyPassword } from "./password.js";
+// ── Auth key (split key derivation) ────────────────────────────────
+export type { SplitKeyResult } from "./auth-key.js";
+export {
+  deriveAuthAndPasswordKeys,
+  generateChallengeNonce,
+  hashAuthKey,
+  hashRecoveryKey,
+  signChallenge,
+  verifyAuthKey,
+  verifyChallenge,
+  verifyRecoveryKey,
+} from "./auth-key.js";
 
 // ── PIN hashing (string-based) ─────────────────────────────────────
 export { hashPin, MIN_PIN_LENGTH, verifyPin } from "./pin.js";
 
 // ── Master key wrap (KEK/DEK two-layer architecture) ─────────────────
-export {
-  derivePasswordKey,
-  generateMasterKey,
-  unwrapMasterKey,
-  wrapMasterKey,
-} from "./master-key-wrap.js";
+export { generateMasterKey, unwrapMasterKey, wrapMasterKey } from "./master-key-wrap.js";
 
 // ── Blob codec ──────────────────────────────────────────────────────
 export { deserializeEncryptedBlob, serializeEncryptedBlob } from "./blob-codec.js";
@@ -167,7 +177,7 @@ export { deserializeRecoveryBackup, serializeRecoveryBackup } from "./recovery-b
 
 // ── Password reset via recovery key ──────────────────────────────────
 export type { PasswordResetParams, PasswordResetResult } from "./password-reset.js";
-export { resetPasswordViaRecoveryKey } from "./password-reset.js";
+export { withPasswordResetResult } from "./password-reset.js";
 
 // ── Recovery key regeneration ─────────────────────────────────────────
 export type { RegenerateResult } from "./recovery-regeneration.js";
@@ -210,8 +220,13 @@ export { MobileKeyLifecycleManager, SECURITY_PRESETS } from "./key-lifecycle.js"
 export {
   assertAeadKey,
   assertAeadNonce,
+  assertAuthKey,
+  assertAuthKeyHash,
   assertBufferLength,
+  assertChallengeNonce,
+  assertEncryptedBlob,
   assertPwhashSalt,
+  assertRecoveryKeyHash,
   assertSignature,
   assertSignPublicKey,
 } from "./validation.js";

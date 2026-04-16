@@ -189,7 +189,7 @@ describe("inferAuthLevelFromMiddlewares", () => {
 
 describe("resolveMapping", () => {
   it("returns tRPC path for known REST route", () => {
-    expect(resolveMapping("POST /v1/auth/register")).toBe("auth.register");
+    expect(resolveMapping("POST /v1/auth/register/initiate")).toBe("auth.registrationInitiate");
   });
 
   it("returns null for unknown REST route", () => {

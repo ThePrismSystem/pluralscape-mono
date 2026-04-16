@@ -16,16 +16,19 @@ CREATE TABLE "accounts" (
 	"account_type" varchar(50) DEFAULT 'system' NOT NULL,
 	"email_hash" varchar(255) NOT NULL,
 	"email_salt" varchar(255) NOT NULL,
-	"password_hash" varchar(255) NOT NULL,
+	"auth_key_hash" "bytea" NOT NULL,
 	"kdf_salt" varchar(255) NOT NULL,
 	"encrypted_master_key" "bytea" NOT NULL,
+	"challenge_nonce" "bytea",
+	"challenge_expires_at" timestamptz,
 	"encrypted_email" "bytea",
 	"audit_log_ip_tracking" boolean DEFAULT false NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
 	CONSTRAINT "accounts_account_type_check" CHECK ("accounts"."account_type" IS NULL OR "accounts"."account_type" IN ('system', 'viewer')),
-	CONSTRAINT "accounts_version_check" CHECK ("accounts"."version" >= 1)
+	CONSTRAINT "accounts_version_check" CHECK ("accounts"."version" >= 1),
+	CONSTRAINT "accounts_challenge_nonce_paired" CHECK (("accounts"."challenge_nonce" IS NULL) = ("accounts"."challenge_expires_at" IS NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "acknowledgements" (
@@ -742,8 +745,10 @@ CREATE TABLE "recovery_keys" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"account_id" varchar(50) NOT NULL,
 	"encrypted_master_key" "bytea" NOT NULL,
+	"recovery_key_hash" "bytea",
 	"created_at" timestamptz NOT NULL,
-	"revoked_at" timestamptz
+	"revoked_at" timestamptz,
+	CONSTRAINT "recovery_keys_hash_required" CHECK ("recovery_keys"."recovery_key_hash" IS NOT NULL OR "recovery_keys"."revoked_at" IS NOT NULL)
 );
 --> statement-breakpoint
 CREATE TABLE "relationships" (

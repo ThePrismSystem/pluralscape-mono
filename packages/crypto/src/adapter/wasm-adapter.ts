@@ -1,4 +1,4 @@
-import { CryptoNotReadyError } from "../errors.js";
+import { CryptoNotReadyError, InvalidInputError } from "../errors.js";
 import { assertSignSeed } from "../validation.js";
 
 import { BaseSodiumAdapter } from "./base-adapter.js";
@@ -68,5 +68,15 @@ export class WasmSodiumAdapter extends BaseSodiumAdapter {
   memzero(buffer: Uint8Array): void {
     const sodium = this.lib();
     sodium.memzero(buffer);
+  }
+
+  memcmp(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) {
+      throw new InvalidInputError(
+        `memcmp: buffers must be same length (got ${String(a.length)} and ${String(b.length)})`,
+      );
+    }
+    const sodium = this.lib();
+    return sodium.memcmp(a, b);
   }
 }

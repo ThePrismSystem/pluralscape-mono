@@ -13,25 +13,21 @@ import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { fromCursor } from "../../lib/pagination.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { MAX_SESSIONS_PER_ACCOUNT } from "../../quota.constants.js";
-import {
-  CLIENT_PLATFORM_HEADER,
-  DEFAULT_PLATFORM,
-  RECOVERY_KEY_GROUP_COUNT,
-  RECOVERY_KEY_GROUP_SIZE,
-} from "../../routes/auth/auth.constants.js";
+import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
 import {
   LoginThrottledError,
   ValidationError,
+  cleanupExpiredRegistrations,
+  commitRegistration,
+  initiateRegistration,
   isDuplicateEmailError,
   listSessions,
-  logoutCurrentSession,
   loginAccount,
-  needsRehash,
-  registerAccount,
+  logoutCurrentSession,
   revokeAllSessions,
   revokeSession,
 } from "../../services/auth.service.js";
-import { mockDb } from "../helpers/mock-db.js";
+import { mockDb, type MockChain } from "../helpers/mock-db.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { AccountId } from "@pluralscape/types";
@@ -63,50 +59,37 @@ function mockContext(headers: Record<string, string> = {}): Context {
 
 // ── Mock external dependencies ───────────────────────────────────────
 
-const mockVerifyPassword = vi.fn<(hash: string, password: string) => boolean>();
-mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
+const mockVerifyAuthKey = vi.fn<(authKey: Uint8Array, storedHash: Uint8Array) => boolean>();
+mockVerifyAuthKey.mockReturnValue(true);
+
+const mockVerifyChallenge =
+  vi.fn<(nonce: Uint8Array, signature: Uint8Array, publicKey: Uint8Array) => boolean>();
+mockVerifyChallenge.mockReturnValue(true);
 
 vi.mock("@pluralscape/crypto", () => ({
+  AUTH_KEY_HASH_BYTES: 32,
+  PWHASH_SALT_BYTES: 16,
   AEAD_KEY_BYTES: 32,
   AEAD_NONCE_BYTES: 24,
-  PWHASH_OPSLIMIT_SENSITIVE: 4,
-  assertAeadNonce: () => undefined,
   GENERIC_HASH_BYTES_MAX: 64,
+  assertAeadNonce: () => undefined,
+  assertSignPublicKey: () => undefined,
+  assertSignature: () => undefined,
+  assertAuthKey: vi.fn(),
+  assertAuthKeyHash: vi.fn(),
+  assertChallengeNonce: vi.fn(),
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
     memzero: vi.fn(),
     genericHash: () => new Uint8Array(32),
   }),
-  hashPassword: () => "$argon2id$fake$hash",
-  verifyPassword: (hash: string, password: string) => mockVerifyPassword(hash, password),
   generateSalt: () => new Uint8Array(16),
-  derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
-  generateMasterKey: () => new Uint8Array(32),
-  wrapMasterKey: () => ({
-    ciphertext: new Uint8Array(48),
-    nonce: new Uint8Array(24),
-  }),
-  generateIdentityKeypair: () => ({
-    encryption: {
-      publicKey: new Uint8Array(32),
-      secretKey: new Uint8Array(32),
-    },
-    signing: {
-      publicKey: new Uint8Array(32),
-      secretKey: new Uint8Array(64),
-    },
-  }),
-  encryptPrivateKey: () => ({
-    ciphertext: new Uint8Array(48),
-    nonce: new Uint8Array(24),
-  }),
-  generateRecoveryKey: () => ({
-    displayKey: "AAAA-BBBB-CCCC-DDDD-EEEE-FFFF-GGGG-HHHH-IIII-JJJJ-KKKK-LLLL-MMMM",
-    encryptedMasterKey: {
-      ciphertext: new Uint8Array(48),
-      nonce: new Uint8Array(24),
-    },
-  }),
+  generateChallengeNonce: () => new Uint8Array(32),
+  hashAuthKey: (authKey: Uint8Array) => new Uint8Array(32).fill(authKey[0] ?? 0),
+  verifyAuthKey: (authKey: Uint8Array, storedHash: Uint8Array) =>
+    mockVerifyAuthKey(authKey, storedHash),
+  verifyChallenge: (nonce: Uint8Array, signature: Uint8Array, publicKey: Uint8Array) =>
+    mockVerifyChallenge(nonce, signature, publicKey),
   serializePublicKey: () => "base64-encoded-key",
 }));
 
@@ -156,14 +139,26 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
 
 const { logger: mockLogger, methods: logMethods } = createMockLogger();
 
+/** Valid hex string of N bytes (all zeros). */
+function hexZeros(byteLen: number): string {
+  return "00".repeat(byteLen);
+}
+
+/** Valid hex string of N bytes (non-zero). */
+function hexFilled(byteLen: number, fill = 0xab): string {
+  return fill.toString(16).padStart(2, "0").repeat(byteLen);
+}
+
 describe("auth service", () => {
   const mockAudit = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
-    mockVerifyPassword.mockClear();
-    mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
+    mockVerifyAuthKey.mockClear();
+    mockVerifyAuthKey.mockReturnValue(true);
+    mockVerifyChallenge.mockClear();
+    mockVerifyChallenge.mockReturnValue(true);
     mockEqualizeAntiEnumTiming.mockClear();
     mockGetEmailEncryptionKey.mockReturnValue(null);
     mockEncryptEmail.mockReturnValue(new Uint8Array(56));
@@ -252,7 +247,6 @@ describe("auth service", () => {
     it("returns null when TRUST_PROXY=true and x-forwarded-for contains only whitespace", () => {
       mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "   " });
-      // After split(",")[0]?.trim(), result is "" which has length 0
       expect(extractIpAddress(c)).toBeNull();
     });
   });
@@ -339,76 +333,37 @@ describe("auth service", () => {
     });
   });
 
-  // ── registerAccount ────────────────────────────────────────────────
+  // ── initiateRegistration ──────────────────────────────────────────
 
-  describe("registerAccount", () => {
+  describe("initiateRegistration", () => {
     afterEach(() => {
       vi.restoreAllMocks();
     });
 
     const validParams = {
       email: "test@example.com",
-      password: "securepassword123",
-      recoveryKeyBackupConfirmed: true,
     };
-    it("throws ValidationError when recoveryKeyBackupConfirmed is false", async () => {
-      const { db } = mockDb();
-      await expect(
-        registerAccount(
-          db,
-          { ...validParams, recoveryKeyBackupConfirmed: false },
-          "web",
-          mockAudit,
-        ),
-      ).rejects.toThrow("Recovery key backup must be confirmed");
-    });
 
-    it("throws ZodError for short passwords (schema-level enforcement)", async () => {
+    it("returns accountId, kdfSalt, and challengeNonce on success", async () => {
       const { db } = mockDb();
-      await expect(
-        registerAccount(db, { ...validParams, password: "short" }, "web", mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
-    });
+      const result = await initiateRegistration(db, validParams);
 
-    it("returns registration result on success", async () => {
-      const { db } = mockDb();
-      const result = await registerAccount(db, validParams, "web", mockAudit);
-
-      expect(result).toHaveProperty("sessionToken");
-      expect(result).toHaveProperty("recoveryKey");
       expect(result).toHaveProperty("accountId");
-      expect(result).toHaveProperty("accountType");
-      expect(result.sessionToken).toMatch(/^[0-9a-f]{64}$/);
+      expect(result).toHaveProperty("kdfSalt");
+      expect(result).toHaveProperty("challengeNonce");
       expect(result.accountId).toMatch(/^acct_/);
-      expect(result.accountType).toBe("system");
-    });
-
-    it("uses provided accountType", async () => {
-      const { db } = mockDb();
-      const result = await registerAccount(
-        db,
-        { ...validParams, accountType: "viewer" },
-        "web",
-        mockAudit,
-      );
-      expect(result.accountType).toBe("viewer");
-    });
-
-    it("returns a recovery key in group format", async () => {
-      const { db } = mockDb();
-      const result = await registerAccount(db, validParams, "web", mockAudit);
-      // Real recovery key is generated by the mock: "AAAA-BBBB-CCCC-..."
-      expect(result.recoveryKey).toContain("-");
-      expect(result.recoveryKey.split("-").length).toBeGreaterThan(1);
+      // kdfSalt and challengeNonce are hex-encoded
+      expect(result.kdfSalt).toMatch(/^[0-9a-f]+$/);
+      expect(result.challengeNonce).toMatch(/^[0-9a-f]+$/);
     });
 
     it("calls db.transaction during registration", async () => {
       const { db, chain } = mockDb();
-      await registerAccount(db, validParams, "web", mockAudit);
+      await initiateRegistration(db, validParams);
       expect(chain.transaction).toHaveBeenCalledOnce();
     });
 
-    it("returns fake result on duplicate email to prevent enumeration", async () => {
+    it("returns fake data on duplicate email to prevent enumeration", async () => {
       const { db, chain } = mockDb();
       const pgError = new Error("duplicate key value violates unique constraint");
       Object.assign(pgError, {
@@ -417,56 +372,23 @@ describe("auth service", () => {
       });
       chain.transaction.mockRejectedValueOnce(pgError);
 
-      const result = await registerAccount(db, validParams, "web", mockAudit);
+      const result = await initiateRegistration(db, validParams);
       // Should still return a result (anti-enumeration)
-      expect(result).toHaveProperty("sessionToken");
-      expect(result).toHaveProperty("recoveryKey");
       expect(result).toHaveProperty("accountId");
+      expect(result).toHaveProperty("kdfSalt");
+      expect(result).toHaveProperty("challengeNonce");
     });
 
     it("rethrows non-duplicate errors", async () => {
       const { db, chain } = mockDb();
       chain.transaction.mockRejectedValueOnce(new Error("connection refused"));
 
-      await expect(registerAccount(db, validParams, "web", mockAudit)).rejects.toThrow(
-        "connection refused",
-      );
+      await expect(initiateRegistration(db, validParams)).rejects.toThrow("connection refused");
     });
 
     it("throws on invalid email format", async () => {
       const { db } = mockDb();
-      await expect(
-        registerAccount(db, { ...validParams, email: "not-an-email" }, "web", mockAudit),
-      ).rejects.toThrow();
-    });
-
-    it("accepts password at exactly minimum length boundary", async () => {
-      const { db } = mockDb();
-      const result = await registerAccount(
-        db,
-        { ...validParams, password: "12345678" },
-        "web",
-        mockAudit,
-      );
-      expect(result).toHaveProperty("sessionToken");
-    });
-
-    it("generates fake recovery key with correct format for anti-enumeration", async () => {
-      const { db, chain } = mockDb();
-      const pgError = new Error("duplicate key value violates unique constraint");
-      Object.assign(pgError, {
-        code: PG_UNIQUE_VIOLATION,
-        constraint_name: "accounts_email_hash_idx",
-      });
-      chain.transaction.mockRejectedValueOnce(pgError);
-
-      const result = await registerAccount(db, validParams, "web", mockAudit);
-      const groups = result.recoveryKey.split("-");
-      expect(groups).toHaveLength(13);
-      for (const group of groups) {
-        expect(group).toHaveLength(4);
-        expect(group).toMatch(/^[A-Z2-7]+$/);
-      }
+      await expect(initiateRegistration(db, { email: "not-an-email" })).rejects.toThrow();
     });
 
     it("calls encryptEmail when getEmailEncryptionKey returns a key", async () => {
@@ -474,7 +396,7 @@ describe("auth service", () => {
       mockGetEmailEncryptionKey.mockReturnValue(fakeKey);
       mockEncryptEmail.mockReturnValue(new Uint8Array(56));
       const { db } = mockDb();
-      await registerAccount(db, validParams, "web", mockAudit);
+      await initiateRegistration(db, validParams);
       expect(mockEncryptEmail).toHaveBeenCalledWith("test@example.com");
     });
 
@@ -482,8 +404,246 @@ describe("auth service", () => {
       mockGetEmailEncryptionKey.mockReturnValue(null);
       mockEncryptEmail.mockClear();
       const { db } = mockDb();
-      await registerAccount(db, validParams, "web", mockAudit);
+      await initiateRegistration(db, validParams);
       expect(mockEncryptEmail).not.toHaveBeenCalled();
+    });
+
+    it("deletes abandoned placeholder and retries on duplicate email", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+
+      // Select finds expired placeholder (consumed after the first transaction rejects)
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_abandoned",
+          authKeyHash: new Uint8Array(32), // all zeros = placeholder
+          challengeExpiresAt: Date.now() - 60_000, // expired
+        },
+      ]);
+
+      // First call rejects (duplicate email), second call succeeds (retry)
+      let txCallCount = 0;
+      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) => {
+        txCallCount++;
+        if (txCallCount === 1) return Promise.reject(pgError);
+        return fn(chain);
+      });
+
+      const result = await initiateRegistration(db, validParams);
+      expect(result).toHaveProperty("accountId");
+      expect(chain.delete).toHaveBeenCalled();
+      expect(txCallCount).toBe(2);
+    });
+
+    it("returns fake data when placeholder exists but is not expired", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+      // Select finds unexpired placeholder
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_pending",
+          authKeyHash: new Uint8Array(32), // all zeros = placeholder
+          challengeExpiresAt: Date.now() + 300_000, // not expired
+        },
+      ]);
+
+      const result = await initiateRegistration(db, validParams);
+      expect(result).toHaveProperty("accountId");
+      expect(chain.delete).not.toHaveBeenCalled();
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("returns fake data when existing account is fully registered", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+      // Select finds a completed account (non-zero authKeyHash)
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_real",
+          authKeyHash: new Uint8Array(32).fill(0xff), // non-zero = completed
+          challengeExpiresAt: null,
+        },
+      ]);
+
+      const result = await initiateRegistration(db, validParams);
+      expect(result).toHaveProperty("accountId");
+      expect(chain.delete).not.toHaveBeenCalled();
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("calls equalizeAntiEnumTiming on success path", async () => {
+      const { db } = mockDb();
+      await initiateRegistration(db, validParams);
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+  });
+
+  // ── commitRegistration ────────────────────────────────────────────
+
+  describe("commitRegistration", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const validCommitParams = {
+      accountId: "acct_test123",
+      authKey: hexFilled(32),
+      encryptedMasterKey: hexFilled(48),
+      encryptedSigningPrivateKey: hexFilled(48),
+      encryptedEncryptionPrivateKey: hexFilled(48),
+      publicSigningKey: hexFilled(32),
+      publicEncryptionKey: hexFilled(32),
+      recoveryEncryptedMasterKey: hexFilled(48),
+      challengeSignature: hexFilled(64),
+      recoveryKeyBackupConfirmed: true,
+      recoveryKeyHash: hexFilled(32),
+    };
+
+    it("throws ValidationError when recoveryKeyBackupConfirmed is false", async () => {
+      const { db } = mockDb();
+      await expect(
+        commitRegistration(
+          db,
+          { ...validCommitParams, recoveryKeyBackupConfirmed: false },
+          "web",
+          mockAudit,
+        ),
+      ).rejects.toThrow("Recovery key backup must be confirmed");
+    });
+
+    it("throws ValidationError when account is not found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([]);
+      await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
+        "Invalid or expired registration",
+      );
+    });
+
+    it("throws ValidationError when registration already completed", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_test123",
+          accountType: "system",
+          authKeyHash: new Uint8Array(32).fill(0xff), // non-zero = completed
+          challengeNonce: new Uint8Array(32),
+          challengeExpiresAt: Date.now() + 300_000,
+        },
+      ]);
+      await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
+        "Invalid or expired registration",
+      );
+    });
+
+    it("throws ValidationError when challenge nonce expired", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_test123",
+          accountType: "system",
+          authKeyHash: new Uint8Array(32), // all zeros = placeholder
+          challengeNonce: new Uint8Array(32),
+          challengeExpiresAt: 1, // expired (way in the past)
+        },
+      ]);
+      mockNow.mockReturnValue(Date.now());
+      await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
+        "Invalid or expired registration",
+      );
+    });
+
+    it("throws ValidationError when challenge signature is invalid", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_test123",
+          accountType: "system",
+          authKeyHash: new Uint8Array(32),
+          challengeNonce: new Uint8Array(32),
+          challengeExpiresAt: Date.now() + 300_000,
+        },
+      ]);
+      mockVerifyChallenge.mockReturnValueOnce(false);
+      await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
+        "Invalid or expired registration",
+      );
+    });
+
+    it("returns commit result on success", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_test123",
+          accountType: "system",
+          authKeyHash: new Uint8Array(32),
+          challengeNonce: new Uint8Array(32),
+          challengeExpiresAt: Date.now() + 300_000,
+        },
+      ]);
+      // TOCTOU guard: UPDATE ... RETURNING must return the updated row
+      chain.returning.mockResolvedValueOnce([{ id: "acct_test123" }]);
+
+      const result = await commitRegistration(db, validCommitParams, "web", mockAudit);
+      expect(result).toHaveProperty("sessionToken");
+      expect(result).toHaveProperty("accountId");
+      expect(result).toHaveProperty("accountType");
+      expect(result.accountId).toBe("acct_test123");
+      expect(result.accountType).toBe("system");
+      expect(result.sessionToken).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("throws ValidationError on TOCTOU race (concurrent commit)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_test123",
+          accountType: "system",
+          authKeyHash: new Uint8Array(32),
+          challengeNonce: new Uint8Array(32),
+          challengeExpiresAt: Date.now() + 300_000,
+        },
+      ]);
+      // UPDATE ... WHERE ... isNotNull(challengeNonce) returns 0 rows
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
+        "Invalid or expired registration",
+      );
+    });
+  });
+
+  // ── cleanupExpiredRegistrations ──────────────────────────────────
+
+  describe("cleanupExpiredRegistrations", () => {
+    it("returns count of deleted abandoned placeholders", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ id: "acct_1" }, { id: "acct_2" }]);
+
+      const count = await cleanupExpiredRegistrations(db);
+      expect(count).toBe(2);
+      expect(chain.delete).toHaveBeenCalled();
+    });
+
+    it("returns 0 when no expired placeholders exist", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([]);
+
+      const count = await cleanupExpiredRegistrations(db);
+      expect(count).toBe(0);
     });
   });
 
@@ -494,11 +654,10 @@ describe("auth service", () => {
       vi.restoreAllMocks();
     });
 
-    const credentials = { email: "test@example.com", password: "securepassword123" };
+    const credentials = { email: "test@example.com", authKey: hexFilled(32) };
 
     it("returns null when account is not found", async () => {
       const { db, chain } = mockDb();
-      // limit() resolves to [] by default (no account found)
       chain.limit.mockResolvedValue([]);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -535,17 +694,19 @@ describe("auth service", () => {
       });
     });
 
-    it("returns null when password is invalid", async () => {
+    it("returns null when auth key is invalid", async () => {
       const { db, chain } = mockDb();
-      // First call to limit() returns an account; verifyPassword will check against this hash
       chain.limit.mockResolvedValueOnce([
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0xff),
           accountType: "system",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
@@ -553,19 +714,18 @@ describe("auth service", () => {
 
     it("returns login result with systemId for system accounts", async () => {
       const { db, chain } = mockDb();
-      // First limit() call: account lookup
       chain.limit
         .mockResolvedValueOnce([
           {
             id: "acct_123",
             emailHash: "hashed_test@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "system",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
-        // Second limit() call: session count query (inside withAccountTransaction)
         .mockResolvedValueOnce([{ total: 0 }])
-        // Third limit() call: system lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -575,6 +735,8 @@ describe("auth service", () => {
       expect(result?.systemId).toBe("sys_456");
       expect(result?.accountType).toBe("system");
       expect(result?.sessionToken).toMatch(/^[0-9a-f]{64}$/);
+      expect(result?.encryptedMasterKey).toBeDefined();
+      expect(result?.kdfSalt).toBeDefined();
     });
 
     it("returns null systemId for non-system accounts", async () => {
@@ -583,8 +745,10 @@ describe("auth service", () => {
         {
           id: "acct_789",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$valid",
+          authKeyHash: new Uint8Array(32).fill(0xab),
           accountType: "caregiver",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
 
@@ -600,8 +764,10 @@ describe("auth service", () => {
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$valid",
+          authKeyHash: new Uint8Array(32).fill(0xab),
           accountType: "caregiver",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
 
@@ -610,16 +776,19 @@ describe("auth service", () => {
       expect(chain.values).toHaveBeenCalled();
     });
 
-    it("calls audit on invalid password (fire-and-forget)", async () => {
+    it("calls audit on invalid auth key (fire-and-forget)", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0xff),
           accountType: "system",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
@@ -635,17 +804,18 @@ describe("auth service", () => {
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0xff),
           accountType: "system",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
       mockAudit.mockRejectedValueOnce(new Error("audit DB down"));
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
 
-      // Flush fire-and-forget promise — no fake timers here since the
-      // delay is waiting for a real async void operation to settle.
       await new Promise((resolve) => setTimeout(resolve, 10));
       expect(logMethods.error).toHaveBeenCalledWith(
         "Failed to write auth.login-failed audit event",
@@ -656,7 +826,7 @@ describe("auth service", () => {
     it("throws on invalid email format", async () => {
       const { db } = mockDb();
       await expect(
-        loginAccount(db, { email: "bad", password: "test" }, "web", mockAudit, mockLogger),
+        loginAccount(db, { email: "bad", authKey: hexFilled(32) }, "web", mockAudit, mockLogger),
       ).rejects.toThrow();
     });
 
@@ -668,16 +838,19 @@ describe("auth service", () => {
       expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
     });
 
-    it("calls equalizeAntiEnumTiming when password is invalid", async () => {
+    it("calls equalizeAntiEnumTiming when auth key is invalid", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0xff),
           accountType: "system",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
@@ -690,13 +863,13 @@ describe("auth service", () => {
           {
             id: "acct_123",
             emailHash: "hashed_test@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "system",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
-        // Session count query
         .mockResolvedValueOnce([{ total: 0 }])
-        // System lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
       chain.returning.mockResolvedValueOnce([{ id: "sess_new" }]);
 
@@ -713,34 +886,6 @@ describe("auth service", () => {
 
       await expect(loginAccount(db, credentials, "web", mockAudit, mockLogger)).rejects.toThrow(
         LoginThrottledError,
-      );
-    });
-
-    it("logs error when verifyPassword throws during anti-enumeration (Error instance)", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValue([]);
-      mockVerifyPassword.mockImplementation(() => {
-        throw new Error("sodium failure");
-      });
-
-      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
-      expect(logMethods.error).toHaveBeenCalledWith(
-        "Unexpected verifyPassword error during anti-enumeration",
-        { err: expect.any(Error) },
-      );
-    });
-
-    it("logs error when verifyPassword throws a TypeError during anti-enumeration", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValue([]);
-      mockVerifyPassword.mockImplementation(() => {
-        throw new TypeError("sodium type error");
-      });
-
-      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
-      expect(logMethods.error).toHaveBeenCalledWith(
-        "Unexpected verifyPassword error during anti-enumeration",
-        { err: expect.any(TypeError) },
       );
     });
 
@@ -780,16 +925,19 @@ describe("auth service", () => {
       });
     });
 
-    it("logs error when recordFailure throws in wrong-password path (Error instance)", async () => {
+    it("logs error when recordFailure throws in wrong-auth-key path (Error instance)", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0xff),
           accountType: "system",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
       mockLoginStoreRecordFailure.mockRejectedValueOnce(new Error("valkey down"));
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -798,16 +946,19 @@ describe("auth service", () => {
       });
     });
 
-    it("logs error when recordFailure throws in wrong-password path (non-Error)", async () => {
+    it("logs error when recordFailure throws in wrong-auth-key path (non-Error)", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0xff),
           accountType: "system",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
       mockLoginStoreRecordFailure.mockRejectedValueOnce(42);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -816,16 +967,19 @@ describe("auth service", () => {
       });
     });
 
-    it("logs String(err) when audit rejects with non-Error in wrong-password path", async () => {
+    it("logs String(err) when audit rejects with non-Error in wrong-auth-key path", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
           id: "acct_123",
           emailHash: "hashed_test@example.com",
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0xff),
           accountType: "system",
+          encryptedMasterKey: new Uint8Array(48),
+          kdfSalt: hexZeros(16),
         },
       ]);
+      mockVerifyAuthKey.mockReturnValueOnce(false);
       mockAudit.mockRejectedValueOnce("string-audit-err");
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -844,8 +998,10 @@ describe("auth service", () => {
           {
             id: "acct_123",
             emailHash: "hashed_test@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "caregiver",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
         .mockResolvedValueOnce([{ total: 0 }]);
@@ -866,8 +1022,10 @@ describe("auth service", () => {
           {
             id: "acct_123",
             emailHash: "hashed_test@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "caregiver",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
         .mockResolvedValueOnce([{ total: 0 }]);
@@ -881,68 +1039,6 @@ describe("auth service", () => {
       );
     });
 
-    it("triggers fire-and-forget rehash when password hash has low iterations", async () => {
-      const { db, chain } = mockDb();
-      // Hash with t=1 triggers needsRehash, and mockVerifyPassword accepts it
-      const lowIterHash = "$argon2id$v=19$m=65536,t=1,p=1$c2FsdA$aGFzaA";
-      mockVerifyPassword.mockImplementation((hash) => hash === lowIterHash);
-      chain.limit
-        .mockResolvedValueOnce([
-          {
-            id: "acct_123",
-            emailHash: "hashed_test@example.com",
-            passwordHash: lowIterHash,
-            accountType: "caregiver",
-          },
-        ])
-        .mockResolvedValueOnce([{ total: 0 }]);
-
-      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
-      expect(result).not.toBeNull();
-
-      // Wait for the fire-and-forget rehash to settle
-      await vi.waitFor(() => {
-        expect(logMethods.info).toHaveBeenCalledWith("Rehashed password to current params", {
-          accountId: "acct_123",
-        });
-      });
-    });
-
-    it("logs error when fire-and-forget rehash fails (Error)", async () => {
-      const { db, chain } = mockDb();
-      const lowIterHash = "$argon2id$v=19$m=65536,t=1,p=1$c2FsdA$aGFzaA";
-      mockVerifyPassword.mockImplementation((hash) => hash === lowIterHash);
-      chain.limit
-        .mockResolvedValueOnce([
-          {
-            id: "acct_123",
-            emailHash: "hashed_test@example.com",
-            passwordHash: lowIterHash,
-            accountType: "caregiver",
-          },
-        ])
-        .mockResolvedValueOnce([{ total: 0 }]);
-      // The fire-and-forget rehash calls db.transaction first (not awaited),
-      // then the login session tx is the second call (awaited).
-      let txCallCount = 0;
-      chain.transaction = vi.fn<(fn: (tx: typeof chain) => Promise<void>) => Promise<void>>(
-        (fn) => {
-          txCallCount++;
-          if (txCallCount === 1) return Promise.reject(new Error("rehash db error"));
-          return fn(chain);
-        },
-      );
-
-      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
-      expect(result).not.toBeNull();
-
-      await vi.waitFor(() => {
-        expect(logMethods.error).toHaveBeenCalledWith("Failed to rehash password on login", {
-          err: expect.any(Error),
-        });
-      });
-    });
-
     it("returns null systemId when system lookup returns empty for system account", async () => {
       const { db, chain } = mockDb();
       chain.limit
@@ -950,12 +1046,13 @@ describe("auth service", () => {
           {
             id: "acct_sys",
             emailHash: "hashed_test@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "system",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
         .mockResolvedValueOnce([{ total: 0 }])
-        // System lookup returns empty
         .mockResolvedValueOnce([]);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -970,18 +1067,17 @@ describe("auth service", () => {
           {
             id: "acct_evict",
             emailHash: "hashed_test@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "caregiver",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
-        // Session count: at capacity
         .mockResolvedValueOnce([{ total: MAX_SESSIONS_PER_ACCOUNT }])
-        // Lock query: all sessions locked by other transactions
         .mockResolvedValueOnce([]);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).not.toBeNull();
-      // No revocation set call should happen for eviction
       const setCalls = chain.set.mock.calls;
       const revocationCall = setCalls.find(
         (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
@@ -1017,7 +1113,6 @@ describe("auth service", () => {
 
     it("returns nextCursor when limit+1 rows are returned", async () => {
       const { db, chain } = mockDb();
-      // With limit=2, the query fetches limit+1=3 rows; the 3rd triggers hasMore
       const rows = [
         { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
@@ -1036,7 +1131,6 @@ describe("auth service", () => {
 
     it("passes cursor as SQL condition (not in-memory filtering)", async () => {
       const { db, chain } = mockDb();
-      // With cursor, SQL does the filtering — mock returns only post-cursor rows
       const rows = [
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
         { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
@@ -1048,7 +1142,6 @@ describe("auth service", () => {
       expect(result.sessions[0]?.id).toBe("sess_2");
       expect(result.sessions[1]?.id).toBe("sess_3");
       expect(result.nextCursor).toBeNull();
-      // where() was called (SQL-level filtering)
       expect(chain.where).toHaveBeenCalled();
     });
 
@@ -1056,8 +1149,6 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       const fixedTime = 700_000_000;
       mockNow.mockReturnValue(fixedTime);
-      // Even with stale lastActive, rows from DB are included —
-      // idle filtering is now in SQL, not post-fetch JS
       const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
       chain.limit.mockResolvedValueOnce(rows);
 
@@ -1097,7 +1188,6 @@ describe("auth service", () => {
 
     it("returns false when session belongs to a different account", async () => {
       const { db, chain } = mockDb();
-      // UPDATE with accountId in WHERE matches zero rows
       chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
@@ -1115,18 +1205,15 @@ describe("auth service", () => {
 
     it("returns false for cross-account revocation without modifying the session", async () => {
       const { db, chain } = mockDb();
-      // The UPDATE should match zero rows (accountId mismatch in WHERE clause)
       chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_target", ATTACKER_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
-      // Audit should NOT be called for unauthorized attempts
       expect(mockAudit).not.toHaveBeenCalled();
     });
 
     it("returns false when session is already revoked", async () => {
       const { db, chain } = mockDb();
-      // WHERE includes revoked = false, so already-revoked sessions match zero rows
       chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
@@ -1189,29 +1276,26 @@ describe("auth service", () => {
       vi.restoreAllMocks();
     });
 
-    const credentials = { email: "session-limit@example.com", password: "securepassword123" };
+    const credentials = { email: "session-limit@example.com", authKey: hexFilled(32) };
 
     it("does not evict sessions when count is below MAX_SESSIONS_PER_ACCOUNT", async () => {
       const { db, chain } = mockDb();
 
-      // Account lookup returns a valid account
       chain.limit
         .mockResolvedValueOnce([
           {
             id: "acct_sess_limit_low",
             emailHash: "hashed_session-limit@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "caregiver",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
-        // Session count query returns total < MAX_SESSIONS_PER_ACCOUNT
         .mockResolvedValueOnce([{ total: 10 }]);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
-      // The session eviction UPDATE should NOT have been called for the oldest session
-      // (update IS called for new session insert, but set() with revoked: true should not happen
-      // for the eviction path when count is below limit)
       const setCalls = chain.set.mock.calls;
       const revocationCall = setCalls.find(
         (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
@@ -1222,24 +1306,22 @@ describe("auth service", () => {
     it("evicts oldest session when count reaches MAX_SESSIONS_PER_ACCOUNT", async () => {
       const { db, chain } = mockDb();
 
-      // Account lookup
       chain.limit
         .mockResolvedValueOnce([
           {
             id: "acct_sess_limit_full",
             emailHash: "hashed_session-limit@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "caregiver",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
-        // Session count query returns total === MAX_SESSIONS_PER_ACCOUNT
         .mockResolvedValueOnce([{ total: MAX_SESSIONS_PER_ACCOUNT }])
-        // Lock query returns oldest session to evict
         .mockResolvedValueOnce([{ id: "sess_oldest" }]);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
-      // The eviction UPDATE must have been called with revoked: true
       expect(chain.update).toHaveBeenCalled();
       expect(chain.set).toHaveBeenCalledWith({ revoked: true });
     });
@@ -1247,120 +1329,27 @@ describe("auth service", () => {
     it("handles zero active sessions gracefully (no eviction)", async () => {
       const { db, chain } = mockDb();
 
-      // Account lookup
       chain.limit
         .mockResolvedValueOnce([
           {
             id: "acct_sess_limit_zero",
             emailHash: "hashed_session-limit@example.com",
-            passwordHash: "$argon2id$fake$valid",
+            authKeyHash: new Uint8Array(32).fill(0xab),
             accountType: "caregiver",
+            encryptedMasterKey: new Uint8Array(48),
+            kdfSalt: hexZeros(16),
           },
         ])
-        // Session count query returns zero active sessions
         .mockResolvedValueOnce([{ total: 0 }]);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
-      // No eviction: set({ revoked: true }) should not appear
       const setCalls = chain.set.mock.calls;
       const revocationCall = setCalls.find(
         (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
       );
       expect(revocationCall).toBeUndefined();
     });
-  });
-
-  // ── generateFakeRecoveryKey format (via registerAccount anti-enumeration) ──
-
-  describe("generateFakeRecoveryKey format", () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    const validParams = {
-      email: "fake-key-format@example.com",
-      password: "securepassword123",
-      recoveryKeyBackupConfirmed: true,
-    };
-
-    it("fake recovery key has exactly RECOVERY_KEY_GROUP_COUNT groups", async () => {
-      const { db, chain } = mockDb();
-      const pgError = new Error("duplicate key value violates unique constraint");
-      Object.assign(pgError, {
-        code: PG_UNIQUE_VIOLATION,
-        constraint_name: "accounts_email_hash_idx",
-      });
-      chain.transaction.mockRejectedValueOnce(pgError);
-
-      const result = await registerAccount(db, validParams, "web", mockAudit);
-      const groups = result.recoveryKey.split("-");
-      expect(groups).toHaveLength(RECOVERY_KEY_GROUP_COUNT);
-    });
-
-    it("each group of fake recovery key has exactly RECOVERY_KEY_GROUP_SIZE characters", async () => {
-      const { db, chain } = mockDb();
-      const pgError = new Error("duplicate key value violates unique constraint");
-      Object.assign(pgError, {
-        code: PG_UNIQUE_VIOLATION,
-        constraint_name: "accounts_email_hash_idx",
-      });
-      chain.transaction.mockRejectedValueOnce(pgError);
-
-      const result = await registerAccount(db, validParams, "web", mockAudit);
-      const groups = result.recoveryKey.split("-");
-      for (const group of groups) {
-        expect(group).toHaveLength(RECOVERY_KEY_GROUP_SIZE);
-      }
-    });
-
-    it("each group of fake recovery key uses only base32 alphabet (A-Z, 2-7)", async () => {
-      const { db, chain } = mockDb();
-      const pgError = new Error("duplicate key value violates unique constraint");
-      Object.assign(pgError, {
-        code: PG_UNIQUE_VIOLATION,
-        constraint_name: "accounts_email_hash_idx",
-      });
-      chain.transaction.mockRejectedValueOnce(pgError);
-
-      const result = await registerAccount(db, validParams, "web", mockAudit);
-      const groups = result.recoveryKey.split("-");
-      for (const group of groups) {
-        expect(group).toMatch(/^[A-Z2-7]+$/);
-      }
-    });
-  });
-});
-
-// ── needsRehash ──────────────────────────────────────────────────────
-
-describe("needsRehash", () => {
-  it("returns true when iterations are below PWHASH_OPSLIMIT_SENSITIVE (4)", () => {
-    const lowOps = "$argon2id$v=19$m=65536,t=1,p=1$c2FsdA$aGFzaA";
-    expect(needsRehash(lowOps)).toBe(true);
-  });
-
-  it("returns true when iterations equal 3 (still below threshold)", () => {
-    const hash = "$argon2id$v=19$m=65536,t=3,p=1$c2FsdA$aGFzaA";
-    expect(needsRehash(hash)).toBe(true);
-  });
-
-  it("returns false when iterations meet the threshold (t=4)", () => {
-    const hash = "$argon2id$v=19$m=65536,t=4,p=1$c2FsdA$aGFzaA";
-    expect(needsRehash(hash)).toBe(false);
-  });
-
-  it("returns false when iterations exceed the threshold (t=8)", () => {
-    const hash = "$argon2id$v=19$m=65536,t=8,p=1$c2FsdA$aGFzaA";
-    expect(needsRehash(hash)).toBe(false);
-  });
-
-  it("returns false when hash format does not match argon2id pattern", () => {
-    expect(needsRehash("not-a-hash")).toBe(false);
-  });
-
-  it("returns false for bcrypt-style hash (no argon2id match)", () => {
-    expect(needsRehash("$2b$10$somesaltandhashthatislongenough")).toBe(false);
   });
 });
 

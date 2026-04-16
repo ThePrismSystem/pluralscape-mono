@@ -54,7 +54,11 @@ const mockDbChain: Record<string, unknown> = {
   })),
   limit: mockDbLimit,
 };
-const mockDb = { select: vi.fn().mockReturnValue(mockDbChain) };
+const mockDb = {
+  select: vi.fn().mockReturnValue(mockDbChain),
+  execute: vi.fn().mockResolvedValue(undefined),
+  transaction: vi.fn(async (fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb)),
+};
 
 vi.mock("../../lib/db.js", () => ({
   getDb: vi.fn().mockImplementation(() => Promise.resolve(mockDb)),

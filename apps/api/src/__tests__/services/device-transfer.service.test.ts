@@ -40,7 +40,7 @@ vi.mock("@pluralscape/crypto", () => ({
   },
 }));
 
-vi.mock("../../lib/pwhash-offload.js", () => ({
+vi.mock("../../lib/kdf-offload.js", () => ({
   deriveTransferKeyOffload: vi.fn(() => Promise.resolve(new Uint8Array(32))),
   WorkerError: MockWorkerError,
 }));
@@ -291,7 +291,7 @@ describe("device-transfer.service", () => {
     });
 
     it("throws KeyDerivationUnavailableError when worker pool fails", async () => {
-      const { deriveTransferKeyOffload } = await import("../../lib/pwhash-offload.js");
+      const { deriveTransferKeyOffload } = await import("../../lib/kdf-offload.js");
       vi.mocked(deriveTransferKeyOffload).mockRejectedValueOnce(
         new MockWorkerError("pwhash worker timeout"),
       );

@@ -16,8 +16,6 @@ vi.mock("node:worker_threads", () => ({
 // ── Mock @pluralscape/crypto ───────────────────────────────────────────
 const mockHashPin = vi.fn().mockReturnValue("hashed-value");
 const mockVerifyPin = vi.fn().mockReturnValue(true);
-const mockHashPassword = vi.fn().mockReturnValue("hashed-password");
-const mockVerifyPassword = vi.fn().mockReturnValue(true);
 const mockDeriveTransferKey = vi.fn().mockReturnValue(new Uint8Array(32));
 const mockAssertPwhashSalt = vi.fn();
 
@@ -25,15 +23,13 @@ vi.mock("@pluralscape/crypto", () => ({
   initSodium: vi.fn().mockResolvedValue(undefined),
   hashPin: mockHashPin,
   verifyPin: mockVerifyPin,
-  hashPassword: mockHashPassword,
-  verifyPassword: mockVerifyPassword,
   deriveTransferKey: mockDeriveTransferKey,
   assertPwhashSalt: mockAssertPwhashSalt,
 }));
 
 // Dynamic import triggers main() which calls initSodium() and registers
 // the message handler on parentPort.
-await import("../../lib/pwhash-worker-thread.js");
+await import("../../lib/kdf-worker-thread.js");
 
 // ── Helpers ────────────────────────────────────────────────────────────
 /** Get the message handler registered by the worker. */
@@ -48,14 +44,10 @@ beforeEach(() => {
   mockPostMessage.mockClear();
   mockHashPin.mockClear();
   mockVerifyPin.mockClear();
-  mockHashPassword.mockClear();
-  mockVerifyPassword.mockClear();
   mockDeriveTransferKey.mockClear();
   mockAssertPwhashSalt.mockClear();
   mockHashPin.mockReturnValue("hashed-value");
   mockVerifyPin.mockReturnValue(true);
-  mockHashPassword.mockReturnValue("hashed-password");
-  mockVerifyPassword.mockReturnValue(true);
   mockDeriveTransferKey.mockReturnValue(new Uint8Array(32));
   mockAssertPwhashSalt.mockImplementation(() => {});
 });
@@ -65,13 +57,13 @@ afterEach(() => {
 });
 
 // ── Tests ──────────────────────────────────────────────────────────────
-describe("pwhash-worker-thread", () => {
+describe("kdf-worker-thread", () => {
   describe("hash operation", () => {
     it("calls hashPin and posts back the result", () => {
       const handler = getMessageHandler();
       handler({ id: 1, op: "hash", pin: "1234", profile: "server" });
 
-      expect(mockHashPin).toHaveBeenCalledWith("1234", "server");
+      expect(mockHashPin).toHaveBeenCalledWith("1234");
       expect(mockPostMessage).toHaveBeenCalledWith({
         id: 1,
         ok: true,
@@ -101,47 +93,6 @@ describe("pwhash-worker-thread", () => {
 
       expect(mockPostMessage).toHaveBeenCalledWith({
         id: 3,
-        ok: true,
-        value: false,
-      });
-    });
-  });
-
-  describe("hashPassword operation", () => {
-    it("calls hashPassword and posts back the result", () => {
-      const handler = getMessageHandler();
-      handler({ id: 20, op: "hashPassword", password: "secret123", profile: "server" });
-
-      expect(mockHashPassword).toHaveBeenCalledWith("secret123", "server");
-      expect(mockPostMessage).toHaveBeenCalledWith({
-        id: 20,
-        ok: true,
-        value: "hashed-password",
-      });
-    });
-  });
-
-  describe("verifyPassword operation", () => {
-    it("calls verifyPassword and posts back the boolean result", () => {
-      const handler = getMessageHandler();
-      handler({ id: 21, op: "verifyPassword", hash: "stored-hash", password: "secret123" });
-
-      expect(mockVerifyPassword).toHaveBeenCalledWith("stored-hash", "secret123");
-      expect(mockPostMessage).toHaveBeenCalledWith({
-        id: 21,
-        ok: true,
-        value: true,
-      });
-    });
-
-    it("returns false when password verification fails", () => {
-      mockVerifyPassword.mockReturnValue(false);
-
-      const handler = getMessageHandler();
-      handler({ id: 22, op: "verifyPassword", hash: "stored-hash", password: "wrong" });
-
-      expect(mockPostMessage).toHaveBeenCalledWith({
-        id: 22,
         ok: true,
         value: false,
       });

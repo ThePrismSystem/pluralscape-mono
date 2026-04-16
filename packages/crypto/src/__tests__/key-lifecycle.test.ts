@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { deriveAuthAndPasswordKeys } from "../auth-key.js";
 import { createBucketKeyCache } from "../bucket-key-cache.js";
 import { encryptBucketKey, generateBucketKey } from "../bucket-keys.js";
 import { DecryptionFailedError, InvalidStateTransitionError, KeysLockedError } from "../errors.js";
 import { generateIdentityKeypair } from "../identity.js";
 import { MobileKeyLifecycleManager, SECURITY_PRESETS } from "../key-lifecycle.js";
-import { derivePasswordKey, generateMasterKey, wrapMasterKey } from "../master-key-wrap.js";
+import { generateMasterKey, wrapMasterKey } from "../master-key-wrap.js";
 import { generateSalt } from "../master-key.js";
 import { getSodium } from "../sodium.js";
 import { createWebKeyStorage } from "../web-key-storage.js";
@@ -40,7 +41,8 @@ async function createWrappedMasterKey(
   salt: PwhashSalt,
 ): Promise<EncryptedPayload> {
   const masterKey = generateMasterKey();
-  const passwordKey = await derivePasswordKey(password, salt, "mobile");
+  const passwordBytes = new TextEncoder().encode(password);
+  const { passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, salt);
   const wrapped = wrapMasterKey(masterKey, passwordKey);
   getSodium().memzero(passwordKey);
   return wrapped;

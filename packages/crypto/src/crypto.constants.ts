@@ -65,11 +65,32 @@ export const PWHASH_MEMLIMIT_MODERATE = 256 * 1_024 * 1_024;
 /** Sensitive ops limit (OWASP minimum for server-side password hashing). */
 export const PWHASH_OPSLIMIT_SENSITIVE = 4;
 
-/** Mobile ops limit (for memory-constrained devices). */
-export const PWHASH_OPSLIMIT_MOBILE = 2;
+/** Unified Argon2id ops limit — OWASP Sensitive tier (t=4). All clients use this. */
+export const PWHASH_OPSLIMIT_UNIFIED = 4;
 
-/** Mobile memory limit in bytes (32 MiB — OWASP Mobile minimum). */
-export const PWHASH_MEMLIMIT_MOBILE = 32 * 1_024 * 1_024;
+/** Unified Argon2id memory limit in bytes (64 MiB). All clients use this. */
+export const PWHASH_MEMLIMIT_UNIFIED = 64 * 1_024 * 1_024;
+
+/** Output length for split key derivation: auth_key (32B) + password_key (32B). */
+export const SPLIT_KEY_BYTES = 64;
+
+/** Size of auth_key in bytes (first half of split derivation). */
+export const AUTH_KEY_BYTES = 32;
+
+/** Size of password_key in bytes (second half of split derivation). */
+export const PASSWORD_KEY_BYTES = 32;
+
+/** BLAKE2B output length for auth key hashing (256 bits). */
+export const AUTH_KEY_HASH_BYTES = 32;
+
+/** BLAKE2B output length for recovery key hashing (256 bits). */
+export const RECOVERY_KEY_HASH_BYTES = 32;
+
+/** Size of challenge nonce in bytes (256 bits). */
+export const CHALLENGE_NONCE_BYTES = 32;
+
+/** Minimum encrypted blob size in bytes: nonce (24B) + tag (16B) = 40B. */
+export const ENCRYPTED_BLOB_MIN_BYTES = 40;
 
 // ── KDF (BLAKE2B) ───────────────────────────────────────────────────
 
@@ -143,12 +164,19 @@ export const SODIUM_CONSTANTS = Object.freeze({
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_MEMLIMIT_MODERATE,
   PWHASH_OPSLIMIT_SENSITIVE,
-  PWHASH_OPSLIMIT_MOBILE,
-  PWHASH_MEMLIMIT_MOBILE,
   KDF_KEY_BYTES,
   KDF_CONTEXT_BYTES,
   KDF_BYTES_MIN,
   KDF_BYTES_MAX,
   GENERIC_HASH_BYTES_MIN,
   GENERIC_HASH_BYTES_MAX,
+  PWHASH_OPSLIMIT_UNIFIED,
+  PWHASH_MEMLIMIT_UNIFIED,
+  SPLIT_KEY_BYTES,
+  AUTH_KEY_BYTES,
+  PASSWORD_KEY_BYTES,
+  AUTH_KEY_HASH_BYTES,
+  RECOVERY_KEY_HASH_BYTES,
+  CHALLENGE_NONCE_BYTES,
+  ENCRYPTED_BLOB_MIN_BYTES,
 } as const);

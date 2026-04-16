@@ -1,73 +1,182 @@
 LoginRequest:
   type: object
-  required: [email, password]
+  required: [email, authKey]
   properties:
     email:
       type: string
       format: email
       example: "user@example.com"
-    password:
+    authKey:
       type: string
-      minLength: 1
-      maxLength: 1024
+      pattern: "^[0-9a-f]{64}$"
+      description: 32-byte hex-encoded auth key derived from password via Argon2id
 
 LoginResponse:
   type: object
-  required: [sessionToken, accountId, accountType]
+  required: [data]
   properties:
-    sessionToken:
-      type: string
-      description: 32-byte hex-encoded session token (64 characters)
-      example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
-    accountId:
-      type: string
-      example: "acc_abc123"
-    systemId:
-      type: string
-      nullable: true
-      example: "sys_abc123"
-    accountType:
-      type: string
-      enum: [system, viewer]
+    data:
+      type: object
+      required: [sessionToken, accountId, accountType]
+      properties:
+        sessionToken:
+          type: string
+          description: 32-byte hex-encoded session token (64 characters)
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+        accountId:
+          type: string
+          example: "acct_abc123"
+        systemId:
+          type: string
+          nullable: true
+          example: "sys_abc123"
+        accountType:
+          type: string
+          enum: [system, viewer]
+        encryptedMasterKey:
+          type: string
+          pattern: "^[0-9a-f]+$"
+          description: E2E-encrypted master key blob (hex-encoded)
+        kdfSalt:
+          type: string
+          pattern: "^[0-9a-f]{32}$"
+          description: Hex-encoded 16-byte Argon2id salt
 
-RegistrationRequest:
+SaltRequest:
   type: object
-  required: [email, password, recoveryKeyBackupConfirmed]
+  required: [email]
   properties:
     email:
       type: string
       format: email
-    password:
+
+SaltResponse:
+  type: object
+  required: [data]
+  properties:
+    data:
+      type: object
+      required: [kdfSalt]
+      properties:
+        kdfSalt:
+          type: string
+          pattern: "^[0-9a-f]{32}$"
+          description: Hex-encoded 16-byte Argon2id salt
+
+RegistrationInitiateRequest:
+  type: object
+  required: [email]
+  properties:
+    email:
       type: string
-      minLength: 8
-      maxLength: 1024
-    recoveryKeyBackupConfirmed:
-      type: boolean
-      const: true
+      format: email
     accountType:
       type: string
       enum: [system, viewer]
       default: system
 
-RegistrationResponse:
+RegistrationInitiateResponse:
   type: object
-  required: [sessionToken, recoveryKey, accountId, accountType]
+  required: [data]
   properties:
-    sessionToken:
-      type: string
-      description: 32-byte hex-encoded session token
-    recoveryKey:
-      type: string
-      description: Recovery key for master key recovery — must be stored securely by the client
+    data:
+      type: object
+      required: [accountId, kdfSalt, challengeNonce]
+      properties:
+        accountId:
+          type: string
+          pattern: "^acct_"
+        kdfSalt:
+          type: string
+          pattern: "^[0-9a-f]{32}$"
+        challengeNonce:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+
+RegistrationCommitRequest:
+  type: object
+  required:
+    [
+      accountId,
+      authKey,
+      encryptedMasterKey,
+      encryptedSigningPrivateKey,
+      encryptedEncryptionPrivateKey,
+      publicSigningKey,
+      publicEncryptionKey,
+      recoveryEncryptedMasterKey,
+      challengeSignature,
+      recoveryKeyBackupConfirmed,
+      recoveryKeyHash,
+    ]
+  properties:
     accountId:
       type: string
-    accountType:
+      pattern: "^acct_"
+    authKey:
       type: string
-      enum: [system, viewer]
+      pattern: "^[0-9a-f]{64}$"
+    encryptedMasterKey:
+      type: string
+      pattern: "^[0-9a-f]+$"
+      minLength: 80
+    encryptedSigningPrivateKey:
+      type: string
+      pattern: "^[0-9a-f]+$"
+      minLength: 80
+    encryptedEncryptionPrivateKey:
+      type: string
+      pattern: "^[0-9a-f]+$"
+      minLength: 80
+    publicSigningKey:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+    publicEncryptionKey:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+    recoveryEncryptedMasterKey:
+      type: string
+      pattern: "^[0-9a-f]+$"
+      minLength: 80
+    challengeSignature:
+      type: string
+      pattern: "^[0-9a-f]{128}$"
+    recoveryKeyBackupConfirmed:
+      type: boolean
+      const: true
+    recoveryKeyHash:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+
+RegistrationCommitResponse:
+  type: object
+  required: [data]
+  properties:
+    data:
+      type: object
+      required: [sessionToken, accountId, accountType]
+      properties:
+        sessionToken:
+          type: string
+        accountId:
+          type: string
+        accountType:
+          type: string
+          enum: [system, viewer]
 
 PasswordResetViaRecoveryKeyRequest:
   type: object
-  required: [email, recoveryKey, newPassword]
+  required:
+    [
+      email,
+      recoveryKey,
+      newAuthKey,
+      newKdfSalt,
+      newEncryptedMasterKey,
+      newRecoveryEncryptedMasterKey,
+      recoveryKeyHash,
+      newRecoveryKeyHash,
+    ]
   properties:
     email:
       type: string
@@ -76,22 +185,39 @@ PasswordResetViaRecoveryKeyRequest:
       type: string
       minLength: 1
       maxLength: 200
-    newPassword:
+    newAuthKey:
       type: string
-      minLength: 8
-      maxLength: 1024
+      pattern: "^[0-9a-f]{64}$"
+    newKdfSalt:
+      type: string
+      pattern: "^[0-9a-f]{32}$"
+    newEncryptedMasterKey:
+      type: string
+      pattern: "^[0-9a-f]+$"
+      minLength: 80
+    newRecoveryEncryptedMasterKey:
+      type: string
+      pattern: "^[0-9a-f]+$"
+      minLength: 80
+    recoveryKeyHash:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+    newRecoveryKeyHash:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
 
 PasswordResetResponse:
   type: object
-  required: [sessionToken, recoveryKey, accountId]
+  required: [data]
   properties:
-    sessionToken:
-      type: string
-    recoveryKey:
-      type: string
-      description: New recovery key (old one is invalidated)
-    accountId:
-      type: string
+    data:
+      type: object
+      required: [sessionToken, accountId]
+      properties:
+        sessionToken:
+          type: string
+        accountId:
+          type: string
 
 BiometricTokenRequest:
   type: object
@@ -162,14 +288,33 @@ SessionListResponse:
 
 RegenerateRecoveryKeyRequest:
   type: object
-  required: [currentPassword, confirmed]
+  required: [authKey, newRecoveryEncryptedMasterKey, recoveryKeyHash, confirmed]
   properties:
-    currentPassword:
+    authKey:
       type: string
-      minLength: 1
+      pattern: "^[0-9a-f]{64}$"
+    newRecoveryEncryptedMasterKey:
+      type: string
+      pattern: "^[0-9a-f]+$"
+      minLength: 80
+    recoveryKeyHash:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
     confirmed:
       type: boolean
       const: true
+
+RegenerateRecoveryKeyResponse:
+  type: object
+  required: [data]
+  properties:
+    data:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+          const: true
 
 RecoveryKeyStatusResponse:
   type: object

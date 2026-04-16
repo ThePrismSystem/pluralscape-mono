@@ -1,7 +1,8 @@
+import { deriveAuthAndPasswordKeys } from "./auth-key.js";
 import { decryptBucketKey } from "./bucket-keys.js";
 import { AEAD_NONCE_BYTES } from "./crypto.constants.js";
 import { InvalidStateTransitionError, KeysLockedError } from "./errors.js";
-import { derivePasswordKey, unwrapMasterKey } from "./master-key-wrap.js";
+import { unwrapMasterKey } from "./master-key-wrap.js";
 import { assertKdfMasterKey, validateKeyVersion } from "./validation.js";
 
 import type { WrappedBucketKey } from "./bucket-keys.js";
@@ -79,7 +80,9 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
   ): Promise<void> {
     this.assertUnlockable();
 
-    const passwordKey = await derivePasswordKey(password, salt, "mobile");
+    const passwordBytes = new TextEncoder().encode(password);
+    const { passwordKey } = await deriveAuthAndPasswordKeys(passwordBytes, salt, password.length);
+    this.deps.sodium.memzero(passwordBytes);
     let masterKey: KdfMasterKey;
     try {
       masterKey = unwrapMasterKey(encryptedMasterKey, passwordKey);

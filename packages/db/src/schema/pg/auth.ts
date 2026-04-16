@@ -20,10 +20,14 @@ export const accounts = pgTable(
       .$type<AccountType>(),
     emailHash: varchar("email_hash", { length: 255 }).notNull(),
     emailSalt: varchar("email_salt", { length: 255 }).notNull(),
-    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+    authKeyHash: pgBinary("auth_key_hash").notNull(),
     kdfSalt: varchar("kdf_salt", { length: 255 }).notNull(),
     /** Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key. */
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
+    /** Challenge nonce for two-phase registration. Cleared after successful commit. */
+    challengeNonce: pgBinary("challenge_nonce"),
+    /** Expiry time for the challenge nonce (5 minutes after creation). */
+    challengeExpiresAt: pgTimestamp("challenge_expires_at"),
     /** Server-side encrypted email for operational communication (ADR 029). Null for pre-migration accounts. */
     encryptedEmail: pgBinary("encrypted_email"),
     /** When true, IP address and user-agent are persisted in audit log entries. Default off (ADR 028). */
@@ -35,6 +39,10 @@ export const accounts = pgTable(
     uniqueIndex("accounts_email_hash_idx").on(t.emailHash),
     check("accounts_account_type_check", enumCheck(t.accountType, ACCOUNT_TYPES)),
     versionCheckFor("accounts", t.version),
+    check(
+      "accounts_challenge_nonce_paired",
+      sql`(${t.challengeNonce} IS NULL) = (${t.challengeExpiresAt} IS NULL)`,
+    ),
   ],
 );
 
@@ -98,6 +106,8 @@ export const recoveryKeys = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
+    /** BLAKE2b hash of the raw recovery key for server-side verification. */
+    recoveryKeyHash: pgBinary("recovery_key_hash"),
     createdAt: pgTimestamp("created_at").notNull(),
     revokedAt: pgTimestamp("revoked_at"),
   },
@@ -106,6 +116,10 @@ export const recoveryKeys = pgTable(
     index("recovery_keys_revoked_at_idx")
       .on(t.revokedAt)
       .where(sql`${t.revokedAt} IS NULL`),
+    check(
+      "recovery_keys_hash_required",
+      sql`${t.recoveryKeyHash} IS NOT NULL OR ${t.revokedAt} IS NOT NULL`,
+    ),
   ],
 );
 

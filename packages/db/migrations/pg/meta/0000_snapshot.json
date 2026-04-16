@@ -1,5 +1,5 @@
 {
-  "id": "59ec05bc-9a21-40b0-a8fc-5c8b8e9d2fda",
+  "id": "d02c809f-ce0e-424e-9ab6-cf33450fb2cc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -148,9 +148,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "password_hash": {
-          "name": "password_hash",
-          "type": "varchar(255)",
+        "auth_key_hash": {
+          "name": "auth_key_hash",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
@@ -165,6 +165,18 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
+        },
+        "challenge_nonce": {
+          "name": "challenge_nonce",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "challenge_expires_at": {
+          "name": "challenge_expires_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         },
         "encrypted_email": {
           "name": "encrypted_email",
@@ -228,6 +240,10 @@
         "accounts_version_check": {
           "name": "accounts_version_check",
           "value": "\"accounts\".\"version\" >= 1"
+        },
+        "accounts_challenge_nonce_paired": {
+          "name": "accounts_challenge_nonce_paired",
+          "value": "(\"accounts\".\"challenge_nonce\" IS NULL) = (\"accounts\".\"challenge_expires_at\" IS NULL)"
         }
       },
       "isRLSEnabled": false
@@ -7421,6 +7437,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "recovery_key_hash": {
+          "name": "recovery_key_hash",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamptz",
@@ -7481,7 +7503,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "recovery_keys_hash_required": {
+          "name": "recovery_keys_hash_required",
+          "value": "\"recovery_keys\".\"recovery_key_hash\" IS NOT NULL OR \"recovery_keys\".\"revoked_at\" IS NOT NULL"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.relationships": {

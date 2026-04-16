@@ -4,10 +4,12 @@ export { brandedIdQueryParam } from "./branded-id.js";
 export {
   ChangeEmailSchema,
   ChangePasswordSchema,
-  LoginCredentialsSchema,
+  LoginSchema,
   PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
-  RegistrationInputSchema,
+  RegistrationCommitSchema,
+  RegistrationInitiateSchema,
+  SaltFetchSchema,
   UpdateAccountSettingsSchema,
 } from "./auth.js";
 export { UpdateSystemBodySchema } from "./system.js";

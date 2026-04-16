@@ -15,6 +15,7 @@ import {
   HTTP_OK,
   asAuthHeaders,
 } from "../../fixtures/http.constants.js";
+import { registerAccount } from "../../helpers/register.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -178,29 +179,11 @@ test.describe("Bucket export", () => {
 
     test("returns 404 for non-owner (second registered account)", async ({ request }) => {
       // Register two accounts
-      const reg1 = await request.post("/v1/auth/register", {
-        data: {
-          email: `e2e-owner-${crypto.randomUUID()}@test.pluralscape.local`,
-          password: `E2E-TestPass-${crypto.randomUUID()}`,
-          recoveryKeyBackupConfirmed: true,
-        },
-      });
-      const {
-        data: { sessionToken: token1 },
-      } = (await reg1.json()) as { data: { sessionToken: string } };
-      const headers1 = asAuthHeaders({ Authorization: `Bearer ${token1}` });
+      const acct1 = await registerAccount(request, { emailPrefix: "e2e-owner" });
+      const headers1 = asAuthHeaders({ Authorization: `Bearer ${acct1.sessionToken}` });
 
-      const reg2 = await request.post("/v1/auth/register", {
-        data: {
-          email: `e2e-other-${crypto.randomUUID()}@test.pluralscape.local`,
-          password: `E2E-TestPass-${crypto.randomUUID()}`,
-          recoveryKeyBackupConfirmed: true,
-        },
-      });
-      const {
-        data: { sessionToken: token2 },
-      } = (await reg2.json()) as { data: { sessionToken: string } };
-      const headers2 = { Authorization: `Bearer ${token2}` };
+      const acct2 = await registerAccount(request, { emailPrefix: "e2e-other" });
+      const headers2 = { Authorization: `Bearer ${acct2.sessionToken}` };
 
       const systemId = await getSystemId(request, headers1);
       const bucket = await createBucket(request, headers1, systemId, "Non-Owner Bucket");
@@ -292,29 +275,11 @@ test.describe("Bucket export", () => {
     });
 
     test("non-owner receives 404", async ({ request }) => {
-      const reg1 = await request.post("/v1/auth/register", {
-        data: {
-          email: `e2e-own-${crypto.randomUUID()}@test.pluralscape.local`,
-          password: `E2E-TestPass-${crypto.randomUUID()}`,
-          recoveryKeyBackupConfirmed: true,
-        },
-      });
-      const {
-        data: { sessionToken: t1 },
-      } = (await reg1.json()) as { data: { sessionToken: string } };
-      const h1 = asAuthHeaders({ Authorization: `Bearer ${t1}` });
+      const own = await registerAccount(request, { emailPrefix: "e2e-own" });
+      const h1 = asAuthHeaders({ Authorization: `Bearer ${own.sessionToken}` });
 
-      const reg2 = await request.post("/v1/auth/register", {
-        data: {
-          email: `e2e-oth-${crypto.randomUUID()}@test.pluralscape.local`,
-          password: `E2E-TestPass-${crypto.randomUUID()}`,
-          recoveryKeyBackupConfirmed: true,
-        },
-      });
-      const {
-        data: { sessionToken: t2 },
-      } = (await reg2.json()) as { data: { sessionToken: string } };
-      const h2 = asAuthHeaders({ Authorization: `Bearer ${t2}` });
+      const oth = await registerAccount(request, { emailPrefix: "e2e-oth" });
+      const h2 = asAuthHeaders({ Authorization: `Bearer ${oth.sessionToken}` });
 
       const sysId = await getSystemId(request, h1);
       const bucket = await createBucket(request, h1, sysId, "Non-Owner Export");

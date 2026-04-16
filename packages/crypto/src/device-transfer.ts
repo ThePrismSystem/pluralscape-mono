@@ -14,10 +14,14 @@
  *   by the 5-minute server-side timeout for online attacks
  */
 
-import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "./crypto.constants.js";
+import {
+  KDF_KEY_BYTES,
+  PWHASH_MEMLIMIT_UNIFIED,
+  PWHASH_OPSLIMIT_UNIFIED,
+  PWHASH_SALT_BYTES,
+} from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { fromHex, toHex } from "./hex.js";
-import { PROFILE_PARAMS, type PwhashProfile } from "./master-key.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";
 import { assertAeadKey, assertKdfMasterKey, assertPwhashSalt } from "./validation.js";
@@ -166,11 +170,7 @@ export function generateTransferCode(): TransferInitiation {
  *
  * Both devices must call this with the same code and salt to obtain the same key.
  */
-export function deriveTransferKey(
-  code: string,
-  salt: PwhashSalt,
-  profile: PwhashProfile = "mobile",
-): AeadKey {
+export function deriveTransferKey(code: string, salt: PwhashSalt): AeadKey {
   if (!isValidTransferCode(code)) {
     throw new InvalidInputError(
       `Transfer code must be exactly ${String(TRANSFER_CODE_LENGTH)} decimal digits.`,
@@ -178,9 +178,14 @@ export function deriveTransferKey(
   }
   const adapter = getSodium();
   const codeBytes = new TextEncoder().encode(code);
-  const { opsLimit, memLimit } = PROFILE_PARAMS[profile];
   try {
-    const raw = adapter.pwhash(KDF_KEY_BYTES, codeBytes, salt, opsLimit, memLimit);
+    const raw = adapter.pwhash(
+      KDF_KEY_BYTES,
+      codeBytes,
+      salt,
+      PWHASH_OPSLIMIT_UNIFIED,
+      PWHASH_MEMLIMIT_UNIFIED,
+    );
     assertAeadKey(raw);
     return raw;
   } finally {

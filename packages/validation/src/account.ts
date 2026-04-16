@@ -1,7 +1,9 @@
 import { z } from "zod/v4";
 
+import { authKeyHex } from "./auth.js";
+
 export const DeleteAccountBodySchema = z
   .object({
-    password: z.string().min(1),
+    authKey: authKeyHex,
   })
   .readonly();

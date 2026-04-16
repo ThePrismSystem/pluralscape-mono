@@ -128,6 +128,7 @@ export interface SodiumLib {
  * - `isReady()` — whether init() has completed
  * - `supportsSecureMemzero` — whether the platform supports secure memory zeroing
  * - `memzero()` — platform-specific secure memory zeroing
+ * - `memcmp()` — constant-time comparison (WASM: native, RN: manual XOR)
  * - `signSeedKeypair()` — RN throws UnsupportedOperationError
  * - `pwhashStr()` — WASM normalizes Uint8Array/string, RN throws
  * - `pwhashStrVerify()` — WASM delegates directly, RN throws
@@ -141,6 +142,7 @@ export abstract class BaseSodiumAdapter implements SodiumAdapter {
   abstract isReady(): boolean;
   protected abstract lib(): SodiumLib;
   abstract memzero(buffer: Uint8Array): void;
+  abstract memcmp(a: Uint8Array, b: Uint8Array): boolean;
 
   // These differ per-platform and must be overridden:
   abstract signSeedKeypair(seed: Uint8Array): SignKeypair;

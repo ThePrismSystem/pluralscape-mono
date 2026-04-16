@@ -1,15 +1,10 @@
 import {
-  DecryptionFailedError,
-  InvalidInputError,
-  PWHASH_SALT_BYTES,
-  derivePasswordKey,
-  getSodium,
-  hashPassword,
-  regenerateRecoveryKey,
-  resetPasswordViaRecoveryKey,
-  serializeRecoveryBackup,
-  unwrapMasterKey,
-  verifyPassword,
+  assertAuthKey,
+  assertAuthKeyHash,
+  assertRecoveryKeyHash,
+  hashAuthKey,
+  verifyAuthKey,
+  verifyRecoveryKey,
 } from "@pluralscape/crypto";
 import { accounts, recoveryKeys, sessions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
@@ -20,23 +15,17 @@ import {
 import { and, eq, isNull } from "drizzle-orm";
 
 import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
+import { ensureUint8Array } from "../lib/binary.js";
 import { hashEmail } from "../lib/email-hash.js";
-import {
-  deserializeEncryptedPayload,
-  serializeEncryptedPayload,
-} from "../lib/encrypted-payload.js";
-import { fromHex, toHex } from "../lib/hex.js";
+import { fromHex } from "../lib/hex.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
-import { DUMMY_ARGON2_HASH } from "../routes/auth/auth.constants.js";
 
 import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { ValidationError } from "./auth.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
-import type { AeadKey, KdfMasterKey, PwhashSalt, RecoveryKeyResult } from "@pluralscape/crypto";
 import type { AccountId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -71,7 +60,7 @@ export async function getRecoveryKeyStatus(
 // ── Regenerate Recovery Key ──────────────────────────────────────
 
 export interface RegenerateRecoveryKeyResult {
-  readonly recoveryKey: string;
+  readonly ok: true;
 }
 
 export async function regenerateRecoveryKeyBackup(
@@ -82,111 +71,77 @@ export async function regenerateRecoveryKeyBackup(
 ): Promise<RegenerateRecoveryKeyResult> {
   const parsed = RegenerateRecoveryKeySchema.parse(params);
 
-  const adapter = getSodium();
-  let kek: AeadKey | undefined;
-  let masterKey: KdfMasterKey | undefined;
-  let serializedBackup: Uint8Array | undefined;
-  let newRecoveryKeyResult: RecoveryKeyResult | undefined;
+  return withAccountTransaction(db, accountId, async (tx) => {
+    const [account] = await tx
+      .select({
+        authKeyHash: accounts.authKeyHash,
+      })
+      .from(accounts)
+      .where(eq(accounts.id, accountId))
+      .limit(1);
 
-  try {
-    const result = await withAccountTransaction(db, accountId, async (tx) => {
-      const [account] = await tx
-        .select({
-          passwordHash: accounts.passwordHash,
-          kdfSalt: accounts.kdfSalt,
-          encryptedMasterKey: accounts.encryptedMasterKey,
-        })
-        .from(accounts)
-        .where(eq(accounts.id, accountId))
-        .limit(1);
+    if (!account) {
+      throw new ValidationError(INCORRECT_PASSWORD_ERROR);
+    }
 
-      if (!account) {
-        throw new ValidationError(INCORRECT_PASSWORD_ERROR);
-      }
+    const storedHash = ensureUint8Array(account.authKeyHash);
+    assertAuthKeyHash(storedHash);
+    const authKeyBytes = fromHex(parsed.authKey);
+    assertAuthKey(authKeyBytes);
+    const valid = verifyAuthKey(authKeyBytes, storedHash);
+    if (!valid) {
+      throw new ValidationError(INCORRECT_PASSWORD_ERROR);
+    }
 
-      const valid = verifyPassword(account.passwordHash, parsed.currentPassword);
-      if (!valid) {
-        throw new ValidationError(INCORRECT_PASSWORD_ERROR);
-      }
+    // Look up active recovery key
+    const activeRows = await tx
+      .select({ id: recoveryKeys.id })
+      .from(recoveryKeys)
+      .where(and(eq(recoveryKeys.accountId, accountId), isNull(recoveryKeys.revokedAt)))
+      .limit(1);
 
-      // Look up active recovery key before doing crypto work
-      const activeRows = await tx
-        .select({
-          id: recoveryKeys.id,
-        })
-        .from(recoveryKeys)
-        .where(and(eq(recoveryKeys.accountId, accountId), isNull(recoveryKeys.revokedAt)))
-        .limit(1);
+    const activeKey = activeRows[0];
+    if (!activeKey) {
+      throw new NoActiveRecoveryKeyError("No active recovery key to revoke");
+    }
 
-      const activeKey = activeRows[0];
-      if (!activeKey) {
-        throw new NoActiveRecoveryKeyError("No active recovery key to revoke");
-      }
+    const newRecoveryEncryptedMasterKeyBytes = fromHex(parsed.newRecoveryEncryptedMasterKey);
+    const recoveryKeyHashBytes = fromHex(parsed.recoveryKeyHash);
+    const timestamp = now();
+    const newId = createId(ID_PREFIXES.recoveryKey);
 
-      const encMasterKeyBytes = account.encryptedMasterKey;
-      const payload = deserializeEncryptedPayload(
-        encMasterKeyBytes instanceof Uint8Array
-          ? encMasterKeyBytes
-          : new Uint8Array(encMasterKeyBytes),
-      );
+    const revoked = await tx
+      .update(recoveryKeys)
+      .set({ revokedAt: timestamp })
+      .where(and(eq(recoveryKeys.id, activeKey.id), isNull(recoveryKeys.revokedAt)))
+      .returning({ id: recoveryKeys.id });
 
-      const salt = fromHex(account.kdfSalt);
-      if (salt.length !== PWHASH_SALT_BYTES) {
-        throw new Error("Stored KDF salt has invalid length");
-      }
-      kek = await derivePasswordKey(parsed.currentPassword, salt as PwhashSalt, "server");
-      masterKey = unwrapMasterKey(payload, kek);
+    if (revoked.length === 0) {
+      throw new Error("Recovery key not found during revocation");
+    }
 
-      const regenResult = regenerateRecoveryKey(masterKey);
-      newRecoveryKeyResult = regenResult.newRecoveryKey;
-      serializedBackup = regenResult.serializedBackup;
-      const backupForInsert = serializedBackup;
-      const timestamp = now();
-      const newId = createId(ID_PREFIXES.recoveryKey);
-
-      const revoked = await tx
-        .update(recoveryKeys)
-        .set({ revokedAt: timestamp })
-        .where(and(eq(recoveryKeys.id, activeKey.id), isNull(recoveryKeys.revokedAt)))
-        .returning({ id: recoveryKeys.id });
-
-      if (revoked.length === 0) {
-        throw new Error("Recovery key not found during revocation");
-      }
-
-      await tx.insert(recoveryKeys).values({
-        id: newId,
-        accountId,
-        encryptedMasterKey: backupForInsert,
-        createdAt: timestamp,
-      });
-
-      await audit(tx, {
-        eventType: "auth.recovery-key-regenerated",
-        actor: { kind: "account", id: accountId },
-        detail: "Recovery key regenerated",
-      });
-
-      return { displayKey: regenResult.newRecoveryKey.displayKey };
+    await tx.insert(recoveryKeys).values({
+      id: newId,
+      accountId,
+      encryptedMasterKey: newRecoveryEncryptedMasterKeyBytes,
+      recoveryKeyHash: recoveryKeyHashBytes,
+      createdAt: timestamp,
     });
 
-    return { recoveryKey: result.displayKey };
-  } finally {
-    if (kek) adapter.memzero(kek);
-    if (masterKey) adapter.memzero(masterKey);
-    if (serializedBackup) adapter.memzero(serializedBackup);
-    if (newRecoveryKeyResult) {
-      adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.ciphertext);
-      adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.nonce);
-    }
-  }
+    await audit(tx, {
+      eventType: "auth.recovery-key-regenerated",
+      actor: { kind: "account", id: accountId },
+      detail: "Recovery key regenerated",
+    });
+
+    return { ok: true as const };
+  });
 }
 
 // ── Reset Password via Recovery Key ──────────────────────────────
 
 export interface PasswordResetResult {
   readonly sessionToken: SessionId;
-  readonly recoveryKey: string;
   readonly accountId: AccountId;
 }
 
@@ -195,7 +150,6 @@ export async function resetPasswordWithRecoveryKey(
   params: unknown,
   platform: ClientPlatform,
   audit: AuditWriter,
-  log: AppLogger,
 ): Promise<PasswordResetResult | null> {
   const startTime = performance.now();
   const parsed = PasswordResetViaRecoveryKeySchema.parse(params);
@@ -204,37 +158,20 @@ export async function resetPasswordWithRecoveryKey(
 
   // Look up account by email hash
   const [account] = await db
-    .select({
-      id: accounts.id,
-      passwordHash: accounts.passwordHash,
-      kdfSalt: accounts.kdfSalt,
-      encryptedMasterKey: accounts.encryptedMasterKey,
-    })
+    .select({ id: accounts.id })
     .from(accounts)
     .where(eq(accounts.emailHash, emailHash))
     .limit(1);
 
   if (!account) {
-    // Anti-enumeration: do dummy work + timing equalization
-    try {
-      verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
-    } catch (err: unknown) {
-      log.error(
-        "Unexpected verifyPassword error during anti-enumeration",
-        err instanceof Error ? { err } : { error: String(err) },
-      );
-    }
     await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
-  // Fetch active recovery key's encrypted backup (account-scoped read)
+  // Fetch active recovery key (account-scoped read)
   const activeKey = await withAccountRead(db, account.id as AccountId, async (tx) => {
     const [row] = await tx
-      .select({
-        id: recoveryKeys.id,
-        encryptedMasterKey: recoveryKeys.encryptedMasterKey,
-      })
+      .select({ id: recoveryKeys.id, recoveryKeyHash: recoveryKeys.recoveryKeyHash })
       .from(recoveryKeys)
       .where(and(eq(recoveryKeys.accountId, account.id), isNull(recoveryKeys.revokedAt)))
       .limit(1);
@@ -242,51 +179,38 @@ export async function resetPasswordWithRecoveryKey(
   });
 
   if (!activeKey) {
-    // Anti-enumeration: match the verifyPassword latency of the "no account" path
-    try {
-      verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
-    } catch (err: unknown) {
-      log.error(
-        "Unexpected verifyPassword error during anti-enumeration",
-        err instanceof Error ? { err } : { error: String(err) },
-      );
-    }
     await equalizeAntiEnumTiming(startTime);
     throw new NoActiveRecoveryKeyError("No active recovery key found");
   }
 
-  const adapter = getSodium();
-  let masterKey: KdfMasterKey | undefined;
-  let newRecoveryKeyResult: RecoveryKeyResult | undefined;
-  let newSalt: PwhashSalt | undefined;
-  let wrappedMasterKeyBytes: Uint8Array | undefined;
-  let newRecoveryBackupBytes: Uint8Array | undefined;
+  // Verify recovery key hash — reject if no hash stored (pre-migration data)
+  if (!activeKey.recoveryKeyHash) {
+    void audit(db, {
+      eventType: "auth.login-failed",
+      actor: { kind: "account", id: account.id },
+      detail: "Recovery key missing server-side hash (pre-migration)",
+    }).catch(() => {
+      // Best-effort audit — don't fail the request if audit write fails
+    });
+    await equalizeAntiEnumTiming(startTime);
+    return null;
+  }
+
+  const storedRecoveryHash = ensureUint8Array(activeKey.recoveryKeyHash);
+  assertRecoveryKeyHash(storedRecoveryHash);
+  const recoveryKeyValid = verifyRecoveryKey(fromHex(parsed.recoveryKeyHash), storedRecoveryHash);
+  if (!recoveryKeyValid) {
+    await equalizeAntiEnumTiming(startTime);
+    return null;
+  }
 
   try {
-    const encBackup = activeKey.encryptedMasterKey;
-    const encBackupBytes = encBackup instanceof Uint8Array ? encBackup : new Uint8Array(encBackup);
+    const newAuthKeyBytes = fromHex(parsed.newAuthKey);
+    assertAuthKey(newAuthKeyBytes);
+    const newAuthKeyHash = hashAuthKey(newAuthKeyBytes);
+    const newEncryptedMasterKeyBytes = fromHex(parsed.newEncryptedMasterKey);
+    const newRecoveryEncryptedMasterKeyBytes = fromHex(parsed.newRecoveryEncryptedMasterKey);
 
-    // Crypto: reset password via recovery key
-    const resetResult = await resetPasswordViaRecoveryKey({
-      displayKey: parsed.recoveryKey,
-      encryptedBackup: encBackupBytes,
-      newPassword: parsed.newPassword,
-      pwhashProfile: "server",
-    });
-
-    masterKey = resetResult.masterKey;
-    newSalt = resetResult.newSalt;
-    newRecoveryKeyResult = resetResult.newRecoveryKey;
-
-    // Hash the new password for storage
-    const newPasswordHash = hashPassword(parsed.newPassword, "server");
-    const newKdfSaltHex = toHex(newSalt);
-    wrappedMasterKeyBytes = serializeEncryptedPayload(resetResult.wrappedMasterKey);
-    newRecoveryBackupBytes = serializeRecoveryBackup(resetResult.newRecoveryKey.encryptedMasterKey);
-
-    // Capture for use in transaction closure (avoids non-null assertions)
-    const wrappedKeyForTx = wrappedMasterKeyBytes;
-    const recoveryBackupForTx = newRecoveryBackupBytes;
     const timestamp = now();
     const rawToken = generateSessionToken();
     const tokenHash = hashSessionToken(rawToken);
@@ -296,18 +220,18 @@ export async function resetPasswordWithRecoveryKey(
     const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
     await withAccountTransaction(db, account.id as AccountId, async (tx) => {
-      // Update account: new password hash, KDF salt, encrypted master key
+      // Update account: new auth key hash, KDF salt, encrypted master key
       await tx
         .update(accounts)
         .set({
-          passwordHash: newPasswordHash,
-          kdfSalt: newKdfSaltHex,
-          encryptedMasterKey: wrappedKeyForTx,
+          authKeyHash: newAuthKeyHash,
+          kdfSalt: parsed.newKdfSalt,
+          encryptedMasterKey: newEncryptedMasterKeyBytes,
           updatedAt: timestamp,
         })
         .where(eq(accounts.id, account.id));
 
-      // Revoke old recovery key (verify it succeeded to prevent TOCTOU race)
+      // Revoke old recovery key (TOCTOU guard)
       const revoked = await tx
         .update(recoveryKeys)
         .set({ revokedAt: timestamp })
@@ -322,7 +246,8 @@ export async function resetPasswordWithRecoveryKey(
       await tx.insert(recoveryKeys).values({
         id: newRecoveryKeyId,
         accountId: account.id,
-        encryptedMasterKey: recoveryBackupForTx,
+        encryptedMasterKey: newRecoveryEncryptedMasterKeyBytes,
+        recoveryKeyHash: fromHex(parsed.newRecoveryKeyHash),
         createdAt: timestamp,
       });
 
@@ -342,7 +267,6 @@ export async function resetPasswordWithRecoveryKey(
         expiresAt,
       });
 
-      // Audit event
       await audit(tx, {
         eventType: "auth.password-reset-via-recovery",
         actor: { kind: "account", id: account.id },
@@ -353,19 +277,9 @@ export async function resetPasswordWithRecoveryKey(
 
     return {
       sessionToken: rawToken as SessionId,
-      recoveryKey: newRecoveryKeyResult.displayKey,
       accountId: account.id as AccountId,
     };
   } finally {
-    if (masterKey) adapter.memzero(masterKey);
-    if (newSalt) adapter.memzero(newSalt);
-    if (wrappedMasterKeyBytes) adapter.memzero(wrappedMasterKeyBytes);
-    if (newRecoveryBackupBytes) adapter.memzero(newRecoveryBackupBytes);
-    if (newRecoveryKeyResult) {
-      adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.ciphertext);
-      adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.nonce);
-    }
-    // Ensure timing equalization on ALL exit paths (including crypto failure)
     await equalizeAntiEnumTiming(startTime);
   }
 }
@@ -376,4 +290,4 @@ class NoActiveRecoveryKeyError extends Error {
   override readonly name = "NoActiveRecoveryKeyError" as const;
 }
 
-export { DecryptionFailedError, InvalidInputError, NoActiveRecoveryKeyError };
+export { NoActiveRecoveryKeyError };

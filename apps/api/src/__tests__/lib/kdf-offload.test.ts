@@ -24,7 +24,7 @@ vi.mock("node:worker_threads", () => {
 
 // Dynamic import so the mock is in place before module evaluation.
 const { hashPinOffload, verifyPinOffload, _shutdownPool } =
-  await import("../../lib/pwhash-offload.js");
+  await import("../../lib/kdf-offload.js");
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -74,13 +74,13 @@ afterEach(async () => {
 describe("pwhash-offload", () => {
   describe("hashPinOffload", () => {
     it("dispatches a hash request to a worker and resolves with the result", async () => {
-      const promise = hashPinOffload("1234", "server");
+      const promise = hashPinOffload("1234");
 
       // Pool should have been created with 2 workers.
       expect(mockWorkers).toHaveLength(2);
 
       const { worker, sentMsg } = findDispatchedWorker();
-      expect(sentMsg).toMatchObject({ op: "hash", pin: "1234", profile: "server" });
+      expect(sentMsg).toMatchObject({ op: "hash", pin: "1234" });
       expect(sentMsg).toHaveProperty("id");
 
       // Simulate worker responding.
@@ -106,9 +106,9 @@ describe("pwhash-offload", () => {
   describe("round-robin dispatch", () => {
     it("alternates requests between workers in the pool", async () => {
       // Three consecutive dispatches should alternate between the two workers.
-      const p1 = hashPinOffload("1111", "server");
-      const p2 = hashPinOffload("2222", "server");
-      const p3 = hashPinOffload("3333", "server");
+      const p1 = hashPinOffload("1111");
+      const p2 = hashPinOffload("2222");
+      const p3 = hashPinOffload("3333");
 
       // Total calls across both workers should be 3, and both workers
       // should have received at least one call (round-robin guarantee).
@@ -133,25 +133,39 @@ describe("pwhash-offload", () => {
   });
 
   describe("worker error event", () => {
-    it("rejects all pending requests when a worker emits an error", async () => {
-      const p1 = hashPinOffload("1111", "server");
-      const p2 = hashPinOffload("2222", "server");
+    it("rejects only the crashed worker's pending requests, not other workers'", async () => {
+      // Dispatch one request; find which worker received it.
+      const p1 = hashPinOffload("1111");
+      expect(mockWorkers).toHaveLength(2);
 
-      // Fire error on all workers to ensure both pending requests are rejected.
-      const workerError = new Error("Worker crashed");
-      for (const worker of mockWorkers) {
-        const errorHandler = getHandler(worker, "error");
-        errorHandler(workerError);
-      }
+      const { worker: crashedWorker, sentMsg: msg1 } = findDispatchedWorker();
 
+      // Identify the sibling worker (the one that did NOT receive p1).
+      const siblingWorker = mockWorkers.find((w) => w !== crashedWorker);
+      if (!siblingWorker) throw new Error("Expected a sibling worker");
+
+      // Crash only the worker that holds p1 — p1 must reject.
+      getHandler(crashedWorker, "error")(new Error("Worker crashed"));
       await expect(p1).rejects.toThrow("Worker crashed");
-      await expect(p2).rejects.toThrow("Worker crashed");
+
+      // Verify msg1 was consumed so findDispatchedWorker works for p2.
+      crashedWorker.postMessage.mockClear();
+
+      // The sibling worker is unaffected — it can still accept and resolve a request.
+      const p2 = hashPinOffload("2222");
+      const { worker: w2, sentMsg: msg2 } = findDispatchedWorker();
+      // p2 should be on one of the workers (may be either due to round-robin).
+      getHandler(w2, "message")({ id: msg2["id"], ok: true, value: "hash-2222" });
+      await expect(p2).resolves.toBe("hash-2222");
+
+      // Suppress unused-variable lint; msg1 id was consumed by the error path.
+      void msg1;
     });
   });
 
   describe("worker message with ok=false", () => {
     it("rejects the individual request with the error message", async () => {
-      const promise = hashPinOffload("bad-pin", "server");
+      const promise = hashPinOffload("bad-pin");
 
       const { worker, sentMsg } = findDispatchedWorker();
       const messageHandler = getHandler(worker, "message");
@@ -161,7 +175,7 @@ describe("pwhash-offload", () => {
     });
 
     it("uses a default error message when none is provided", async () => {
-      const promise = hashPinOffload("bad-pin", "server");
+      const promise = hashPinOffload("bad-pin");
 
       const { worker, sentMsg } = findDispatchedWorker();
       const messageHandler = getHandler(worker, "message");
@@ -174,7 +188,7 @@ describe("pwhash-offload", () => {
   describe("_shutdownPool", () => {
     it("terminates all workers and clears pending requests", async () => {
       // Create pool by dispatching a request (don't await -- it will never resolve).
-      const promise = hashPinOffload("1234", "server");
+      const promise = hashPinOffload("1234");
 
       expect(mockWorkers).toHaveLength(2);
 
@@ -187,7 +201,7 @@ describe("pwhash-offload", () => {
       // Verify the pool was nulled: the next call should create new workers.
       mockWorkers.length = 0;
 
-      const p2 = hashPinOffload("5678", "server");
+      const p2 = hashPinOffload("5678");
       expect(mockWorkers).toHaveLength(2); // Fresh pool created.
 
       // Clean up the new request.
@@ -206,7 +220,7 @@ describe("pwhash-offload", () => {
   describe("re-initialization after shutdown", () => {
     it("creates a fresh pool when called after shutdown", async () => {
       // First call initialises pool.
-      const p1 = hashPinOffload("1234", "server");
+      const p1 = hashPinOffload("1234");
       const firstPoolWorkers = [...mockWorkers];
       expect(firstPoolWorkers).toHaveLength(2);
 
@@ -219,7 +233,7 @@ describe("pwhash-offload", () => {
       await _shutdownPool();
       mockWorkers.length = 0;
 
-      const p2 = hashPinOffload("5678", "server");
+      const p2 = hashPinOffload("5678");
       expect(mockWorkers).toHaveLength(2);
 
       // New workers are different instances.
@@ -234,9 +248,9 @@ describe("pwhash-offload", () => {
 
   describe("multiple concurrent requests", () => {
     it("assigns unique IDs and resolves each independently", async () => {
-      const p1 = hashPinOffload("aaaa", "server");
+      const p1 = hashPinOffload("aaaa");
       const p2 = verifyPinOffload("hash", "bbbb");
-      const p3 = hashPinOffload("cccc", "server");
+      const p3 = hashPinOffload("cccc");
 
       // Collect all sent messages with their workers.
       const dispatches: { worker: MockWorker; msg: Record<string, unknown> }[] = [];

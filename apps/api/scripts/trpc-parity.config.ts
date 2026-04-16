@@ -41,6 +41,11 @@ export const REST_ONLY_ALLOWLIST: readonly AllowlistEntry[] = [
     route: "GET /v1/notifications/stream",
     reason: "SSE notifications stream — transport-specific, tRPC uses subscriptions differently",
   },
+  {
+    route: "POST /v1/auth/salt",
+    reason:
+      "Returns KDF salt for client-side key derivation before login — no tRPC equivalent (login returns salt directly)",
+  },
 ];
 
 /** Set of route keys for fast lookup. */

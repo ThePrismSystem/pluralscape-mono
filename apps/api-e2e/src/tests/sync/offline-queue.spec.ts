@@ -5,7 +5,11 @@
  * through the real WebSocket sync server.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { makeSignedChange, asSyncDocId } from "../../fixtures/crypto.fixture.js";
+import {
+  makeSignedChange,
+  asSyncDocId,
+  createAccountSyncContext,
+} from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted } from "@pluralscape/sync";
@@ -15,6 +19,7 @@ test.describe("Sync offline queue E2E", () => {
     registeredAccount,
     request,
   }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
@@ -31,7 +36,7 @@ test.describe("Sync offline queue E2E", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      const change = await makeSignedChange(docId);
+      const change = await makeSignedChange(docId, syncCtx);
       const accepted = await ws1.submitChange(docId, change);
       expect(accepted.type).toBe("ChangeAccepted");
       expect((accepted as ChangeAccepted).assignedSeq).toBe(1);
@@ -64,6 +69,7 @@ test.describe("Sync offline queue E2E", () => {
     registeredAccount,
     request,
   }) => {
+    const syncCtx = await createAccountSyncContext(registeredAccount.signingKeypair);
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
@@ -80,7 +86,7 @@ test.describe("Sync offline queue E2E", () => {
       await ws.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
       // Submit the same change twice (same nonce + authorPublicKey + documentId)
-      const change = await makeSignedChange(docId);
+      const change = await makeSignedChange(docId, syncCtx);
 
       const accepted1 = await ws.submitChange(docId, change);
       expect(accepted1.type).toBe("ChangeAccepted");

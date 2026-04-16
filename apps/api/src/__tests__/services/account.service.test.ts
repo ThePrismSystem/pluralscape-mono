@@ -8,29 +8,33 @@ import type { AccountId } from "@pluralscape/types";
 
 // ── Mock external dependencies ───────────────────────────────────────
 
-const mockMemzero = vi.fn();
-
 vi.mock("@pluralscape/crypto", () => ({
   AEAD_KEY_BYTES: 32,
+  AUTH_KEY_HASH_BYTES: 32,
   PWHASH_SALT_BYTES: 16,
   AEAD_NONCE_BYTES: 24,
   AEAD_TAG_BYTES: 16,
   assertAeadNonce: () => undefined,
+  assertSignPublicKey: () => undefined,
+  assertSignature: () => undefined,
+  assertAuthKey: vi.fn(),
+  assertAuthKeyHash: vi.fn(),
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
-    memzero: mockMemzero,
-    genericHash: () => new Uint8Array(32),
   }),
-  hashPassword: () => "$argon2id$fake$newhash",
-  verifyPassword: (hash: string) => hash === "$argon2id$fake$valid",
+  hashAuthKey: () => new Uint8Array(32),
+  verifyAuthKey: (_authKey: Uint8Array, storedHash: Uint8Array) =>
+    storedHash.every((b) => b === 0xab),
+  verify: vi.fn().mockReturnValue(true),
   generateSalt: () => new Uint8Array(16),
-  derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
+  generateChallengeNonce: () => new Uint8Array(32),
   generateMasterKey: () => new Uint8Array(32),
   wrapMasterKey: () => ({
     ciphertext: new Uint8Array(48),
     nonce: new Uint8Array(24),
   }),
   unwrapMasterKey: () => new Uint8Array(32),
+  serializePublicKey: () => "base64-encoded-key",
 }));
 
 vi.mock("../../lib/audit-log.js", () => ({
@@ -52,6 +56,26 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 const { getAccountInfo, changeEmail, changePassword, updateAccountSettings, ConcurrencyError } =
   await import("../../services/account.service.js");
+const { verify: mockVerify } = await import("@pluralscape/crypto");
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+/** A valid 32-byte auth key encoded as hex (all 0xab bytes → verifyAuthKey returns true). */
+const VALID_AUTH_KEY_HEX = "ab".repeat(32);
+/** An invalid auth key hex — verifyAuthKey returns false for these bytes. */
+const INVALID_AUTH_KEY_HEX = "00".repeat(32);
+/** Stored authKeyHash where every byte is 0xab — matches VALID_AUTH_KEY_HEX in the mock. */
+const VALID_AUTH_KEY_HASH = new Uint8Array(32).fill(0xab);
+/** A valid signing public key (32 bytes). */
+const VALID_SIGN_PUBLIC_KEY = new Uint8Array(32).fill(0x11);
+
+const VALID_CHANGE_PASSWORD_PARAMS = {
+  oldAuthKey: VALID_AUTH_KEY_HEX,
+  newAuthKey: "cc".repeat(32),
+  newKdfSalt: "dd".repeat(16),
+  newEncryptedMasterKey: "ee".repeat(72),
+  challengeSignature: "ff".repeat(64),
+};
 
 // ── Tests ────────────────────────────────────────────────────────────
 
@@ -60,7 +84,6 @@ describe("account service", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    mockMemzero.mockClear();
     mockAudit.mockClear();
   });
 
@@ -143,11 +166,11 @@ describe("account service", () => {
   // ── changeEmail ─────────────────────────────────────────────────
 
   describe("changeEmail", () => {
-    it("throws on invalid password", async () => {
+    it("throws on invalid auth key", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
-          passwordHash: "$argon2id$fake$invalid",
+          authKeyHash: new Uint8Array(32).fill(0x00),
           emailHash: "hashed_old@example.com",
           version: 1,
         },
@@ -157,7 +180,7 @@ describe("account service", () => {
         changeEmail(
           db,
           "acct_123" as AccountId,
-          { email: "new@example.com", currentPassword: "wrong" },
+          { email: "new@example.com", authKey: INVALID_AUTH_KEY_HEX },
           mockAudit,
         ),
       ).rejects.toThrow("Incorrect password");
@@ -171,7 +194,7 @@ describe("account service", () => {
         changeEmail(
           db,
           "acct_missing" as AccountId,
-          { email: "new@example.com", currentPassword: "pass" },
+          { email: "new@example.com", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
       ).rejects.toThrow("Incorrect password");
@@ -181,7 +204,7 @@ describe("account service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
-          passwordHash: "$argon2id$fake$valid",
+          authKeyHash: VALID_AUTH_KEY_HASH,
           emailHash: "hashed_same@example.com",
           version: 1,
         },
@@ -190,7 +213,7 @@ describe("account service", () => {
       const result = await changeEmail(
         db,
         "acct_123" as AccountId,
-        { email: "same@example.com", currentPassword: "pass" },
+        { email: "same@example.com", authKey: VALID_AUTH_KEY_HEX },
         mockAudit,
       );
       expect(result).toEqual({ ok: true });
@@ -203,7 +226,7 @@ describe("account service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
-          passwordHash: "$argon2id$fake$valid",
+          authKeyHash: VALID_AUTH_KEY_HASH,
           emailHash: "hashed_old@example.com",
           version: 1,
         },
@@ -213,7 +236,7 @@ describe("account service", () => {
       const result = await changeEmail(
         db,
         "acct_123" as AccountId,
-        { email: "new@example.com", currentPassword: "pass" },
+        { email: "new@example.com", authKey: VALID_AUTH_KEY_HEX },
         mockAudit,
       );
       expect(result).toEqual({ ok: true });
@@ -223,7 +246,7 @@ describe("account service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
-          passwordHash: "$argon2id$fake$valid",
+          authKeyHash: VALID_AUTH_KEY_HASH,
           emailHash: "hashed_old@example.com",
           version: 1,
         },
@@ -247,7 +270,7 @@ describe("account service", () => {
         changeEmail(
           db,
           "acct_123" as AccountId,
-          { email: "taken@example.com", currentPassword: "pass" },
+          { email: "taken@example.com", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
       ).rejects.toThrow("Email change failed");
@@ -259,7 +282,7 @@ describe("account service", () => {
         changeEmail(
           db,
           "acct_123" as AccountId,
-          { email: "not-an-email", currentPassword: "pass" },
+          { email: "not-an-email", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
@@ -269,7 +292,7 @@ describe("account service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
-          passwordHash: "$argon2id$fake$valid",
+          authKeyHash: VALID_AUTH_KEY_HASH,
           emailHash: "hashed_old@example.com",
           version: 5,
         },
@@ -281,7 +304,7 @@ describe("account service", () => {
         changeEmail(
           db,
           "acct_123" as AccountId,
-          { email: "new@example.com", currentPassword: "pass" },
+          { email: "new@example.com", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
       ).rejects.toThrow("Account was modified concurrently");
@@ -291,24 +314,22 @@ describe("account service", () => {
   // ── changePassword ──────────────────────────────────────────────
 
   describe("changePassword", () => {
-    const validParams = {
-      currentPassword: "currentpass123",
-      newPassword: "newpassword123",
-    };
-
-    it("throws on invalid current password", async () => {
+    it("throws on invalid old auth key", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
-          passwordHash: "$argon2id$fake$invalid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
+          authKeyHash: new Uint8Array(32).fill(0x00),
           version: 1,
         },
       ]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
+        changePassword(
+          db,
+          "acct_123" as AccountId,
+          { ...VALID_CHANGE_PASSWORD_PARAMS, oldAuthKey: INVALID_AUTH_KEY_HEX },
+          mockAudit,
+        ),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -317,107 +338,114 @@ describe("account service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_missing" as AccountId, validParams, mockAudit),
+        changePassword(db, "acct_missing" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
-    it("throws ZodError on too-short new password", async () => {
+    it("throws ZodError on missing required fields", async () => {
       const { db } = mockDb();
 
       await expect(
-        changePassword(
-          db,
-          "acct_123" as AccountId,
-          { currentPassword: "current", newPassword: "short" },
-          mockAudit,
-        ),
+        changePassword(db, "acct_123" as AccountId, { oldAuthKey: VALID_AUTH_KEY_HEX }, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("returns ok and revokedSessionCount on success", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-          version: 1,
-        },
-      ]);
-      // First returning: account update
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
       chain.returning
         .mockResolvedValueOnce([{ id: "acct_123" }])
-        // Second returning: session revocation
         .mockResolvedValueOnce([{ id: "sess_1" }, { id: "sess_2" }, { id: "sess_3" }]);
 
-      const result = await changePassword(db, "acct_123" as AccountId, validParams, mockAudit);
+      const result = await changePassword(
+        db,
+        "acct_123" as AccountId,
+        VALID_CHANGE_PASSWORD_PARAMS,
+        mockAudit,
+      );
       expect(result).toEqual({ ok: true, revokedSessionCount: 3, sessionRevoked: true });
-      expect(mockMemzero).toHaveBeenCalledTimes(3);
     });
 
     it("calls transaction during password change", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-          version: 1,
-        },
-      ]);
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
       chain.returning.mockResolvedValueOnce([{ id: "acct_123" }]).mockResolvedValueOnce([]);
 
-      await changePassword(db, "acct_123" as AccountId, validParams, mockAudit);
-      // Two transaction calls: withAccountRead (read) + withAccountTransaction (write)
-      expect(chain.transaction).toHaveBeenCalledTimes(2);
+      await changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit);
+      // Three transaction calls: withAccountRead (account) + withAccountRead (signing key) + withAccountTransaction (write)
+      expect(chain.transaction).toHaveBeenCalledTimes(3);
     });
 
     it("throws on optimistic lock failure", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-          version: 1,
-        },
-      ]);
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
+        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
       ).rejects.toThrow("Account was modified concurrently");
-    });
-
-    it("cleans up keys via memzero even when transaction throws", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        {
-          passwordHash: "$argon2id$fake$valid",
-          kdfSalt: "00".repeat(16),
-          encryptedMasterKey: new Uint8Array(72),
-          version: 1,
-        },
-      ]);
-      chain.returning.mockResolvedValueOnce([]);
-
-      await expect(
-        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
-      ).rejects.toThrow();
-
-      expect(mockMemzero).toHaveBeenCalledTimes(3);
     });
 
     it("throws ZodError on invalid Zod input", async () => {
       const { db } = mockDb();
       await expect(
-        changePassword(
-          db,
-          "acct_123" as AccountId,
-          { currentPassword: "", newPassword: "newpass123" },
-          mockAudit,
-        ),
+        changePassword(db, "acct_123" as AccountId, { oldAuthKey: "" }, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
+    });
+
+    it("rejects when no signing key found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      await expect(
+        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+      ).rejects.toThrow("No signing key found");
+    });
+
+    it("rejects with invalid challenge signature", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            authKeyHash: VALID_AUTH_KEY_HASH,
+            version: 1,
+          },
+        ])
+        .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
+
+      vi.mocked(mockVerify).mockReturnValueOnce(false);
+
+      await expect(
+        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+      ).rejects.toThrow("Invalid challenge signature");
     });
   });
 

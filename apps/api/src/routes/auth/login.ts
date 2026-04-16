@@ -58,6 +58,8 @@ loginRoute.post("/", async (c) => {
       accountId: result.accountId,
       systemId: result.systemId,
       accountType: result.accountType,
+      encryptedMasterKey: result.encryptedMasterKey,
+      kdfSalt: result.kdfSalt,
     }),
   );
 });

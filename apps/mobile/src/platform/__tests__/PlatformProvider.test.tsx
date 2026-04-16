@@ -45,6 +45,7 @@ const stubContext: PlatformContext = {
     genericHash: vi.fn(),
     randomBytes: vi.fn(),
     memzero: vi.fn(),
+    memcmp: vi.fn(),
   },
 };
 

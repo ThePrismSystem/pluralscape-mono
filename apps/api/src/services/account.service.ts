@@ -1,14 +1,14 @@
 import {
-  PWHASH_SALT_BYTES,
-  derivePasswordKey,
-  generateSalt,
+  assertAuthKey,
+  assertAuthKeyHash,
+  assertSignPublicKey,
+  assertSignature,
   getSodium,
-  hashPassword,
-  unwrapMasterKey,
-  verifyPassword,
-  wrapMasterKey,
+  hashAuthKey,
+  verify,
+  verifyAuthKey,
 } from "@pluralscape/crypto";
-import { accounts, sessions, systems } from "@pluralscape/db/pg";
+import { accounts, authKeys, sessions, systems } from "@pluralscape/db/pg";
 import { now, toUnixMillis } from "@pluralscape/types";
 import {
   ChangeEmailSchema,
@@ -17,11 +17,8 @@ import {
 } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
+import { ensureUint8Array } from "../lib/binary.js";
 import { hashEmail } from "../lib/email-hash.js";
-import {
-  deserializeEncryptedPayload,
-  serializeEncryptedPayload,
-} from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { EMAIL_CHANGE_FAILED_ERROR } from "../routes/account/account.constants.js";
@@ -31,7 +28,6 @@ import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { isDuplicateEmailError, ValidationError } from "./auth.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AeadKey, KdfMasterKey, PwhashSalt } from "@pluralscape/crypto";
 import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -102,7 +98,7 @@ export async function changeEmail(
   const account = await withAccountRead(db, accountId, async (tx) => {
     const [row] = await tx
       .select({
-        passwordHash: accounts.passwordHash,
+        authKeyHash: accounts.authKeyHash,
         emailHash: accounts.emailHash,
         version: accounts.version,
       })
@@ -116,7 +112,11 @@ export async function changeEmail(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const valid = verifyPassword(account.passwordHash, parsed.currentPassword);
+  const authKeyBytes = fromHex(parsed.authKey);
+  assertAuthKey(authKeyBytes);
+  const storedHash = ensureUint8Array(account.authKeyHash);
+  assertAuthKeyHash(storedHash);
+  const valid = verifyAuthKey(authKeyBytes, storedHash);
   if (!valid) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
@@ -183,9 +183,7 @@ export async function changePassword(
   const account = await withAccountRead(db, accountId, async (tx) => {
     const [row] = await tx
       .select({
-        passwordHash: accounts.passwordHash,
-        kdfSalt: accounts.kdfSalt,
-        encryptedMasterKey: accounts.encryptedMasterKey,
+        authKeyHash: accounts.authKeyHash,
         version: accounts.version,
       })
       .from(accounts)
@@ -198,82 +196,84 @@ export async function changePassword(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const valid = verifyPassword(account.passwordHash, parsed.currentPassword);
+  const oldAuthKeyBytes = fromHex(parsed.oldAuthKey);
+  assertAuthKey(oldAuthKeyBytes);
+  const storedHash = ensureUint8Array(account.authKeyHash);
+  assertAuthKeyHash(storedHash);
+  const valid = verifyAuthKey(oldAuthKeyBytes, storedHash);
   if (!valid) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const adapter = getSodium();
-  let oldKek: AeadKey | undefined;
-  let masterKey: KdfMasterKey | undefined;
-  let newKek: AeadKey | undefined;
+  // Hash the new auth key (BLAKE2B) — server never sees the raw key again after this point
+  const newAuthKeyBytes = fromHex(parsed.newAuthKey);
+  assertAuthKey(newAuthKeyBytes);
+  const newAuthKeyHash = hashAuthKey(newAuthKeyBytes);
 
-  try {
-    // Deserialize stored encrypted master key
-    const encMasterKeyBytes = account.encryptedMasterKey;
-    const payload = deserializeEncryptedPayload(
-      encMasterKeyBytes instanceof Uint8Array
-        ? encMasterKeyBytes
-        : new Uint8Array(encMasterKeyBytes),
-    );
+  // Client sends the re-wrapped master key blob; server stores it opaquely
+  const newEncMasterKeyBytes = fromHex(parsed.newEncryptedMasterKey);
 
-    // Derive old KEK and unwrap master key
-    const oldSalt = fromHex(account.kdfSalt);
-    if (oldSalt.length !== PWHASH_SALT_BYTES) {
-      throw new Error("Stored KDF salt has invalid length");
+  // Look up the signing public key for challenge verification
+  const [signingKey] = await withAccountRead(db, accountId, async (tx) => {
+    return tx
+      .select({ publicKey: authKeys.publicKey })
+      .from(authKeys)
+      .where(and(eq(authKeys.accountId, accountId), eq(authKeys.keyType, "signing")))
+      .limit(1);
+  });
+
+  if (!signingKey) {
+    throw new ValidationError("No signing key found");
+  }
+
+  const sigPublicKey = ensureUint8Array(signingKey.publicKey);
+  assertSignPublicKey(sigPublicKey);
+
+  const signatureBytes = fromHex(parsed.challengeSignature);
+  assertSignature(signatureBytes);
+
+  // Client signs the new auth key hash as proof of key derivation
+  const signatureValid = verify(newAuthKeyHash, signatureBytes, sigPublicKey);
+  if (!signatureValid) {
+    throw new ValidationError("Invalid challenge signature");
+  }
+
+  const timestamp = now();
+
+  const revokedSessionCount = await withAccountTransaction(db, accountId, async (tx) => {
+    const updated = await tx
+      .update(accounts)
+      .set({
+        authKeyHash: newAuthKeyHash,
+        kdfSalt: parsed.newKdfSalt,
+        encryptedMasterKey: newEncMasterKeyBytes,
+        updatedAt: timestamp,
+        version: account.version + 1,
+      })
+      .where(and(eq(accounts.id, accountId), eq(accounts.version, account.version)))
+      .returning({ id: accounts.id });
+
+    if (updated.length === 0) {
+      throw new ConcurrencyError("Account was modified concurrently");
     }
-    oldKek = await derivePasswordKey(parsed.currentPassword, oldSalt as PwhashSalt, "server");
-    masterKey = unwrapMasterKey(payload, oldKek);
 
-    // Generate new salt, derive new KEK, re-wrap master key
-    const newSalt = generateSalt();
-    newKek = await derivePasswordKey(parsed.newPassword, newSalt, "server");
-    const newWrapped = wrapMasterKey(masterKey, newKek);
-    const newPasswordHash = hashPassword(parsed.newPassword, "server");
-    const newEncMasterKeyBytes = serializeEncryptedPayload(newWrapped);
-    const newKdfSaltHex = toHex(newSalt);
+    // Revoke ALL sessions (forces re-auth on every device)
+    const revoked = await tx
+      .update(sessions)
+      .set({ revoked: true })
+      .where(and(eq(sessions.accountId, accountId), eq(sessions.revoked, false)))
+      .returning({ id: sessions.id });
 
-    const timestamp = now();
-
-    const revokedSessionCount = await withAccountTransaction(db, accountId, async (tx) => {
-      const updated = await tx
-        .update(accounts)
-        .set({
-          passwordHash: newPasswordHash,
-          kdfSalt: newKdfSaltHex,
-          encryptedMasterKey: newEncMasterKeyBytes,
-          updatedAt: timestamp,
-          version: account.version + 1,
-        })
-        .where(and(eq(accounts.id, accountId), eq(accounts.version, account.version)))
-        .returning({ id: accounts.id });
-
-      if (updated.length === 0) {
-        throw new ConcurrencyError("Account was modified concurrently");
-      }
-
-      // Revoke ALL sessions (forces re-auth on every device)
-      const revoked = await tx
-        .update(sessions)
-        .set({ revoked: true })
-        .where(and(eq(sessions.accountId, accountId), eq(sessions.revoked, false)))
-        .returning({ id: sessions.id });
-
-      await audit(tx, {
-        eventType: "auth.password-changed",
-        actor: { kind: "account", id: accountId },
-        detail: `Password changed, all ${String(revoked.length)} sessions revoked`,
-      });
-
-      return revoked.length;
+    await audit(tx, {
+      eventType: "auth.password-changed",
+      actor: { kind: "account", id: accountId },
+      detail: `Password changed, all ${String(revoked.length)} sessions revoked`,
     });
 
-    return { ok: true, revokedSessionCount, sessionRevoked: revokedSessionCount > 0 };
-  } finally {
-    if (oldKek) adapter.memzero(oldKek);
-    if (masterKey) adapter.memzero(masterKey);
-    if (newKek) adapter.memzero(newKek);
-  }
+    return revoked.length;
+  });
+
+  return { ok: true, revokedSessionCount, sessionRevoked: revokedSessionCount > 0 };
 }
 
 // ── Update Account Settings ──────────────────────────────────────

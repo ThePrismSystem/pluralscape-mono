@@ -17,13 +17,16 @@ export type AccountType = "system" | "viewer";
 /** Status of a device transfer request. */
 export type DeviceTransferStatus = "pending" | "approved" | "expired";
 
+/** Account ID for a phase-1 registration placeholder (not yet committed). */
+export type PendingAccountId = string & { readonly __brand: "PendingAccountId" };
+
 /** A user account — the top-level authentication entity. */
 export interface Account extends AuditMetadata {
   readonly id: AccountId;
   readonly accountType: AccountType;
   readonly emailHash: string;
   readonly emailSalt: string;
-  readonly passwordHash: string;
+  readonly authKeyHash: Uint8Array;
   readonly kdfSalt: string;
   /** Persistent random MasterKey wrapped by the password-derived key (KEK/DEK pattern). */
   readonly encryptedMasterKey: Uint8Array;
@@ -64,6 +67,7 @@ export interface RecoveryKey {
   readonly id: RecoveryKeyId;
   readonly accountId: AccountId;
   readonly encryptedMasterKey: Uint8Array;
+  readonly recoveryKeyHash: Uint8Array | null;
   readonly createdAt: UnixMillis;
   readonly revokedAt: UnixMillis | null;
 }
@@ -71,15 +75,28 @@ export interface RecoveryKey {
 /** Input type for login. */
 export interface LoginCredentials {
   readonly email: string;
-  readonly password: string;
+  readonly authKey: string;
 }
 
-/** Input type for registration. */
-export interface RegistrationInput {
+/** Input for registration phase 1: initiate. */
+export interface RegistrationInitiateInput {
   readonly email: string;
-  readonly password: string;
-  readonly recoveryKeyBackupConfirmed: boolean;
   readonly accountType: AccountType;
+}
+
+/** Input for registration phase 2: commit. */
+export interface RegistrationCommitInput {
+  readonly accountId: string;
+  readonly authKey: string;
+  readonly encryptedMasterKey: string;
+  readonly encryptedSigningPrivateKey: string;
+  readonly encryptedEncryptionPrivateKey: string;
+  readonly publicSigningKey: string;
+  readonly publicEncryptionKey: string;
+  readonly recoveryEncryptedMasterKey: string;
+  readonly challengeSignature: string;
+  readonly recoveryKeyBackupConfirmed: boolean;
+  readonly recoveryKeyHash: string;
 }
 
 /** A request to transfer encryption keys from one device to another. */
