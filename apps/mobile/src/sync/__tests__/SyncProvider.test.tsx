@@ -108,16 +108,16 @@ function makeSqliteDriver(): PlatformStorage & { backend: "sqlite" } {
   return {
     backend: "sqlite" as const,
     driver: {
-      exec: vi.fn(),
+      exec: vi.fn(() => Promise.resolve()),
       prepare: vi.fn(() => ({
-        all: vi.fn(() => []),
-        get: vi.fn(),
-        run: vi.fn(),
+        all: vi.fn(() => Promise.resolve([])),
+        get: vi.fn(() => Promise.resolve(undefined)),
+        run: vi.fn(() => Promise.resolve()),
       })),
-      transaction<T>(fn: () => T): T {
+      transaction<T>(fn: () => Promise<T>): Promise<T> {
         return fn();
       },
-      close: vi.fn(),
+      close: vi.fn(() => Promise.resolve()),
     },
   };
 }
