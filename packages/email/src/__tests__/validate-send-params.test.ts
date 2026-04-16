@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MAX_RECIPIENTS, MAX_SUBJECT_LENGTH, validateSendParams } from "../email.constants.js";
-import { EmailValidationError } from "../errors.js";
+import { EmailValidationError, InvalidRecipientError } from "../errors.js";
 
 describe("validateSendParams", () => {
   it("passes with a single recipient and valid subject", () => {
@@ -92,5 +92,34 @@ describe("validateSendParams", () => {
       expect(err.actual).toBe(MAX_SUBJECT_LENGTH + 1);
       expect(err.max).toBe(MAX_SUBJECT_LENGTH);
     }
+  });
+
+  it("passes when from and replyTo are valid emails", () => {
+    expect(() => {
+      validateSendParams({
+        to: "a@example.com",
+        subject: "Hello",
+        from: "sender@example.com",
+        replyTo: "reply@example.com",
+      });
+    }).not.toThrow();
+  });
+
+  it("throws InvalidRecipientError when from is not a valid email", () => {
+    expect(() => {
+      validateSendParams({ to: "a@example.com", subject: "Hello", from: "not-an-email" });
+    }).toThrow(InvalidRecipientError);
+  });
+
+  it("throws InvalidRecipientError when replyTo is not a valid email", () => {
+    expect(() => {
+      validateSendParams({ to: "a@example.com", subject: "Hello", replyTo: "bad" });
+    }).toThrow(InvalidRecipientError);
+  });
+
+  it("passes when from and replyTo are undefined", () => {
+    expect(() => {
+      validateSendParams({ to: "a@example.com", subject: "Hello" });
+    }).not.toThrow();
   });
 });
