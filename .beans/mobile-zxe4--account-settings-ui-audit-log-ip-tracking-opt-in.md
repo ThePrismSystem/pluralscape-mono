@@ -5,8 +5,8 @@ status: todo
 type: feature
 priority: normal
 created_at: 2026-03-24T19:54:32Z
-updated_at: 2026-04-16T06:41:46Z
-parent: ps-9cca
+updated_at: 2026-04-16T07:12:58Z
+parent: ps-nwju
 blocked_by:
   - api-j20p
 ---
