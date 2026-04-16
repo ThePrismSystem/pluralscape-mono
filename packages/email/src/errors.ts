@@ -38,6 +38,13 @@ export class EmailRateLimitError extends Error {
 }
 
 /**
+ * Thrown when send parameters fail validation (e.g., too many recipients, subject too long).
+ */
+export class EmailValidationError extends Error {
+  override readonly name = "EmailValidationError" as const;
+}
+
+/**
  * Thrown when the recipient email address is invalid or rejected by the provider.
  */
 export class InvalidRecipientError extends Error {

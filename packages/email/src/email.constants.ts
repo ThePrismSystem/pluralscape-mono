@@ -1,4 +1,4 @@
-import { EmailDeliveryError, InvalidRecipientError } from "./errors.js";
+import { EmailValidationError } from "./errors.js";
 
 /** Default sender address used when `from` is not specified in EmailSendParams. */
 export const DEFAULT_FROM_ADDRESS = "noreply@pluralscape.app";
@@ -12,8 +12,8 @@ export const MAX_SUBJECT_LENGTH = 998;
 /**
  * Validates send parameters against package constraints.
  *
- * Throws InvalidRecipientError if too many recipients are provided.
- * Throws EmailDeliveryError if the subject line exceeds the maximum length.
+ * Throws EmailValidationError if too many recipients are provided or
+ * if the subject line exceeds the maximum length.
  */
 export function validateSendParams(params: {
   readonly to: string | readonly string[];
@@ -21,14 +21,13 @@ export function validateSendParams(params: {
 }): void {
   const recipientCount = typeof params.to === "string" ? 1 : params.to.length;
   if (recipientCount > MAX_RECIPIENTS) {
-    const firstRecipient = typeof params.to === "string" ? params.to : (params.to[0] ?? "unknown");
-    throw new InvalidRecipientError(firstRecipient);
+    throw new EmailValidationError(
+      `Recipient count ${String(recipientCount)} exceeds maximum of ${String(MAX_RECIPIENTS)}.`,
+    );
   }
 
   if (params.subject.length > MAX_SUBJECT_LENGTH) {
-    const firstRecipient = typeof params.to === "string" ? params.to : (params.to[0] ?? "unknown");
-    throw new EmailDeliveryError(
-      firstRecipient,
+    throw new EmailValidationError(
       `Subject length ${String(params.subject.length)} exceeds maximum of ${String(MAX_SUBJECT_LENGTH)} characters.`,
     );
   }
