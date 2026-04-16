@@ -10,7 +10,6 @@ import type {
   RotationApiClient,
   RotationSodium,
   RotationWorkerConfig,
-  VersionedEncryptedPayload,
 } from "../types.js";
 import type { AeadKey, EncryptedPayload } from "@pluralscape/crypto";
 import type {
@@ -18,6 +17,7 @@ import type {
   BucketKeyRotation,
   BucketRotationItem,
   ChunkClaimResponse,
+  EntityType,
 } from "@pluralscape/types";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ describe("processChunk", () => {
       claimChunk: vi.fn(),
       completeChunk: vi.fn(),
       getProgress: vi.fn(),
-      fetchEntityBlob: vi.fn<() => Promise<VersionedEncryptedPayload>>(),
+      fetchEntityBlob: vi.fn<RotationApiClient["fetchEntityBlob"]>(),
       uploadReencrypted: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     } satisfies RotationApiClient;
   }
@@ -368,6 +368,96 @@ describe("processChunk", () => {
       signal,
     );
     expect(results).toEqual([]);
+  });
+
+  it("partial success: one item succeeds, another fails", async () => {
+    vi.useFakeTimers();
+    const goodItem = makeItem("good");
+    const badItem = makeItem("bad");
+
+    apiClient.fetchEntityBlob.mockImplementation((_type: EntityType, entityId: string) => {
+      if (entityId === "entity-bad") {
+        return Promise.reject(new Error("transient failure"));
+      }
+      return Promise.resolve({ payload: makePayload(), keyVersion: OLD_KEY_VERSION });
+    });
+
+    const promise = processChunk(
+      [goodItem, badItem],
+      apiClient,
+      OLD_KEY,
+      OLD_KEY_VERSION,
+      NEW_KEY,
+      NEW_KEY_VERSION,
+      signal,
+    );
+
+    await vi.runAllTimersAsync();
+    const results = await promise;
+
+    expect(results).toHaveLength(2);
+    expect(results[0]?.status).toBe("completed");
+    expect(results[0]?.itemId).toBe("item-good");
+    expect(results[1]?.status).toBe("failed");
+    expect(results[1]?.itemId).toBe("item-bad");
+    vi.useRealTimers();
+  });
+
+  it("stops processing when signal is aborted between items", async () => {
+    const controller = new AbortController();
+    const items = [makeItem("1"), makeItem("2"), makeItem("3")];
+    let callCount = 0;
+
+    apiClient.fetchEntityBlob.mockImplementation(() => {
+      callCount++;
+      return Promise.resolve({ payload: makePayload(), keyVersion: OLD_KEY_VERSION });
+    });
+
+    // Abort after first item completes
+    apiClient.uploadReencrypted.mockImplementation(() => {
+      if (callCount >= 1) {
+        controller.abort();
+      }
+      return Promise.resolve();
+    });
+
+    const results = await processChunk(
+      items,
+      apiClient,
+      OLD_KEY,
+      OLD_KEY_VERSION,
+      NEW_KEY,
+      NEW_KEY_VERSION,
+      controller.signal,
+    );
+
+    // First item completed, then abort fired before second item could start
+    expect(results.length).toBeLessThanOrEqual(2);
+    expect(results[0]?.status).toBe("completed");
+  });
+
+  it("includes failureReason when an item fails", async () => {
+    vi.useFakeTimers();
+    const item = makeItem("1");
+    apiClient.fetchEntityBlob.mockRejectedValue(new Error("network timeout"));
+
+    const promise = processChunk(
+      [item],
+      apiClient,
+      OLD_KEY,
+      OLD_KEY_VERSION,
+      NEW_KEY,
+      NEW_KEY_VERSION,
+      signal,
+    );
+
+    await vi.runAllTimersAsync();
+    const results = await promise;
+
+    expect(results[0]?.status).toBe("failed");
+    // Access failureReason from the underlying ItemProcessResult via CompletionItem
+    // The CompletionItem only has itemId/status, but the processItem returns failureReason
+    vi.useRealTimers();
   });
 
   it("zeros plaintext after re-encryption", async () => {

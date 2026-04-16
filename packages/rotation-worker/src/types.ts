@@ -67,4 +67,6 @@ export type RotationProgressCallback = (rotation: BucketKeyRotation) => void;
 export interface ItemProcessResult {
   readonly item: BucketRotationItem;
   readonly status: "completed" | "failed";
+  /** Present when status is "failed" — the error message from the last retry attempt. */
+  readonly failureReason?: string;
 }

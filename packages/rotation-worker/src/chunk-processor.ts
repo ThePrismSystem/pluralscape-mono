@@ -44,6 +44,7 @@ async function processItem(
   newKey: AeadKey,
   newKeyVersion: number,
 ): Promise<ItemProcessResult> {
+  let lastError: unknown;
   for (let attempt = 0; attempt < MAX_ITEM_RETRIES; attempt++) {
     try {
       // Fetch the entity blob
@@ -77,6 +78,8 @@ async function processItem(
 
       return { item, status: "completed" };
     } catch (error) {
+      lastError = error;
+
       // On 404: entity deleted — mark completed
       if (isHttpError(error, HTTP_NOT_FOUND)) {
         return { item, status: "completed" };
@@ -95,7 +98,8 @@ async function processItem(
     }
   }
 
-  return { item, status: "failed" };
+  const failureReason = lastError instanceof Error ? lastError.message : String(lastError);
+  return { item, status: "failed", failureReason };
 }
 
 function isHttpError(error: unknown, status: number): boolean {
