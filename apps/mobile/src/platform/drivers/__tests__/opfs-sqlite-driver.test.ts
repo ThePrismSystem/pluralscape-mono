@@ -266,8 +266,9 @@ describe("createOpfsSqliteDriver", () => {
   });
 
   describe("close()", () => {
-    it("delegates to sqlite3.close", () => {
+    it("delegates to sqlite3.close", async () => {
       driver.close();
+      await driver.flush().catch(() => undefined);
       expect(mockClose).toHaveBeenCalledWith(1);
     });
 
@@ -280,6 +281,36 @@ describe("createOpfsSqliteDriver", () => {
       await new Promise((r) => setTimeout(r, 0));
 
       await expect(driver.flush()).rejects.toThrow("VFS lock stuck");
+    });
+
+    it("waits for pending exec to settle before calling sqlite3.close", async () => {
+      let resolveExec!: (rc: number) => void;
+      mockExec.mockReturnValueOnce(
+        new Promise<number>((r) => {
+          resolveExec = r;
+        }),
+      );
+
+      driver.exec("LONG QUERY");
+      driver.close();
+
+      // Close must not have been called yet — exec is still pending
+      expect(mockClose).not.toHaveBeenCalled();
+
+      resolveExec(0);
+      await driver.flush().catch(() => undefined);
+
+      expect(mockClose).toHaveBeenCalledWith(1);
+    });
+
+    it("still closes when a pending exec rejects", async () => {
+      mockExec.mockReturnValueOnce(Promise.reject(new Error("disk error")));
+
+      driver.exec("FAILING");
+      driver.close();
+      await driver.flush().catch(() => undefined);
+
+      expect(mockClose).toHaveBeenCalledWith(1);
     });
   });
 

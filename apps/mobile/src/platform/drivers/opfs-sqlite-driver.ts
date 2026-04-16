@@ -191,8 +191,10 @@ export async function createOpfsSqliteDriver(
     },
 
     close(): void {
-      checkLastError();
-      const closePromise = sqlite3.close(db);
+      const closePromise = lastExecPromise.then(
+        () => sqlite3.close(db),
+        () => sqlite3.close(db),
+      );
       lastExecPromise = closePromise;
       closePromise.catch((err: unknown) => {
         setLastError(err);
