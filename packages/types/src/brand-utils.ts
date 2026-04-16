@@ -8,7 +8,7 @@ type AnyBrandedId = Brand<string, string>;
  *
  * @example
  * ```ts
- * const id = brandId("sys_abc123" as SystemId);
+ * const id = brandId<SystemId>("sys_abc123");
  * ```
  */
 export function brandId<B extends AnyBrandedId>(id: B | string): B {
