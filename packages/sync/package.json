@@ -6,7 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./adapters": "./src/adapters.ts",
-    "./schemas": "./src/schemas.ts",
+    "./schemas": "./src/schema-registry.ts",
     "./protocol": "./src/protocol.ts",
     "./materializer": "./src/materializer/index.ts"
   },
