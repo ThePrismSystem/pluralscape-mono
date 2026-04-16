@@ -21,7 +21,7 @@ import {
 import { API_BASE_URL } from "./api-server.js";
 
 import type { EncryptedPayload } from "@pluralscape/crypto";
-import type { SystemId } from "@pluralscape/types";
+import type { SystemId, SystemListItem } from "@pluralscape/types";
 
 // ── Registration ─────────────────────────────────────────────────────
 
@@ -143,10 +143,6 @@ export async function registerTestAccount(): Promise<RegisteredAccount> {
 
 // ── System discovery ────────────────────────────────────────────────
 
-interface SystemListItem {
-  id: string;
-}
-
 interface SystemListResponse {
   data: SystemListItem[];
 }
@@ -169,5 +165,5 @@ export async function getSystemId(sessionToken: string): Promise<SystemId> {
   if (!first) {
     throw new Error("No systems found for authenticated account");
   }
-  return first.id as SystemId;
+  return first.id;
 }

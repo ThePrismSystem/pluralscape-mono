@@ -130,7 +130,6 @@ export type {
   ArchivedMemberPhoto,
   MemberListItem,
   SystemListItem,
-  SystemDuplicationScope,
   CreateMemberBody,
   UpdateMemberBody,
   CreateMemberPhotoBody,

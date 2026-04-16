@@ -128,21 +128,3 @@ export interface DuplicateMemberBody {
   readonly copyFields: boolean;
   readonly copyMemberships: boolean;
 }
-
-/** @future System duplication scope controls — not yet implemented. */
-export interface SystemDuplicationScope {
-  readonly members: boolean;
-  readonly photos: boolean;
-  readonly customFields: boolean;
-  readonly groups: boolean;
-  /** Structure entity types, entities, links, member links, and associations. */
-  readonly structure: boolean;
-  readonly relationships: boolean;
-  readonly frontingHistory: boolean;
-  /** Channels, messages, boards, notes, polls. */
-  readonly communication: boolean;
-  readonly journal: boolean;
-  readonly wiki: boolean;
-  readonly innerworld: boolean;
-  readonly settings: boolean;
-}

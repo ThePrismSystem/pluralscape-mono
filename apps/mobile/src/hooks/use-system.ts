@@ -16,7 +16,7 @@ import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 // ---------------------------------------------------------------------------
 
 type SystemGetResult = RouterOutput["system"]["get"];
-type SystemListItem = RouterOutput["system"]["list"]["data"][number];
+type SystemListEntry = RouterOutput["system"]["list"]["data"][number];
 
 interface SystemListOpts {
   readonly limit?: number;
@@ -39,11 +39,11 @@ export function useSystem(opts?: SystemIdOverride): DataQuery<SystemGetResult> {
  * Uses `protectedProcedure` (account-scoped) — no systemId required.
  * Plain tRPC hook, not a factory, because this is both account-scoped and remote-only.
  */
-export function useSystemsList(opts?: SystemListOpts): DataListQuery<SystemListItem> {
+export function useSystemsList(opts?: SystemListOpts): DataListQuery<SystemListEntry> {
   return trpc.system.list.useInfiniteQuery(
     { limit: opts?.limit ?? DEFAULT_LIST_LIMIT },
     { getNextPageParam: (lastPage) => lastPage.nextCursor },
-  ) as DataListQuery<SystemListItem>;
+  ) as DataListQuery<SystemListEntry>;
 }
 
 // ---------------------------------------------------------------------------
