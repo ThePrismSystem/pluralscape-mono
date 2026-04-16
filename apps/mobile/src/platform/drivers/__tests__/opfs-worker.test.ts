@@ -8,7 +8,15 @@
  *
  * wa-sqlite + OPFSCoopSyncVFS are mocked — no WASM is loaded.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * Upper bound on setTimeout(0) ticks allowed while waiting for the worker's
+ * dispatch chain to settle. Some ops await multiple async sqlite calls
+ * (e.g. prepare does two iter.next() calls before resolving), so a single
+ * microtask flush is insufficient — we poll up to this many macrotasks.
+ */
+const MAX_SETTLE_TICKS = 10;
 
 interface FakeSelf {
   listeners: Array<(ev: MessageEvent<unknown>) => void>;
@@ -112,6 +120,29 @@ function singleStmtIter(ptr: number): AsyncIterable<number> {
   };
 }
 
+/**
+ * Build an AsyncIterable that yields the given ptrs in order. Used to simulate
+ * multi-statement SQL (two+ ptrs) and empty-statement SQL (zero ptrs).
+ */
+function multiStmtIter(ptrs: readonly number[]): AsyncIterable<number> {
+  return {
+    [Symbol.asyncIterator]() {
+      let i = 0;
+      return {
+        next(): Promise<IteratorResult<number>> {
+          if (i >= ptrs.length) return Promise.resolve({ done: true as const, value: 0 });
+          const value = ptrs[i++];
+          if (value === undefined) return Promise.resolve({ done: true as const, value: 0 });
+          return Promise.resolve({ done: false as const, value });
+        },
+        return(): Promise<IteratorResult<number>> {
+          return Promise.resolve({ done: true as const, value: 0 });
+        },
+      };
+    },
+  };
+}
+
 /** Posted response shape helpers — narrow envelopes the worker returns. */
 interface OkEnvelope<T> {
   id: number;
@@ -136,13 +167,52 @@ function assertEnvelope(v: unknown): Envelope<unknown> {
   if (rec.ok) {
     return { id: rec.id, ok: true, result: rec.result };
   }
-  const err = rec.error as { message: string; name?: string };
+  // Runtime-narrow the error field rather than casting — a malformed worker
+  // payload should fail this helper, not silently propagate as `any`-shaped.
+  const errRaw = rec.error;
+  if (errRaw === null || typeof errRaw !== "object") {
+    throw new Error(`Invalid envelope error: ${JSON.stringify(rec)}`);
+  }
+  const errRec: Record<string, unknown> = errRaw as Record<string, unknown>;
+  if (typeof errRec.message !== "string") {
+    throw new Error(`Envelope error.message not a string: ${JSON.stringify(rec)}`);
+  }
+  if (errRec.name !== undefined && typeof errRec.name !== "string") {
+    throw new Error(`Envelope error.name not a string: ${JSON.stringify(rec)}`);
+  }
+  const err: { message: string; name?: string } =
+    typeof errRec.name === "string"
+      ? { message: errRec.message, name: errRec.name }
+      : { message: errRec.message };
   return { id: rec.id, ok: false, error: err };
+}
+
+/** Narrow an `unknown` to `number`, throwing with context if it is not. */
+function asNumber(v: unknown): number {
+  if (typeof v !== "number") {
+    throw new Error(`Expected number, got ${typeof v}: ${JSON.stringify(v)}`);
+  }
+  return v;
 }
 
 let fakeSelf: FakeSelf;
 
+/**
+ * Store the original `self` value from globalThis (if any) so we can restore
+ * it after each test. Vitest workers run in a Node-ish environment where
+ * `self` is typically undefined, but we don't want to assume — save whatever
+ * was there and put it back.
+ */
+const ORIGINAL_SELF_KEY = "self" as const;
+let originalSelf: unknown;
+let originalSelfPresent = false;
+
 beforeEach(async () => {
+  // Reflect.get + hasOwnProperty avoids a cast on globalThis — we still get
+  // the (unknown) original value if it was defined.
+  originalSelfPresent = Object.prototype.hasOwnProperty.call(globalThis, ORIGINAL_SELF_KEY);
+  originalSelf = originalSelfPresent ? Reflect.get(globalThis, ORIGINAL_SELF_KEY) : undefined;
+
   vi.clearAllMocks();
   mockOpenV2.mockResolvedValue(1);
   mockExec.mockResolvedValue(0);
@@ -156,14 +226,22 @@ beforeEach(async () => {
   await import("../opfs-worker.js");
 });
 
+afterEach(() => {
+  if (originalSelfPresent) {
+    Object.assign(globalThis, { [ORIGINAL_SELF_KEY]: originalSelf });
+  } else {
+    Reflect.deleteProperty(globalThis, ORIGINAL_SELF_KEY);
+  }
+});
+
 async function dispatch(req: unknown): Promise<Envelope<unknown>> {
   const before = fakeSelf.lastPosted.length;
   for (const l of fakeSelf.listeners) {
     l({ data: req } as MessageEvent<unknown>);
   }
   // Allow the dispatch promise chain to settle before reading posted result.
-  // The worker awaits several sqlite mocks — give microtasks room to drain.
-  for (let i = 0; i < 10; i++) {
+  // The worker awaits several sqlite mocks — give macrotasks room to drain.
+  for (let i = 0; i < MAX_SETTLE_TICKS; i++) {
     if (fakeSelf.lastPosted.length > before) break;
     await new Promise<void>((r) => {
       setTimeout(r, 0);
@@ -179,6 +257,13 @@ describe("OPFS worker dispatch", () => {
     expect(res).toEqual({ id: 1, ok: true, result: undefined });
     expect(mockOpenV2).toHaveBeenCalledWith("pluralscape-sync.db");
     expect(mockVfsRegister).toHaveBeenCalled();
+    // vfs_register must be called with makeDefault === true so opens without
+    // an explicit vfs name route through OPFSCoopSyncVFS.
+    const firstCall = mockVfsRegister.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    if (firstCall !== undefined) {
+      expect(firstCall[1]).toBe(true);
+    }
   });
 
   it("errors when ops come before init", async () => {
@@ -212,8 +297,7 @@ describe("OPFS worker dispatch", () => {
     const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT * FROM t" });
     expect(prep.ok).toBe(true);
     if (!prep.ok) return;
-    const stmtHandle = prep.result;
-    expect(typeof stmtHandle).toBe("number");
+    const stmtHandle = asNumber(prep.result);
 
     mockColumnNames.mockReturnValue(["id", "name"]);
     mockRow.mockReturnValueOnce([1, "alice"]).mockReturnValueOnce([2, "bob"]);
@@ -225,7 +309,7 @@ describe("OPFS worker dispatch", () => {
     const res = await dispatch({
       id: 3,
       kind: "all",
-      stmt: stmtHandle as number,
+      stmt: stmtHandle,
       params: [1],
     });
 
@@ -248,7 +332,7 @@ describe("OPFS worker dispatch", () => {
     const res = await dispatch({
       id: 3,
       kind: "run",
-      stmt: prep.result as number,
+      stmt: asNumber(prep.result),
       params: [new Date()],
     });
     expect(res.ok).toBe(false);
@@ -295,13 +379,13 @@ describe("OPFS worker dispatch", () => {
     expect(prep.ok).toBe(true);
     if (!prep.ok) return;
 
-    const res = await dispatch({ id: 3, kind: "finalize", stmt: prep.result as number });
+    const res = await dispatch({ id: 3, kind: "finalize", stmt: asNumber(prep.result) });
     expect(res.ok).toBe(true);
     expect(mockFinalize).toHaveBeenCalledWith(4242);
 
     // Second finalize of the same handle is idempotent — no extra sqlite call.
     mockFinalize.mockClear();
-    const res2 = await dispatch({ id: 4, kind: "finalize", stmt: prep.result as number });
+    const res2 = await dispatch({ id: 4, kind: "finalize", stmt: asNumber(prep.result) });
     expect(res2.ok).toBe(true);
     expect(mockFinalize).not.toHaveBeenCalled();
   });
@@ -327,5 +411,219 @@ describe("OPFS worker dispatch", () => {
     expect(mockFinalize).toHaveBeenCalledTimes(2);
     expect(mockClose).toHaveBeenCalledWith(1);
     expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects multi-statement SQL and finalizes the first ptr to avoid leak", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    // Two ptrs yielded — simulates multi-statement SQL like "SELECT 1; SELECT 2".
+    mockStatements.mockReturnValue(multiStmtIter([42, 43]));
+
+    const res = await dispatch({ id: 2, kind: "prepare", sql: "SELECT 1; SELECT 2" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toMatch(/multi-statement SQL not supported/);
+    }
+    // The first ptr must be finalized (iterator-cleanup path); the second
+    // ptr is never materialized as a handle so no finalize call for it.
+    expect(mockFinalize).toHaveBeenCalledWith(42);
+  });
+
+  it("rejects empty-statement SQL", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    mockStatements.mockReturnValue(multiStmtIter([]));
+
+    const res = await dispatch({ id: 2, kind: "prepare", sql: "   " });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toMatch(/prepare produced no statement/);
+    }
+  });
+
+  it("rejects run with unknown statement handle", async () => {
+    await dispatch({ id: 1, kind: "init" });
+
+    const res = await dispatch({ id: 2, kind: "run", stmt: 999, params: [] });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toMatch(/unknown statement handle/);
+    }
+  });
+
+  it("rejects run when bind_collection returns non-zero rc", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    mockStatements.mockReturnValue(singleStmtIter(42));
+    const prep = await dispatch({ id: 2, kind: "prepare", sql: "INSERT INTO t VALUES (?)" });
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) return;
+
+    mockBindCollection.mockReturnValue(1); // non-OK rc
+
+    const res = await dispatch({
+      id: 3,
+      kind: "run",
+      stmt: asNumber(prep.result),
+      params: [1],
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toMatch(/bind_collection failed/);
+    }
+  });
+
+  it("get returns the first row when step yields SQLITE_ROW", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    mockStatements.mockReturnValue(singleStmtIter(42));
+    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT * FROM t LIMIT 1" });
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) return;
+
+    mockColumnNames.mockReturnValue(["id", "name"]);
+    mockRow.mockReturnValueOnce([7, "carol"]);
+    mockStep.mockResolvedValueOnce(100); // SQLITE_ROW
+
+    const res = await dispatch({
+      id: 3,
+      kind: "get",
+      stmt: asNumber(prep.result),
+      params: [],
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.result).toEqual({ id: 7, name: "carol" });
+    }
+  });
+
+  it("get returns undefined when step yields SQLITE_DONE (no row)", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    mockStatements.mockReturnValue(singleStmtIter(42));
+    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT * FROM t WHERE 0" });
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) return;
+
+    mockStep.mockResolvedValueOnce(101); // SQLITE_DONE
+
+    const res = await dispatch({
+      id: 3,
+      kind: "get",
+      stmt: asNumber(prep.result),
+      params: [],
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.result).toBeUndefined();
+    }
+  });
+
+  it("evicts oldest statement via LRU once MAX_STMT_HANDLES is exceeded", async () => {
+    await dispatch({ id: 1, kind: "init" });
+
+    // Prepare MAX_STMT_HANDLES + 1 = 129 statements. Each returns a unique ptr
+    // (1000, 1001, ..., 1128). The 129th insert triggers LRU eviction of the
+    // first (ptr=1000), which must be finalized.
+    const MAX_STMT_HANDLES = 128;
+    const totalToPrepare = MAX_STMT_HANDLES + 1;
+    for (let i = 0; i < totalToPrepare; i++) {
+      mockStatements.mockReturnValueOnce(singleStmtIter(1000 + i));
+      const prep = await dispatch({ id: 100 + i, kind: "prepare", sql: `SELECT ${String(i)}` });
+      expect(prep.ok).toBe(true);
+    }
+
+    // The first ptr (1000) should have been finalized when the 129th was added.
+    expect(mockFinalize).toHaveBeenCalledWith(1000);
+  });
+
+  it("coerces number[] column values (BLOB) to Uint8Array", async () => {
+    await dispatch({ id: 1, kind: "init" });
+    mockStatements.mockReturnValue(singleStmtIter(42));
+    const prep = await dispatch({ id: 2, kind: "prepare", sql: "SELECT data FROM blobs" });
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) return;
+
+    mockColumnNames.mockReturnValue(["data"]);
+    // wa-sqlite returns BLOB columns as number[] in some builds. The worker's
+    // recordsFromStmt() Array.isArray branch must convert to Uint8Array so the
+    // response matches the BindParam shape.
+    mockRow.mockReturnValueOnce([[1, 2, 3]]);
+    mockStep.mockResolvedValueOnce(100).mockResolvedValueOnce(101); // ROW, DONE
+
+    const res = await dispatch({
+      id: 3,
+      kind: "all",
+      stmt: asNumber(prep.result),
+      params: [],
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      const rows = res.result;
+      expect(Array.isArray(rows)).toBe(true);
+      if (Array.isArray(rows)) {
+        const first = rows[0];
+        expect(first).toBeDefined();
+        if (first !== undefined && typeof first === "object" && first !== null) {
+          const rec: Record<string, unknown> = first as Record<string, unknown>;
+          const data = rec.data;
+          expect(data).toBeInstanceOf(Uint8Array);
+          if (data instanceof Uint8Array) {
+            expect(Array.from(data)).toEqual([1, 2, 3]);
+          }
+        }
+      }
+    }
+  });
+
+  it("falls back to error envelope when postMessage throws on first response", async () => {
+    // Swap postMessage so the first call throws (simulating a non-cloneable
+    // result) but the second call (the error fallback) succeeds.
+    const originalPost = fakeSelf.postMessage.bind(fakeSelf);
+    let calls = 0;
+    const thrownMessages: unknown[] = [];
+    fakeSelf.postMessage = (msg: unknown): void => {
+      calls++;
+      if (calls === 1) {
+        thrownMessages.push(msg);
+        throw new Error("structured clone failed");
+      }
+      originalPost(msg);
+    };
+
+    try {
+      // The raw dispatch path: trigger listener, then wait for the fallback
+      // envelope to land in lastPosted. We can't use the top-level `dispatch`
+      // helper because the first postMessage throws (lastPosted length won't
+      // advance on call #1), so we poll for lastPosted > initial.
+      const before = fakeSelf.lastPosted.length;
+      for (const l of fakeSelf.listeners) {
+        l({ data: { id: 99, kind: "init" } } as MessageEvent<unknown>);
+      }
+      for (let i = 0; i < MAX_SETTLE_TICKS; i++) {
+        if (fakeSelf.lastPosted.length > before) break;
+        await new Promise<void>((r) => {
+          setTimeout(r, 0);
+        });
+      }
+      const posted = fakeSelf.lastPosted[before];
+      const env = assertEnvelope(posted);
+      expect(env.ok).toBe(false);
+      if (!env.ok) {
+        expect(env.error.message).toMatch(/failed to post response/);
+      }
+      // The first (thrown) call was given the original success envelope.
+      expect(calls).toBeGreaterThanOrEqual(2);
+    } finally {
+      fakeSelf.postMessage = originalPost;
+    }
+  });
+
+  it("rejects unknown request kind via default/exhaustive switch arm", async () => {
+    await dispatch({ id: 1, kind: "init" });
+
+    // The worker's dispatch uses a `never`-typed default arm — send a request
+    // whose kind is not in the Req union. Route via the FakeSelf path directly
+    // since our top-level dispatch helper is untyped (accepts `unknown`).
+    const res = await dispatch({ id: 42, kind: "bogus" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toMatch(/unknown request kind/);
+    }
   });
 });
