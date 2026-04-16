@@ -1096,7 +1096,7 @@ erDiagram
         varchar system_id FK "unique"
         boolean enabled
         varchar sync_direction
-        binary pk_token_encrypted
+        blob pk_token_encrypted "encrypted blob"
         blob entity_mappings "encrypted blob"
         blob error_log "encrypted blob"
         timestamp last_sync_at
