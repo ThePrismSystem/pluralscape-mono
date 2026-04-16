@@ -12,9 +12,6 @@ const mockVfsRegister = vi.fn<WaSqliteAPI["vfs_register"]>();
 const mockStatements = vi.fn<WaSqliteAPI["statements"]>();
 const mockBindCollection = vi.fn<WaSqliteAPI["bind_collection"]>();
 const mockStep = vi.fn<WaSqliteAPI["step"]>();
-const mockRow = vi.fn<WaSqliteAPI["row"]>();
-const mockColumnNames = vi.fn<WaSqliteAPI["column_names"]>();
-
 const mockSqlite3: WaSqliteAPI = {
   exec: mockExec,
   close: mockClose,
@@ -23,8 +20,8 @@ const mockSqlite3: WaSqliteAPI = {
   statements: mockStatements,
   bind_collection: mockBindCollection,
   step: mockStep,
-  row: mockRow,
-  column_names: mockColumnNames,
+  row: vi.fn<WaSqliteAPI["row"]>(),
+  column_names: vi.fn<WaSqliteAPI["column_names"]>(),
 };
 
 vi.mock("@journeyapps/wa-sqlite/dist/wa-sqlite.mjs", () => ({
@@ -42,22 +39,15 @@ vi.mock("@journeyapps/wa-sqlite/src/examples/OPFSCoopSyncVFS.js", () => ({
   },
 }));
 
-/**
- * Helper: create a mock async iterable that yields a single statement handle,
- * simulating `sqlite3.statements(db, sql)`.
- */
 function mockStatementsIterator(stmtHandle: number): AsyncIterable<number> {
   return {
     [Symbol.asyncIterator]() {
       let done = false;
       return {
-        next() {
-          if (done) return Promise.resolve({ done: true as const, value: undefined });
+        next(): Promise<IteratorResult<number>> {
+          if (done) return Promise.resolve({ done: true, value: undefined });
           done = true;
-          return Promise.resolve({ done: false as const, value: stmtHandle });
-        },
-        return() {
-          return Promise.resolve({ done: true as const, value: undefined });
+          return Promise.resolve({ done: false, value: stmtHandle });
         },
       };
     },
