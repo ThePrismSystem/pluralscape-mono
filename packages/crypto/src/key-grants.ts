@@ -119,8 +119,9 @@ function parseEnvelope(
   let offset = UINT16_BYTES;
   const idBytes = plaintext.subarray(offset, offset + idLen);
   offset += idLen;
-  const extractedId = new TextDecoder().decode(idBytes);
-  if (extractedId !== expectedBucketId) {
+  const expectedIdBytes = new TextEncoder().encode(expectedBucketId);
+  if (idBytes.length !== expectedIdBytes.length || !getSodium().memcmp(idBytes, expectedIdBytes)) {
+    const extractedId = new TextDecoder().decode(idBytes);
     throw new InvalidInputError(
       `Key grant bucket ID mismatch: expected "${expectedBucketId}", got "${extractedId}".`,
     );
@@ -128,6 +129,7 @@ function parseEnvelope(
 
   const extractedVersion = view.getUint32(offset, true);
   offset += UINT32_BYTES;
+  // Integer comparison of fixed-width uint32 values is already constant-time.
   if (extractedVersion !== expectedKeyVersion) {
     throw new InvalidInputError(
       `Key grant key version mismatch: expected ${String(expectedKeyVersion)}, got ${String(extractedVersion)}.`,
