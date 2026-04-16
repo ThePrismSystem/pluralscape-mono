@@ -3,8 +3,10 @@
 title: Add error-path E2E tests for SP import engine
 status: todo
 type: task
+priority: normal
 created_at: 2026-04-11T03:07:31Z
-updated_at: 2026-04-11T03:07:31Z
+updated_at: 2026-04-16T06:49:51Z
+parent: ps-0enb
 ---
 
 Add E2E tests covering error scenarios deferred from PR #408 review:

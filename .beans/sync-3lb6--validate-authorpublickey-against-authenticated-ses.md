@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-04-14T09:28:37Z
-updated_at: 2026-04-14T10:28:36Z
+updated_at: 2026-04-16T06:35:32Z
+parent: ps-ai5y
 ---
 
 AUDIT [SYNC-S-H1] handleSubmitChange verifies envelope signature using envelope.authorPublicKey but never checks it matches the authenticated system's registered signing key. Attacker can submit envelopes claiming any authorPublicKey. File: apps/api/src/ws/handlers.ts

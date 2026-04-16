@@ -1,11 +1,11 @@
 ---
 # api-tc7x
 title: License audit for resend and nodemailer dependencies
-status: done
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-29T04:23:15Z
-updated_at: 2026-03-29T04:23:21Z
+updated_at: 2026-04-16T06:36:06Z
 parent: api-7xw0
 ---
 

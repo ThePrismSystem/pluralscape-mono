@@ -1,10 +1,11 @@
 ---
 # api-ghp5
 title: Friend network E2E tests and OpenAPI
-status: done
+status: completed
 type: feature
+priority: normal
 created_at: 2026-03-26T16:04:19Z
-updated_at: 2026-03-27T00:45:00Z
+updated_at: 2026-04-16T06:36:06Z
 parent: api-rl9o
 blocked_by:
   - api-ivfs

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-04-14T09:28:57Z
-updated_at: 2026-04-14T11:29:40Z
+updated_at: 2026-04-16T06:35:33Z
+parent: ps-ai5y
 ---
 
 AUDIT [CRYPTO-TC-H1] No test vectors for XChaCha20-Poly1305, BLAKE2b, Argon2id, X25519, Ed25519. All tests are round-trip only. Algorithm substitution or parameter error would not be caught.

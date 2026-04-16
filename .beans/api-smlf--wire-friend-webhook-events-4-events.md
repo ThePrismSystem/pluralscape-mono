@@ -1,11 +1,11 @@
 ---
 # api-smlf
 title: Wire friend webhook events (4 events)
-status: done
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-29T02:08:00Z
-updated_at: 2026-03-29T03:03:50Z
+updated_at: 2026-04-16T06:36:07Z
 parent: api-9wze
 blocked_by:
   - api-q642

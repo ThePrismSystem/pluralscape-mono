@@ -1,11 +1,11 @@
 ---
 # ps-al4g
 title: Simply Plural import Plan 3 — mobile glue + E2E
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-08T23:56:02Z
-updated_at: 2026-04-09T04:10:17Z
+updated_at: 2026-04-16T07:13:16Z
 parent: ps-nrg4
 ---
 

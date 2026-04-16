@@ -1,11 +1,11 @@
 ---
 # ps-axyv
 title: SP seed script — first live run against real SP API
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-11T19:36:04Z
-updated_at: 2026-04-11T19:36:04Z
+updated_at: 2026-04-16T07:13:18Z
 parent: ps-nrg4
 blocked_by:
   - ps-2mrz
@@ -37,3 +37,5 @@ Validate:
 - Resolve any empirical unknowns (ToS PATCH body shape, per-entity required fields, probe path edge cases for rarely-used entity types)
 - Re-run to verify idempotency: second run should reuse all entities (planSeed returns empty create list)
 - After operator saves exports, run pnpm test:e2e with SP*TEST*\*\_API_KEY env vars set — E2E ApiSource and FileSource suites should run (currently skipped) and pass
+
+## Summary of Changes\n\nCompleted during beans audit cleanup (2026-04-16). Seed script landed and validated in prior work.

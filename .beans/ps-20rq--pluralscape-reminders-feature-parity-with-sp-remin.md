@@ -5,7 +5,8 @@ status: todo
 type: epic
 priority: normal
 created_at: 2026-04-08T12:07:04Z
-updated_at: 2026-04-08T12:07:04Z
+updated_at: 2026-04-16T06:41:46Z
+parent: ps-lksz
 ---
 
 Add a generic reminders feature to Pluralscape so users can create named one-shot and recurring reminders, closing a parity gap with Simply Plural and PluralKit.

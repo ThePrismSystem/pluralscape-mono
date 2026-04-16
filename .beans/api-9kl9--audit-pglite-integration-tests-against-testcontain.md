@@ -1,11 +1,11 @@
 ---
 # api-9kl9
 title: Audit PGlite integration tests against Testcontainers requirement
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-08T02:08:36Z
-updated_at: 2026-04-08T02:08:36Z
+updated_at: 2026-04-16T06:47:02Z
 ---
 
 PR #399 review flagged that several apps/api/src/**tests**/services/\*.integration.test.ts files labeled as integration tests are using @electric-sql/pglite (WASM Postgres) rather than real production Postgres. The project testing rule in CLAUDE.md requires integration tests to hit real I/O — PGlite is stronger than mocks but does not exercise the postgres-js driver, real connection pooling, or RLS policies as applied by the API auth middleware.

@@ -1,11 +1,11 @@
 ---
 # api-a2x5
 title: Fix friend dashboard review issues
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-28T03:39:32Z
-updated_at: 2026-03-28T04:38:53Z
+updated_at: 2026-04-16T06:41:46Z
 ---
 
 Fix all critical, important, and suggestion issues from multi-model PR review of PR #294 (external dashboard).

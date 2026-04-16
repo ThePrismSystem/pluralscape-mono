@@ -5,8 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-09T05:12:37Z
-updated_at: 2026-04-04T09:23:47Z
-parent: ps-vq2h
+updated_at: 2026-04-16T07:12:59Z
+parent: ps-8coo
 ---
 
 Current RN adapter tests mock react-native-libsodium with libsodium-wrappers-sumo (WASM). This covers logic and crypto correctness but doesn't verify JSI binding compatibility. Add RN-environment tests when Expo test runner or similar is set up.

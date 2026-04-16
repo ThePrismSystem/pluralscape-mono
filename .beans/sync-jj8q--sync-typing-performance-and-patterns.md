@@ -1,0 +1,23 @@
+---
+# sync-jj8q
+title: Sync typing, performance, and patterns
+status: todo
+type: task
+priority: low
+created_at: 2026-04-16T06:58:42Z
+updated_at: 2026-04-16T06:58:42Z
+parent: ps-0enb
+---
+
+Low-severity sync findings from comprehensive audit.
+
+## Findings
+
+- [ ] [SYNC-T-L1] fieldName: string in CrdtStrategy instead of union of field names
+- [ ] [SYNC-T-L2] failedConflictPersistence array not readonly
+- [ ] [SYNC-P-L1] On-demand loader always fetches all changes since seq=0
+- [ ] [SYNC-P-L2] Storage budget eviction sort O(n log n) on every check
+- [ ] [SYNC-P-M1] SYNC_PROTOCOL_VERSION in protocol.ts instead of constants
+- [ ] [SYNC-P-L3] schemas.ts and schemas/ coexist — potential import confusion
+- [ ] [SYNC-TC-L1] Two setTimeout-based timing hacks in hardening tests
+- [ ] [SYNC-TC-L2] Two toBeDefined() assertions without further checks
