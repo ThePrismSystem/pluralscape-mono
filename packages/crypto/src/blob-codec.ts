@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import { AEAD_NONCE_BYTES } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 
@@ -178,7 +180,9 @@ export function deserializeEncryptedBlob(data: Uint8Array): EncryptedBlob {
     if (offset + bucketIdLength > data.length) {
       throw new InvalidInputError("EncryptedBlob buffer truncated: missing bucketId data");
     }
-    bucketId = textDecoder.decode(data.subarray(offset, offset + bucketIdLength)) as BucketId;
+    bucketId = brandId<BucketId>(
+      textDecoder.decode(data.subarray(offset, offset + bucketIdLength)),
+    );
     offset += bucketIdLength;
   }
 

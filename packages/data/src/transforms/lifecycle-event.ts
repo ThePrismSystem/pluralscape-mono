@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import {
   assertObjectBlob,
   decodeAndDecryptT1,
@@ -87,6 +89,16 @@ function metaIds(
   return meta?.[key] ?? [];
 }
 
+function atOrThrow(arr: readonly string[], index: number, label: string): string {
+  const value = arr[index];
+  if (value === undefined) {
+    throw new Error(
+      `lifecycleEvent missing required ${label}[${String(index)}] in plaintextMetadata`,
+    );
+  }
+  return value;
+}
+
 function firstOrThrow(arr: readonly string[], label: string): string {
   const value = arr[0];
   if (value === undefined) {
@@ -140,8 +152,8 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "split" as const,
-        sourceMemberId: ids[0] as MemberId,
-        resultMemberIds: ids.slice(1) as MemberId[],
+        sourceMemberId: brandId<MemberId>(firstOrThrow(ids, "memberIds")),
+        resultMemberIds: ids.slice(1).map((id) => brandId<MemberId>(id)),
       });
     }
     case "fusion": {
@@ -152,43 +164,45 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "fusion" as const,
-        sourceMemberIds: ids.slice(0, -1) as MemberId[],
-        resultMemberId: ids[ids.length - 1] as MemberId,
+        sourceMemberIds: ids.slice(0, -1).map((id) => brandId<MemberId>(id)),
+        resultMemberId: brandId<MemberId>(atOrThrow(ids, ids.length - 1, "memberIds")),
       });
     }
     case "merge":
       return withArchive({
         ...shared,
         eventType: "merge" as const,
-        memberIds: metaIds(meta, "memberIds") as MemberId[],
+        memberIds: metaIds(meta, "memberIds").map((id) => brandId<MemberId>(id)),
       });
     case "unmerge":
       return withArchive({
         ...shared,
         eventType: "unmerge" as const,
-        memberIds: metaIds(meta, "memberIds") as MemberId[],
+        memberIds: metaIds(meta, "memberIds").map((id) => brandId<MemberId>(id)),
       });
     case "dormancy-start":
       return withArchive({
         ...shared,
         eventType: "dormancy-start" as const,
-        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
-        relatedLifecycleEventId:
-          (payload.relatedLifecycleEventId as LifecycleEventId | null) ?? null,
+        memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
+        relatedLifecycleEventId: payload.relatedLifecycleEventId
+          ? brandId<LifecycleEventId>(payload.relatedLifecycleEventId)
+          : null,
       });
     case "dormancy-end":
       return withArchive({
         ...shared,
         eventType: "dormancy-end" as const,
-        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
-        relatedLifecycleEventId:
-          (payload.relatedLifecycleEventId as LifecycleEventId | null) ?? null,
+        memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
+        relatedLifecycleEventId: payload.relatedLifecycleEventId
+          ? brandId<LifecycleEventId>(payload.relatedLifecycleEventId)
+          : null,
       });
     case "discovery":
       return withArchive({
         ...shared,
         eventType: "discovery" as const,
-        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
+        memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
       });
     case "archival": {
       if (payload.entity === undefined) {
@@ -204,17 +218,16 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "structure-entity-formation" as const,
-        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
-        resultStructureEntityId: firstOrThrow(
-          metaIds(meta, "structureIds"),
-          "structureIds",
-        ) as SystemStructureEntityId,
+        memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
+        resultStructureEntityId: brandId<SystemStructureEntityId>(
+          firstOrThrow(metaIds(meta, "structureIds"), "structureIds"),
+        ),
       });
     case "form-change":
       return withArchive({
         ...shared,
         eventType: "form-change" as const,
-        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
+        memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
         previousForm: (payload.previousForm as string | null) ?? null,
         newForm: (payload.newForm as string | null) ?? null,
       });
@@ -227,7 +240,7 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "name-change" as const,
-        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
+        memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
         previousName: (payload.previousName as string | null) ?? null,
         newName: payload.newName,
       });
@@ -237,15 +250,24 @@ export function decryptLifecycleEvent(
       if (sIds.length === 0) {
         throw new Error("lifecycleEvent missing required structureIds in plaintextMetadata");
       }
-      const mId = firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId;
+      const mId = brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds"));
       const fromStructure: EntityReference<"structure-entity"> | null =
         sIds.length >= 2
-          ? { entityType: "structure-entity", entityId: sIds[0] as SystemStructureEntityId }
+          ? {
+              entityType: "structure-entity",
+              entityId: brandId<SystemStructureEntityId>(atOrThrow(sIds, 0, "structureIds")),
+            }
           : null;
       const toStructure: EntityReference<"structure-entity"> =
         sIds.length >= 2
-          ? { entityType: "structure-entity", entityId: sIds[1] as SystemStructureEntityId }
-          : { entityType: "structure-entity", entityId: sIds[0] as SystemStructureEntityId };
+          ? {
+              entityType: "structure-entity",
+              entityId: brandId<SystemStructureEntityId>(atOrThrow(sIds, 1, "structureIds")),
+            }
+          : {
+              entityType: "structure-entity",
+              entityId: brandId<SystemStructureEntityId>(atOrThrow(sIds, 0, "structureIds")),
+            };
       return withArchive({
         ...shared,
         eventType: "structure-move" as const,
@@ -264,17 +286,17 @@ export function decryptLifecycleEvent(
         );
       }
       const fromRegionId: InnerWorldRegionId | null =
-        rIds.length >= 2 ? (rIds[0] as InnerWorldRegionId) : null;
+        rIds.length >= 2 ? brandId<InnerWorldRegionId>(atOrThrow(rIds, 0, "regionIds")) : null;
       const toRegionId: InnerWorldRegionId | null =
         rIds.length >= 2
-          ? (rIds[1] as InnerWorldRegionId)
+          ? brandId<InnerWorldRegionId>(atOrThrow(rIds, 1, "regionIds"))
           : rIds.length === 1
-            ? (rIds[0] as InnerWorldRegionId)
+            ? brandId<InnerWorldRegionId>(atOrThrow(rIds, 0, "regionIds"))
             : null;
       return withArchive({
         ...shared,
         eventType: "innerworld-move" as const,
-        entityId: firstOrThrow(eIds, "entityIds") as InnerWorldEntityId,
+        entityId: brandId<InnerWorldEntityId>(firstOrThrow(eIds, "entityIds")),
         entityType: iwEntityType,
         fromRegionId,
         toRegionId,

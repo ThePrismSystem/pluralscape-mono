@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptGroup } from "@pluralscape/data/transforms/group";
+import { brandId } from "@pluralscape/types";
 
 import { rowToGroup } from "../data/row-transforms/index.js";
 
@@ -143,7 +144,7 @@ export function useAddGroupMembers(): TRPCMutation<
       void utils.group.listMembers.invalidate({ systemId, groupId: variables.groupId });
       void utils.member.listMemberships.invalidate({
         systemId,
-        memberId: variables.memberId as MemberId,
+        memberId: brandId<MemberId>(String(variables.memberId)),
       });
     },
   });
@@ -156,10 +157,13 @@ export function useRemoveGroupMembers(): TRPCMutation<
   return useDomainMutation({
     useMutation: (mutOpts) => trpc.group.removeMember.useMutation(mutOpts),
     onInvalidate: (utils, systemId, _data, variables) => {
-      void utils.group.listMembers.invalidate({ systemId, groupId: variables.groupId as GroupId });
+      void utils.group.listMembers.invalidate({
+        systemId,
+        groupId: brandId<GroupId>(String(variables.groupId)),
+      });
       void utils.member.listMemberships.invalidate({
         systemId,
-        memberId: variables.memberId as MemberId,
+        memberId: brandId<MemberId>(String(variables.memberId)),
       });
     },
   });

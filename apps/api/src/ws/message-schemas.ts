@@ -6,6 +6,7 @@
  */
 import { AEAD_NONCE_BYTES, SIGN_BYTES, SIGN_PUBLIC_KEY_BYTES } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { z } from "zod";
 
 import { SESSION_TOKEN_PATTERN } from "../middleware/middleware.constants.js";
@@ -25,11 +26,11 @@ const correlationId = z.uuid().nullable();
 const docId = z
   .string()
   .min(1)
-  .transform((s): SyncDocumentId => s as SyncDocumentId);
+  .transform((s): SyncDocumentId => brandId<SyncDocumentId>(s));
 const systemId = z
   .string()
   .min(1)
-  .transform((s): SystemId => s as SystemId);
+  .transform((s): SystemId => brandId<SystemId>(s));
 
 /** Pattern for valid base64url characters (RFC 4648 §5). */
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
@@ -82,7 +83,7 @@ const changeWithoutSeq = z.object({
   documentId: z
     .string()
     .min(1)
-    .transform((s): SyncDocumentId => s as SyncDocumentId),
+    .transform((s): SyncDocumentId => brandId<SyncDocumentId>(s)),
 });
 
 /** Full encrypted snapshot envelope. */
@@ -94,7 +95,7 @@ const snapshotEnvelope = z.object({
   documentId: z
     .string()
     .min(1)
-    .transform((s): SyncDocumentId => s as SyncDocumentId),
+    .transform((s): SyncDocumentId => brandId<SyncDocumentId>(s)),
   snapshotVersion: z.number().int().positive(),
 });
 

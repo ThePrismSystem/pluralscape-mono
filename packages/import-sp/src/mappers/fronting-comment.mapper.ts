@@ -6,6 +6,8 @@
  * validateCollection). We resolve that through the translation table and
  * fail the mapping when the session isn't present.
  */
+import { brandId } from "@pluralscape/types";
+
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -39,14 +41,12 @@ export function mapFrontingComment(
   }
 
   // SP comments don't carry their own subject — inherit from the parent session.
-  const sessionMemberId = ctx.getMetadata("fronting-session", sp.documentId, "memberId") as
-    | MemberId
-    | undefined;
-  const sessionCustomFrontId = ctx.getMetadata(
-    "fronting-session",
-    sp.documentId,
-    "customFrontId",
-  ) as CustomFrontId | undefined;
+  const rawMemberId = ctx.getMetadata("fronting-session", sp.documentId, "memberId");
+  const sessionMemberId =
+    rawMemberId !== undefined ? brandId<MemberId>(rawMemberId as string) : undefined;
+  const rawCustomFrontId = ctx.getMetadata("fronting-session", sp.documentId, "customFrontId");
+  const sessionCustomFrontId =
+    rawCustomFrontId !== undefined ? brandId<CustomFrontId>(rawCustomFrontId as string) : undefined;
 
   if (sessionMemberId === undefined && sessionCustomFrontId === undefined) {
     ctx.addWarning({

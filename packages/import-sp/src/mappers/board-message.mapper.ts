@@ -12,6 +12,8 @@
  *   surfaced as a one-time dropped-field warning.
  * - `read` — the single-boolean read flag has no Pluralscape equivalent yet.
  */
+import { brandId } from "@pluralscape/types";
+
 import { warnDropped } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
@@ -68,7 +70,7 @@ export function mapBoardMessage(
 
   const encrypted: BoardMessageEncryptedFields = {
     content,
-    senderId: authorMemberId as MemberId,
+    senderId: brandId<MemberId>(authorMemberId),
   };
 
   const payload: MappedBoardMessage = {

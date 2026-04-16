@@ -4,6 +4,8 @@
  * Follows the same pattern as SqliteStorageAdapter: prepared statements,
  * SqliteDriver abstraction, DDL in constructor.
  */
+import { brandId } from "@pluralscape/types";
+
 import { DRAIN_BATCH_SIZE } from "../sync.constants.js";
 
 import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
@@ -50,9 +52,9 @@ function rowToEntry(row: QueueRow): OfflineQueueEntry {
   const blobs = assertEnvelopeBlobs(row);
   return {
     id: row.id,
-    documentId: row.document_id as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(row.document_id),
     envelope: {
-      documentId: row.document_id as SyncDocumentId,
+      documentId: brandId<SyncDocumentId>(row.document_id),
       ciphertext: toUint8Array(row.ciphertext),
       ...blobs,
     },

@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import { idbRequest, openIdb } from "./indexeddb-utils.js";
 
 import type { EncryptedChangeEnvelope } from "@pluralscape/sync";
@@ -22,9 +24,9 @@ interface QueueRecord {
 function recordToEntry(r: QueueRecord): OfflineQueueEntry {
   return {
     id: r.id,
-    documentId: r.documentId as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(r.documentId),
     envelope: {
-      documentId: r.documentId as SyncDocumentId,
+      documentId: brandId<SyncDocumentId>(r.documentId),
       ciphertext: r.ciphertext,
       nonce: r.nonce as OfflineQueueEntry["envelope"]["nonce"],
       signature: r.signature as OfflineQueueEntry["envelope"]["signature"],

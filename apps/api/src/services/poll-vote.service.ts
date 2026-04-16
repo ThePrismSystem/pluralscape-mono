@@ -35,11 +35,13 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EntityReference,
+  MemberId,
   PaginatedResult,
   PollId,
   PollOptionId,
   PollVoteId,
   SystemId,
+  SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -143,7 +145,10 @@ export async function castVote(
     }
 
     // 5. Cooperative enforcement: count existing votes by this voter
-    const voter = parsed.voter as EntityReference<"member" | "structure-entity">;
+    const voter: EntityReference<"member" | "structure-entity"> = {
+      entityType: parsed.voter.entityType,
+      entityId: brandId<MemberId | SystemStructureEntityId>(parsed.voter.entityId),
+    };
     const [voteCountResult] = await tx
       .select({ count: count() })
       .from(pollVotes)

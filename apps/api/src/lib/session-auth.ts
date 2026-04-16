@@ -1,5 +1,5 @@
 import { accounts, sessions, systems } from "@pluralscape/db/pg";
-import { SESSION_TIMEOUTS, now } from "@pluralscape/types";
+import { SESSION_TIMEOUTS, brandId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { hashSessionToken } from "./session-token.js";
@@ -62,7 +62,7 @@ export async function validateSession(
   }
 
   // Fetch all non-archived system IDs for system accounts (viewers never own systems)
-  const accountId = row.session.accountId as AccountId;
+  const accountId = brandId<AccountId>(row.session.accountId);
   const systemRows =
     row.accountType === "system"
       ? await db
@@ -72,8 +72,8 @@ export async function validateSession(
           .orderBy(systems.createdAt)
       : [];
 
-  const ownedSystemIds = new Set(systemRows.map((r) => r.id as SystemId));
-  const firstSystemId = systemRows[0]?.id as SystemId | undefined;
+  const ownedSystemIds = new Set(systemRows.map((r) => brandId<SystemId>(r.id)));
+  const firstSystemId = systemRows[0] ? brandId<SystemId>(systemRows[0].id) : undefined;
 
   return {
     ok: true,
@@ -81,7 +81,7 @@ export async function validateSession(
       authMethod: "session" as const,
       accountId,
       systemId: firstSystemId ?? null,
-      sessionId: row.session.id as SessionId,
+      sessionId: brandId<SessionId>(row.session.id),
       accountType: row.accountType,
       ownedSystemIds,
       auditLogIpTracking: row.auditLogIpTracking,

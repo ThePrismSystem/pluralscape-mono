@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import {
   assertObjectBlob,
   assertStringField,
@@ -75,8 +77,8 @@ export function decryptRelationship(
   const base = {
     id: raw.id,
     systemId: raw.systemId,
-    sourceMemberId: raw.sourceMemberId as MemberId | null,
-    targetMemberId: raw.targetMemberId as MemberId | null,
+    sourceMemberId: raw.sourceMemberId ? brandId<MemberId>(raw.sourceMemberId) : null,
+    targetMemberId: raw.targetMemberId ? brandId<MemberId>(raw.targetMemberId) : null,
     type: raw.type,
     label,
     bidirectional: raw.bidirectional,

@@ -1,4 +1,5 @@
 import * as Automerge from "@automerge/automerge";
+import { brandId } from "@pluralscape/types";
 
 import { parseDocumentId } from "./document-types.js";
 import { UnsupportedDocumentTypeError } from "./errors.js";
@@ -160,7 +161,9 @@ export function splitDocument<T>(
 
           // Migrate comments belonging to active sessions
           for (const [id, comment] of entityEntries(currentDoc.comments)) {
-            if (activeSessionIds.has(comment.frontingSessionId.toString() as FrontingSessionId)) {
+            if (
+              activeSessionIds.has(brandId<FrontingSessionId>(comment.frontingSessionId.toString()))
+            ) {
               d.comments[id] = comment;
             }
           }

@@ -1,4 +1,4 @@
-import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import type { JobRow } from "@pluralscape/db/sqlite";
 import type { JobDefinition, SystemId } from "@pluralscape/types";
@@ -12,7 +12,7 @@ import type { JobDefinition, SystemId } from "@pluralscape/types";
 export function rowToJob(row: JobRow): JobDefinition {
   return {
     id: row.id,
-    systemId: (row.systemId ?? null) as SystemId | null,
+    systemId: row.systemId ? brandId<SystemId>(row.systemId) : null,
     type: row.type,
     status: row.status,
     payload: (row.payload ?? {}) as Readonly<Record<string, unknown>>,

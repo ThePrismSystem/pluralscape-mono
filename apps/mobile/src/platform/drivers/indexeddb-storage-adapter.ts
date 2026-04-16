@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import { idbRequest, openIdb } from "./indexeddb-utils.js";
 
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "@pluralscape/sync";
@@ -28,7 +30,7 @@ interface ChangeRecord {
 
 function recordToSnapshot(r: SnapshotRecord): EncryptedSnapshotEnvelope {
   return {
-    documentId: r.documentId as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(r.documentId),
     snapshotVersion: r.snapshotVersion,
     ciphertext: r.ciphertext,
     nonce: r.nonce as EncryptedSnapshotEnvelope["nonce"],
@@ -39,7 +41,7 @@ function recordToSnapshot(r: SnapshotRecord): EncryptedSnapshotEnvelope {
 
 function recordToChange(r: ChangeRecord): EncryptedChangeEnvelope {
   return {
-    documentId: r.documentId as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(r.documentId),
     seq: r.seq,
     ciphertext: r.ciphertext,
     nonce: r.nonce as EncryptedChangeEnvelope["nonce"],
@@ -192,7 +194,7 @@ export function createIndexedDbStorageAdapter(
       });
 
       const all = new Set([...snapshotIds, ...changeIds]);
-      return [...all] as SyncDocumentId[];
+      return [...all].map((id) => brandId<SyncDocumentId>(id));
     },
 
     async deleteDocument(documentId: SyncDocumentId): Promise<void> {

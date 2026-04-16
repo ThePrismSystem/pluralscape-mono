@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
@@ -51,7 +53,7 @@ CREATE TABLE IF NOT EXISTS sync_local_changes (
 function rowToEnvelope(row: ChangeRow): EncryptedChangeEnvelope {
   const blobs = assertEnvelopeBlobs(row);
   return {
-    documentId: row.document_id as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(row.document_id),
     seq: row.seq,
     ciphertext: toUint8Array(row.ciphertext),
     ...blobs,
@@ -61,7 +63,7 @@ function rowToEnvelope(row: ChangeRow): EncryptedChangeEnvelope {
 function rowToSnapshot(row: SnapshotRow): EncryptedSnapshotEnvelope {
   const blobs = assertEnvelopeBlobs(row);
   return {
-    documentId: row.document_id as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(row.document_id),
     snapshotVersion: row.snapshot_version,
     ciphertext: toUint8Array(row.ciphertext),
     ...blobs,
@@ -185,7 +187,7 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
 
   listDocuments(): Promise<readonly SyncDocumentId[]> {
     const rows = this.stmts.listDocs.all();
-    return Promise.resolve(rows.map((r) => r.document_id as SyncDocumentId));
+    return Promise.resolve(rows.map((r) => brandId<SyncDocumentId>(r.document_id)));
   }
 
   deleteDocument(documentId: SyncDocumentId): Promise<void> {
