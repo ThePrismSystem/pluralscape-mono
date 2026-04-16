@@ -23,6 +23,19 @@ export const SP_API_BACKOFF_MAX_MS = 16_000;
 /** Default per-request timeout for SP API calls in milliseconds. */
 export const SP_API_REQUEST_TIMEOUT_MS = 30_000;
 
+/** Bytes per mebibyte. */
+const BYTES_PER_MIB = 1_024 * 1_024;
+
+/**
+ * Maximum permitted size of an API response body (50 MiB).
+ *
+ * SP streams entire collections in a single response. Bounding the body size
+ * prevents OOM from unexpectedly large payloads or corrupted Content-Length
+ * headers. 50 MiB accommodates even the largest personal exports while keeping
+ * peak resident memory under control.
+ */
+export const SP_API_MAX_RESPONSE_BYTES = 50 * BYTES_PER_MIB;
+
 // ── SP CustomFieldType numeric enum values ────────────────────────────────────
 // Sourced from SP's `typeConverters` array in
 // `src/api/base/user/generateReports.ts`. Used in the exhaustive switch in

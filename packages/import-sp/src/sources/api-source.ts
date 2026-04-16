@@ -1,6 +1,7 @@
 import {
   SP_API_BACKOFF_BASE_MS,
   SP_API_BACKOFF_MAX_MS,
+  SP_API_MAX_RESPONSE_BYTES,
   SP_API_MAX_RETRIES,
   SP_API_REQUEST_TIMEOUT_MS,
 } from "../import-sp.constants.js";
@@ -251,6 +252,29 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
         throw new ApiSourceTransientError(
           `SP API returned ${String(response.status)} (${response.statusText})`,
         );
+      }
+
+      // Guard against oversized responses to prevent OOM.
+      const contentLength = response.headers.get("Content-Length");
+      if (contentLength !== null) {
+        const declaredBytes = Number(contentLength);
+        if (!Number.isNaN(declaredBytes) && declaredBytes > SP_API_MAX_RESPONSE_BYTES) {
+          throw new ApiSourcePermanentError(
+            `SP API response size ${String(declaredBytes)} bytes exceeds limit of ${String(SP_API_MAX_RESPONSE_BYTES)} bytes`,
+          );
+        }
+      }
+
+      // When Content-Length is absent, read as text and check byte length.
+      if (contentLength === null) {
+        const text = await response.text();
+        const byteLength = new TextEncoder().encode(text).byteLength;
+        if (byteLength > SP_API_MAX_RESPONSE_BYTES) {
+          throw new ApiSourcePermanentError(
+            `SP API response size ${String(byteLength)} bytes exceeds limit of ${String(SP_API_MAX_RESPONSE_BYTES)} bytes`,
+          );
+        }
+        return JSON.parse(text) as unknown;
       }
 
       return (await response.json()) as unknown;

@@ -541,4 +541,92 @@ describe("createApiImportSource", () => {
     const [url] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("https://api.test/v1/notes/sys_abc/m3");
   });
+
+  describe("response size limit", () => {
+    it("rejects responses exceeding MAX_RESPONSE_BYTES via Content-Length header", async () => {
+      const hugeLength = String(51 * 1_024 * 1_024);
+      fetchMock.mockResolvedValueOnce(
+        new Response("[]", {
+          status: 200,
+          headers: { "Content-Length": hugeLength, "Content-Type": "application/json" },
+        }),
+      );
+
+      const source = createApiImportSource(DEFAULT_INPUT);
+      let caught: unknown;
+      try {
+        await drain(source, "members");
+      } catch (err) {
+        caught = err;
+      }
+      await source.close();
+
+      expect(caught).toBeInstanceOf(ApiSourcePermanentError);
+      if (caught instanceof ApiSourcePermanentError) {
+        expect(caught.message).toMatch(/response size/i);
+      }
+    });
+
+    it("rejects responses exceeding MAX_RESPONSE_BYTES when Content-Length is absent (text fallback)", async () => {
+      // Build a body that exceeds 50 MiB. We only need to verify the check
+      // fires, so we mock `response.text()` to return a string whose
+      // `.length` exceeds the limit without actually allocating 50 MiB.
+      const fakeResponse = new Response(null, {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+      // Stub .text() to report oversized content
+      const oversizedText = JSON.stringify({ data: "x".repeat(100) });
+      vi.spyOn(fakeResponse, "text").mockResolvedValue(oversizedText);
+      // Override byte-length calculation: pretend the text is 51 MiB
+      const oversizedByteLength = 51 * 1_024 * 1_024;
+      const originalEncoder = globalThis.TextEncoder;
+      const fakeEncoder = {
+        encode: () => new Uint8Array(oversizedByteLength),
+      };
+      vi.stubGlobal(
+        "TextEncoder",
+        class {
+          encode(input: string): Uint8Array {
+            if (input === oversizedText) return fakeEncoder.encode();
+            return new originalEncoder().encode(input);
+          }
+        },
+      );
+
+      fetchMock.mockResolvedValueOnce(fakeResponse);
+
+      const source = createApiImportSource(DEFAULT_INPUT);
+      let caught: unknown;
+      try {
+        await drain(source, "members");
+      } catch (err) {
+        caught = err;
+      }
+      await source.close();
+
+      expect(caught).toBeInstanceOf(ApiSourcePermanentError);
+      if (caught instanceof ApiSourcePermanentError) {
+        expect(caught.message).toMatch(/response size/i);
+      }
+    });
+
+    it("allows responses within the 50 MiB limit", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify([{ _id: "m1", name: "OK" }]), {
+          status: 200,
+          headers: {
+            "Content-Length": String(49 * 1_024 * 1_024),
+            "Content-Type": "application/json",
+          },
+        }),
+      );
+
+      const source = createApiImportSource(DEFAULT_INPUT);
+      const out = await drain(source, "members");
+      await source.close();
+
+      expect(out).toEqual(["m1"]);
+    });
+  });
 });
