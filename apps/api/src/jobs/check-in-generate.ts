@@ -1,5 +1,5 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId } from "@pluralscape/types";
+import { ID_PREFIXES, MS_PER_SECOND, createId } from "@pluralscape/types";
 import { and, asc, eq, gt, isNull, lte } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
@@ -12,9 +12,6 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Seconds per minute, used to convert interval minutes to milliseconds. */
 const SECONDS_PER_MINUTE = 60;
-
-/** Milliseconds per second. */
-const MS_PER_SECOND = 1000;
 
 /**
  * Compute idempotency key for a timer config + interval window.

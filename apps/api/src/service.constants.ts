@@ -77,9 +77,6 @@ export const WEBHOOK_HOST_THROTTLE_DELAY_MS = 30_000;
 /** Default jitter fraction for backoff (25%). */
 export const WEBHOOK_DEFAULT_JITTER_FRACTION = 0.25;
 
-/** Milliseconds per second, used to convert Date.now() to Unix seconds. */
-export const MS_PER_SECOND = 1_000;
-
 /** Required URL protocol for webhook endpoints in production. */
 export const WEBHOOK_REQUIRED_PROTOCOL = "https://";
 

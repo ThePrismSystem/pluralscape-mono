@@ -4,8 +4,7 @@ const MINUTES_PER_HOUR = 60;
 /** Seconds per minute, used to convert interval minutes to milliseconds. */
 const SECONDS_PER_MINUTE = 60;
 
-/** Milliseconds per second. */
-const MS_PER_SECOND = 1000;
+import { MS_PER_SECOND } from "@pluralscape/types";
 
 /**
  * Compute the next check-in time (as UnixMillis) for a timer config.

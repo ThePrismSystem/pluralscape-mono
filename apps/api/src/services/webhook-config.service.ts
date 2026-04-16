@@ -4,6 +4,7 @@ import { systems, webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import {
   brandId,
   ID_PREFIXES,
+  MS_PER_SECOND,
   createId,
   now,
   toUnixMillis,
@@ -39,7 +40,6 @@ import {
   HTTP_SUCCESS_MAX,
   HTTP_SUCCESS_MIN,
   MAX_PAGE_LIMIT,
-  MS_PER_SECOND,
   WEBHOOK_REQUIRED_PROTOCOL,
   WEBHOOK_SECRET_BYTES,
 } from "../service.constants.js";

@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { getSodium } from "@pluralscape/crypto";
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { MS_PER_SECOND, now } from "@pluralscape/types";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
 import { buildIpPinnedFetchArgs, resolveAndValidateUrl } from "../lib/ip-validation.js";
@@ -11,7 +11,6 @@ import { sendSignedWebhookRequest } from "../lib/webhook-fetch.js";
 import {
   HTTP_SUCCESS_MAX,
   HTTP_SUCCESS_MIN,
-  MS_PER_SECOND,
   WEBHOOK_BASE_BACKOFF_MS,
   WEBHOOK_DEFAULT_JITTER_FRACTION,
   WEBHOOK_HMAC_ALGORITHM,

@@ -1,5 +1,6 @@
-/** Milliseconds per second. */
-export const MS_PER_SECOND = 1000;
+import { MS_PER_SECOND } from "@pluralscape/types";
+
+export { MS_PER_SECOND };
 
 /** Seconds per minute. */
 export const SECONDS_PER_MINUTE = 60;

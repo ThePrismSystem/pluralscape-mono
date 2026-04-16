@@ -10,12 +10,13 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
+import { MS_PER_SECOND } from "@pluralscape/types";
+
 const E2E_PORT = 10_099;
 const HEALTH_POLL_MS = 100;
 const HEALTH_TIMEOUT_MS = 15_000;
 const PG_READY_POLL_MS = 200;
 const PG_READY_TIMEOUT_MS = 30_000;
-const MS_PER_SECOND = 1000;
 const DOCKER_CONTAINER_NAME = "pluralscape-e2e-pg";
 const DOCKER_PG_PORT = 15_432;
 const MINIO_CONTAINER_NAME = "pluralscape-minio-test";

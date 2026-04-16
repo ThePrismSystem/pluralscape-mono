@@ -1,11 +1,10 @@
-import { RATE_LIMITS } from "@pluralscape/types";
+import { MS_PER_SECOND, RATE_LIMITS } from "@pluralscape/types";
 
 import { env } from "../env.js";
 import { HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { isValidIpFormat } from "../lib/ip-validation.js";
 import { logger } from "../lib/logger.js";
 
-import { MS_PER_SECOND } from "./middleware.constants.js";
 import { MemoryRateLimitStore } from "./stores/memory-store.js";
 
 import type { RateLimitStore } from "./rate-limit-store.js";

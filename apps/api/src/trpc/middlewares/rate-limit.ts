@@ -1,4 +1,4 @@
-import { RATE_LIMITS } from "@pluralscape/types";
+import { MS_PER_SECOND, RATE_LIMITS } from "@pluralscape/types";
 import { TRPCError } from "@trpc/server";
 
 import { logger } from "../../lib/logger.js";
@@ -11,8 +11,6 @@ import type { TRPCMiddlewareBuilder } from "@trpc/server";
 
 /** Fallback key when IP is not available. */
 const GLOBAL_KEY = "__global__";
-
-const MS_PER_SECOND = 1_000;
 
 type KeyExtractor = (ctx: Pick<TRPCContext, "auth" | "requestMeta">, input: unknown) => string;
 

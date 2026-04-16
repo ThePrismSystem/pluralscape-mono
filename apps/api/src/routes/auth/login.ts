@@ -1,3 +1,4 @@
+import { MS_PER_SECOND } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { HTTP_TOO_MANY_REQUESTS, HTTP_UNAUTHORIZED } from "../../http.constants.js";
@@ -8,7 +9,6 @@ import { getContextLogger } from "../../lib/logger.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
-import { MS_PER_SECOND } from "../../middleware/middleware.constants.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ACCOUNT_LOGIN_WINDOW_MS } from "../../middleware/stores/account-login-store.js";
 import { LoginThrottledError, loginAccount } from "../../services/auth.service.js";
