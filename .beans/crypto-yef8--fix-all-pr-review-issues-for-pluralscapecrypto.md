@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-09T04:12:55Z
-updated_at: 2026-03-09T04:29:31Z
+updated_at: 2026-04-16T07:29:36Z
+parent: crypto-89v7
 ---
 
 Address 7 important issues and 10 suggestions from multi-model PR review: race conditions, null AD coercion, bare catch blocks, bundler issues, input validation, branded types, missing tests, and more.

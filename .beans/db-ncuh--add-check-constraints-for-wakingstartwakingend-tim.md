@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-11T11:12:20Z
-updated_at: 2026-03-12T23:23:07Z
+updated_at: 2026-04-16T07:29:38Z
+parent: ps-vtws
 ---
 
 wakingStart and wakingEnd columns store time-of-day strings (e.g. '09:00') but lack format validation. Add CHECK constraints to enforce HH:MM format.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-09T01:13:36Z
-updated_at: 2026-03-09T06:05:11Z
+updated_at: 2026-04-16T07:29:42Z
+parent: types-im7i
 ---
 
 These unions are defined in structure.ts but have no consumer type yet.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-21T06:10:16Z
-updated_at: 2026-03-21T06:14:45Z
+updated_at: 2026-04-16T07:29:47Z
+parent: ps-afy4
 ---
 
 Fix all critical, important, and suggestion-level issues from PR 226 review: async close rejection, dispose/close overlap, non-retriable errors, causal skip logging, post-replay race, test strengthening

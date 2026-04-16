@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T17:29:35Z
-updated_at: 2026-03-20T17:43:30Z
+updated_at: 2026-04-16T07:29:46Z
+parent: ps-afy4
 ---
 
 Fix all issues found in PR #201 review: CI action versions, renovate automerge scope, commitlint script, env validation improvements, boolean transforms, middleware env migration, dead test mock removal, and test env mock migration.

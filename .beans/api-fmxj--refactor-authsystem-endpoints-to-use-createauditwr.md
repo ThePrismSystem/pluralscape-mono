@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T08:50:04Z
-updated_at: 2026-03-17T08:59:30Z
+updated_at: 2026-04-16T07:29:43Z
+parent: api-o89k
 ---
 
 Replace extractRequestMeta + writeAuditLog pattern with createAuditWriter factory across 9 route handlers, 4 services, and their tests

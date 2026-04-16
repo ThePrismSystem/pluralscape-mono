@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: critical
 created_at: 2026-03-13T13:20:58Z
-updated_at: 2026-03-13T13:28:40Z
+updated_at: 2026-04-16T07:29:37Z
+parent: db-2nr7
 ---
 
 Generate applyAllRls() that iterates RLS_TABLE_POLICIES and applies generateRlsStatements() per table. Create CLI script, static migration, test helpers, and integration tests verifying all tables have policies in pg_policies.

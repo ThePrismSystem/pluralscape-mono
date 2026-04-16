@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-03-30T02:39:28Z
-updated_at: 2026-03-30T03:07:11Z
+updated_at: 2026-04-16T07:29:50Z
+parent: ps-n8uk
 ---
 
 CI fails: branch coverage is 83.17%, threshold is 85%. Need service-level unit tests for new 0% coverage services (structure-entity, api-key, friend-dashboard-sync, account-pin) and branch gap tests for partially-covered services (device-token, poll-vote, lifecycle-event, field-value).

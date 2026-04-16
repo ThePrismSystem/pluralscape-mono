@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-04-03T05:10:36Z
-updated_at: 2026-04-03T06:42:45Z
+updated_at: 2026-04-16T07:29:52Z
+parent: ps-7j8n
 ---
 
 initTRPC.create() in trpc.ts has no errorFormatter. Clients receive generic validation messages without field-level details. Must add errorFormatter that checks `error.cause instanceof ZodError` and returns `error.cause.flatten()` in `shape.data.zodError`.

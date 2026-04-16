@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-24T15:29:03Z
-updated_at: 2026-03-24T15:39:37Z
+updated_at: 2026-04-16T07:29:48Z
+parent: ps-mmpz
 ---
 
 Mark M4 completed, update README/CHANGELOG/milestones/db-schema/api-limits, add test coverage section, remove pr_diff.patch, create /update-docs skill

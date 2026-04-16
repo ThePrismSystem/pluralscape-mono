@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-03-20T12:18:41Z
-updated_at: 2026-03-20T12:39:02Z
+updated_at: 2026-04-16T07:29:45Z
+parent: ps-afy4
 ---
 
 Device-transfer: migration missing code_salt, code_attempts columns and wrong nullability on target_session_id. Sync dedup: EncryptedRelay.submit() lacks nonce-based dedup.

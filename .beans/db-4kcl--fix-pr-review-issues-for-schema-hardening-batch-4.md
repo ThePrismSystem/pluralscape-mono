@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T11:49:27Z
-updated_at: 2026-03-12T11:55:12Z
+updated_at: 2026-04-16T07:29:37Z
+parent: db-2nr7
 ---
 
 Address 2 critical bugs, 8 important issues, and 5 suggestions from PR #75 review. Includes: parseSearchableEntityType validation, dead export removal, VARCHAR fix, rebuildSearchIndex fix, GIN sargability fix with PGlite trigger, limit clamping, result mapping validation, doc fixes, and RLS test coverage.

@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-03-27T21:11:56Z
-updated_at: 2026-03-27T21:15:08Z
+updated_at: 2026-04-16T07:29:49Z
+parent: ps-6itw
 ---
 
 Persistent 'Connection is closed' unhandled rejections from ioredis during test teardown. Root cause: fetchWorker (BullMQ Worker with autorun:false) is eagerly created in BullMQJobQueue constructor, starting ioredis connections that may never be used. When close() is called before connections settle, pending commands are rejected. Fix: lazy fetchWorker, error event listeners, and test teardown hardening.

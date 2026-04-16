@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-21T09:32:51Z
-updated_at: 2026-03-21T09:48:07Z
+updated_at: 2026-04-16T07:29:46Z
+parent: ps-afy4
 ---
 
 Update milestones.md, README.md, CHANGELOG.md, and roadmap.md to reflect M3 completion. Mark M2/M3 as completed, update test counts, coverage numbers, ADR count, add M2+M3 CHANGELOG sections, regenerate roadmap.

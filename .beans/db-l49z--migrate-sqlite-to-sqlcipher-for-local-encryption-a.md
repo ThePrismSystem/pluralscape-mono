@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-12T11:20:43Z
-updated_at: 2026-03-13T13:46:38Z
+updated_at: 2026-04-16T07:29:38Z
+parent: ps-vtws
 ---
 
 Migrated from better-sqlite3 to better-sqlite3-multiple-ciphers for SQLCipher encryption-at-rest support. Per ADR 006, production and mobile deployments encrypt the local SQLite database at rest via SQLITE_ENCRYPTION_KEY env var.

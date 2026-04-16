@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-03-22T01:30:48Z
-updated_at: 2026-03-22T10:03:46Z
+updated_at: 2026-04-16T07:29:48Z
+parent: ps-mmpz
 ---
 
 Replace 9 rigid structure tables (subsystems, side_systems, layers + 3 membership junctions + 3 cross-link junctions) with generic entity model. Expand custom fields to support groups and structure entity types. Add structure entities as fronting session subjects. 3-PR series: types, db, sync.

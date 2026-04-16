@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-24T16:23:05Z
-updated_at: 2026-03-24T20:01:11Z
+updated_at: 2026-04-16T07:29:49Z
+parent: ps-106o
 ---
 
 Add account-level setting (audit_log_ip_tracking, default false) to control whether IP address and user-agent are persisted in audit log entries. Includes API endpoint, schema change, AuthContext propagation, and conditional audit writer logic.

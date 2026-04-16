@@ -3,8 +3,10 @@
 title: Central scope registry with fail-closed API key enforcement
 status: completed
 type: task
+priority: normal
 created_at: 2026-04-07T00:01:24Z
-updated_at: 2026-04-07T00:01:24Z
+updated_at: 2026-04-16T07:29:53Z
+parent: ps-h2gl
 ---
 
 Refactor per-route/per-procedure scope enforcement into a central scope registry with fail-closed behavior. If a new endpoint is added without a scope mapping, API key requests are rejected with 403 before the handler executes. Session auth is unaffected.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T01:39:46Z
-updated_at: 2026-03-13T00:05:55Z
+updated_at: 2026-04-16T07:29:36Z
+parent: ps-vtws
 ---
 
 systemSettings PK changed from systemId to id, and littlesSafeModeEnabled moved to encrypted data. Migration path for existing rows needs documentation before the schema ships.

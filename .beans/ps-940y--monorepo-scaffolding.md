@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T08:35:12Z
-updated_at: 2026-03-08T08:51:22Z
+updated_at: 2026-04-16T07:29:40Z
+parent: ps-vtws
 ---
 
 Scaffold complete monorepo: workspace config, tooling packages, shared packages, apps, and git hooks

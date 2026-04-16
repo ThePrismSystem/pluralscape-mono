@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T01:31:16Z
-updated_at: 2026-03-17T03:06:27Z
+updated_at: 2026-04-16T07:29:44Z
+parent: ps-rdqo
 ---
 
 Audit all onDelete configurations across DB tables to verify cascade/restrict/set-null behavior matches intended data lifecycle. Ensure hard deletes, soft deletes, and archive patterns are consistent and won't cause unintended data loss.

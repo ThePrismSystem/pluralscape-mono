@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-14T05:03:35Z
-updated_at: 2026-03-14T05:06:27Z
+updated_at: 2026-04-16T07:29:40Z
+parent: ps-vtws
 ---
 
 Update README, CHANGELOG, database-schema, and milestones docs to reflect current project state: 2889 tests, 22 ADRs, entity archival, launch features, coverage numbers, and consistency fixes.

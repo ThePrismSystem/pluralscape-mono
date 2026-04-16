@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-11T02:06:57Z
-updated_at: 2026-03-11T02:31:54Z
+updated_at: 2026-04-16T07:29:39Z
+parent: ps-vtws
 ---
 
 Address 26 issues found in multi-model PR review across 7 phases: types/helpers, SQLite constraints, PG schema fixes, view/query helper fixes, FTS5 search, test DDL updates, test code fixes.

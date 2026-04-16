@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-19T23:39:15Z
-updated_at: 2026-03-19T23:51:55Z
+updated_at: 2026-04-16T07:29:45Z
+parent: ps-afy4
 ---
 
 Address all 17 review findings from PR #192: 2 critical protocol bugs, 9 important issues, 6 suggestions. Covers ws.utils, message-schemas, sliding-window-counter, connection-state, connection-manager, message-router, index, handlers, broadcast, auth-handler, origin-validation, valkey-pubsub.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T03:25:35Z
-updated_at: 2026-03-17T03:26:49Z
+updated_at: 2026-04-16T07:29:43Z
+parent: ps-rdqo
 ---
 
 Fix 3 critical schema issues (PG onDelete divergences, inverted comment), add audit log SET NULL exception comments, and add deletion pattern sections to 6 epic beans

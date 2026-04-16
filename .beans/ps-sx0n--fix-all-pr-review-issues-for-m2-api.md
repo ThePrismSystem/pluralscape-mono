@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-17T22:12:06Z
-updated_at: 2026-03-17T22:28:02Z
+updated_at: 2026-04-16T07:29:44Z
+parent: ps-rdqo
 ---
 
 Address 12 PR review items: extract shared helpers, fix TOCTOU race, add unique index on tokenHash, require current PIN for removal, worker thread offload for PIN hashing, fix optional field handling, fix verifyPinCode error differentiation, add route tests, add blob validation tests

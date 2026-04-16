@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-24T23:26:27Z
-updated_at: 2026-03-24T23:54:13Z
+updated_at: 2026-04-16T07:29:49Z
+parent: ps-53up
 ---
 
 Fix all issues from PR review of security audit remediation: add withTenantRead/withAccountRead helpers, move S3 calls out of transactions, add tests for 9 untested security fixes, explicit headers, dedup WS code, optimize session eviction, add biometric index, document throttle asymmetry

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-03T05:43:12Z
-updated_at: 2026-04-03T06:42:56Z
+updated_at: 2026-04-16T07:29:52Z
+parent: ps-y621
 ---
 
 Execute the 9-task remediation plan from docs/superpowers/plans/2026-04-03-trpc-audit-remediation.md

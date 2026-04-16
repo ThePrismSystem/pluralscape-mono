@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-15T20:05:47Z
-updated_at: 2026-03-15T20:46:31Z
+updated_at: 2026-04-16T07:29:39Z
+parent: ps-vtws
 ---
 
 Address 4 critical, 9 important, and 11 suggestion findings from PR #118 multi-agent review. 8 sequential commits covering: logger/empty-catches/fireHook (C2,C3,I8), idempotency TTL (C1), retry attempts reset (C4), performance/resilience (I5,I10,I11), worker fixes (I7,I9,I12,I13), type refinements (S17,S18,S24), dead code/tests/observability (S14,S15,S20,S21), backoff jitter/asPromise (S22,S23).

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-16T04:12:40Z
-updated_at: 2026-03-16T04:17:51Z
+updated_at: 2026-04-16T07:29:36Z
+parent: infra-o80c
 ---
 
 Address all 15 findings from PR #133 review: extract shared constants, discriminated unions, assertion functions, BLAKE2b naming fix, stream deserialization hardening, delete download-pipeline, simplify bytesToHex, MIME normalization, tighten ThumbnailResult, typed errors, update exports, add missing tests.

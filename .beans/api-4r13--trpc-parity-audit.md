@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-02T09:33:10Z
-updated_at: 2026-04-02T09:47:45Z
+updated_at: 2026-04-16T07:29:50Z
+parent: api-kjyg
 ---
 
 Audit all 15 domains for tRPC/REST parity. Produce report at docs/local-audits/trpc-parity-audit.md and create beans for each gap found. See docs/superpowers/specs/2026-04-02-trpc-parity-audit-design.md

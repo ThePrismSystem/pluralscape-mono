@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-16T03:30:56Z
-updated_at: 2026-04-16T03:31:00Z
+updated_at: 2026-04-16T07:29:55Z
+parent: ps-0w7l
 ---
 
 Fixes from zero-knowledge compliance audit (2026-04-15):

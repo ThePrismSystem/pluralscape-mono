@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-17T02:23:27Z
-updated_at: 2026-03-17T02:33:49Z
+updated_at: 2026-04-16T07:29:42Z
+parent: ps-rdqo
 ---
 
 Address all 16 review findings from PR #147 (system profile CRUD): shared HTTP constants, ZodError handling, extractRequestMeta helper, soft-delete, version increment, transactions, branded types, test updates

@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-04-06T00:52:03Z
-updated_at: 2026-04-06T11:22:34Z
+updated_at: 2026-04-16T07:29:53Z
+parent: ps-7j8n
 ---
 
 Remediate all 80 findings from the M8 comprehensive audit (docs/local-audits/m8-comprehensive-audit.md). Organized by priority tier.

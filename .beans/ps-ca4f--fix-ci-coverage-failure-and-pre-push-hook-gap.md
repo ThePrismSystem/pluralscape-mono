@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: critical
 created_at: 2026-03-09T05:07:40Z
-updated_at: 2026-03-09T05:12:59Z
+updated_at: 2026-04-16T07:29:40Z
+parent: ps-vtws
 ---
 
 CI fails on unit-tests job because global coverage (73.75% lines) is below 80% threshold. Root causes: type-only files at 0%, untested RN adapter, minor gaps in wasm-adapter and sodium init error path. Pre-push hook also doesn't run tests.

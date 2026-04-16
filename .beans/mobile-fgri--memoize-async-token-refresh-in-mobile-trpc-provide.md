@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-03T05:10:54Z
-updated_at: 2026-04-03T06:42:46Z
+updated_at: 2026-04-16T07:29:53Z
+parent: ps-7j8n
 ---
 
 trpc-provider.tsx:31 — headers() is async and calls await getToken() on every request with no caching. Concurrent requests each independently refresh tokens. React Query's isFetching can get stuck per the tRPC auth skill's documented race condition.

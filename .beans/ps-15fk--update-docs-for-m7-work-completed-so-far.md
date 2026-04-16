@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-29T12:35:44Z
-updated_at: 2026-03-29T12:43:13Z
+updated_at: 2026-04-16T07:29:52Z
+parent: ps-n8uk
 ---
 
 Update README, CHANGELOG, milestones, database-schema, CLAUDE.md to reflect M7 email/webhook work, new ADRs 029-030, email package, audit remediation

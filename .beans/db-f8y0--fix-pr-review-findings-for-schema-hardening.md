@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-13T15:27:48Z
-updated_at: 2026-03-13T19:42:58Z
+updated_at: 2026-04-16T07:29:37Z
+parent: db-2nr7
 ---
 
 Address all critical, important issues and suggestions from PR #85 review: composite FK for customFrontId, cross-tenant tests, view join regression test, deployment guard wiring, DEPLOYMENT_MODE env handling, type narrowing, test cleanup

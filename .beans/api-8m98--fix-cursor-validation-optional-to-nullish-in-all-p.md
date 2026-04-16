@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: critical
 created_at: 2026-04-03T05:10:35Z
-updated_at: 2026-04-03T06:42:45Z
+updated_at: 2026-04-16T07:29:52Z
+parent: ps-7j8n
 ---
 
 20+ routers use `cursor: z.string().optional()` for pagination. React Query passes `cursor: undefined` during invalidation refetch, which can fail validation. Must change to `.nullish()` per tRPC validators skill.

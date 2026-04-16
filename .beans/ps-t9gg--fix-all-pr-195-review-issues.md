@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T02:49:41Z
-updated_at: 2026-03-20T03:34:31Z
+updated_at: 2026-04-16T07:29:47Z
+parent: ps-afy4
 ---
 
 Address all critical, important, and suggested fixes from the multi-model PR #195 review: DB schema signature columns, PgSyncRelayService fixes, type unification, interface changes, WsNetworkAdapter hardening, SqliteStorageAdapter fixes, SyncEngine critical fixes and suggestions, WS handler error handling, and test coverage.

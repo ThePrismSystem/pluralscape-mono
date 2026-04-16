@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-23T03:07:17Z
-updated_at: 2026-03-23T04:05:32Z
+updated_at: 2026-04-16T07:29:48Z
+parent: ps-mmpz
 ---
 
 Address all review findings from PR #242: critical DB audit enum bug, 409 CONFLICT for wrong-state archive/restore, missing tests, migration regeneration, and minor fixes.

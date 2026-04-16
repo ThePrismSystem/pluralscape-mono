@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-19T22:17:31Z
-updated_at: 2026-03-19T22:36:38Z
+updated_at: 2026-04-16T07:29:45Z
+parent: api-fh4u
 ---
 
 Address all 3 critical, 19 important, and 17 suggestion-level issues from PR #192 review across correctness, security, type safety, test coverage, and code quality. Steps 1-11 covering shared utilities, constants, relay fixes, crypto exports, schema validation, connection manager safety, auth handler hardening, message router fixes, broadcast/pubsub fixes, origin validation, and E2E tests.

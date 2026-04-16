@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T02:46:20Z
-updated_at: 2026-03-20T03:06:53Z
+updated_at: 2026-04-16T07:29:46Z
+parent: ps-afy4
 ---
 
 Implement all fixes from multi-model review of sync infrastructure PR #196: signature columns, lastSeq on snapshots, PgSyncRelayService correctness, WsNetworkAdapter fixes, SyncEngine fixes, compaction handler fixes, type consolidation, and test updates.

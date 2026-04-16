@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T02:48:49Z
-updated_at: 2026-03-20T03:32:18Z
+updated_at: 2026-04-16T07:29:47Z
+parent: ps-afy4
 ---
 
 Implement all 8 commits from the PR #193 review plan: signature columns, async/manifest fixes, dedup/TOCTOU, error handling, parallel reads, type consolidation, stale job removal, integration tests

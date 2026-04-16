@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-04-06T13:19:53Z
-updated_at: 2026-04-06T13:20:14Z
+updated_at: 2026-04-16T07:29:55Z
+parent: ps-h2gl
 ---
 
 CI fails on extract coverage data step because coverage-summary.json is missing (json-summary reporter not configured). Also bump schneegans/dynamic-badges-action from v1.7.0 to v1.8.0.

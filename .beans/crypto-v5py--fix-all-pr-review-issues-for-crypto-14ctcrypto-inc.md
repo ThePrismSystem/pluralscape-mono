@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-15T05:13:39Z
-updated_at: 2026-03-15T05:21:57Z
+updated_at: 2026-04-16T07:29:36Z
+parent: crypto-89v7
 ---
 
 Fix all 19 issues (3 critical, 9 important, 7 suggested) from PR #114 review across 8 files: errors.ts, lifecycle-types.ts, index.ts, NativeMemzeroModule.kt, NativeMemzeroModule.swift, key-lifecycle.test.ts, key-lifecycle.ts, native-memzero/src/index.ts

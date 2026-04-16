@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T20:22:55Z
-updated_at: 2026-03-13T13:35:25Z
+updated_at: 2026-04-16T07:29:36Z
+parent: ps-vtws
 ---
 
 API layer must gate writes to search_index based on deployment mode. ADR 018 already states this; the schema audit flagged the missing implementation. Enforce at the API layer, not the DB.

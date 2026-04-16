@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-11T03:08:35Z
-updated_at: 2026-03-11T03:30:23Z
+updated_at: 2026-04-16T07:29:37Z
+parent: ps-vtws
 ---
 
 Address all critical bugs, important issues, and suggestions found in multi-model PR review of PR #57 (docs/db-dialect-strategy). Includes: narrow view types, add CHECK constraints, fix friend request filter direction, fix webhook retry filter, fix FTS5 injection, fix PG type alias, update tests, update docs.

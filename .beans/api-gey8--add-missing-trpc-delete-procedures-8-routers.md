@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-02T09:47:09Z
-updated_at: 2026-04-02T10:56:43Z
+updated_at: 2026-04-16T07:29:50Z
+parent: ps-n8uk
 ---
 
 Add permanent delete procedures missing from 8 tRPC routers:

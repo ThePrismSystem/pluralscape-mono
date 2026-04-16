@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T11:36:43Z
-updated_at: 2026-03-20T11:57:57Z
+updated_at: 2026-04-16T07:29:47Z
+parent: sync-p1uq
 ---
 
 Implement all fixes from multi-model review: types, adapter fixes, PostMergeValidator refactor, OfflineQueueManager causal ordering, SyncEngine integration, cleanup job extension, and test improvements across 20 files.

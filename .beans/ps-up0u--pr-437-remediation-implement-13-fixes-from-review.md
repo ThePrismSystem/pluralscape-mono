@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-04-14T20:31:10Z
-updated_at: 2026-04-14T20:57:28Z
+updated_at: 2026-04-16T07:29:55Z
+parent: ps-h2gl
 ---
 
 Execute implementation plan for 13 fixes identified during PR review. See docs/superpowers/plans/2026-04-14-pr437-remediation.md

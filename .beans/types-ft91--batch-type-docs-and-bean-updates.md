@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-09T10:48:00Z
-updated_at: 2026-03-09T11:06:00Z
+updated_at: 2026-04-16T07:29:42Z
+parent: types-im7i
 ---
 
 Close ~20 gaps between type definitions/docs and feature requirements: member images, notifications, fronting comments, structure enhancements, innerworld linking, new lifecycle events, poll overhaul, friend visibility, saturation levels, tag expansion, nomenclature categories

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T06:08:06Z
-updated_at: 2026-03-17T06:08:22Z
+updated_at: 2026-04-16T07:29:43Z
+parent: ps-rdqo
 ---
 
 Address 10 review issues from PR #150: type-safe parseIdParam via IdPrefixBrandMap, limit validation in list route, branded service params, toCursor helper, simplified tests, benchmark failure counter, and migration regen.

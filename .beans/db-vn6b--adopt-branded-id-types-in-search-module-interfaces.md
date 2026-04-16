@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T11:54:24Z
-updated_at: 2026-03-12T23:58:35Z
+updated_at: 2026-04-16T07:29:39Z
+parent: ps-vtws
 ---
 
 The schema layer (packages/db/src/schema/) consistently uses plain string for IDs. Adopting branded types (SystemId, etc.) in the search interfaces (both PG and SQLite) would require changes across both dialects and all callers. This is a cross-cutting change best tracked separately.

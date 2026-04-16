@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T20:23:02Z
-updated_at: 2026-03-13T00:07:09Z
+updated_at: 2026-04-16T07:29:37Z
+parent: ps-vtws
 ---
 
 Document how self-hosted deployments should handle message archival in SQLite. PG uses partitioned tables for messages; SQLite needs a different strategy. Covers finding S2 from audit 004.

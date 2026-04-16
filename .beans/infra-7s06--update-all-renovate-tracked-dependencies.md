@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-10T14:11:35Z
-updated_at: 2026-04-10T14:38:00Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-h2gl
 ---
 
 Update all dependencies from Renovate dashboard issue #203 and incorporate PR #388 docker digest. Run full verification + pnpm audit.

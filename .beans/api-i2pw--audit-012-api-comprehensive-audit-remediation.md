@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-03-18T07:12:32Z
-updated_at: 2026-03-18T09:48:49Z
+updated_at: 2026-04-16T07:29:43Z
+parent: ps-rdqo
 ---
 
 Track all remediation work from the comprehensive pre-M3 API audit (docs/audits/012-api-comprehensive-audit.md). Covers critical runtime fixes, security hardening, feature gaps, code quality, and test coverage.

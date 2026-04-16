@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-14T09:29:32Z
-updated_at: 2026-04-14T14:53:35Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-h2gl
 ---
 
 AUDIT [DATA-S-M1] assertMemberEncryptedFields only validates name and pronouns. All other fields trusted without validation after decryption. Same in group.ts (name only) and custom-front.ts (object-ness only). Corrupted blob silently produces undefined values.

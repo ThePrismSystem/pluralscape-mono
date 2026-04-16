@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T04:44:41Z
-updated_at: 2026-03-20T04:49:59Z
+updated_at: 2026-04-16T07:29:46Z
+parent: ps-afy4
 ---
 
 Address 2 critical, 7 important, and 6 suggestion-level issues from PR review. Steps: null standardization, RLS policy fix, try/catch handlers, WsNetworkAdapter refactors, SqliteStorageAdapter async, EncryptedRelay.asService, parameterized SQL, blank line cleanup.

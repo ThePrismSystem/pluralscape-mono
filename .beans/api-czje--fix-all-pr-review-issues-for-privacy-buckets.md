@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-26T21:08:53Z
-updated_at: 2026-03-26T21:40:23Z
+updated_at: 2026-04-16T07:29:49Z
+parent: api-e3hk
 ---
 
 Address all 19 issues from multi-model PR review: missing DB enums, parseQuery misuse, phantom audit events, missing webhooks, dead code, unsafe casts, missing integration/E2E tests

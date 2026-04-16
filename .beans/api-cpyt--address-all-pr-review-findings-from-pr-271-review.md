@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T02:18:13Z
-updated_at: 2026-03-25T02:27:50Z
+updated_at: 2026-04-16T07:29:49Z
+parent: ps-53up
 ---
 
 Fix critical timing oracle in loginAccount, consolidate duplicate equalizeAntiEnumTiming, fix biometric audit rollback, add fail-closed logging, normalize tenantCtx usage across 15 services, inline rls-context helpers, and add missing tests.

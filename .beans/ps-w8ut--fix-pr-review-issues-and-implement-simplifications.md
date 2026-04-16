@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T22:07:41Z
-updated_at: 2026-03-17T22:26:07Z
+updated_at: 2026-04-16T07:29:44Z
+parent: ps-rdqo
 ---
 
 Addresses 3 critical bugs, 7 important issues, and 10 simplification suggestions from PR review of Groups + Custom Fronts feature

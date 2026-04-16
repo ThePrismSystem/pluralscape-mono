@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T22:13:40Z
-updated_at: 2026-03-08T23:19:07Z
+updated_at: 2026-04-16T07:29:40Z
+parent: ps-jvnm
 ---
 
 Address 15 issues from multi-model PR review: fix error swallowing in withTestTransaction, export TestDatabase type, simplify factories, consolidate vitest config, fix coverage gap, and minor fixes.

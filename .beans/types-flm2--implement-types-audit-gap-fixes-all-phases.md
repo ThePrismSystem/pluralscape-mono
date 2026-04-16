@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-09T08:47:50Z
-updated_at: 2026-03-09T08:55:30Z
+updated_at: 2026-04-16T07:29:42Z
+parent: db-hcgk
 ---
 
 Implement all 24 gap fixes from the types-vs-features audit across 3 phases: 6 critical, 13 moderate, 5 minor.

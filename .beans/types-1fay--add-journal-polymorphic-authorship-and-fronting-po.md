@@ -3,8 +3,10 @@
 title: Add journal polymorphic authorship and fronting positionality
 status: completed
 type: task
+priority: normal
 created_at: 2026-03-09T11:09:44Z
-updated_at: 2026-03-09T11:09:44Z
+updated_at: 2026-04-16T07:29:41Z
+parent: types-im7i
 ---
 
 Journal entries can be authored by members or structure entities (subsystems, side systems, layers). Add positionality text field to fronting sessions.

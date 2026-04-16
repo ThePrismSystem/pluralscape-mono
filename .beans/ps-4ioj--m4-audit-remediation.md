@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-03-24T09:20:57Z
-updated_at: 2026-04-16T06:21:15Z
+updated_at: 2026-04-16T07:29:48Z
+parent: ps-mmpz
 ---
 
 Address must-fix and should-fix findings from the M4 comprehensive audit. 12 items: 4 critical/high data integrity + security, 8 should-fix performance/quality/testing.

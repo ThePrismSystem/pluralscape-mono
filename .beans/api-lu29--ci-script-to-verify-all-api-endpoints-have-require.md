@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T18:37:34Z
-updated_at: 2026-04-07T00:01:00Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-9ujv
 ---
 
 Create a CI check that verifies every REST route and tRPC procedure has all required security middleware applied: auth gating, rate limiting, API key scope enforcement, idempotency (for mutations). Should fail CI if any endpoint is missing a required middleware layer. Follow-up from api-u998 (scope enforcement).

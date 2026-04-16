@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-14T08:04:00Z
-updated_at: 2026-03-14T08:51:29Z
+updated_at: 2026-04-16T07:29:36Z
+parent: crypto-89v7
 ---
 
 Address 6 implementation fixes, 4 test additions, 1 shared helper, and 2 follow-up beans from PR #106 review.

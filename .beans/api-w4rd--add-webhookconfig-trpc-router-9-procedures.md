@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-04-02T09:47:02Z
-updated_at: 2026-04-02T10:56:38Z
+updated_at: 2026-04-16T07:29:51Z
+parent: api-7xw0
 ---
 
 Create webhookConfigRouter with 9 procedures matching REST /webhook-configs/\* endpoints. Uses systemProcedure. Procedures: list, get, create, update, delete, archive, restore, rotateSecret, test. See audit Domain 15.

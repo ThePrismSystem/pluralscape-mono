@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-09T21:39:32Z
-updated_at: 2026-03-09T21:40:01Z
+updated_at: 2026-04-16T07:29:41Z
+parent: sync-mxeg
 ---
 
 Address 2 critical, 5 important, and 8 suggestion-level issues from PR review of feat/encrypted-crdt-relay-poc. Key fixes: TextEncoder for AEAD associated data (was silently truncating non-ASCII), atomic rollback in applyEncryptedChanges, snapshot version monotonicity, defensive copy in inspectStorage, MemberProfile moved to test-local, re-exports removed.

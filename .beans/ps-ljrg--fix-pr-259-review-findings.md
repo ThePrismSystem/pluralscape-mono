@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-24T06:10:13Z
-updated_at: 2026-03-24T06:38:47Z
+updated_at: 2026-04-16T07:29:48Z
+parent: ps-mmpz
 ---
 
 Fix all critical/important issues and suggestions from PR review: connOpts auth options, exec error visibility, biometric_tokens RLS, filter assertions, webhook-config over-mocking, shared crypto mock, redundant mockClear, thin test assertions, bean completion.

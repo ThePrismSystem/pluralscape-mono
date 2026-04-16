@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-03T01:08:32Z
-updated_at: 2026-04-03T01:17:51Z
+updated_at: 2026-04-16T07:29:52Z
+parent: ps-n8uk
 ---
 
 Complete /update-docs pass: mark M7 complete, add tRPC parity as final M7 entries, update all stale docs, groom M8 beans. Triggered before mobile app starts consuming tRPC endpoints.

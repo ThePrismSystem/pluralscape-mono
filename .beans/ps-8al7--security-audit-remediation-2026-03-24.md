@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: high
 created_at: 2026-03-24T21:48:36Z
-updated_at: 2026-03-24T22:43:25Z
+updated_at: 2026-04-16T07:29:49Z
+parent: ps-53up
 ---
 
 Address all 12 findings from the 2026-03-24 STRIDE/OWASP security audit. Report: security/260324-2124-stride-owasp-full-audit/overview.md

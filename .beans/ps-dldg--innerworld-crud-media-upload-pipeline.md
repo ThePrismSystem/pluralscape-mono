@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-03-18T00:10:44Z
-updated_at: 2026-03-18T01:19:22Z
+updated_at: 2026-04-16T07:29:44Z
+parent: ps-rdqo
 ---
 
 Implement 6 tasks across 2 epics: innerworld CRUD (canvas, regions, entities) and blob upload pipeline (presigned URLs, confirmation, download/delete)

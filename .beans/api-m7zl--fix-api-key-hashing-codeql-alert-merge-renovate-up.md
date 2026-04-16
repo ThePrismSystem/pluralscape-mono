@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-07T01:56:26Z
-updated_at: 2026-04-07T02:05:00Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-h2gl
 ---
 
 Change API key token hashing from plain SHA-256 to HMAC-SHA256 with server-side key to resolve CodeQL js/insufficient-password-hash alert. Also merge Renovate PRs #393 (AWS SDK) and #394 (vitest-mock-extended v4).

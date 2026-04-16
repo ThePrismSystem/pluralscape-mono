@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-22T03:01:53Z
-updated_at: 2026-03-22T03:25:18Z
+updated_at: 2026-04-16T07:29:48Z
+parent: db-rsn2
 ---
 
 Fix critical/important issues and implement suggestions from multi-model PR review of PR #236. Covers: Archived type bug, orphan cleanup, validation mismatches, audit events, views, sync schemas, JSDoc, linkedStructure removal, Client type aliases, SubsystemFormationEvent rename, FieldDefinitionScopeType simplification, new DB tables.

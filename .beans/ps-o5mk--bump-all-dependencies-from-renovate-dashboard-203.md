@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T21:47:46Z
-updated_at: 2026-03-20T22:05:16Z
+updated_at: 2026-04-16T07:29:46Z
+parent: ps-afy4
 ---
 
 Remove deprecated @types/libsodium-wrappers-sumo, bump pnpm 9.15.9, tRPC 11.14.0, pino v10, react-i18next v16, pglite 0.4, ioredis 5.10.1, @types/node v24, hono 4.12.8, widen eslint peer dep, and run pnpm install to pick up all lockfile-only updates.

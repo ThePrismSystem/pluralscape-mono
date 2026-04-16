@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-04-02T00:10:52Z
-updated_at: 2026-04-02T03:13:39Z
+updated_at: 2026-04-16T07:29:51Z
+parent: ps-n8uk
 ---
 
 Complete all ~29 tRPC routers for internal API consumption and wire TRPCProvider into mobile app. Spec: docs/superpowers/specs/2026-04-01-trpc-full-buildout-design.md. Plan: docs/superpowers/plans/2026-04-01-trpc-full-buildout.md

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-30T09:37:32Z
-updated_at: 2026-03-30T10:03:19Z
+updated_at: 2026-04-16T07:29:51Z
+parent: ps-n8uk
 ---
 
 Fix all issues from PR #330 review: migrations, Valkey publish failures, heartbeat zombie connections, service logic, test helpers, and test coverage

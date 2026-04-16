@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-27T02:14:10Z
-updated_at: 2026-03-27T04:55:49Z
+updated_at: 2026-04-16T07:29:49Z
+parent: api-rl9o
 ---
 
 Fix all critical, important, and suggested issues from the multi-model PR review of PR #291. Covers RLS cross-account fix, bilateral block/remove, key rotation signaling, validation, type cast removal, projection fixes, service improvements, and missing tests.

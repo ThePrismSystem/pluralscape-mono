@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-14T09:29:29Z
-updated_at: 2026-04-14T14:53:47Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-h2gl
 ---
 
 AUDIT [CLIENT-P-M1, DATA-P-M1] uint8ArrayToBase64/base64ToUint8Array use byte-by-byte string concatenation. Hot path for all crypto transforms. Buffer.from is ~10x faster. Affects both api-client and data packages.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-10T00:15:17Z
-updated_at: 2026-03-10T01:03:16Z
+updated_at: 2026-04-16T07:29:39Z
+parent: ps-vtws
 ---
 
 Fix all critical, important, and suggestion-level issues from the multi-model PR review of feat/auth-core-tables.

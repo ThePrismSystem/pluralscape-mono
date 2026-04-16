@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-02T21:51:31Z
-updated_at: 2026-04-02T23:02:37Z
+updated_at: 2026-04-16T07:29:50Z
+parent: api-kjyg
 ---
 
 Fix all critical, important, and suggested issues from PR #357 code review. See docs/superpowers/plans/2026-04-02-pr357-review-fixes.md for full plan.

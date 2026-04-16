@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T10:51:59Z
-updated_at: 2026-03-17T11:07:09Z
+updated_at: 2026-04-16T07:29:44Z
+parent: ps-rdqo
 ---
 
 Generate 9 primary Pluralscape mobile screens in Stitch using Inner Horizons branding.

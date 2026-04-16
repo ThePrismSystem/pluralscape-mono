@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T22:11:54Z
-updated_at: 2026-03-17T22:34:49Z
+updated_at: 2026-04-16T07:29:44Z
+parent: api-b0nb
 ---
 
 Address 5 critical, 6 important, and 7 suggestion-level issues from PR review across services, routes, types, and tests. 5 commits total.

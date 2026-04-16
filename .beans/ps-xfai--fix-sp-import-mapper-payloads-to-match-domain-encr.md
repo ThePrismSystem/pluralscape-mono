@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-04-12T07:16:20Z
-updated_at: 2026-04-12T08:40:18Z
+updated_at: 2026-04-16T07:29:56Z
+parent: ps-dvxb
 ---
 
 Import mappers produce ad-hoc payload shapes that don't match the domain EncryptedFields types from @pluralscape/data. This causes decryptMember/decryptNote/etc to throw at runtime when the mobile app tries to read imported data. Each mapper must type its encrypted payload against the corresponding domain type and provide sensible defaults for missing fields.

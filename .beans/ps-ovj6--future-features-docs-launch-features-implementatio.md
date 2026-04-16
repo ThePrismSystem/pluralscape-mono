@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-03-13T20:44:10Z
-updated_at: 2026-03-13T21:38:29Z
+updated_at: 2026-04-16T07:29:41Z
+parent: ps-vtws
 ---
 
 Phase 1: Create docs/future-features/ with template + 13 feature docs. Phase 2: Implement launch features L1-L10 (types, DB schema, enums). Phase 3: Update features.md, milestones.md, write ADRs 021-022.

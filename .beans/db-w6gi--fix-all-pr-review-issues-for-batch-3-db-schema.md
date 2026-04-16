@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-10T03:39:40Z
-updated_at: 2026-03-10T03:45:11Z
+updated_at: 2026-04-16T07:29:39Z
+parent: db-2nr7
 ---
 
 Fix 18 issues from multi-model PR review of PR #48. Includes shared type extraction, schema fixes (CHECK constraints, detail type, pin_hash width), enums cleanup, PG test fixes, SQLite test infrastructure, and 6 new SQLite integration test files.

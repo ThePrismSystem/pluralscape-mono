@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T09:42:00Z
-updated_at: 2026-03-08T09:45:06Z
+updated_at: 2026-04-16T07:29:40Z
+parent: ps-jvnm
 ---
 
 Configure GitHub repo for public access: discussions, branch protection, labels, issue templates, dependabot, CODEOWNERS, roadmap workflow

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-30T02:09:40Z
-updated_at: 2026-03-30T02:21:48Z
+updated_at: 2026-04-16T07:29:51Z
+parent: api-e7gt
 ---
 
 Update README.md, CHANGELOG.md, milestones.md, and OpenAPI specs to reflect all new endpoints added in the feat/api-feature-completeness branch.

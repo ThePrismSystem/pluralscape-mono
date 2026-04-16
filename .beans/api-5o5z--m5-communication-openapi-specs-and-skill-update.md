@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-26T14:48:50Z
-updated_at: 2026-03-26T14:56:50Z
+updated_at: 2026-04-16T07:29:49Z
+parent: api-jjb0
 ---
 
 Add OpenAPI 3.1 path and schema files for all M5 communication routes (channels, messages, board-messages, notes, polls, acknowledgements). Update the update-docs skill to make OpenAPI spec authoring explicit.

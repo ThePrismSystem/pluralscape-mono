@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-04-14T09:14:48Z
-updated_at: 2026-04-14T09:29:52Z
+updated_at: 2026-04-16T07:29:55Z
+parent: ps-h2gl
 ---
 
 Full audit across security, performance, typing/patterns, testing, simplification for all packages.

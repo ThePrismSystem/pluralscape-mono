@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-15T06:50:19Z
-updated_at: 2026-03-15T06:55:01Z
+updated_at: 2026-04-16T07:29:41Z
+parent: sync-xlhb
 ---
 
 Address 2 critical, 5 important, and 4 suggestion-level issues from multi-agent review of PR #115 (feat/sync-gc-partial-replication). 11 steps across time-split, on-demand-loader, storage-budget, subscription-filter, types, and compaction modules.

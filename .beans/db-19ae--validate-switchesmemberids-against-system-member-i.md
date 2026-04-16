@@ -5,7 +5,8 @@ status: scrapped
 type: bug
 priority: normal
 created_at: 2026-03-12T01:39:44Z
-updated_at: 2026-03-12T21:24:32Z
+updated_at: 2026-04-16T07:29:36Z
+parent: ps-vtws
 ---
 
 switches.memberIds is a JSONB array that cannot have FK constraints. Cross-system member IDs could be inserted with no server-side validation. Need application-layer validation to verify member IDs belong to the same system.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-10T06:02:35Z
-updated_at: 2026-03-10T06:07:59Z
+updated_at: 2026-04-16T07:29:38Z
+parent: db-2nr7
 ---
 
 Address 7 issues from multi-model review of PR #50 (groups, innerworld, PK bridge schema):

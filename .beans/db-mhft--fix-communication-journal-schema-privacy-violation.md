@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-10T05:38:45Z
-updated_at: 2026-03-10T05:46:03Z
+updated_at: 2026-04-16T07:29:38Z
+parent: db-2nr7
 ---
 
 Fix T1/T3 privacy violations in batch 4a schemas: move plaintext columns that belong in encrypted_data blobs (senderId, replyToId, voter, etc.), add missing slug column to wikiPages, use archivable() helper consistently, fix nullable encryptedData in pollVotes, remove POLL_KINDS enum

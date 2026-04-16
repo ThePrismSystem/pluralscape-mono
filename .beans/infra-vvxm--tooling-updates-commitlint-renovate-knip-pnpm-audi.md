@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T12:52:36Z
-updated_at: 2026-03-20T13:17:56Z
+updated_at: 2026-04-16T07:29:45Z
+parent: ps-i3xl
 ---
 
 Add commitlint, replace dependabot with renovate, add knip for dead code detection, add pnpm audit to CI, add t3-env for API env validation

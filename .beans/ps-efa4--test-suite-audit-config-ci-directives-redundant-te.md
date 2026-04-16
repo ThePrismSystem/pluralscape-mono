@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-24T12:07:44Z
-updated_at: 2026-03-24T12:30:17Z
+updated_at: 2026-04-16T07:29:48Z
+parent: ps-4ioj
 ---
 
 Coverage config cleanup (add type-only exclusions, raise threshold to 85%), merge CI unit+integration coverage, add testing directives to CLAUDE.md, fix observable-queue coverage, delete redundant type tests (barrel.test.ts, smoke.test.ts, expectTypeOf assertions)

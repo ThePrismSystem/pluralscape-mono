@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-15T21:07:32Z
-updated_at: 2026-03-15T21:19:24Z
+updated_at: 2026-04-16T07:29:39Z
+parent: ps-vtws
 ---
 
 Address remaining 7 issues and 8 suggestions from PR #118 multi-agent review: move MAX_FETCH to constants, inject clock into SQLite/mock workers, fire-hook console.warn fallback, stalled sweeper concurrent guard, poll backoff, ack retry, DLQ batchOp helper, HEAVY_BACKOFF constant, health comma-operator, JobId mapper, listJobs let-to-const, missing test coverage.

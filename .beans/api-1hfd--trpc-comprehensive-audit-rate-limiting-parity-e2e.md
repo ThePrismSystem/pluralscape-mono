@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-02T19:44:35Z
-updated_at: 2026-04-02T21:01:11Z
+updated_at: 2026-04-16T07:29:50Z
+parent: api-kjyg
 ---
 
 Bring tRPC to full parity with REST before mobile consumption. Rate limiting, CI parity script, gap fixes, response shape audit, code dedup, E2E tests, ADR 032, consumer guide, and final polish.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-15T19:22:35Z
-updated_at: 2026-03-15T19:42:35Z
+updated_at: 2026-04-16T07:29:39Z
+parent: ps-vtws
 ---
 
 Address all 19 review issues from PR #118 (feat/retry-dlq-policies). Covers shared utility extraction, interface expansion, critical fixes, worker delegation, DLQ resilience, observability, cleanup, and generic typing.

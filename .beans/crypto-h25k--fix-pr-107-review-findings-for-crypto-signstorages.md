@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-14T10:06:50Z
-updated_at: 2026-03-14T10:10:37Z
+updated_at: 2026-04-16T07:29:36Z
+parent: crypto-89v7
 ---
 
 Address all 12 review findings from PR #107 (feat/crypto-sign-storage-safety): 2 critical, 4 important, 6 suggestions. Covers adapter catch blocks, assertSignature, web-key-storage opts/clearAll, safety-number divisibility guard, test improvements, and memzero cleanup.

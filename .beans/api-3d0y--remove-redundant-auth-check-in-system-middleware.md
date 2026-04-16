@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: low
 created_at: 2026-04-03T05:11:02Z
-updated_at: 2026-04-03T06:42:47Z
+updated_at: 2026-04-16T07:29:52Z
+parent: ps-o72l
 ---
 
 system.ts:15-17 — enforceSystemAccess re-checks ctx.auth which is already guaranteed non-null by protectedProcedure. Remove the redundant if (!ctx.auth) block.

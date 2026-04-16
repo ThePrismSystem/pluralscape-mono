@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T03:34:43Z
-updated_at: 2026-03-12T03:36:01Z
+updated_at: 2026-04-16T07:29:39Z
+parent: db-2nr7
 ---
 
 Address PR review feedback: add CHECK constraints (sessions expiresAt, deviceTransferRequests key material), partial indexes (sessions, recoveryKeys), domain type updates, CI migration gating, and integration tests.

@@ -5,7 +5,8 @@ status: scrapped
 type: task
 priority: normal
 created_at: 2026-03-08T08:47:59Z
-updated_at: 2026-03-08T19:56:10Z
+updated_at: 2026-04-16T07:29:41Z
+parent: ps-jvnm
 ---
 
 Add actual test runner CI jobs (unit via vitest, integration, e2e via playwright) with coverage thresholds once testing framework is set up. Stubs exist in CI workflow.

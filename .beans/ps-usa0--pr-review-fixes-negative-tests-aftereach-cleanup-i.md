@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-13T11:18:21Z
-updated_at: 2026-03-13T11:26:33Z
+updated_at: 2026-04-16T07:29:41Z
+parent: ps-vtws
 ---
 
 Address all findings from PR review of fix/audit-005-medium-low-schema:\n- Add negative tests for checksum length != 64 (PG + SQLite)\n- Add negative tests for detail length > 2048 (PG + SQLite)\n- Add afterEach cleanup to PG blob-metadata and PG pk-bridge tests\n- Add query-pattern tests for new partial indexes\n- Create follow-up bean for Sha256Hex branded type

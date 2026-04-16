@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-07T22:44:28Z
-updated_at: 2026-04-07T22:56:07Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-tdj8
 ---
 
 Several type-only files are showing 0/0/0/0 in the coverage report and dragging down branch coverage numbers. They should be excluded from coverage like other type-only files.

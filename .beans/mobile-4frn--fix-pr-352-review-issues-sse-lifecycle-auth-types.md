@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-01T07:16:29Z
-updated_at: 2026-04-01T07:33:14Z
+updated_at: 2026-04-16T07:29:51Z
+parent: ps-n8uk
 ---
 
 Fix all critical (#1-4) and important (#5-11) issues from PR #352 review, plus suggestions #14-19. Covers SSE lifecycle callbacks, OPFS bind params, discriminated AuthStateSnapshot, AuthGate/layout fixes, error handling, and idbRequest extraction.

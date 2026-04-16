@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-04-02T09:47:16Z
-updated_at: 2026-04-02T10:56:44Z
+updated_at: 2026-04-16T07:29:50Z
+parent: ps-n8uk
 ---
 
 Two tRPC list procedures are missing query filters present in REST:

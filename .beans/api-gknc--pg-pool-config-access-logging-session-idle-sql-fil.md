@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-19T01:37:59Z
-updated_at: 2026-03-19T01:52:19Z
+updated_at: 2026-04-16T07:29:45Z
+parent: ps-afy4
 ---
 
 Milestone 2 audit remediation: (1) Add PG pool config + graceful shutdown, (2) Add HTTP access logging middleware, (3) Push session idle timeout filtering into SQL.

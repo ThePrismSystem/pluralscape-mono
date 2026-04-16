@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-09T22:33:09Z
-updated_at: 2026-03-09T22:34:30Z
+updated_at: 2026-04-16T07:29:36Z
+parent: crypto-89v7
 ---
 
 Fix 2 critical (memory safety: key material not zeroed on error paths), 6 important (error handling, adapter fixes), and 6 suggestion-level issues from PR review of feat/crypto-foundation.

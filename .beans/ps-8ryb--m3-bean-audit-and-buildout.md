@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-19T11:33:02Z
-updated_at: 2026-03-19T11:41:12Z
+updated_at: 2026-04-16T07:29:46Z
+parent: ps-i3xl
 ---
 
 Audit and expand all M3 beans: expand milestone body, enrich epic descriptions, set priorities and blocking relationships, create ~40 child tasks for empty epics, expand api-765x task ACs, reparent api-955n

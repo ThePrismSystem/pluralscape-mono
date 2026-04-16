@@ -5,7 +5,8 @@ status: scrapped
 type: feature
 priority: normal
 created_at: 2026-03-08T12:31:28Z
-updated_at: 2026-03-21T10:02:28Z
+updated_at: 2026-04-16T07:29:41Z
+parent: ps-vtws
 ---
 
 Libraries for Python, JavaScript/TypeScript, Go, Rust, C# that handle authentication and libsodium decryption so third-party developers don't need to implement the crypto stack. Future feature — after integration guides are stable.

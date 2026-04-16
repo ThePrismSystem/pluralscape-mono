@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: deferred
 created_at: 2026-03-26T12:23:26Z
-updated_at: 2026-04-04T22:43:00Z
+updated_at: 2026-04-16T07:29:49Z
+parent: ps-53up
 ---
 
 Change Record<string, CrdtX> to Record<XId, CrdtX> in CRDT sync schemas (bucket.ts, chat.ts, fronting.ts, journal.ts). Needs serialization impact analysis. Deferred from M5 audit (L9).

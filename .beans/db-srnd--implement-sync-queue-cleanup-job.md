@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T20:22:58Z
-updated_at: 2026-03-12T23:51:44Z
+updated_at: 2026-04-16T07:29:38Z
+parent: ps-vtws
 ---
 
 Implement the sync-queue-cleanup background job: delete synced items older than N days. Job type already exists in packages/types/src/jobs.ts.

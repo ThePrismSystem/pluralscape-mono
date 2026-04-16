@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-15T20:47:20Z
-updated_at: 2026-03-18T15:58:30Z
+updated_at: 2026-04-16T07:29:41Z
+parent: db-hcgk
 ---
 
 The project is pre-production with no external consumers. Scan the entire codebase for any deprecated exports, backwards-compat aliases, re-export shims, or @deprecated JSDoc tags and remove them outright.

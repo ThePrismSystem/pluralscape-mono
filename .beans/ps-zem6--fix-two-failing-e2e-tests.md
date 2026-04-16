@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-03-20T17:53:54Z
-updated_at: 2026-03-20T18:00:04Z
+updated_at: 2026-04-16T07:29:47Z
+parent: ps-afy4
 ---
 
 Fix device-transfer timeout (worker thread race condition) and sync dedup (missing dedup in EncryptedRelay)

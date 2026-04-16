@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-22T03:55:15Z
-updated_at: 2026-03-22T04:30:20Z
+updated_at: 2026-04-16T07:29:47Z
+parent: db-rsn2
 ---
 
 PR 2 of M4 structure entity refactor. Remove 9 old tables, add fieldDefinitionScopes, extend fieldValues, update fronting FK/CHECK, update RLS policies and all tests.

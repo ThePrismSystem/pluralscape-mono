@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T18:50:52Z
-updated_at: 2026-03-12T19:16:32Z
+updated_at: 2026-04-16T07:29:37Z
+parent: db-hcgk
 ---
 
 Implement all fixes from audit 004 (comprehensive database schema audit). Covers: C1+C2 (UNIQUE(id) on partitioned tables), C3 (friend code min length CHECK), C4 (device token uniqueness), M3 (composite member FKs), M4+S1 (performance indexes), M6 (fronting_reports RLS), M7 (remove api_keys.name plaintext), M12 (composite self-referential FKs), E2 (audit_log.detail tier clarification).

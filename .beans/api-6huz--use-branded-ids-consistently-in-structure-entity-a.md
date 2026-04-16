@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-14T09:29:40Z
-updated_at: 2026-04-14T14:53:47Z
+updated_at: 2026-04-16T07:29:53Z
+parent: ps-h2gl
 ---
 
 AUDIT [API-T-M3,P01,P02] structure-entity-type/crud services accept entityTypeId/entityId as string instead of branded types. webhook-delivery-worker uses raw string literals instead of WebhookDeliveryStatus union. webhook-dispatcher uses string[] instead of WebhookDeliveryId[].

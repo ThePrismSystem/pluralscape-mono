@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-04-06T14:28:06Z
-updated_at: 2026-04-06T20:09:56Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-h2gl
 ---
 
 Add scope checking to all system-scoped endpoints. Each endpoint should validate that the API key's scopes include the required scope for that operation (e.g., read:members for GET /members). The AuthContext.apiKeyScopes field is already populated by the auth middleware (added in security audit remediation). This task adds requireScope() checks to route handlers and tRPC procedures.

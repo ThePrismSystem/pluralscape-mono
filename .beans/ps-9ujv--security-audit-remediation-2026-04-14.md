@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-04-14T06:39:38Z
-updated_at: 2026-04-14T07:24:56Z
+updated_at: 2026-04-16T07:29:55Z
+parent: ps-h2gl
 ---
 
 Remediate findings from the 2026-04-14 STRIDE+OWASP full security audit. Report: security/260414-0126-stride-owasp-full-audit/overview.md. 7 findings: 0 Critical, 0 High, 2 Medium, 2 Low, 3 Info.

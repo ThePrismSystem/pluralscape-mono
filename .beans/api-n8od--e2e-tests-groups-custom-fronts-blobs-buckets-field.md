@@ -5,7 +5,8 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-03-24T12:30:01Z
-updated_at: 2026-03-24T12:57:17Z
+updated_at: 2026-04-16T07:29:47Z
+parent: ps-mmpz
 ---
 
 Add E2E tests for API route modules that lack end-to-end coverage. High priority: groups CRUD, custom-fronts, blob upload/download, privacy buckets. Medium: custom fields, relationships, innerworld, fronting comments.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T08:45:16Z
-updated_at: 2026-03-18T08:46:13Z
+updated_at: 2026-04-16T07:29:44Z
+parent: api-tspr
 ---
 
 Fix all critical, important, and suggestion-level issues from PR review of feat/audit-012-auth-features

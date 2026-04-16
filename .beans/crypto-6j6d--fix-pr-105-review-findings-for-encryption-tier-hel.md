@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-03-14T06:31:00Z
-updated_at: 2026-03-14T06:35:13Z
+updated_at: 2026-04-16T07:29:36Z
+parent: crypto-gd8f
 ---
 
 Address 4 issues from multi-model review: encryptJSON input validation, nonce validation in blobToPayload, keyVersion validation in encryptTier2, deriveDataKey adapter threading. Plus JSDoc and 17 new tests.

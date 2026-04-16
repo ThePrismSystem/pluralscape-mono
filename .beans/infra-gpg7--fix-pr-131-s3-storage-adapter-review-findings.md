@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-16T02:51:12Z
-updated_at: 2026-03-16T03:01:25Z
+updated_at: 2026-04-16T07:29:39Z
+parent: infra-o80c
 ---
 
 Address 18 review findings from multi-agent PR review: TOCTOU race fix, defensive throws, metadata key constants, error mapper cleanup, forcePathStyle config, delete 404 handling, UnixMillis types, presigned URL timing, test infrastructure improvements.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-19T02:59:15Z
-updated_at: 2026-03-19T03:48:40Z
+updated_at: 2026-04-16T07:29:45Z
+parent: ps-afy4
 ---
 
 Address all 14 review issues from PR #188: SQL correctness, shutdown testability, signal handlers, access log try/finally, race conditions, and test gaps

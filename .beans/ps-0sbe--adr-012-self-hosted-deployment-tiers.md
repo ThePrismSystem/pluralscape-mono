@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T12:15:48Z
-updated_at: 2026-03-08T12:18:45Z
+updated_at: 2026-04-16T07:29:40Z
+parent: ps-vtws
 ---
 
 Minimal (single binary) vs full (Docker Compose), capability matrix

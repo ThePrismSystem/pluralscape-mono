@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T15:33:12Z
-updated_at: 2026-03-18T15:58:30Z
+updated_at: 2026-04-16T07:29:43Z
+parent: api-i2pw
 ---
 
 Implement all 5 HIGH-severity fixes from the API core comprehensive audit (013): missing blob list rate limit, pagination limit standardization, inline JSON body parsing extraction, parallel reorder updates, and relationship service test coverage.

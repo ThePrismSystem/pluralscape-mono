@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-19T06:38:55Z
-updated_at: 2026-03-19T10:46:10Z
+updated_at: 2026-04-16T07:29:45Z
+parent: ps-afy4
 ---
 
 Address 14 review findings from PR #190 (feat/e2e-test-infrastructure): bigint CAST for TTL, shutdown hardening, discriminated union for db.ts, CI env cleanup, schema-to-ddl fixes, access log health skip, unique-violation cause chain, and test.step refactor.

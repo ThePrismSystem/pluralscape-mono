@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T08:12:33Z
-updated_at: 2026-03-17T08:18:20Z
+updated_at: 2026-04-16T07:29:43Z
+parent: ps-rdqo
 ---
 
 Fix all issues from PR #152 review: 3 critical bugs (race condition, JSON parse, ZodError catch), 5 important issues (schema literal, crypto zeroing, constants, discriminated union, tests), and 2 suggestions (HTTP 201, pre-push hook). Create follow-up beans for deferred S3/S4.

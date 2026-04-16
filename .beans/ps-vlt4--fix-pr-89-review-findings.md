@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-13T22:21:40Z
-updated_at: 2026-03-13T22:39:45Z
+updated_at: 2026-04-16T07:29:41Z
+parent: ps-vtws
 ---
 
 Fix 5 critical, 9 important, and 5 suggestion issues found in PR #89 multi-model review across types, DB schema, RLS, and tests.

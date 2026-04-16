@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-02T09:47:12Z
-updated_at: 2026-04-02T10:56:43Z
+updated_at: 2026-04-16T07:29:51Z
+parent: ps-n8uk
 ---
 
 Add 3 missing procedures to auth/account tRPC routers:

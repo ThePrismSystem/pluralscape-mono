@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-20T19:20:55Z
-updated_at: 2026-03-20T19:25:48Z
+updated_at: 2026-04-16T07:29:45Z
+parent: api-mzn0
 ---
 
 Address all 10 issues from PR review: TOCTOU cache invalidation, sparse fieldset types, CORS null return, filterFields overloads, origin matcher docs, QueryCache.size rename, S3 pattern JSDoc, bean formatting, sparse fieldset route tests, cache integration tests

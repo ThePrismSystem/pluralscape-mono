@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-03-11T07:37:54Z
-updated_at: 2026-03-11T07:42:09Z
+updated_at: 2026-04-16T07:29:36Z
+parent: crypto-89v7
 ---
 
 Address 1 critical, 6 important, and 7 suggestion-level issues found during multi-model PR review of encrypted blob codec

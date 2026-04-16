@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: high
 created_at: 2026-04-07T04:53:07Z
-updated_at: 2026-04-08T00:00:38Z
+updated_at: 2026-04-16T07:29:55Z
+parent: ps-tdj8
 ---
 
 Design + implementation work to lift branch coverage from current 86.3% to at least 91%, and prevent regression by bumping the vitest threshold.

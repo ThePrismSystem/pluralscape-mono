@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-26T07:00:39Z
-updated_at: 2026-03-26T07:00:44Z
+updated_at: 2026-04-16T07:29:49Z
+parent: ps-106o
 ---
 
 Consolidate 5 Renovate PRs into a single branch, fix pnpm audit vulnerabilities (picomatch, yaml via lint-staged), and fix flaky ioredis teardown in queue integration tests.

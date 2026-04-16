@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: critical
 created_at: 2026-03-20T11:35:02Z
-updated_at: 2026-03-20T12:00:40Z
+updated_at: 2026-04-16T07:29:45Z
+parent: ps-afy4
 ---
 
 Address 4 critical, 8 important, 6 suggestion-level findings from multi-model review of PR #197 (feat/api-hardening-sse). Covers SSE subsystem (10), auth/throttle (6), biometric (1).

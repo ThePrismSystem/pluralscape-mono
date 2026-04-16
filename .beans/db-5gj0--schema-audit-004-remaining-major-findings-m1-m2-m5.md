@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-12T19:50:32Z
-updated_at: 2026-03-12T20:25:38Z
+updated_at: 2026-04-16T07:29:37Z
+parent: db-hcgk
 ---
 
 Implement the remaining major findings from audit 004: M1 (NOT NULL + DEFAULT on 10 columns), M2 (fronting session subject CHECK), M5 (deployment-mode guard follow-up), M8 (expand purge partial unique), M10 (size_bytes max CHECK), M11 (SQLite sync_queue seq per-system unique), P3 (remove SQLite messages reply_to_id self-FK), S4/S5 (audit-log-cleanup job type)

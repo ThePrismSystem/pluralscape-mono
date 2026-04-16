@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T08:48:01Z
-updated_at: 2026-03-08T08:51:10Z
+updated_at: 2026-04-16T07:29:41Z
+parent: ps-vtws
 ---
 
 Add CI workflow, test coverage docs, zero-warning lint enforcement, remove project-scope.md references, update gitignore

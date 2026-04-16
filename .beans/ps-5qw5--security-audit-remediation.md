@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T14:02:50Z
-updated_at: 2026-04-06T14:43:15Z
+updated_at: 2026-04-16T07:29:55Z
+parent: ps-9ujv
 ---
 
 Implement 5 confirmed findings from the STRIDE+OWASP security audit.\n\n- [x] Task 1: Enforce SMTP TLS in production\n- [x] Task 2: Tighten CSP to default-src 'none'\n- [x] Task 3: API key authentication middleware\n- [x] Task 4: Recovery key per-account rate limiting\n- [x] Tasks 5-6: Resource quotas (hierarchy factory + groups)\n- [x] Tasks 7-9: Resource quotas (members, custom fronts, channels)\n- [x] Task 10: Update existing limits (buckets, photos)\n- [x] Task 11: Create M11 follow-up bean\n- [x] Task 12: Full verification

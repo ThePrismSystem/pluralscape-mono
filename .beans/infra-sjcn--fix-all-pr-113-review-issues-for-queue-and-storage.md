@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-15T03:46:48Z
-updated_at: 2026-03-15T03:54:18Z
+updated_at: 2026-04-16T07:29:40Z
+parent: infra-o80c
 ---
 
 Address all 20 findings from multi-agent review of PR #113: status precondition enforcement, worker error handling, type design fixes, test coverage gaps, and code simplification across @pluralscape/queue and @pluralscape/storage packages.

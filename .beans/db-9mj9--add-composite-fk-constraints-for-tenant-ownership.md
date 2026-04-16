@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-13T13:30:06Z
-updated_at: 2026-03-13T13:35:25Z
+updated_at: 2026-04-16T07:29:37Z
+parent: ps-vtws
 ---
 
 Replace single-column FKs with composite (systemId, accountId) FKs on api_keys, import_jobs, export_requests. Add composite unique on systems(id, accountId) and customFronts(id, systemId). Prevents cross-tenant references at the DB layer.

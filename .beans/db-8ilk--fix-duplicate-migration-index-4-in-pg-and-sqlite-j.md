@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: critical
 created_at: 2026-04-14T09:28:31Z
-updated_at: 2026-04-14T10:11:25Z
+updated_at: 2026-04-16T07:29:54Z
+parent: ps-h2gl
 ---
 
 AUDIT [DB-S-C1] Two conflicting idx=4 entries: 0004_nasty_redwing.sql and 0004_oval_domino.sql in PG, mirrored in SQLite. Drizzle migration runner may skip one silently, leaving incomplete event_type allowlist.

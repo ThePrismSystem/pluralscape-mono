@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-10T10:41:38Z
-updated_at: 2026-03-10T10:50:41Z
+updated_at: 2026-04-16T07:29:39Z
+parent: ps-vtws
 ---
 
 Fix all 4 critical, 10 important, and 5 suggestion-level issues from multi-model PR review

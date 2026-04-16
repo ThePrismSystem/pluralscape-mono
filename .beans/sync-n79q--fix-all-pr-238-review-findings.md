@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-22T09:23:36Z
-updated_at: 2026-03-22T09:32:03Z
+updated_at: 2026-04-16T07:29:48Z
+parent: ps-mmpz
 ---
 
 Fix 3 critical, 8 important, 7 suggestion-level issues from multi-model review of PR #238. Includes parent-scoped sort normalization, CRDT type consistency, discriminated union for CrdtFieldValue, strategy metadata corrections, docs, and comprehensive test coverage.

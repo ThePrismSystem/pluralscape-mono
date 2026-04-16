@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-10T02:06:54Z
-updated_at: 2026-03-10T02:23:54Z
+updated_at: 2026-04-16T07:29:38Z
+parent: db-2nr7
 ---
 
 Fix self-friendship CHECK, add missing indexes, DDL helpers, extract insert helpers, add negative tests per review plan

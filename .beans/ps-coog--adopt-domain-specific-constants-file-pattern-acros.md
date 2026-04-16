@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-15T20:46:00Z
-updated_at: 2026-03-16T20:44:41Z
+updated_at: 2026-04-16T07:29:40Z
+parent: ps-vtws
 ---
 
 Establish \*.constants.ts as the standard pattern for numeric/string constants that would otherwise trigger no-magic-numbers lint warnings.

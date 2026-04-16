@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T11:19:35Z
-updated_at: 2026-03-08T12:16:02Z
+updated_at: 2026-04-16T07:29:41Z
+parent: ps-ovj6
 ---
 
 Synthesize project-scope.md into committable features.md and milestones.md

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-11T21:16:24Z
-updated_at: 2026-03-11T21:21:08Z
+updated_at: 2026-04-16T07:29:37Z
+parent: db-2nr7
 ---
 
 Address all 8 review items from PR #65: SQLite chunks CHECK NULL bug, FRONTING_REPORT_FORMATS satisfies, memberIds non-empty CHECK, shared analytics types, ReportFormat $type, TABLE_PAIRS expansion, analytics test edge cases, constraint ordering

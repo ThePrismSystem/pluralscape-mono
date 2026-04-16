@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-11T01:00:53Z
-updated_at: 2026-03-11T01:06:16Z
+updated_at: 2026-04-16T07:29:37Z
+parent: ps-vtws
 ---
 
 Address all review findings from PR #55 (FTS5 search index and SQLite job queue tables). Includes schema fixes, test helper DDL updates, test improvements, and documentation.
