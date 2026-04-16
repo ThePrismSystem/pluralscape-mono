@@ -115,6 +115,11 @@ export const JITTER_MAX = 1.0;
 /** Maximum number of queue entries fetched per drain batch. */
 export const DRAIN_BATCH_SIZE = 500;
 
+// ── Offline queue ─────────────────────────────────────────────────
+
+/** Prefix for offline queue entry IDs. */
+export const OFFLINE_QUEUE_ID_PREFIX = "oq_";
+
 // ── Protocol ──────────────────────────────────────────────────────
 
 /** Current sync protocol version. Declared in AuthenticateRequest. */

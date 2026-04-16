@@ -6,7 +6,7 @@
  */
 import { brandId } from "@pluralscape/types";
 
-import { DRAIN_BATCH_SIZE } from "../sync.constants.js";
+import { DRAIN_BATCH_SIZE, OFFLINE_QUEUE_ID_PREFIX } from "../sync.constants.js";
 
 import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 
@@ -66,7 +66,7 @@ function rowToEntry(row: QueueRow): OfflineQueueEntry {
 
 /** Generates a unique ID for queue entries using crypto.randomUUID(). */
 function generateId(): string {
-  return `oq_${crypto.randomUUID()}`;
+  return `${OFFLINE_QUEUE_ID_PREFIX}${crypto.randomUUID()}`;
 }
 
 /** Cached prepared statements for all SQLite operations. */
