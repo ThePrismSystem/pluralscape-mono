@@ -159,6 +159,17 @@ describe("createOpfsSqliteDriver", () => {
       stmt.run("ok", new Date());
       await expect(driver.flush()).rejects.toThrow(/index 1/);
     });
+
+    it("surfaces bind_collection failure via flush()", async () => {
+      const stmtHandle = 42;
+      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
+      mockBindCollection.mockReturnValue(1); // SQLITE_ERROR
+      mockStep.mockResolvedValue(SQLITE_DONE);
+
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run("x");
+      await expect(driver.flush()).rejects.toThrow(/bind_collection failed.*rc=1/);
+    });
   });
 
   describe("prepare().all()", () => {

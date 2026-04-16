@@ -1,4 +1,4 @@
-import { SQLITE_ROW } from "./wa-sqlite.constants.js";
+import { SQLITE_OK, SQLITE_ROW } from "./wa-sqlite.constants.js";
 
 import type { SqliteDriver, SqliteStatement } from "@pluralscape/sync/adapters";
 
@@ -85,7 +85,10 @@ export async function createOpfsSqliteDriver(
     const promise = (async () => {
       const params = toBindParams(rawParams);
       for await (const stmt of sqlite3.statements(db, sql)) {
-        sqlite3.bind_collection(stmt, params);
+        const bindRc = sqlite3.bind_collection(stmt, params);
+        if (bindRc !== SQLITE_OK) {
+          throw new Error(`OPFS driver: bind_collection failed (rc=${String(bindRc)})`);
+        }
         while ((await sqlite3.step(stmt)) === SQLITE_ROW) {
           /* drain */
         }
