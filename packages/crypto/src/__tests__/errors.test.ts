@@ -3,11 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   AlreadyInitializedError,
   BiometricFailedError,
+  CryptoError,
   CryptoNotReadyError,
   DecryptionFailedError,
   InvalidInputError,
+  InvalidStateTransitionError,
   KeysLockedError,
   KeyStorageFailedError,
+  SignatureVerificationError,
   UnsupportedOperationError,
 } from "../errors.js";
 
@@ -165,5 +168,40 @@ describe("BiometricFailedError", () => {
   it("reports retries not exhausted when false", () => {
     const error = new BiometricFailedError(false);
     expect(error.retriesExhausted).toBe(false);
+  });
+});
+
+describe("CryptoError base class", () => {
+  it("has the correct name property", () => {
+    const error = new CryptoError();
+    expect(error.name).toBe("CryptoError");
+  });
+
+  it("is an instance of Error", () => {
+    const error = new CryptoError();
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  it("accepts a custom message", () => {
+    const error = new CryptoError("custom crypto failure");
+    expect(error.message).toBe("custom crypto failure");
+  });
+
+  it("all subclasses are instanceof CryptoError", () => {
+    expect(new CryptoNotReadyError()).toBeInstanceOf(CryptoError);
+    expect(new DecryptionFailedError()).toBeInstanceOf(CryptoError);
+    expect(new InvalidInputError()).toBeInstanceOf(CryptoError);
+    expect(new AlreadyInitializedError()).toBeInstanceOf(CryptoError);
+    expect(new UnsupportedOperationError("op", "platform")).toBeInstanceOf(CryptoError);
+    expect(new KeysLockedError()).toBeInstanceOf(CryptoError);
+    expect(new KeyStorageFailedError()).toBeInstanceOf(CryptoError);
+    expect(new SignatureVerificationError()).toBeInstanceOf(CryptoError);
+    expect(new InvalidStateTransitionError("unlocked", "locked")).toBeInstanceOf(CryptoError);
+    expect(new BiometricFailedError(false)).toBeInstanceOf(CryptoError);
+  });
+
+  it("subclasses are also instanceof Error", () => {
+    expect(new DecryptionFailedError("x")).toBeInstanceOf(Error);
+    expect(new InvalidInputError("x")).toBeInstanceOf(Error);
   });
 });

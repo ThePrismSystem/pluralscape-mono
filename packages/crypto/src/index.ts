@@ -40,6 +40,7 @@ export type {
 export {
   AlreadyInitializedError,
   BiometricFailedError,
+  CryptoError,
   CryptoNotReadyError,
   DecryptionFailedError,
   InvalidInputError,
