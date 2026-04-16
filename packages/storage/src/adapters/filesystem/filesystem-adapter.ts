@@ -17,7 +17,7 @@ import type {
   PresignedUrlResult,
   StoredBlobMetadata,
 } from "../../interface.js";
-import type { StorageKey, UnixMillis } from "@pluralscape/types";
+import type { Logger, StorageKey, UnixMillis } from "@pluralscape/types";
 
 interface SidecarMetadata {
   mimeType: string | null;
@@ -43,10 +43,20 @@ export class FilesystemBlobStorageAdapter implements BlobStorageAdapter {
 
   private readonly storageRoot: string;
   private readonly maxSizeBytes: number | null;
+  private readonly logger: Logger | null;
 
-  constructor({ storageRoot, maxSizeBytes }: { storageRoot: string; maxSizeBytes?: number }) {
+  constructor({
+    storageRoot,
+    maxSizeBytes,
+    logger,
+  }: {
+    storageRoot: string;
+    maxSizeBytes?: number;
+    logger?: Logger;
+  }) {
     this.storageRoot = resolve(storageRoot);
     this.maxSizeBytes = maxSizeBytes ?? null;
+    this.logger = logger ?? null;
   }
 
   async upload(params: BlobUploadParams): Promise<StoredBlobMetadata> {
@@ -139,7 +149,14 @@ export class FilesystemBlobStorageAdapter implements BlobStorageAdapter {
     try {
       const raw = await readFile(metaPath, "utf-8");
       sidecar = JSON.parse(raw) as SidecarMetadata;
-    } catch {
+    } catch (error) {
+      if (isNodeError(error) && error.code === "ENOENT") {
+        return null;
+      }
+      this.logger?.warn("Failed to parse sidecar metadata JSON, returning null", {
+        metaPath,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
 
