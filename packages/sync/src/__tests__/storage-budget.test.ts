@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { checkStorageBudget, selectEvictionCandidates } from "../storage-budget.js";
+import { EvictionCache, checkStorageBudget, selectEvictionCandidates } from "../storage-budget.js";
 
 import type { StorageBudget } from "../types.js";
 
@@ -9,6 +9,70 @@ const TEST_BUDGET: StorageBudget = { maxTotalBytes: 1000 };
 function docsMap(entries: [string, number][]): ReadonlyMap<string, number> {
   return new Map(entries);
 }
+
+// ── EvictionCache ───────────────────────────────────────────────────
+
+describe("EvictionCache", () => {
+  it("avoids re-sorting on consecutive calls when cache is valid", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 100],
+      ["fronting-sys_a", 200],
+      ["journal-sys_a-2024", 400],
+      ["chat-ch_a-2025-01", 300],
+      ["fronting-sys_a-2025-Q1", 200],
+    ]);
+
+    const cache = new EvictionCache();
+
+    // Spy on Array.prototype.sort to count sort invocations
+    const sortSpy = vi.spyOn(Array.prototype, "sort");
+    const callsBefore = sortSpy.mock.calls.length;
+
+    const result1 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+    const sortCallsAfterFirst = sortSpy.mock.calls.length - callsBefore;
+
+    // Second call without invalidation should not re-sort
+    const result2 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+    const sortCallsAfterSecond = sortSpy.mock.calls.length - callsBefore;
+
+    expect(result1).toEqual(result2);
+    expect(sortCallsAfterFirst).toBeGreaterThan(0);
+    expect(sortCallsAfterSecond).toBe(sortCallsAfterFirst);
+
+    sortSpy.mockRestore();
+  });
+
+  it("re-sorts after invalidation", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 100],
+      ["fronting-sys_a", 600],
+      ["journal-sys_a-2024", 400],
+    ]);
+
+    const cache = new EvictionCache();
+    const result1 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+
+    // Invalidate and add a new document
+    cache.invalidate();
+    docs.set("chat-ch_a-2025-01", 200);
+
+    const result2 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+
+    // Results should differ because the document set changed
+    expect(result1).not.toEqual(result2);
+  });
+
+  it("returns empty when within budget regardless of cache state", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 200],
+      ["fronting-sys_a", 300],
+    ]);
+
+    const cache = new EvictionCache();
+    expect(cache.selectEvictionCandidates(docs, TEST_BUDGET)).toEqual([]);
+    expect(cache.selectEvictionCandidates(docs, TEST_BUDGET)).toEqual([]);
+  });
+});
 
 describe("checkStorageBudget", () => {
   it("reports within budget when total is under limit", () => {

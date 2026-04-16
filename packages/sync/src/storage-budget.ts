@@ -50,9 +50,11 @@ export function selectEvictionCandidates(
   documents: ReadonlyMap<string, number>,
   budget: StorageBudget,
 ): string[] {
-  const status = checkStorageBudget(documents, budget);
-  if (status.withinBudget) return [];
+  return selectFromSortedEvictable(buildSortedEvictable(documents), documents, budget);
+}
 
+/** Filter and sort evictable entries by descending priority index. */
+function buildSortedEvictable(documents: ReadonlyMap<string, number>): [string, number][] {
   const evictable = [...documents.entries()].filter(([docId]) => {
     try {
       const parsed = parseDocumentId(docId);
@@ -69,6 +71,18 @@ export function selectEvictionCandidates(
     return bIdx - aIdx;
   });
 
+  return evictable;
+}
+
+/** Pick candidates from pre-sorted evictable list until excess is covered. */
+function selectFromSortedEvictable(
+  evictable: readonly [string, number][],
+  documents: ReadonlyMap<string, number>,
+  budget: StorageBudget,
+): string[] {
+  const status = checkStorageBudget(documents, budget);
+  if (status.withinBudget) return [];
+
   const candidates: string[] = [];
   let remaining = status.excessBytes;
 
@@ -79,4 +93,29 @@ export function selectEvictionCandidates(
   }
 
   return candidates;
+}
+
+/**
+ * Caches the sorted eviction candidate list between calls.
+ *
+ * Only re-sorts when explicitly invalidated (call {@link invalidate} on
+ * document add/remove). Consecutive calls with the same document set
+ * reuse the cached sort order, avoiding redundant O(n log n) sorts.
+ */
+export class EvictionCache {
+  private cachedEvictable: [string, number][] | null = null;
+
+  /** Select eviction candidates, reusing cached sort order when valid. */
+  selectEvictionCandidates(
+    documents: ReadonlyMap<string, number>,
+    budget: StorageBudget,
+  ): string[] {
+    this.cachedEvictable ??= buildSortedEvictable(documents);
+    return selectFromSortedEvictable(this.cachedEvictable, documents, budget);
+  }
+
+  /** Invalidate the cache. Must be called when documents are added or removed. */
+  invalidate(): void {
+    this.cachedEvictable = null;
+  }
 }

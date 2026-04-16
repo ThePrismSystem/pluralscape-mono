@@ -175,7 +175,7 @@ export {
 
 // ── Storage budget ───────────────────────────────────────────────────
 export type { StorageBudgetStatus } from "./storage-budget.js";
-export { checkStorageBudget, selectEvictionCandidates } from "./storage-budget.js";
+export { EvictionCache, checkStorageBudget, selectEvictionCandidates } from "./storage-budget.js";
 
 // ── Subscription filtering ───────────────────────────────────────────
 export { filterManifest } from "./subscription-filter.js";
