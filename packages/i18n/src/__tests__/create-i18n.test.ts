@@ -64,4 +64,20 @@ describe("createI18nInstance", () => {
     const instance = createI18nInstance({ missingKeyMode: "throw" });
     expect(instance).toBeDefined();
   });
+
+  it("defaults to throw mode when called with no arguments", async () => {
+    const instance = createI18nInstance();
+    instance.use(initReactI18next);
+
+    await instance.init({
+      lng: "en",
+      fallbackLng: DEFAULT_LOCALE,
+      defaultNS: DEFAULT_NAMESPACE,
+      ns: [...NAMESPACES],
+      resources: { en: { common: { hello: "Hello" } } },
+    });
+
+    expect(instance.isInitialized).toBe(true);
+    expect(instance.options.saveMissing).toBe(true);
+  });
 });

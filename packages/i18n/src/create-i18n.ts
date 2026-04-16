@@ -14,7 +14,7 @@ export type CreateI18nOptions = Pick<I18nConfig, "missingKeyMode" | "logger">;
  */
 export function createI18nInstance(options?: CreateI18nOptions): i18n {
   const instance = i18next.createInstance();
-  const mode = options?.missingKeyMode ?? "warn";
+  const mode = options?.missingKeyMode ?? "throw";
 
   instance.use({
     type: "3rdParty" as const,
@@ -25,7 +25,7 @@ export function createI18nInstance(options?: CreateI18nOptions): i18n {
       } else if (options?.logger) {
         handler = createMissingKeyHandler(mode, options.logger);
       } else {
-        throw new Error("Logger is required when missingKeyMode is 'warn'");
+        handler = createMissingKeyHandler("throw");
       }
       i18nInstance.options.saveMissing = true;
       i18nInstance.options.missingKeyHandler = (
