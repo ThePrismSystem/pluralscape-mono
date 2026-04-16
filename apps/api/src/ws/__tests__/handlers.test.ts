@@ -49,6 +49,7 @@ vi.hoisted(() => {
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../connection-manager.js";
+import { shouldVerifyEnvelopeSignatures } from "../envelope-verification-config.js";
 import {
   handleDocumentLoad,
   handleFetchChanges,
@@ -61,8 +62,6 @@ import {
   verifyEnvelopeOrError,
   verifyKeyOwnership,
 } from "../handlers.js";
-
-import { shouldVerifyEnvelopeSignatures } from "../envelope-verification-config.js";
 
 import type { AppLogger } from "../../lib/logger.js";
 import type { SyncRelayService, PaginatedEnvelopes } from "@pluralscape/sync";
