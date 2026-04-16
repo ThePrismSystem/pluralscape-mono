@@ -3,6 +3,11 @@
  * OPFS Web Worker — hosts wa-sqlite + OPFSCoopSyncVFS so the async step()
  * loop does not block the main thread. Main-thread proxy talks to this worker
  * via the wire protocol declared in opfs-worker-protocol.ts.
+ *
+ * Concurrency assumption: the main-thread proxy MUST serialize transaction
+ * boundaries; this worker does not mutex BEGIN/COMMIT/ROLLBACK. Statement
+ * access may interleave safely at the SQLite level but nested transactions
+ * are a caller bug.
  */
 import { SQLITE_OK, SQLITE_ROW } from "./wa-sqlite.constants.js";
 
@@ -104,26 +109,44 @@ async function stepAll(s: WorkerState, ptr: number): Promise<Row[]> {
 
 async function handlePrepare(sql: string): Promise<StmtHandle> {
   const s = requireState();
-  // Compile via statements() to get a single stmt ptr. Adapters always send
-  // single statements — if we encounter multi, throw rather than silently drop.
-  const iter = s.sqlite3.statements(s.db, sql)[Symbol.asyncIterator]();
-  const first = await iter.next();
+  // Compile via statements() with `unscoped: true` so the returned ptr stays
+  // valid outside the iterator. Adapters always send single statements — if we
+  // encounter multi, finalize the first and throw rather than silently drop.
+  const iter = s.sqlite3.statements(s.db, sql, { unscoped: true })[Symbol.asyncIterator]();
+  let first: IteratorResult<number>;
+  try {
+    first = await iter.next();
+  } catch (err) {
+    await iter.return?.(undefined);
+    throw err;
+  }
   if (first.done === true) {
     throw new Error(`OPFS worker: prepare produced no statement for SQL: ${sql}`);
   }
   const ptr = first.value;
-  const second = await iter.next();
+  let second: IteratorResult<number>;
+  try {
+    second = await iter.next();
+  } catch (err) {
+    await s.sqlite3.finalize(ptr);
+    throw err;
+  }
   if (second.done !== true) {
     await iter.return?.(undefined);
+    await s.sqlite3.finalize(ptr);
     throw new Error(`OPFS worker: prepare of multi-statement SQL not supported: ${sql}`);
   }
   const handle = s.nextStmtHandle++;
   s.stmts.set(handle, { sql, ptr });
   if (s.stmts.size > MAX_STMT_HANDLES) {
-    // LRU: delete oldest entry (Map preserves insertion order).
+    // LRU: evict oldest entry and free its sqlite statement (Map preserves
+    // insertion order). Without this finalize, evicted ptrs would leak until
+    // close().
     const [oldest] = s.stmts.keys();
     if (oldest !== undefined && oldest !== handle) {
+      const evicted = s.stmts.get(oldest);
       s.stmts.delete(oldest);
+      if (evicted !== undefined) await s.sqlite3.finalize(evicted.ptr);
     }
   }
   return handle;
@@ -175,21 +198,24 @@ async function handleGet(
   return undefined;
 }
 
-function handleFinalize(handle: StmtHandle): void {
+async function handleFinalize(handle: StmtHandle): Promise<void> {
   const s = requireState();
   const entry = s.stmts.get(handle);
   if (entry === undefined) return; // idempotent
   s.stmts.delete(handle);
-  // wa-sqlite does not expose finalize directly on the API surface used here;
-  // statements() cleans up when its iterator returns. Since we held the ptr
-  // outside the iterator, the handle is simply dropped from our registry and
-  // the underlying statement is freed at close() via sqlite3_close_v2.
-  // Per-request finalization is bounded by MAX_STMT_HANDLES LRU eviction.
+  await s.sqlite3.finalize(entry.ptr);
 }
 
 async function handleClose(): Promise<void> {
   const s = state;
   if (s === null) return;
+  // Finalize any still-registered statements before closing. sqlite3_close_v2
+  // will also clean up, but explicit finalize keeps the registry and SQLite
+  // state consistent for diagnostics.
+  for (const entry of s.stmts.values()) {
+    await s.sqlite3.finalize(entry.ptr);
+  }
+  s.stmts.clear();
   await s.sqlite3.close(s.db);
   state = null;
 }
@@ -222,7 +248,7 @@ async function dispatch(req: Req): Promise<Res> {
         await handleExec("ROLLBACK");
         return { id: req.id, ok: true, result: undefined };
       case "finalize":
-        handleFinalize(req.stmt);
+        await handleFinalize(req.stmt);
         return { id: req.id, ok: true, result: undefined };
       case "close":
         await handleClose();
@@ -244,6 +270,17 @@ async function dispatch(req: Req): Promise<Res> {
 
 self.addEventListener("message", (ev: MessageEvent<Req>) => {
   void dispatch(ev.data).then((res) => {
-    self.postMessage(res);
+    try {
+      self.postMessage(res);
+    } catch (err: unknown) {
+      // postMessage throws if a result value is not structured-cloneable. Fall
+      // back to an error envelope so the caller's pending slot still resolves.
+      const e = err instanceof Error ? err : new Error(String(err));
+      self.postMessage({
+        id: res.id,
+        ok: false,
+        error: { message: `OPFS worker: failed to post response: ${e.message}`, name: e.name },
+      });
+    }
   });
 });
