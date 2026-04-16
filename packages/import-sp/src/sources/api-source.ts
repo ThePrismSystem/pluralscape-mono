@@ -265,19 +265,15 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
         }
       }
 
-      // When Content-Length is absent, read as text and check byte length.
-      if (contentLength === null) {
-        const text = await response.text();
-        const byteLength = new TextEncoder().encode(text).byteLength;
-        if (byteLength > SP_API_MAX_RESPONSE_BYTES) {
-          throw new ApiSourcePermanentError(
-            `SP API response size ${String(byteLength)} bytes exceeds limit of ${String(SP_API_MAX_RESPONSE_BYTES)} bytes`,
-          );
-        }
-        return JSON.parse(text) as unknown;
+      // Always read as text and verify byte length — Content-Length can lie.
+      const text = await response.text();
+      const byteLength = new Blob([text]).size;
+      if (byteLength > SP_API_MAX_RESPONSE_BYTES) {
+        throw new ApiSourcePermanentError(
+          `SP API response size ${String(byteLength)} bytes exceeds limit of ${String(SP_API_MAX_RESPONSE_BYTES)} bytes`,
+        );
       }
-
-      return (await response.json()) as unknown;
+      return JSON.parse(text) as unknown;
     }
     // Unreachable — the loop exits via `return` or a thrown error — but
     // keep an explicit throw so TypeScript's control-flow analysis is happy.

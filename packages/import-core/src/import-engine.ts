@@ -42,7 +42,7 @@ import { isBatchMapper, type MapperDispatchEntry, type SourceDocument } from "./
 
 import type { ErrorClassifier } from "./engine-errors.js";
 import type { MapperResult } from "./mapper-result.js";
-import type { PersistableEntity, Persister } from "./persister.types.js";
+import type { PersistableEntity, Persister, PersisterUpsertAction } from "./persister.types.js";
 import type { ImportDataSource } from "./source.types.js";
 import type {
   ImportAvatarMode,
@@ -216,6 +216,14 @@ export async function runImportEngine<TCollection extends string>(
   const ctx = createMappingContext({ sourceMode: source.mode });
   const errors: ImportError[] = [];
 
+  type CheckpointStateRef = { current: ImportCheckpointState };
+
+  const UPSERT_ACTION_TO_DELTA: Record<PersisterUpsertAction, AdvanceDelta> = {
+    created: delta("imported"),
+    updated: delta("updated"),
+    skipped: delta("skipped"),
+  };
+
   /**
    * Process a single mapper result (skipped/failed/mapped) through the
    * persist-and-checkpoint pipeline. Shared by both the batch and single
@@ -228,7 +236,7 @@ export async function runImportEngine<TCollection extends string>(
     sourceEntityId: string,
     entityType: ImportCollectionType,
     persistedSourceIds: string[],
-    stateRef: { current: ImportCheckpointState },
+    stateRef: CheckpointStateRef,
   ): Promise<boolean> {
     if (result.status === "skipped") {
       stateRef.current = advanceWithinCollection(stateRef.current, {
@@ -248,7 +256,11 @@ export async function runImportEngine<TCollection extends string>(
         fatal: false,
       };
       errors.push(error);
-      await persister.recordError(error);
+      try {
+        await persister.recordError(error);
+      } catch {
+        /* contract violation — swallow */
+      }
       stateRef.current = advanceWithinCollection(stateRef.current, {
         entityType,
         lastSourceId: sourceEntityId,
@@ -264,22 +276,7 @@ export async function runImportEngine<TCollection extends string>(
       );
       ctx.register(entityType, sourceEntityId, upsert.pluralscapeEntityId);
       persistedSourceIds.push(sourceEntityId);
-      let upsertDelta: AdvanceDelta;
-      switch (upsert.action) {
-        case "created":
-          upsertDelta = delta("imported");
-          break;
-        case "updated":
-          upsertDelta = delta("updated");
-          break;
-        case "skipped":
-          upsertDelta = delta("skipped");
-          break;
-        default: {
-          const _exhaustive: never = upsert.action;
-          throw new Error(`Unhandled upsert action: ${String(_exhaustive)}`);
-        }
-      }
+      const upsertDelta = UPSERT_ACTION_TO_DELTA[upsert.action];
       stateRef.current = advanceWithinCollection(stateRef.current, {
         entityType,
         lastSourceId: sourceEntityId,
@@ -475,7 +472,7 @@ export async function runImportEngine<TCollection extends string>(
           // Process all accumulated documents in a single batch call.
           const batchResults = entry.mapBatch(accumulated, ctx);
 
-          const stateRef = { current: state };
+          const stateRef: CheckpointStateRef = { current: state };
           for (const batchItem of batchResults) {
             if (isAborted(args.abortSignal)) {
               state = stateRef.current;
@@ -525,6 +522,7 @@ export async function runImportEngine<TCollection extends string>(
         // Single mapper path: process documents one at a time.
         // ---------------------------------------------------------------
         try {
+          const singleStateRef: CheckpointStateRef = { current: state };
           for await (const event of source.iterate(collection)) {
             if (!pastResumeCutoff) {
               if (event.sourceId === resumeCutoffSourceId) {
@@ -566,7 +564,7 @@ export async function runImportEngine<TCollection extends string>(
 
             const doc = event;
             const result = entry.map(doc.document, ctx);
-            const singleStateRef = { current: state };
+            singleStateRef.current = state;
 
             const fatal = await persistMapperResult(
               result,

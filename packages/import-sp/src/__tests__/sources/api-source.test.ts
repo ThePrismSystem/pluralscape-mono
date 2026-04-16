@@ -570,7 +570,7 @@ describe("createApiImportSource", () => {
     it("rejects responses exceeding MAX_RESPONSE_BYTES when Content-Length is absent (text fallback)", async () => {
       // Build a body that exceeds 50 MiB. We only need to verify the check
       // fires, so we mock `response.text()` to return a string whose
-      // `.length` exceeds the limit without actually allocating 50 MiB.
+      // Blob size exceeds the limit without actually allocating 50 MiB.
       const fakeResponse = new Response(null, {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -578,18 +578,14 @@ describe("createApiImportSource", () => {
       // Stub .text() to report oversized content
       const oversizedText = JSON.stringify({ data: "x".repeat(100) });
       vi.spyOn(fakeResponse, "text").mockResolvedValue(oversizedText);
-      // Override byte-length calculation: pretend the text is 51 MiB
+      // Override Blob so .size reports 51 MiB
       const oversizedByteLength = 51 * 1_024 * 1_024;
-      const originalEncoder = globalThis.TextEncoder;
-      const fakeEncoder = {
-        encode: () => new Uint8Array(oversizedByteLength),
-      };
+      const OriginalBlob = globalThis.Blob;
       vi.stubGlobal(
-        "TextEncoder",
-        class {
-          encode(input: string): Uint8Array {
-            if (input === oversizedText) return fakeEncoder.encode();
-            return new originalEncoder().encode(input);
+        "Blob",
+        class FakeBlob extends OriginalBlob {
+          override get size(): number {
+            return oversizedByteLength;
           }
         },
       );
@@ -609,6 +605,42 @@ describe("createApiImportSource", () => {
       if (caught instanceof ApiSourcePermanentError) {
         expect(caught.message).toMatch(/response size/i);
       }
+    });
+
+    it("allows responses at the exact 50 MiB boundary", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify([{ _id: "m1", name: "Boundary" }]), {
+          status: 200,
+          headers: {
+            "Content-Length": String(50 * 1_024 * 1_024),
+            "Content-Type": "application/json",
+          },
+        }),
+      );
+
+      const source = createApiImportSource(DEFAULT_INPUT);
+      const out = await drain(source, "members");
+      await source.close();
+
+      expect(out).toEqual(["m1"]);
+    });
+
+    it("falls through to text-based check when Content-Length is non-numeric", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify([{ _id: "m1", name: "OK" }]), {
+          status: 200,
+          headers: {
+            "Content-Length": "garbage",
+            "Content-Type": "application/json",
+          },
+        }),
+      );
+
+      const source = createApiImportSource(DEFAULT_INPUT);
+      const out = await drain(source, "members");
+      await source.close();
+
+      expect(out).toEqual(["m1"]);
     });
 
     it("allows responses within the 50 MiB limit", async () => {

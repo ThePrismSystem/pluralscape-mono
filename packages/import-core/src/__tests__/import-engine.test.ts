@@ -2087,6 +2087,95 @@ describe("runImportEngine", () => {
     });
   });
 
+  // -----------------------------------------------------------------------
+  // persistMapperResult stateRef propagation
+  // -----------------------------------------------------------------------
+
+  describe("persistMapperResult stateRef propagation", () => {
+    it("returns aborted result with correct checkpoint state on fatal persister error", async () => {
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "Aria" },
+          { _id: "m2", name: "Blake" },
+          { _id: "m3", name: "Cass" },
+        ],
+      });
+      const { persister } = createInMemoryPersister({
+        throwOn: [
+          {
+            entityType: "member",
+            sourceEntityId: "m2",
+            error: new SyntaxError("fatal write"),
+            fatal: true,
+          },
+        ],
+      });
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      // Checkpoint should reflect m1 imported; m2 fatal abort exits before
+      // advancing the checkpoint, so the fatal entity is not counted in totals.
+      expect(result.finalState.totals.perCollection["member"]?.imported).toBe(1);
+      expect(result.finalState.totals.perCollection["member"]?.total).toBe(1);
+      // The fatal error is still recorded in the errors array
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.fatal).toBe(true);
+    });
+
+    it("reflects failure delta in checkpoint state for non-fatal mapper failed status", async () => {
+      const source = createFakeImportSource({
+        members: [
+          { _id: "m1", name: "Aria" },
+          { _id: "m2", name: "" },
+          { _id: "m3", name: "Cass" },
+        ],
+      });
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: {
+            entityType: "member",
+            map: (doc: unknown) => {
+              const record = doc as Record<string, unknown>;
+              if (!record["name"])
+                return failed({ kind: "validation-failed", message: "empty name" });
+              return mapped(doc);
+            },
+          },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      // Checkpoint should reflect 2 imported + 1 failed
+      expect(result.finalState.totals.perCollection["member"]?.imported).toBe(2);
+      expect(result.finalState.totals.perCollection["member"]?.failed).toBe(1);
+      expect(result.finalState.totals.perCollection["member"]?.total).toBe(3);
+      // The failure should be recorded
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.entityId).toBe("m2");
+    });
+  });
+
   describe("empty dependencyOrder", () => {
     it("throws when dependencyOrder is empty", async () => {
       const source = createFakeImportSource({});
