@@ -62,7 +62,13 @@ declare interface WaSqliteAPI {
   // ── Prepared statement API ──────────────────────────────────────────
   /** Compile SQL into an async iterator of prepared statement handles. */
   statements(db: number, sql: string): AsyncIterable<number>;
-  /** Bind an array or object of values to a prepared statement. */
+  /**
+   * Bind an array of values to a prepared statement (positional `?` parameters).
+   * Returns 0 on success; non-zero is a SQLite result code indicating failure.
+   * The upstream wa-sqlite API also accepts `{[name]: value}` for named-parameter
+   * SQL (`:name`/`@name`/`$name`); this local declaration intentionally narrows
+   * to the array form because the sync adapters only emit positional `?` SQL.
+   */
   bind_collection(stmt: number, bindings: ReadonlyArray<WaSqliteCompatibleType | null>): number;
   /** Evaluate one step of a prepared statement. Resolves to SQLITE_ROW or SQLITE_DONE. */
   step(stmt: number): Promise<number>;
@@ -80,8 +86,6 @@ declare module "@journeyapps/wa-sqlite/dist/wa-sqlite.mjs" {
 
 declare module "@journeyapps/wa-sqlite" {
   export function Factory(Module: WaSqliteModule): WaSqliteAPI;
-  /** Return code from step() indicating a row is available. */
-  export const SQLITE_ROW: number;
 }
 
 /** OPFSCoopSyncVFS instance — the object returned by OPFSCoopSyncVFS.create(). */

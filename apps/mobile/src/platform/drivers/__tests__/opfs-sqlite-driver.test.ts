@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createOpfsSqliteDriver } from "../opfs-sqlite-driver.js";
-import { SQLITE_DONE, SQLITE_OK, SQLITE_ROW } from "../wa-sqlite.constants.js";
+import { SQLITE_DONE, SQLITE_OK } from "../wa-sqlite.constants.js";
 
 import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
@@ -30,7 +30,6 @@ vi.mock("@journeyapps/wa-sqlite/dist/wa-sqlite.mjs", () => ({
 
 vi.mock("@journeyapps/wa-sqlite", () => ({
   Factory: vi.fn().mockReturnValue(mockSqlite3),
-  SQLITE_ROW: SQLITE_ROW,
 }));
 
 vi.mock("@journeyapps/wa-sqlite/src/examples/OPFSCoopSyncVFS.js", () => ({
