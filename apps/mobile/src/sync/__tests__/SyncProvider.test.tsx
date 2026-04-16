@@ -194,17 +194,19 @@ const mockCreateBucketKeyCache = vi.fn(() => mockBucketKeyCache);
 
 // ── Mock SqliteStorageAdapter ───────────────────────────────────────
 
-const MockSqliteStorageAdapter = vi.fn(function MockSqliteStorageAdapterImpl(
-  this: Record<string, unknown>,
-) {
-  this.loadSnapshot = vi.fn();
-  this.saveSnapshot = vi.fn();
-  this.loadChanges = vi.fn();
-  this.appendChange = vi.fn();
-  this.pruneChanges = vi.fn();
-  this.listDocuments = vi.fn(() => []);
-  this.deleteDocument = vi.fn();
-});
+const MockSqliteStorageAdapter = {
+  create: vi.fn((): Promise<unknown> => {
+    return Promise.resolve({
+      loadSnapshot: vi.fn(),
+      saveSnapshot: vi.fn(),
+      loadChanges: vi.fn(),
+      appendChange: vi.fn(),
+      pruneChanges: vi.fn(),
+      listDocuments: vi.fn(() => []),
+      deleteDocument: vi.fn(),
+    });
+  }),
+};
 
 // ── Mock WsManager ──────────────────────────────────────────────────
 
@@ -376,11 +378,14 @@ describe("SyncProvider", () => {
     expect(result.current.progress).toBeNull();
   });
 
-  it("creates engine when auth is unlocked with sqlite platform", () => {
+  it("creates engine when auth is unlocked with sqlite platform", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
     const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    // Wait for the async adapter factory to resolve and engine to wire up
+    await act(() => Promise.resolve());
 
     // Engine should be created
     expect(MockSyncEngine).toHaveBeenCalledTimes(1);
@@ -392,7 +397,7 @@ describe("SyncProvider", () => {
     );
 
     // Adapters should be created
-    expect(MockSqliteStorageAdapter).toHaveBeenCalledTimes(1);
+    expect(MockSqliteStorageAdapter.create).toHaveBeenCalledTimes(1);
     expect(MockDocumentKeyResolver.create).toHaveBeenCalledTimes(1);
     expect(mockCreateBucketKeyCache).toHaveBeenCalledTimes(1);
     expect(mockCreateWsManager).toHaveBeenCalledTimes(1);
@@ -427,11 +432,13 @@ describe("SyncProvider", () => {
     expect(result.current.engine).toBeNull();
   });
 
-  it("selects owner-full profile for sqlite backend", () => {
+  it("selects owner-full profile for sqlite backend", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    await act(() => Promise.resolve());
 
     expect(MockSyncEngine).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -446,6 +453,9 @@ describe("SyncProvider", () => {
 
     const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
+    // Wait for async adapter/engine construction, then for bootstrap microtasks
+    await act(() => Promise.resolve());
+
     // Bootstrap should have been called since we're connected
     expect(mockBootstrap).toHaveBeenCalled();
 
@@ -455,21 +465,25 @@ describe("SyncProvider", () => {
     expect(result.current.isBootstrapped).toBe(true);
   });
 
-  it("does not bootstrap when not connected", () => {
+  it("does not bootstrap when not connected", async () => {
     setUnlocked();
     mockConnectionStatus = "disconnected";
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
 
+    await act(() => Promise.resolve());
+
     expect(MockSyncEngine).toHaveBeenCalled();
     expect(mockBootstrap).not.toHaveBeenCalled();
   });
 
-  it("disposes engine on cleanup (unmount)", () => {
+  it("disposes engine on cleanup (unmount)", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
     const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    await act(() => Promise.resolve());
 
     unmount();
 
@@ -479,11 +493,13 @@ describe("SyncProvider", () => {
     expect(mockWsDisconnect).toHaveBeenCalledTimes(1);
   });
 
-  it("disposes engine when auth transitions to unauthenticated", () => {
+  it("disposes engine when auth transitions to unauthenticated", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
     const { rerender } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    await act(() => Promise.resolve());
 
     expect(MockSyncEngine).toHaveBeenCalledTimes(1);
 
@@ -499,11 +515,13 @@ describe("SyncProvider", () => {
     expect(mockWsDisconnect).toHaveBeenCalled();
   });
 
-  it("passes eventBus to SyncEngine config", () => {
+  it("passes eventBus to SyncEngine config", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    await act(() => Promise.resolve());
 
     expect(MockSyncEngine).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -512,11 +530,13 @@ describe("SyncProvider", () => {
     );
   });
 
-  it("passes correct DocumentKeyResolver config", () => {
+  it("passes correct DocumentKeyResolver config", async () => {
     setUnlocked();
     mockConnectionStatus = "connected";
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    await act(() => Promise.resolve());
 
     expect(MockDocumentKeyResolver.create).toHaveBeenCalledWith({
       masterKey: TEST_MASTER_KEY,

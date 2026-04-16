@@ -145,61 +145,94 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       return;
     }
 
-    // Create sync pipeline resources
-    const bucketKeyCache = createBucketKeyCache();
-    bucketKeyCacheRef.current = bucketKeyCache;
+    // Create sync pipeline resources. The SQLite storage adapter is constructed
+    // via an async factory (OPFS backends need to initialize a worker), so we
+    // wrap the pipeline construction in an IIFE and guard each await boundary
+    // with a `cancelled` flag to handle teardown during initialization.
+    // `cancelled` is read via a getter function so TypeScript's control-flow
+    // analysis doesn't narrow it to `false` at each check — the cleanup closure
+    // below mutates the backing state across await boundaries.
+    const state: { cancelled: boolean } = { cancelled: false };
+    const isCancelled = (): boolean => state.cancelled;
+    let cleanup: (() => void) | null = null;
 
-    const storageAdapter = new SqliteStorageAdapter(engineConfig.sqliteDriver);
+    void (async () => {
+      const bucketKeyCache = createBucketKeyCache();
+      bucketKeyCacheRef.current = bucketKeyCache;
 
-    const keyResolver = DocumentKeyResolver.create({
-      masterKey: engineConfig.masterKey,
-      signingKeys: engineConfig.signingKeys,
-      bucketKeyCache,
-      sodium: engineConfig.sodium,
-    });
-    keyResolverRef.current = keyResolver;
+      const storageAdapter = await SqliteStorageAdapter.create(engineConfig.sqliteDriver);
+      if (isCancelled()) {
+        bucketKeyCache.clearAll();
+        bucketKeyCacheRef.current = null;
+        return;
+      }
 
-    const wsManager = createWsManager({
-      url: getWsUrl(),
-      eventBus: engineConfig.eventBus,
-    });
-    wsManagerRef.current = wsManager;
-    wsManager.connect(engineConfig.sessionToken, engineConfig.systemId);
+      const keyResolver = DocumentKeyResolver.create({
+        masterKey: engineConfig.masterKey,
+        signingKeys: engineConfig.signingKeys,
+        bucketKeyCache,
+        sodium: engineConfig.sodium,
+      });
+      keyResolverRef.current = keyResolver;
 
-    const networkAdapter = wsManager.getAdapter();
-    if (networkAdapter === null) {
-      // Should not happen since connect() sets it synchronously, but guard
-      return;
-    }
+      const wsManager = createWsManager({
+        url: getWsUrl(),
+        eventBus: engineConfig.eventBus,
+      });
+      wsManagerRef.current = wsManager;
+      wsManager.connect(engineConfig.sessionToken, engineConfig.systemId);
 
-    const profile: ReplicationProfile = { profileType: "owner-full" };
+      const networkAdapter = wsManager.getAdapter();
+      if (networkAdapter === null || isCancelled()) {
+        // connect() sets the adapter synchronously, but defend against both
+        // a missing adapter and cancellation during connect().
+        return;
+      }
 
-    // Create SyncEngine — errors are emitted via the event bus
-    const bus = engineConfig.eventBus;
-    const newEngine = new SyncEngine({
-      networkAdapter,
-      storageAdapter,
-      keyResolver,
-      sodium: engineConfig.sodium,
-      profile,
-      systemId: engineConfig.systemId,
-      onError: (message, error) => {
-        bus.emit("sync:error", { type: "sync:error", message, error });
-      },
-      eventBus: bus,
-    });
-    setEngine(newEngine);
+      const profile: ReplicationProfile = { profileType: "owner-full" };
+
+      // Create SyncEngine — errors are emitted via the event bus
+      const bus = engineConfig.eventBus;
+      const newEngine = new SyncEngine({
+        networkAdapter,
+        storageAdapter,
+        keyResolver,
+        sodium: engineConfig.sodium,
+        profile,
+        systemId: engineConfig.systemId,
+        onError: (message, error) => {
+          bus.emit("sync:error", { type: "sync:error", message, error });
+        },
+        eventBus: bus,
+      });
+      if (isCancelled()) {
+        newEngine.dispose();
+        keyResolver.dispose();
+        keyResolverRef.current = null;
+        bucketKeyCache.clearAll();
+        bucketKeyCacheRef.current = null;
+        wsManager.disconnect();
+        wsManagerRef.current = null;
+        return;
+      }
+      setEngine(newEngine);
+
+      cleanup = () => {
+        newEngine.dispose();
+        setEngine(null);
+        keyResolver.dispose();
+        keyResolverRef.current = null;
+        bucketKeyCache.clearAll();
+        bucketKeyCacheRef.current = null;
+        wsManager.disconnect();
+        wsManagerRef.current = null;
+        setIsBootstrapped(false);
+      };
+    })();
 
     return () => {
-      newEngine.dispose();
-      setEngine(null);
-      keyResolver.dispose();
-      keyResolverRef.current = null;
-      bucketKeyCache.clearAll();
-      bucketKeyCacheRef.current = null;
-      wsManager.disconnect();
-      wsManagerRef.current = null;
-      setIsBootstrapped(false);
+      state.cancelled = true;
+      cleanup?.();
     };
   }, [engineConfig]);
 
