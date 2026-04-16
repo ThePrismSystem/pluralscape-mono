@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/** Sentinel returned by step() when a result row is available. */
-const MOCK_SQLITE_ROW = 100;
-/** Sentinel returned by step() when statement execution is complete. */
-const MOCK_SQLITE_DONE = 101;
+import { createOpfsSqliteDriver } from "../opfs-sqlite-driver.js";
+import { SQLITE_DONE, SQLITE_ROW } from "../wa-sqlite.constants.js";
+
+import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
 const mockExec = vi.fn<WaSqliteAPI["exec"]>();
 const mockClose = vi.fn<WaSqliteAPI["close"]>();
@@ -33,7 +33,7 @@ vi.mock("@journeyapps/wa-sqlite/dist/wa-sqlite.mjs", () => ({
 
 vi.mock("@journeyapps/wa-sqlite", () => ({
   Factory: vi.fn().mockReturnValue(mockSqlite3),
-  SQLITE_ROW: MOCK_SQLITE_ROW,
+  SQLITE_ROW: SQLITE_ROW,
 }));
 
 vi.mock("@journeyapps/wa-sqlite/src/examples/OPFSCoopSyncVFS.js", () => ({
@@ -63,10 +63,6 @@ function mockStatementsIterator(stmtHandle: number): AsyncIterable<number> {
     },
   };
 }
-
-import { createOpfsSqliteDriver } from "../opfs-sqlite-driver.js";
-
-import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
 let driver: SqliteDriver & { flush(): Promise<void> };
 
@@ -102,7 +98,7 @@ describe("createOpfsSqliteDriver", () => {
       const stmtHandle = 42;
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
       mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(MOCK_SQLITE_DONE);
+      mockStep.mockResolvedValue(SQLITE_DONE);
 
       const stmt = driver.prepare("INSERT INTO t VALUES (?)");
       stmt.run("val");
@@ -119,7 +115,7 @@ describe("createOpfsSqliteDriver", () => {
       const stmtHandle = 42;
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
       mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(MOCK_SQLITE_DONE);
+      mockStep.mockResolvedValue(SQLITE_DONE);
 
       const stmt = driver.prepare("INSERT INTO t (a, b, c) VALUES (?, ?, ?)");
       stmt.run(1, "two", null);
@@ -172,9 +168,9 @@ describe("createOpfsSqliteDriver", () => {
 
       // First step returns a row, second returns DONE
       mockStep
-        .mockResolvedValueOnce(MOCK_SQLITE_ROW)
-        .mockResolvedValueOnce(MOCK_SQLITE_ROW)
-        .mockResolvedValueOnce(MOCK_SQLITE_DONE);
+        .mockResolvedValueOnce(SQLITE_ROW)
+        .mockResolvedValueOnce(SQLITE_ROW)
+        .mockResolvedValueOnce(SQLITE_DONE);
       mockRow.mockReturnValueOnce(["Alice", 30]).mockReturnValueOnce(["Bob", 25]);
 
       const stmt = driver.prepare<{ name: string; age: number }>("SELECT * FROM t WHERE age > ?");
@@ -192,7 +188,7 @@ describe("createOpfsSqliteDriver", () => {
       const stmtHandle = 42;
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
       mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(MOCK_SQLITE_DONE);
+      mockStep.mockResolvedValue(SQLITE_DONE);
 
       const stmt = driver.prepare("SELECT * FROM t WHERE id = ?");
       const rows = stmt.all(999);
@@ -205,7 +201,7 @@ describe("createOpfsSqliteDriver", () => {
       const stmtHandle = 42;
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
       mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(MOCK_SQLITE_DONE);
+      mockStep.mockResolvedValue(SQLITE_DONE);
 
       const stmt = driver.prepare("SELECT * FROM t WHERE col IS ?");
       stmt.all(null);
@@ -244,7 +240,7 @@ describe("createOpfsSqliteDriver", () => {
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
       mockBindCollection.mockReturnValue(0);
       mockColumnNames.mockReturnValue(["name", "age"]);
-      mockStep.mockResolvedValueOnce(MOCK_SQLITE_ROW).mockResolvedValueOnce(MOCK_SQLITE_DONE);
+      mockStep.mockResolvedValueOnce(SQLITE_ROW).mockResolvedValueOnce(SQLITE_DONE);
       mockRow.mockReturnValueOnce(["Alice", 30]);
 
       const stmt = driver.prepare<{ name: string; age: number }>("SELECT * FROM t WHERE id = ?");
@@ -263,7 +259,7 @@ describe("createOpfsSqliteDriver", () => {
       const stmtHandle = 42;
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
       mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(MOCK_SQLITE_DONE);
+      mockStep.mockResolvedValue(SQLITE_DONE);
 
       const stmt = driver.prepare("SELECT * FROM t WHERE id = ?");
       const row = stmt.get(999);
