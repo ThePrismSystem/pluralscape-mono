@@ -182,7 +182,7 @@ export { filterManifest } from "./subscription-filter.js";
 
 // ── On-demand document loading ───────────────────────────────────────
 export type { OnDemandLoadResult } from "./on-demand-loader.js";
-export { requestOnDemandDocument } from "./on-demand-loader.js";
+export { OnDemandLoader, requestOnDemandDocument } from "./on-demand-loader.js";
 
 // ── Replication profiles ──────────────────────────────────────────────
 export type {

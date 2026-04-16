@@ -1,8 +1,8 @@
 import * as Automerge from "@automerge/automerge";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { requestOnDemandDocument } from "../on-demand-loader.js";
+import { OnDemandLoader, requestOnDemandDocument } from "../on-demand-loader.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
 import { asSyncDocId, sysId } from "./test-crypto-helpers.js";
@@ -25,6 +25,94 @@ function makeKeys(s: SodiumAdapter): DocumentKeys {
     signingKeys: s.signKeypair(),
   };
 }
+
+// ── OnDemandLoader (lastFetchedSeq tracking) ────────────────────────
+
+describe("OnDemandLoader", () => {
+  const DOC_ID = asSyncDocId("fronting-sys_loader");
+  let keys: DocumentKeys;
+
+  beforeAll(async () => {
+    sodium = new WasmSodiumAdapter();
+    await sodium.init();
+  });
+
+  beforeEach(() => {
+    keys = makeKeys(sodium);
+  });
+
+  it("uses lastFetchedSeq on subsequent loads to skip already-fetched changes", async () => {
+    const fetchChangesSince = vi.fn().mockResolvedValue([]);
+    const mockAdapter: SyncNetworkAdapter = {
+      fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
+      fetchChangesSince,
+      submitChange: vi.fn(),
+      submitSnapshot: vi.fn(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+      fetchManifest: vi.fn().mockResolvedValue({ systemId: sysId("sys_1"), documents: [] }),
+    };
+
+    const loader = new OnDemandLoader();
+
+    // First load: no prior seq tracked, should fetch from 0
+    await loader.load<SimpleDoc>({ docId: DOC_ID, persist: false }, mockAdapter, keys, sodium);
+    expect(fetchChangesSince).toHaveBeenCalledWith(DOC_ID, 0);
+
+    // Simulate a second load where the adapter returns a change with seq=5
+    const base = Automerge.from<SimpleDoc>({ items: [] });
+    const session = new EncryptedSyncSession<SimpleDoc>({
+      doc: base,
+      keys,
+      documentId: DOC_ID,
+      sodium,
+    });
+    const env = session.change((doc) => {
+      doc.items.push("new-item");
+    });
+    fetchChangesSince.mockResolvedValue([{ ...env, seq: 5 }]);
+
+    const result = await loader.load<SimpleDoc>(
+      { docId: DOC_ID, persist: false },
+      mockAdapter,
+      keys,
+      sodium,
+    );
+
+    // Second load still fetches from 0 because first load returned seq=0
+    expect(fetchChangesSince).toHaveBeenNthCalledWith(2, DOC_ID, 0);
+
+    // After second load, lastFetchedSeq should be updated to 5
+    expect(loader.getLastFetchedSeq(DOC_ID)).toBe(5);
+    expect(result.syncState.lastSyncedSeq).toBe(5);
+
+    // Third load: should fetch from 5 (tracked seq)
+    fetchChangesSince.mockResolvedValue([]);
+    await loader.load<SimpleDoc>({ docId: DOC_ID, persist: false }, mockAdapter, keys, sodium);
+    expect(fetchChangesSince).toHaveBeenNthCalledWith(3, DOC_ID, 5);
+  });
+
+  it("returns 0 for never-fetched documents", () => {
+    const loader = new OnDemandLoader();
+    expect(loader.getLastFetchedSeq(DOC_ID)).toBe(0);
+  });
+
+  it("clear resets all tracked state", async () => {
+    const mockAdapter: SyncNetworkAdapter = {
+      fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
+      fetchChangesSince: vi.fn().mockResolvedValue([]),
+      submitChange: vi.fn(),
+      submitSnapshot: vi.fn(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+      fetchManifest: vi.fn().mockResolvedValue({ systemId: sysId("sys_1"), documents: [] }),
+    };
+
+    const loader = new OnDemandLoader();
+    await loader.load<SimpleDoc>({ docId: DOC_ID, persist: false }, mockAdapter, keys, sodium);
+
+    loader.clear();
+    expect(loader.getLastFetchedSeq(DOC_ID)).toBe(0);
+  });
+});
 
 /** Minimal mock adapter for on-demand loading tests. */
 class MockNetworkAdapter implements SyncNetworkAdapter {
