@@ -8,7 +8,6 @@ const {
   mockExecuteSync,
   mockPrepareSync,
   mockExecSync,
-  mockWithTransactionSync,
   mockCloseSync,
   mockDeleteDatabaseSync,
   mockOpenDatabaseSync,
@@ -25,15 +24,11 @@ const {
     finalizeSync: mockFinalizeSync,
   }));
   const mockExecSync = vi.fn();
-  const mockWithTransactionSync = vi.fn((fn: () => void) => {
-    fn();
-  });
   const mockCloseSync = vi.fn();
   const mockDeleteDatabaseSync = vi.fn();
   const mockOpenDatabaseSync = vi.fn(() => ({
     prepareSync: mockPrepareSync,
     execSync: mockExecSync,
-    withTransactionSync: mockWithTransactionSync,
     closeSync: mockCloseSync,
   }));
 
@@ -44,7 +39,6 @@ const {
     mockExecuteSync,
     mockPrepareSync,
     mockExecSync,
-    mockWithTransactionSync,
     mockCloseSync,
     mockDeleteDatabaseSync,
     mockOpenDatabaseSync,
@@ -87,7 +81,7 @@ describe("createExpoSqliteDriver", () => {
   describe("exec()", () => {
     it("delegates to db.execSync()", async () => {
       const driver = await createExpoSqliteDriver();
-      driver.exec("CREATE TABLE t (id INTEGER)");
+      await driver.exec("CREATE TABLE t (id INTEGER)");
       expect(mockExecSync).toHaveBeenCalledWith("CREATE TABLE t (id INTEGER)");
     });
   });
@@ -95,24 +89,50 @@ describe("createExpoSqliteDriver", () => {
   describe("close()", () => {
     it("delegates to db.closeSync()", async () => {
       const driver = await createExpoSqliteDriver();
-      driver.close();
+      await driver.close();
       expect(mockCloseSync).toHaveBeenCalledOnce();
     });
   });
 
   describe("transaction()", () => {
-    it("wraps fn in db.withTransactionSync() and returns fn result", async () => {
+    it("issues BEGIN/COMMIT and returns fn result on success", async () => {
       const driver = await createExpoSqliteDriver();
-      const result = driver.transaction(() => 42);
-      expect(mockWithTransactionSync).toHaveBeenCalled();
+      const result = await driver.transaction(() => Promise.resolve(42));
+      expect(mockExecSync).toHaveBeenCalledWith("BEGIN");
+      expect(mockExecSync).toHaveBeenCalledWith("COMMIT");
+      expect(mockExecSync).not.toHaveBeenCalledWith("ROLLBACK");
       expect(result).toBe(42);
+    });
+
+    it("issues ROLLBACK and rethrows when fn throws", async () => {
+      const driver = await createExpoSqliteDriver();
+      const failure = new Error("fn failed");
+      await expect(driver.transaction(() => Promise.reject(failure))).rejects.toBe(failure);
+      expect(mockExecSync).toHaveBeenCalledWith("BEGIN");
+      expect(mockExecSync).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockExecSync).not.toHaveBeenCalledWith("COMMIT");
+    });
+
+    it("throws AggregateError when both fn and ROLLBACK throw", async () => {
+      const driver = await createExpoSqliteDriver();
+      const failure = new Error("fn failed");
+      const rollbackFailure = new Error("rollback failed");
+      mockExecSync.mockImplementation((sql: string) => {
+        if (sql === "ROLLBACK") {
+          throw rollbackFailure;
+        }
+      });
+      await expect(driver.transaction(() => Promise.reject(failure))).rejects.toMatchObject({
+        name: "AggregateError",
+        errors: [failure, rollbackFailure],
+      });
     });
   });
 
   describe("prepare().run()", () => {
     it("prepares, executes, and finalizes the statement", async () => {
       const driver = await createExpoSqliteDriver();
-      driver.prepare("INSERT INTO t VALUES (?)").run(1);
+      await driver.prepare("INSERT INTO t VALUES (?)").run(1);
       expect(mockPrepareSync).toHaveBeenCalledWith("INSERT INTO t VALUES (?)");
       expect(mockExecuteSync).toHaveBeenCalledWith([1]);
       expect(mockFinalizeSync).toHaveBeenCalledOnce();
@@ -124,7 +144,7 @@ describe("createExpoSqliteDriver", () => {
       const rows = [{ id: 1 }, { id: 2 }];
       mockGetAllSync.mockReturnValueOnce(rows);
       const driver = await createExpoSqliteDriver();
-      const result = driver.prepare("SELECT * FROM t").all();
+      const result = await driver.prepare("SELECT * FROM t").all();
       expect(result).toEqual(rows);
       expect(mockFinalizeSync).toHaveBeenCalledOnce();
     });
@@ -134,7 +154,7 @@ describe("createExpoSqliteDriver", () => {
     it("returns the first row when present", async () => {
       mockGetFirstSync.mockReturnValueOnce({ id: 1 });
       const driver = await createExpoSqliteDriver();
-      const result = driver.prepare("SELECT * FROM t WHERE id = ?").get(1);
+      const result = await driver.prepare("SELECT * FROM t WHERE id = ?").get(1);
       expect(result).toEqual({ id: 1 });
       expect(mockFinalizeSync).toHaveBeenCalledOnce();
     });
@@ -142,7 +162,7 @@ describe("createExpoSqliteDriver", () => {
     it("returns undefined (not null) when no row is found", async () => {
       mockGetFirstSync.mockReturnValueOnce(null);
       const driver = await createExpoSqliteDriver();
-      const result = driver.prepare("SELECT * FROM t WHERE id = ?").get(999);
+      const result = await driver.prepare("SELECT * FROM t WHERE id = ?").get(999);
       expect(result).toBeUndefined();
       expect(mockFinalizeSync).toHaveBeenCalledOnce();
     });
@@ -154,9 +174,7 @@ describe("createExpoSqliteDriver", () => {
         throw new Error("db error");
       });
       const driver = await createExpoSqliteDriver();
-      expect(() => {
-        driver.prepare("SELECT 1").run();
-      }).toThrow("db error");
+      expect(() => driver.prepare("SELECT 1").run()).toThrow("db error");
       expect(mockFinalizeSync).toHaveBeenCalledOnce();
     });
   });

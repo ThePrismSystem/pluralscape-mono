@@ -96,29 +96,30 @@ export function createExpoSqliteDriver(
   const driver: SqliteDriver = {
     prepare<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
       return {
-        run(...params: unknown[]): void {
+        run(...params: unknown[]): Promise<void> {
           const stmt = db.prepareSync(sql);
           try {
             stmt.executeSync(params as SQLiteBindParams);
           } finally {
             stmt.finalizeSync();
           }
+          return Promise.resolve();
         },
-        all(...params: unknown[]): TRow[] {
+        all(...params: unknown[]): Promise<TRow[]> {
           const stmt = db.prepareSync(sql);
           try {
             const result = stmt.executeSync<TRow>(params as SQLiteBindParams);
-            return result.getAllSync();
+            return Promise.resolve(result.getAllSync());
           } finally {
             stmt.finalizeSync();
           }
         },
-        get(...params: unknown[]): TRow | undefined {
+        get(...params: unknown[]): Promise<TRow | undefined> {
           const stmt = db.prepareSync(sql);
           try {
             const result = stmt.executeSync<TRow>(params as SQLiteBindParams);
             const first = result.getFirstSync();
-            return first ?? undefined;
+            return Promise.resolve(first ?? undefined);
           } finally {
             stmt.finalizeSync();
           }
@@ -126,20 +127,37 @@ export function createExpoSqliteDriver(
       };
     },
 
-    exec(sql: string): void {
+    exec(sql: string): Promise<void> {
       db.execSync(sql);
+      return Promise.resolve();
     },
 
-    transaction<T>(fn: () => T): T {
-      let result!: T;
-      db.withTransactionSync(() => {
-        result = fn();
-      });
-      return result;
+    async transaction<T>(fn: () => Promise<T>): Promise<T> {
+      // expo-sqlite's withTransactionSync wraps a sync callback. Since our fn
+      // is async, we use explicit BEGIN/COMMIT/ROLLBACK so the fn can await.
+      // Preserve the original error if ROLLBACK itself throws (matches the
+      // bun/better-sqlite pattern).
+      db.execSync("BEGIN");
+      try {
+        const result = await fn();
+        db.execSync("COMMIT");
+        return result;
+      } catch (err) {
+        try {
+          db.execSync("ROLLBACK");
+        } catch (rollbackErr) {
+          throw new AggregateError(
+            [err, rollbackErr],
+            "transaction failed and rollback also failed",
+          );
+        }
+        throw err;
+      }
     },
 
-    close(): void {
+    close(): Promise<void> {
       db.closeSync();
+      return Promise.resolve();
     },
   };
 
