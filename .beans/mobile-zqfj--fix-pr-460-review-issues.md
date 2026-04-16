@@ -1,11 +1,11 @@
 ---
 # mobile-zqfj
 title: "Fix PR #460 review issues"
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-16T20:12:09Z
-updated_at: 2026-04-16T20:30:08Z
+updated_at: 2026-04-16T20:54:40Z
 ---
 
 Remediate all Critical/Important/Suggestion items from 5-agent review of PR #460 (async SqliteDriver contract). See docs/superpowers/plans/2026-04-16-mobile-shr0-opfs-worker-plan.md for Phase 1 context.
@@ -56,4 +56,19 @@ Remediate all Critical/Important/Suggestion items from 5-agent review of PR #460
 
 ### Verification
 
-- [ ] /verify passes (format, lint, typecheck, unit, integration, e2e)
+- [x] /verify passes (format, lint, typecheck, unit, integration, e2e, e2e-slow, sp-import, pk-import)
+
+## Summary of Changes
+
+Remediated all Critical, Important, and Suggestion items from the 5-agent review of PR #460 (12 commits, all verification steps green).
+
+- **runAsyncTransaction helper** extracted with best-effort ROLLBACK on COMMIT failure and AggregateError wrapping; fn type widened to `() => T | Promise<T>`; nested transactions rejected at the driver level.
+- **SyncProvider** pipeline init no longer swallows rejections (emits `sync:error`) and disposes every partial allocation on unmount/cancel via a single `disposePartial()` over a mutable pipeline record.
+- **DataLayer** surfaces `data:error` via a new event type when `initialize()` or `close()` rejects.
+- **Coverage**: AggregateError, COMMIT-failure, nested-transaction tests across bun, better-sqlite helper, and expo drivers; SyncProvider cancellation-race and init-error tests; DataLayerProvider init-error test.
+- **Cleanups**: `OFFLINE_QUEUE_ID_PREFIX` extracted, `OfflineQueueAdapter.close` narrowed to `Promise<void>`, `isDatabaseAccessible` rethrows unexpected errors instead of masking them as decryption mismatches.
+- **Ergonomics**: SyncProvider tests migrated from `await act(() => Promise.resolve())` microtask-flushing to `waitFor` on the assertion of interest.
+
+### Note on the cancelled-flag simplification (Group A suggestion)
+
+The plan proposed replacing the object plus getter pattern with a plain `let cancelled: boolean = false`. In practice the project ESLint config rule `@typescript-eslint/no-unnecessary-condition` narrows the `let` variant to `false` at every check across the await boundaries, even with an explicit `boolean` annotation. The getter pattern was kept as the only reliable way to bypass that narrowing without disabling the rule.
