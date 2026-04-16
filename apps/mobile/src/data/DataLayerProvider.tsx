@@ -35,7 +35,10 @@ export function DataLayerProvider({
   const localDbRef = useRef<LocalDatabase | null>(null);
   if (localDbRef.current === null && platform.storage.backend === "sqlite") {
     const db = createLocalDatabase(platform.storage.driver);
-    db.initialize();
+    // Fire-and-forget: initialize() runs CREATE TABLE DDL asynchronously.
+    // Queries issued before init resolves will error; in practice the
+    // microtask completes well before any user interaction produces a query.
+    void db.initialize();
     localDbRef.current = db;
   }
 
@@ -53,7 +56,8 @@ export function DataLayerProvider({
 
   useEffect(() => {
     return () => {
-      localDbRef.current?.close();
+      const db = localDbRef.current;
+      if (db !== null) void db.close();
       eventBusRef.current?.removeAll();
     };
   }, []);
