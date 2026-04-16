@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { checkStorageBudget, selectEvictionCandidates } from "../storage-budget.js";
+import { EvictionCache, checkStorageBudget, selectEvictionCandidates } from "../storage-budget.js";
 
 import type { StorageBudget } from "../types.js";
 
@@ -9,6 +9,115 @@ const TEST_BUDGET: StorageBudget = { maxTotalBytes: 1000 };
 function docsMap(entries: [string, number][]): ReadonlyMap<string, number> {
   return new Map(entries);
 }
+
+// ── EvictionCache ───────────────────────────────────────────────────
+
+describe("EvictionCache", () => {
+  it("reuses cached sort order when cache is not invalidated", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 100],
+      ["fronting-sys_a", 200],
+      ["journal-sys_a-2024", 400],
+      ["chat-ch_a-2025-01", 300],
+      ["fronting-sys_a-2025-Q1", 200],
+    ]);
+
+    const cache = new EvictionCache();
+
+    // Populate the cache
+    cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+
+    // Add a new document WITHOUT calling invalidate()
+    docs.set("chat-ch_b-2025-02", 150);
+
+    // The new document should NOT appear in eviction candidates because
+    // the cached sort order was reused (not rebuilt)
+    const result = cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+    expect(result).not.toContain("chat-ch_b-2025-02");
+  });
+
+  it("re-sorts after invalidation", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 100],
+      ["fronting-sys_a", 600],
+      ["journal-sys_a-2024", 400],
+    ]);
+
+    const cache = new EvictionCache();
+    const result1 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+
+    // Invalidate and add a new document
+    cache.invalidate();
+    docs.set("chat-ch_a-2025-01", 200);
+
+    const result2 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+
+    // Results should differ because the document set changed
+    expect(result1).not.toEqual(result2);
+  });
+
+  it("reflects current sizes from the live map, not stale cached sizes", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 100],
+      ["fronting-sys_a", 200],
+      ["journal-sys_a-2024", 400],
+      ["chat-ch_a-2025-01", 300],
+    ]);
+    // Total: 1000, budget: 800, excess: 200
+    const cache = new EvictionCache();
+    const result1 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 800 });
+
+    // journal-historical (400) covers the 200 excess → 1 candidate
+    expect(result1).toEqual(["journal-sys_a-2024"]);
+
+    // Shrink journal size in the live map WITHOUT invalidating
+    docs.set("journal-sys_a-2024", 50);
+    // Total is now 650, within budget → no candidates
+    const result2 = cache.selectEvictionCandidates(docs, { maxTotalBytes: 800 });
+    expect(result2).toEqual([]);
+  });
+
+  it("invokes onParseWarning for malformed doc IDs during cache build", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 100],
+      ["not-a-valid-doc-id", 500],
+      ["fronting-sys_a", 600],
+    ]);
+
+    const warnings: string[] = [];
+    const cache = new EvictionCache({ onParseWarning: (docId) => warnings.push(docId) });
+    cache.selectEvictionCandidates(docs, { maxTotalBytes: 800 });
+
+    expect(warnings).toEqual(["not-a-valid-doc-id"]);
+  });
+
+  it("does not invoke onParseWarning on cached calls", () => {
+    const docs = new Map<string, number>([
+      ["not-a-valid-doc-id", 500],
+      ["fronting-sys_a", 600],
+    ]);
+
+    const onParseWarning = vi.fn();
+    const cache = new EvictionCache({ onParseWarning });
+    cache.selectEvictionCandidates(docs, { maxTotalBytes: 800 });
+    expect(onParseWarning).toHaveBeenCalledTimes(1);
+
+    // Second call uses cache — no new warnings
+    cache.selectEvictionCandidates(docs, { maxTotalBytes: 800 });
+    expect(onParseWarning).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns empty when within budget regardless of cache state", () => {
+    const docs = new Map<string, number>([
+      ["system-core-sys_a", 200],
+      ["fronting-sys_a", 300],
+    ]);
+
+    const cache = new EvictionCache();
+    expect(cache.selectEvictionCandidates(docs, TEST_BUDGET)).toEqual([]);
+    expect(cache.selectEvictionCandidates(docs, TEST_BUDGET)).toEqual([]);
+  });
+});
 
 describe("checkStorageBudget", () => {
   it("reports within budget when total is under limit", () => {

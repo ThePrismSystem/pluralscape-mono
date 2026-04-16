@@ -493,6 +493,7 @@ describe("P-M3: batch storage writes", () => {
 
 describe("P-M4: operation promise cleanup", () => {
   it("cleans up documentQueues after operations complete", async () => {
+    vi.useFakeTimers();
     const engine = await createBootstrappedEngine();
 
     await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
@@ -500,10 +501,8 @@ describe("P-M4: operation promise cleanup", () => {
       d["_cleanup_test"] = { value: "test" };
     });
 
-    // Allow microtask queue to drain for cleanup callback
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
+    // Drain the microtask queue so the cleanup .then() handler fires
+    await vi.advanceTimersByTimeAsync(0);
 
     // After the operation completes and microtasks drain, the queue entry should be removed
     expect(engine.pendingOperationCount).toBe(0);
@@ -517,6 +516,7 @@ describe("P-M4: operation promise cleanup", () => {
     expect(seq2).toBe(2);
 
     engine.dispose();
+    vi.useRealTimers();
   });
 });
 
@@ -638,6 +638,7 @@ describe("P-M5: conflict retry buffer cap", () => {
 
 describe("P-M8: bounded concurrency for correction envelopes", () => {
   it("limits concurrent network submissions", async () => {
+    vi.useFakeTimers();
     let maxConcurrent = 0;
     let currentConcurrent = 0;
     let seqCounter = 0;
@@ -684,11 +685,15 @@ describe("P-M8: bounded concurrency for correction envelopes", () => {
       });
     }
 
-    await submitCorrectionEnvelopes(
+    const done = submitCorrectionEnvelopes(
       { networkAdapter, storageAdapter, onError },
       asSyncDocId("doc_a"),
       envelopes,
     );
+
+    // Advance fake timers to resolve all setTimeout(10) calls
+    await vi.advanceTimersByTimeAsync(100);
+    await done;
 
     // All 10 should be submitted
     expect(submitChange).toHaveBeenCalledTimes(10);
@@ -700,6 +705,8 @@ describe("P-M8: bounded concurrency for correction envelopes", () => {
     // All 10 should be persisted
     expect(appendChange).toHaveBeenCalledTimes(10);
     expect(onError).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
   });
 
   it("persists only successful submissions and reports failures", async () => {

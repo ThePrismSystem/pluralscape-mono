@@ -114,3 +114,8 @@ export const JITTER_MAX = 1.0;
 
 /** Maximum number of queue entries fetched per drain batch. */
 export const DRAIN_BATCH_SIZE = 500;
+
+// ── Protocol ──────────────────────────────────────────────────────
+
+/** Current sync protocol version. Declared in AuthenticateRequest. */
+export const SYNC_PROTOCOL_VERSION = 1;

@@ -1,11 +1,11 @@
+import { SYNC_PROTOCOL_VERSION } from "./sync.constants.js";
+
 import type { SyncManifest } from "./adapters/network-adapter.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
-// ── Protocol version ──────────────────────────────────────────────────
-
-/** Current sync protocol version. Declared in AuthenticateRequest. */
-export const SYNC_PROTOCOL_VERSION = 1;
+// Re-export so existing consumers of `@pluralscape/sync/protocol` still resolve it.
+export { SYNC_PROTOCOL_VERSION };
 
 // ── Transport ─────────────────────────────────────────────────────────
 

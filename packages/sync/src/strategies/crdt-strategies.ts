@@ -356,3 +356,7 @@ export const ENTITY_CRDT_STRATEGIES = {
 
 /** All entity type keys in the strategy registry. */
 export type SyncedEntityType = keyof typeof ENTITY_CRDT_STRATEGIES;
+
+/** Union of all fieldName values across the strategy registry. */
+export type SyncStorageFieldName =
+  (typeof ENTITY_CRDT_STRATEGIES)[keyof typeof ENTITY_CRDT_STRATEGIES]["fieldName"];

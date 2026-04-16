@@ -3,7 +3,7 @@
 // Root barrel exports core types, session, engine, document factory, and
 // protocol messages. Specialized exports live behind sub-entry points:
 //   @pluralscape/sync/adapters    — storage/network adapters and SQLite drivers
-//   @pluralscape/sync/schemas     — CRDT document schema types
+//   @pluralscape/sync/schemas     — CRDT document schema types (schema-registry.ts)
 //   @pluralscape/sync/protocol    — full protocol message taxonomy
 //   @pluralscape/sync/materializer — entity registry and document materializers
 
@@ -110,6 +110,7 @@ export type {
   CrdtStorageType,
   CrdtStrategy,
   SyncedEntityType,
+  SyncStorageFieldName,
 } from "./strategies/crdt-strategies.js";
 
 // ── Document factories ───────────────────────────────────────────────
@@ -174,14 +175,14 @@ export {
 
 // ── Storage budget ───────────────────────────────────────────────────
 export type { StorageBudgetStatus } from "./storage-budget.js";
-export { checkStorageBudget, selectEvictionCandidates } from "./storage-budget.js";
+export { EvictionCache, checkStorageBudget, selectEvictionCandidates } from "./storage-budget.js";
 
 // ── Subscription filtering ───────────────────────────────────────────
 export { filterManifest } from "./subscription-filter.js";
 
 // ── On-demand document loading ───────────────────────────────────────
 export type { OnDemandLoadResult } from "./on-demand-loader.js";
-export { requestOnDemandDocument } from "./on-demand-loader.js";
+export { OnDemandLoader, requestOnDemandDocument } from "./on-demand-loader.js";
 
 // ── Replication profiles ──────────────────────────────────────────────
 export type {
@@ -227,7 +228,7 @@ export type {
   ServerMessage,
   SyncMessage,
 } from "./protocol.js";
-export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
+export { SYNC_PROTOCOL_VERSION } from "./sync.constants.js";
 
 // ── Sync engine ─────────────────────────────────────────────────────
 export { SyncEngine } from "./engine/index.js";
