@@ -102,6 +102,22 @@ afterEach(() => {
 });
 
 /**
+ * Tick budget for `flushMicrotasks`. The deepest await chain across these
+ * tests is in `transaction()`: await prev → await txn-begin response →
+ * await user fn (await exec response) → await txn-commit response. Eight
+ * `await Promise.resolve()` cycles cover that depth with comfortable margin.
+ * Bump if a future driver change adds awaits between sends.
+ */
+const MICROTASK_FLUSH_TICKS = 8;
+
+/** Flush enough microtasks to drain a chain of awaited proxy sends. */
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < MICROTASK_FLUSH_TICKS; i++) {
+    await Promise.resolve();
+  }
+}
+
+/**
  * Drive the init handshake: wait for the driver to post `init`, respond ok,
  * and return the resolved driver.
  */
@@ -237,8 +253,11 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
 
     // Flush enough microtasks for the user fn to await exec1 and the
     // transaction body to schedule the txn-commit send.
-    for (let i = 0; i < 5; i++) await Promise.resolve();
+    await flushMicrotasks();
+    // Commit MUST have posted — otherwise a release-without-commit regression
+    // would silently pass the begin-count assertion below.
     const commit1 = fakeWorker.posted.find((r) => r.kind === "txn-commit");
+    expect(commit1).toBeDefined();
     if (commit1 === undefined) throw new Error("expected txn-commit for t1");
 
     // Crucial assertion: while t1's commit is in flight, t2's BEGIN must not
@@ -258,12 +277,12 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     if (begin2 === undefined) throw new Error("expected second txn-begin");
     fakeWorker.respond({ id: begin2.id, ok: true, result: undefined });
 
-    for (let i = 0; i < 5; i++) await Promise.resolve();
+    await flushMicrotasks();
     const exec2 = fakeWorker.posted.find((r) => r.kind === "exec" && r.sql === "step2");
     if (exec2 === undefined) throw new Error("expected step2 exec");
     fakeWorker.respond({ id: exec2.id, ok: true, result: undefined });
 
-    for (let i = 0; i < 5; i++) await Promise.resolve();
+    await flushMicrotasks();
     const commit2 = fakeWorker.posted.filter((r) => r.kind === "txn-commit")[1];
     if (commit2 === undefined) throw new Error("expected txn-commit for t2");
     fakeWorker.respond({ id: commit2.id, ok: true, result: undefined });
