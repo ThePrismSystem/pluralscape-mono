@@ -141,7 +141,12 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
       },
 
       get(...params: unknown[]): TRow | undefined {
-        return this.all(...params)[0];
+        if (params.length > 0) {
+          throw new Error(
+            "OPFS driver: parameterized .get() not yet supported — requires Worker bridge (see mobile-shr0)",
+          );
+        }
+        return this.all()[0];
       },
     };
   }

@@ -224,7 +224,7 @@ describe("createOpfsSqliteDriver", () => {
     it("throws when called with params (Worker bridge required)", () => {
       const stmt = driver.prepare("SELECT * FROM t WHERE id = ?");
       expect(() => stmt.get(1)).toThrow(
-        /parameterized .all\(\) not yet supported.*Worker bridge.*mobile-shr0/,
+        /parameterized .get\(\) not yet supported.*Worker bridge.*mobile-shr0/,
       );
     });
   });
