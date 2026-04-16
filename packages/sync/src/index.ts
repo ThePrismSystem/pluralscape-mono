@@ -110,6 +110,7 @@ export type {
   CrdtStorageType,
   CrdtStrategy,
   SyncedEntityType,
+  SyncStorageFieldName,
 } from "./strategies/crdt-strategies.js";
 
 // ── Document factories ───────────────────────────────────────────────
