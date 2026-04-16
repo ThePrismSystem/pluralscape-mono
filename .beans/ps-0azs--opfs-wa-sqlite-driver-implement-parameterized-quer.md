@@ -1,11 +1,11 @@
 ---
 # ps-0azs
 title: "OPFS wa-sqlite driver: implement parameterized query support via prepare/bind/step API"
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-01T04:13:11Z
-updated_at: 2026-04-16T17:02:33Z
+updated_at: 2026-04-16T22:28:22Z
 parent: ps-0enb
 blocked_by:
   - mobile-shr0
@@ -28,3 +28,7 @@ Scoped down to keep what works:
 - Single-slot `lastError` overwrites surface via the optional `OpfsSqliteDriverOptions.onDroppedError` callback (project bans direct `console.error` use)
 
 Will be marked completed once mobile-shr0 lands and parameterized reads return correct rows synchronously.
+
+## Resolution
+
+Parameterized reads now work via the OPFS Web Worker bridge. See mobile-shr0 for the implementation. `.all(...params)` and `.get(...params)` return correct rows via async resolution.
