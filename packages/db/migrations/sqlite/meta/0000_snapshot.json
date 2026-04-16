@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "18ab0e76-a4ff-4336-a650-a5aad377346b",
+  "id": "278eb55d-a413-4c7c-accf-54284c51d8a5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -8146,14 +8146,7 @@
           "name": "encrypted_data",
           "type": "blob",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "payload_data": {
-          "name": "payload_data",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "created_at": {
@@ -8237,10 +8230,6 @@
         "webhook_deliveries_http_status_check": {
           "name": "webhook_deliveries_http_status_check",
           "value": "\"webhook_deliveries\".\"http_status\" IS NULL OR (\"webhook_deliveries\".\"http_status\" >= 100 AND \"webhook_deliveries\".\"http_status\" <= 599)"
-        },
-        "webhook_deliveries_payload_presence_check": {
-          "name": "webhook_deliveries_payload_presence_check",
-          "value": "\"webhook_deliveries\".\"encrypted_data\" IS NOT NULL OR \"webhook_deliveries\".\"payload_data\" IS NOT NULL"
         }
       }
     },
