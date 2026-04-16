@@ -729,11 +729,12 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
     // that both sessions see the same final state — the application layer would
     // then apply the normalization rule as a follow-up change.
     const cr = sessionA.document.checkInRecords[asCheckInRecordId("cr_1")];
-    expect(cr).toBeDefined();
+    expect(cr).toMatchObject({
+      respondedAt: 1100,
+    });
     // Verify response data is present (LWW on each field independently)
     // The exact winner of `dismissed` depends on Automerge's LWW ordering
     expect(cr?.respondedByMemberId?.val).toBe("mem_1");
-    expect(cr?.respondedAt).toBe(1100);
   });
 });
 
@@ -890,7 +891,9 @@ describe("Category 9: ChatMessage edit chain", () => {
 
     // Edit chain is intact: msg_2.editOf references msg_1
     const msg2 = sessionA.document.messages.find((m) => m.id.val === "msg_2");
-    expect(msg2).toBeDefined();
+    expect(msg2).toMatchObject({
+      id: expect.objectContaining({ val: "msg_2" }),
+    });
     expect(msg2?.editOf?.val).toBe("msg_1");
   });
 });
