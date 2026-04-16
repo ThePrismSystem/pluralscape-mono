@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createOpfsSqliteDriver } from "../opfs-sqlite-driver.js";
-import { SQLITE_DONE, SQLITE_ROW } from "../wa-sqlite.constants.js";
+import { SQLITE_DONE, SQLITE_OK, SQLITE_ROW } from "../wa-sqlite.constants.js";
 
 import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
@@ -129,6 +129,35 @@ describe("createOpfsSqliteDriver", () => {
       stmt.run();
       expect(mockExec).toHaveBeenCalledWith(1, "INSERT INTO t VALUES (1)");
       expect(mockStatements).not.toHaveBeenCalled();
+    });
+
+    it("rejects Date as bind parameter", async () => {
+      const stmtHandle = 42;
+      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
+      mockBindCollection.mockReturnValue(SQLITE_OK);
+      mockStep.mockResolvedValue(SQLITE_DONE);
+
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run(new Date());
+      await expect(driver.flush()).rejects.toThrow(/unsupported bind type.*Date/);
+    });
+
+    it("rejects plain object as bind parameter", async () => {
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run({ key: "value" });
+      await expect(driver.flush()).rejects.toThrow(/unsupported bind type/);
+    });
+
+    it("rejects function as bind parameter", async () => {
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run(() => "x");
+      await expect(driver.flush()).rejects.toThrow(/unsupported bind type.*function/);
+    });
+
+    it("includes the parameter index in the unsupported-type error", async () => {
+      const stmt = driver.prepare("INSERT INTO t VALUES (?, ?)");
+      stmt.run("ok", new Date());
+      await expect(driver.flush()).rejects.toThrow(/index 1/);
     });
   });
 

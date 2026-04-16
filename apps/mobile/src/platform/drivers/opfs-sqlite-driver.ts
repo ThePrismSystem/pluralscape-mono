@@ -1,3 +1,5 @@
+import { SQLITE_ROW } from "./wa-sqlite.constants.js";
+
 import type { SqliteDriver, SqliteStatement } from "@pluralscape/sync/adapters";
 
 const DB_NAME = "pluralscape-sync.db";
@@ -59,25 +61,47 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
   }
 
   /**
-   * Execute a parameterized query using wa-sqlite's prepared statement API.
-   * Returns collected rows as column-name-keyed objects (empty array for non-SELECT).
-   *
-   * Lifecycle: statements() -> bind_collection() -> step() loop -> row()/column_names()
-   * The async iterator from statements() auto-finalizes when iteration completes.
+   * Execute a write-only parameterized statement. toBindParams is called inside
+   * the async IIFE so validation errors land in lastError and surface on flush().
    */
-  function trackPrepared(
+  function trackPrepared(sql: string, rawParams: unknown[]): void {
+    checkLastError();
+
+    const promise = (async () => {
+      const params = toBindParams(rawParams);
+      for await (const stmt of sqlite3.statements(db, sql)) {
+        sqlite3.bind_collection(stmt, params);
+        while ((await sqlite3.step(stmt)) === SQLITE_ROW) {
+          // run() does not collect rows — discard
+        }
+      }
+      return 0;
+    })();
+
+    lastExecPromise = promise;
+    promise.catch((err: unknown) => {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    });
+  }
+
+  /**
+   * Execute a parameterized SELECT and collect rows into the provided array.
+   * Used by all()/get() parameterized paths. Will be removed in Tasks 6/7 when
+   * those paths are replaced with throws.
+   */
+  function trackPreparedRowCollect(
     sql: string,
-    params: ReadonlyArray<WaSqliteCompatibleType | null>,
+    rawParams: unknown[],
     rows: Record<string, unknown>[],
   ): void {
     checkLastError();
 
     const promise = (async () => {
+      const params = toBindParams(rawParams);
       for await (const stmt of sqlite3.statements(db, sql)) {
         sqlite3.bind_collection(stmt, params);
-
         const columns = sqlite3.column_names(stmt);
-        while ((await sqlite3.step(stmt)) === SQLite.SQLITE_ROW) {
+        while ((await sqlite3.step(stmt)) === SQLITE_ROW) {
           const values = sqlite3.row(stmt);
           const obj: Record<string, unknown> = {};
           for (let i = 0; i < columns.length; i++) {
@@ -107,18 +131,19 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
   }
 
   /**
-   * Cast unknown params from the SqliteStatement interface to wa-sqlite compatible
-   * types. The sync adapters only pass null, number, string, and Uint8Array values.
+   * Cast unknown params from the SqliteStatement interface to wa-sqlite-compatible
+   * types. Throws on anything outside the supported set.
    */
   function toBindParams(params: unknown[]): (WaSqliteCompatibleType | null)[] {
-    return params.map((p) => {
+    return params.map((p, i) => {
       if (p === null || p === undefined) return null;
       if (typeof p === "number" || typeof p === "string" || typeof p === "bigint") return p;
       if (p instanceof Uint8Array) return p;
-      if (Array.isArray(p)) return p as number[];
-      // Unreachable for known callers (sync adapters only pass null/number/string/Uint8Array),
-      // but handle gracefully by JSON-serializing unknown objects.
-      return JSON.stringify(p);
+      // Extract a human-readable type name for the error message.
+      // Object.prototype.toString yields e.g. "[object Date]"; slice out "Date".
+      const tag = Object.prototype.toString.call(p);
+      const desc = typeof p === "object" ? tag.slice(8, -1) : typeof p;
+      throw new Error(`OPFS driver: unsupported bind type at index ${String(i)}: ${desc}`);
     });
   }
 
@@ -126,7 +151,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
     return {
       run(...params: unknown[]): void {
         if (params.length > 0) {
-          trackPrepared(sql, toBindParams(params), []);
+          trackPrepared(sql, params);
           return;
         }
         trackExec(sql);
@@ -135,7 +160,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
       all(...params: unknown[]): TRow[] {
         if (params.length > 0) {
           const rows: Record<string, unknown>[] = [];
-          trackPrepared(sql, toBindParams(params), rows);
+          trackPreparedRowCollect(sql, params, rows);
           return rows as TRow[];
         }
         const rows: TRow[] = [];
