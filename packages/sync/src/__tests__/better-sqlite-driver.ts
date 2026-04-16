@@ -6,9 +6,12 @@
  */
 import Database from "better-sqlite3-multiple-ciphers";
 
+import { runAsyncTransaction } from "../adapters/sqlite-driver.js";
+
 import type { SqliteDriver, SqliteStatement } from "../adapters/sqlite-driver.js";
 
 export function createBetterSqliteDriver(db: InstanceType<typeof Database>): SqliteDriver {
+  let txDepth = 0;
   return {
     prepare<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
       const stmt = db.prepare(sql);
@@ -29,25 +32,17 @@ export function createBetterSqliteDriver(db: InstanceType<typeof Database>): Sql
       db.exec(sql);
       return Promise.resolve();
     },
-    async transaction<T>(fn: () => Promise<T>): Promise<T> {
-      // better-sqlite3's db.transaction expects a sync fn. Wrap BEGIN/COMMIT/ROLLBACK
-      // manually so the fn can await. Preserve any original error when rollback itself
-      // throws, matching the bun driver.
-      db.exec("BEGIN");
+    async transaction<T>(fn: () => T | Promise<T>): Promise<T> {
+      if (txDepth > 0) {
+        throw new Error("SqliteDriver.transaction: nested transactions are not supported");
+      }
+      txDepth++;
       try {
-        const result = await fn();
-        db.exec("COMMIT");
-        return result;
-      } catch (err) {
-        try {
-          db.exec("ROLLBACK");
-        } catch (rollbackErr) {
-          throw new AggregateError(
-            [err, rollbackErr],
-            "transaction failed and rollback also failed",
-          );
-        }
-        throw err;
+        return await runAsyncTransaction((sql) => {
+          db.exec(sql);
+        }, fn);
+      } finally {
+        txDepth--;
       }
     },
     close(): Promise<void> {

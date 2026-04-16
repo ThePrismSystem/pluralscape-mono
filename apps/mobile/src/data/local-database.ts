@@ -9,7 +9,7 @@ export interface LocalDatabase {
   queryAll(sql: string, params: unknown[]): Promise<Record<string, unknown>[]>;
   queryOne(sql: string, params: unknown[]): Promise<Record<string, unknown> | undefined>;
   execute(sql: string, params: unknown[]): Promise<void>;
-  transaction<T>(fn: () => Promise<T>): Promise<T>;
+  transaction<T>(fn: () => T | Promise<T>): Promise<T>;
   close(): Promise<void>;
 }
 
@@ -34,7 +34,7 @@ export function createLocalDatabase(driver: SqliteDriver): LocalDatabase {
       return driver.prepare(sql).run(...params);
     },
 
-    transaction<T>(fn: () => Promise<T>): Promise<T> {
+    transaction<T>(fn: () => T | Promise<T>): Promise<T> {
       return driver.transaction(fn);
     },
 

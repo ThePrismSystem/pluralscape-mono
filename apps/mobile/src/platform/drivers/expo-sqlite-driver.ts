@@ -1,3 +1,4 @@
+import { runAsyncTransaction } from "@pluralscape/sync/adapters";
 import {
   deleteDatabaseSync,
   openDatabaseSync,
@@ -93,6 +94,8 @@ export function createExpoSqliteDriver(
     }
   }
 
+  let txDepth = 0;
+
   const driver: SqliteDriver = {
     prepare<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
       return {
@@ -132,26 +135,17 @@ export function createExpoSqliteDriver(
       return Promise.resolve();
     },
 
-    async transaction<T>(fn: () => Promise<T>): Promise<T> {
-      // expo-sqlite's withTransactionSync wraps a sync callback. Since our fn
-      // is async, we use explicit BEGIN/COMMIT/ROLLBACK so the fn can await.
-      // Preserve the original error if ROLLBACK itself throws (matches the
-      // bun/better-sqlite pattern).
-      db.execSync("BEGIN");
+    async transaction<T>(fn: () => T | Promise<T>): Promise<T> {
+      if (txDepth > 0) {
+        throw new Error("SqliteDriver.transaction: nested transactions are not supported");
+      }
+      txDepth++;
       try {
-        const result = await fn();
-        db.execSync("COMMIT");
-        return result;
-      } catch (err) {
-        try {
-          db.execSync("ROLLBACK");
-        } catch (rollbackErr) {
-          throw new AggregateError(
-            [err, rollbackErr],
-            "transaction failed and rollback also failed",
-          );
-        }
-        throw err;
+        return await runAsyncTransaction((sql) => {
+          db.execSync(sql);
+        }, fn);
+      } finally {
+        txDepth--;
       }
     },
 

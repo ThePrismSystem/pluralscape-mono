@@ -27,14 +27,59 @@ export interface SqliteDriver {
   /**
    * Run a function inside a transaction. Rollback on throw.
    *
-   * Nested transactions are not supported. Callers must not invoke
-   * `transaction` from inside another `transaction` — the inner BEGIN will
-   * fail with "cannot start a transaction within a transaction".
+   * Nested transactions are not supported and are rejected synchronously at
+   * the driver level with a clear error message before any SQL is issued.
    */
-  transaction<T>(fn: () => Promise<T>): Promise<T>;
+  transaction<T>(fn: () => T | Promise<T>): Promise<T>;
 
   /** Close the database connection. */
   close(): Promise<void>;
+}
+
+// ── Shared transaction helper ────────────────────────────────────────
+
+/**
+ * Shared transaction runner used by all SqliteDriver implementations.
+ *
+ * Issues BEGIN, awaits `fn`, then COMMIT on success or ROLLBACK on failure.
+ * When ROLLBACK itself throws, wraps both errors in an AggregateError so
+ * neither is lost. When COMMIT fails, attempts a best-effort ROLLBACK to
+ * leave the connection in a known state and throws the commit error
+ * (wrapped if the rollback also fails).
+ *
+ * Not reentrant — callers must guard against nested invocations before
+ * entering.
+ */
+export async function runAsyncTransaction<T>(
+  exec: (sql: string) => void | Promise<void>,
+  fn: () => T | Promise<T>,
+): Promise<T> {
+  await exec("BEGIN");
+  let result: T;
+  try {
+    result = await fn();
+  } catch (err) {
+    try {
+      await exec("ROLLBACK");
+    } catch (rollbackErr) {
+      throw new AggregateError([err, rollbackErr], "transaction failed and rollback also failed");
+    }
+    throw err;
+  }
+  try {
+    await exec("COMMIT");
+  } catch (commitErr) {
+    try {
+      await exec("ROLLBACK");
+    } catch (rollbackErr) {
+      throw new AggregateError(
+        [commitErr, rollbackErr],
+        "commit failed and subsequent rollback also failed",
+      );
+    }
+    throw commitErr;
+  }
+  return result;
 }
 
 // ── Bun SQLite driver factory ────────────────────────────────────────
@@ -50,12 +95,12 @@ interface BunSqliteDatabase {
     get(...params: unknown[]): unknown;
   };
   exec(sql: string): void;
-  transaction<T>(fn: () => T): () => T;
   close(): void;
 }
 
 /** Wraps a bun:sqlite Database as an async SqliteDriver. */
 export function createBunSqliteDriver(db: BunSqliteDatabase): SqliteDriver {
+  let txDepth = 0;
   return {
     prepare<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
       const stmt = db.prepare(sql);
@@ -76,24 +121,17 @@ export function createBunSqliteDriver(db: BunSqliteDatabase): SqliteDriver {
       db.exec(sql);
       return Promise.resolve();
     },
-    async transaction<T>(fn: () => Promise<T>): Promise<T> {
-      // bun:sqlite's transaction wraps a sync fn. Since our fn is async, we
-      // emulate BEGIN/COMMIT/ROLLBACK manually.
-      db.exec("BEGIN");
+    async transaction<T>(fn: () => T | Promise<T>): Promise<T> {
+      if (txDepth > 0) {
+        throw new Error("SqliteDriver.transaction: nested transactions are not supported");
+      }
+      txDepth++;
       try {
-        const result = await fn();
-        db.exec("COMMIT");
-        return result;
-      } catch (err) {
-        try {
-          db.exec("ROLLBACK");
-        } catch (rollbackErr) {
-          throw new AggregateError(
-            [err, rollbackErr],
-            "transaction failed and rollback also failed",
-          );
-        }
-        throw err;
+        return await runAsyncTransaction((sql) => {
+          db.exec(sql);
+        }, fn);
+      } finally {
+        txDepth--;
       }
     },
     close(): Promise<void> {

@@ -90,7 +90,10 @@ interface OfflineFirstQueryConfigBase<TRaw, TDecrypted> {
   /** Transforms a raw SQLite row into the local domain type. */
   readonly rowTransform: (row: Record<string, unknown>) => TDecrypted;
   /** Override the default `SELECT * FROM <table> WHERE id = ?` query. */
-  readonly localQueryFn?: (localDb: LocalDatabase, systemId: SystemId) => Promise<TDecrypted>;
+  readonly localQueryFn?: (
+    localDb: LocalDatabase,
+    systemId: SystemId,
+  ) => TDecrypted | Promise<TDecrypted>;
   readonly systemIdOverride?: SystemIdOverride;
   /**
    * Consumer-provided hook call. The factory cannot call tRPC hooks directly
@@ -138,7 +141,7 @@ interface OfflineFirstInfiniteQueryConfigBase<TRaw, TDecrypted> {
     localDb: LocalDatabase,
     systemId: SystemId,
     pagination: { readonly offset: number; readonly limit: number },
-  ) => Promise<readonly TDecrypted[]>;
+  ) => readonly TDecrypted[] | Promise<readonly TDecrypted[]>;
   readonly systemIdOverride?: SystemIdOverride;
   /** Whether to auto-append resolved systemId to queryKey. Defaults to true. Set false for account-scoped queries. */
   readonly injectSystemId?: boolean;

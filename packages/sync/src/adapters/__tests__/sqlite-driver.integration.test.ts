@@ -35,9 +35,6 @@ function makeBunShim(db: InstanceType<typeof Database>) {
     exec(sql: string): void {
       db.exec(sql);
     },
-    transaction<T>(fn: () => T): () => T {
-      return db.transaction(fn) as () => T;
-    },
     close(): void {
       db.close();
     },
