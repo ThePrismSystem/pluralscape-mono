@@ -233,3 +233,46 @@ describe("PKPayloadSchema", () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe("prototype pollution resistance", () => {
+  it("does not pollute Object.prototype via __proto__ key in member", () => {
+    const payload = JSON.parse(
+      '{"version":2,"id":"sys01","members":[{"id":"m1","name":"Evil","__proto__":{"polluted":"yes"}}],"groups":[],"switches":[]}',
+    );
+    const result = PKPayloadSchema.safeParse(payload);
+    // Should parse successfully (looseObject tolerates extra keys)
+    expect(result.success).toBe(true);
+    // But must NOT pollute Object.prototype
+    expect(Object.prototype).not.toHaveProperty("polluted");
+  });
+
+  it("does not pollute via constructor key in member", () => {
+    const payload = JSON.parse(
+      '{"version":2,"id":"sys01","members":[{"id":"m1","name":"Evil","constructor":{"prototype":{"injected":"yes"}}}],"groups":[],"switches":[]}',
+    );
+    const result = PKPayloadSchema.safeParse(payload);
+    expect(result.success).toBe(true);
+    expect(Object.prototype).not.toHaveProperty("injected");
+  });
+
+  it("does not pollute via __proto__ key in group", () => {
+    const payload = JSON.parse(
+      '{"version":2,"id":"sys01","members":[],"groups":[{"id":"g1","name":"Bad","__proto__":{"gpolluted":"yes"}}],"switches":[]}',
+    );
+    const result = PKPayloadSchema.safeParse(payload);
+    expect(result.success).toBe(true);
+    expect(Object.prototype).not.toHaveProperty("gpolluted");
+  });
+
+  it("does not pollute via nested __proto__ in privacy fields", () => {
+    const payload = JSON.parse(
+      '{"version":2,"id":"sys01","members":[{"id":"m1","name":"Tricky","privacy":{"__proto__":{"deep":"yes"}}}],"groups":[],"switches":[]}',
+    );
+    // Parse the payload — we only care that it doesn't pollute, not whether
+    // the __proto__ key inside privacy passes or fails validation.
+    PKPayloadSchema.safeParse(payload);
+    // Privacy field has strict enum keys, so __proto__ should either be
+    // stripped or ignored by the schema. Either way, no pollution.
+    expect(Object.prototype).not.toHaveProperty("deep");
+  });
+});

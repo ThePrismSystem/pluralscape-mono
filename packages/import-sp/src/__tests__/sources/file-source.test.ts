@@ -341,4 +341,70 @@ describe("createFileImportSource", () => {
     const parseErr = err as InstanceType<typeof FileSourceParseError>;
     expect(parseErr.message).toContain('Collection "members" had a non-array value');
   });
+
+  describe("corrupted prescan state", () => {
+    it("throws FileSourceParseError for non-JSON input (binary noise)", async () => {
+      const source = createFileImportSource({
+        stream: stringToStream("\x00\x01\x02\xFF"),
+      });
+      const err = await (async () => {
+        try {
+          for await (const e of source.iterate("members")) {
+            void e;
+          }
+          return null;
+        } catch (thrown) {
+          return thrown;
+        }
+      })();
+      expect(err).toBeInstanceOf(FileSourceParseError);
+    });
+
+    it("throws FileSourceParseError when root is an array instead of object", async () => {
+      const source = createFileImportSource({
+        stream: stringToStream('[{"_id": "m1"}]'),
+      });
+      const err = await (async () => {
+        try {
+          for await (const e of source.iterate("members")) {
+            void e;
+          }
+          return null;
+        } catch (thrown) {
+          return thrown;
+        }
+      })();
+      expect(err).toBeInstanceOf(FileSourceParseError);
+    });
+
+    it("throws FileSourceParseError for a bare scalar root", async () => {
+      const source = createFileImportSource({
+        stream: stringToStream('"just a string"'),
+      });
+      const err = await (async () => {
+        try {
+          await source.listCollections();
+          return null;
+        } catch (thrown) {
+          return thrown;
+        }
+      })();
+      expect(err).toBeInstanceOf(FileSourceParseError);
+    });
+
+    it("throws FileSourceParseError for empty input", async () => {
+      const source = createFileImportSource({
+        stream: stringToStream(""),
+      });
+      const err = await (async () => {
+        try {
+          await source.listCollections();
+          return null;
+        } catch (thrown) {
+          return thrown;
+        }
+      })();
+      expect(err).toBeInstanceOf(FileSourceParseError);
+    });
+  });
 });
