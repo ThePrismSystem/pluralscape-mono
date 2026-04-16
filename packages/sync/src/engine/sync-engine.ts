@@ -69,9 +69,9 @@ export class SyncEngine {
   private readonly documentQueues = new Map<SyncDocumentId, Promise<void>>();
 
   private readonly config: SyncEngineConfig;
-  private failedConflictPersistence: Array<{
-    documentId: SyncDocumentId;
-    notifications: readonly ConflictNotification[];
+  private failedConflictPersistence: ReadonlyArray<{
+    readonly documentId: SyncDocumentId;
+    readonly notifications: readonly ConflictNotification[];
   }> = [];
 
   constructor(config: SyncEngineConfig) {
@@ -543,12 +543,11 @@ export class SyncEngine {
     if (!this.config.conflictPersistenceAdapter) return;
 
     // Include previously failed attempts
-    const retryBatch = [...this.failedConflictPersistence];
+    const retryBatch =
+      notifications.length > 0
+        ? [...this.failedConflictPersistence, { documentId: docId, notifications }]
+        : [...this.failedConflictPersistence];
     this.failedConflictPersistence = [];
-
-    if (notifications.length > 0) {
-      retryBatch.push({ documentId: docId, notifications });
-    }
 
     for (const batch of retryBatch) {
       try {
@@ -558,7 +557,7 @@ export class SyncEngine {
         );
       } catch (error: unknown) {
         this.handleError("Failed to persist conflict records", error);
-        this.failedConflictPersistence.push(batch);
+        this.failedConflictPersistence = [...this.failedConflictPersistence, batch];
       }
     }
 
