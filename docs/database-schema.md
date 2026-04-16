@@ -1067,8 +1067,7 @@ erDiagram
         integer attempt_count
         timestamp last_attempt_at "nullable"
         timestamp next_retry_at
-        binary encrypted_data "nullable"
-        jsonb payload_data "nullable"
+        binary encrypted_data
     }
 
     accounts ||--o{ api_keys : "owns"

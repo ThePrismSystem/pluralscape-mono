@@ -98,6 +98,9 @@ async function executeDispatch<K extends WebhookEventType>(
   const encryptionKey = getWebhookPayloadEncryptionKey();
 
   try {
+    // Encrypt once — same ciphertext for all delivery records (identical payload).
+    const encryptedData = encryptWebhookPayload(payloadJson, encryptionKey);
+
     const values = matchingConfigs.map((config) => {
       const deliveryId = createId(ID_PREFIXES.webhookDelivery) as WebhookDeliveryId;
       deliveryIds.push(deliveryId);
@@ -109,12 +112,13 @@ async function executeDispatch<K extends WebhookEventType>(
         status: "pending" as const,
         attemptCount: 0,
         createdAt: timestamp,
-        encryptedData: encryptWebhookPayload(payloadJson, encryptionKey),
+        encryptedData,
       };
     });
 
     await db.insert(webhookDeliveries).values(values);
   } finally {
+    // Zeros the derived Uint8Array; the hex source in process.env is not erasable.
     getSodium().memzero(encryptionKey);
   }
 

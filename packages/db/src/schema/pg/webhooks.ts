@@ -83,8 +83,7 @@ export const webhookDeliveries = pgTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: pgTimestamp("last_attempt_at"),
     nextRetryAt: pgTimestamp("next_retry_at"),
-    encryptedData: pgBinary("encrypted_data"),
-    payloadData: jsonb("payload_data").$type<Record<string, unknown>>(),
+    encryptedData: pgBinary("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -110,10 +109,6 @@ export const webhookDeliveries = pgTable(
     check(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
-    ),
-    check(
-      "webhook_deliveries_payload_presence_check",
-      sql`${t.encryptedData} IS NOT NULL OR ${t.payloadData} IS NOT NULL`,
     ),
   ],
 );

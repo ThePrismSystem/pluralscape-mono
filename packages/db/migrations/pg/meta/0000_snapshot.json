@@ -1,5 +1,5 @@
 {
-  "id": "d02c809f-ce0e-424e-9ab6-cf33450fb2cc",
+  "id": "f8d4b053-0f37-4978-a14b-74a42152f8eb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -9696,13 +9696,7 @@
           "name": "encrypted_data",
           "type": "bytea",
           "primaryKey": false,
-          "notNull": false
-        },
-        "payload_data": {
-          "name": "payload_data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -9863,10 +9857,6 @@
         "webhook_deliveries_http_status_check": {
           "name": "webhook_deliveries_http_status_check",
           "value": "\"webhook_deliveries\".\"http_status\" IS NULL OR (\"webhook_deliveries\".\"http_status\" >= 100 AND \"webhook_deliveries\".\"http_status\" <= 599)"
-        },
-        "webhook_deliveries_payload_presence_check": {
-          "name": "webhook_deliveries_payload_presence_check",
-          "value": "\"webhook_deliveries\".\"encrypted_data\" IS NOT NULL OR \"webhook_deliveries\".\"payload_data\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false

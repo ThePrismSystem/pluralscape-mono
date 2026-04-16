@@ -1108,14 +1108,12 @@ export const SQLITE_DDL = {
       attempt_count INTEGER NOT NULL DEFAULT 0,
       last_attempt_at INTEGER,
       next_retry_at INTEGER,
-      encrypted_data BLOB,
-      payload_data TEXT,
+      encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE RESTRICT,
       CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'lifecycle.event-recorded', 'custom-front.changed', 'channel.created', 'channel.updated', 'channel.archived', 'channel.restored', 'channel.deleted', 'message.created', 'message.updated', 'message.archived', 'message.restored', 'message.deleted', 'board-message.created', 'board-message.updated', 'board-message.pinned', 'board-message.unpinned', 'board-message.reordered', 'board-message.archived', 'board-message.restored', 'board-message.deleted', 'note.created', 'note.updated', 'note.archived', 'note.restored', 'note.deleted', 'poll.created', 'poll.updated', 'poll.closed', 'poll.archived', 'poll.restored', 'poll.deleted', 'poll-vote.cast', 'poll-vote.vetoed', 'acknowledgement.created', 'acknowledgement.confirmed', 'acknowledgement.archived', 'acknowledgement.restored', 'acknowledgement.deleted', 'bucket.created', 'bucket.updated', 'bucket.archived', 'bucket.restored', 'bucket.deleted', 'bucket-content-tag.tagged', 'bucket-content-tag.untagged', 'field-bucket-visibility.set', 'field-bucket-visibility.removed', 'friend.connected', 'friend.removed', 'friend.bucket-assigned', 'friend.bucket-unassigned')),
       CHECK (status IS NULL OR status IN ('pending', 'success', 'failed')),
       CHECK (attempt_count >= 0),
-      CHECK (encrypted_data IS NOT NULL OR payload_data IS NOT NULL),
       CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599))
     )
   `,
