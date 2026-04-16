@@ -72,7 +72,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
       for await (const stmt of sqlite3.statements(db, sql)) {
         sqlite3.bind_collection(stmt, params);
         while ((await sqlite3.step(stmt)) === SQLITE_ROW) {
-          // run() does not collect rows — discard
+          /* drain */
         }
       }
       return 0;
@@ -86,8 +86,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
 
   /**
    * Execute a parameterized SELECT and collect rows into the provided array.
-   * Used by all()/get() parameterized paths. Will be removed in Tasks 6/7 when
-   * those paths are replaced with throws.
+   * Temporary: kept until parameterized .all()/.get() throw unconditionally.
    */
   function trackPreparedRowCollect(
     sql: string,
@@ -139,8 +138,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
       if (p === null || p === undefined) return null;
       if (typeof p === "number" || typeof p === "string" || typeof p === "bigint") return p;
       if (p instanceof Uint8Array) return p;
-      // Extract a human-readable type name for the error message.
-      // Object.prototype.toString yields e.g. "[object Date]"; slice out "Date".
+      // Object.prototype.toString handles cross-realm objects and null prototypes.
       const tag = Object.prototype.toString.call(p);
       const desc = typeof p === "object" ? tag.slice(8, -1) : typeof p;
       throw new Error(`OPFS driver: unsupported bind type at index ${String(i)}: ${desc}`);
