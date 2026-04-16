@@ -1,5 +1,12 @@
 import { channels, messages } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { CreateMessageBodySchema, UpdateMessageBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, lt, or, sql } from "drizzle-orm";
 
@@ -65,10 +72,10 @@ interface TimestampHint {
 
 function toMessageResult(row: typeof messages.$inferSelect): MessageResult {
   return {
-    id: row.id as MessageId,
-    channelId: row.channelId as ChannelId,
-    systemId: row.systemId as SystemId,
-    replyToId: (row.replyToId as MessageId | null) ?? null,
+    id: brandId<MessageId>(row.id),
+    channelId: brandId<ChannelId>(row.channelId),
+    systemId: brandId<SystemId>(row.systemId),
+    replyToId: row.replyToId ? brandId<MessageId>(row.replyToId) : null,
     timestamp: toUnixMillis(row.timestamp),
     editedAt: toUnixMillisOrNull(row.editedAt),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
@@ -154,7 +161,7 @@ export async function createMessage(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "message.created", {
-      messageId: row.id as MessageId,
+      messageId: brandId<MessageId>(row.id),
       channelId: channelId,
     });
 
@@ -300,8 +307,8 @@ export async function updateMessage(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "message.updated", {
-      messageId: row.id as MessageId,
-      channelId: row.channelId as ChannelId,
+      messageId: brandId<MessageId>(row.id),
+      channelId: brandId<ChannelId>(row.channelId),
     });
 
     return toMessageResult(row);
@@ -338,8 +345,8 @@ export async function deleteMessage(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "message.deleted", {
-      messageId: existing.id as MessageId,
-      channelId: existing.channelId as ChannelId,
+      messageId: brandId<MessageId>(existing.id),
+      channelId: brandId<ChannelId>(existing.channelId),
     });
 
     await tx
@@ -365,7 +372,7 @@ const MESSAGE_LIFECYCLE: ArchivableEntityConfig<MessageId> = {
     if (msg) {
       await dispatchWebhookEvent(tx, sId, "message.archived", {
         messageId: eid,
-        channelId: msg.channelId as ChannelId,
+        channelId: brandId<ChannelId>(msg.channelId),
       });
     }
   },
@@ -378,7 +385,7 @@ const MESSAGE_LIFECYCLE: ArchivableEntityConfig<MessageId> = {
     if (msg) {
       await dispatchWebhookEvent(tx, sId, "message.restored", {
         messageId: eid,
-        channelId: msg.channelId as ChannelId,
+        channelId: brandId<ChannelId>(msg.channelId),
       });
     }
   },

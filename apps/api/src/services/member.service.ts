@@ -13,7 +13,14 @@ import {
   systemStructureEntityMemberLinks,
   systems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateMemberBodySchema,
   DuplicateMemberBodySchema,
@@ -81,8 +88,8 @@ function toMemberResult(row: {
   archivedAt: number | null;
 }): MemberResult {
   return {
-    id: row.id as MemberId,
-    systemId: row.systemId as SystemId,
+    id: brandId<MemberId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),
@@ -151,7 +158,7 @@ export async function createMember(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "member.created", {
-      memberId: row.id as MemberId,
+      memberId: brandId<MemberId>(row.id),
     });
 
     return toMemberResult(row);
@@ -299,7 +306,7 @@ export async function updateMember(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "member.updated", {
-      memberId: row.id as MemberId,
+      memberId: brandId<MemberId>(row.id),
     });
 
     return toMemberResult(row);
@@ -467,7 +474,7 @@ export async function duplicateMember(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "member.created", {
-      memberId: row.id as MemberId,
+      memberId: brandId<MemberId>(row.id),
     });
 
     return toMemberResult(row);
@@ -816,16 +823,16 @@ export async function listAllMemberMemberships(
 
     return {
       groups: groupRows.map((r) => ({
-        groupId: r.groupId as GroupId,
-        memberId: r.memberId as MemberId,
-        systemId: r.systemId as SystemId,
+        groupId: brandId<GroupId>(r.groupId),
+        memberId: brandId<MemberId>(r.memberId),
+        systemId: brandId<SystemId>(r.systemId),
         createdAt: toUnixMillis(r.createdAt),
       })),
       structureEntities: entityMemberRows.map((r) => ({
         id: r.id,
         parentEntityId: r.parentEntityId,
-        memberId: r.memberId as MemberId,
-        systemId: r.systemId as SystemId,
+        memberId: brandId<MemberId>(r.memberId),
+        systemId: brandId<SystemId>(r.systemId),
         createdAt: toUnixMillis(r.createdAt),
       })),
     };

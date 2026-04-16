@@ -1,5 +1,12 @@
 import { innerworldEntities, innerworldRegions, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { CreateRegionBodySchema, UpdateRegionBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
 
@@ -57,9 +64,9 @@ function toRegionResult(row: {
   archivedAt: number | null;
 }): RegionResult {
   return {
-    id: row.id as InnerWorldRegionId,
-    systemId: row.systemId as SystemId,
-    parentRegionId: row.parentRegionId as InnerWorldRegionId | null,
+    id: brandId<InnerWorldRegionId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    parentRegionId: row.parentRegionId ? brandId<InnerWorldRegionId>(row.parentRegionId) : null,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),
@@ -339,7 +346,7 @@ export async function archiveRegion(
           ),
         );
 
-      frontier = children.map((c) => c.id as InnerWorldRegionId);
+      frontier = children.map((c) => brandId<InnerWorldRegionId>(c.id));
       regionsToArchive.push(...frontier);
     }
 

@@ -1,5 +1,5 @@
 import { notificationConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -47,8 +47,8 @@ function toNotificationConfigResult(row: {
   updatedAt: number;
 }): NotificationConfigResult {
   return {
-    id: row.id as NotificationConfigId,
-    systemId: row.systemId as SystemId,
+    id: brandId<NotificationConfigId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     eventType: row.eventType,
     enabled: row.enabled,
     pushEnabled: row.pushEnabled,
@@ -73,7 +73,7 @@ async function insertNotificationConfig(
   overrides: { readonly enabled?: boolean; readonly pushEnabled?: boolean } = {},
 ): Promise<NotificationConfigResult> {
   const timestamp = now();
-  const id = createId(ID_PREFIXES.notificationConfig) as NotificationConfigId;
+  const id = brandId<NotificationConfigId>(createId(ID_PREFIXES.notificationConfig));
 
   const [created] = await tx
     .insert(notificationConfigs)

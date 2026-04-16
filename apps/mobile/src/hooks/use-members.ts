@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptMember } from "@pluralscape/data/transforms/member";
+import { brandId } from "@pluralscape/types";
 
 import { rowToMember } from "../data/row-transforms/index.js";
 
@@ -57,7 +58,7 @@ export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Ar
         {
           systemId,
           limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
-          groupId: opts?.groupId as GroupId | undefined,
+          groupId: opts?.groupId ? brandId<GroupId>(opts.groupId) : undefined,
           includeArchived: opts?.includeArchived ?? false,
         },
         {

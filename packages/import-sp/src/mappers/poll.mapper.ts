@@ -14,6 +14,8 @@
  * can't be resolved become `{memberId: null, isVeto: false}` with a warning —
  * the vote is still preserved, just unattributed.
  */
+import { brandId } from "@pluralscape/types";
+
 import { parseHexColor } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
@@ -42,7 +44,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
   // downstream votes can still reference them by position even without a
   // server-assigned id.
   const options = (sp.options ?? []).map((o, idx) => ({
-    id: (o.id ?? `${sp._id}_opt_${String(idx)}`) as PollOptionId,
+    id: brandId<PollOptionId>(o.id ?? `${sp._id}_opt_${String(idx)}`),
     label: o.name,
     voteCount: 0,
     color: parseHexColor(o.color),

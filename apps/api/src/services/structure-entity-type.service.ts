@@ -1,5 +1,12 @@
 import { systemStructureEntities, systemStructureEntityTypes } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateStructureEntityTypeBodySchema,
   UpdateStructureEntityTypeBodySchema,
@@ -56,8 +63,8 @@ function toEntityTypeResult(row: {
   updatedAt: number;
 }): EntityTypeResult {
   return {
-    id: row.id as SystemStructureEntityTypeId,
-    systemId: row.systemId as SystemId,
+    id: brandId<SystemStructureEntityTypeId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     sortOrder: row.sortOrder,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,

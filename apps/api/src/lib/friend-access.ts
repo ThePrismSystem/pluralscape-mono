@@ -1,4 +1,5 @@
 import { friendBucketAssignments, friendConnections, systems } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_INTERNAL_SERVER_ERROR, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -82,14 +83,14 @@ export async function assertFriendAccess(
     .from(friendBucketAssignments)
     .where(eq(friendBucketAssignments.friendConnectionId, inverseConnection.id));
 
-  const assignedBucketIds = assignments.map((a) => a.bucketId as BucketId);
+  const assignedBucketIds = assignments.map((a) => brandId<BucketId>(a.bucketId));
 
   // 5. Derive target system from assignments, or fall back to systems table
   let targetSystemId: SystemId;
 
   const firstAssignment = assignments[0];
   if (firstAssignment) {
-    targetSystemId = firstAssignment.systemId as SystemId;
+    targetSystemId = brandId<SystemId>(firstAssignment.systemId);
 
     // Validate all assignments reference the same system (data integrity check)
     const mixedSystems = assignments.some((a) => a.systemId !== firstAssignment.systemId);
@@ -111,11 +112,11 @@ export async function assertFriendAccess(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
     }
 
-    targetSystemId = system.id as SystemId;
+    targetSystemId = brandId<SystemId>(system.id);
   }
 
   return {
-    targetAccountId: connection.friendAccountId as AccountId,
+    targetAccountId: brandId<AccountId>(connection.friendAccountId),
     targetSystemId,
     connectionId,
     assignedBucketIds,

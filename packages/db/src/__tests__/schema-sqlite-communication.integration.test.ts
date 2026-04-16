@@ -26,6 +26,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { MemberId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -1109,7 +1110,7 @@ describe("SQLite communication schema", () => {
           pollId,
           systemId,
           optionId: "opt-1",
-          voter: { entityType: "member", entityId: "m-1" },
+          voter: { entityType: "member", entityId: "m-1" as MemberId },
           isVeto: true,
           votedAt,
           encryptedData: testBlob(new Uint8Array([1])),

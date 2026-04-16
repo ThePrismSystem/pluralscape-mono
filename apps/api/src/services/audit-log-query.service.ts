@@ -1,5 +1,5 @@
 import { auditLog } from "@pluralscape/db/pg";
-import { toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, desc, eq, gt, like, lt, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
@@ -73,7 +73,7 @@ function decodeCursor(cursor: string): CursorData {
 
 function toEntryResult(row: typeof auditLog.$inferSelect): AuditLogEntryResult {
   return {
-    id: row.id as AuditLogEntryId,
+    id: brandId<AuditLogEntryId>(row.id),
     eventType: row.eventType,
     timestamp: toUnixMillis(row.timestamp),
     actor: row.actor,

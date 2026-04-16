@@ -1,5 +1,12 @@
 import { checkInRecords, members, timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CheckInRecordQuerySchema,
   CreateCheckInRecordBodySchema,
@@ -90,9 +97,9 @@ function toCheckInRecordResult(row: {
   archivedAt: number | null;
 }): CheckInRecordResult {
   const base: CheckInRecordBase = {
-    id: row.id as CheckInRecordId,
-    systemId: row.systemId as SystemId,
-    timerConfigId: row.timerConfigId as TimerId,
+    id: brandId<CheckInRecordId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    timerConfigId: brandId<TimerId>(row.timerConfigId),
     scheduledAt: toUnixMillis(row.scheduledAt),
     encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
     archived: row.archived,
@@ -103,7 +110,7 @@ function toCheckInRecordResult(row: {
     return {
       ...base,
       status: "responded",
-      respondedByMemberId: row.respondedByMemberId as MemberId,
+      respondedByMemberId: brandId<MemberId>(row.respondedByMemberId),
       respondedAt: toUnixMillis(row.respondedAt),
       dismissed: false,
     };

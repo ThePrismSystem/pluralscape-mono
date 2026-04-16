@@ -1,4 +1,5 @@
 import { frontingSessions } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 
 import { withTenantRead } from "../lib/rls-context.js";
@@ -41,13 +42,13 @@ interface SessionRow {
 function resolveSubject(
   row: SessionRow,
 ): { subjectType: FrontingSubjectType; subjectId: SubjectId } | null {
-  if (row.memberId) return { subjectType: "member", subjectId: row.memberId as MemberId };
+  if (row.memberId) return { subjectType: "member", subjectId: brandId<MemberId>(row.memberId) };
   if (row.customFrontId)
-    return { subjectType: "customFront", subjectId: row.customFrontId as CustomFrontId };
+    return { subjectType: "customFront", subjectId: brandId<CustomFrontId>(row.customFrontId) };
   if (row.structureEntityId)
     return {
       subjectType: "structureEntity",
-      subjectId: row.structureEntityId as SystemStructureEntityId,
+      subjectId: brandId<SystemStructureEntityId>(row.structureEntityId),
     };
   return null;
 }
@@ -331,8 +332,8 @@ export async function computeCoFrontingBreakdown(
   const pairs: CoFrontingPair[] = [];
   for (const pair of pairMap.values()) {
     pairs.push({
-      memberA: pair.memberA as MemberId,
-      memberB: pair.memberB as MemberId,
+      memberA: brandId<MemberId>(pair.memberA),
+      memberB: brandId<MemberId>(pair.memberB),
       totalDuration: pair.totalDuration as Duration,
       sessionCount: pair.sessionCount,
       percentageOfTotal: toOneDecimalPercent(pair.totalDuration, totalFrontingUnion),

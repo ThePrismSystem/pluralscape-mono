@@ -1,5 +1,8 @@
 // @pluralscape/types — shared TypeScript domain types
 
+// ── Crypto key brands ────────────────────────────────────────────────
+export type { KdfMasterKey } from "./crypto-keys.js";
+
 // ── IDs ─────────────────────────────────────────────────────────────
 export type {
   Brand,
@@ -76,8 +79,14 @@ export type {
   RecoveryKeyDisplay,
   ChecksumHex,
   EntityType,
+  EntityTypeIdMap,
+  AssertAllPrefixesMapped,
+  AssertAllEntityTypesMapped,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
+
+// ── Brand utilities ────────────────────────────────────────────────
+export { brandId } from "./brand-utils.js";
 
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";
@@ -127,7 +136,6 @@ export type {
   ArchivedMemberPhoto,
   MemberListItem,
   SystemListItem,
-  SystemDuplicationScope,
   CreateMemberBody,
   UpdateMemberBody,
   CreateMemberPhotoBody,
@@ -672,8 +680,10 @@ export type {
 } from "./snapshot.js";
 
 // ── API constants ─────────────────────────────────────────────────────
-export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants.js";
+export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants/index.js";
 export {
+  MS_PER_SECOND,
+  MS_PER_MINUTE,
   MS_PER_DAY,
   MS_PER_HOUR,
   RATE_LIMITS,
@@ -688,7 +698,7 @@ export {
   KEY_ROTATION,
   ROTATION_STATES,
   ROTATION_ITEM_STATUSES,
-} from "./api-constants.js";
+} from "./api-constants/index.js";
 
 // ── Logger ─────────────────────────────────────────────────────────
 export type { Logger } from "./logger.js";

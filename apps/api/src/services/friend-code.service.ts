@@ -1,7 +1,14 @@
 import { randomBytes } from "node:crypto";
 
 import { friendCodes, friendConnections } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -94,8 +101,8 @@ function generateCodeString(): string {
 
 function toFriendCodeResult(row: typeof friendCodes.$inferSelect): FriendCodeResult {
   return {
-    id: row.id as FriendCodeId,
-    accountId: row.accountId as AccountId,
+    id: brandId<FriendCodeId>(row.id),
+    accountId: brandId<AccountId>(row.accountId),
     code: row.code,
     createdAt: toUnixMillis(row.createdAt),
     expiresAt: toUnixMillisOrNull(row.expiresAt),
@@ -138,7 +145,7 @@ export async function generateFriendCode(
     // Retry loop for unique constraint collisions on the code value
     let row: typeof friendCodes.$inferSelect | undefined;
     for (let attempt = 0; attempt <= MAX_CODE_GENERATION_RETRIES; attempt++) {
-      const codeId = createId(ID_PREFIXES.friendCode) as FriendCodeId;
+      const codeId = brandId<FriendCodeId>(createId(ID_PREFIXES.friendCode));
       const timestamp = now();
       const code = generateCodeString();
 
@@ -309,7 +316,7 @@ export async function redeemFriendCode(
         .from(friendCodes)
         .where(
           and(
-            eq(friendCodes.id, codeRow.id as FriendCodeId),
+            eq(friendCodes.id, brandId<FriendCodeId>(codeRow.id)),
             sql`${friendCodes.expiresAt} >= NOW()`,
           ),
         )
@@ -320,7 +327,7 @@ export async function redeemFriendCode(
       }
     }
 
-    const codeOwnerId = codeRow.accountId as AccountId;
+    const codeOwnerId = brandId<AccountId>(codeRow.accountId);
 
     // Self-redeem prevention
     if (codeOwnerId === redeemerId) {
@@ -353,8 +360,8 @@ export async function redeemFriendCode(
     }
 
     // Create bidirectional connections
-    const connectionIdAB = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
-    const connectionIdBA = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
+    const connectionIdAB = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
+    const connectionIdBA = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
 
     const [connAB] = await tx
       .insert(friendConnections)
@@ -419,7 +426,10 @@ export async function redeemFriendCode(
     }
 
     return {
-      connectionIds: [connAB.id as FriendConnectionId, connBA.id as FriendConnectionId],
+      connectionIds: [
+        brandId<FriendConnectionId>(connAB.id),
+        brandId<FriendConnectionId>(connBA.id),
+      ],
     };
   });
 }

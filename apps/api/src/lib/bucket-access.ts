@@ -1,4 +1,5 @@
 import { bucketContentTags } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { MAX_IN_CLAUSE_SIZE } from "../service.constants.js";
@@ -50,9 +51,9 @@ export async function loadBucketTags(
     for (const tag of tags) {
       const existing = map.get(tag.entityId);
       if (existing) {
-        existing.push(tag.bucketId as BucketId);
+        existing.push(brandId<BucketId>(tag.bucketId));
       } else {
-        map.set(tag.entityId, [tag.bucketId as BucketId]);
+        map.set(tag.entityId, [brandId<BucketId>(tag.bucketId)]);
       }
     }
   }

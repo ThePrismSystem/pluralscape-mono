@@ -1,6 +1,13 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { memberPhotos, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, inArray, max, or, sql } from "drizzle-orm";
 
@@ -72,9 +79,9 @@ function toPhotoResult(row: {
   archivedAt: number | null;
 }): MemberPhotoResult {
   return {
-    id: row.id as MemberPhotoId,
-    memberId: row.memberId as MemberId,
-    systemId: row.systemId as SystemId,
+    id: brandId<MemberPhotoId>(row.id),
+    memberId: brandId<MemberId>(row.memberId),
+    systemId: brandId<SystemId>(row.systemId),
     sortOrder: row.sortOrder,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,

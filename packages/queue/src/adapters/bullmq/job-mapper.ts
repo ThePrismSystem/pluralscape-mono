@@ -1,4 +1,4 @@
-import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import type {
   JobDefinition,
@@ -37,7 +37,7 @@ export interface StoredJobData {
 export function fromStoredData(id: JobId, data: StoredJobData): JobDefinition {
   return {
     id,
-    systemId: (data.systemId ?? null) as SystemId | null,
+    systemId: data.systemId ? brandId<SystemId>(data.systemId) : null,
     type: data.type,
     status: data.status,
     payload: data.payload as Readonly<Record<string, unknown>>,

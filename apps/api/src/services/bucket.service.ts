@@ -1,5 +1,12 @@
 import { buckets, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   BucketQuerySchema,
   CreateBucketBodySchema,
@@ -56,8 +63,8 @@ interface ListBucketOpts {
 
 function toBucketResult(row: typeof buckets.$inferSelect): BucketResult {
   return {
-    id: row.id as BucketId,
-    systemId: row.systemId as SystemId,
+    id: brandId<BucketId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     archived: row.archived,

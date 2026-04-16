@@ -1,5 +1,12 @@
 import { innerworldEntities, innerworldRegions, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { CreateEntityBodySchema, UpdateEntityBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -59,9 +66,9 @@ function toEntityResult(row: {
   archivedAt: number | null;
 }): EntityResult {
   return {
-    id: row.id as InnerWorldEntityId,
-    systemId: row.systemId as SystemId,
-    regionId: row.regionId as InnerWorldRegionId | null,
+    id: brandId<InnerWorldEntityId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    regionId: row.regionId ? brandId<InnerWorldRegionId>(row.regionId) : null,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),

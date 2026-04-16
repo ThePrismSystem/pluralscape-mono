@@ -1,5 +1,12 @@
 import { boardMessages } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   BoardMessageQuerySchema,
   CreateBoardMessageBodySchema,
@@ -65,8 +72,8 @@ interface ListBoardMessageOpts {
 
 function toBoardMessageResult(row: typeof boardMessages.$inferSelect): BoardMessageResult {
   return {
-    id: row.id as BoardMessageId,
-    systemId: row.systemId as SystemId,
+    id: brandId<BoardMessageId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     pinned: row.pinned,
     sortOrder: row.sortOrder,
     encryptedData: encryptedBlobToBase64(row.encryptedData),

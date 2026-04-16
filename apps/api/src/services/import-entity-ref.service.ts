@@ -1,5 +1,6 @@
 import { importEntityRefs } from "@pluralscape/db/pg";
 import {
+  brandId,
   assertBrandedTargetId,
   ID_PREFIXES,
   createId,
@@ -85,9 +86,9 @@ interface ListImportEntityRefsOpts {
 
 function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRef {
   const base = {
-    id: row.id as ImportEntityRefId,
-    accountId: row.accountId as AccountId,
-    systemId: row.systemId as SystemId,
+    id: brandId<ImportEntityRefId>(row.id),
+    accountId: brandId<AccountId>(row.accountId),
+    systemId: brandId<SystemId>(row.systemId),
     source: row.source,
     sourceEntityId: row.sourceEntityId,
     importedAt: toUnixMillis(row.importedAt),

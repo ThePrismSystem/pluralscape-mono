@@ -1,4 +1,4 @@
-import { extractErrorMessage } from "@pluralscape/types";
+import { brandId, extractErrorMessage } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 import { Worker } from "bullmq";
 
@@ -107,7 +107,9 @@ export class BullMQJobWorker extends BaseJobWorker {
   // ── BullMQ-specific processing ────────────────────────────────────
 
   private async processBullMQJob(bullmqJob: BullMQJob): Promise<void> {
-    const jobId = bullmqJob.id as JobId;
+    const rawId = bullmqJob.id;
+    if (rawId === undefined) throw new Error("BullMQ job missing id");
+    const jobId = brandId<JobId>(rawId);
 
     // Update status to running
     const currentData = bullmqJob.data as StoredJobData;

@@ -1,5 +1,12 @@
 import { frontingReports } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateFrontingReportBodySchema,
   UpdateFrontingReportBodySchema,
@@ -99,8 +106,8 @@ function toFrontingReportResult(row: {
   updatedAt: number;
 }): FrontingReportResult {
   return {
-    id: row.id as FrontingReportId,
-    systemId: row.systemId as SystemId,
+    id: brandId<FrontingReportId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     format: row.format as ReportFormat,
     generatedAt: toUnixMillis(row.generatedAt),

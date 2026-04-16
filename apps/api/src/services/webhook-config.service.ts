@@ -1,7 +1,15 @@
 import { randomBytes } from "node:crypto";
 
 import { systems, webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  MS_PER_SECOND,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateWebhookConfigBodySchema,
   RotateWebhookSecretBodySchema,
@@ -32,7 +40,6 @@ import {
   HTTP_SUCCESS_MAX,
   HTTP_SUCCESS_MIN,
   MAX_PAGE_LIMIT,
-  MS_PER_SECOND,
   WEBHOOK_REQUIRED_PROTOCOL,
   WEBHOOK_SECRET_BYTES,
 } from "../service.constants.js";
@@ -112,8 +119,8 @@ function toWebhookConfigResult(row: {
   updatedAt: number;
 }): WebhookConfigResult {
   return {
-    id: row.id as WebhookId,
-    systemId: row.systemId as SystemId,
+    id: brandId<WebhookId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     url: row.url,
     eventTypes: row.eventTypes,
     enabled: row.enabled,

@@ -24,6 +24,7 @@
  */
 
 import { trpc } from "@pluralscape/api-client/trpc";
+import { brandId } from "@pluralscape/types";
 import { createTRPCClientProxy } from "@trpc/client";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 
@@ -347,7 +348,7 @@ export function useStartImport(): UseStartImportReturn {
 export function useImportJob(jobId: ImportJobId | null): DataQuery<ImportJob> {
   const activeSystemId = useActiveSystemId();
   return trpc.importJob.get.useQuery(
-    { systemId: activeSystemId, importJobId: jobId ?? ("ij_placeholder" as ImportJobId) },
+    { systemId: activeSystemId, importJobId: jobId ?? brandId<ImportJobId>("ij_placeholder") },
     { enabled: jobId !== null },
   ) as DataQuery<ImportJob>;
 }
@@ -405,7 +406,7 @@ function sumTotals(state: ImportCheckpointState | null | undefined): {
 export function useImportProgress(jobId: ImportJobId | null): ImportProgressSnapshot | null {
   const activeSystemId = useActiveSystemId();
   const query = trpc.importJob.get.useQuery(
-    { systemId: activeSystemId, importJobId: jobId ?? ("ij_placeholder" as ImportJobId) },
+    { systemId: activeSystemId, importJobId: jobId ?? brandId<ImportJobId>("ij_placeholder") },
     {
       enabled: jobId !== null,
       refetchInterval: (q): number | false => {
@@ -462,7 +463,7 @@ export interface ImportSummary {
 export function useImportSummary(jobId: ImportJobId | null): ImportSummary | null {
   const activeSystemId = useActiveSystemId();
   const query = trpc.importJob.get.useQuery(
-    { systemId: activeSystemId, importJobId: jobId ?? ("ij_placeholder" as ImportJobId) },
+    { systemId: activeSystemId, importJobId: jobId ?? brandId<ImportJobId>("ij_placeholder") },
     { enabled: jobId !== null },
   );
   const job = query.data;

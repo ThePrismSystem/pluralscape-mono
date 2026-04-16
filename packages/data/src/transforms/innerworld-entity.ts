@@ -112,25 +112,31 @@ export function decryptInnerWorldEntity(
   }
 
   switch (plaintext.entityType) {
-    case "member":
-      return withArchive({
-        ...shared,
-        entityType: "member" as const,
-        linkedMemberId: plaintext.linkedMemberId as MemberId,
-      });
+    case "member": {
+      const linkedMemberId = plaintext.linkedMemberId;
+      if (linkedMemberId === undefined)
+        throw new Error("Validated innerworldEntity(member) missing linkedMemberId");
+      return withArchive({ ...shared, entityType: "member" as const, linkedMemberId });
+    }
     case "landmark":
       return withArchive({
         ...shared,
         entityType: "landmark" as const,
-        name: plaintext.name as string,
-        description: (plaintext.description as string | null) ?? null,
+        name: plaintext.name ?? "",
+        description: plaintext.description ?? null,
       });
-    case "structure-entity":
+    case "structure-entity": {
+      const linkedStructureEntityId = plaintext.linkedStructureEntityId;
+      if (linkedStructureEntityId === undefined)
+        throw new Error(
+          "Validated innerworldEntity(structure-entity) missing linkedStructureEntityId",
+        );
       return withArchive({
         ...shared,
         entityType: "structure-entity" as const,
-        linkedStructureEntityId: plaintext.linkedStructureEntityId as SystemStructureEntityId,
+        linkedStructureEntityId,
       });
+    }
     default:
       throw new Error(`Unknown innerworld entity type: ${String(plaintext.entityType)}`);
   }

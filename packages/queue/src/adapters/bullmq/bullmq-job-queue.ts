@@ -1,4 +1,4 @@
-import { extractErrorMessage, toUnixMillis } from "@pluralscape/types";
+import { brandId, extractErrorMessage, toUnixMillis } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 import { Queue, Worker } from "bullmq";
 import { z } from "zod";
@@ -57,6 +57,12 @@ const StoredJobDataSchema = z.object({
   scheduledFor: z.number().nullable(),
   priority: z.number(),
 });
+
+function jobIdOf(job: BullMQJob): JobId {
+  const id = job.id;
+  if (id === undefined) throw new Error("BullMQ job missing id");
+  return brandId<JobId>(id);
+}
 
 /**
  * BullMQ-backed implementation of JobQueue.
@@ -191,7 +197,7 @@ export class BullMQJobQueue implements JobQueue {
       // Key already exists — check whether the existing job allows re-enqueue
       const existingId = await this.redis.get(idemKey);
       if (existingId !== null && existingId !== "reserving") {
-        const existing = await this.getJob(existingId as JobId);
+        const existing = await this.getJob(brandId<JobId>(existingId));
         if (
           existing !== null &&
           existing.status !== "completed" &&
@@ -206,7 +212,7 @@ export class BullMQJobQueue implements JobQueue {
       // Completed/cancelled — allow re-enqueue by overwriting
     }
 
-    const id = createId("job_") as JobId;
+    const id = brandId<JobId>(createId("job_"));
     const currentTime = this.clock();
     const policy = this.getRetryPolicy(params.type);
     const maxAttempts = params.maxAttempts ?? policy.maxRetries + 1;
@@ -274,7 +280,7 @@ export class BullMQJobQueue implements JobQueue {
     const idemKey = `${this.prefix}:idem:${key}`;
     const jobId = await this.redis.get(idemKey);
     if (jobId === null) return { exists: false };
-    const job = await this.getJob(jobId as JobId);
+    const job = await this.getJob(brandId<JobId>(jobId));
     if (job === null) return { exists: false };
     return { exists: true, existingJob: job };
   }
@@ -328,7 +334,7 @@ export class BullMQJobQueue implements JobQueue {
           lastHeartbeatAt: currentTime,
         };
         await job.updateData(updated);
-        result = fromStoredData(job.id as JobId, updated);
+        result = fromStoredData(jobIdOf(job), updated);
         break;
       }
     } finally {
@@ -511,7 +517,7 @@ export class BullMQJobQueue implements JobQueue {
     // Check BullMQ first
     const job = await this.queue.getJob(jobId);
     if (job !== undefined) {
-      return fromStoredData(job.id as JobId, job.data as StoredJobData);
+      return fromStoredData(jobIdOf(job), job.data as StoredJobData);
     }
 
     // Check cancelled store
@@ -535,7 +541,7 @@ export class BullMQJobQueue implements JobQueue {
     const bullmqJobs = bullmqStates.length > 0 ? await this.queue.getJobs(bullmqStates) : [];
 
     const allJobs: JobDefinition[] = bullmqJobs.map((j) =>
-      fromStoredData(j.id as JobId, j.data as StoredJobData),
+      fromStoredData(jobIdOf(j), j.data as StoredJobData),
     );
 
     if (filter.status === undefined || filter.status === "cancelled") {
@@ -543,7 +549,7 @@ export class BullMQJobQueue implements JobQueue {
       for (const key of cancelledKeys) {
         const raw = await this.redis.get(key);
         if (raw !== null) {
-          const id = key.replace(`${this.prefix}:cancelled:`, "") as JobId;
+          const id = brandId<JobId>(key.replace(`${this.prefix}:cancelled:`, ""));
           try {
             allJobs.push(
               fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw)) as StoredJobData),
@@ -606,7 +612,7 @@ export class BullMQJobQueue implements JobQueue {
         if (lastBeat === null) return false;
         return lastBeat + d.timeoutMs < currentTime;
       })
-      .map((j) => fromStoredData(j.id as JobId, j.data as StoredJobData));
+      .map((j) => fromStoredData(jobIdOf(j), j.data as StoredJobData));
   }
 
   getRetryPolicy(type: JobType): RetryPolicy {

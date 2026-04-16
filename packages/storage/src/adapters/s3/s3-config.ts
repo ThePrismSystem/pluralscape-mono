@@ -21,10 +21,11 @@ export interface S3AdapterConfig {
   readonly forcePathStyle?: boolean;
 }
 
+import { MS_PER_SECOND } from "@pluralscape/types";
+
 const MINUTES_15 = 15;
 const MINUTES_60 = 60;
 const SECONDS_PER_MINUTE = 60;
-const MS_PER_SECOND = 1_000;
 
 /** Default presigned upload URL expiry: 15 minutes. */
 export const DEFAULT_PRESIGNED_UPLOAD_EXPIRY_MS = MINUTES_15 * SECONDS_PER_MINUTE * MS_PER_SECOND;

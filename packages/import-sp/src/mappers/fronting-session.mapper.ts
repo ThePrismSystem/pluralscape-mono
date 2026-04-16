@@ -10,6 +10,8 @@
  * moves on (sessions whose referenced member was skipped upstream simply
  * can't be materialised).
  */
+import { brandId } from "@pluralscape/types";
+
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -51,8 +53,8 @@ export function mapFrontingSession(
     outtriggerSentiment: null,
   };
 
-  const memberId = sp.custom ? undefined : (resolved as MemberId);
-  const customFrontId = sp.custom ? (resolved as CustomFrontId) : undefined;
+  const memberId = sp.custom ? undefined : brandId<MemberId>(resolved);
+  const customFrontId = sp.custom ? brandId<CustomFrontId>(resolved) : undefined;
 
   const payload: MappedFrontingSession = {
     encrypted,

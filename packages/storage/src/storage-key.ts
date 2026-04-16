@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import type { BlobId, StorageKey, SystemId } from "@pluralscape/types";
 
 /**
@@ -7,7 +9,7 @@ import type { BlobId, StorageKey, SystemId } from "@pluralscape/types";
  * preventing key collisions between systems and enabling prefix-based access control.
  */
 export function generateStorageKey(systemId: SystemId, blobId: BlobId): StorageKey {
-  return `${systemId}/${blobId}` as StorageKey;
+  return brandId<StorageKey>(`${systemId}/${blobId}`);
 }
 
 /**
@@ -20,7 +22,7 @@ export function parseStorageKey(key: string): { systemId: SystemId; blobId: Blob
     return null;
   }
   return {
-    systemId: key.slice(0, slashIndex) as SystemId,
-    blobId: key.slice(slashIndex + 1) as BlobId,
+    systemId: brandId<SystemId>(key.slice(0, slashIndex)),
+    blobId: brandId<BlobId>(key.slice(slashIndex + 1)),
   };
 }

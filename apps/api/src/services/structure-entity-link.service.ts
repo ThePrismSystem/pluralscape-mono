@@ -1,5 +1,5 @@
 import { systemStructureEntityLinks } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
   CreateStructureEntityLinkBodySchema,
   UpdateStructureEntityLinkBodySchema,
@@ -107,10 +107,12 @@ function toEntityLinkResult(row: {
   createdAt: number;
 }): EntityLinkResult {
   return {
-    id: row.id as SystemStructureEntityLinkId,
-    systemId: row.systemId as SystemId,
-    entityId: row.entityId as SystemStructureEntityId,
-    parentEntityId: row.parentEntityId as SystemStructureEntityId | null,
+    id: brandId<SystemStructureEntityLinkId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    entityId: brandId<SystemStructureEntityId>(row.entityId),
+    parentEntityId: row.parentEntityId
+      ? brandId<SystemStructureEntityId>(row.parentEntityId)
+      : null,
     sortOrder: row.sortOrder,
     createdAt: toUnixMillis(row.createdAt),
   };

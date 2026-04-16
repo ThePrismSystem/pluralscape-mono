@@ -1,4 +1,4 @@
-import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT } from "../http.constants.js";
@@ -24,7 +24,7 @@ export function mapBaseFields(row: {
 }): BaseHierarchyResult {
   return {
     id: row.id,
-    systemId: row.systemId as SystemId,
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),

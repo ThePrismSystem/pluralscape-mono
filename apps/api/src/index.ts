@@ -1,6 +1,7 @@
 import { initSodium } from "@pluralscape/crypto";
 import { FilesystemBlobStorageAdapter } from "@pluralscape/storage/filesystem";
 import { S3BlobStorageAdapter } from "@pluralscape/storage/s3";
+import { MS_PER_SECOND } from "@pluralscape/types";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
@@ -80,8 +81,6 @@ app.get("/health", (c) => {
 });
 
 app.route("/v1", v1Routes);
-
-const MS_PER_SECOND = 1_000;
 
 /**
  * Gracefully shuts down the server and drains the connection pool.

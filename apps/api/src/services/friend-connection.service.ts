@@ -1,5 +1,5 @@
 import { friendBucketAssignments, friendConnections, keyGrants } from "@pluralscape/db/pg";
-import { now, toUnixMillis } from "@pluralscape/types";
+import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { and, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -97,9 +97,9 @@ function toFriendConnectionResult(
   row: typeof friendConnections.$inferSelect,
 ): FriendConnectionResult {
   return {
-    id: row.id as FriendConnectionId,
-    accountId: row.accountId as AccountId,
-    friendAccountId: row.friendAccountId as AccountId,
+    id: brandId<FriendConnectionId>(row.id),
+    accountId: brandId<AccountId>(row.accountId),
+    friendAccountId: brandId<AccountId>(row.friendAccountId),
     status: row.status,
     encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
     version: row.version,
@@ -317,8 +317,8 @@ async function cleanupBucketAssignments(
     );
 
   return assignments.map((a) => ({
-    systemId: a.systemId as SystemId,
-    bucketId: a.bucketId as BucketId,
+    systemId: brandId<SystemId>(a.systemId),
+    bucketId: brandId<BucketId>(a.bucketId),
   }));
 }
 
@@ -392,7 +392,7 @@ async function terminateConnection(
     if (reverseConn) {
       reverseRotations = await cleanupBucketAssignments(
         tx,
-        reverseConn.id as FriendConnectionId,
+        brandId<FriendConnectionId>(reverseConn.id),
         accountId,
         timestamp,
       );
@@ -402,7 +402,7 @@ async function terminateConnection(
     for (const systemId of auth.ownedSystemIds) {
       await dispatchWebhookEvent(tx, systemId, "friend.removed", {
         connectionId,
-        friendAccountId: existing.friendAccountId as AccountId,
+        friendAccountId: brandId<AccountId>(existing.friendAccountId),
       });
     }
 
@@ -447,7 +447,7 @@ export async function acceptFriendConnection(
     for (const systemId of auth.ownedSystemIds) {
       await dispatchWebhookEvent(tx, systemId, "friend.connected", {
         connectionId,
-        friendAccountId: existing.friendAccountId as AccountId,
+        friendAccountId: brandId<AccountId>(existing.friendAccountId),
       });
     }
 

@@ -1,4 +1,5 @@
 import { fieldBucketVisibility, fieldDefinitions } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
@@ -27,8 +28,8 @@ export interface FieldBucketVisibilityResult {
 
 function toResult(row: typeof fieldBucketVisibility.$inferSelect): FieldBucketVisibilityResult {
   return {
-    fieldDefinitionId: row.fieldDefinitionId as FieldDefinitionId,
-    bucketId: row.bucketId as BucketId,
+    fieldDefinitionId: brandId<FieldDefinitionId>(row.fieldDefinitionId),
+    bucketId: brandId<BucketId>(row.bucketId),
   };
 }
 

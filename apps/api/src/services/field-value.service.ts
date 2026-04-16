@@ -1,6 +1,6 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { fieldValues } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { SetFieldValueBodySchema, UpdateFieldValueBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -70,12 +70,14 @@ function toFieldValueResult(row: {
   updatedAt: number;
 }): FieldValueResult {
   return {
-    id: row.id as FieldValueId,
-    fieldDefinitionId: row.fieldDefinitionId as FieldDefinitionId,
-    memberId: row.memberId as MemberId | null,
-    structureEntityId: row.structureEntityId as SystemStructureEntityId | null,
-    groupId: row.groupId as GroupId | null,
-    systemId: row.systemId as SystemId,
+    id: brandId<FieldValueId>(row.id),
+    fieldDefinitionId: brandId<FieldDefinitionId>(row.fieldDefinitionId),
+    memberId: row.memberId ? brandId<MemberId>(row.memberId) : null,
+    structureEntityId: row.structureEntityId
+      ? brandId<SystemStructureEntityId>(row.structureEntityId)
+      : null,
+    groupId: row.groupId ? brandId<GroupId>(row.groupId) : null,
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),

@@ -1,5 +1,5 @@
 import { lifecycleEvents } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
   CreateLifecycleEventBodySchema,
   UpdateLifecycleEventBodySchema,
@@ -82,8 +82,8 @@ function toLifecycleEventResult(row: {
   archivedAt: number | null;
 }): LifecycleEventResult {
   return {
-    id: row.id as LifecycleEventId,
-    systemId: row.systemId as SystemId,
+    id: brandId<LifecycleEventId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     eventType: row.eventType,
     occurredAt: toUnixMillis(row.occurredAt),
     recordedAt: toUnixMillis(row.recordedAt),
@@ -179,7 +179,7 @@ export async function createLifecycleEvent(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "lifecycle.event-recorded", {
-      eventId: row.id as LifecycleEventId,
+      eventId: brandId<LifecycleEventId>(row.id),
     });
 
     return toLifecycleEventResult(row);
@@ -350,7 +350,7 @@ export async function updateLifecycleEvent(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "lifecycle.event-recorded", {
-      eventId: row.id as LifecycleEventId,
+      eventId: brandId<LifecycleEventId>(row.id),
     });
 
     return toLifecycleEventResult(row);

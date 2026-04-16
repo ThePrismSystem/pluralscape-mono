@@ -1,4 +1,4 @@
-import { ID_PREFIXES } from "@pluralscape/types";
+import { ID_PREFIXES, brandId } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { HTTP_CREATED, HTTP_NO_CONTENT } from "../../http.constants.js";
@@ -43,11 +43,11 @@ interface FieldValueRoutes {
 function toFieldValueOwner(kind: FieldValueOwner["kind"], id: string): FieldValueOwner {
   switch (kind) {
     case "member":
-      return { kind, id: id as MemberId };
+      return { kind, id: brandId<MemberId>(id) };
     case "group":
-      return { kind, id: id as GroupId };
+      return { kind, id: brandId<GroupId>(id) };
     case "structureEntity":
-      return { kind, id: id as SystemStructureEntityId };
+      return { kind, id: brandId<SystemStructureEntityId>(id) };
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unknown owner kind: ${String(_exhaustive)}`);

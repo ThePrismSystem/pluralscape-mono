@@ -1,6 +1,6 @@
 import { getSodium } from "@pluralscape/crypto";
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { WEBHOOK_CONFIGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
@@ -75,7 +75,7 @@ async function executeDispatch<K extends WebhookEventType>(
           eq(webhookConfigs.archived, false),
         ),
       );
-    configs = rows.map((row) => ({ id: row.id as WebhookId, eventTypes: row.eventTypes }));
+    configs = rows.map((row) => ({ id: brandId<WebhookId>(row.id), eventTypes: row.eventTypes }));
     // Only populate cache from committed data — transaction-scoped reads
     // may see uncommitted state that would become stale on rollback.
     if (!inTransaction) {
@@ -102,7 +102,7 @@ async function executeDispatch<K extends WebhookEventType>(
     const encryptedData = encryptWebhookPayload(payloadJson, encryptionKey);
 
     const values = matchingConfigs.map((config) => {
-      const deliveryId = createId(ID_PREFIXES.webhookDelivery) as WebhookDeliveryId;
+      const deliveryId = brandId<WebhookDeliveryId>(createId(ID_PREFIXES.webhookDelivery));
       deliveryIds.push(deliveryId);
       return {
         id: deliveryId,

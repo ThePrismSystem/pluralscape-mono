@@ -1,5 +1,12 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CastVoteBodySchema,
   PollVoteQuerySchema,
@@ -28,11 +35,13 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EntityReference,
+  MemberId,
   PaginatedResult,
   PollId,
   PollOptionId,
   PollVoteId,
   SystemId,
+  SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -62,9 +71,9 @@ interface ListVoteOpts {
 
 function toVoteResult(row: typeof pollVotes.$inferSelect): PollVoteResult {
   return {
-    id: row.id as PollVoteId,
-    pollId: row.pollId as PollId,
-    optionId: (row.optionId ?? null) as PollOptionId | null,
+    id: brandId<PollVoteId>(row.id),
+    pollId: brandId<PollId>(row.pollId),
+    optionId: row.optionId ? brandId<PollOptionId>(row.optionId) : null,
     voter: row.voter,
     isVeto: row.isVeto,
     votedAt: toUnixMillis(row.votedAt),
@@ -136,7 +145,10 @@ export async function castVote(
     }
 
     // 5. Cooperative enforcement: count existing votes by this voter
-    const voter = parsed.voter;
+    const voter: EntityReference<"member" | "structure-entity"> = {
+      entityType: parsed.voter.entityType,
+      entityId: brandId<MemberId | SystemStructureEntityId>(parsed.voter.entityId),
+    };
     const [voteCountResult] = await tx
       .select({ count: count() })
       .from(pollVotes)
@@ -169,7 +181,7 @@ export async function castVote(
         pollId,
         systemId,
         optionId,
-        voter: { entityType: voter.entityType, entityId: voter.entityId },
+        voter,
         isVeto: parsed.isVeto,
         votedAt: timestamp,
         encryptedData: blob,

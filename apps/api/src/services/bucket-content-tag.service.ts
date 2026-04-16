@@ -1,4 +1,5 @@
 import { bucketContentTags } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { BucketContentTagQuerySchema, TagContentBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -37,7 +38,7 @@ function toTagResult(row: typeof bucketContentTags.$inferSelect): BucketContentT
   return {
     entityType: row.entityType,
     entityId: row.entityId,
-    bucketId: row.bucketId as BucketId,
+    bucketId: brandId<BucketId>(row.bucketId),
   };
 }
 

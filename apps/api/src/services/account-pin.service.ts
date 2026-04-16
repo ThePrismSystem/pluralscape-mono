@@ -1,5 +1,6 @@
 import { systemSettings } from "@pluralscape/db/pg";
 import { systems } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import {
   RemovePinBodySchema,
   SetPinBodySchema,
@@ -40,7 +41,7 @@ async function resolveSystemId(tx: PostgresJsDatabase, accountId: AccountId): Pr
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "No system found for account");
   }
 
-  return row.id as SystemId;
+  return brandId<SystemId>(row.id);
 }
 
 // ── SET PIN ─────────────────────────────────────────────────────────

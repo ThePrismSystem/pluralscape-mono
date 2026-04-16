@@ -11,6 +11,7 @@ import type {
   PollVote,
   AcknowledgementRequest,
 } from "./communication.js";
+import type { KdfMasterKey } from "./crypto-keys.js";
 import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js";
 import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
@@ -684,10 +685,10 @@ export type ClientResponseData =
 // ── Mapping utility types ──────────────────────────────────────
 
 /** Maps a server type to its client-side equivalent via decryption. */
-export type DecryptFn<ServerT, ClientT> = (server: ServerT, masterKey: Uint8Array) => ClientT;
+export type DecryptFn<ServerT, ClientT> = (server: ServerT, masterKey: KdfMasterKey) => ClientT;
 
 /** Maps a client type to its server-side equivalent via encryption. */
-export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Array) => ServerT;
+export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: KdfMasterKey) => ServerT;
 
 // ── Tier map ───────────────────────────────────────────────────
 //

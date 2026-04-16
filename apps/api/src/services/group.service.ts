@@ -1,5 +1,5 @@
 import { fieldValues, groupMemberships, groups } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CopyGroupBodySchema,
   CreateGroupBodySchema,
@@ -64,8 +64,8 @@ function toGroupResult(row: {
 }): GroupResult {
   return {
     ...mapBaseFields(row),
-    id: row.id as GroupId,
-    parentGroupId: row.parentGroupId as GroupId | null,
+    id: brandId<GroupId>(row.id),
+    parentGroupId: row.parentGroupId ? brandId<GroupId>(row.parentGroupId) : null,
     sortOrder: row.sortOrder,
   };
 }
@@ -142,7 +142,7 @@ const groupHierarchy = createHierarchyService<
   webhookEvents: {
     created: "group.created",
     updated: "group.updated",
-    buildPayload: (entityId: string) => ({ groupId: entityId as GroupId }),
+    buildPayload: (entityId: string) => ({ groupId: brandId<GroupId>(entityId) }),
   },
 });
 
@@ -395,7 +395,7 @@ export async function copyGroup(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "group.created", {
-      groupId: newGroupId as GroupId,
+      groupId: brandId<GroupId>(newGroupId),
     });
 
     return toGroupResult(row);

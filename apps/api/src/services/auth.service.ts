@@ -12,7 +12,14 @@ import {
   verifyChallenge,
 } from "@pluralscape/crypto";
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  SESSION_TIMEOUTS,
+  createId,
+  now,
+  toUnixMillis,
+} from "@pluralscape/types";
 import {
   LoginSchema,
   RegistrationCommitSchema,
@@ -88,7 +95,7 @@ export async function initiateRegistration(
   const timestamp = now();
 
   try {
-    await withAccountTransaction(db, accountId as AccountId, async (tx) => {
+    await withAccountTransaction(db, brandId<AccountId>(accountId), async (tx) => {
       await tx.insert(accounts).values({
         id: accountId,
         accountType,
@@ -229,7 +236,7 @@ export async function commitRegistration(
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
-  await withAccountTransaction(db, account.id as AccountId, async (tx) => {
+  await withAccountTransaction(db, brandId<AccountId>(account.id), async (tx) => {
     // Fill in the account shell with real crypto data
     // TOCTOU guard: isNotNull(challengeNonce) ensures concurrent commits can't both succeed
     const updated = await tx
@@ -297,7 +304,7 @@ export async function commitRegistration(
       eventType: "auth.register",
       actor: { kind: "account", id: account.id },
       detail: "Account registered",
-      accountId: account.id as AccountId,
+      accountId: brandId<AccountId>(account.id),
     });
   });
 
@@ -431,7 +438,7 @@ export async function loginAccount(
       eventType: "auth.login-failed",
       actor: { kind: "account", id: account.id },
       detail: "Invalid auth key",
-      accountId: account.id as AccountId,
+      accountId: brandId<AccountId>(account.id),
       overrideTrackIp: account.auditLogIpTracking,
     }).catch((auditError: unknown) => {
       log.error(
@@ -460,7 +467,7 @@ export async function loginAccount(
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
-  const systemId = await withAccountTransaction(db, account.id as AccountId, async (tx) => {
+  const systemId = await withAccountTransaction(db, brandId<AccountId>(account.id), async (tx) => {
     // Enforce per-account session limit: evict oldest session if at capacity
     const currentTime = now();
     const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
@@ -515,8 +522,8 @@ export async function loginAccount(
       eventType: "auth.login",
       actor: { kind: "account", id: account.id },
       detail: `Login via ${platform}`,
-      accountId: account.id as AccountId,
-      systemId: sysId as SystemId | null,
+      accountId: brandId<AccountId>(account.id),
+      systemId: sysId ? brandId<SystemId>(sysId) : null,
       overrideTrackIp: account.auditLogIpTracking,
     });
 

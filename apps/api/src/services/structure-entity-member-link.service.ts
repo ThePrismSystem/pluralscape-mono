@@ -1,5 +1,5 @@
 import { systemStructureEntityMemberLinks } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateStructureEntityMemberLinkBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
@@ -45,10 +45,12 @@ function toEntityMemberLinkResult(row: {
   createdAt: number;
 }): EntityMemberLinkResult {
   return {
-    id: row.id as SystemStructureEntityMemberLinkId,
-    systemId: row.systemId as SystemId,
-    parentEntityId: row.parentEntityId as SystemStructureEntityId | null,
-    memberId: row.memberId as MemberId,
+    id: brandId<SystemStructureEntityMemberLinkId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    parentEntityId: row.parentEntityId
+      ? brandId<SystemStructureEntityId>(row.parentEntityId)
+      : null,
+    memberId: brandId<MemberId>(row.memberId),
     sortOrder: row.sortOrder,
     createdAt: toUnixMillis(row.createdAt),
   };

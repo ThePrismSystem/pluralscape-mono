@@ -9,7 +9,7 @@ import {
   verifyAuthKey,
 } from "@pluralscape/crypto";
 import { accounts, authKeys, sessions, systems } from "@pluralscape/db/pg";
-import { now, toUnixMillis } from "@pluralscape/types";
+import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import {
   ChangeEmailSchema,
   ChangePasswordSchema,
@@ -70,11 +70,11 @@ export async function getAccountInfo(
         .from(systems)
         .where(eq(systems.accountId, accountId))
         .limit(1);
-      systemId = system ? (system.id as SystemId) : null;
+      systemId = system ? brandId<SystemId>(system.id) : null;
     }
 
     return {
-      accountId: row.accountId as AccountId,
+      accountId: brandId<AccountId>(row.accountId),
       accountType: row.accountType,
       systemId,
       auditLogIpTracking: row.auditLogIpTracking,

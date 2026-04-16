@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import {
   guardedNum,
   guardedStr,
@@ -63,12 +65,9 @@ export function rowToInnerWorldEntity(
     const memberEntity = {
       ...baseCommon,
       entityType: "member" as const,
-      linkedMemberId: guardedStr(
-        row["linked_member_id"],
-        "innerworld_entities",
-        "linked_member_id",
-        id,
-      ) as MemberId,
+      linkedMemberId: brandId<MemberId>(
+        guardedStr(row["linked_member_id"], "innerworld_entities", "linked_member_id", id),
+      ),
     };
     return archived ? wrapArchived(memberEntity, updatedAt) : memberEntity;
   }
@@ -84,12 +83,14 @@ export function rowToInnerWorldEntity(
   const structureEntity = {
     ...baseCommon,
     entityType: "structure-entity" as const,
-    linkedStructureEntityId: guardedStr(
-      row["linked_structure_entity_id"],
-      "innerworld_entities",
-      "linked_structure_entity_id",
-      id,
-    ) as SystemStructureEntityId,
+    linkedStructureEntityId: brandId<SystemStructureEntityId>(
+      guardedStr(
+        row["linked_structure_entity_id"],
+        "innerworld_entities",
+        "linked_structure_entity_id",
+        id,
+      ),
+    ),
   };
   return archived ? wrapArchived(structureEntity, updatedAt) : structureEntity;
 }

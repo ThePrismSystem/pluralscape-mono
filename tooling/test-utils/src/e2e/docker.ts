@@ -5,9 +5,10 @@
  */
 import { execSync } from "node:child_process";
 
+import { MS_PER_SECOND } from "@pluralscape/types";
+
 const PG_READY_POLL_MS = 200;
 const PG_READY_TIMEOUT_MS = 30_000;
-const MS_PER_SECOND = 1000;
 const MINIO_READY_POLL_MS = 200;
 const MINIO_READY_TIMEOUT_MS = 30_000;
 const MINIO_ROOT_USER = "minioadmin";

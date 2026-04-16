@@ -1,5 +1,5 @@
 import { jobs } from "@pluralscape/db/sqlite";
-import { toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
@@ -65,7 +65,7 @@ export class SqliteJobQueue implements JobQueue {
             tx.update(jobs).set({ idempotencyKey: null }).where(eq(jobs.id, existing.id)).run();
           }
 
-          const id = createId("job_") as JobId;
+          const id = brandId<JobId>(createId("job_"));
           const currentTime = this.clock();
           const policy = this.getRetryPolicy(params.type);
           const maxAttempts = params.maxAttempts ?? policy.maxRetries + 1;

@@ -1,5 +1,12 @@
 import { notes, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateNoteBodySchema,
   NoteQuerySchema,
@@ -66,8 +73,8 @@ interface ListNoteOpts {
 
 function toNoteResult(row: typeof notes.$inferSelect): NoteResult {
   return {
-    id: row.id as NoteId,
-    systemId: row.systemId as SystemId,
+    id: brandId<NoteId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     authorEntityType: row.authorEntityType as NoteAuthorEntityType | null,
     authorEntityId: row.authorEntityId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),

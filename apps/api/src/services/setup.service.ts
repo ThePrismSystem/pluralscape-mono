@@ -1,5 +1,5 @@
 import { nomenclatureSettings, systemSettings, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   SetupCompleteBodySchema,
   SetupNomenclatureStepBodySchema,
@@ -244,7 +244,7 @@ export async function setupComplete(
   }
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
-  const id = createId(ID_PREFIXES.systemSettings) as SystemSettingsId;
+  const id = brandId<SystemSettingsId>(createId(ID_PREFIXES.systemSettings));
   const timestamp = now();
 
   // Atomic insert with onConflictDoNothing to avoid TOCTOU race

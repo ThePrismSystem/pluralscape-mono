@@ -3,7 +3,7 @@ import {
   systemStructureEntityAssociations,
   systemStructureEntityLinks,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateStructureEntityAssociationBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
@@ -52,10 +52,10 @@ function toEntityAssociationResult(row: {
   createdAt: number;
 }): EntityAssociationResult {
   return {
-    id: row.id as SystemStructureEntityAssociationId,
-    systemId: row.systemId as SystemId,
-    sourceEntityId: row.sourceEntityId as SystemStructureEntityId,
-    targetEntityId: row.targetEntityId as SystemStructureEntityId,
+    id: brandId<SystemStructureEntityAssociationId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    sourceEntityId: brandId<SystemStructureEntityId>(row.sourceEntityId),
+    targetEntityId: brandId<SystemStructureEntityId>(row.targetEntityId),
     createdAt: toUnixMillis(row.createdAt),
   };
 }
@@ -247,8 +247,10 @@ export async function getEntityHierarchy(
     `);
 
     return rows.map((r) => ({
-      entityId: r.entity_id as SystemStructureEntityId,
-      parentEntityId: r.parent_entity_id as SystemStructureEntityId | null,
+      entityId: brandId<SystemStructureEntityId>(r.entity_id),
+      parentEntityId: r.parent_entity_id
+        ? brandId<SystemStructureEntityId>(r.parent_entity_id)
+        : null,
       depth: r.depth,
     }));
   });

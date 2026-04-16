@@ -33,7 +33,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, MemberId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { polls, pollVotes } = schema;
@@ -454,7 +454,7 @@ describe("poll.service (PGlite integration)", () => {
         id: genPollVoteId(),
         pollId: created.id,
         systemId,
-        voter: { entityType: "member", entityId: "mem_test-voter" },
+        voter: { entityType: "member", entityId: "mem_test-voter" as MemberId },
         votedAt: voteNow,
         encryptedData: testBlob(),
         createdAt: voteNow,

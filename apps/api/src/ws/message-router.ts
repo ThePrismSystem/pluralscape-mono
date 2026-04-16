@@ -6,6 +6,7 @@
  */
 import { syncDocuments } from "@pluralscape/db/pg";
 import { EncryptedRelay } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { eq, inArray } from "drizzle-orm";
 
 import { getDb } from "../lib/db.js";
@@ -185,7 +186,7 @@ async function checkAccess(
       );
       const row = rows[0];
       if (row) {
-        owner = row.systemId as SystemId;
+        owner = brandId<SystemId>(row.systemId);
         ownership.set(docId, owner);
       }
     } catch (err: unknown) {
@@ -405,7 +406,7 @@ export async function routeMessage(
                 .where(inArray(syncDocuments.documentId, uncachedDocIds)),
           );
           for (const row of rows) {
-            documentOwnership.set(row.documentId, row.systemId as SystemId);
+            documentOwnership.set(row.documentId, brandId<SystemId>(row.systemId));
           }
         } catch (err: unknown) {
           log.error("Failed to batch-query document ownership from DB", {

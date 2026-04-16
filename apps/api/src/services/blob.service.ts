@@ -1,6 +1,7 @@
 import { blobMetadata } from "@pluralscape/db/pg";
 import { QuotaExceededError } from "@pluralscape/storage";
 import {
+  brandId,
   BLOB_SIZE_LIMITS,
   ID_PREFIXES,
   createId,
@@ -152,7 +153,7 @@ export async function createUploadUrl(
   }
 
   return {
-    blobId: blobId as BlobId,
+    blobId: brandId<BlobId>(blobId),
     uploadUrl: presigned.url,
     expiresAt: presigned.expiresAt,
     ...(presigned.fields ? { fields: presigned.fields } : {}),
@@ -431,13 +432,13 @@ function toBlobResult(row: {
   thumbnailOfBlobId: string | null;
 }): BlobResult {
   return {
-    id: row.id as BlobId,
-    systemId: row.systemId as SystemId,
+    id: brandId<BlobId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     purpose: row.purpose as BlobPurpose,
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
     checksum: row.checksum ? toChecksumHex(row.checksum) : null,
     uploadedAt: toUnixMillis(row.uploadedAt ?? 0),
-    thumbnailOfBlobId: row.thumbnailOfBlobId as BlobId | null,
+    thumbnailOfBlobId: row.thumbnailOfBlobId ? brandId<BlobId>(row.thumbnailOfBlobId) : null,
   };
 }

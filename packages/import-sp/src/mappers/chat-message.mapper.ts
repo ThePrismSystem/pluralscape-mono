@@ -9,6 +9,8 @@
  * each failure and continues — callers never see a partially-materialised
  * message.
  */
+import { brandId } from "@pluralscape/types";
+
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -62,7 +64,7 @@ export function mapChatMessage(
 
   const encrypted: MessageEncryptedFields = {
     content: sp.message,
-    senderId: senderId as MemberId,
+    senderId: brandId<MemberId>(senderId),
     attachments: [],
     mentions: [],
   };

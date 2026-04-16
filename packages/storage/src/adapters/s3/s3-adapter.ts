@@ -7,7 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { toUnixMillis } from "@pluralscape/types";
+import { MS_PER_SECOND, toUnixMillis } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 
 import { BlobAlreadyExistsError, BlobNotFoundError, BlobTooLargeError } from "../../errors.js";
@@ -31,7 +31,6 @@ import type { StorageKey } from "@pluralscape/types";
 
 const CHECKSUM_META_KEY = "checksum";
 const UPLOADED_AT_META_KEY = "uploadedat";
-const MS_PER_SECOND = 1_000;
 
 /**
  * S3-compatible blob storage adapter supporting presigned URLs.
