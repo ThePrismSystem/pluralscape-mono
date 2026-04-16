@@ -1,6 +1,7 @@
 import {
   SP_API_BACKOFF_BASE_MS,
   SP_API_BACKOFF_MAX_MS,
+  SP_API_MAX_RESPONSE_BYTES,
   SP_API_MAX_RETRIES,
   SP_API_REQUEST_TIMEOUT_MS,
 } from "../import-sp.constants.js";
@@ -253,7 +254,26 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
         );
       }
 
-      return (await response.json()) as unknown;
+      // Guard against oversized responses to prevent OOM.
+      const contentLength = response.headers.get("Content-Length");
+      if (contentLength !== null) {
+        const declaredBytes = Number(contentLength);
+        if (!Number.isNaN(declaredBytes) && declaredBytes > SP_API_MAX_RESPONSE_BYTES) {
+          throw new ApiSourcePermanentError(
+            `SP API response size ${String(declaredBytes)} bytes exceeds limit of ${String(SP_API_MAX_RESPONSE_BYTES)} bytes`,
+          );
+        }
+      }
+
+      // Always read as text and verify byte length — Content-Length can lie.
+      const text = await response.text();
+      const byteLength = new Blob([text]).size;
+      if (byteLength > SP_API_MAX_RESPONSE_BYTES) {
+        throw new ApiSourcePermanentError(
+          `SP API response size ${String(byteLength)} bytes exceeds limit of ${String(SP_API_MAX_RESPONSE_BYTES)} bytes`,
+        );
+      }
+      return JSON.parse(text) as unknown;
     }
     // Unreachable — the loop exits via `return` or a thrown error — but
     // keep an explicit throw so TypeScript's control-flow analysis is happy.
