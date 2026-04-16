@@ -41,6 +41,7 @@ import { CHECKPOINT_CHUNK_SIZE } from "./import-core.constants.js";
 import { isBatchMapper, type MapperDispatchEntry, type SourceDocument } from "./mapper-dispatch.js";
 
 import type { ErrorClassifier } from "./engine-errors.js";
+import type { MapperResult } from "./mapper-result.js";
 import type { PersistableEntity, Persister } from "./persister.types.js";
 import type { ImportDataSource } from "./source.types.js";
 import type {
@@ -223,10 +224,7 @@ export async function runImportEngine<TCollection extends string>(
    * Returns `true` when a fatal error aborted the collection.
    */
   async function persistMapperResult(
-    result:
-      | { readonly status: "skipped"; readonly kind: string; readonly reason: string }
-      | { readonly status: "failed"; readonly kind: string; readonly message: string }
-      | { readonly status: "mapped"; readonly payload: unknown },
+    result: MapperResult<unknown>,
     sourceEntityId: string,
     entityType: ImportCollectionType,
     persistedSourceIds: string[],
@@ -337,14 +335,15 @@ export async function runImportEngine<TCollection extends string>(
       }
     }
 
-    if (dependencyOrder.length === 0) {
+    const firstCollection = dependencyOrder[0];
+    if (firstCollection === undefined) {
       throw new Error("Import dependency order is empty — no collections to process");
     }
 
     let state: ImportCheckpointState =
       args.initialCheckpoint ??
       emptyCheckpointState({
-        firstEntityType: collectionToEntityType(dependencyOrder[0]),
+        firstEntityType: collectionToEntityType(firstCollection),
         selectedCategories: options.selectedCategories,
         avatarMode: options.avatarMode,
       });
