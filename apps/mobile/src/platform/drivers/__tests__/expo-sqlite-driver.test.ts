@@ -127,6 +127,45 @@ describe("createExpoSqliteDriver", () => {
         errors: [failure, rollbackFailure],
       });
     });
+
+    it("propagates COMMIT failure and attempts a ROLLBACK", async () => {
+      const driver = await createExpoSqliteDriver();
+      const commitFailure = new Error("commit failed");
+      mockExecSync.mockImplementation((sql: string) => {
+        if (sql === "COMMIT") throw commitFailure;
+      });
+
+      await expect(driver.transaction(() => Promise.resolve("ok"))).rejects.toBe(commitFailure);
+      expect(mockExecSync).toHaveBeenCalledWith("BEGIN");
+      expect(mockExecSync).toHaveBeenCalledWith("COMMIT");
+      expect(mockExecSync).toHaveBeenCalledWith("ROLLBACK");
+    });
+
+    it("wraps COMMIT and ROLLBACK errors in AggregateError when both fail", async () => {
+      const driver = await createExpoSqliteDriver();
+      const commitFailure = new Error("commit failed");
+      const rollbackFailure = new Error("rollback failed");
+      mockExecSync.mockImplementation((sql: string) => {
+        if (sql === "COMMIT") throw commitFailure;
+        if (sql === "ROLLBACK") throw rollbackFailure;
+      });
+
+      await expect(driver.transaction(() => Promise.resolve("ok"))).rejects.toMatchObject({
+        name: "AggregateError",
+        errors: [commitFailure, rollbackFailure],
+      });
+    });
+
+    it("rejects nested transactions with a clear error", async () => {
+      // Reset any lingering mockImplementation from preceding error-path tests
+      mockExecSync.mockImplementation(() => {});
+      const driver = await createExpoSqliteDriver();
+      await expect(
+        driver.transaction(async () => {
+          await driver.transaction(() => Promise.resolve("inner"));
+        }),
+      ).rejects.toThrow(/nested transactions are not supported/);
+    });
   });
 
   describe("prepare().run()", () => {

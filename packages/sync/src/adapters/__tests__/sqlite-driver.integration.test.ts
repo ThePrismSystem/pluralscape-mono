@@ -11,9 +11,30 @@ import { createBunSqliteDriver } from "../sqlite-driver.js";
 
 import type { SqliteDriver } from "../sqlite-driver.js";
 
-/** Build a BunSqliteDatabase-shaped adapter around better-sqlite3. */
-function makeBunShim(db: InstanceType<typeof Database>) {
-  return {
+/**
+ * Build a BunSqliteDatabase-shaped adapter around better-sqlite3.
+ *
+ * `execOverride`, when provided, runs before delegating to the real db.exec —
+ * it can throw to simulate a SQLite-level failure on specific SQL (e.g.
+ * "ROLLBACK" or "COMMIT"). The exec call-log is exposed for assertions.
+ */
+function makeBunShim(
+  db: InstanceType<typeof Database>,
+  execOverride?: (sql: string) => void,
+): {
+  readonly shim: {
+    prepare(sql: string): {
+      run(...params: unknown[]): void;
+      all(...params: unknown[]): unknown[];
+      get(...params: unknown[]): unknown;
+    };
+    exec(sql: string): void;
+    close(): void;
+  };
+  readonly execCalls: string[];
+} {
+  const execCalls: string[] = [];
+  const shim = {
     prepare(sql: string) {
       const stmt = db.prepare(sql);
       return {
@@ -33,12 +54,15 @@ function makeBunShim(db: InstanceType<typeof Database>) {
       };
     },
     exec(sql: string): void {
+      execCalls.push(sql);
+      execOverride?.(sql);
       db.exec(sql);
     },
     close(): void {
       db.close();
     },
   };
+  return { shim, execCalls };
 }
 
 describe("createBunSqliteDriver", () => {
@@ -47,7 +71,7 @@ describe("createBunSqliteDriver", () => {
 
   beforeEach(async () => {
     rawDb = new Database(":memory:");
-    driver = createBunSqliteDriver(makeBunShim(rawDb));
+    driver = createBunSqliteDriver(makeBunShim(rawDb).shim);
     await driver.exec("CREATE TABLE kv (k TEXT PRIMARY KEY, v TEXT)");
   });
 
@@ -129,5 +153,57 @@ describe("createBunSqliteDriver", () => {
     await driver.close();
     // Mark rawDb as closed so afterEach does not double-close
     // (rawDb.open will be false after driver.close() calls db.close())
+  });
+
+  describe("transaction error paths", () => {
+    it("throws AggregateError when both fn and ROLLBACK throw", async () => {
+      const rollbackErr = new Error("rollback failed");
+      const { shim } = makeBunShim(rawDb, (sql) => {
+        if (sql === "ROLLBACK") throw rollbackErr;
+      });
+      const failingDriver = createBunSqliteDriver(shim);
+
+      const fnErr = new Error("fn failed");
+      await expect(failingDriver.transaction(() => Promise.reject(fnErr))).rejects.toMatchObject({
+        name: "AggregateError",
+        errors: [fnErr, rollbackErr],
+      });
+    });
+
+    it("propagates COMMIT failure and attempts a ROLLBACK", async () => {
+      const commitErr = new Error("commit failed");
+      const { shim, execCalls } = makeBunShim(rawDb, (sql) => {
+        if (sql === "COMMIT") throw commitErr;
+      });
+      const failingDriver = createBunSqliteDriver(shim);
+
+      await expect(failingDriver.transaction(() => Promise.resolve("ok"))).rejects.toBe(commitErr);
+      expect(execCalls).toContain("BEGIN");
+      expect(execCalls).toContain("COMMIT");
+      expect(execCalls).toContain("ROLLBACK");
+    });
+
+    it("wraps COMMIT and ROLLBACK errors in AggregateError when both fail", async () => {
+      const commitErr = new Error("commit failed");
+      const rollbackErr = new Error("rollback failed");
+      const { shim } = makeBunShim(rawDb, (sql) => {
+        if (sql === "COMMIT") throw commitErr;
+        if (sql === "ROLLBACK") throw rollbackErr;
+      });
+      const failingDriver = createBunSqliteDriver(shim);
+
+      await expect(failingDriver.transaction(() => Promise.resolve("ok"))).rejects.toMatchObject({
+        name: "AggregateError",
+        errors: [commitErr, rollbackErr],
+      });
+    });
+
+    it("rejects nested transactions with a clear error", async () => {
+      await expect(
+        driver.transaction(async () => {
+          await driver.transaction(() => Promise.resolve("inner"));
+        }),
+      ).rejects.toThrow(/nested transactions are not supported/);
+    });
   });
 });
