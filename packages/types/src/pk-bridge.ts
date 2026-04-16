@@ -1,4 +1,4 @@
-import type { EncryptedString } from "./encryption.js";
+import type { EncryptedBlob } from "./encryption.js";
 import type { GroupId, MemberId, PKBridgeConfigId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
@@ -31,7 +31,7 @@ export type PKSyncErrorCode =
 export interface PKBridgeConfig extends AuditMetadata {
   readonly id: PKBridgeConfigId;
   readonly systemId: SystemId;
-  readonly pkToken: EncryptedString;
+  readonly pkToken: EncryptedBlob;
   readonly syncDirection: PKSyncDirection;
   readonly enabled: boolean;
   readonly lastSyncAt: UnixMillis | null;

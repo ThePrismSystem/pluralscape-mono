@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { EncryptedString } from "../encryption.js";
+import type { EncryptedBlob } from "../encryption.js";
 import type { GroupId, MemberId, PKBridgeConfigId, SystemId } from "../ids.js";
 import type {
   PKBridgeConfig,
@@ -142,7 +142,7 @@ describe("PKBridgeConfig", () => {
   it("has correct field types", () => {
     expectTypeOf<PKBridgeConfig["id"]>().toEqualTypeOf<PKBridgeConfigId>();
     expectTypeOf<PKBridgeConfig["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<PKBridgeConfig["pkToken"]>().toEqualTypeOf<EncryptedString>();
+    expectTypeOf<PKBridgeConfig["pkToken"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<PKBridgeConfig["syncDirection"]>().toEqualTypeOf<PKSyncDirection>();
     expectTypeOf<PKBridgeConfig["enabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<PKBridgeConfig["lastSyncAt"]>().toEqualTypeOf<UnixMillis | null>();

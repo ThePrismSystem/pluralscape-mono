@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import {
   createPgCommunicationTables,
@@ -7,7 +8,12 @@ import {
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+// Set encryption key before module load so env.ts picks it up.
+vi.hoisted(() => {
+  process.env.WEBHOOK_PAYLOAD_ENCRYPTION_KEY = "ab".repeat(32);
+});
 
 import {
   archiveBoardMessage,
@@ -46,6 +52,7 @@ describe("board-message.service (PGlite integration)", () => {
   let auth: AuthContext;
 
   beforeAll(async () => {
+    await initSodium();
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgCommunicationTables(client);

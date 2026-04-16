@@ -1067,8 +1067,7 @@ erDiagram
         integer attempt_count
         timestamp last_attempt_at "nullable"
         timestamp next_retry_at
-        binary encrypted_data "nullable"
-        jsonb payload_data "nullable"
+        binary encrypted_data
     }
 
     accounts ||--o{ api_keys : "owns"
@@ -1096,7 +1095,7 @@ erDiagram
         varchar system_id FK "unique"
         boolean enabled
         varchar sync_direction
-        binary pk_token_encrypted
+        blob pk_token_encrypted "encrypted blob"
         blob entity_mappings "encrypted blob"
         blob error_log "encrypted blob"
         timestamp last_sync_at

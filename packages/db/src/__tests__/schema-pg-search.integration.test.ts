@@ -45,15 +45,19 @@ describe("PG search_index full-text search", () => {
   });
 
   it("inserts and searches by keyword", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Luna",
-      content: "Protector who enjoys gardening and nature walks",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Luna",
+        content: "Protector who enjoys gardening and nature walks",
+      },
+      "self-hosted",
+    );
 
-    const results = await searchEntries(db, systemId, "gardening");
+    const results = await searchEntries(db, systemId, "gardening", undefined, "self-hosted");
     expect(results).toHaveLength(1);
     expect(results[0]?.entityId).toBe("m-1");
     expect(results[0]?.entityType).toBe("member");
@@ -61,15 +65,19 @@ describe("PG search_index full-text search", () => {
   });
 
   it("returns highlighted snippets via headline", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "journal-entry",
-      entityId: "j-1",
-      title: "Morning thoughts",
-      content: "Today was a peaceful morning with quiet reflection",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "journal-entry",
+        entityId: "j-1",
+        title: "Morning thoughts",
+        content: "Today was a peaceful morning with quiet reflection",
+      },
+      "self-hosted",
+    );
 
-    const results = await searchEntries(db, systemId, "peaceful");
+    const results = await searchEntries(db, systemId, "peaceful", undefined, "self-hosted");
     expect(results).toHaveLength(1);
     expect(results[0]?.headline).toContain("<b>peaceful</b>");
   });
@@ -78,73 +86,105 @@ describe("PG search_index full-text search", () => {
     const otherAccountId = await pgInsertAccount(db);
     const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
 
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Shared name",
-      content: "Content for system A",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Shared name",
+        content: "Content for system A",
+      },
+      "self-hosted",
+    );
 
-    await insertSearchEntry(db, {
-      systemId: otherSystemId,
-      entityType: "member",
-      entityId: "m-2",
-      title: "Shared name",
-      content: "Content for system B",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId: otherSystemId,
+        entityType: "member",
+        entityId: "m-2",
+        title: "Shared name",
+        content: "Content for system B",
+      },
+      "self-hosted",
+    );
 
-    const resultsA = await searchEntries(db, systemId, "shared");
+    const resultsA = await searchEntries(db, systemId, "shared", undefined, "self-hosted");
     expect(resultsA).toHaveLength(1);
     expect(resultsA[0]?.entityId).toBe("m-1");
 
-    const resultsB = await searchEntries(db, otherSystemId, "shared");
+    const resultsB = await searchEntries(db, otherSystemId, "shared", undefined, "self-hosted");
     expect(resultsB).toHaveLength(1);
     expect(resultsB[0]?.entityId).toBe("m-2");
   });
 
   it("filters by entity type", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Starlight",
-      content: "A dreamy alter",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Starlight",
+        content: "A dreamy alter",
+      },
+      "self-hosted",
+    );
 
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "journal-entry",
-      entityId: "j-1",
-      title: "Starlight reflections",
-      content: "Thinking about starlight",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "journal-entry",
+        entityId: "j-1",
+        title: "Starlight reflections",
+        content: "Thinking about starlight",
+      },
+      "self-hosted",
+    );
 
-    const membersOnly = await searchEntries(db, systemId, "starlight", {
-      entityType: "member",
-    });
+    const membersOnly = await searchEntries(
+      db,
+      systemId,
+      "starlight",
+      {
+        entityType: "member",
+      },
+      "self-hosted",
+    );
     expect(membersOnly).toHaveLength(1);
     expect(membersOnly[0]?.entityType).toBe("member");
 
-    const all = await searchEntries(db, systemId, "starlight");
+    const all = await searchEntries(db, systemId, "starlight", undefined, "self-hosted");
     expect(all).toHaveLength(2);
   });
 
   it("supports limit and offset", async () => {
     for (let i = 0; i < 5; i++) {
-      await insertSearchEntry(db, {
-        systemId,
-        entityType: "note",
-        entityId: `n-${String(i)}`,
-        title: `Note about flowers ${String(i)}`,
-        content: `Content about beautiful flowers number ${String(i)}`,
-      });
+      await insertSearchEntry(
+        db,
+        {
+          systemId,
+          entityType: "note",
+          entityId: `n-${String(i)}`,
+          title: `Note about flowers ${String(i)}`,
+          content: `Content about beautiful flowers number ${String(i)}`,
+        },
+        "self-hosted",
+      );
     }
 
-    const page1 = await searchEntries(db, systemId, "flowers", { limit: 2 });
+    const page1 = await searchEntries(db, systemId, "flowers", { limit: 2 }, "self-hosted");
     expect(page1).toHaveLength(2);
 
-    const page2 = await searchEntries(db, systemId, "flowers", { limit: 2, offset: 2 });
+    const page2 = await searchEntries(
+      db,
+      systemId,
+      "flowers",
+      { limit: 2, offset: 2 },
+      "self-hosted",
+    );
     expect(page2).toHaveLength(2);
 
     const allIds = [...page1, ...page2].map((r) => r.entityId);
@@ -153,108 +193,140 @@ describe("PG search_index full-text search", () => {
   });
 
   it("upserts on conflict (same system + entity type + entity ID)", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Original name",
-      content: "Original bio",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Original name",
+        content: "Original bio",
+      },
+      "self-hosted",
+    );
 
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Updated name",
-      content: "Updated bio with astronomy",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Updated name",
+        content: "Updated bio with astronomy",
+      },
+      "self-hosted",
+    );
 
-    const results = await searchEntries(db, systemId, "astronomy");
+    const results = await searchEntries(db, systemId, "astronomy", undefined, "self-hosted");
     expect(results).toHaveLength(1);
     expect(results[0]?.title).toBe("Updated name");
 
-    const oldResults = await searchEntries(db, systemId, "original");
+    const oldResults = await searchEntries(db, systemId, "original", undefined, "self-hosted");
     expect(oldResults).toHaveLength(0);
   });
 
   it("deletes search entries", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Deletable",
-      content: "This will be removed",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Deletable",
+        content: "This will be removed",
+      },
+      "self-hosted",
+    );
 
-    let results = await searchEntries(db, systemId, "deletable");
+    let results = await searchEntries(db, systemId, "deletable", undefined, "self-hosted");
     expect(results).toHaveLength(1);
 
-    await deleteSearchEntry(db, systemId, "member", "m-1");
+    await deleteSearchEntry(db, systemId, "member", "m-1", "self-hosted");
 
-    results = await searchEntries(db, systemId, "deletable");
+    results = await searchEntries(db, systemId, "deletable", undefined, "self-hosted");
     expect(results).toHaveLength(0);
   });
 
   it("ranks title matches higher than content matches", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-title",
-      title: "Gardening expert",
-      content: "Likes cooking",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-title",
+        title: "Gardening expert",
+        content: "Likes cooking",
+      },
+      "self-hosted",
+    );
 
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-content",
-      title: "Cooking expert",
-      content: "Sometimes does gardening on weekends",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-content",
+        title: "Cooking expert",
+        content: "Sometimes does gardening on weekends",
+      },
+      "self-hosted",
+    );
 
-    const results = await searchEntries(db, systemId, "gardening");
+    const results = await searchEntries(db, systemId, "gardening", undefined, "self-hosted");
     expect(results).toHaveLength(2);
     expect(results[0]?.entityId).toBe("m-title");
     expect(results[1]?.entityId).toBe("m-content");
   });
 
   it("returns empty array for empty query", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Test",
-      content: "Content",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Test",
+        content: "Content",
+      },
+      "self-hosted",
+    );
 
-    const results = await searchEntries(db, systemId, "");
+    const results = await searchEntries(db, systemId, "", undefined, "self-hosted");
     expect(results).toHaveLength(0);
 
-    const whitespaceResults = await searchEntries(db, systemId, "   ");
+    const whitespaceResults = await searchEntries(db, systemId, "   ", undefined, "self-hosted");
     expect(whitespaceResults).toHaveLength(0);
   });
 
   it("returns empty array for no matches", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Luna",
-      content: "A protector",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Luna",
+        content: "A protector",
+      },
+      "self-hosted",
+    );
 
-    const results = await searchEntries(db, systemId, "xyznonexistent");
+    const results = await searchEntries(db, systemId, "xyznonexistent", undefined, "self-hosted");
     expect(results).toHaveLength(0);
   });
 
   it("handles special characters safely via websearch_to_tsquery", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "member",
-      entityId: "m-1",
-      title: "Test member",
-      content: "Regular content for testing",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "member",
+        entityId: "m-1",
+        title: "Test member",
+        content: "Regular content for testing",
+      },
+      "self-hosted",
+    );
 
     const testCases = [
       "test's",
@@ -266,12 +338,14 @@ describe("PG search_index full-text search", () => {
     ];
 
     for (const query of testCases) {
-      const result = await searchEntries(db, systemId, query).catch((err: unknown) => {
-        // websearch_to_tsquery may reject some special character combinations —
-        // that's acceptable. Verify it's a PG parse error, not an injection.
-        expect(err).toBeInstanceOf(Error);
-        return null;
-      });
+      const result = await searchEntries(db, systemId, query, undefined, "self-hosted").catch(
+        (err: unknown) => {
+          // websearch_to_tsquery may reject some special character combinations —
+          // that's acceptable. Verify it's a PG parse error, not an injection.
+          expect(err).toBeInstanceOf(Error);
+          return null;
+        },
+      );
       if (result !== null) {
         expect(Array.isArray(result)).toBe(true);
         for (const entry of result) {
@@ -283,33 +357,47 @@ describe("PG search_index full-text search", () => {
   });
 
   it("supports websearch_to_tsquery operators (AND, OR, negation)", async () => {
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "note",
-      entityId: "n-1",
-      title: "Happy morning",
-      content: "A wonderful start to the day",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "note",
+        entityId: "n-1",
+        title: "Happy morning",
+        content: "A wonderful start to the day",
+      },
+      "self-hosted",
+    );
 
-    await insertSearchEntry(db, {
-      systemId,
-      entityType: "note",
-      entityId: "n-2",
-      title: "Sad morning",
-      content: "A difficult start to the day",
-    });
+    await insertSearchEntry(
+      db,
+      {
+        systemId,
+        entityType: "note",
+        entityId: "n-2",
+        title: "Sad morning",
+        content: "A difficult start to the day",
+      },
+      "self-hosted",
+    );
 
     // websearch_to_tsquery treats "happy morning" as AND by default
-    const andResults = await searchEntries(db, systemId, "happy morning");
+    const andResults = await searchEntries(db, systemId, "happy morning", undefined, "self-hosted");
     expect(andResults).toHaveLength(1);
     expect(andResults[0]?.entityId).toBe("n-1");
 
     // OR operator
-    const orResults = await searchEntries(db, systemId, "happy OR sad");
+    const orResults = await searchEntries(db, systemId, "happy OR sad", undefined, "self-hosted");
     expect(orResults).toHaveLength(2);
 
     // Negation with -
-    const negResults = await searchEntries(db, systemId, "morning -happy");
+    const negResults = await searchEntries(
+      db,
+      systemId,
+      "morning -happy",
+      undefined,
+      "self-hosted",
+    );
     expect(negResults).toHaveLength(1);
     expect(negResults[0]?.entityId).toBe("n-2");
   });
@@ -369,6 +457,18 @@ describe("PG search_index hosted-mode guard", () => {
     );
   });
 
+  it("rejects deleteSearchEntry in hosted mode", async () => {
+    await expect(
+      deleteSearchEntry(db, "sys-1" as SystemId, "member", "ent-1", "hosted"),
+    ).rejects.toThrow("Plaintext search_index is not available in hosted mode");
+  });
+
+  it("rejects searchEntries in hosted mode", async () => {
+    await expect(
+      searchEntries(db, "sys-1" as SystemId, "test query", undefined, "hosted"),
+    ).rejects.toThrow("Plaintext search_index is not available in hosted mode");
+  });
+
   it("allows operations in self-hosted mode (explicit param)", async () => {
     const accountId = await pgInsertAccount(db);
     const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
@@ -385,6 +485,43 @@ describe("PG search_index hosted-mode guard", () => {
         "self-hosted",
       ),
     ).resolves.toBeUndefined();
+  });
+
+  it("allows deleteSearchEntry in self-hosted mode (explicit param)", async () => {
+    const accountId = await pgInsertAccount(db);
+    const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
+    await insertSearchEntry(
+      db,
+      {
+        systemId: sysId,
+        entityType: "member",
+        entityId: "m-del-1",
+        title: "deletable entry",
+        content: "deletable entry",
+      },
+      "self-hosted",
+    );
+    await deleteSearchEntry(db, sysId, "member", "m-del-1", "self-hosted");
+    const results = await searchEntries(db, sysId, "deletable", undefined, "self-hosted");
+    expect(results).toHaveLength(0);
+  });
+
+  it("allows searchEntries in self-hosted mode (explicit param)", async () => {
+    const accountId = await pgInsertAccount(db);
+    const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
+    await insertSearchEntry(
+      db,
+      {
+        systemId: sysId,
+        entityType: "member",
+        entityId: "m-search-1",
+        title: "findable entry",
+        content: "findable entry",
+      },
+      "self-hosted",
+    );
+    const results = await searchEntries(db, sysId, "findable", undefined, "self-hosted");
+    expect(results).toHaveLength(1);
   });
 });
 

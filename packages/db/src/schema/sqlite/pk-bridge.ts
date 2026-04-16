@@ -1,6 +1,6 @@
 import { check, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
@@ -19,7 +19,8 @@ export const pkBridgeConfigs = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     syncDirection: text("sync_direction").notNull().$type<PKSyncDirection>(),
-    pkTokenEncrypted: sqliteBinary("pk_token_encrypted").notNull(),
+    /** T1 encrypted: PluralKit API token, encrypted client-side with master key. */
+    pkTokenEncrypted: sqliteEncryptedBlob("pk_token_encrypted").notNull(),
     /** T1 encrypted: contains member name→PK ID mappings. */
     entityMappings: sqliteEncryptedBlob("entity_mappings").notNull(),
     /** T1 encrypted: may contain member names in error context. */
