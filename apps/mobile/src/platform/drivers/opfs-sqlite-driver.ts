@@ -6,28 +6,26 @@ const DB_NAME = "pluralscape-sync.db";
 
 /**
  * wa-sqlite backed by Origin Private File System (OPFS).
- * Only available on web with OPFS support (Chrome 86+, Safari 16.4+, Firefox 111+).
+ * Web-only; tree-shaken from native bundles via the dynamic import in detect.ts.
  *
- * This is a web-only module — tree-shaken from native bundles via dynamic import
- * in detect.ts.
+ * Bridges wa-sqlite (entirely async) to the synchronous SqliteStatement contract:
  *
- * Architecture note: wa-sqlite's entire JS API is async (all methods return Promise).
- * The SqliteDriver interface requires synchronous run/all/get/exec/transaction methods.
- * This driver bridges that gap by:
+ *   - exec() / run() (no params): store-and-check via trackExec — the Promise is
+ *     cached; rejections surface on the next driver call or explicit flush().
+ *   - run(...params): store-and-check via trackPrepared using the wa-sqlite
+ *     prepare/bind/step API. Same surface guarantees as trackExec.
+ *   - all() / get() (no params): exec row-accumulator with synchronous callback.
+ *     Works because OPFSCoopSyncVFS uses FileSystemSyncAccessHandle and the
+ *     non-asyncify wa-sqlite build resolves each step() synchronously, making
+ *     the per-row callback effectively sync.
+ *   - all(...params) / get(...params): NOT YET SUPPORTED — both throw, pointing
+ *     at mobile-shr0 for the Worker bridge follow-up. The async statements()/step()
+ *     API cannot satisfy the synchronous return contract without an Atomics.wait
+ *     bridge over a SharedArrayBuffer in a dedicated Web Worker.
  *
- *   - exec() / run(): store-and-check via trackExec — the Promise is cached and any
- *     rejection is surfaced on the next operation or explicit flush()
- *   - all() / get(): use the exec row-accumulator pattern with synchronous callback —
- *     the callback is invoked per-row within the async iterator. Because
- *     OPFSCoopSyncVFS uses FileSystemSyncAccessHandle, the non-asyncify wa-sqlite
- *     build resolves each step() synchronously, making callbacks effectively sync.
- *
- * Parameterized queries (run/all/get with bind params) use the wa-sqlite prepared
- * statement API: statements() -> bind_collection() -> step() -> row()/column_names().
- * These are async and follow the same store-and-check pattern as exec().
- *
- * Production deployments MUST run this driver inside a dedicated Web Worker where
- * Atomics.wait is available for blocking synchronous behaviour.
+ * Production deployments MUST run this driver inside a dedicated Web Worker
+ * where Atomics.wait is available — required both for the existing sync-callback
+ * pattern under load and for the eventual parameterized-read bridge.
  */
 export interface OpfsSqliteDriverOptions {
   /** Called when a pending error is silently overwritten by a new one. */
@@ -75,10 +73,6 @@ export async function createOpfsSqliteDriver(
     });
   }
 
-  /**
-   * Execute a write-only parameterized statement. toBindParams is called inside
-   * the async IIFE so validation errors land in lastError and surface on flush().
-   */
   function trackPrepared(sql: string, rawParams: unknown[]): void {
     checkLastError();
 
@@ -151,8 +145,6 @@ export async function createOpfsSqliteDriver(
           );
         }
         const rows: TRow[] = [];
-        // The exec callback is invoked synchronously per row in the non-asyncify
-        // wa-sqlite build with OPFSCoopSyncVFS (synchronous file access handles).
         trackExec(sql, (row: (WaSqliteCompatibleType | null)[], columns: string[]) => {
           const obj = Object.create(null) as Record<string, unknown>;
           for (let i = 0; i < columns.length; i++) {
