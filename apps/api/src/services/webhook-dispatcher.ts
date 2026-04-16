@@ -101,7 +101,7 @@ async function executeDispatch<K extends WebhookEventType>(
     const values = matchingConfigs.map((config) => {
       const deliveryId = createId(ID_PREFIXES.webhookDelivery) as WebhookDeliveryId;
       deliveryIds.push(deliveryId);
-      const base = {
+      return {
         id: deliveryId,
         webhookId: config.id,
         systemId,
@@ -109,17 +109,13 @@ async function executeDispatch<K extends WebhookEventType>(
         status: "pending" as const,
         attemptCount: 0,
         createdAt: timestamp,
+        encryptedData: encryptWebhookPayload(payloadJson, encryptionKey),
       };
-      return encryptionKey
-        ? { ...base, encryptedData: encryptWebhookPayload(payloadJson, encryptionKey) }
-        : { ...base, payloadData: { ...payload, systemId } };
     });
 
     await db.insert(webhookDeliveries).values(values);
   } finally {
-    if (encryptionKey) {
-      getSodium().memzero(encryptionKey);
-    }
+    getSodium().memzero(encryptionKey);
   }
 
   return deliveryIds;

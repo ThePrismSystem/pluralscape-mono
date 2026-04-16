@@ -7,7 +7,20 @@ import {
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+// Mock encryption — integration tests focus on dispatch logic, not crypto.
+const { fakeKey } = vi.hoisted(() => ({
+  fakeKey: new Uint8Array(32).fill(0xab),
+}));
+vi.mock("../../services/webhook-payload-encryption.js", () => ({
+  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(fakeKey),
+  encryptWebhookPayload: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
+}));
+vi.mock("@pluralscape/crypto", async () => {
+  const actual = await vi.importActual("@pluralscape/crypto");
+  return { ...actual, getSodium: vi.fn().mockReturnValue({ memzero: vi.fn() }) };
+});
 
 import { createWebhookConfig } from "../../services/webhook-config.service.js";
 import {

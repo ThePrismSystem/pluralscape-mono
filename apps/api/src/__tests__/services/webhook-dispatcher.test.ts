@@ -33,7 +33,7 @@ const mockRawDb = {
   transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockDb)),
 };
 
-const mockGetKey = vi.fn().mockReturnValue(null);
+const mockGetKey = vi.fn().mockReturnValue(new Uint8Array(32).fill(0xab));
 const mockEncrypt = vi.fn().mockReturnValue(new Uint8Array([1, 2, 3]));
 
 vi.mock("../../services/webhook-payload-encryption.js", () => ({
@@ -147,14 +147,27 @@ describe("dispatchWebhookEvent", () => {
     expect(result).toHaveLength(2);
   });
 
-  it("stores payload on delivery records", async () => {
+  it("stores encrypted payload on delivery records", async () => {
     mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
     mockInsertValues.mockResolvedValueOnce(undefined);
 
     await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
-    expect(insertedValues[0]).toHaveProperty("payloadData", { ...payload, systemId });
+    expect(insertedValues[0]).toHaveProperty("encryptedData");
+    expect(insertedValues[0]).not.toHaveProperty("payloadData");
+    expect(mockEncrypt).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws when WEBHOOK_PAYLOAD_ENCRYPTION_KEY is not configured", async () => {
+    mockGetKey.mockImplementationOnce(() => {
+      throw new Error("WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required");
+    });
+    mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+
+    await expect(
+      dispatchWebhookEvent(mockDb as never, systemId, eventType, payload),
+    ).rejects.toThrow("WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required");
   });
 
   it("uses cached configs on second dispatch for same system", async () => {
@@ -235,7 +248,7 @@ describe("dispatchWebhookEvent", () => {
     }
   });
 
-  it("stores encryptedData when encryption key is configured", async () => {
+  it("encrypts payload with the configured encryption key", async () => {
     const fakeKey = new Uint8Array(32).fill(0xab);
     mockGetKey.mockReturnValueOnce(fakeKey);
     mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);

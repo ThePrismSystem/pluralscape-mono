@@ -16,12 +16,14 @@ const ENCRYPTION_KEY_HEX_LENGTH = AEAD_KEY_BYTES * 2;
 
 /**
  * Get the server-held webhook payload encryption key from the environment.
- * Returns null if the key is not configured (development/testing).
+ * Throws if the key is not configured — webhook payloads must always be encrypted.
  */
-export function getWebhookPayloadEncryptionKey(): AeadKey | null {
+export function getWebhookPayloadEncryptionKey(): AeadKey {
   const hex = env.WEBHOOK_PAYLOAD_ENCRYPTION_KEY;
   if (!hex) {
-    return null;
+    throw new Error(
+      "WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required. Webhook payloads must be encrypted at rest.",
+    );
   }
   if (hex.length !== ENCRYPTION_KEY_HEX_LENGTH) {
     throw new Error(
