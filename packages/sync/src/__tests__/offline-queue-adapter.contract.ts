@@ -23,17 +23,19 @@ function makeEnvelope(docId: SyncDocumentId, fill = 1): Omit<EncryptedChangeEnve
   };
 }
 
-export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapter): void {
+export function runOfflineQueueAdapterContract(
+  factory: () => OfflineQueueAdapter | Promise<OfflineQueueAdapter>,
+): void {
   describe("OfflineQueueAdapter contract", () => {
     describe("enqueue / drainUnsynced", () => {
       it("returns empty array when no entries exist", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const result = await adapter.drainUnsynced();
         expect(result).toHaveLength(0);
       });
 
       it("returns enqueued entries in order", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const docA = asSyncDocId("doc_a");
         const id1 = await adapter.enqueue(docA, makeEnvelope(docA, 1));
         const id2 = await adapter.enqueue(docA, makeEnvelope(docA, 2));
@@ -46,7 +48,7 @@ export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapte
       });
 
       it("returns entries from multiple documents", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const docA = asSyncDocId("doc_a");
         const docB = asSyncDocId("doc_b");
         await adapter.enqueue(docA, makeEnvelope(docA, 1));
@@ -57,7 +59,7 @@ export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapte
       });
 
       it("returns a unique ID for each enqueued entry", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const docA = asSyncDocId("doc_a");
         const id1 = await adapter.enqueue(docA, makeEnvelope(docA, 1));
         const id2 = await adapter.enqueue(docA, makeEnvelope(docA, 2));
@@ -67,7 +69,7 @@ export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapte
 
     describe("markSynced", () => {
       it("marks an entry as synced so it no longer appears in drainUnsynced", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const docA = asSyncDocId("doc_a");
         const id = await adapter.enqueue(docA, makeEnvelope(docA, 1));
         await adapter.markSynced(id, 42);
@@ -77,7 +79,7 @@ export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapte
       });
 
       it("only marks the specified entry", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const docA = asSyncDocId("doc_a");
         const id1 = await adapter.enqueue(docA, makeEnvelope(docA, 1));
         await adapter.enqueue(docA, makeEnvelope(docA, 2));
@@ -90,7 +92,7 @@ export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapte
 
     describe("deleteConfirmed", () => {
       it("deletes synced entries older than cutoff", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const docA = asSyncDocId("doc_a");
         const id = await adapter.enqueue(docA, makeEnvelope(docA, 1));
         await adapter.markSynced(id, 1);
@@ -101,7 +103,7 @@ export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapte
       });
 
       it("does not delete unsynced entries", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const docA = asSyncDocId("doc_a");
         await adapter.enqueue(docA, makeEnvelope(docA, 1));
 
@@ -113,7 +115,7 @@ export function runOfflineQueueAdapterContract(factory: () => OfflineQueueAdapte
       });
 
       it("returns 0 when nothing to delete", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const deleted = await adapter.deleteConfirmed(Date.now());
         expect(deleted).toBe(0);
       });
