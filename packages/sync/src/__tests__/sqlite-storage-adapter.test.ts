@@ -13,10 +13,10 @@ import { runStorageAdapterContract } from "./storage-adapter.contract.js";
 describe("SqliteStorageAdapter (better-sqlite3)", () => {
   const databases: InstanceType<typeof Database>[] = [];
 
-  function createAdapter(): SqliteStorageAdapter {
+  async function createAdapter(): Promise<SqliteStorageAdapter> {
     const db = new Database(":memory:");
     databases.push(db);
-    return new SqliteStorageAdapter(createBetterSqliteDriver(db));
+    return SqliteStorageAdapter.create(createBetterSqliteDriver(db));
   }
 
   afterEach(() => {
