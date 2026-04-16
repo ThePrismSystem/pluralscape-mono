@@ -29,6 +29,8 @@ import type {
   AeadNonce,
   AuthKey,
   AuthKeyHash,
+  BoxPublicKey,
+  BoxSecretKey,
   ChallengeNonce,
   EncryptedBlob,
   KdfMasterKey,
@@ -37,6 +39,7 @@ import type {
   RecoveryKeyHash,
   Signature,
   SignPublicKey,
+  SignSecretKey,
 } from "./types.js";
 
 export function assertBufferLength(buffer: Uint8Array, expected: number, name: string): void {
@@ -55,11 +58,11 @@ export function assertAeadNonce(nonce: Uint8Array): asserts nonce is AeadNonce {
   assertBufferLength(nonce, AEAD_NONCE_BYTES, "AEAD nonce");
 }
 
-export function assertBoxPublicKey(key: Uint8Array): void {
+export function assertBoxPublicKey(key: Uint8Array): asserts key is BoxPublicKey {
   assertBufferLength(key, BOX_PUBLIC_KEY_BYTES, "Box public key");
 }
 
-export function assertBoxSecretKey(key: Uint8Array): void {
+export function assertBoxSecretKey(key: Uint8Array): asserts key is BoxSecretKey {
   assertBufferLength(key, BOX_SECRET_KEY_BYTES, "Box secret key");
 }
 
@@ -75,7 +78,7 @@ export function assertSignPublicKey(key: Uint8Array): asserts key is SignPublicK
   assertBufferLength(key, SIGN_PUBLIC_KEY_BYTES, "Sign public key");
 }
 
-export function assertSignSecretKey(key: Uint8Array): void {
+export function assertSignSecretKey(key: Uint8Array): asserts key is SignSecretKey {
   assertBufferLength(key, SIGN_SECRET_KEY_BYTES, "Sign secret key");
 }
 

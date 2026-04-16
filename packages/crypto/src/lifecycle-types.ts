@@ -1,5 +1,12 @@
 import type { EncryptedPayload } from "./symmetric.js";
-import type { AeadKey, BoxKeypair, KdfMasterKey, PwhashSalt, SignKeypair } from "./types.js";
+import type {
+  AeadKey,
+  BoxKeypair,
+  KdfMasterKey,
+  KeyVersion,
+  PwhashSalt,
+  SignKeypair,
+} from "./types.js";
 import type { BucketId } from "@pluralscape/types";
 
 /** Lifecycle states for the mobile key manager. */
@@ -45,7 +52,7 @@ export interface KeyLifecycleManager {
   getIdentityKeys(): { readonly sign: SignKeypair; readonly box: BoxKeypair };
 
   /** Get or derive a bucket key. Throws KeysLockedError if state is not unlocked/grace. */
-  getBucketKey(bucketId: BucketId, encryptedKey: Uint8Array, keyVersion: number): AeadKey;
+  getBucketKey(bucketId: BucketId, encryptedKey: Uint8Array, keyVersion: KeyVersion): AeadKey;
 }
 
 /** Interface for platform-native secure memory zeroing. */

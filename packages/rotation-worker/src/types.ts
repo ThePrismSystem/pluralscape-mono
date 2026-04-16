@@ -18,6 +18,7 @@ export interface VersionedEncryptedPayload {
 export interface CompletionItem {
   readonly itemId: string;
   readonly status: "completed" | "failed";
+  readonly failureReason?: string;
 }
 
 /** API client interface — implemented by the mobile/web app using its HTTP layer. */
@@ -64,7 +65,6 @@ export interface RotationWorkerConfig {
 export type RotationProgressCallback = (rotation: BucketKeyRotation) => void;
 
 /** Result of processing a single item. */
-export interface ItemProcessResult {
-  readonly item: BucketRotationItem;
-  readonly status: "completed" | "failed";
-}
+export type ItemProcessResult =
+  | { readonly item: BucketRotationItem; readonly status: "completed" }
+  | { readonly item: BucketRotationItem; readonly status: "failed"; readonly failureReason: string };

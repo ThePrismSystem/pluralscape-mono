@@ -40,6 +40,7 @@ export type {
 export {
   AlreadyInitializedError,
   BiometricFailedError,
+  CryptoError,
   CryptoNotReadyError,
   DecryptionFailedError,
   InvalidInputError,
@@ -70,6 +71,7 @@ export {
   KDF_KEY_BYTES,
   PWHASH_MEMLIMIT_INTERACTIVE,
   PWHASH_MEMLIMIT_MODERATE,
+  PWHASH_MEMLIMIT_SENSITIVE,
   PWHASH_OPSLIMIT_INTERACTIVE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_OPSLIMIT_SENSITIVE,
@@ -177,7 +179,7 @@ export { deserializeRecoveryBackup, serializeRecoveryBackup } from "./recovery-b
 
 // ── Password reset via recovery key ──────────────────────────────────
 export type { PasswordResetParams, PasswordResetResult } from "./password-reset.js";
-export { withPasswordResetResult } from "./password-reset.js";
+export { withMasterKeyFromReset, withPasswordResetResult } from "./password-reset.js";
 
 // ── Recovery key regeneration ─────────────────────────────────────────
 export type { RegenerateResult } from "./recovery-regeneration.js";

@@ -6,7 +6,7 @@ import type {
   NativeMemzero,
   SecurityPresetLevel,
 } from "../lifecycle-types.js";
-import type { AeadKey, BoxKeypair, KdfMasterKey, SignKeypair } from "../types.js";
+import type { AeadKey, BoxKeypair, KdfMasterKey, KeyVersion, SignKeypair } from "../types.js";
 import type { BucketId } from "@pluralscape/types";
 
 describe("KeyLifecycleState", () => {
@@ -88,7 +88,11 @@ describe("KeyLifecycleManager", () => {
 
   it("getBucketKey accepts bucketId, encryptedKey, and keyVersion", () => {
     type GetBucketKey = KeyLifecycleManager["getBucketKey"];
-    expectTypeOf<GetBucketKey>().toBeCallableWith("" as BucketId, new Uint8Array(), 1);
+    expectTypeOf<GetBucketKey>().toBeCallableWith(
+      "" as BucketId,
+      new Uint8Array(),
+      1 as KeyVersion,
+    );
     expectTypeOf<ReturnType<GetBucketKey>>().toEqualTypeOf<AeadKey>();
   });
 

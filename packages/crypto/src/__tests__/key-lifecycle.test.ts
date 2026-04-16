@@ -9,6 +9,7 @@ import { MobileKeyLifecycleManager, SECURITY_PRESETS } from "../key-lifecycle.js
 import { generateMasterKey, wrapMasterKey } from "../master-key-wrap.js";
 import { generateSalt } from "../master-key.js";
 import { getSodium } from "../sodium.js";
+import { validateKeyVersion } from "../validation.js";
 import { createWebKeyStorage } from "../web-key-storage.js";
 
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
@@ -17,6 +18,8 @@ import type { KeyLifecycleConfig, KeyLifecycleDeps } from "../lifecycle-types.js
 import type { EncryptedPayload } from "../symmetric.js";
 import type { PwhashSalt } from "../types.js";
 import type { BucketId } from "@pluralscape/types";
+
+const KEY_VERSION_1 = validateKeyVersion(1);
 
 // Timer type declarations for test environment (lib: ES2022 excludes DOM/Node timer globals)
 declare function setTimeout(callback: () => void, ms: number): number;
@@ -96,9 +99,9 @@ describe("initial state", () => {
   });
 
   it("getBucketKey throws KeysLockedError", () => {
-    expect(() => manager.getBucketKey("bucket-1" as BucketId, new Uint8Array(64), 1)).toThrow(
-      KeysLockedError,
-    );
+    expect(() =>
+      manager.getBucketKey("bucket-1" as BucketId, new Uint8Array(64), KEY_VERSION_1),
+    ).toThrow(KeysLockedError);
   });
 });
 
@@ -617,7 +620,7 @@ describe("grace period", () => {
 
     manager.onBackground();
     expect(manager.state).toBe("grace");
-    const result = manager.getBucketKey("bucket-grace" as BucketId, encryptedKey, 1);
+    const result = manager.getBucketKey("bucket-grace" as BucketId, encryptedKey, KEY_VERSION_1);
     expect(result).toEqual(bucketKey);
   });
 
@@ -789,7 +792,7 @@ describe("getBucketKey", () => {
     encryptedKey.set(wrapped.nonce, 0);
     encryptedKey.set(wrapped.ciphertext, wrapped.nonce.length);
 
-    const result = manager.getBucketKey(bucketId, encryptedKey, 1);
+    const result = manager.getBucketKey(bucketId, encryptedKey, KEY_VERSION_1);
     expect(result).toEqual(bucketKey);
   });
 
@@ -808,7 +811,7 @@ describe("getBucketKey", () => {
     encryptedKey.set(wrapped.ciphertext, wrapped.nonce.length);
 
     // First call — should decrypt
-    manager.getBucketKey(bucketId, encryptedKey, 1);
+    manager.getBucketKey(bucketId, encryptedKey, KEY_VERSION_1);
     expect(deps.bucketKeyCache.has(bucketId)).toBe(true);
   });
 
@@ -826,11 +829,11 @@ describe("getBucketKey", () => {
     encryptedKey.set(wrapped.nonce, 0);
     encryptedKey.set(wrapped.ciphertext, wrapped.nonce.length);
 
-    manager.getBucketKey(bucketId, encryptedKey, 1);
+    manager.getBucketKey(bucketId, encryptedKey, KEY_VERSION_1);
 
     // Spy on decryptBucketKey path (cache should skip it)
     const cacheSpy = vi.spyOn(deps.bucketKeyCache, "get");
-    const result = manager.getBucketKey(bucketId, encryptedKey, 1);
+    const result = manager.getBucketKey(bucketId, encryptedKey, KEY_VERSION_1);
     expect(cacheSpy).toHaveBeenCalled();
     expect(result).toEqual(bucketKey);
   });
@@ -842,7 +845,9 @@ describe("getBucketKey", () => {
       await createWrappedMasterKey(TEST_PASSWORD, salt),
     );
     await manager.lock();
-    expect(() => manager.getBucketKey(bucketId, new Uint8Array(64), 1)).toThrow(KeysLockedError);
+    expect(() => manager.getBucketKey(bucketId, new Uint8Array(64), KEY_VERSION_1)).toThrow(
+      KeysLockedError,
+    );
   });
 
   it("throws on truncated encrypted key data", async () => {
@@ -853,7 +858,7 @@ describe("getBucketKey", () => {
     );
     // Too short to contain nonce (24 bytes) + any ciphertext
     const truncated = new Uint8Array(10);
-    expect(() => manager.getBucketKey(bucketId, truncated, 1)).toThrow();
+    expect(() => manager.getBucketKey(bucketId, truncated, KEY_VERSION_1)).toThrow();
   });
 
   it("throws DecryptionFailedError on corrupted ciphertext", async () => {
@@ -872,9 +877,9 @@ describe("getBucketKey", () => {
     // Corrupt the ciphertext portion by filling it with zeros
     encryptedKey.fill(0, wrapped.nonce.length);
 
-    expect(() => manager.getBucketKey("bucket-corrupt" as BucketId, encryptedKey, 1)).toThrow(
-      DecryptionFailedError,
-    );
+    expect(() =>
+      manager.getBucketKey("bucket-corrupt" as BucketId, encryptedKey, KEY_VERSION_1),
+    ).toThrow(DecryptionFailedError);
   });
 });
 

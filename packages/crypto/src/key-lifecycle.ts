@@ -21,6 +21,7 @@ import type {
   AeadNonce,
   BoxKeypair,
   KdfMasterKey,
+  KeyVersion,
   PwhashSalt,
   SignKeypair,
 } from "./types.js";
@@ -228,7 +229,7 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     return { sign: this.identityKeys.signing, box: this.identityKeys.encryption };
   }
 
-  getBucketKey(bucketId: BucketId, encryptedKey: Uint8Array, keyVersion: number): AeadKey {
+  getBucketKey(bucketId: BucketId, encryptedKey: Uint8Array, keyVersion: KeyVersion): AeadKey {
     if (this.masterKey === null) {
       throw new KeysLockedError();
     }

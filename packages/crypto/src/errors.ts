@@ -1,7 +1,16 @@
 import type { KeyLifecycleState } from "./lifecycle-types.js";
 
+/** Base error class for all crypto-related errors. */
+export class CryptoError extends Error {
+  override readonly name: string = "CryptoError" as const;
+
+  constructor(message = "An error occurred in the crypto layer.", options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+
 /** Thrown when `getSodium()` is called before `initSodium()`. */
-export class CryptoNotReadyError extends Error {
+export class CryptoNotReadyError extends CryptoError {
   override readonly name = "CryptoNotReadyError" as const;
 
   constructor(
@@ -13,7 +22,7 @@ export class CryptoNotReadyError extends Error {
 }
 
 /** Thrown when AEAD or box decryption fails (tampered ciphertext, wrong key). */
-export class DecryptionFailedError extends Error {
+export class DecryptionFailedError extends CryptoError {
   override readonly name = "DecryptionFailedError" as const;
 
   constructor(
@@ -25,7 +34,7 @@ export class DecryptionFailedError extends Error {
 }
 
 /** Thrown when a cryptographic input has an invalid size or format. */
-export class InvalidInputError extends Error {
+export class InvalidInputError extends CryptoError {
   override readonly name = "InvalidInputError" as const;
   constructor(message = "Invalid cryptographic input.", options?: ErrorOptions) {
     super(message, options);
@@ -33,7 +42,7 @@ export class InvalidInputError extends Error {
 }
 
 /** Thrown when `configureSodium()` is called after initialization. */
-export class AlreadyInitializedError extends Error {
+export class AlreadyInitializedError extends CryptoError {
   override readonly name = "AlreadyInitializedError" as const;
 
   constructor() {
@@ -42,7 +51,7 @@ export class AlreadyInitializedError extends Error {
 }
 
 /** Thrown when a method is not supported on the current platform adapter. */
-export class UnsupportedOperationError extends Error {
+export class UnsupportedOperationError extends CryptoError {
   override readonly name = "UnsupportedOperationError" as const;
 
   constructor(operation: string, platform: string) {
@@ -53,7 +62,7 @@ export class UnsupportedOperationError extends Error {
 }
 
 /** Thrown when crypto operations are attempted while keys are cleared. */
-export class KeysLockedError extends Error {
+export class KeysLockedError extends CryptoError {
   override readonly name = "KeysLockedError" as const;
 
   constructor(
@@ -65,7 +74,7 @@ export class KeysLockedError extends Error {
 }
 
 /** Thrown when expo-secure-store operations fail. */
-export class KeyStorageFailedError extends Error {
+export class KeyStorageFailedError extends CryptoError {
   override readonly name = "KeyStorageFailedError" as const;
 
   constructor(message = "Secure storage operation failed.", options?: ErrorOptions) {
@@ -74,7 +83,7 @@ export class KeyStorageFailedError extends Error {
 }
 
 /** Thrown when Ed25519 signature verification fails. */
-export class SignatureVerificationError extends Error {
+export class SignatureVerificationError extends CryptoError {
   override readonly name = "SignatureVerificationError" as const;
   constructor(message = "Signature verification failed.", options?: ErrorOptions) {
     super(message, options);
@@ -82,7 +91,7 @@ export class SignatureVerificationError extends Error {
 }
 
 /** Thrown when an invalid key lifecycle state transition is attempted. */
-export class InvalidStateTransitionError extends Error {
+export class InvalidStateTransitionError extends CryptoError {
   override readonly name = "InvalidStateTransitionError" as const;
   readonly from: KeyLifecycleState;
   readonly to: KeyLifecycleState;
@@ -95,7 +104,7 @@ export class InvalidStateTransitionError extends Error {
 }
 
 /** Thrown when biometric authentication fails after max retries. */
-export class BiometricFailedError extends Error {
+export class BiometricFailedError extends CryptoError {
   override readonly name = "BiometricFailedError" as const;
   readonly retriesExhausted: boolean;
 
