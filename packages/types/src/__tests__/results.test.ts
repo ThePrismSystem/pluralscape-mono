@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { ApiErrorCode } from "../api-constants.js";
+import type { ApiErrorCode } from "../api-constants/error-codes.js";
 import type { ApiError, ApiResponse, Result, ValidationError } from "../results.js";
 
 describe("Result", () => {

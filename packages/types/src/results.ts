@@ -1,4 +1,4 @@
-import type { ApiErrorCode } from "./api-constants.js";
+import type { ApiErrorCode } from "./api-constants/error-codes.js";
 
 /** Discriminated success/error union. */
 export type Result<T, E> =

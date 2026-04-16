@@ -678,8 +678,9 @@ export type {
 } from "./snapshot.js";
 
 // ── API constants ─────────────────────────────────────────────────────
-export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants.js";
+export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants/index.js";
 export {
+  MS_PER_MINUTE,
   MS_PER_DAY,
   MS_PER_HOUR,
   RATE_LIMITS,
@@ -694,7 +695,7 @@ export {
   KEY_ROTATION,
   ROTATION_STATES,
   ROTATION_ITEM_STATUSES,
-} from "./api-constants.js";
+} from "./api-constants/index.js";
 
 // ── Logger ─────────────────────────────────────────────────────────
 export type { Logger } from "./logger.js";
