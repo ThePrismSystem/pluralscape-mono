@@ -47,15 +47,20 @@ export const DB_ENCRYPTION_SUBKEY_ID = 10;
 export const DB_ENCRYPTION_KEY_BYTES = 32;
 
 /**
- * Tests whether the database is accessible (encrypted databases require the
- * correct PRAGMA key before any queries succeed).
+ * Tests whether the database is accessible under the current PRAGMA key.
+ *
+ * Encrypted databases return "file is not a database" / SQLITE_NOTADB when
+ * read with the wrong key. Any other error (permissions, I/O, etc.) is
+ * rethrown so it isn't silently misinterpreted as a decryption mismatch.
  */
 function isDatabaseAccessible(db: SQLiteDatabase): boolean {
   try {
     db.execSync("SELECT count(*) FROM sqlite_master");
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/not a database|SQLITE_NOTADB|file is encrypted/i.test(msg)) return false;
+    throw err;
   }
 }
 
