@@ -327,6 +327,36 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0(typescript@6.0.2)(vitest@4.1.4)
 
+  apps/mobile-web-e2e:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.59.1
+        version: 1.59.1
+      '@pluralscape/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
+      '@pluralscape/mobile':
+        specifier: workspace:*
+        version: link:../mobile
+      '@pluralscape/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
+      '@pluralscape/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
+      '@pluralscape/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@types/node':
+        specifier: ^24.12.2
+        version: 24.12.2
+      esbuild:
+        specifier: '>=0.25.0'
+        version: 0.27.4
+      typescript:
+        specifier: ^6.0.0
+        version: 6.0.2
+
   packages/api-client:
     dependencies:
       '@trpc/client':

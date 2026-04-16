@@ -1,0 +1,8 @@
+{
+  "extends": "@pluralscape/tsconfig/node.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "types": ["@playwright/test", "node"]
+  },
+  "include": ["src/**/*", "playwright.config.ts"]
+}

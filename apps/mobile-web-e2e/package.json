@@ -1,0 +1,22 @@
+{
+  "name": "@pluralscape/mobile-web-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/mobile": "workspace:*",
+    "@pluralscape/sync": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "@pluralscape/types": "workspace:*",
+    "@types/node": "^24.12.2",
+    "esbuild": "^0.27.4",
+    "typescript": "^6.0.0"
+  }
+}
