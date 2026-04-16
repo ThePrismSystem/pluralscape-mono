@@ -69,7 +69,7 @@ const unixTimestampQueryParam = z
         code: "custom",
         message: "Expected a positive Unix timestamp",
       });
-      return undefined;
+      return z.NEVER;
     }
     return n;
   });

@@ -203,6 +203,54 @@ describe("TagContentBodySchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rejects entityId without prefix separator", () => {
+    const result = TagContentBodySchema.safeParse({
+      entityType: "member",
+      entityId: "noprefixhere",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects entityId with uppercase prefix", () => {
+    const result = TagContentBodySchema.safeParse({
+      entityType: "member",
+      entityId: "MEM_abc123",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects entityId with single-char prefix", () => {
+    const result = TagContentBodySchema.safeParse({
+      entityType: "member",
+      entityId: "x_id",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects entityId with prefix but empty suffix", () => {
+    const result = TagContentBodySchema.safeParse({
+      entityType: "member",
+      entityId: "mem_",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects entityId with special characters in suffix", () => {
+    const result = TagContentBodySchema.safeParse({
+      entityType: "member",
+      entityId: "mem_abc!@#",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts entityId with hyphenated UUID suffix", () => {
+    const result = TagContentBodySchema.safeParse({
+      entityType: "member",
+      entityId: "mem_550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("BucketContentTagQuerySchema", () => {

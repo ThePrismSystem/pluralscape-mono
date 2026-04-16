@@ -402,7 +402,11 @@ export async function deleteStructureEntity(
         .select({ count: count() })
         .from(notes)
         .where(
-          and(eq(notes.authorEntityType, "structure-entity"), eq(notes.authorEntityId, entityId)),
+          and(
+            eq(notes.systemId, systemId),
+            eq(notes.authorEntityType, "structure-entity"),
+            eq(notes.authorEntityId, entityId),
+          ),
         ),
     ]);
 

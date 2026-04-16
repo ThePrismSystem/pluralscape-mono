@@ -26,6 +26,7 @@ export function validateSendParams(params: {
   readonly replyTo?: string;
 }): void {
   const recipientCount = typeof params.to === "string" ? 1 : params.to.length;
+
   if (recipientCount > MAX_RECIPIENTS) {
     throw new EmailValidationError("Recipient count", recipientCount, MAX_RECIPIENTS);
   }

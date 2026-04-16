@@ -58,10 +58,11 @@ import {
   handleSubmitSnapshot,
   handleSubscribeRequest,
   handleUnsubscribeRequest,
-  shouldVerifyEnvelopeSignatures,
   verifyEnvelopeOrError,
   verifyKeyOwnership,
 } from "../handlers.js";
+
+import { shouldVerifyEnvelopeSignatures } from "../envelope-verification-config.js";
 
 import type { AppLogger } from "../../lib/logger.js";
 import type { SyncRelayService, PaginatedEnvelopes } from "@pluralscape/sync";

@@ -16,7 +16,7 @@ import { eq } from "drizzle-orm";
 
 import { withAccountRead } from "../lib/rls-context.js";
 
-import * as envelopeVerificationConfig from "./envelope-verification-config.js";
+import { shouldVerifyEnvelopeSignatures } from "./envelope-verification-config.js";
 import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
@@ -209,7 +209,7 @@ export function verifyEnvelopeOrError(
   correlationId: string | null,
   docId: SyncDocumentId,
 ): SyncError | null {
-  if (!envelopeVerificationConfig.shouldVerifyEnvelopeSignatures()) return null;
+  if (!shouldVerifyEnvelopeSignatures()) return null;
   try {
     const sodium = getSodium();
     const valid = verifyEnvelopeSignature({ ...envelope, documentId: docId, seq: 0 }, sodium);
@@ -463,6 +463,3 @@ async function collectAllEnvelopes(
   }
   return all;
 }
-
-export const shouldVerifyEnvelopeSignatures =
-  envelopeVerificationConfig.shouldVerifyEnvelopeSignatures;
