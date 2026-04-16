@@ -124,6 +124,20 @@ describe("BlobQuotaService", () => {
     });
   });
 
+  describe("reserveQuota (advisory)", () => {
+    it("resolves when upload is within quota", async () => {
+      const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(100));
+      await expect(service.reserveQuota("sys_abc" as SystemId, 500)).resolves.toBeUndefined();
+    });
+
+    it("throws QuotaExceededError when over quota", async () => {
+      const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(900));
+      await expect(service.reserveQuota("sys_abc" as SystemId, 200)).rejects.toThrow(
+        QuotaExceededError,
+      );
+    });
+  });
+
   describe("error propagation", () => {
     it("propagates usage query errors through getUsage", async () => {
       const failingQuery: BlobUsageQuery = {
