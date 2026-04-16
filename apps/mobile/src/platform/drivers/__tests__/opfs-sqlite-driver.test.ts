@@ -189,54 +189,11 @@ describe("createOpfsSqliteDriver", () => {
       expect(rows).toEqual([]);
     });
 
-    it("uses prepared statement API with params and collects rows", async () => {
-      const stmtHandle = 42;
-      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
-      mockBindCollection.mockReturnValue(0);
-      mockColumnNames.mockReturnValue(["name", "age"]);
-
-      // First step returns a row, second returns DONE
-      mockStep
-        .mockResolvedValueOnce(SQLITE_ROW)
-        .mockResolvedValueOnce(SQLITE_ROW)
-        .mockResolvedValueOnce(SQLITE_DONE);
-      mockRow.mockReturnValueOnce(["Alice", 30]).mockReturnValueOnce(["Bob", 25]);
-
-      const stmt = driver.prepare<{ name: string; age: number }>("SELECT * FROM t WHERE age > ?");
-      const rows = stmt.all(20);
-      await driver.flush();
-
-      expect(mockBindCollection).toHaveBeenCalledWith(stmtHandle, [20]);
-      expect(rows).toEqual([
-        { name: "Alice", age: 30 },
-        { name: "Bob", age: 25 },
-      ]);
-    });
-
-    it("returns empty array when parameterized query matches no rows", async () => {
-      const stmtHandle = 42;
-      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
-      mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(SQLITE_DONE);
-
+    it("throws when called with params (Worker bridge required)", () => {
       const stmt = driver.prepare("SELECT * FROM t WHERE id = ?");
-      const rows = stmt.all(999);
-      await driver.flush();
-
-      expect(rows).toEqual([]);
-    });
-
-    it("handles NULL parameter values in SELECT", async () => {
-      const stmtHandle = 42;
-      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
-      mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(SQLITE_DONE);
-
-      const stmt = driver.prepare("SELECT * FROM t WHERE col IS ?");
-      stmt.all(null);
-      await driver.flush();
-
-      expect(mockBindCollection).toHaveBeenCalledWith(stmtHandle, [null]);
+      expect(() => stmt.all(1)).toThrow(
+        /parameterized .all\(\) not yet supported.*Worker bridge.*mobile-shr0/,
+      );
     });
   });
 
@@ -264,37 +221,11 @@ describe("createOpfsSqliteDriver", () => {
       expect(stmt.get()).toBeUndefined();
     });
 
-    it("delegates to all() for parameterized queries", async () => {
-      const stmtHandle = 42;
-      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
-      mockBindCollection.mockReturnValue(0);
-      mockColumnNames.mockReturnValue(["name", "age"]);
-      mockStep.mockResolvedValueOnce(SQLITE_ROW).mockResolvedValueOnce(SQLITE_DONE);
-      mockRow.mockReturnValueOnce(["Alice", 30]);
-
-      const stmt = driver.prepare<{ name: string; age: number }>("SELECT * FROM t WHERE id = ?");
-      // get() with params uses the store-and-check pattern: the row is populated
-      // asynchronously so the return value is undefined until flush().
-      // Callers should use all() for parameterized queries requiring immediate reads,
-      // or flush() before accessing the result.
-      stmt.get(1);
-      await driver.flush();
-
-      expect(mockBindCollection).toHaveBeenCalledWith(stmtHandle, [1]);
-      expect(mockStep).toHaveBeenCalledWith(stmtHandle);
-    });
-
-    it("returns undefined when parameterized query matches nothing", async () => {
-      const stmtHandle = 42;
-      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
-      mockBindCollection.mockReturnValue(0);
-      mockStep.mockResolvedValue(SQLITE_DONE);
-
+    it("throws when called with params (Worker bridge required)", () => {
       const stmt = driver.prepare("SELECT * FROM t WHERE id = ?");
-      const row = stmt.get(999);
-      await driver.flush();
-
-      expect(row).toBeUndefined();
+      expect(() => stmt.get(1)).toThrow(
+        /parameterized .all\(\) not yet supported.*Worker bridge.*mobile-shr0/,
+      );
     });
   });
 

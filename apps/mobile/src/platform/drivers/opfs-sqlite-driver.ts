@@ -84,43 +84,6 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
     });
   }
 
-  /**
-   * Execute a parameterized SELECT and collect rows into the provided array.
-   * Temporary: kept until parameterized .all()/.get() throw unconditionally.
-   */
-  function trackPreparedRowCollect(
-    sql: string,
-    rawParams: unknown[],
-    rows: Record<string, unknown>[],
-  ): void {
-    checkLastError();
-
-    const promise = (async () => {
-      const params = toBindParams(rawParams);
-      for await (const stmt of sqlite3.statements(db, sql)) {
-        sqlite3.bind_collection(stmt, params);
-        const columns = sqlite3.column_names(stmt);
-        while ((await sqlite3.step(stmt)) === SQLITE_ROW) {
-          const values = sqlite3.row(stmt);
-          const obj: Record<string, unknown> = {};
-          for (let i = 0; i < columns.length; i++) {
-            const col = columns[i];
-            if (col !== undefined) {
-              obj[col] = values[i];
-            }
-          }
-          rows.push(obj);
-        }
-      }
-      return 0;
-    })();
-
-    lastExecPromise = promise;
-    promise.catch((err: unknown) => {
-      lastError = err instanceof Error ? err : new Error(String(err));
-    });
-  }
-
   function checkLastError(): void {
     if (lastError !== null) {
       const err = lastError;
@@ -157,9 +120,9 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
 
       all(...params: unknown[]): TRow[] {
         if (params.length > 0) {
-          const rows: Record<string, unknown>[] = [];
-          trackPreparedRowCollect(sql, params, rows);
-          return rows as TRow[];
+          throw new Error(
+            "OPFS driver: parameterized .all() not yet supported — requires Worker bridge (see mobile-shr0)",
+          );
         }
         const rows: TRow[] = [];
         // The exec callback is invoked synchronously per row in the non-asyncify
