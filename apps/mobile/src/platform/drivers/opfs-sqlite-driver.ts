@@ -20,6 +20,10 @@ const DB_NAME = "pluralscape-sync.db";
  *     OPFSCoopSyncVFS uses FileSystemSyncAccessHandle, the non-asyncify wa-sqlite
  *     build resolves each step() synchronously, making callbacks effectively sync.
  *
+ * Parameterized queries (run/all/get with bind params) use the wa-sqlite prepared
+ * statement API: statements() -> bind_collection() -> step() -> row()/column_names().
+ * These are async and follow the same store-and-check pattern as exec().
+ *
  * Production deployments MUST run this driver inside a dedicated Web Worker where
  * Atomics.wait is available for blocking synchronous behaviour.
  */
@@ -54,6 +58,46 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
     });
   }
 
+  /**
+   * Execute a parameterized query using wa-sqlite's prepared statement API.
+   * Returns collected rows as column-name-keyed objects (empty array for non-SELECT).
+   *
+   * Lifecycle: statements() -> bind_collection() -> step() loop -> row()/column_names()
+   * The async iterator from statements() auto-finalizes when iteration completes.
+   */
+  function trackPrepared(
+    sql: string,
+    params: ReadonlyArray<WaSqliteCompatibleType | null>,
+    rows: Record<string, unknown>[],
+  ): void {
+    checkLastError();
+
+    const promise = (async () => {
+      for await (const stmt of sqlite3.statements(db, sql)) {
+        sqlite3.bind_collection(stmt, params);
+
+        const columns = sqlite3.column_names(stmt);
+        while ((await sqlite3.step(stmt)) === SQLite.SQLITE_ROW) {
+          const values = sqlite3.row(stmt);
+          const obj: Record<string, unknown> = {};
+          for (let i = 0; i < columns.length; i++) {
+            const col = columns[i];
+            if (col !== undefined) {
+              obj[col] = values[i];
+            }
+          }
+          rows.push(obj);
+        }
+      }
+      return 0;
+    })();
+
+    lastExecPromise = promise;
+    promise.catch((err: unknown) => {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    });
+  }
+
   function checkLastError(): void {
     if (lastError !== null) {
       const err = lastError;
@@ -62,18 +106,37 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
     }
   }
 
+  /**
+   * Cast unknown params from the SqliteStatement interface to wa-sqlite compatible
+   * types. The sync adapters only pass null, number, string, and Uint8Array values.
+   */
+  function toBindParams(params: unknown[]): (WaSqliteCompatibleType | null)[] {
+    return params.map((p) => {
+      if (p === null || p === undefined) return null;
+      if (typeof p === "number" || typeof p === "string" || typeof p === "bigint") return p;
+      if (p instanceof Uint8Array) return p;
+      if (Array.isArray(p)) return p as number[];
+      // Unreachable for known callers (sync adapters only pass null/number/string/Uint8Array),
+      // but handle gracefully by JSON-serializing unknown objects.
+      return JSON.stringify(p);
+    });
+  }
+
   function makeStatement<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
     return {
       run(...params: unknown[]): void {
         if (params.length > 0) {
-          throw new Error("OPFS driver: parameterized queries not yet implemented (see ps-0azs)");
+          trackPrepared(sql, toBindParams(params), []);
+          return;
         }
         trackExec(sql);
       },
 
       all(...params: unknown[]): TRow[] {
         if (params.length > 0) {
-          throw new Error("OPFS driver: parameterized queries not yet implemented (see ps-0azs)");
+          const rows: Record<string, unknown>[] = [];
+          trackPrepared(sql, toBindParams(params), rows);
+          return rows as TRow[];
         }
         const rows: TRow[] = [];
         // The exec callback is invoked synchronously per row in the non-asyncify

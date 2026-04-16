@@ -58,6 +58,18 @@ declare interface WaSqliteAPI {
     callback?: (row: (WaSqliteCompatibleType | null)[], columns: string[]) => void,
   ): Promise<number>;
   close(db: number): Promise<number>;
+
+  // ── Prepared statement API ──────────────────────────────────────────
+  /** Compile SQL into an async iterator of prepared statement handles. */
+  statements(db: number, sql: string): AsyncIterable<number>;
+  /** Bind an array or object of values to a prepared statement. */
+  bind_collection(stmt: number, bindings: ReadonlyArray<WaSqliteCompatibleType | null>): number;
+  /** Evaluate one step of a prepared statement. Resolves to SQLITE_ROW or SQLITE_DONE. */
+  step(stmt: number): Promise<number>;
+  /** Retrieve all column values for the current row (copies blobs). */
+  row(stmt: number): (WaSqliteCompatibleType | null)[];
+  /** Retrieve all column names for a prepared statement. */
+  column_names(stmt: number): string[];
 }
 
 /** @journeyapps/wa-sqlite module augmentations. */
@@ -68,6 +80,8 @@ declare module "@journeyapps/wa-sqlite/dist/wa-sqlite.mjs" {
 
 declare module "@journeyapps/wa-sqlite" {
   export function Factory(Module: WaSqliteModule): WaSqliteAPI;
+  /** Return code from step() indicating a row is available. */
+  export const SQLITE_ROW: number;
 }
 
 /** OPFSCoopSyncVFS instance — the object returned by OPFSCoopSyncVFS.create(). */
