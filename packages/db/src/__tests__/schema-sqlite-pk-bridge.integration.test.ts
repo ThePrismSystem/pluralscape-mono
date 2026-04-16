@@ -40,7 +40,8 @@ describe("SQLite PK Bridge Schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
     const id = crypto.randomUUID();
-    const pkToken = new Uint8Array([10, 20, 30]);
+    const pkTokenCiphertext = new Uint8Array([10, 20, 30]);
+    const pkToken = testBlob(pkTokenCiphertext);
     const entityMappings = testBlob(new Uint8Array([40, 50, 60]));
     const errorLog = testBlob(new Uint8Array([70, 80, 90]));
 
@@ -66,7 +67,7 @@ describe("SQLite PK Bridge Schema", () => {
     expect(row?.systemId).toBe(systemId);
     expect(row?.enabled).toBe(true);
     expect(row?.syncDirection).toBe("bidirectional");
-    expect(row?.pkTokenEncrypted).toEqual(pkToken);
+    expect(row?.pkTokenEncrypted.ciphertext).toEqual(pkTokenCiphertext);
     expect(row?.entityMappings.ciphertext).toEqual(entityMappings.ciphertext);
     expect(row?.errorLog.ciphertext).toEqual(errorLog.ciphertext);
     expect(row?.lastSyncAt).toBe(now);
@@ -85,7 +86,7 @@ describe("SQLite PK Bridge Schema", () => {
         id,
         systemId,
         syncDirection: "ps-to-pk",
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         createdAt: now,
@@ -112,7 +113,7 @@ describe("SQLite PK Bridge Schema", () => {
           id,
           systemId,
           syncDirection: direction,
-          pkTokenEncrypted: new Uint8Array([1]),
+          pkTokenEncrypted: testBlob(new Uint8Array([1])),
           entityMappings: testBlob(),
           errorLog: testBlob(),
           createdAt: now,
@@ -137,7 +138,7 @@ describe("SQLite PK Bridge Schema", () => {
           id: crypto.randomUUID(),
           systemId,
           syncDirection: "invalid-direction" as "bidirectional",
-          pkTokenEncrypted: new Uint8Array([1]),
+          pkTokenEncrypted: testBlob(new Uint8Array([1])),
           entityMappings: testBlob(),
           errorLog: testBlob(),
           createdAt: now,
@@ -158,7 +159,7 @@ describe("SQLite PK Bridge Schema", () => {
         id,
         systemId,
         syncDirection: "pk-to-ps",
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         lastSyncAt: null,
@@ -183,7 +184,7 @@ describe("SQLite PK Bridge Schema", () => {
         id,
         systemId,
         syncDirection: "ps-to-pk",
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         lastSyncAt: syncTime,
@@ -202,12 +203,13 @@ describe("SQLite PK Bridge Schema", () => {
     const now = Date.now();
     const id = crypto.randomUUID();
 
-    const largePkToken = new Uint8Array(256);
+    const largePkTokenCiphertext = new Uint8Array(256);
     const largeEntityCiphertext = new Uint8Array(512);
     const largeErrorCiphertext = new Uint8Array(1024);
-    for (let i = 0; i < largePkToken.length; i++) largePkToken[i] = i % 256;
+    for (let i = 0; i < largePkTokenCiphertext.length; i++) largePkTokenCiphertext[i] = i % 256;
     for (let i = 0; i < largeEntityCiphertext.length; i++) largeEntityCiphertext[i] = (i * 3) % 256;
     for (let i = 0; i < largeErrorCiphertext.length; i++) largeErrorCiphertext[i] = (i * 7) % 256;
+    const largePkToken = testBlob(largePkTokenCiphertext);
     const largeEntityMappings = testBlob(largeEntityCiphertext);
     const largeErrorLog = testBlob(largeErrorCiphertext);
 
@@ -225,7 +227,7 @@ describe("SQLite PK Bridge Schema", () => {
       .run();
 
     const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
-    expect(rows[0]?.pkTokenEncrypted).toEqual(largePkToken);
+    expect(rows[0]?.pkTokenEncrypted.ciphertext).toEqual(largePkTokenCiphertext);
     expect(rows[0]?.entityMappings.ciphertext).toEqual(largeEntityCiphertext);
     expect(rows[0]?.errorLog.ciphertext).toEqual(largeErrorCiphertext);
   });
@@ -241,7 +243,7 @@ describe("SQLite PK Bridge Schema", () => {
         id,
         systemId,
         syncDirection: "ps-to-pk",
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         createdAt: now,
@@ -271,7 +273,7 @@ describe("SQLite PK Bridge Schema", () => {
         id,
         systemId,
         syncDirection: "pk-to-ps",
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         createdAt: now,
@@ -293,7 +295,7 @@ describe("SQLite PK Bridge Schema", () => {
           id: crypto.randomUUID(),
           systemId: "nonexistent-system-id",
           syncDirection: "ps-to-pk",
-          pkTokenEncrypted: new Uint8Array([1]),
+          pkTokenEncrypted: testBlob(new Uint8Array([1])),
           entityMappings: testBlob(),
           errorLog: testBlob(),
           createdAt: now,
@@ -315,7 +317,7 @@ describe("SQLite PK Bridge Schema", () => {
         systemId,
         enabled: false,
         syncDirection: "bidirectional",
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         createdAt: now,

@@ -36,8 +36,8 @@ vi.mock("@pluralscape/crypto", async () => {
 });
 
 vi.mock("../../services/webhook-payload-encryption.js", () => ({
-  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(null),
-  decryptWebhookPayload: vi.fn(),
+  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(new Uint8Array(32).fill(0xab)),
+  decryptWebhookPayload: vi.fn().mockReturnValue('{"event":"test"}'),
 }));
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -150,8 +150,7 @@ const JOINED_ROW = {
   systemId: "sys_test-system",
   eventType: "fronting.started",
   attemptCount: 0,
-  encryptedData: null,
-  payloadData: { event: "test" },
+  encryptedData: new Uint8Array([1, 2, 3]),
   configUrl: "https://example.com/webhook",
   configSecret: "dGVzdC1zZWNyZXQta2V5",
   configEnabled: true,
@@ -310,20 +309,15 @@ describe("processWebhookDelivery (unit)", () => {
     ).rejects.toThrow("unexpected");
   });
 
-  it("marks as failed when encrypted payload but no key configured", async () => {
+  it("marks as failed when encryption key is not configured", async () => {
+    const { getWebhookPayloadEncryptionKey } =
+      await import("../../services/webhook-payload-encryption.js");
+    vi.mocked(getWebhookPayloadEncryptionKey).mockImplementationOnce(() => {
+      throw new Error("WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required");
+    });
+
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([
-      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
-    ]);
-
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
-
-    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
-  });
-
-  it("marks as failed when delivery has no payload data", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, encryptedData: null, payloadData: null }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
@@ -332,17 +326,12 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("marks as failed when decryption throws", async () => {
     const { decryptWebhookPayload } = await import("../../services/webhook-payload-encryption.js");
-    const { getWebhookPayloadEncryptionKey } =
-      await import("../../services/webhook-payload-encryption.js");
-    vi.mocked(getWebhookPayloadEncryptionKey).mockReturnValueOnce(new Uint8Array(32) as never);
     vi.mocked(decryptWebhookPayload).mockImplementationOnce(() => {
       throw new Error("decryption failed");
     });
 
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([
-      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
-    ]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
@@ -351,16 +340,11 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("decrypts encrypted payload and sends it via fetch", async () => {
     const { decryptWebhookPayload } = await import("../../services/webhook-payload-encryption.js");
-    const { getWebhookPayloadEncryptionKey } =
-      await import("../../services/webhook-payload-encryption.js");
     const expectedJson = '{"event":"test","systemId":"sys_test-system"}';
-    vi.mocked(getWebhookPayloadEncryptionKey).mockReturnValueOnce(new Uint8Array(32) as never);
     vi.mocked(decryptWebhookPayload).mockReturnValueOnce(expectedJson);
 
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([
-      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
-    ]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
     await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);

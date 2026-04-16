@@ -44,7 +44,8 @@ describe("PG pk_bridge_configs schema", () => {
     const id = crypto.randomUUID();
     const now = Date.now();
     const syncAt = now - 60_000;
-    const token = new Uint8Array([10, 20, 30, 40]);
+    const tokenCiphertext = new Uint8Array([10, 20, 30, 40]);
+    const token = testBlob(tokenCiphertext);
     const mappings = testBlob(new Uint8Array([50, 60, 70]));
     const errors = testBlob(new Uint8Array([80, 90]));
 
@@ -69,7 +70,7 @@ describe("PG pk_bridge_configs schema", () => {
     expect(row?.systemId).toBe(systemId);
     expect(row?.enabled).toBe(true);
     expect(row?.syncDirection).toBe("ps-to-pk");
-    expect(row?.pkTokenEncrypted).toEqual(token);
+    expect(row?.pkTokenEncrypted.ciphertext).toEqual(tokenCiphertext);
     expect(row?.entityMappings.ciphertext).toEqual(mappings.ciphertext);
     expect(row?.errorLog.ciphertext).toEqual(errors.ciphertext);
     expect(row?.lastSyncAt).toBe(syncAt);
@@ -88,7 +89,7 @@ describe("PG pk_bridge_configs schema", () => {
       id,
       systemId,
       syncDirection: "bidirectional",
-      pkTokenEncrypted: new Uint8Array([1]),
+      pkTokenEncrypted: testBlob(new Uint8Array([1])),
       entityMappings: testBlob(),
       errorLog: testBlob(),
       createdAt: now,
@@ -111,7 +112,7 @@ describe("PG pk_bridge_configs schema", () => {
         id,
         systemId,
         syncDirection: dir,
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         createdAt: now,
@@ -146,7 +147,7 @@ describe("PG pk_bridge_configs schema", () => {
       id,
       systemId,
       syncDirection: "ps-to-pk",
-      pkTokenEncrypted: new Uint8Array([1]),
+      pkTokenEncrypted: testBlob(new Uint8Array([1])),
       entityMappings: testBlob(),
       errorLog: testBlob(),
       lastSyncAt: null,
@@ -169,7 +170,7 @@ describe("PG pk_bridge_configs schema", () => {
       id,
       systemId,
       syncDirection: "pk-to-ps",
-      pkTokenEncrypted: new Uint8Array([1]),
+      pkTokenEncrypted: testBlob(new Uint8Array([1])),
       entityMappings: testBlob(),
       errorLog: testBlob(),
       lastSyncAt: syncAt,
@@ -187,8 +188,9 @@ describe("PG pk_bridge_configs schema", () => {
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    const token = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) token[i] = i;
+    const tokenCiphertext = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) tokenCiphertext[i] = i;
+    const token = testBlob(tokenCiphertext);
     const mappingsCiphertext = new Uint8Array(512);
     for (let i = 0; i < 512; i++) mappingsCiphertext[i] = i % 256;
     const errorsCiphertext = new Uint8Array(1024);
@@ -208,7 +210,7 @@ describe("PG pk_bridge_configs schema", () => {
     });
 
     const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
-    expect(rows[0]?.pkTokenEncrypted).toEqual(token);
+    expect(rows[0]?.pkTokenEncrypted.ciphertext).toEqual(tokenCiphertext);
     expect(rows[0]?.entityMappings.ciphertext).toEqual(mappingsCiphertext);
     expect(rows[0]?.errorLog.ciphertext).toEqual(errorsCiphertext);
   });
@@ -223,7 +225,7 @@ describe("PG pk_bridge_configs schema", () => {
       id,
       systemId,
       syncDirection: "ps-to-pk",
-      pkTokenEncrypted: new Uint8Array([1]),
+      pkTokenEncrypted: testBlob(new Uint8Array([1])),
       entityMappings: testBlob(),
       errorLog: testBlob(),
       createdAt: now,
@@ -251,7 +253,7 @@ describe("PG pk_bridge_configs schema", () => {
       id,
       systemId,
       syncDirection: "pk-to-ps",
-      pkTokenEncrypted: new Uint8Array([1]),
+      pkTokenEncrypted: testBlob(new Uint8Array([1])),
       entityMappings: testBlob(),
       errorLog: testBlob(),
       createdAt: now,
@@ -269,7 +271,7 @@ describe("PG pk_bridge_configs schema", () => {
         id: crypto.randomUUID(),
         systemId: "nonexistent-system-id",
         syncDirection: "ps-to-pk",
-        pkTokenEncrypted: new Uint8Array([1]),
+        pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
         errorLog: testBlob(),
         createdAt: now,
@@ -289,7 +291,7 @@ describe("PG pk_bridge_configs schema", () => {
       systemId,
       enabled: false,
       syncDirection: "bidirectional",
-      pkTokenEncrypted: new Uint8Array([1]),
+      pkTokenEncrypted: testBlob(new Uint8Array([1])),
       entityMappings: testBlob(),
       errorLog: testBlob(),
       createdAt: now,

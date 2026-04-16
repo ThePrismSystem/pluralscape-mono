@@ -92,7 +92,7 @@ interface PgExecutable {
  */
 export async function createSearchIndex(
   db: PgExecutable,
-  deploymentMode?: DeploymentMode,
+  deploymentMode: DeploymentMode,
 ): Promise<void> {
   assertSelfHosted(deploymentMode);
   await db.execute(sql.raw(SEARCH_INDEX_DDL));
@@ -110,7 +110,7 @@ export async function dropSearchIndex(db: PgExecutable): Promise<void> {
 /** Create indexes on search_index (idempotent). Guarded: indexes only make sense if the table exists. */
 export async function createSearchIndexIndexes(
   db: PgExecutable,
-  deploymentMode?: DeploymentMode,
+  deploymentMode: DeploymentMode,
 ): Promise<void> {
   assertSelfHosted(deploymentMode);
   await db.execute(sql.raw(SEARCH_INDEX_INDEXES_DDL));
@@ -120,7 +120,7 @@ export async function createSearchIndexIndexes(
 export async function insertSearchEntry(
   db: PgExecutable,
   entry: PgSearchIndexEntry,
-  deploymentMode?: DeploymentMode,
+  deploymentMode: DeploymentMode,
 ): Promise<void> {
   assertSelfHosted(deploymentMode);
   await db.execute(
@@ -137,7 +137,9 @@ export async function deleteSearchEntry(
   systemId: SystemId,
   entityType: SearchableEntityType,
   entityId: string,
+  deploymentMode: DeploymentMode,
 ): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(
     sql`DELETE FROM search_index
         WHERE system_id = ${systemId} AND entity_type = ${entityType} AND entity_id = ${entityId}`,
@@ -151,7 +153,7 @@ export async function deleteSearchEntry(
  */
 export async function rebuildSearchIndex(
   db: PgExecutable,
-  deploymentMode?: DeploymentMode,
+  deploymentMode: DeploymentMode,
 ): Promise<void> {
   assertSelfHosted(deploymentMode);
   await dropSearchIndex(db);
@@ -172,8 +174,10 @@ export async function searchEntries(
   db: PgExecutable,
   systemId: SystemId,
   query: string,
-  opts?: PgSearchOptions,
+  opts: PgSearchOptions | undefined,
+  deploymentMode: DeploymentMode,
 ): Promise<PgSearchIndexResult[]> {
+  assertSelfHosted(deploymentMode);
   const trimmed = query.trim();
   if (trimmed.length === 0) {
     return [];

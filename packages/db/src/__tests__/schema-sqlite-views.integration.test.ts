@@ -308,7 +308,7 @@ describe("SQLite views / query helpers", () => {
           status: "failed",
           attemptCount: 2,
           nextRetryAt: now - 60000,
-          payloadData: { test: true },
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         })
         .run();
@@ -322,7 +322,7 @@ describe("SQLite views / query helpers", () => {
           status: "failed",
           attemptCount: 5,
           nextRetryAt: now - 60000,
-          payloadData: { test: true },
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         })
         .run();
@@ -336,7 +336,7 @@ describe("SQLite views / query helpers", () => {
           status: "failed",
           attemptCount: 2,
           nextRetryAt: now + 60000,
-          payloadData: { test: true },
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         })
         .run();

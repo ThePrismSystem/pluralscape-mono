@@ -67,8 +67,7 @@ export const webhookDeliveries = sqliteTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: sqliteTimestamp("last_attempt_at"),
     nextRetryAt: sqliteTimestamp("next_retry_at"),
-    encryptedData: sqliteBinary("encrypted_data"),
-    payloadData: sqliteJson("payload_data").$type<Record<string, unknown>>(),
+    encryptedData: sqliteBinary("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -94,10 +93,6 @@ export const webhookDeliveries = sqliteTable(
     check(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
-    ),
-    check(
-      "webhook_deliveries_payload_presence_check",
-      sql`${t.encryptedData} IS NOT NULL OR ${t.payloadData} IS NOT NULL`,
     ),
   ],
 );

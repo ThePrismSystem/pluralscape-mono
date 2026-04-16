@@ -36,9 +36,11 @@ function makeTestKey() {
 // -- getWebhookPayloadEncryptionKey -----------------------------------------
 
 describe("getWebhookPayloadEncryptionKey", () => {
-  it("returns null when env var is not set", () => {
+  it("throws when env var is not set", () => {
     delete mockEnv.WEBHOOK_PAYLOAD_ENCRYPTION_KEY;
-    expect(getWebhookPayloadEncryptionKey()).toBeNull();
+    expect(() => getWebhookPayloadEncryptionKey()).toThrow(
+      "WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required",
+    );
   });
 
   it("returns an AeadKey when env var is a valid 64-char hex string", () => {

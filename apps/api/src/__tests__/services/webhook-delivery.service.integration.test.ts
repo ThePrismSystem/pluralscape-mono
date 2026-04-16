@@ -78,7 +78,7 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       eventType: "fronting.started" as const,
       status: "pending" as const,
       attemptCount: 0,
-      payloadData: {},
+      encryptedData: new Uint8Array([1, 2, 3]),
       createdAt: Date.now(),
       ...overrides,
     };

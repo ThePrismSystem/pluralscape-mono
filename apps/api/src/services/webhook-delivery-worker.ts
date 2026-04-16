@@ -100,7 +100,7 @@ async function markDeliveryFailed(
  * Process a single pending webhook delivery.
  *
  * 1. Fetches the delivery row (including payload) and associated webhook config.
- * 2. Decrypts the payload if stored encrypted, or reads plaintext JSONB.
+ * 2. Decrypts the encrypted payload using the server-held encryption key.
  * 3. Sends an HTTP POST with the JSON payload and HMAC signature header.
  * 4. On success (2xx): marks the delivery as 'success'.
  * 5. On failure: increments attempt count and schedules retry with exponential backoff.
@@ -120,7 +120,6 @@ export async function processWebhookDelivery(
       eventType: webhookDeliveries.eventType,
       attemptCount: webhookDeliveries.attemptCount,
       encryptedData: webhookDeliveries.encryptedData,
-      payloadData: webhookDeliveries.payloadData,
       configUrl: webhookConfigs.url,
       configSecret: webhookConfigs.secret,
       configEnabled: webhookConfigs.enabled,
@@ -159,34 +158,19 @@ export async function processWebhookDelivery(
     return;
   }
 
-  // Resolve payload from DB — encrypted or plaintext
+  // Decrypt payload
   let payloadJson: string;
-  if (row.encryptedData) {
+  try {
     const key = getWebhookPayloadEncryptionKey();
-    if (!key) {
-      logger.warn("[webhook-worker] encrypted payload but no encryption key configured", {
-        deliveryId,
-      });
-      await markDeliveryFailed(db, deliveryId);
-      return;
-    }
     try {
       payloadJson = decryptWebhookPayload(row.encryptedData, key);
-    } catch (err: unknown) {
-      logger.warn("[webhook-worker] decryption failed for delivery", {
-        deliveryId,
-        reason: err instanceof Error ? err.message : String(err),
-      });
-      await markDeliveryFailed(db, deliveryId);
-      return;
     } finally {
       getSodium().memzero(key);
     }
-  } else if (row.payloadData) {
-    payloadJson = JSON.stringify(row.payloadData);
-  } else {
-    logger.warn("[webhook-worker] delivery has neither encrypted nor plaintext payload", {
+  } catch (err: unknown) {
+    logger.warn("[webhook-worker] payload decryption failed for delivery", {
       deliveryId,
+      reason: err instanceof Error ? err.message : String(err),
     });
     await markDeliveryFailed(db, deliveryId);
     return;
