@@ -99,9 +99,7 @@ export function createPkFileImportSource(args: PkFileImportSourceArgs): ImportDa
           // synthesise a "PK Private" bucket.
           const members = payload.members.map((m) => ({
             pkMemberId: m.id,
-            // Widening from PKPrivacySchema (validated enum fields) to Record<string, string>
-            // for the privacy-scan document, which uses string values for field inspection.
-            privacy: m.privacy as Record<string, string> | undefined,
+            privacy: m.privacy,
           }));
           yield {
             kind: "doc",
