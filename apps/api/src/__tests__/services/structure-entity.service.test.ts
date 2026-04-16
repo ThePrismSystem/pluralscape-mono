@@ -774,11 +774,12 @@ describe("deleteStructureEntity", () => {
     chain.where.mockReturnValueOnce(chain); // mid-chain, flows to limit
     chain.limit.mockReturnValueOnce(chain);
     chain.for.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
-    // Three count queries in Promise.all — terminal where() calls
+    // Four count queries in Promise.all — terminal where() calls
     chain.where
       .mockResolvedValueOnce([{ count: 0 }]) // entity links
       .mockResolvedValueOnce([{ count: 0 }]) // member links
-      .mockResolvedValueOnce([{ count: 0 }]); // associations
+      .mockResolvedValueOnce([{ count: 0 }]) // associations
+      .mockResolvedValueOnce([{ count: 0 }]); // notes
 
     await expect(
       deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit),
@@ -805,7 +806,8 @@ describe("deleteStructureEntity", () => {
     chain.where
       .mockResolvedValueOnce([{ count: 2 }]) // entity links
       .mockResolvedValueOnce([{ count: 0 }]) // member links
-      .mockResolvedValueOnce([{ count: 0 }]); // associations
+      .mockResolvedValueOnce([{ count: 0 }]) // associations
+      .mockResolvedValueOnce([{ count: 0 }]); // notes
 
     await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
       "Structure entity has dependents",
@@ -820,7 +822,8 @@ describe("deleteStructureEntity", () => {
     chain.where
       .mockResolvedValueOnce([{ count: 0 }]) // entity links
       .mockResolvedValueOnce([{ count: 1 }]) // member links
-      .mockResolvedValueOnce([{ count: 0 }]); // associations
+      .mockResolvedValueOnce([{ count: 0 }]) // associations
+      .mockResolvedValueOnce([{ count: 0 }]); // notes
 
     await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
       "Structure entity has dependents",
@@ -835,7 +838,24 @@ describe("deleteStructureEntity", () => {
     chain.where
       .mockResolvedValueOnce([{ count: 0 }]) // entity links
       .mockResolvedValueOnce([{ count: 0 }]) // member links
-      .mockResolvedValueOnce([{ count: 5 }]); // associations
+      .mockResolvedValueOnce([{ count: 5 }]) // associations
+      .mockResolvedValueOnce([{ count: 0 }]); // notes
+
+    await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity has dependents",
+    );
+  });
+
+  it("throws HAS_DEPENDENTS when entity has notes", async () => {
+    const { db, chain } = mockDb();
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
+    chain.where
+      .mockResolvedValueOnce([{ count: 0 }]) // entity links
+      .mockResolvedValueOnce([{ count: 0 }]) // member links
+      .mockResolvedValueOnce([{ count: 0 }]) // associations
+      .mockResolvedValueOnce([{ count: 3 }]); // notes
 
     await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
       "Structure entity has dependents",
@@ -850,7 +870,8 @@ describe("deleteStructureEntity", () => {
     chain.where
       .mockResolvedValueOnce([{ count: 1 }]) // entity links
       .mockResolvedValueOnce([{ count: 2 }]) // member links
-      .mockResolvedValueOnce([{ count: 3 }]); // associations
+      .mockResolvedValueOnce([{ count: 3 }]) // associations
+      .mockResolvedValueOnce([{ count: 0 }]); // notes
 
     await expect(deleteStructureEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit)).rejects.toThrow(
       "Structure entity has dependents",
