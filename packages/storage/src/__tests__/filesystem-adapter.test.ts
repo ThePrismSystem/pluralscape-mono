@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FilesystemBlobStorageAdapter } from "../adapters/filesystem/filesystem-adapter.js";
 import { BlobTooLargeError, StorageBackendError } from "../errors.js";
@@ -200,6 +200,50 @@ describe("FilesystemBlobStorageAdapter-specific", () => {
       const downloaded2 = await adapter.download(params2.storageKey);
       expect(downloaded1).toEqual(makeBytes(1));
       expect(downloaded2).toEqual(makeBytes(2));
+    });
+  });
+
+  // ── Metadata parse failure logging ──────────────────────────────────
+
+  describe("metadata parse failure logging", () => {
+    it("logs a warning and returns null when sidecar JSON is corrupt", async () => {
+      const warnFn = vi.fn();
+      const logger = { info: vi.fn(), warn: warnFn, error: vi.fn() };
+      const adapter = new FilesystemBlobStorageAdapter({ storageRoot, logger });
+      const params = makeBlobData(makeBytes(0xab, 32));
+      await adapter.upload(params);
+
+      // Corrupt the sidecar file
+      const parts = params.storageKey.split("/");
+      const metaPath = join(storageRoot, ...parts) + ".meta.json";
+      await writeFile(metaPath, "NOT VALID JSON", { mode: 0o600 });
+
+      const result = await adapter.getMetadata(params.storageKey);
+      expect(result).toBeNull();
+      expect(warnFn).toHaveBeenCalledOnce();
+      expect(warnFn).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to parse sidecar metadata JSON"),
+        expect.objectContaining({ metaPath }),
+      );
+    });
+
+    it("returns null without logging when sidecar file is missing", async () => {
+      const warnFn = vi.fn();
+      const logger = { info: vi.fn(), warn: warnFn, error: vi.fn() };
+      const adapter = new FilesystemBlobStorageAdapter({ storageRoot, logger });
+      const params = makeBlobData(makeBytes(0xab, 32));
+      await adapter.upload(params);
+
+      // Delete the sidecar file but keep the blob
+      const parts = params.storageKey.split("/");
+      const metaPath = join(storageRoot, ...parts) + ".meta.json";
+      const { unlink } = await import("node:fs/promises");
+      await unlink(metaPath);
+
+      const result = await adapter.getMetadata(params.storageKey);
+      expect(result).toBeNull();
+      // Missing file is not a parse failure — should not warn
+      expect(warnFn).not.toHaveBeenCalled();
     });
   });
 });

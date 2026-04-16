@@ -78,6 +78,27 @@ export class BlobQuotaService {
     }
   }
 
+  /**
+   * Reserves quota for an upload by performing an advisory check.
+   *
+   * This method checks current usage and throws {@link QuotaExceededError} if the
+   * upload would exceed the system's quota. It is functionally equivalent to
+   * {@link assertQuota} today but exists as the future integration point for
+   * database-level advisory locks.
+   *
+   * **TOCTOU limitation:** Without advisory locks (not yet available in the
+   * current infrastructure), a concurrent upload could pass the check before
+   * either is committed. The API layer should wrap the reserve + upload in a
+   * serializable transaction when advisory locks become available.
+   *
+   * TODO(ps-wsiw): Acquire a pg_advisory_xact_lock on the system ID before
+   * checking usage, ensuring the quota check and the subsequent blob insert
+   * are atomic within the same transaction.
+   */
+  async reserveQuota(systemId: SystemId, additionalBytes: number): Promise<void> {
+    await this.assertQuota(systemId, additionalBytes);
+  }
+
   private getQuotaForSystem(systemId: SystemId): number {
     return this.config.perSystemOverrides?.[systemId] ?? this.config.defaultQuotaBytes;
   }

@@ -8,6 +8,7 @@ export {
   EmailDeliveryError,
   EmailConfigurationError,
   EmailRateLimitError,
+  EmailValidationError,
   InvalidRecipientError,
 } from "./errors.js";
 

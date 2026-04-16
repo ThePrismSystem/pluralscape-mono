@@ -8,13 +8,13 @@ const mockWarnLogger = { warn: vi.fn() };
 
 describe("createI18nInstance", () => {
   it("creates a new i18next instance", () => {
-    const instance = createI18nInstance({ logger: mockWarnLogger });
+    const instance = createI18nInstance({ missingKeyMode: "warn", logger: mockWarnLogger });
     expect(instance).toBeDefined();
     expect(instance.isInitialized).toBeFalsy();
   });
 
   it("sets saveMissing via the 3rdParty plugin", async () => {
-    const instance = createI18nInstance({ logger: mockWarnLogger });
+    const instance = createI18nInstance({ missingKeyMode: "warn", logger: mockWarnLogger });
     instance.use(initReactI18next);
 
     await instance.init({
@@ -29,7 +29,7 @@ describe("createI18nInstance", () => {
   });
 
   it("caller sets fallbackLng via init (not the factory)", async () => {
-    const instance = createI18nInstance({ logger: mockWarnLogger });
+    const instance = createI18nInstance({ missingKeyMode: "warn", logger: mockWarnLogger });
     instance.use(initReactI18next);
 
     await instance.init({
@@ -63,5 +63,36 @@ describe("createI18nInstance", () => {
   it("can be initialized with throw mode", () => {
     const instance = createI18nInstance({ missingKeyMode: "throw" });
     expect(instance).toBeDefined();
+  });
+
+  it("defaults to throw mode when called with no arguments", async () => {
+    const instance = createI18nInstance();
+    instance.use(initReactI18next);
+
+    await instance.init({
+      lng: "en",
+      fallbackLng: DEFAULT_LOCALE,
+      defaultNS: DEFAULT_NAMESPACE,
+      ns: [...NAMESPACES],
+      resources: { en: { common: { hello: "Hello" } } },
+    });
+
+    expect(instance.isInitialized).toBe(true);
+    expect(instance.options.saveMissing).toBe(true);
+
+    const handler = instance.options.missingKeyHandler as (
+      lngs: readonly string[],
+      ns: string,
+      key: string,
+    ) => void;
+    expect(() => {
+      handler(["en"], "common", "nonexistent");
+    }).toThrow("Missing translation key: common:nonexistent");
+  });
+
+  it("throws when missingKeyMode is 'warn' without a logger", () => {
+    expect(() => {
+      createI18nInstance({ missingKeyMode: "warn" });
+    }).toThrow("Logger is required when missingKeyMode is 'warn'");
   });
 });
