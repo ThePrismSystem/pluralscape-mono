@@ -263,6 +263,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright browsers (mobile-web-e2e)
+        run: pnpm --filter @pluralscape/mobile-web-e2e exec playwright install --with-deps chromium
+
       - name: Run E2E tests
         env:
           E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
@@ -280,6 +283,11 @@ jobs:
       - name: Run PK import E2E tests
         run: set -o pipefail && pnpm test:e2e:pk-import | tee e2e-pk-import-output.txt
 
+      - name: Run mobile web E2E tests (OPFS driver)
+        env:
+          CI: "true"
+        run: set -o pipefail && pnpm test:e2e:web | tee e2e-web-output.txt
+
       - name: Extract E2E test count
         if: github.ref == 'refs/heads/main'
         id: e2e-data
@@ -288,7 +296,8 @@ jobs:
           SLOW_COUNT=$(grep -oP '\d+(?= passed)' e2e-slow-output.txt | tail -1)
           SP_COUNT=$(grep -oP '\d+(?= passed)' e2e-sp-import-output.txt | tail -1)
           PK_COUNT=$(grep -oP '\d+(?= passed)' e2e-pk-import-output.txt | tail -1)
-          TOTAL=$(( ${E2E_COUNT:-0} + ${SLOW_COUNT:-0} + ${SP_COUNT:-0} + ${PK_COUNT:-0} ))
+          WEB_COUNT=$(grep -oP '\d+(?= passed)' e2e-web-output.txt | tail -1)
+          TOTAL=$(( ${E2E_COUNT:-0} + ${SLOW_COUNT:-0} + ${SP_COUNT:-0} + ${PK_COUNT:-0} + ${WEB_COUNT:-0} ))
           echo "count=$TOTAL" >> "$GITHUB_OUTPUT"
           echo "message=${TOTAL} passed" >> "$GITHUB_OUTPUT"
 

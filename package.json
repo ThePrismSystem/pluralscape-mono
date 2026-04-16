@@ -19,6 +19,7 @@
     "test:e2e": "pnpm --filter @pluralscape/api-e2e exec playwright test --project=api",
     "test:e2e:slow": "pnpm --filter @pluralscape/api-e2e exec playwright test --project=api-slow",
     "test:e2e:all": "pnpm --filter @pluralscape/api-e2e exec playwright test",
+    "test:e2e:web": "pnpm --filter @pluralscape/mobile-web-e2e test",
     "clean": "turbo clean",
     "roadmap": "beans roadmap > docs/roadmap.md",
     "codeql": "bash scripts/codeql/analyze.sh",
