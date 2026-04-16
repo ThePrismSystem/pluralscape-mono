@@ -76,6 +76,7 @@ export type {
   RecoveryKeyDisplay,
   ChecksumHex,
   EntityType,
+  EntityTypeIdMap,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
 

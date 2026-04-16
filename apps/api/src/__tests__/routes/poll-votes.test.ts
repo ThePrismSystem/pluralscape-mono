@@ -8,7 +8,7 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, MemberId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -50,7 +50,7 @@ const MOCK_VOTE = {
   id: VOTE_ID as never,
   pollId: POLL_ID as never,
   optionId: "opt_550e8400-e29b-41d4-a716-446655440003" as never,
-  voter: { entityType: "member" as const, entityId: "mem_test" },
+  voter: { entityType: "member" as const, entityId: "mem_test" as MemberId },
   isVeto: false,
   votedAt: 1000 as never,
   encryptedData: "dGVzdA==",

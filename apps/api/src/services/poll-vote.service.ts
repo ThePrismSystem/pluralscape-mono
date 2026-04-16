@@ -136,7 +136,7 @@ export async function castVote(
     }
 
     // 5. Cooperative enforcement: count existing votes by this voter
-    const voter = parsed.voter;
+    const voter = parsed.voter as EntityReference<"member" | "structure-entity">;
     const [voteCountResult] = await tx
       .select({ count: count() })
       .from(pollVotes)
@@ -169,7 +169,7 @@ export async function castVote(
         pollId,
         systemId,
         optionId,
-        voter: { entityType: voter.entityType, entityId: voter.entityId },
+        voter,
         isVeto: parsed.isVeto,
         votedAt: timestamp,
         encryptedData: blob,

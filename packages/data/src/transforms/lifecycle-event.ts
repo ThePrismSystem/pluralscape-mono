@@ -239,11 +239,13 @@ export function decryptLifecycleEvent(
       }
       const mId = firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId;
       const fromStructure: EntityReference<"structure-entity"> | null =
-        sIds.length >= 2 ? { entityType: "structure-entity", entityId: sIds[0] as string } : null;
+        sIds.length >= 2
+          ? { entityType: "structure-entity", entityId: sIds[0] as SystemStructureEntityId }
+          : null;
       const toStructure: EntityReference<"structure-entity"> =
         sIds.length >= 2
-          ? { entityType: "structure-entity", entityId: sIds[1] as string }
-          : { entityType: "structure-entity", entityId: sIds[0] as string };
+          ? { entityType: "structure-entity", entityId: sIds[1] as SystemStructureEntityId }
+          : { entityType: "structure-entity", entityId: sIds[0] as SystemStructureEntityId };
       return withArchive({
         ...shared,
         eventType: "structure-move" as const,

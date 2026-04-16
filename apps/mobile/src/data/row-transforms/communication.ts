@@ -28,6 +28,7 @@ import type {
   ChatMessage,
   EntityReference,
   JournalEntry,
+  MemberId,
   NoteAuthorEntityType,
   Poll,
   WikiPage,
@@ -209,7 +210,7 @@ export function rowToJournalEntry(
   // Mobile SQLite stores `author` as a plain member-ID string; reconstruct EntityReference.
   const authorRaw = strOrNull(row["author"], "journal_entries", "author", id);
   const author: EntityReference<"member" | "structure-entity"> | null =
-    authorRaw !== null ? { entityType: "member", entityId: authorRaw } : null;
+    authorRaw !== null ? { entityType: "member", entityId: authorRaw as MemberId } : null;
   const base: JournalEntry = {
     id: guardedStr(row["id"], "journal_entries", "id", id) as JournalEntry["id"],
     systemId: guardedStr(

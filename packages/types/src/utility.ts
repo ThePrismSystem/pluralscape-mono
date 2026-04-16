@@ -1,4 +1,4 @@
-import type { EntityType } from "./ids.js";
+import type { EntityType, EntityTypeIdMap } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** Input for creating an entity — strips server-assigned fields. */
@@ -58,10 +58,12 @@ export type SortDirection = "asc" | "desc";
 /**
  * A generic reference to any entity by type and ID.
  *
- * `entityId` is a plain `string` because a full EntityType→BrandedId
- * mapping is deferred to runtime utils.
+ * When `T` is a specific {@link EntityType} literal, `entityId` resolves to
+ * the corresponding branded ID (e.g. `EntityReference<"member">` →
+ * `MemberId`). The unparameterised `EntityReference` (default `T = EntityType`)
+ * keeps `entityId: string` for backwards compatibility.
  */
 export interface EntityReference<T extends EntityType = EntityType> {
   readonly entityType: T;
-  readonly entityId: string;
+  readonly entityId: [EntityType] extends [T] ? string : EntityTypeIdMap[T];
 }

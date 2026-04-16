@@ -295,3 +295,72 @@ export type EntityType =
   | "system-snapshot"
   | "biometric-token"
   | "field-definition-scope";
+
+// ── EntityType → branded ID mapping ────────────────────────────────
+
+/** Maps each {@link EntityType} variant to its branded ID type. */
+export type EntityTypeIdMap = {
+  system: SystemId;
+  member: MemberId;
+  group: GroupId;
+  bucket: BucketId;
+  channel: ChannelId;
+  message: MessageId;
+  note: NoteId;
+  poll: PollId;
+  relationship: RelationshipId;
+  "structure-entity-type": SystemStructureEntityTypeId;
+  "structure-entity": SystemStructureEntityId;
+  "structure-entity-link": SystemStructureEntityLinkId;
+  "structure-entity-member-link": SystemStructureEntityMemberLinkId;
+  "structure-entity-association": SystemStructureEntityAssociationId;
+  "journal-entry": JournalEntryId;
+  "wiki-page": WikiPageId;
+  "custom-front": CustomFrontId;
+  "fronting-session": FrontingSessionId;
+  blob: BlobId;
+  webhook: WebhookId;
+  timer: TimerId;
+  "board-message": BoardMessageId;
+  acknowledgement: AcknowledgementId;
+  "innerworld-entity": InnerWorldEntityId;
+  "innerworld-region": InnerWorldRegionId;
+  "innerworld-canvas": InnerWorldCanvasId;
+  "field-definition": FieldDefinitionId;
+  "field-value": FieldValueId;
+  "api-key": ApiKeyId;
+  "audit-log-entry": AuditLogEntryId;
+  "check-in-record": CheckInRecordId;
+  "friend-connection": FriendConnectionId;
+  "key-grant": KeyGrantId;
+  "device-token": DeviceTokenId;
+  "poll-vote": PollVoteId;
+  session: SessionId;
+  "lifecycle-event": LifecycleEventId;
+  account: AccountId;
+  "friend-code": FriendCodeId;
+  "notification-config": NotificationConfigId;
+  "system-settings": SystemSettingsId;
+  "poll-option": PollOptionId;
+  "member-photo": MemberPhotoId;
+  "auth-key": AuthKeyId;
+  "recovery-key": RecoveryKeyId;
+  "device-transfer-request": DeviceTransferRequestId;
+  "sync-document": SyncDocumentId;
+  "sync-change": SyncChangeId;
+  "sync-snapshot": SyncSnapshotId;
+  "import-job": ImportJobId;
+  "pk-bridge-config": PKBridgeConfigId;
+  "account-purge-request": AccountPurgeRequestId;
+  "export-request": ExportRequestId;
+  job: JobId;
+  "webhook-delivery": WebhookDeliveryId;
+  "fronting-report": FrontingReportId;
+  "friend-notification-preference": FriendNotificationPreferenceId;
+  "fronting-comment": FrontingCommentId;
+  "bucket-key-rotation": BucketKeyRotationId;
+  "bucket-rotation-item": BucketRotationItemId;
+  "system-snapshot": SystemSnapshotId;
+  "biometric-token": BiometricTokenId;
+  "field-definition-scope": FieldDefinitionScopeId;
+};
