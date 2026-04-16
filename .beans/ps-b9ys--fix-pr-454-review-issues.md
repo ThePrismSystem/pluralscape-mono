@@ -1,6 +1,6 @@
 ---
 # ps-b9ys
-title: 'Fix PR #454 review issues'
+title: "Fix PR #454 review issues"
 status: completed
 type: task
 priority: normal

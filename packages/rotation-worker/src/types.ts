@@ -67,4 +67,8 @@ export type RotationProgressCallback = (rotation: BucketKeyRotation) => void;
 /** Result of processing a single item. */
 export type ItemProcessResult =
   | { readonly item: BucketRotationItem; readonly status: "completed" }
-  | { readonly item: BucketRotationItem; readonly status: "failed"; readonly failureReason: string };
+  | {
+      readonly item: BucketRotationItem;
+      readonly status: "failed";
+      readonly failureReason: string;
+    };

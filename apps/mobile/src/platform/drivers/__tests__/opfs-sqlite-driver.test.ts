@@ -1,15 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createOpfsSqliteDriver } from "../opfs-sqlite-driver.js";
+import { SQLITE_DONE, SQLITE_OK } from "../wa-sqlite.constants.js";
+
+import type { SqliteDriver } from "@pluralscape/sync/adapters";
+
 const mockExec = vi.fn<WaSqliteAPI["exec"]>();
 const mockClose = vi.fn<WaSqliteAPI["close"]>();
 const mockOpenV2 = vi.fn<WaSqliteAPI["open_v2"]>();
 const mockVfsRegister = vi.fn<WaSqliteAPI["vfs_register"]>();
-
+const mockStatements = vi.fn<WaSqliteAPI["statements"]>();
+const mockBindCollection = vi.fn<WaSqliteAPI["bind_collection"]>();
+const mockStep = vi.fn<WaSqliteAPI["step"]>();
 const mockSqlite3: WaSqliteAPI = {
   exec: mockExec,
   close: mockClose,
   open_v2: mockOpenV2,
   vfs_register: mockVfsRegister,
+  statements: mockStatements,
+  bind_collection: mockBindCollection,
+  step: mockStep,
+  row: vi.fn<WaSqliteAPI["row"]>(),
+  column_names: vi.fn<WaSqliteAPI["column_names"]>(),
 };
 
 vi.mock("@journeyapps/wa-sqlite/dist/wa-sqlite.mjs", () => ({
@@ -26,9 +38,20 @@ vi.mock("@journeyapps/wa-sqlite/src/examples/OPFSCoopSyncVFS.js", () => ({
   },
 }));
 
-import { createOpfsSqliteDriver } from "../opfs-sqlite-driver.js";
-
-import type { SqliteDriver } from "@pluralscape/sync/adapters";
+function mockStatementsIterator(stmtHandle: number): AsyncIterable<number> {
+  return {
+    [Symbol.asyncIterator]() {
+      let done = false;
+      return {
+        next(): Promise<IteratorResult<number>> {
+          if (done) return Promise.resolve({ done: true, value: undefined });
+          done = true;
+          return Promise.resolve({ done: false, value: stmtHandle });
+        },
+      };
+    },
+  };
+}
 
 let driver: SqliteDriver & { flush(): Promise<void> };
 
@@ -60,16 +83,111 @@ describe("createOpfsSqliteDriver", () => {
       expect(mockExec).toHaveBeenCalledWith(1, "INSERT INTO t VALUES (1)");
     });
 
-    it("throws when params are passed", () => {
+    it("uses prepared statement API when params are provided", async () => {
+      const stmtHandle = 42;
+      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
+      mockBindCollection.mockReturnValue(SQLITE_OK);
+      mockStep.mockResolvedValue(SQLITE_DONE);
+
       const stmt = driver.prepare("INSERT INTO t VALUES (?)");
-      expect(() => {
-        stmt.run("val");
-      }).toThrow("parameterized queries not yet implemented");
+      stmt.run("val");
+
+      // Flush to let the async prepared-statement promise settle
+      await driver.flush();
+
+      expect(mockStatements).toHaveBeenCalledWith(1, "INSERT INTO t VALUES (?)");
+      expect(mockBindCollection).toHaveBeenCalledWith(stmtHandle, ["val"]);
+      expect(mockStep).toHaveBeenCalledWith(stmtHandle);
+    });
+
+    it("handles multiple bind parameters", async () => {
+      const stmtHandle = 42;
+      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
+      mockBindCollection.mockReturnValue(SQLITE_OK);
+      mockStep.mockResolvedValue(SQLITE_DONE);
+
+      const stmt = driver.prepare("INSERT INTO t (a, b, c) VALUES (?, ?, ?)");
+      stmt.run(1, "two", null);
+      await driver.flush();
+
+      expect(mockBindCollection).toHaveBeenCalledWith(stmtHandle, [1, "two", null]);
+    });
+
+    it("falls back to exec when empty params array is spread", () => {
+      const stmt = driver.prepare("INSERT INTO t VALUES (1)");
+      stmt.run();
+      expect(mockExec).toHaveBeenCalledWith(1, "INSERT INTO t VALUES (1)");
+      expect(mockStatements).not.toHaveBeenCalled();
+    });
+
+    it("rejects Date as bind parameter", async () => {
+      const stmtHandle = 42;
+      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
+      mockBindCollection.mockReturnValue(SQLITE_OK);
+      mockStep.mockResolvedValue(SQLITE_DONE);
+
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run(new Date());
+      await expect(driver.flush()).rejects.toThrow(/unsupported bind type.*Date/);
+    });
+
+    it("rejects plain object as bind parameter", async () => {
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run({ key: "value" });
+      await expect(driver.flush()).rejects.toThrow(/unsupported bind type/);
+    });
+
+    it("rejects function as bind parameter", async () => {
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run(() => "x");
+      await expect(driver.flush()).rejects.toThrow(/unsupported bind type.*function/);
+    });
+
+    it("includes the parameter index in the unsupported-type error", async () => {
+      const stmt = driver.prepare("INSERT INTO t VALUES (?, ?)");
+      stmt.run("ok", new Date());
+      await expect(driver.flush()).rejects.toThrow(/index 1/);
+    });
+
+    it("surfaces bind_collection failure via flush()", async () => {
+      const stmtHandle = 42;
+      mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
+      mockBindCollection.mockReturnValue(1); // SQLITE_ERROR
+      mockStep.mockResolvedValue(SQLITE_DONE);
+
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run("x");
+      await expect(driver.flush()).rejects.toThrow(/bind_collection failed.*rc=1/);
+    });
+
+    it("finalizes the statements iterator when bind_collection fails", async () => {
+      const stmtHandle = 42;
+      const returnSpy = vi.fn().mockResolvedValue({ done: true as const, value: undefined });
+      mockStatements.mockReturnValue({
+        [Symbol.asyncIterator]() {
+          let yielded = false;
+          return {
+            next() {
+              if (yielded) return Promise.resolve({ done: true as const, value: undefined });
+              yielded = true;
+              return Promise.resolve({ done: false as const, value: stmtHandle });
+            },
+            return: returnSpy,
+          };
+        },
+      });
+      mockBindCollection.mockReturnValue(1); // trigger throw
+
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run("x");
+      await expect(driver.flush()).rejects.toThrow();
+
+      expect(returnSpy).toHaveBeenCalled();
     });
   });
 
   describe("prepare().all()", () => {
-    it("accumulates rows from the exec callback", () => {
+    it("accumulates rows from the exec callback (no params)", () => {
       mockExec.mockImplementation(
         (
           _db: number,
@@ -90,20 +208,22 @@ describe("createOpfsSqliteDriver", () => {
       ]);
     });
 
-    it("returns empty array when no rows", () => {
+    it("returns empty array when no rows (no params)", () => {
       const stmt = driver.prepare("SELECT * FROM t");
       const rows = stmt.all();
       expect(rows).toEqual([]);
     });
 
-    it("throws when params are passed", () => {
+    it("throws when called with params (Worker bridge required)", () => {
       const stmt = driver.prepare("SELECT * FROM t WHERE id = ?");
-      expect(() => stmt.all(1)).toThrow("parameterized queries not yet implemented");
+      expect(() => stmt.all(1)).toThrow(
+        /parameterized .all\(\) not yet supported.*Worker bridge.*mobile-shr0/,
+      );
     });
   });
 
   describe("prepare().get()", () => {
-    it("returns the first row", () => {
+    it("returns the first row (no params)", () => {
       mockExec.mockImplementation(
         (
           _db: number,
@@ -121,9 +241,16 @@ describe("createOpfsSqliteDriver", () => {
       expect(row).toEqual({ name: "Alice", age: 30 });
     });
 
-    it("returns undefined when no rows", () => {
+    it("returns undefined when no rows (no params)", () => {
       const stmt = driver.prepare("SELECT * FROM t");
       expect(stmt.get()).toBeUndefined();
+    });
+
+    it("throws when called with params (Worker bridge required)", () => {
+      const stmt = driver.prepare("SELECT * FROM t WHERE id = ?");
+      expect(() => stmt.get(1)).toThrow(
+        /parameterized .get\(\) not yet supported.*Worker bridge.*mobile-shr0/,
+      );
     });
   });
 
@@ -153,8 +280,9 @@ describe("createOpfsSqliteDriver", () => {
   });
 
   describe("close()", () => {
-    it("delegates to sqlite3.close", () => {
+    it("delegates to sqlite3.close", async () => {
       driver.close();
+      await driver.flush().catch(() => undefined);
       expect(mockClose).toHaveBeenCalledWith(1);
     });
 
@@ -167,6 +295,36 @@ describe("createOpfsSqliteDriver", () => {
       await new Promise((r) => setTimeout(r, 0));
 
       await expect(driver.flush()).rejects.toThrow("VFS lock stuck");
+    });
+
+    it("waits for pending exec to settle before calling sqlite3.close", async () => {
+      let resolveExec!: (rc: number) => void;
+      mockExec.mockReturnValueOnce(
+        new Promise<number>((r) => {
+          resolveExec = r;
+        }),
+      );
+
+      driver.exec("LONG QUERY");
+      driver.close();
+
+      // Close must not have been called yet — exec is still pending
+      expect(mockClose).not.toHaveBeenCalled();
+
+      resolveExec(0);
+      await driver.flush().catch(() => undefined);
+
+      expect(mockClose).toHaveBeenCalledWith(1);
+    });
+
+    it("still closes when a pending exec rejects", async () => {
+      mockExec.mockReturnValueOnce(Promise.reject(new Error("disk error")));
+
+      driver.exec("FAILING");
+      driver.close();
+      await driver.flush().catch(() => undefined);
+
+      expect(mockClose).toHaveBeenCalledWith(1);
     });
   });
 
@@ -197,6 +355,39 @@ describe("createOpfsSqliteDriver", () => {
     it("flush() resolves when no errors", async () => {
       driver.exec("SELECT 1");
       await expect(driver.flush()).resolves.toBeUndefined();
+    });
+
+    it("calls onDroppedError when an earlier error is overwritten", async () => {
+      const onDroppedError = vi.fn<(err: Error) => void>();
+      const driverWithHook = await createOpfsSqliteDriver({ onDroppedError });
+
+      // Use a manually-resolved reject so we control exactly when the .catch fires
+      let rejectFirst!: (err: Error) => void;
+      let rejectSecond!: (err: Error) => void;
+      const firstPromise = new Promise<number>((_res, rej) => {
+        rejectFirst = rej;
+      });
+      const secondPromise = new Promise<number>((_res, rej) => {
+        rejectSecond = rej;
+      });
+
+      mockExec
+        .mockImplementationOnce(() => firstPromise)
+        .mockImplementationOnce(() => secondPromise);
+
+      // Fire both execs synchronously so neither checkLastError call sees a stored error
+      driverWithHook.exec("FIRST");
+      driverWithHook.exec("SECOND");
+
+      // Now reject both — first lands, then second triggers the overwrite path
+      rejectFirst(new Error("first"));
+      rejectSecond(new Error("second"));
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(onDroppedError).toHaveBeenCalledWith(expect.objectContaining({ message: "first" }));
+
+      // Drain the lastError so other tests start clean
+      await driverWithHook.flush().catch(() => undefined);
     });
   });
 });
