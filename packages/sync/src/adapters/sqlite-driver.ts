@@ -24,7 +24,13 @@ export interface SqliteDriver {
   /** Execute raw SQL (for DDL like CREATE TABLE). */
   exec(sql: string): Promise<void>;
 
-  /** Run a function inside a transaction. Rollback on throw. */
+  /**
+   * Run a function inside a transaction. Rollback on throw.
+   *
+   * Nested transactions are not supported. Callers must not invoke
+   * `transaction` from inside another `transaction` — the inner BEGIN will
+   * fail with "cannot start a transaction within a transaction".
+   */
   transaction<T>(fn: () => Promise<T>): Promise<T>;
 
   /** Close the database connection. */
@@ -33,6 +39,10 @@ export interface SqliteDriver {
 
 // ── Bun SQLite driver factory ────────────────────────────────────────
 
+/**
+ * Database interface matching `bun:sqlite`'s Database class.
+ * Declared here to avoid a hard dependency on bun-types in the sync package.
+ */
 interface BunSqliteDatabase {
   prepare(sql: string): {
     run(...params: unknown[]): void;
@@ -75,7 +85,14 @@ export function createBunSqliteDriver(db: BunSqliteDatabase): SqliteDriver {
         db.exec("COMMIT");
         return result;
       } catch (err) {
-        db.exec("ROLLBACK");
+        try {
+          db.exec("ROLLBACK");
+        } catch (rollbackErr) {
+          throw new AggregateError(
+            [err, rollbackErr],
+            "transaction failed and rollback also failed",
+          );
+        }
         throw err;
       }
     },
