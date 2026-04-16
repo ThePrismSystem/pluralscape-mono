@@ -79,6 +79,9 @@ export type {
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
 
+// ── Brand utilities ────────────────────────────────────────────────
+export { brandId } from "./brand-utils.js";
+
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";
 
