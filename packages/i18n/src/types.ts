@@ -15,7 +15,7 @@ export interface I18nConfig {
   readonly fallbackLocale: Locale;
   /** Translation resources keyed by namespace. */
   readonly resources: Record<string, TranslationResources>;
-  /** Missing key handling mode. Defaults to "warn". */
+  /** Missing key handling mode. Defaults to "throw". */
   readonly missingKeyMode?: "warn" | "throw";
   /** Logger for missing key warnings. Only used when missingKeyMode is "warn". */
   readonly logger?: Pick<Logger, "warn">;

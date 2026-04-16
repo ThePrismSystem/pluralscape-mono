@@ -64,4 +64,33 @@ describe("validateSendParams", () => {
       `Subject length ${String(MAX_SUBJECT_LENGTH + 1)} exceeds maximum of ${String(MAX_SUBJECT_LENGTH)}`,
     );
   });
+
+  it("exposes structured fields for recipient violation", () => {
+    const recipients = Array.from(
+      { length: MAX_RECIPIENTS + 1 },
+      (_, i) => `user${String(i)}@example.com`,
+    );
+    try {
+      validateSendParams({ to: recipients, subject: "Hello" });
+      expect.fail("Should have thrown");
+    } catch (err) {
+      if (!(err instanceof EmailValidationError)) throw err;
+      expect(err.field).toBe("Recipient count");
+      expect(err.actual).toBe(MAX_RECIPIENTS + 1);
+      expect(err.max).toBe(MAX_RECIPIENTS);
+    }
+  });
+
+  it("exposes structured fields for subject violation", () => {
+    const subject = "a".repeat(MAX_SUBJECT_LENGTH + 1);
+    try {
+      validateSendParams({ to: "a@example.com", subject });
+      expect.fail("Should have thrown");
+    } catch (err) {
+      if (!(err instanceof EmailValidationError)) throw err;
+      expect(err.field).toBe("Subject length");
+      expect(err.actual).toBe(MAX_SUBJECT_LENGTH + 1);
+      expect(err.max).toBe(MAX_SUBJECT_LENGTH);
+    }
+  });
 });

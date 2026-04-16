@@ -130,6 +130,11 @@ describe("BlobQuotaService", () => {
       await expect(service.reserveQuota("sys_abc" as SystemId, 500)).resolves.toBeUndefined();
     });
 
+    it("resolves at exact quota boundary", async () => {
+      const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(500));
+      await expect(service.reserveQuota("sys_abc" as SystemId, 500)).resolves.toBeUndefined();
+    });
+
     it("throws QuotaExceededError when over quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(900));
       await expect(service.reserveQuota("sys_abc" as SystemId, 200)).rejects.toThrow(

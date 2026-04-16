@@ -21,14 +21,10 @@ export function validateSendParams(params: {
 }): void {
   const recipientCount = typeof params.to === "string" ? 1 : params.to.length;
   if (recipientCount > MAX_RECIPIENTS) {
-    throw new EmailValidationError(
-      `Recipient count ${String(recipientCount)} exceeds maximum of ${String(MAX_RECIPIENTS)}.`,
-    );
+    throw new EmailValidationError("Recipient count", recipientCount, MAX_RECIPIENTS);
   }
 
   if (params.subject.length > MAX_SUBJECT_LENGTH) {
-    throw new EmailValidationError(
-      `Subject length ${String(params.subject.length)} exceeds maximum of ${String(MAX_SUBJECT_LENGTH)} characters.`,
-    );
+    throw new EmailValidationError("Subject length", params.subject.length, MAX_SUBJECT_LENGTH);
   }
 }

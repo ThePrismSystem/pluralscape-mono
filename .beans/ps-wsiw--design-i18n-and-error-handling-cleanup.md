@@ -1,11 +1,11 @@
 ---
 # ps-wsiw
 title: Design, i18n, and error handling cleanup
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-16T06:59:12Z
-updated_at: 2026-04-16T06:59:12Z
+updated_at: 2026-04-16T12:33:32Z
 parent: ps-0enb
 ---
 
@@ -21,3 +21,13 @@ Low-severity design, i18n, and error handling findings from comprehensive audit.
 - [ ] [I18N-T-L1] nomenclature.ts contains "Alter"/"Alters" in PRESET_PLURAL_RULES
 - [ ] [STORAGE-S-L1] Quota TOCTOU acknowledged but not enforced
 - [ ] [STORAGE-S-L2] getMetadata silently swallows parse errors on sidecar JSON
+
+## Summary of Changes
+
+Fixed PR #458 review issues:
+
+- Fixed dead else branch in createI18nInstance branching logic — now throws when missingKeyMode is 'warn' without a logger
+- Fixed stale JSDoc default in I18nConfig (warn → throw)
+- Fixed i18n tests to explicitly pass missingKeyMode: 'warn' and added behavioral tests for throw mode default and warn-without-logger
+- Added structured fields (field, actual, max) to EmailValidationError with tests
+- Added reserveQuota boundary test in quota-service

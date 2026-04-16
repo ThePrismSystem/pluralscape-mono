@@ -16,17 +16,18 @@ export function createI18nInstance(options?: CreateI18nOptions): i18n {
   const instance = i18next.createInstance();
   const mode = options?.missingKeyMode ?? "throw";
 
+  const logger = options?.logger;
+  if (mode === "warn" && !logger) {
+    throw new Error("Logger is required when missingKeyMode is 'warn'");
+  }
+
   instance.use({
     type: "3rdParty" as const,
     init(i18nInstance: i18n) {
-      let handler: (key: string, namespace: string) => void;
-      if (mode === "throw") {
-        handler = createMissingKeyHandler(mode);
-      } else if (options?.logger) {
-        handler = createMissingKeyHandler(mode, options.logger);
-      } else {
-        handler = createMissingKeyHandler("throw");
-      }
+      const handler =
+        mode === "warn" && logger
+          ? createMissingKeyHandler("warn", logger)
+          : createMissingKeyHandler("throw");
       i18nInstance.options.saveMissing = true;
       i18nInstance.options.missingKeyHandler = (
         _lngs: readonly string[],
