@@ -7,9 +7,13 @@ import { createIndexedDbStorageAdapter } from "./drivers/indexeddb-storage-adapt
 import type { PlatformContext } from "./types.js";
 import type { NativeMemzero } from "@pluralscape/crypto";
 
-function hasOpfsSupport(): boolean {
+function canUseOpfsSqlite(): boolean {
   try {
-    return typeof navigator !== "undefined" && typeof navigator.storage.getDirectory === "function";
+    return (
+      typeof navigator !== "undefined" &&
+      typeof navigator.storage.getDirectory === "function" &&
+      typeof Worker === "function"
+    );
   } catch {
     // navigator.storage may throw in restrictive contexts
     return false;
@@ -20,20 +24,38 @@ async function detectWeb(): Promise<PlatformContext> {
   const crypto = new WasmSodiumAdapter();
   await crypto.init();
 
-  if (hasOpfsSupport()) {
-    const { createOpfsSqliteDriver } = await import("./drivers/opfs-sqlite-driver.js");
-    const driver = await createOpfsSqliteDriver();
-    return {
-      capabilities: {
-        hasSecureStorage: false,
-        hasBiometric: false,
-        hasBackgroundSync: false,
-        hasNativeMemzero: false,
-        storageBackend: "sqlite",
-      },
-      storage: { backend: "sqlite", driver },
-      crypto,
-    };
+  if (canUseOpfsSqlite()) {
+    try {
+      const { createOpfsSqliteDriver } = await import("./drivers/opfs-sqlite-driver.js");
+      const driver = await createOpfsSqliteDriver();
+      return {
+        capabilities: {
+          hasSecureStorage: false,
+          hasBiometric: false,
+          hasBackgroundSync: false,
+          hasNativeMemzero: false,
+          storageBackend: "sqlite",
+        },
+        storage: { backend: "sqlite", driver },
+        crypto,
+      };
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      const storageAdapter = createIndexedDbStorageAdapter();
+      const offlineQueueAdapter = createIndexedDbOfflineQueueAdapter();
+      return {
+        capabilities: {
+          hasSecureStorage: false,
+          hasBiometric: false,
+          hasBackgroundSync: false,
+          hasNativeMemzero: false,
+          storageBackend: "indexeddb",
+          storageFallbackReason: `OPFS init failed: ${reason}`,
+        },
+        storage: { backend: "indexeddb", storageAdapter, offlineQueueAdapter },
+        crypto,
+      };
+    }
   }
 
   const storageAdapter = createIndexedDbStorageAdapter();

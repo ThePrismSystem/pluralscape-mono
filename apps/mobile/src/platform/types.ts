@@ -13,6 +13,8 @@ export interface PlatformCapabilities {
   readonly hasBackgroundSync: boolean;
   readonly hasNativeMemzero: boolean;
   readonly storageBackend: StorageBackend;
+  /** Populated when OPFS was available but init failed, causing IndexedDB fallback. */
+  readonly storageFallbackReason?: string;
 }
 
 export type PlatformStorage =
