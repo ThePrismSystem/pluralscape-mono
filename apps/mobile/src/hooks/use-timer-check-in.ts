@@ -177,7 +177,7 @@ export function useCheckInHistory(
       opts?.pending ?? null,
       opts?.includeArchived ?? false,
     ],
-    queryFn: () => {
+    queryFn: async () => {
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const params: unknown[] = [systemId];
@@ -193,7 +193,8 @@ export function useCheckInHistory(
         sql += " AND archived = 0";
       }
       sql += " ORDER BY created_at DESC";
-      return localDb.queryAll(sql, params).map(rowToCheckInRecord);
+      const rows = await localDb.queryAll(sql, params);
+      return rows.map(rowToCheckInRecord);
     },
     enabled: source === "local" && localDb !== null,
   });

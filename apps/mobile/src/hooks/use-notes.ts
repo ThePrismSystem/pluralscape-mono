@@ -69,11 +69,12 @@ export function useNotesList(
     systemIdOverride: opts,
     // Custom local query: note filters (authorEntityType, authorEntityId, systemWide)
     // are server-side only; local fallback returns all notes for the system
-    localQueryFn: (localDb, systemId, pagination) => {
+    localQueryFn: async (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
       const archived = includeArchived ? "" : " AND archived = 0";
       const sql = `SELECT * FROM own_notes WHERE system_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
-      return localDb.queryAll(sql, [systemId]).map(rowToNote);
+      const rows = await localDb.queryAll(sql, [systemId]);
+      return rows.map(rowToNote);
     },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.note.list.useInfiniteQuery(

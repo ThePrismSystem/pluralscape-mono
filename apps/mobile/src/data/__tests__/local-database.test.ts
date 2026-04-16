@@ -18,15 +18,15 @@ vi.mock("@pluralscape/sync/materializer", () => ({
  */
 function createMockDriver() {
   const stmt = {
-    run: vi.fn(),
-    all: vi.fn((): Record<string, unknown>[] => []),
-    get: vi.fn((): Record<string, unknown> | undefined => undefined),
+    run: vi.fn((): Promise<void> => Promise.resolve()),
+    all: vi.fn((): Promise<Record<string, unknown>[]> => Promise.resolve([])),
+    get: vi.fn((): Promise<Record<string, unknown> | undefined> => Promise.resolve(undefined)),
   };
 
-  const execSpy = vi.fn();
+  const execSpy = vi.fn((): Promise<void> => Promise.resolve());
   const prepareSpy = vi.fn(() => stmt);
-  const transactionSpy = vi.fn(<T>(fn: () => T): T => fn());
-  const closeSpy = vi.fn();
+  const transactionSpy = vi.fn(<T>(fn: () => Promise<T>): Promise<T> => fn());
+  const closeSpy = vi.fn((): Promise<void> => Promise.resolve());
 
   // SqliteDriver.prepare and .transaction are generic methods whose type
   // parameters cannot be captured by vi.fn(). Wrapping in arrow functions
@@ -55,70 +55,70 @@ describe("createLocalDatabase", () => {
   });
 
   describe("initialize()", () => {
-    it("sets WAL journal mode first", () => {
+    it("sets WAL journal mode first", async () => {
       const db = createLocalDatabase(m.driver);
-      db.initialize();
+      await db.initialize();
       expect(m.execSpy).toHaveBeenNthCalledWith(1, "PRAGMA journal_mode=WAL");
     });
 
-    it("executes all DDL statements from generateAllDdl", () => {
+    it("executes all DDL statements from generateAllDdl", async () => {
       const db = createLocalDatabase(m.driver);
-      db.initialize();
+      await db.initialize();
       expect(m.execSpy).toHaveBeenCalledWith("CREATE TABLE a (id TEXT)");
       expect(m.execSpy).toHaveBeenCalledWith("CREATE TABLE b (id TEXT)");
     });
 
-    it("calls driver.exec once per DDL statement plus the WAL pragma", () => {
+    it("calls driver.exec once per DDL statement plus the WAL pragma", async () => {
       const db = createLocalDatabase(m.driver);
-      db.initialize();
+      await db.initialize();
       expect(m.execSpy).toHaveBeenCalledTimes(3);
     });
   });
 
   describe("queryAll()", () => {
-    it("prepares the statement and returns all rows", () => {
+    it("prepares the statement and returns all rows", async () => {
       const rows = [{ id: "1" }, { id: "2" }];
-      m.stmt.all.mockReturnValueOnce(rows);
+      m.stmt.all.mockReturnValueOnce(Promise.resolve(rows));
 
       const db = createLocalDatabase(m.driver);
-      const result = db.queryAll("SELECT * FROM a", []);
+      const result = await db.queryAll("SELECT * FROM a", []);
 
       expect(m.prepareSpy).toHaveBeenCalledWith("SELECT * FROM a");
       expect(result).toEqual(rows);
     });
 
-    it("passes params to the prepared statement", () => {
+    it("passes params to the prepared statement", async () => {
       const db = createLocalDatabase(m.driver);
-      db.queryAll("SELECT * FROM a WHERE id = ?", ["abc"]);
+      await db.queryAll("SELECT * FROM a WHERE id = ?", ["abc"]);
 
       expect(m.stmt.all).toHaveBeenCalledWith("abc");
     });
   });
 
   describe("queryOne()", () => {
-    it("prepares the statement and returns a single row", () => {
+    it("prepares the statement and returns a single row", async () => {
       const row = { id: "1" };
-      m.stmt.get.mockReturnValueOnce(row);
+      m.stmt.get.mockReturnValueOnce(Promise.resolve(row));
 
       const db = createLocalDatabase(m.driver);
-      const result = db.queryOne("SELECT * FROM a WHERE id = ?", ["1"]);
+      const result = await db.queryOne("SELECT * FROM a WHERE id = ?", ["1"]);
 
       expect(m.prepareSpy).toHaveBeenCalledWith("SELECT * FROM a WHERE id = ?");
       expect(m.stmt.get).toHaveBeenCalledWith("1");
       expect(result).toEqual(row);
     });
 
-    it("returns undefined when no row is found", () => {
+    it("returns undefined when no row is found", async () => {
       const db = createLocalDatabase(m.driver);
-      const result = db.queryOne("SELECT * FROM a WHERE id = ?", ["missing"]);
+      const result = await db.queryOne("SELECT * FROM a WHERE id = ?", ["missing"]);
       expect(result).toBeUndefined();
     });
   });
 
   describe("execute()", () => {
-    it("prepares and runs the statement with params", () => {
+    it("prepares and runs the statement with params", async () => {
       const db = createLocalDatabase(m.driver);
-      db.execute("INSERT INTO a (id) VALUES (?)", ["x"]);
+      await db.execute("INSERT INTO a (id) VALUES (?)", ["x"]);
 
       expect(m.prepareSpy).toHaveBeenCalledWith("INSERT INTO a (id) VALUES (?)");
       expect(m.stmt.run).toHaveBeenCalledWith("x");
@@ -126,25 +126,25 @@ describe("createLocalDatabase", () => {
   });
 
   describe("transaction()", () => {
-    it("delegates to driver.transaction and returns the fn result", () => {
+    it("delegates to driver.transaction and returns the fn result", async () => {
       const db = createLocalDatabase(m.driver);
-      const result = db.transaction(() => 42);
+      const result = await db.transaction(() => Promise.resolve(42));
       expect(m.transactionSpy).toHaveBeenCalled();
       expect(result).toBe(42);
     });
 
-    it("wraps the provided function inside driver.transaction", () => {
-      const fn = vi.fn(() => "done");
+    it("wraps the provided function inside driver.transaction", async () => {
+      const fn = vi.fn(() => Promise.resolve("done"));
       const db = createLocalDatabase(m.driver);
-      db.transaction(fn);
+      await db.transaction(fn);
       expect(fn).toHaveBeenCalledOnce();
     });
   });
 
   describe("close()", () => {
-    it("delegates to driver.close", () => {
+    it("delegates to driver.close", async () => {
       const db = createLocalDatabase(m.driver);
-      db.close();
+      await db.close();
       expect(m.closeSpy).toHaveBeenCalledOnce();
     });
   });

@@ -80,7 +80,7 @@ export function useFrontingSessionsList(
     decrypt: decryptFrontingSession,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb: LocalDatabase, systemId: SystemId, pagination) => {
+    localQueryFn: async (localDb: LocalDatabase, systemId: SystemId, pagination) => {
       const activeOnly = opts?.activeOnly ?? false;
       const includeArchived = opts?.includeArchived ?? false;
       let sql = "SELECT * FROM fronting_sessions WHERE system_id = ?";
@@ -90,7 +90,8 @@ export function useFrontingSessionsList(
         sql += " AND archived = 0";
       }
       sql += ` ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
-      return localDb.queryAll(sql, [systemId]).map(rowToFrontingSession);
+      const rows = await localDb.queryAll(sql, [systemId]);
+      return rows.map(rowToFrontingSession);
     },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.frontingSession.list.useInfiniteQuery(

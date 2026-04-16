@@ -48,84 +48,88 @@ describe("createBunSqliteDriver", () => {
   let rawDb: InstanceType<typeof Database>;
   let driver: SqliteDriver;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     rawDb = new Database(":memory:");
     driver = createBunSqliteDriver(makeBunShim(rawDb));
-    driver.exec("CREATE TABLE kv (k TEXT PRIMARY KEY, v TEXT)");
+    await driver.exec("CREATE TABLE kv (k TEXT PRIMARY KEY, v TEXT)");
   });
 
   afterEach(() => {
     if (rawDb.open) rawDb.close();
   });
 
-  it("exec runs DDL without throwing", () => {
+  it("exec runs DDL without throwing", async () => {
     // Already ran in beforeEach; run another DDL to confirm it works
-    driver.exec("CREATE TABLE IF NOT EXISTS extra (id INTEGER PRIMARY KEY)");
+    await driver.exec("CREATE TABLE IF NOT EXISTS extra (id INTEGER PRIMARY KEY)");
   });
 
-  it("prepare + run inserts a row", () => {
+  it("prepare + run inserts a row", async () => {
     const insert = driver.prepare("INSERT INTO kv (k, v) VALUES (?, ?)");
-    insert.run("hello", "world");
+    await insert.run("hello", "world");
 
     const select = driver.prepare<{ k: string; v: string }>("SELECT k, v FROM kv WHERE k = ?");
-    const row = select.get("hello");
+    const row = await select.get("hello");
     expect(row).toEqual({ k: "hello", v: "world" });
   });
 
-  it("prepare + get returns undefined when row is absent (null → undefined branch)", () => {
+  it("prepare + get returns undefined when row is absent (null → undefined branch)", async () => {
     const select = driver.prepare<{ k: string; v: string }>("SELECT k, v FROM kv WHERE k = ?");
-    const row = select.get("missing");
+    const row = await select.get("missing");
     expect(row).toBeUndefined();
   });
 
-  it("prepare + all returns an array of matching rows", () => {
+  it("prepare + all returns an array of matching rows", async () => {
     const insert = driver.prepare("INSERT INTO kv (k, v) VALUES (?, ?)");
-    insert.run("a", "1");
-    insert.run("b", "2");
+    await insert.run("a", "1");
+    await insert.run("b", "2");
 
-    const rows = driver.prepare<{ k: string; v: string }>("SELECT k, v FROM kv ORDER BY k").all();
+    const rows = await driver
+      .prepare<{ k: string; v: string }>("SELECT k, v FROM kv ORDER BY k")
+      .all();
     expect(rows).toHaveLength(2);
     expect(rows[0]).toEqual({ k: "a", v: "1" });
     expect(rows[1]).toEqual({ k: "b", v: "2" });
   });
 
-  it("prepare + all with params filters rows", () => {
+  it("prepare + all with params filters rows", async () => {
     const insert = driver.prepare("INSERT INTO kv (k, v) VALUES (?, ?)");
-    insert.run("x", "10");
-    insert.run("y", "20");
+    await insert.run("x", "10");
+    await insert.run("y", "20");
 
-    const rows = driver
+    const rows = await driver
       .prepare<{ k: string; v: string }>("SELECT k, v FROM kv WHERE k = ?")
       .all("x");
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual({ k: "x", v: "10" });
   });
 
-  it("transaction commits on success", () => {
-    const result = driver.transaction(() => {
-      driver.prepare("INSERT INTO kv (k, v) VALUES (?, ?)").run("tx-key", "tx-val");
+  it("transaction commits on success", async () => {
+    const result = await driver.transaction(async () => {
+      await driver.prepare("INSERT INTO kv (k, v) VALUES (?, ?)").run("tx-key", "tx-val");
       return "ok";
     });
 
     expect(result).toBe("ok");
-    const row = driver.prepare<{ v: string }>("SELECT v FROM kv WHERE k = ?").get("tx-key");
+    const row = await driver.prepare<{ v: string }>("SELECT v FROM kv WHERE k = ?").get("tx-key");
     expect(row?.v).toBe("tx-val");
   });
 
-  it("transaction rolls back on throw", () => {
-    expect(() => {
-      driver.transaction(() => {
-        driver.prepare("INSERT INTO kv (k, v) VALUES (?, ?)").run("rollback-key", "val");
+  it("transaction rolls back on throw", async () => {
+    await expect(
+      driver.transaction(async () => {
+        await driver.prepare("INSERT INTO kv (k, v) VALUES (?, ?)").run("rollback-key", "val");
         throw new Error("intentional rollback");
-      });
-    }).toThrow("intentional rollback");
+      }),
+    ).rejects.toThrow("intentional rollback");
 
-    const row = driver.prepare<{ v: string }>("SELECT v FROM kv WHERE k = ?").get("rollback-key");
+    const row = await driver
+      .prepare<{ v: string }>("SELECT v FROM kv WHERE k = ?")
+      .get("rollback-key");
     expect(row).toBeUndefined();
   });
 
-  it("close does not throw", () => {
-    driver.close();
+  it("close does not throw", async () => {
+    await driver.close();
     // Mark rawDb as closed so afterEach does not double-close
     // (rawDb.open will be false after driver.close() calls db.close())
   });

@@ -54,13 +54,13 @@ function buildFtsQuery(query: string): string {
 /**
  * Executes a single FTS5 search against one table and returns typed results.
  */
-function searchTable(
+async function searchTable(
   db: LocalDatabase,
   entityType: SyncedEntityType | `friend-${SyncedEntityType}`,
   tableName: string,
   ftsName: string,
   ftsQuery: string,
-): SearchResult[] {
+): Promise<SearchResult[]> {
   const sql =
     `SELECT ${tableName}.*, ${ftsName}.rank ` +
     `FROM ${ftsName} ` +
@@ -69,7 +69,7 @@ function searchTable(
     `ORDER BY ${ftsName}.rank ` +
     `LIMIT ${String(SEARCH_RESULTS_LIMIT)}`;
 
-  const rows = db.queryAll(sql, [ftsQuery]);
+  const rows = await db.queryAll(sql, [ftsQuery]);
 
   return rows.map((row): SearchResult => {
     const { rank, ...data } = row;
@@ -93,11 +93,11 @@ function searchTable(
  * @param scope - "self" queries own data, "friends" queries friend data, "all" queries both
  * @returns Results sorted by FTS5 rank (lower = more relevant)
  */
-export function executeSearch(
+export async function executeSearch(
   db: LocalDatabase,
   query: string,
   scope: SearchScope,
-): SearchResult[] {
+): Promise<SearchResult[]> {
   if (query.trim().length === 0) {
     return [];
   }
@@ -111,7 +111,7 @@ export function executeSearch(
 
     if (scope === "self" || scope === "all") {
       const ftsName = `fts_${tableName}`;
-      const rows = searchTable(db, entityType, tableName, ftsName, ftsQuery);
+      const rows = await searchTable(db, entityType, tableName, ftsName, ftsQuery);
       results.push(...rows);
     }
 
@@ -122,7 +122,7 @@ export function executeSearch(
       const ftsName = `fts_friend_${tableName}`;
       const friendEntityType: `friend-${SyncedEntityType}` = `friend-${entityType}`;
       const friendTableName = `friend_${tableName}`;
-      const rows = searchTable(db, friendEntityType, friendTableName, ftsName, ftsQuery);
+      const rows = await searchTable(db, friendEntityType, friendTableName, ftsName, ftsQuery);
       results.push(...rows);
     }
   }

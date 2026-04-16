@@ -168,12 +168,13 @@ export function useMemberFieldValues(
       throw new Error("rowTransform unused — localQueryFn overrides");
     },
     decrypt: decryptFieldValueList,
-    localQueryFn: (localDb, systemId) =>
-      localDb
-        .queryAll("SELECT * FROM field_values WHERE member_id = ? ORDER BY created_at DESC", [
-          memberId,
-        ])
-        .map((row) => rowToFieldValue(row, systemId)),
+    localQueryFn: async (localDb, systemId) => {
+      const rows = await localDb.queryAll(
+        "SELECT * FROM field_values WHERE member_id = ? ORDER BY created_at DESC",
+        [memberId],
+      );
+      return rows.map((row) => rowToFieldValue(row, systemId));
+    },
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
       trpc.field.value.list.useQuery(

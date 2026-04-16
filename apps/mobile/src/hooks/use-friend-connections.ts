@@ -43,9 +43,9 @@ export function useFriendConnection(
     table: "friend_connections",
     entityId: connectionId,
     rowTransform: rowToFriendConnection,
-    localQueryFn: (localDb) => {
+    localQueryFn: async (localDb) => {
       if (accountId === null) throw new Error("accountId is null");
-      const row = localDb.queryOne(
+      const row = await localDb.queryOne(
         "SELECT * FROM friend_connections WHERE id = ? AND account_id = ?",
         [connectionId, accountId],
       );
@@ -80,7 +80,7 @@ export function useFriendConnectionsList(
     rowTransform: rowToFriendConnection,
     injectSystemId: false,
     includeArchived: opts?.includeArchived,
-    localQueryFn: (localDb, _systemId, pagination) => {
+    localQueryFn: async (localDb, _systemId, pagination) => {
       if (accountId === null) throw new Error("accountId is null");
       const includeArchived = opts?.includeArchived ?? false;
       const status = opts?.status;
@@ -97,7 +97,8 @@ export function useFriendConnectionsList(
       }
       sql += ` ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
 
-      return localDb.queryAll(sql, params).map(rowToFriendConnection);
+      const rows = await localDb.queryAll(sql, params);
+      return rows.map(rowToFriendConnection);
     },
     useRemote: ({ enabled, select }) =>
       trpc.friend.list.useInfiniteQuery(

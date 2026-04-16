@@ -80,7 +80,7 @@ export function useStructureEntitiesList(
     decrypt: decryptStructureEntity,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId, pagination) => {
+    localQueryFn: async (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
       const archived = includeArchived ? "" : " AND archived = 0";
       let sql = `SELECT * FROM structure_entities WHERE system_id = ?${archived}`;
@@ -90,7 +90,8 @@ export function useStructureEntitiesList(
         params.push(opts.entityTypeId);
       }
       sql += ` ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
-      return localDb.queryAll(sql, params).map(rowToStructureEntity);
+      const rows = await localDb.queryAll(sql, params);
+      return rows.map(rowToStructureEntity);
     },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.structure.entity.list.useInfiniteQuery(

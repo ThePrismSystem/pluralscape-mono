@@ -60,11 +60,12 @@ export function useLifecycleEventsList(
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
     // Custom orderBy: lifecycle events sort by occurred_at, not created_at
-    localQueryFn: (localDb, systemId, pagination) => {
+    localQueryFn: async (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
       const archived = includeArchived ? "" : " AND archived = 0";
       const sql = `SELECT * FROM lifecycle_events WHERE system_id = ?${archived} ORDER BY occurred_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
-      return localDb.queryAll(sql, [systemId]).map(rowToLifecycleEvent);
+      const rows = await localDb.queryAll(sql, [systemId]);
+      return rows.map(rowToLifecycleEvent);
     },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.lifecycleEvent.list.useInfiniteQuery(

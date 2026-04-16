@@ -28,13 +28,13 @@ export function useStructureAssociationsList(
     table: "structure_entity_associations",
     rowTransform: rowToStructureEntityAssociation,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId, pagination) =>
-      localDb
-        .queryAll(
-          `SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`,
-          [systemId],
-        )
-        .map(rowToStructureEntityAssociation),
+    localQueryFn: async (localDb, systemId, pagination) => {
+      const rows = await localDb.queryAll(
+        `SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`,
+        [systemId],
+      );
+      return rows.map(rowToStructureEntityAssociation);
+    },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.structure.association.list.useInfiniteQuery(
         {

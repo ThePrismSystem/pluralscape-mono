@@ -130,7 +130,7 @@ function usePlaintextGet(id: string) {
 
 function useLocalGet(
   id: string,
-  localQueryFn?: (db: LocalDatabase, systemId: SystemId) => DecEntity,
+  localQueryFn?: (db: LocalDatabase, systemId: SystemId) => Promise<DecEntity>,
 ) {
   return useOfflineFirstQuery<RawEntity, DecEntity>({
     queryKey: ["test-local", id],
@@ -265,7 +265,11 @@ describe("useOfflineFirstQuery (local source)", () => {
     const customFn = vi.fn().mockReturnValue({ decryptedName: "custom-result" });
 
     const { result } = renderHookWithProviders(
-      () => useLocalGet("loc-2", customFn as (db: LocalDatabase, systemId: SystemId) => DecEntity),
+      () =>
+        useLocalGet(
+          "loc-2",
+          customFn as (db: LocalDatabase, systemId: SystemId) => Promise<DecEntity>,
+        ),
       { querySource: "local", localDb },
     );
 
@@ -404,7 +408,7 @@ describe("useOfflineFirstInfiniteQuery (local source)", () => {
           db: LocalDatabase,
           systemId: SystemId,
           pagination: { offset: number; limit: number },
-        ) => readonly RawEntity[],
+        ) => Promise<readonly RawEntity[]>,
         useRemote: ({ systemId, enabled, select }) =>
           trpc.member.list.useInfiniteQuery({ systemId, limit: 20 }, {
             enabled,

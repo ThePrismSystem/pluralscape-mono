@@ -11,16 +11,18 @@ import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
 function createMockDriver(): SqliteDriver {
   const stmt = {
-    run: vi.fn(),
-    all: vi.fn((): Record<string, unknown>[] => []),
-    get: vi.fn((): Record<string, unknown> | undefined => undefined),
+    run: vi.fn((): Promise<void> => Promise.resolve()),
+    all: vi.fn((): Promise<Record<string, unknown>[]> => Promise.resolve([])),
+    get: vi.fn((): Promise<Record<string, unknown> | undefined> => Promise.resolve(undefined)),
   };
 
   return {
-    exec: vi.fn(),
+    exec: vi.fn((): Promise<void> => Promise.resolve()),
     prepare: vi.fn(() => stmt) as SqliteDriver["prepare"],
-    transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
-    close: vi.fn(),
+    transaction: vi.fn(
+      <T,>(fn: () => Promise<T>): Promise<T> => fn(),
+    ) as SqliteDriver["transaction"],
+    close: vi.fn((): Promise<void> => Promise.resolve()),
   };
 }
 
