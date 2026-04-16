@@ -170,6 +170,31 @@ describe("createOpfsSqliteDriver", () => {
       stmt.run("x");
       await expect(driver.flush()).rejects.toThrow(/bind_collection failed.*rc=1/);
     });
+
+    it("finalizes the statements iterator when bind_collection fails", async () => {
+      const stmtHandle = 42;
+      const returnSpy = vi.fn().mockResolvedValue({ done: true as const, value: undefined });
+      mockStatements.mockReturnValue({
+        [Symbol.asyncIterator]() {
+          let yielded = false;
+          return {
+            next() {
+              if (yielded) return Promise.resolve({ done: true as const, value: undefined });
+              yielded = true;
+              return Promise.resolve({ done: false as const, value: stmtHandle });
+            },
+            return: returnSpy,
+          };
+        },
+      });
+      mockBindCollection.mockReturnValue(1); // trigger throw
+
+      const stmt = driver.prepare("INSERT INTO t VALUES (?)");
+      stmt.run("x");
+      await expect(driver.flush()).rejects.toThrow();
+
+      expect(returnSpy).toHaveBeenCalled();
+    });
   });
 
   describe("prepare().all()", () => {

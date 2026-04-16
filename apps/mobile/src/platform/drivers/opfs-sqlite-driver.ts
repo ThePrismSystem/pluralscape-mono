@@ -84,16 +84,24 @@ export async function createOpfsSqliteDriver(
 
     const promise = (async () => {
       const params = toBindParams(rawParams);
-      for await (const stmt of sqlite3.statements(db, sql)) {
-        const bindRc = sqlite3.bind_collection(stmt, params);
-        if (bindRc !== SQLITE_OK) {
-          throw new Error(`OPFS driver: bind_collection failed (rc=${String(bindRc)})`);
+      const iterator = sqlite3.statements(db, sql)[Symbol.asyncIterator]();
+      try {
+        let result = await iterator.next();
+        while (!result.done) {
+          const stmt = result.value;
+          const bindRc = sqlite3.bind_collection(stmt, params);
+          if (bindRc !== SQLITE_OK) {
+            throw new Error(`OPFS driver: bind_collection failed (rc=${String(bindRc)})`);
+          }
+          while ((await sqlite3.step(stmt)) === SQLITE_ROW) {
+            /* drain */
+          }
+          result = await iterator.next();
         }
-        while ((await sqlite3.step(stmt)) === SQLITE_ROW) {
-          /* drain */
-        }
+        return 0;
+      } finally {
+        await iterator.return?.(undefined);
       }
-      return 0;
     })();
 
     lastExecPromise = promise;
