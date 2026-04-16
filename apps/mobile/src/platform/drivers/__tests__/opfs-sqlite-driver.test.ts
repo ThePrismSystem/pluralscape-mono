@@ -86,7 +86,7 @@ describe("createOpfsSqliteDriver", () => {
     it("uses prepared statement API when params are provided", async () => {
       const stmtHandle = 42;
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
-      mockBindCollection.mockReturnValue(0);
+      mockBindCollection.mockReturnValue(SQLITE_OK);
       mockStep.mockResolvedValue(SQLITE_DONE);
 
       const stmt = driver.prepare("INSERT INTO t VALUES (?)");
@@ -103,7 +103,7 @@ describe("createOpfsSqliteDriver", () => {
     it("handles multiple bind parameters", async () => {
       const stmtHandle = 42;
       mockStatements.mockReturnValue(mockStatementsIterator(stmtHandle));
-      mockBindCollection.mockReturnValue(0);
+      mockBindCollection.mockReturnValue(SQLITE_OK);
       mockStep.mockResolvedValue(SQLITE_DONE);
 
       const stmt = driver.prepare("INSERT INTO t (a, b, c) VALUES (?, ?, ?)");

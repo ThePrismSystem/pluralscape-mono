@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-01T04:13:11Z
-updated_at: 2026-04-16T16:23:47Z
+updated_at: 2026-04-16T17:02:33Z
 parent: ps-0enb
 blocked_by:
   - mobile-shr0
@@ -25,6 +25,6 @@ Scoped down to keep what works:
 - `bind_collection` return code now checked
 - `close()` chains after pending work
 - `trackPrepared` finalizes the statements iterator on throw
-- Single-slot `lastError` overwrites now log via `console.error`
+- Single-slot `lastError` overwrites surface via the optional `OpfsSqliteDriverOptions.onDroppedError` callback (project bans direct `console.error` use)
 
 Will be marked completed once mobile-shr0 lands and parameterized reads return correct rows synchronously.
