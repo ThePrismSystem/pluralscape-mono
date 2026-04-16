@@ -2086,4 +2086,24 @@ describe("runImportEngine", () => {
       }
     });
   });
+
+  describe("empty dependencyOrder", () => {
+    it("throws when dependencyOrder is empty", async () => {
+      const source = createFakeImportSource({});
+      const { persister } = createInMemoryPersister();
+
+      await expect(
+        runImportEngine({
+          source,
+          persister,
+          sourceFormat: "simply-plural",
+          mapperDispatch: {},
+          dependencyOrder: [],
+          collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+          options: { selectedCategories: {}, avatarMode: "skip" },
+          onProgress: noopProgress,
+        }),
+      ).rejects.toThrow(/dependency order is empty/i);
+    });
+  });
 });

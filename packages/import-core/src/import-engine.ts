@@ -249,10 +249,14 @@ export async function runImportEngine<TCollection extends string>(
       }
     }
 
+    if (dependencyOrder.length === 0) {
+      throw new Error("Import dependency order is empty — no collections to process");
+    }
+
     let state: ImportCheckpointState =
       args.initialCheckpoint ??
       emptyCheckpointState({
-        firstEntityType: collectionToEntityType(dependencyOrder[0] ?? "unknown"),
+        firstEntityType: collectionToEntityType(dependencyOrder[0]),
         selectedCategories: options.selectedCategories,
         avatarMode: options.avatarMode,
       });
