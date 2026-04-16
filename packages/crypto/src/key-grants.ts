@@ -8,7 +8,14 @@ import {
   validateKeyVersion,
 } from "./validation.js";
 
-import type { AeadKey, BoxNonce, BoxPublicKey, BoxSecretKey, EncryptedKeyGrant } from "./types.js";
+import type {
+  AeadKey,
+  BoxNonce,
+  BoxPublicKey,
+  BoxSecretKey,
+  EncryptedKeyGrant,
+  KeyVersion,
+} from "./types.js";
 import type { BucketId } from "@pluralscape/types";
 
 /**
@@ -72,7 +79,7 @@ export interface DecryptKeyGrantParams {
  * Build the plaintext envelope that binds the bucket key to its bucket ID and version.
  * See wire format documentation above for envelope layout.
  */
-function buildEnvelope(bucketId: BucketId, keyVersion: number, bucketKey: AeadKey): Uint8Array {
+function buildEnvelope(bucketId: BucketId, keyVersion: KeyVersion, bucketKey: AeadKey): Uint8Array {
   const idBytes = new TextEncoder().encode(bucketId);
   if (idBytes.length > MAX_BUCKET_ID_UTF8_BYTES) {
     throw new InvalidInputError(
@@ -101,7 +108,7 @@ function buildEnvelope(bucketId: BucketId, keyVersion: number, bucketKey: AeadKe
 function parseEnvelope(
   plaintext: Uint8Array,
   expectedBucketId: BucketId,
-  expectedKeyVersion: number,
+  expectedKeyVersion: KeyVersion,
 ): AeadKey {
   if (plaintext.length < UINT16_BYTES) {
     throw new InvalidInputError("Decrypted envelope too short to contain id length.");
@@ -167,12 +174,12 @@ function sealEnvelope(
  */
 export function createKeyGrant(params: CreateKeyGrantParams): KeyGrantBlob {
   const { bucketKey, bucketId, keyVersion, recipientPublicKey, senderSecretKey } = params;
-  validateKeyVersion(keyVersion);
+  const validVersion = validateKeyVersion(keyVersion);
   assertAeadKey(bucketKey);
   assertBoxPublicKey(recipientPublicKey);
   assertBoxSecretKey(senderSecretKey);
 
-  const envelope = buildEnvelope(bucketId, keyVersion, bucketKey);
+  const envelope = buildEnvelope(bucketId, validVersion, bucketKey);
   try {
     const encryptedBucketKey = sealEnvelope(envelope, recipientPublicKey, senderSecretKey);
     return { encryptedBucketKey };
@@ -190,7 +197,7 @@ export function createKeyGrant(params: CreateKeyGrantParams): KeyGrantBlob {
  */
 export function decryptKeyGrant(params: DecryptKeyGrantParams): AeadKey {
   const { encryptedBucketKey, bucketId, keyVersion, senderPublicKey, recipientSecretKey } = params;
-  validateKeyVersion(keyVersion);
+  const validVersion = validateKeyVersion(keyVersion);
   assertBoxPublicKey(senderPublicKey);
   assertBoxSecretKey(recipientSecretKey);
 
@@ -207,7 +214,7 @@ export function decryptKeyGrant(params: DecryptKeyGrantParams): AeadKey {
   // boxOpenEasy throws DecryptionFailedError on wrong keys or tampered data
   const plaintext = adapter.boxOpenEasy(ciphertext, nonce, senderPublicKey, recipientSecretKey);
 
-  return parseEnvelope(plaintext, bucketId, keyVersion);
+  return parseEnvelope(plaintext, bucketId, validVersion);
 }
 
 /**
@@ -222,7 +229,7 @@ export function decryptKeyGrant(params: DecryptKeyGrantParams): AeadKey {
  */
 export function createKeyGrants(params: CreateKeyGrantsBatchParams): readonly KeyGrantBlob[] {
   const { bucketKey, bucketId, keyVersion, recipientPublicKeys, senderSecretKey } = params;
-  validateKeyVersion(keyVersion);
+  const validVersion = validateKeyVersion(keyVersion);
   assertAeadKey(bucketKey);
   assertBoxSecretKey(senderSecretKey);
 
@@ -235,7 +242,7 @@ export function createKeyGrants(params: CreateKeyGrantsBatchParams): readonly Ke
     assertBoxPublicKey(pk);
   }
 
-  const envelope = buildEnvelope(bucketId, keyVersion, bucketKey);
+  const envelope = buildEnvelope(bucketId, validVersion, bucketKey);
   try {
     return recipientPublicKeys.map((recipientPublicKey) => {
       const encryptedBucketKey = sealEnvelope(envelope, recipientPublicKey, senderSecretKey);

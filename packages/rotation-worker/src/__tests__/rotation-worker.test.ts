@@ -455,8 +455,7 @@ describe("processChunk", () => {
     const results = await promise;
 
     expect(results[0]?.status).toBe("failed");
-    // Access failureReason from the underlying ItemProcessResult via CompletionItem
-    // The CompletionItem only has itemId/status, but the processItem returns failureReason
+    expect(results[0]?.failureReason).toBe("network timeout");
     vi.useRealTimers();
   });
 

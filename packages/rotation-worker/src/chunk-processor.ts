@@ -30,7 +30,11 @@ export async function processChunk(
 
     const result = await processItem(item, apiClient, oldKey, oldKeyVersion, newKey, newKeyVersion);
 
-    results.push({ itemId: item.id, status: result.status });
+    results.push({
+      itemId: item.id,
+      status: result.status,
+      ...(result.status === "failed" && { failureReason: result.failureReason }),
+    });
   }
 
   return results;

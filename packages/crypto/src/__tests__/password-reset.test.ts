@@ -246,8 +246,11 @@ describe("withMasterKeyFromReset", () => {
       }),
     ).rejects.toThrow("callback failure");
 
-    // memzero should still have been called for cleanup
-    expect(memzeroSpy).toHaveBeenCalled();
+    // memzero should have been called exactly twice (masterKey + authKey)
+    expect(memzeroSpy).toHaveBeenCalledTimes(2);
+    const zeroedBuffers = memzeroSpy.mock.calls.map((call) => call[0] as Uint8Array);
+    expect(zeroedBuffers.some((buf) => buf.length === 32)).toBe(true); // masterKey (KDF_KEY_BYTES)
+    expect(zeroedBuffers.filter((buf) => buf.length === 32)).toHaveLength(2); // both are 32 bytes
     memzeroSpy.mockRestore();
   });
 });
