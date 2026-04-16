@@ -56,6 +56,12 @@ export interface SyncEngineConfig {
   readonly eventBus?: EventBus<DataLayerEventMap>;
 }
 
+/** A batch of conflict notifications that failed to persist and should be retried. */
+export interface FailedConflictBatch {
+  readonly documentId: SyncDocumentId;
+  readonly notifications: readonly ConflictNotification[];
+}
+
 /**
  * Client-side sync engine.
  *
@@ -69,10 +75,7 @@ export class SyncEngine {
   private readonly documentQueues = new Map<SyncDocumentId, Promise<void>>();
 
   private readonly config: SyncEngineConfig;
-  private failedConflictPersistence: ReadonlyArray<{
-    readonly documentId: SyncDocumentId;
-    readonly notifications: readonly ConflictNotification[];
-  }> = [];
+  private failedConflictPersistence: readonly FailedConflictBatch[] = [];
 
   constructor(config: SyncEngineConfig) {
     this.config = config;
@@ -543,12 +546,12 @@ export class SyncEngine {
     if (!this.config.conflictPersistenceAdapter) return;
 
     // Include previously failed attempts
-    const retryBatch =
+    const retryBatch: FailedConflictBatch[] =
       notifications.length > 0
         ? [...this.failedConflictPersistence, { documentId: docId, notifications }]
         : [...this.failedConflictPersistence];
-    this.failedConflictPersistence = [];
 
+    const failed: FailedConflictBatch[] = [];
     for (const batch of retryBatch) {
       try {
         await this.config.conflictPersistenceAdapter.saveConflicts(
@@ -557,15 +560,16 @@ export class SyncEngine {
         );
       } catch (error: unknown) {
         this.handleError("Failed to persist conflict records", error);
-        this.failedConflictPersistence = [...this.failedConflictPersistence, batch];
+        failed.push(batch);
       }
     }
+    this.failedConflictPersistence = failed;
 
     // Cap the retry buffer to prevent unbounded growth
     const cap = this.config.maxConflictRetryBatches ?? MAX_CONFLICT_RETRY_BATCHES;
-    if (this.failedConflictPersistence.length > cap) {
-      const dropped = this.failedConflictPersistence.length - cap;
-      this.failedConflictPersistence = this.failedConflictPersistence.slice(dropped);
+    if (failed.length > cap) {
+      const dropped = failed.length - cap;
+      this.failedConflictPersistence = failed.slice(dropped);
       this.handleError(
         `Conflict retry buffer exceeded cap (${String(cap)}), dropped ${String(dropped)} oldest entries`,
         null,

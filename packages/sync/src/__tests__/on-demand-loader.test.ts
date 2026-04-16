@@ -96,6 +96,62 @@ describe("OnDemandLoader", () => {
     expect(loader.getLastFetchedSeq(DOC_ID)).toBe(0);
   });
 
+  it("does not regress lastFetchedSeq when adapter returns a lower seq", async () => {
+    const fetchChangesSince = vi.fn();
+    const mockAdapter: SyncNetworkAdapter = {
+      fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
+      fetchChangesSince,
+      submitChange: vi.fn(),
+      submitSnapshot: vi.fn(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+      fetchManifest: vi.fn().mockResolvedValue({ systemId: sysId("sys_1"), documents: [] }),
+    };
+
+    const loader = new OnDemandLoader();
+
+    // First load: adapter returns a change with seq=10
+    const base = Automerge.from<SimpleDoc>({ items: [] });
+    const session = new EncryptedSyncSession<SimpleDoc>({
+      doc: base,
+      keys,
+      documentId: DOC_ID,
+      sodium,
+    });
+    const env = session.change((doc) => {
+      doc.items.push("item");
+    });
+    fetchChangesSince.mockResolvedValue([{ ...env, seq: 10 }]);
+    await loader.load<SimpleDoc>({ docId: DOC_ID, persist: false }, mockAdapter, keys, sodium);
+    expect(loader.getLastFetchedSeq(DOC_ID)).toBe(10);
+
+    // Second load: adapter returns no changes (seq stays 0 on session)
+    fetchChangesSince.mockResolvedValue([]);
+    await loader.load<SimpleDoc>({ docId: DOC_ID, persist: false }, mockAdapter, keys, sodium);
+
+    // lastFetchedSeq should NOT regress from 10 to 0
+    expect(loader.getLastFetchedSeq(DOC_ID)).toBe(10);
+  });
+
+  it("does not update lastFetchedSeq when loadOnDemandDocument throws", async () => {
+    const mockAdapter: SyncNetworkAdapter = {
+      fetchLatestSnapshot: vi.fn().mockRejectedValue(new Error("network failure")),
+      fetchChangesSince: vi.fn(),
+      submitChange: vi.fn(),
+      submitSnapshot: vi.fn(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+      fetchManifest: vi.fn().mockResolvedValue({ systemId: sysId("sys_1"), documents: [] }),
+    };
+
+    const loader = new OnDemandLoader();
+
+    await expect(
+      loader.load<SimpleDoc>({ docId: DOC_ID, persist: false }, mockAdapter, keys, sodium),
+    ).rejects.toThrow("network failure");
+
+    // lastFetchedSeq should remain at 0 — the failed load should not have updated it
+    expect(loader.getLastFetchedSeq(DOC_ID)).toBe(0);
+  });
+
   it("clear resets all tracked state", async () => {
     const mockAdapter: SyncNetworkAdapter = {
       fetchLatestSnapshot: vi.fn().mockResolvedValue(null),

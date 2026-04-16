@@ -74,7 +74,8 @@ export class OnDemandLoader {
       this.lastFetchedSeq.get(request.docId) ?? 0,
     );
 
-    this.lastFetchedSeq.set(request.docId, result.syncState.lastSyncedSeq);
+    const prev = this.lastFetchedSeq.get(request.docId) ?? 0;
+    this.lastFetchedSeq.set(request.docId, Math.max(prev, result.syncState.lastSyncedSeq));
     return result;
   }
 

@@ -53,21 +53,25 @@ export function selectEvictionCandidates(
   return selectFromSortedEvictable(buildSortedEvictable(documents), documents, budget);
 }
 
-/** Filter and sort evictable entries by descending priority index. */
-function buildSortedEvictable(documents: ReadonlyMap<string, number>): [string, number][] {
-  const evictable = [...documents.entries()].filter(([docId]) => {
+/** Filter and sort evictable doc IDs by descending priority index. */
+function buildSortedEvictable(
+  documents: ReadonlyMap<string, number>,
+  onParseWarning?: (docId: string) => void,
+): string[] {
+  const evictable = [...documents.keys()].filter((docId) => {
     try {
       const parsed = parseDocumentId(docId);
       return parsed.documentType !== "system-core" && parsed.documentType !== "privacy-config";
     } catch {
+      onParseWarning?.(docId);
       return false;
     }
   });
 
   // Sort by priority index descending (lowest priority = highest index = evict first)
   evictable.sort((a, b) => {
-    const aIdx = SYNC_PRIORITY_ORDER.indexOf(getEvictionCategory(a[0]));
-    const bIdx = SYNC_PRIORITY_ORDER.indexOf(getEvictionCategory(b[0]));
+    const aIdx = SYNC_PRIORITY_ORDER.indexOf(getEvictionCategory(a));
+    const bIdx = SYNC_PRIORITY_ORDER.indexOf(getEvictionCategory(b));
     return bIdx - aIdx;
   });
 
@@ -76,7 +80,7 @@ function buildSortedEvictable(documents: ReadonlyMap<string, number>): [string, 
 
 /** Pick candidates from pre-sorted evictable list until excess is covered. */
 function selectFromSortedEvictable(
-  evictable: readonly [string, number][],
+  evictable: readonly string[],
   documents: ReadonlyMap<string, number>,
   budget: StorageBudget,
 ): string[] {
@@ -86,10 +90,10 @@ function selectFromSortedEvictable(
   const candidates: string[] = [];
   let remaining = status.excessBytes;
 
-  for (const [docId, size] of evictable) {
+  for (const docId of evictable) {
     if (remaining <= 0) break;
     candidates.push(docId);
-    remaining -= size;
+    remaining -= documents.get(docId) ?? 0;
   }
 
   return candidates;
@@ -103,14 +107,19 @@ function selectFromSortedEvictable(
  * reuse the cached sort order, avoiding redundant O(n log n) sorts.
  */
 export class EvictionCache {
-  private cachedEvictable: [string, number][] | null = null;
+  private cachedEvictable: string[] | null = null;
+  private readonly onParseWarning?: (docId: string) => void;
+
+  constructor(options?: { onParseWarning?: (docId: string) => void }) {
+    this.onParseWarning = options?.onParseWarning;
+  }
 
   /** Select eviction candidates, reusing cached sort order when valid. */
   selectEvictionCandidates(
     documents: ReadonlyMap<string, number>,
     budget: StorageBudget,
   ): string[] {
-    this.cachedEvictable ??= buildSortedEvictable(documents);
+    this.cachedEvictable ??= buildSortedEvictable(documents, this.onParseWarning);
     return selectFromSortedEvictable(this.cachedEvictable, documents, budget);
   }
 
