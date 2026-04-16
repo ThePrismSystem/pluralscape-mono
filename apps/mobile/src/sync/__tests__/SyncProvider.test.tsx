@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -385,10 +385,9 @@ describe("SyncProvider", () => {
     const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
     // Wait for the async adapter factory to resolve and engine to wire up
-    await act(() => Promise.resolve());
-
-    // Engine should be created
-    expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    });
     expect(MockSyncEngine).toHaveBeenCalledWith(
       expect.objectContaining({
         systemId: TEST_SYSTEM_ID,
@@ -438,13 +437,13 @@ describe("SyncProvider", () => {
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    await act(() => Promise.resolve());
-
-    expect(MockSyncEngine).toHaveBeenCalledWith(
-      expect.objectContaining({
-        profile: { profileType: "owner-full" } satisfies ReplicationProfile,
-      }),
-    );
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledWith(
+        expect.objectContaining({
+          profile: { profileType: "owner-full" } satisfies ReplicationProfile,
+        }),
+      );
+    });
   });
 
   it("bootstraps engine when connected and sets isBootstrapped", async () => {
@@ -453,16 +452,13 @@ describe("SyncProvider", () => {
 
     const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    // Wait for async adapter/engine construction, then for bootstrap microtasks
-    await act(() => Promise.resolve());
-
-    // Bootstrap should have been called since we're connected
-    expect(mockBootstrap).toHaveBeenCalled();
-
-    // Wait for bootstrap promise to resolve and state to update
-    await act(() => Promise.resolve());
-
-    expect(result.current.isBootstrapped).toBe(true);
+    // Wait for async adapter/engine construction and bootstrap to complete
+    await waitFor(() => {
+      expect(mockBootstrap).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(result.current.isBootstrapped).toBe(true);
+    });
   });
 
   it("does not bootstrap when not connected", async () => {
@@ -471,9 +467,9 @@ describe("SyncProvider", () => {
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    await act(() => Promise.resolve());
-
-    expect(MockSyncEngine).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalled();
+    });
     expect(mockBootstrap).not.toHaveBeenCalled();
   });
 
@@ -483,7 +479,9 @@ describe("SyncProvider", () => {
 
     const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    await act(() => Promise.resolve());
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    });
 
     unmount();
 
@@ -499,9 +497,9 @@ describe("SyncProvider", () => {
 
     const { rerender } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    await act(() => Promise.resolve());
-
-    expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    });
 
     // Simulate logout
     setUnauthenticated();
@@ -521,13 +519,13 @@ describe("SyncProvider", () => {
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    await act(() => Promise.resolve());
-
-    expect(MockSyncEngine).toHaveBeenCalledWith(
-      expect.objectContaining({
-        eventBus: mockEventBus,
-      }),
-    );
+    await waitFor(() => {
+      expect(MockSyncEngine).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventBus: mockEventBus,
+        }),
+      );
+    });
   });
 
   it("passes correct DocumentKeyResolver config", async () => {
@@ -536,13 +534,13 @@ describe("SyncProvider", () => {
 
     renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-    await act(() => Promise.resolve());
-
-    expect(MockDocumentKeyResolver.create).toHaveBeenCalledWith({
-      masterKey: TEST_MASTER_KEY,
-      signingKeys: TEST_SIGN_KEYS,
-      bucketKeyCache: mockBucketKeyCache,
-      sodium: mockSodium,
+    await waitFor(() => {
+      expect(MockDocumentKeyResolver.create).toHaveBeenCalledWith({
+        masterKey: TEST_MASTER_KEY,
+        signingKeys: TEST_SIGN_KEYS,
+        bucketKeyCache: mockBucketKeyCache,
+        sodium: mockSodium,
+      });
     });
   });
 
@@ -561,10 +559,9 @@ describe("SyncProvider", () => {
 
       const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-      // Allow rejection microtask to flush
-      await act(() => Promise.resolve());
-
-      expect(result.current.bootstrapError).toEqual(bootError);
+      await waitFor(() => {
+        expect(result.current.bootstrapError).toEqual(bootError);
+      });
       expect(result.current.bootstrapAttempts).toBe(1);
       expect(result.current.fallbackToRemote).toBe(false);
     });
@@ -582,9 +579,9 @@ describe("SyncProvider", () => {
 
       const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-      await act(() => Promise.resolve());
-
-      expect(result.current.bootstrapError).toBeInstanceOf(Error);
+      await waitFor(() => {
+        expect(result.current.bootstrapError).toBeInstanceOf(Error);
+      });
       expect(result.current.bootstrapError?.message).toBe("string failure");
     });
 
@@ -596,8 +593,9 @@ describe("SyncProvider", () => {
       const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
       // First attempt fails on initial mount
-      await act(() => Promise.resolve());
-      expect(result.current.bootstrapAttempts).toBe(1);
+      await waitFor(() => {
+        expect(result.current.bootstrapAttempts).toBe(1);
+      });
       expect(result.current.fallbackToRemote).toBe(false);
 
       // Trigger retry — second attempt
@@ -633,8 +631,9 @@ describe("SyncProvider", () => {
         .mockImplementationOnce(() => Promise.resolve());
 
       const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
-      await act(() => Promise.resolve());
-      expect(result.current.bootstrapError?.message).toBe("first");
+      await waitFor(() => {
+        expect(result.current.bootstrapError?.message).toBe("first");
+      });
 
       await act(() => {
         result.current.retryBootstrap();
@@ -662,8 +661,10 @@ describe("SyncProvider", () => {
 
       const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-      // IIFE starts — bucketKeyCache is created, then awaits storage adapter
-      await act(() => Promise.resolve());
+      // Wait for IIFE to reach the awaiting-storage-adapter state
+      await waitFor(() => {
+        expect(MockSqliteStorageAdapter.create).toHaveBeenCalledTimes(1);
+      });
 
       unmount();
 
@@ -677,12 +678,12 @@ describe("SyncProvider", () => {
         listDocuments: vi.fn(() => []),
         deleteDocument: vi.fn(),
       });
-      await act(() => Promise.resolve());
+      await waitFor(() => {
+        expect(mockClearAll).toHaveBeenCalledTimes(1);
+      });
 
       // Engine never instantiated — cancellation caught the branch after await
       expect(MockSyncEngine).not.toHaveBeenCalled();
-      // bucketKeyCache was allocated pre-await, so it should be disposed
-      expect(mockClearAll).toHaveBeenCalledTimes(1);
       // wsManager was not yet created, so disconnect should not be called
       expect(mockWsDisconnect).not.toHaveBeenCalled();
     });
@@ -701,9 +702,10 @@ describe("SyncProvider", () => {
 
       const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
 
-      await act(() => Promise.resolve());
+      await waitFor(() => {
+        expect(emitted).toHaveLength(1);
+      });
 
-      expect(emitted).toHaveLength(1);
       expect(emitted[0]?.message).toContain("initialization failed");
       expect(emitted[0]?.error).toBe(initError);
       expect(MockSyncEngine).not.toHaveBeenCalled();
