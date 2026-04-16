@@ -6,7 +6,7 @@
  */
 import { brandId } from "@pluralscape/types";
 
-import { DRAIN_BATCH_SIZE } from "../sync.constants.js";
+import { DRAIN_BATCH_SIZE, OFFLINE_QUEUE_ID_PREFIX } from "../sync.constants.js";
 
 import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 
@@ -66,7 +66,7 @@ function rowToEntry(row: QueueRow): OfflineQueueEntry {
 
 /** Generates a unique ID for queue entries using crypto.randomUUID(). */
 function generateId(): string {
-  return `oq_${crypto.randomUUID()}`;
+  return `${OFFLINE_QUEUE_ID_PREFIX}${crypto.randomUUID()}`;
 }
 
 /** Cached prepared statements for all SQLite operations. */
@@ -83,11 +83,19 @@ export class SqliteOfflineQueueAdapter implements OfflineQueueAdapter {
   private readonly driver: SqliteDriver;
   private readonly stmts: CachedStatements;
 
-  constructor(driver: SqliteDriver) {
+  /**
+   * Private constructor — use the static async `create` factory instead.
+   * The factory runs DDL which requires awaiting the async `driver.exec`.
+   */
+  private constructor(driver: SqliteDriver, stmts: CachedStatements) {
     this.driver = driver;
-    driver.exec(CREATE_QUEUE);
-    driver.exec(CREATE_QUEUE_INDEX);
-    this.stmts = {
+    this.stmts = stmts;
+  }
+
+  static async create(driver: SqliteDriver): Promise<SqliteOfflineQueueAdapter> {
+    await driver.exec(CREATE_QUEUE);
+    await driver.exec(CREATE_QUEUE_INDEX);
+    const stmts: CachedStatements = {
       enqueue: driver.prepare(
         `INSERT INTO sync_offline_queue
          (id, document_id, ciphertext, nonce, signature, author_public_key, enqueued_at, synced_at, server_seq)
@@ -110,12 +118,16 @@ export class SqliteOfflineQueueAdapter implements OfflineQueueAdapter {
       ),
       countDeleted: driver.prepare<CountRow>(`SELECT changes() as cnt`),
     };
+    return new SqliteOfflineQueueAdapter(driver, stmts);
   }
 
-  enqueue(documentId: string, envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<string> {
+  async enqueue(
+    documentId: string,
+    envelope: Omit<EncryptedChangeEnvelope, "seq">,
+  ): Promise<string> {
     const id = generateId();
     const now = Date.now();
-    this.stmts.enqueue.run(
+    await this.stmts.enqueue.run(
       id,
       documentId,
       envelope.ciphertext,
@@ -124,30 +136,28 @@ export class SqliteOfflineQueueAdapter implements OfflineQueueAdapter {
       envelope.authorPublicKey,
       now,
     );
-    return Promise.resolve(id);
+    return id;
   }
 
-  drainUnsynced(): Promise<readonly OfflineQueueEntry[]> {
-    const rows = this.stmts.drainUnsynced.all(DRAIN_BATCH_SIZE);
-    return Promise.resolve(rows.map(rowToEntry));
+  async drainUnsynced(): Promise<readonly OfflineQueueEntry[]> {
+    const rows = await this.stmts.drainUnsynced.all(DRAIN_BATCH_SIZE);
+    return rows.map(rowToEntry);
   }
 
-  markSynced(id: string, serverSeq: number): Promise<void> {
+  async markSynced(id: string, serverSeq: number): Promise<void> {
     const now = Date.now();
-    this.stmts.markSynced.run(now, serverSeq, id);
-    return Promise.resolve();
+    await this.stmts.markSynced.run(now, serverSeq, id);
   }
 
-  deleteConfirmed(cutoffMs: number): Promise<number> {
-    const count = this.driver.transaction(() => {
-      this.stmts.deleteConfirmed.run(cutoffMs);
-      const result = this.stmts.countDeleted.get();
+  async deleteConfirmed(cutoffMs: number): Promise<number> {
+    return this.driver.transaction(async () => {
+      await this.stmts.deleteConfirmed.run(cutoffMs);
+      const result = await this.stmts.countDeleted.get();
       return result?.cnt ?? 0;
     });
-    return Promise.resolve(count);
   }
 
-  close(): void {
-    this.driver.close();
+  async close(): Promise<void> {
+    await this.driver.close();
   }
 }

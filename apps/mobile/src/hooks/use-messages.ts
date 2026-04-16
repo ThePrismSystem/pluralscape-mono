@@ -47,11 +47,11 @@ export function useMessage(
     decrypt: decryptMessage,
     systemIdOverride: opts,
     // Custom local query: messages are scoped by channel_id in addition to id
-    localQueryFn: (localDb) => {
-      const row = localDb.queryOne("SELECT * FROM own_messages WHERE id = ? AND channel_id = ?", [
-        messageId,
-        channelId,
-      ]);
+    localQueryFn: async (localDb) => {
+      const row = await localDb.queryOne(
+        "SELECT * FROM own_messages WHERE id = ? AND channel_id = ?",
+        [messageId, channelId],
+      );
       if (!row) throw new Error("Message not found");
       return rowToMessage(row);
     },
@@ -75,11 +75,12 @@ export function useMessagesList(
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
     // Custom local query: scoped by channel_id, ordered by timestamp DESC
-    localQueryFn: (localDb, systemId, pagination) => {
+    localQueryFn: async (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
       const archived = includeArchived ? "" : " AND archived = 0";
       const sql = `SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ?${archived} ORDER BY timestamp DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
-      return localDb.queryAll(sql, [systemId, channelId]).map(rowToMessage);
+      const rows = await localDb.queryAll(sql, [systemId, channelId]);
+      return rows.map(rowToMessage);
     },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.message.list.useInfiniteQuery(

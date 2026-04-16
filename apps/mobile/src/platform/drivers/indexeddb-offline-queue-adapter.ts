@@ -129,16 +129,15 @@ export function createIndexedDbOfflineQueueAdapter(
       return toDelete.length;
     },
 
-    close(): void {
-      void dbPromise
-        .then((db) => {
-          db.close();
-        })
-        .catch(() => {
-          // Close errors during teardown are non-recoverable — the DB handle
-          // is being discarded regardless. Logging requires a Logger not yet
-          // available in the mobile app.
-        });
+    async close(): Promise<void> {
+      try {
+        const db = await dbPromise;
+        db.close();
+      } catch {
+        // Close errors during teardown are non-recoverable — the DB handle
+        // is being discarded regardless. Logging requires a Logger not yet
+        // available in the mobile app.
+      }
     },
   };
 }

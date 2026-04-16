@@ -37,9 +37,11 @@ export function useSystemSettings(): DataQuery<SystemSettings> {
 
   const localQuery = useQuery({
     queryKey: ["system_settings", systemId],
-    queryFn: () => {
+    queryFn: async () => {
       if (localDb === null) throw new Error("localDb is null");
-      const row = localDb.queryOne("SELECT * FROM system_settings WHERE system_id = ?", [systemId]);
+      const row = await localDb.queryOne("SELECT * FROM system_settings WHERE system_id = ?", [
+        systemId,
+      ]);
       if (!row) throw new Error("System settings not found");
       return rowToSystemSettings(row);
     },
@@ -73,11 +75,12 @@ export function useNomenclature(): DataQuery<DecryptedNomenclature | Nomenclatur
 
   const localQuery = useQuery({
     queryKey: ["system_settings", "nomenclature", systemId],
-    queryFn: (): NomenclatureSettings => {
+    queryFn: async (): Promise<NomenclatureSettings> => {
       if (localDb === null) throw new Error("localDb is null");
-      const row = localDb.queryOne("SELECT nomenclature FROM system_settings WHERE system_id = ?", [
-        systemId,
-      ]);
+      const row = await localDb.queryOne(
+        "SELECT nomenclature FROM system_settings WHERE system_id = ?",
+        [systemId],
+      );
       if (!row) throw new Error("System settings not found");
       const raw = row["nomenclature"];
       if (typeof raw === "string") return JSON.parse(raw) as NomenclatureSettings;

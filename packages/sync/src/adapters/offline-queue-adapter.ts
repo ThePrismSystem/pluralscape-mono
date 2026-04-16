@@ -42,5 +42,5 @@ export interface OfflineQueueAdapter {
   deleteConfirmed(cutoffMs: number): Promise<number>;
 
   /** Release resources. Optional. */
-  close?(): void;
+  close?(): Promise<void>;
 }

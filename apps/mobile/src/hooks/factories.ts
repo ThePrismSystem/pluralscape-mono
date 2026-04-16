@@ -90,7 +90,10 @@ interface OfflineFirstQueryConfigBase<TRaw, TDecrypted> {
   /** Transforms a raw SQLite row into the local domain type. */
   readonly rowTransform: (row: Record<string, unknown>) => TDecrypted;
   /** Override the default `SELECT * FROM <table> WHERE id = ?` query. */
-  readonly localQueryFn?: (localDb: LocalDatabase, systemId: SystemId) => TDecrypted;
+  readonly localQueryFn?: (
+    localDb: LocalDatabase,
+    systemId: SystemId,
+  ) => TDecrypted | Promise<TDecrypted>;
   readonly systemIdOverride?: SystemIdOverride;
   /**
    * Consumer-provided hook call. The factory cannot call tRPC hooks directly
@@ -138,7 +141,7 @@ interface OfflineFirstInfiniteQueryConfigBase<TRaw, TDecrypted> {
     localDb: LocalDatabase,
     systemId: SystemId,
     pagination: { readonly offset: number; readonly limit: number },
-  ) => readonly TDecrypted[];
+  ) => readonly TDecrypted[] | Promise<readonly TDecrypted[]>;
   readonly systemIdOverride?: SystemIdOverride;
   /** Whether to auto-append resolved systemId to queryKey. Defaults to true. Set false for account-scoped queries. */
   readonly injectSystemId?: boolean;
@@ -283,10 +286,12 @@ export function useOfflineFirstQuery<TRaw, TDecrypted>(
 
   const localQuery = useQuery({
     queryKey: config.queryKey,
-    queryFn: () => {
+    queryFn: async () => {
       if (localDb === null) throw new Error("localDb is null");
       if (config.localQueryFn) return config.localQueryFn(localDb, systemId);
-      const row = localDb.queryOne(`SELECT * FROM ${config.table} WHERE id = ?`, [config.entityId]);
+      const row = await localDb.queryOne(`SELECT * FROM ${config.table} WHERE id = ?`, [
+        config.entityId,
+      ]);
       if (!row) throw new Error(`${config.table} entity not found`);
       return config.rowTransform(row);
     },
@@ -332,17 +337,18 @@ export function useOfflineFirstInfiniteQuery<TRaw, TDecrypted>(
 
   const localQuery = useInfiniteQuery({
     queryKey: scopedQueryKey,
-    queryFn: ({ pageParam }) => {
+    queryFn: async ({ pageParam }) => {
       if (localDb === null) throw new Error("localDb is null");
       const offset = pageParam;
       const limit = DEFAULT_LIST_LIMIT;
       let rows: readonly TDecrypted[];
       if (config.localQueryFn) {
-        rows = config.localQueryFn(localDb, systemId, { offset, limit });
+        rows = await config.localQueryFn(localDb, systemId, { offset, limit });
       } else {
         const archived = includeArchived ? "" : " AND archived = 0";
         const sql = `SELECT * FROM ${config.table} WHERE system_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(limit)} OFFSET ${String(offset)}`;
-        rows = localDb.queryAll(sql, [systemId]).map(config.rowTransform);
+        const rawRows = await localDb.queryAll(sql, [systemId]);
+        rows = rawRows.map(config.rowTransform);
       }
       return {
         data: rows,

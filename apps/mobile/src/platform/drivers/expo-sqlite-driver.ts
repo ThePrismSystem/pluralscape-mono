@@ -1,3 +1,4 @@
+import { runAsyncTransaction } from "@pluralscape/sync/adapters";
 import {
   deleteDatabaseSync,
   openDatabaseSync,
@@ -46,15 +47,20 @@ export const DB_ENCRYPTION_SUBKEY_ID = 10;
 export const DB_ENCRYPTION_KEY_BYTES = 32;
 
 /**
- * Tests whether the database is accessible (encrypted databases require the
- * correct PRAGMA key before any queries succeed).
+ * Tests whether the database is accessible under the current PRAGMA key.
+ *
+ * Encrypted databases return "file is not a database" / SQLITE_NOTADB when
+ * read with the wrong key. Any other error (permissions, I/O, etc.) is
+ * rethrown so it isn't silently misinterpreted as a decryption mismatch.
  */
 function isDatabaseAccessible(db: SQLiteDatabase): boolean {
   try {
     db.execSync("SELECT count(*) FROM sqlite_master");
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/not a database|SQLITE_NOTADB|file is encrypted/i.test(msg)) return false;
+    throw err;
   }
 }
 
@@ -93,32 +99,35 @@ export function createExpoSqliteDriver(
     }
   }
 
+  let txDepth = 0;
+
   const driver: SqliteDriver = {
     prepare<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
       return {
-        run(...params: unknown[]): void {
+        run(...params: unknown[]): Promise<void> {
           const stmt = db.prepareSync(sql);
           try {
             stmt.executeSync(params as SQLiteBindParams);
           } finally {
             stmt.finalizeSync();
           }
+          return Promise.resolve();
         },
-        all(...params: unknown[]): TRow[] {
+        all(...params: unknown[]): Promise<TRow[]> {
           const stmt = db.prepareSync(sql);
           try {
             const result = stmt.executeSync<TRow>(params as SQLiteBindParams);
-            return result.getAllSync();
+            return Promise.resolve(result.getAllSync());
           } finally {
             stmt.finalizeSync();
           }
         },
-        get(...params: unknown[]): TRow | undefined {
+        get(...params: unknown[]): Promise<TRow | undefined> {
           const stmt = db.prepareSync(sql);
           try {
             const result = stmt.executeSync<TRow>(params as SQLiteBindParams);
             const first = result.getFirstSync();
-            return first ?? undefined;
+            return Promise.resolve(first ?? undefined);
           } finally {
             stmt.finalizeSync();
           }
@@ -126,20 +135,28 @@ export function createExpoSqliteDriver(
       };
     },
 
-    exec(sql: string): void {
+    exec(sql: string): Promise<void> {
       db.execSync(sql);
+      return Promise.resolve();
     },
 
-    transaction<T>(fn: () => T): T {
-      let result!: T;
-      db.withTransactionSync(() => {
-        result = fn();
-      });
-      return result;
+    async transaction<T>(fn: () => T | Promise<T>): Promise<T> {
+      if (txDepth > 0) {
+        throw new Error("SqliteDriver.transaction: nested transactions are not supported");
+      }
+      txDepth++;
+      try {
+        return await runAsyncTransaction((sql) => {
+          db.execSync(sql);
+        }, fn);
+      } finally {
+        txDepth--;
+      }
     },
 
-    close(): void {
+    close(): Promise<void> {
       db.closeSync();
+      return Promise.resolve();
     },
   };
 

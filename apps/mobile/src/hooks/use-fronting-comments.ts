@@ -67,11 +67,12 @@ export function useFrontingCommentsList(
     decrypt: decryptFrontingComment,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb, _systemId, pagination) => {
+    localQueryFn: async (localDb, _systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
       const archived = includeArchived ? "" : " AND archived = 0";
       const sql = `SELECT * FROM fronting_comments WHERE fronting_session_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
-      return localDb.queryAll(sql, [sessionId]).map(rowToFrontingComment);
+      const rows = await localDb.queryAll(sql, [sessionId]);
+      return rows.map(rowToFrontingComment);
     },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.frontingComment.list.useInfiniteQuery(

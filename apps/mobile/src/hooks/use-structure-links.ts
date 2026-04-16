@@ -28,13 +28,13 @@ export function useStructureLinksList(
     table: "structure_entity_links",
     rowTransform: rowToStructureEntityLink,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId, pagination) =>
-      localDb
-        .queryAll(
-          `SELECT * FROM structure_entity_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`,
-          [systemId],
-        )
-        .map(rowToStructureEntityLink),
+    localQueryFn: async (localDb, systemId, pagination) => {
+      const rows = await localDb.queryAll(
+        `SELECT * FROM structure_entity_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`,
+        [systemId],
+      );
+      return rows.map(rowToStructureEntityLink);
+    },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.structure.link.list.useInfiniteQuery(
         {

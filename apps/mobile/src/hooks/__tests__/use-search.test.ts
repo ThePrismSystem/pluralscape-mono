@@ -13,14 +13,16 @@ interface DbFixture {
 }
 
 function makeDb(rows: Record<string, unknown>[] = []): DbFixture {
-  const queryAllMock = vi.fn().mockReturnValue(rows);
+  const queryAllMock = vi.fn().mockResolvedValue(rows);
   const db: LocalDatabase = {
-    initialize: vi.fn(),
+    initialize: vi.fn(() => Promise.resolve()),
     queryAll: queryAllMock,
-    queryOne: vi.fn().mockReturnValue(undefined),
-    execute: vi.fn(),
-    transaction: vi.fn((fn: () => unknown) => fn()) as LocalDatabase["transaction"],
-    close: vi.fn(),
+    queryOne: vi.fn().mockResolvedValue(undefined),
+    execute: vi.fn(() => Promise.resolve()),
+    transaction: vi.fn(
+      <T>(fn: () => Promise<T>): Promise<T> => fn(),
+    ) as LocalDatabase["transaction"],
+    close: vi.fn(() => Promise.resolve()),
   };
   return { db, queryAllMock };
 }
@@ -36,22 +38,22 @@ describe("executeSearch", () => {
   });
 
   describe("empty / whitespace query", () => {
-    it("returns empty array for empty string", () => {
-      const results = executeSearch(fixture.db, "", "all");
+    it("returns empty array for empty string", async () => {
+      const results = await executeSearch(fixture.db, "", "all");
       expect(results).toEqual([]);
       expect(fixture.queryAllMock).not.toHaveBeenCalled();
     });
 
-    it("returns empty array for whitespace-only string", () => {
-      const results = executeSearch(fixture.db, "   ", "all");
+    it("returns empty array for whitespace-only string", async () => {
+      const results = await executeSearch(fixture.db, "   ", "all");
       expect(results).toEqual([]);
       expect(fixture.queryAllMock).not.toHaveBeenCalled();
     });
   });
 
   describe("FTS5 query execution", () => {
-    it("executes queries against fts_ tables for self scope", () => {
-      executeSearch(fixture.db, "alice", "self");
+    it("executes queries against fts_ tables for self scope", async () => {
+      await executeSearch(fixture.db, "alice", "self");
 
       const calls = fixture.queryAllMock.mock.calls as [string, unknown[]][];
       expect(calls.length).toBeGreaterThan(0);
@@ -64,8 +66,8 @@ describe("executeSearch", () => {
       }
     });
 
-    it("executes queries against fts_friend_ tables for friends scope", () => {
-      executeSearch(fixture.db, "alice", "friends");
+    it("executes queries against fts_friend_ tables for friends scope", async () => {
+      await executeSearch(fixture.db, "alice", "friends");
 
       const calls = fixture.queryAllMock.mock.calls as [string, unknown[]][];
       expect(calls.length).toBeGreaterThan(0);
@@ -77,8 +79,8 @@ describe("executeSearch", () => {
       }
     });
 
-    it("queries both self and friend tables for all scope", () => {
-      executeSearch(fixture.db, "alice", "all");
+    it("queries both self and friend tables for all scope", async () => {
+      await executeSearch(fixture.db, "alice", "all");
 
       const calls = fixture.queryAllMock.mock.calls as [string, unknown[]][];
       const sqls = calls.map(([sql]) => sql);
@@ -89,8 +91,8 @@ describe("executeSearch", () => {
       expect(hasFriend).toBe(true);
     });
 
-    it("appends * to each word for prefix matching", () => {
-      executeSearch(fixture.db, "alice bob", "self");
+    it("appends * to each word for prefix matching", async () => {
+      await executeSearch(fixture.db, "alice bob", "self");
 
       const calls = fixture.queryAllMock.mock.calls as [string, unknown[]][];
       // The FTS query param should be "alice* bob*"
@@ -99,8 +101,8 @@ describe("executeSearch", () => {
       }
     });
 
-    it("uses friend_ base table for friend scope JOIN (not base table)", () => {
-      executeSearch(fixture.db, "alice", "friends");
+    it("uses friend_ base table for friend scope JOIN (not base table)", async () => {
+      await executeSearch(fixture.db, "alice", "friends");
 
       const calls = fixture.queryAllMock.mock.calls as [string, unknown[]][];
       for (const [sql] of calls) {
@@ -113,8 +115,8 @@ describe("executeSearch", () => {
       }
     });
 
-    it("only queries entity types with non-empty ftsColumns", () => {
-      executeSearch(fixture.db, "test", "self");
+    it("only queries entity types with non-empty ftsColumns", async () => {
+      await executeSearch(fixture.db, "test", "self");
 
       // Count expected searchable entity types (those with ftsColumns.length > 0)
       const searchableCount = Object.values(ENTITY_TABLE_REGISTRY).filter(
@@ -127,11 +129,11 @@ describe("executeSearch", () => {
   });
 
   describe("result shape", () => {
-    it("returns results as discriminated union with type, id, rank, data", () => {
+    it("returns results as discriminated union with type, id, rank, data", async () => {
       const mockRows = [{ id: "m-1", name: "Alice", rank: -0.5 }];
       const { db } = makeDb(mockRows);
 
-      const results = executeSearch(db, "alice", "self");
+      const results = await executeSearch(db, "alice", "self");
 
       expect(results.length).toBeGreaterThan(0);
       const [first] = results;
@@ -142,58 +144,60 @@ describe("executeSearch", () => {
       expect(first?.data).toMatchObject({ id: "m-1", name: "Alice" });
     });
 
-    it("tags self results with bare entity type string", () => {
+    it("tags self results with bare entity type string", async () => {
       const mockRows = [{ id: "m-1", name: "Alice", rank: -1.0 }];
       const { db } = makeDb(mockRows);
 
-      const results = executeSearch(db, "alice", "self");
+      const results = await executeSearch(db, "alice", "self");
       const memberResults = results.filter((r) => r.type === "member");
       expect(memberResults.length).toBeGreaterThan(0);
     });
 
-    it("tags friend results with friend- prefixed entity type string", () => {
+    it("tags friend results with friend- prefixed entity type string", async () => {
       const mockRows = [{ id: "m-1", name: "Alice", rank: -1.0 }];
       const { db } = makeDb(mockRows);
 
-      const results = executeSearch(db, "alice", "friends");
+      const results = await executeSearch(db, "alice", "friends");
       const friendMemberResults = results.filter((r) => r.type === "friend-member");
       expect(friendMemberResults.length).toBeGreaterThan(0);
     });
   });
 
   describe("sorting", () => {
-    it("sorts results by rank ascending (lower = more relevant)", () => {
+    it("sorts results by rank ascending (lower = more relevant)", async () => {
       // First call returns a low-relevance result, second returns high-relevance
       const callIndex = { current: 0 };
       const queryAllMock = vi.fn().mockImplementation(() => {
         const idx = callIndex.current++;
-        if (idx === 0) return [{ id: "m-less", rank: -0.5 }];
-        if (idx === 1) return [{ id: "m-more", rank: -2.0 }];
-        return [];
+        if (idx === 0) return Promise.resolve([{ id: "m-less", rank: -0.5 }]);
+        if (idx === 1) return Promise.resolve([{ id: "m-more", rank: -2.0 }]);
+        return Promise.resolve([]);
       });
       const db2: LocalDatabase = {
-        initialize: vi.fn(),
+        initialize: vi.fn(() => Promise.resolve()),
         queryAll: queryAllMock,
-        queryOne: vi.fn(),
-        execute: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()) as LocalDatabase["transaction"],
-        close: vi.fn(),
+        queryOne: vi.fn(() => Promise.resolve(undefined)),
+        execute: vi.fn(() => Promise.resolve()),
+        transaction: vi.fn(
+          <T>(fn: () => Promise<T>): Promise<T> => fn(),
+        ) as LocalDatabase["transaction"],
+        close: vi.fn(() => Promise.resolve()),
       };
 
-      const results = executeSearch(db2, "test", "self");
+      const results = await executeSearch(db2, "test", "self");
       // Lower rank value = more relevant = should come first
       expect(results[0]?.rank).toBeLessThanOrEqual(results[1]?.rank ?? Infinity);
     });
 
-    it("returns empty array when no rows match", () => {
-      const results = executeSearch(fixture.db, "xyzzy", "all");
+    it("returns empty array when no rows match", async () => {
+      const results = await executeSearch(fixture.db, "xyzzy", "all");
       expect(results).toEqual([]);
     });
   });
 
   describe("SQL structure", () => {
-    it("uses JOIN between fts table and base table", () => {
-      executeSearch(fixture.db, "test", "self");
+    it("uses JOIN between fts table and base table", async () => {
+      await executeSearch(fixture.db, "test", "self");
 
       const calls = fixture.queryAllMock.mock.calls as [string, unknown[]][];
       for (const [sql] of calls) {

@@ -87,11 +87,20 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
   private readonly driver: SqliteDriver;
   private readonly stmts: CachedStatements;
 
-  constructor(driver: SqliteDriver) {
+  /**
+   * Private constructor — use the static async `create` factory instead.
+   * The factory runs DDL (`CREATE TABLE IF NOT EXISTS ...`) which requires
+   * awaiting the async `driver.exec`.
+   */
+  private constructor(driver: SqliteDriver, stmts: CachedStatements) {
     this.driver = driver;
-    driver.exec(CREATE_SNAPSHOTS);
-    driver.exec(CREATE_CHANGES);
-    this.stmts = {
+    this.stmts = stmts;
+  }
+
+  static async create(driver: SqliteDriver): Promise<SqliteStorageAdapter> {
+    await driver.exec(CREATE_SNAPSHOTS);
+    await driver.exec(CREATE_CHANGES);
+    const stmts: CachedStatements = {
       loadSnapshot: driver.prepare<SnapshotRow>(
         "SELECT * FROM sync_local_snapshots WHERE document_id = ?",
       ),
@@ -121,15 +130,19 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
       deleteChanges: driver.prepare("DELETE FROM sync_local_changes WHERE document_id = ?"),
       deleteSnapshots: driver.prepare("DELETE FROM sync_local_snapshots WHERE document_id = ?"),
     };
+    return new SqliteStorageAdapter(driver, stmts);
   }
 
-  loadSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {
-    const row = this.stmts.loadSnapshot.get(documentId);
-    return Promise.resolve(row ? rowToSnapshot(row) : null);
+  async loadSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {
+    const row = await this.stmts.loadSnapshot.get(documentId);
+    return row ? rowToSnapshot(row) : null;
   }
 
-  saveSnapshot(documentId: SyncDocumentId, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
-    this.stmts.saveSnapshot.run(
+  async saveSnapshot(
+    documentId: SyncDocumentId,
+    snapshot: EncryptedSnapshotEnvelope,
+  ): Promise<void> {
+    await this.stmts.saveSnapshot.run(
       documentId,
       snapshot.snapshotVersion,
       snapshot.ciphertext,
@@ -137,19 +150,18 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
       snapshot.signature,
       snapshot.authorPublicKey,
     );
-    return Promise.resolve();
   }
 
-  loadChangesSince(
+  async loadChangesSince(
     documentId: SyncDocumentId,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
-    const rows = this.stmts.loadChanges.all(documentId, sinceSeq);
-    return Promise.resolve(rows.map(rowToEnvelope));
+    const rows = await this.stmts.loadChanges.all(documentId, sinceSeq);
+    return rows.map(rowToEnvelope);
   }
 
-  appendChange(documentId: SyncDocumentId, change: EncryptedChangeEnvelope): Promise<void> {
-    this.stmts.appendChange.run(
+  async appendChange(documentId: SyncDocumentId, change: EncryptedChangeEnvelope): Promise<void> {
+    await this.stmts.appendChange.run(
       documentId,
       change.seq,
       change.ciphertext,
@@ -157,17 +169,16 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
       change.signature,
       change.authorPublicKey,
     );
-    return Promise.resolve();
   }
 
-  appendChanges(
+  async appendChanges(
     documentId: SyncDocumentId,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
-    if (changes.length === 0) return Promise.resolve();
-    this.driver.transaction(() => {
+    if (changes.length === 0) return;
+    await this.driver.transaction(async () => {
       for (const change of changes) {
-        this.stmts.appendChange.run(
+        await this.stmts.appendChange.run(
           documentId,
           change.seq,
           change.ciphertext,
@@ -177,24 +188,24 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
         );
       }
     });
-    return Promise.resolve();
   }
 
-  pruneChangesBeforeSnapshot(documentId: SyncDocumentId, snapshotVersion: number): Promise<void> {
-    this.stmts.pruneChanges.run(documentId, snapshotVersion);
-    return Promise.resolve();
+  async pruneChangesBeforeSnapshot(
+    documentId: SyncDocumentId,
+    snapshotVersion: number,
+  ): Promise<void> {
+    await this.stmts.pruneChanges.run(documentId, snapshotVersion);
   }
 
-  listDocuments(): Promise<readonly SyncDocumentId[]> {
-    const rows = this.stmts.listDocs.all();
-    return Promise.resolve(rows.map((r) => brandId<SyncDocumentId>(r.document_id)));
+  async listDocuments(): Promise<readonly SyncDocumentId[]> {
+    const rows = await this.stmts.listDocs.all();
+    return rows.map((r) => brandId<SyncDocumentId>(r.document_id));
   }
 
-  deleteDocument(documentId: SyncDocumentId): Promise<void> {
-    this.driver.transaction(() => {
-      this.stmts.deleteChanges.run(documentId);
-      this.stmts.deleteSnapshots.run(documentId);
+  async deleteDocument(documentId: SyncDocumentId): Promise<void> {
+    await this.driver.transaction(async () => {
+      await this.stmts.deleteChanges.run(documentId);
+      await this.stmts.deleteSnapshots.run(documentId);
     });
-    return Promise.resolve();
   }
 }

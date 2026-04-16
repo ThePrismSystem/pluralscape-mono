@@ -31,17 +31,19 @@ function makeChange(seq: number, documentId: SyncDocumentId): EncryptedChangeEnv
 
 // ── Contract ───────────────────────────────────────────────────────────
 
-export function runStorageAdapterContract(factory: () => SyncStorageAdapter): void {
+export function runStorageAdapterContract(
+  factory: () => SyncStorageAdapter | Promise<SyncStorageAdapter>,
+): void {
   describe("SyncStorageAdapter contract", () => {
     describe("loadSnapshot / saveSnapshot", () => {
       it("returns null for a document with no snapshot", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const result = await adapter.loadSnapshot(asSyncDocId("doc_none"));
         expect(result).toBeNull();
       });
 
       it("round-trips a saved snapshot", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_snap1");
         const snapshot = makeSnapshot(1, testDocId);
         await adapter.saveSnapshot(testDocId, snapshot);
@@ -52,7 +54,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("overwrites the previous snapshot on re-save", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_snap_overwrite");
         await adapter.saveSnapshot(testDocId, makeSnapshot(1, testDocId));
         await adapter.saveSnapshot(testDocId, makeSnapshot(2, testDocId));
@@ -63,13 +65,13 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
 
     describe("appendChange / loadChangesSince", () => {
       it("returns empty array when no changes exist", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const result = await adapter.loadChangesSince(asSyncDocId("doc_empty_changes"), 0);
         expect(result).toHaveLength(0);
       });
 
       it("returns changes in ascending seq order", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_order");
         await adapter.appendChange(testDocId, makeChange(3, testDocId));
         await adapter.appendChange(testDocId, makeChange(1, testDocId));
@@ -79,7 +81,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("loadChangesSince(seq) excludes envelopes at or below seq", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_since");
         for (let i = 1; i <= 5; i++) {
           await adapter.appendChange(testDocId, makeChange(i, testDocId));
@@ -89,7 +91,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("does not cross-contaminate changes between documents", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         await adapter.appendChange(asSyncDocId("doc_a"), makeChange(1, asSyncDocId("doc_a")));
         await adapter.appendChange(asSyncDocId("doc_b"), makeChange(1, asSyncDocId("doc_b")));
         const result = await adapter.loadChangesSince(asSyncDocId("doc_a"), 0);
@@ -100,7 +102,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
 
     describe("appendChanges (batch)", () => {
       it("persists multiple changes in a single call", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         if (!adapter.appendChanges) return;
         const testDocId = asSyncDocId("doc_batch");
         const changes = [
@@ -114,7 +116,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("is a no-op for empty array", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         if (!adapter.appendChanges) return;
         await expect(
           adapter.appendChanges(asSyncDocId("doc_empty_batch"), []),
@@ -124,7 +126,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("does not cross-contaminate between documents", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         if (!adapter.appendChanges) return;
         await adapter.appendChanges(asSyncDocId("doc_a"), [
           makeChange(1, asSyncDocId("doc_a")),
@@ -140,7 +142,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
 
     describe("pruneChangesBeforeSnapshot", () => {
       it("removes changes with seq ≤ snapshotVersion", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_prune");
         for (let i = 1; i <= 5; i++) {
           await adapter.appendChange(testDocId, makeChange(i, testDocId));
@@ -151,7 +153,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("is a no-op when no changes exist", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         // Should not throw
         await expect(
           adapter.pruneChangesBeforeSnapshot(asSyncDocId("doc_prune_empty"), 5),
@@ -161,13 +163,13 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
 
     describe("listDocuments", () => {
       it("returns empty array when nothing is stored", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const result = await adapter.listDocuments();
         expect(result).toHaveLength(0);
       });
 
       it("lists a document after a snapshot is saved", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_list1");
         await adapter.saveSnapshot(testDocId, makeSnapshot(1, testDocId));
         const result = await adapter.listDocuments();
@@ -175,7 +177,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("lists a document after a change is appended", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_list2");
         await adapter.appendChange(testDocId, makeChange(1, testDocId));
         const result = await adapter.listDocuments();
@@ -183,7 +185,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("does not list the same document twice", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_list_dedup");
         await adapter.appendChange(testDocId, makeChange(1, testDocId));
         await adapter.appendChange(testDocId, makeChange(2, testDocId));
@@ -195,7 +197,7 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
 
     describe("deleteDocument", () => {
       it("removes snapshot and changes for the document", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         const testDocId = asSyncDocId("doc_delete");
         await adapter.saveSnapshot(testDocId, makeSnapshot(1, testDocId));
         await adapter.appendChange(testDocId, makeChange(1, testDocId));
@@ -207,12 +209,12 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
 
       it("is a no-op for a non-existent document", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         await expect(adapter.deleteDocument(asSyncDocId("doc_ghost"))).resolves.not.toThrow();
       });
 
       it("does not affect other documents", async () => {
-        const adapter = factory();
+        const adapter = await factory();
         await adapter.saveSnapshot(
           asSyncDocId("doc_keep"),
           makeSnapshot(1, asSyncDocId("doc_keep")),

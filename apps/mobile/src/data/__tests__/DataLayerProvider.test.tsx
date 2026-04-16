@@ -1,26 +1,31 @@
+// @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook } from "@testing-library/react";
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { DataLayerProvider, useDataLayer } from "../DataLayerProvider.js";
 
+import type { DataErrorEvent } from "@pluralscape/sync";
 import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
 // ── Mocks ─────────────────────────────────────────────────────────────
 
 function createMockDriver(): SqliteDriver {
   const stmt = {
-    run: vi.fn(),
-    all: vi.fn((): Record<string, unknown>[] => []),
-    get: vi.fn((): Record<string, unknown> | undefined => undefined),
+    run: vi.fn((): Promise<void> => Promise.resolve()),
+    all: vi.fn((): Promise<Record<string, unknown>[]> => Promise.resolve([])),
+    get: vi.fn((): Promise<Record<string, unknown> | undefined> => Promise.resolve(undefined)),
   };
 
   return {
-    exec: vi.fn(),
+    exec: vi.fn((): Promise<void> => Promise.resolve()),
     prepare: vi.fn(() => stmt) as SqliteDriver["prepare"],
-    transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
-    close: vi.fn(),
+    transaction: vi.fn(
+      <T,>(fn: () => Promise<T>): Promise<T> => fn(),
+    ) as SqliteDriver["transaction"],
+    close: vi.fn((): Promise<void> => Promise.resolve()),
   };
 }
 
@@ -116,5 +121,44 @@ describe("DataLayerProvider", () => {
         </QueryClientProvider>,
       );
     }).toThrow("useDataLayer must be used within DataLayerProvider");
+  });
+
+  it("emits data:error when local database initialize() rejects", async () => {
+    const initError = new Error("WAL pragma failed");
+    mockDriver.exec = vi.fn(
+      (sql: string): Promise<void> =>
+        sql.includes("journal_mode=WAL") ? Promise.reject(initError) : Promise.resolve(),
+    );
+
+    const emitted: DataErrorEvent[] = [];
+
+    function Subscriber(): React.JSX.Element {
+      const { eventBus } = useDataLayer();
+      React.useEffect(() => {
+        return eventBus.on("data:error", (event) => {
+          emitted.push(event);
+        });
+      }, [eventBus]);
+      return <span>ok</span>;
+    }
+
+    const qc = makeQueryClient();
+
+    renderHook(() => null, {
+      wrapper: ({ children }): React.JSX.Element => (
+        <QueryClientProvider client={qc}>
+          <DataLayerProvider>
+            <Subscriber />
+            {children}
+          </DataLayerProvider>
+        </QueryClientProvider>
+      ),
+    });
+
+    await act(() => Promise.resolve());
+
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0]?.message).toContain("initialization failed");
+    expect(emitted[0]?.error).toBe(initError);
   });
 });

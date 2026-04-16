@@ -14,10 +14,10 @@ import { asSyncDocId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
 describe("SqliteOfflineQueueAdapter (better-sqlite3)", () => {
   const databases: InstanceType<typeof Database>[] = [];
 
-  function createAdapter(): SqliteOfflineQueueAdapter {
+  async function createAdapter(): Promise<SqliteOfflineQueueAdapter> {
     const db = new Database(":memory:");
     databases.push(db);
-    return new SqliteOfflineQueueAdapter(createBetterSqliteDriver(db));
+    return SqliteOfflineQueueAdapter.create(createBetterSqliteDriver(db));
   }
 
   afterEach(() => {
@@ -31,15 +31,13 @@ describe("SqliteOfflineQueueAdapter (better-sqlite3)", () => {
 
   // ── SQLite-specific tests ──────────────────────────────────────────
 
-  it("close() does not throw", () => {
-    const adapter = createAdapter();
-    expect(() => {
-      adapter.close();
-    }).not.toThrow();
+  it("close() does not throw", async () => {
+    const adapter = await createAdapter();
+    await expect(adapter.close()).resolves.not.toThrow();
   });
 
   it("100 rapid enqueue calls produce 100 unique IDs", async () => {
-    const adapter = createAdapter();
+    const adapter = await createAdapter();
     const ids = new Set<string>();
 
     const testDocId = asSyncDocId("doc_1");
@@ -60,7 +58,7 @@ describe("SqliteOfflineQueueAdapter (better-sqlite3)", () => {
   });
 
   it("drainUnsynced returns proper Uint8Array (not Buffer subclass)", async () => {
-    const adapter = createAdapter();
+    const adapter = await createAdapter();
 
     const testDocId = asSyncDocId("doc_1");
     const envelope = {

@@ -64,11 +64,12 @@ export function useStructureEntityTypesList(
     decrypt: decryptStructureEntityType,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId, pagination) => {
+    localQueryFn: async (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
       const archived = includeArchived ? "" : " AND archived = 0";
       const sql = `SELECT * FROM structure_entity_types WHERE system_id = ?${archived} ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
-      return localDb.queryAll(sql, [systemId]).map(rowToStructureEntityType);
+      const rows = await localDb.queryAll(sql, [systemId]);
+      return rows.map(rowToStructureEntityType);
     },
     useRemote: ({ systemId, enabled, select }) =>
       trpc.structure.entityType.list.useInfiniteQuery(

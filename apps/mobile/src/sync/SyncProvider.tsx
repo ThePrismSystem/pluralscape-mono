@@ -145,61 +145,105 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       return;
     }
 
-    // Create sync pipeline resources
-    const bucketKeyCache = createBucketKeyCache();
-    bucketKeyCacheRef.current = bucketKeyCache;
+    // Create sync pipeline resources. The SQLite storage adapter is constructed
+    // via an async factory (OPFS backends need to initialize a worker), so we
+    // wrap the pipeline construction in an IIFE and guard each await boundary
+    // with a cancellation check to handle teardown during initialization.
+    // `isCancelled` is a getter function so TypeScript's control-flow analysis
+    // does not narrow the backing flag to `false` at each check across the
+    // await boundaries.
+    const state: { cancelled: boolean } = { cancelled: false };
+    const isCancelled = (): boolean => state.cancelled;
+    let cleanup: (() => void) | null = null;
 
-    const storageAdapter = new SqliteStorageAdapter(engineConfig.sqliteDriver);
+    const pipeline: {
+      bucketKeyCache?: ReturnType<typeof createBucketKeyCache>;
+      keyResolver?: DocumentKeyResolver;
+      wsManager?: WsManager;
+      engine?: SyncEngine;
+    } = {};
 
-    const keyResolver = DocumentKeyResolver.create({
-      masterKey: engineConfig.masterKey,
-      signingKeys: engineConfig.signingKeys,
-      bucketKeyCache,
-      sodium: engineConfig.sodium,
-    });
-    keyResolverRef.current = keyResolver;
+    const disposePartial = (): void => {
+      pipeline.engine?.dispose();
+      pipeline.keyResolver?.dispose();
+      pipeline.wsManager?.disconnect();
+      pipeline.bucketKeyCache?.clearAll();
+      bucketKeyCacheRef.current = null;
+      keyResolverRef.current = null;
+      wsManagerRef.current = null;
+    };
 
-    const wsManager = createWsManager({
-      url: getWsUrl(),
-      eventBus: engineConfig.eventBus,
-    });
-    wsManagerRef.current = wsManager;
-    wsManager.connect(engineConfig.sessionToken, engineConfig.systemId);
+    void (async () => {
+      try {
+        pipeline.bucketKeyCache = createBucketKeyCache();
+        bucketKeyCacheRef.current = pipeline.bucketKeyCache;
 
-    const networkAdapter = wsManager.getAdapter();
-    if (networkAdapter === null) {
-      // Should not happen since connect() sets it synchronously, but guard
-      return;
-    }
+        const storageAdapter = await SqliteStorageAdapter.create(engineConfig.sqliteDriver);
+        if (isCancelled()) {
+          disposePartial();
+          return;
+        }
 
-    const profile: ReplicationProfile = { profileType: "owner-full" };
+        pipeline.keyResolver = DocumentKeyResolver.create({
+          masterKey: engineConfig.masterKey,
+          signingKeys: engineConfig.signingKeys,
+          bucketKeyCache: pipeline.bucketKeyCache,
+          sodium: engineConfig.sodium,
+        });
+        keyResolverRef.current = pipeline.keyResolver;
 
-    // Create SyncEngine — errors are emitted via the event bus
-    const bus = engineConfig.eventBus;
-    const newEngine = new SyncEngine({
-      networkAdapter,
-      storageAdapter,
-      keyResolver,
-      sodium: engineConfig.sodium,
-      profile,
-      systemId: engineConfig.systemId,
-      onError: (message, error) => {
-        bus.emit("sync:error", { type: "sync:error", message, error });
-      },
-      eventBus: bus,
-    });
-    setEngine(newEngine);
+        pipeline.wsManager = createWsManager({
+          url: getWsUrl(),
+          eventBus: engineConfig.eventBus,
+        });
+        wsManagerRef.current = pipeline.wsManager;
+        pipeline.wsManager.connect(engineConfig.sessionToken, engineConfig.systemId);
+
+        const networkAdapter = pipeline.wsManager.getAdapter();
+        if (networkAdapter === null || isCancelled()) {
+          disposePartial();
+          return;
+        }
+
+        const profile: ReplicationProfile = { profileType: "owner-full" };
+
+        const bus = engineConfig.eventBus;
+        pipeline.engine = new SyncEngine({
+          networkAdapter,
+          storageAdapter,
+          keyResolver: pipeline.keyResolver,
+          sodium: engineConfig.sodium,
+          profile,
+          systemId: engineConfig.systemId,
+          onError: (message, error) => {
+            bus.emit("sync:error", { type: "sync:error", message, error });
+          },
+          eventBus: bus,
+        });
+        if (isCancelled()) {
+          disposePartial();
+          return;
+        }
+        setEngine(pipeline.engine);
+
+        cleanup = () => {
+          disposePartial();
+          setEngine(null);
+          setIsBootstrapped(false);
+        };
+      } catch (error) {
+        engineConfig.eventBus.emit("sync:error", {
+          type: "sync:error",
+          message: "Sync pipeline initialization failed",
+          error,
+        });
+        disposePartial();
+      }
+    })();
 
     return () => {
-      newEngine.dispose();
-      setEngine(null);
-      keyResolver.dispose();
-      keyResolverRef.current = null;
-      bucketKeyCache.clearAll();
-      bucketKeyCacheRef.current = null;
-      wsManager.disconnect();
-      wsManagerRef.current = null;
-      setIsBootstrapped(false);
+      state.cancelled = true;
+      cleanup?.();
     };
   }, [engineConfig]);
 
