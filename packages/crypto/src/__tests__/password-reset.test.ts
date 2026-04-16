@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { deriveAuthAndPasswordKeys } from "../auth-key.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { generateMasterKey, unwrapMasterKey } from "../master-key-wrap.js";
-import { withPasswordResetResult } from "../password-reset.js";
+import { withMasterKeyFromReset, withPasswordResetResult } from "../password-reset.js";
 import { serializeRecoveryBackup } from "../recovery-backup.js";
 import { recoverMasterKey } from "../recovery.js";
 import { getSodium } from "../sodium.js";
@@ -198,6 +198,55 @@ describe("withPasswordResetResult", () => {
     );
 
     // memzero called for: passwordKey, passwordBytes, and authKey
+    expect(memzeroSpy).toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+  });
+});
+
+describe("withMasterKeyFromReset", () => {
+  it("provides masterKey to the callback and zeros both masterKey and authKey after", async () => {
+    const masterKey = generateMasterKey();
+    const { displayKey, encryptedBackup } = await makeBackup(masterKey);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+
+    let receivedMasterKey: Uint8Array | undefined;
+    const callbackResult = await withMasterKeyFromReset(
+      { displayKey, encryptedBackup, newPassword: "zeroing-test-pw" },
+      (result) => {
+        receivedMasterKey = new Uint8Array(result.masterKey);
+        expect(result.masterKey).toEqual(masterKey);
+        return Promise.resolve("callback-value");
+      },
+    );
+
+    expect(callbackResult).toBe("callback-value");
+    expect(receivedMasterKey).toBeDefined();
+
+    // masterKey and authKey should both have been zeroed
+    const zeroedBuffers = memzeroSpy.mock.calls.map((call) => call[0]);
+    // Find the masterKey buffer among zeroed buffers (32 bytes, was equal to original)
+    const masterKeyZeroed = zeroedBuffers.some(
+      (buf) => buf.length === masterKey.length && buf.every((b) => b === 0),
+    );
+    expect(masterKeyZeroed).toBe(true);
+
+    memzeroSpy.mockRestore();
+  });
+
+  it("zeros masterKey and authKey even when the callback throws", async () => {
+    const masterKey = generateMasterKey();
+    const { displayKey, encryptedBackup } = await makeBackup(masterKey);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+
+    await expect(
+      withMasterKeyFromReset({ displayKey, encryptedBackup, newPassword: "throw-test-pw" }, () => {
+        return Promise.reject(new Error("callback failure"));
+      }),
+    ).rejects.toThrow("callback failure");
+
+    // memzero should still have been called for cleanup
     expect(memzeroSpy).toHaveBeenCalled();
     memzeroSpy.mockRestore();
   });

@@ -22,7 +22,7 @@ export interface PasswordResetParams {
 
 /** Result of a successful password reset via recovery key. */
 export interface PasswordResetResult {
-  /** The recovered MasterKey — unchanged from before the reset. */
+  /** The recovered MasterKey — unchanged from before the reset. @mustZero */
   readonly masterKey: KdfMasterKey;
   /** New salt generated for the new password. */
   readonly newSalt: PwhashSalt;
@@ -49,6 +49,27 @@ export async function withPasswordResetResult<T>(
   try {
     return await fn(result);
   } finally {
+    getSodium().memzero(result.authKey);
+  }
+}
+
+/**
+ * Reset a password using a recovery key, with automatic masterKey and authKey zeroing.
+ *
+ * The callback receives the full result including the raw masterKey and authKey.
+ * When the callback completes (or throws), both masterKey and authKey are zeroed
+ * in a `finally` block. This prevents callers from forgetting to clean up
+ * sensitive key material.
+ */
+export async function withMasterKeyFromReset<T>(
+  params: PasswordResetParams,
+  fn: (result: PasswordResetResult) => Promise<T>,
+): Promise<T> {
+  const result = await resetPasswordViaRecoveryKeyInternal(params);
+  try {
+    return await fn(result);
+  } finally {
+    getSodium().memzero(result.masterKey);
     getSodium().memzero(result.authKey);
   }
 }
