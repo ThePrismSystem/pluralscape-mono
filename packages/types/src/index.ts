@@ -80,6 +80,8 @@ export type {
   ChecksumHex,
   EntityType,
   EntityTypeIdMap,
+  AssertAllPrefixesMapped,
+  AssertAllEntityTypesMapped,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
 
@@ -680,6 +682,7 @@ export type {
 // ── API constants ─────────────────────────────────────────────────────
 export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants/index.js";
 export {
+  MS_PER_SECOND,
   MS_PER_MINUTE,
   MS_PER_DAY,
   MS_PER_HOUR,

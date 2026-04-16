@@ -229,13 +229,24 @@ export interface IdPrefixBrandMap {
   bt_: "BiometricTokenId";
 }
 
+// Helper: constrains T to Record<string, true> — fails at definition site if any value is not `true`.
+type AssertAllTrue<T extends Record<string, true>> = T;
+
 // Compile-time check: every ID_PREFIXES value must appear as a key in IdPrefixBrandMap.
 // Adding a prefix to ID_PREFIXES without a matching entry in IdPrefixBrandMap is a type error.
-export type AssertAllPrefixesMapped = {
+export type AssertAllPrefixesMapped = AssertAllTrue<{
   [K in keyof typeof ID_PREFIXES as (typeof ID_PREFIXES)[K]]: (typeof ID_PREFIXES)[K] extends keyof IdPrefixBrandMap
     ? true
     : `Missing prefix mapping for "${(typeof ID_PREFIXES)[K]}"`;
-};
+}>;
+
+// Compile-time check: every EntityType variant must appear as a key in EntityTypeIdMap.
+// Adding an EntityType without a matching entry in EntityTypeIdMap is a type error.
+export type AssertAllEntityTypesMapped = AssertAllTrue<{
+  [K in EntityType]: K extends keyof EntityTypeIdMap
+    ? true
+    : `Missing EntityTypeIdMap entry for "${K}"`;
+}>;
 
 // ── EntityType union ────────────────────────────────────────────────
 

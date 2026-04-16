@@ -9,6 +9,7 @@ import {
   FIVE_MINUTES_MS,
   MS_PER_DAY,
   MS_PER_MINUTE,
+  MS_PER_SECOND,
   NINETY_DAYS_MS,
   SEVEN_DAYS_MS,
   TEN_MiB,
@@ -125,7 +126,6 @@ export const ROTATION_ITEM_STATUSES = {
 
 // ── Client-Side Retry Guidance ───────────────────────────────────────
 
-const MS_PER_SECOND = 1_000;
 const CLIENT_RETRY_MAX_ATTEMPTS = 3;
 
 export const CLIENT_RETRY = {
