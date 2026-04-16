@@ -30,7 +30,10 @@ export const BucketQuerySchema = z.object({
 export const TagContentBodySchema = z
   .object({
     entityType: z.enum(BUCKET_CONTENT_ENTITY_TYPES),
-    entityId: z.string().min(1),
+    entityId: z
+      .string()
+      .min(1)
+      .regex(/^[a-z]{2,6}_[a-zA-Z0-9-]+$/),
   })
   .readonly();
 

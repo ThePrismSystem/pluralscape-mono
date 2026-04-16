@@ -60,6 +60,7 @@ const VALID_CREATE_INPUT = {
   systemId: MOCK_SYSTEM_ID,
   url: "https://example.com/hook",
   eventTypes: ["fronting.started" as const],
+  cryptoKeyId: undefined,
 };
 
 const EMPTY_LIST = {

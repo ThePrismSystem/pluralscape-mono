@@ -154,11 +154,8 @@ describe("WebhookDeliveryQuerySchema", () => {
     }
   });
 
-  it("treats non-numeric fromDate as undefined", () => {
+  it("rejects non-numeric fromDate with a validation error", () => {
     const result = WebhookDeliveryQuerySchema.safeParse({ fromDate: "not-a-number" });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.fromDate).toBeUndefined();
-    }
+    expect(result.success).toBe(false);
   });
 });

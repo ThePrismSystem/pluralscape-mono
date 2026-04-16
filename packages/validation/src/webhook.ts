@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import { brandedIdQueryParam } from "./branded-id.js";
+import { brandedIdQueryParam, optionalBrandedId } from "./branded-id.js";
 import { booleanQueryParam } from "./query-params.js";
 import {
   MAX_WEBHOOK_EVENT_TYPES,
@@ -21,7 +21,7 @@ export const CreateWebhookConfigBodySchema = z
     url: urlSchema,
     eventTypes: z.array(webhookEventTypeSchema).min(1).max(MAX_WEBHOOK_EVENT_TYPES),
     enabled: z.boolean().optional().default(true),
-    cryptoKeyId: z.string().startsWith("ak_").optional(),
+    cryptoKeyId: optionalBrandedId("ak_"),
   })
   .readonly();
 
@@ -61,10 +61,17 @@ const webhookDeliveryStatusSchema = z.enum(["pending", "success", "failed"]);
 const unixTimestampQueryParam = z
   .string()
   .optional()
-  .transform((v) => {
+  .transform((v, ctx) => {
     if (v === undefined) return undefined;
     const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? n : undefined;
+    if (!Number.isFinite(n) || n <= 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Expected a positive Unix timestamp",
+      });
+      return undefined;
+    }
+    return n;
   });
 
 export const WebhookDeliveryQuerySchema = z.object({
