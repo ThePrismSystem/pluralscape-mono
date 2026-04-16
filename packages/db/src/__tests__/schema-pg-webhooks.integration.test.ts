@@ -284,7 +284,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
-        payloadData: {},
+        encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: now,
       });
 
@@ -293,7 +293,6 @@ describe("PG webhooks schema", () => {
       expect(rows[0]?.status).toBe("pending");
       expect(rows[0]?.attemptCount).toBe(0);
       expect(rows[0]?.httpStatus).toBeNull();
-      expect(rows[0]?.encryptedData).toBeNull();
     });
 
     it("rejects invalid event type", async () => {
@@ -318,7 +317,7 @@ describe("PG webhooks schema", () => {
           webhookId: whId,
           systemId,
           eventType: "invalid.event" as "member.created",
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -347,7 +346,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           attemptCount: -1,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -376,7 +375,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           httpStatus: 999,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -404,7 +403,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
-        payloadData: {},
+        encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: now,
       });
 
@@ -436,7 +435,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           status: "queued" as "pending",
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -470,7 +469,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "success" as const,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: thirtyOneDaysAgo,
         },
         {
@@ -479,7 +478,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "failed" as const,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         },
         {
@@ -488,7 +487,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "pending" as const,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: thirtyOneDaysAgo,
         },
       ]);
@@ -528,7 +527,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
-        payloadData: {},
+        encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: now,
       });
 
@@ -564,7 +563,7 @@ describe("PG webhooks schema", () => {
           eventType: "member.created" as const,
           status: "pending" as const,
           nextRetryAt: retryAt,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         },
         {
@@ -573,7 +572,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "success" as const,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         },
         {
@@ -582,7 +581,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "failed" as const,
-          payloadData: {},
+          encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         },
       ]);
@@ -593,30 +592,6 @@ describe("PG webhooks schema", () => {
       );
       expect(retryable.rows).toHaveLength(1);
       expect(retryable.rows[0]?.id).toBe(pendingId);
-    });
-
-    it("rejects delivery with neither encrypted_data nor payload_data via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(webhookConfigs).values({
-        id: whId,
-        systemId,
-        url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
-        eventTypes: [],
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      await expect(
-        client.query(
-          "INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at, encrypted_data, payload_data) VALUES ($1, $2, $3, 'member.created', $4, NULL, NULL)",
-          [crypto.randomUUID(), whId, systemId, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
     });
   });
 });

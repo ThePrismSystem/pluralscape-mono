@@ -155,7 +155,7 @@ describe("dispatchWebhookEvent", () => {
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
     expect(insertedValues[0]).toHaveProperty("encryptedData");
-    expect(insertedValues[0]).not.toHaveProperty("payloadData");
+
     expect(mockEncrypt).toHaveBeenCalledTimes(1);
   });
 
@@ -258,7 +258,7 @@ describe("dispatchWebhookEvent", () => {
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
     expect(insertedValues[0]).toHaveProperty("encryptedData");
-    expect(insertedValues[0]).not.toHaveProperty("payloadData");
+
     expect(mockEncrypt).toHaveBeenCalledTimes(1);
   });
 

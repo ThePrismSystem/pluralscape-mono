@@ -65,7 +65,7 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
       eventType: "fronting.started",
       status,
       attemptCount: status === "pending" ? 0 : 1,
-      payloadData: {},
+      encryptedData: new Uint8Array([1, 2, 3]),
       createdAt,
     });
     return id;

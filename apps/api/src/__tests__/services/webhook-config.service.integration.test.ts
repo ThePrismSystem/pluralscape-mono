@@ -310,7 +310,7 @@ describe("webhook-config.service (PGlite integration)", () => {
         eventType: "fronting.started",
         status: "pending",
         attemptCount: 0,
-        payloadData: {},
+        encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: Date.now(),
       });
 

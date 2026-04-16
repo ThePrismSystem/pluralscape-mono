@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { PGlite } from "@electric-sql/pglite";
+import { initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import {
   createPgWebhookTables,
@@ -10,6 +11,11 @@ import {
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+// Set encryption key before module load so env.ts picks it up.
+vi.hoisted(() => {
+  process.env.WEBHOOK_PAYLOAD_ENCRYPTION_KEY = "ab".repeat(32);
+});
 
 vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/ip-validation.js")>();
@@ -29,12 +35,18 @@ import {
   findPendingDeliveries,
   processWebhookDelivery,
 } from "../../services/webhook-delivery-worker.js";
+import {
+  encryptWebhookPayload,
+  getWebhookPayloadEncryptionKey,
+} from "../../services/webhook-payload-encryption.js";
 import { asDb, genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
 
 import type { AccountId, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { webhookConfigs, webhookDeliveries } = schema;
+
+const TEST_PAYLOAD_JSON = '{"test":true}';
 
 describe("webhook-delivery-worker (PGlite integration)", () => {
   let client: PGlite;
@@ -44,6 +56,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
   let webhookSecret: Buffer;
 
   beforeAll(async () => {
+    await initSodium();
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgWebhookTables(client);
@@ -78,6 +91,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
     overrides: Record<string, unknown> = {},
   ): Promise<WebhookDeliveryId> {
     const id = genWebhookDeliveryId();
+    const key = getWebhookPayloadEncryptionKey();
     const values = {
       id,
       webhookId,
@@ -85,7 +99,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       eventType: "fronting.started" as const,
       status: "pending" as const,
       attemptCount: 0,
-      payloadData: { test: true },
+      encryptedData: encryptWebhookPayload(TEST_PAYLOAD_JSON, key),
       createdAt: Date.now(),
       ...overrides,
     };
@@ -96,7 +110,6 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
   describe("processWebhookDelivery", () => {
     it("success path: marks as success on 2xx", async () => {
       const deliveryId = await insertDelivery();
-      const payload = { test: true };
 
       const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
@@ -116,11 +129,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       expect(timestamp).toBeGreaterThan(0);
 
       // Verify signature matches using the sent timestamp
-      const expectedSig = computeWebhookSignature(
-        webhookSecret,
-        timestamp,
-        JSON.stringify(payload),
-      );
+      const expectedSig = computeWebhookSignature(webhookSecret, timestamp, TEST_PAYLOAD_JSON);
       expect(headers.get(WEBHOOK_SIGNATURE_HEADER)).toBe(expectedSig);
 
       // Verify delivery status in DB

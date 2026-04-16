@@ -32,8 +32,12 @@ const MINIO_ROOT_PASSWORD = "minioadmin";
 const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../");
 const API_DIR = path.join(MONOREPO_ROOT, "apps/api");
 
-/** Stable 64-char hex pepper for local E2E tests (not used in production). */
+/** Stable 64-char hex keys for local E2E tests (not used in production). */
 const DEFAULT_TEST_PEPPER = crypto.createHash("sha256").update("e2e-test-pepper").digest("hex");
+const DEFAULT_TEST_WEBHOOK_KEY = crypto
+  .createHash("sha256")
+  .update("e2e-test-webhook-key")
+  .digest("hex");
 
 let serverProcess: ChildProcess | null = null;
 
@@ -250,6 +254,8 @@ async function globalSetup(): Promise<void> {
       DB_DIALECT: "pg",
       DATABASE_URL: databaseUrl,
       EMAIL_HASH_PEPPER: emailPepper,
+      WEBHOOK_PAYLOAD_ENCRYPTION_KEY:
+        process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] ?? DEFAULT_TEST_WEBHOOK_KEY,
       NODE_ENV: "test",
       DISABLE_RATE_LIMIT: "1",
       BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,

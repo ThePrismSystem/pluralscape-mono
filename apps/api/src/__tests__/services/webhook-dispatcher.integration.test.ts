@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import {
   createPgWebhookTables,
@@ -9,17 +10,9 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-// Mock encryption — integration tests focus on dispatch logic, not crypto.
-const { fakeKey } = vi.hoisted(() => ({
-  fakeKey: new Uint8Array(32).fill(0xab),
-}));
-vi.mock("../../services/webhook-payload-encryption.js", () => ({
-  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(fakeKey),
-  encryptWebhookPayload: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
-}));
-vi.mock("@pluralscape/crypto", async () => {
-  const actual = await vi.importActual("@pluralscape/crypto");
-  return { ...actual, getSodium: vi.fn().mockReturnValue({ memzero: vi.fn() }) };
+// Set encryption key before module load so env.ts picks it up.
+vi.hoisted(() => {
+  process.env.WEBHOOK_PAYLOAD_ENCRYPTION_KEY = "ab".repeat(32);
 });
 
 import { createWebhookConfig } from "../../services/webhook-config.service.js";
@@ -42,6 +35,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
   let auth: AuthContext;
 
   beforeAll(async () => {
+    await initSodium();
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgWebhookTables(client);
