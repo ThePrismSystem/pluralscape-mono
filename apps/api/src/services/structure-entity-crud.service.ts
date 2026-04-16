@@ -1,4 +1,5 @@
 import {
+  notes,
   systemStructureEntities,
   systemStructureEntityAssociations,
   systemStructureEntityLinks,
@@ -362,8 +363,8 @@ export async function deleteStructureEntity(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Structure entity not found");
     }
 
-    // Check for dependents across all junction tables
-    const [[linkCount], [memberLinkCount], [assocCount]] = await Promise.all([
+    // Check for dependents across all junction tables and notes
+    const [[linkCount], [memberLinkCount], [assocCount], [noteCount]] = await Promise.all([
       tx
         .select({ count: count() })
         .from(systemStructureEntityLinks)
@@ -397,19 +398,30 @@ export async function deleteStructureEntity(
             ),
           ),
         ),
+      tx
+        .select({ count: count() })
+        .from(notes)
+        .where(
+          and(
+            eq(notes.systemId, systemId),
+            eq(notes.authorEntityType, "structure-entity"),
+            eq(notes.authorEntityId, entityId),
+          ),
+        ),
     ]);
 
-    if (!linkCount || !memberLinkCount || !assocCount) {
+    if (!linkCount || !memberLinkCount || !assocCount || !noteCount) {
       throw new Error("Unexpected: count query returned no rows");
     }
 
-    type EntityDependentType = "entityLinks" | "entityMemberLinks" | "entityAssociations";
+    type EntityDependentType = "entityLinks" | "entityMemberLinks" | "entityAssociations" | "notes";
     const dependents: { type: EntityDependentType; count: number }[] = [];
     if (linkCount.count > 0) dependents.push({ type: "entityLinks", count: linkCount.count });
     if (memberLinkCount.count > 0)
       dependents.push({ type: "entityMemberLinks", count: memberLinkCount.count });
     if (assocCount.count > 0)
       dependents.push({ type: "entityAssociations", count: assocCount.count });
+    if (noteCount.count > 0) dependents.push({ type: "notes", count: noteCount.count });
 
     if (dependents.length > 0) {
       throw new ApiHttpError(

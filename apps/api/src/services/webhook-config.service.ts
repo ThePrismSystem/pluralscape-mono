@@ -640,8 +640,6 @@ export async function testWebhookConfig(
 
   const testPayload = {
     event: "webhook.test",
-    webhookId,
-    systemId,
     timestamp: now(),
   };
   const payloadJson = JSON.stringify(testPayload);

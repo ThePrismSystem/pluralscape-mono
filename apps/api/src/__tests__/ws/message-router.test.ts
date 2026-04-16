@@ -2,6 +2,12 @@ import { initSodium } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Disable envelope signature verification before module load.
+// The IIFE in envelope-verification-config.ts reads this at import time.
+vi.hoisted(() => {
+  process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+});
+
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import { createRouterContext, routeMessage } from "../../ws/message-router.js";
@@ -119,9 +125,6 @@ function authRequest(): string {
   });
 }
 
-// Disable envelope signature verification for router tests (mock data has invalid signatures).
-const savedEnvValue = process.env["VERIFY_ENVELOPE_SIGNATURES"];
-
 // ── Tests ───────────────────────────────────────────────────────────
 
 describe("message-router", () => {
@@ -135,7 +138,6 @@ describe("message-router", () => {
   });
 
   beforeEach(() => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
     state = manager.register("conn-1", mockWs() as never, Date.now());
@@ -144,11 +146,6 @@ describe("message-router", () => {
   });
 
   afterEach(() => {
-    if (savedEnvValue === undefined) {
-      delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
-    } else {
-      process.env["VERIFY_ENVELOPE_SIGNATURES"] = savedEnvValue;
-    }
     manager.closeAll(1001, "test cleanup");
     ctx.documentOwnership.clear();
   });
@@ -908,7 +905,8 @@ describe("message-router", () => {
     });
 
     it("returns INVALID_ENVELOPE and skips broadcast when signature verification fails", async () => {
-      process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+      const configMod = await import("../../ws/envelope-verification-config.js");
+      vi.spyOn(configMod, "shouldVerifyEnvelopeSignatures").mockReturnValue(true);
 
       // Register a subscriber to verify no broadcast is sent
       manager.reserveUnauthSlot();

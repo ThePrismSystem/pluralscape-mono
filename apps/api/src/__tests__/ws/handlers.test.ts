@@ -1,6 +1,12 @@
 import { getSodium, initSodium } from "@pluralscape/crypto";
 import { EncryptedRelay } from "@pluralscape/sync";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+// Disable envelope signature verification before module load.
+// The IIFE in envelope-verification-config.ts reads this at import time.
+vi.hoisted(() => {
+  process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+});
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
@@ -130,22 +136,6 @@ function mockDb(authorPublicKey: Uint8Array = pubkey(10)) {
   };
   return db as never;
 }
-
-// Disable envelope signature verification for handler tests that use mock data.
-// Tests that specifically exercise signature verification enable it per-test.
-const savedEnvValue = process.env["VERIFY_ENVELOPE_SIGNATURES"];
-
-beforeEach(() => {
-  process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
-});
-
-afterEach(() => {
-  if (savedEnvValue === undefined) {
-    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
-  } else {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = savedEnvValue;
-  }
-});
 
 // ── Tests ─────────────────────────────────────────────────────────────
 
@@ -918,12 +908,26 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
 // ── Sec-M2: Signature verification tests ────────────────────────────
 
 describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
+  async function enableVerification(): Promise<void> {
+    const mod = await import("../../ws/envelope-verification-config.js");
+    vi.spyOn(mod, "shouldVerifyEnvelopeSignatures").mockReturnValue(true);
+  }
+
+  async function disableVerification(): Promise<void> {
+    const mod = await import("../../ws/envelope-verification-config.js");
+    vi.spyOn(mod, "shouldVerifyEnvelopeSignatures").mockReturnValue(false);
+  }
+
   beforeAll(async () => {
     await initSodium();
   });
 
+  afterEach(async () => {
+    await disableVerification();
+  });
+
   it("returns SyncError with INVALID_ENVELOPE when verification is enabled and signature is invalid", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+    await enableVerification();
 
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());
@@ -950,26 +954,8 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     expect(stored.envelopes).toHaveLength(0);
   });
 
-  it("accepts the envelope when verification is disabled via env var", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
-
-    const relay = new EncryptedRelay();
-    const docId = asSyncDocId(crypto.randomUUID());
-
-    const message: SubmitChangeRequest = {
-      type: "SubmitChangeRequest",
-      correlationId: crypto.randomUUID(),
-      docId,
-      change: mockChangeWithoutSeq(docId),
-    };
-
-    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
-
-    expect(isSubmitChangeResult(result)).toBe(true);
-  });
-
-  it("accepts the envelope when VERIFY_ENVELOPE_SIGNATURES is '0'", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "0";
+  it("accepts the envelope when verification is disabled", async () => {
+    await disableVerification();
 
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());
@@ -987,7 +973,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
   });
 
   it("accepts a properly signed envelope when verification is enabled", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+    await enableVerification();
 
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());
@@ -1025,7 +1011,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
   });
 
   it("returns INVALID_ENVELOPE when envelope fields have wrong byte lengths", async () => {
-    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+    await enableVerification();
 
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());

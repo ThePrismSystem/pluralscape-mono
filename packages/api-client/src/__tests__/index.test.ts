@@ -34,6 +34,26 @@ describe("createApiClient", () => {
     expect(capturedHeaders?.get("Authorization")).toBe("Bearer ps_sess_token42");
   });
 
+  it("attaches Authorization header when getToken returns a Promise", async () => {
+    let capturedHeaders: Headers | undefined;
+
+    const client = createApiClient({
+      baseUrl: "http://localhost:3000",
+      getToken: () => Promise.resolve("ps_sess_async99"),
+    });
+
+    client.use({
+      onRequest({ request }) {
+        capturedHeaders = request.headers;
+        throw new Error("intercepted");
+      },
+    });
+
+    await expect(client.GET("/api/v1/health" as never)).rejects.toThrow("intercepted");
+
+    expect(capturedHeaders?.get("Authorization")).toBe("Bearer ps_sess_async99");
+  });
+
   it("does not attach Authorization header when token is null", async () => {
     let capturedHeaders: Headers | undefined;
 

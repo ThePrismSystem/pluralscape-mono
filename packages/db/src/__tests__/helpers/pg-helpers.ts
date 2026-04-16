@@ -451,6 +451,8 @@ export async function createPgStructureTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.systemStructureEntityMemberLinksIndexes);
   await pgExec(client, PG_DDL.systemStructureEntityAssociations);
   await pgExec(client, PG_DDL.systemStructureEntityAssociationsIndexes);
+  await pgExec(client, PG_DDL.notes);
+  await pgExec(client, PG_DDL.notesIndexes);
 }
 
 export async function createPgCustomFieldsTables(client: PGlite): Promise<void> {

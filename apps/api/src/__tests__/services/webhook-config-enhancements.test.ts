@@ -224,6 +224,21 @@ describe("testWebhookConfig", () => {
     );
   });
 
+  it("does not include systemId or webhookId in the test payload", async () => {
+    const mockTx = makeReadMockTx([makeTestConfigRow()]);
+    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+
+    await testWebhookConfig(asDb(mockTx), SYS_ID, WH_ID, AUTH, mockFetch);
+
+    const call = mockFetch.mock.calls[0] ?? [];
+    const options = call[1] as RequestInit;
+    const body = JSON.parse(options.body as string) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("systemId");
+    expect(body).not.toHaveProperty("webhookId");
+    expect(body).toHaveProperty("event", "webhook.test");
+    expect(body).toHaveProperty("timestamp");
+  });
+
   it("includes signature and timestamp headers in the request", async () => {
     const mockTx = makeReadMockTx([makeTestConfigRow()]);
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));

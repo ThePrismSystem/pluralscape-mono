@@ -288,10 +288,17 @@ export class BullMQJobQueue implements JobQueue {
   /**
    * Dequeues the next eligible job.
    *
-   * **Known limitation:** When a `types` filter is provided, non-matching jobs
-   * are fetched and then put back via `moveToDelayed`. This means type-filtered
-   * dequeue does not guarantee strict priority ordering across all job types —
-   * only among the jobs inspected in a single call (up to 20).
+   * **Client-side type filtering:** BullMQ does not support server-side type
+   * filtering — `Worker.getNextJob()` pulls the next available job from the
+   * queue regardless of job data. The `types` filter is therefore applied
+   * client-side: non-matching jobs are fetched and put back via
+   * `moveToDelayed`. This means type-filtered dequeue does not guarantee
+   * strict priority ordering across all job types — only among the jobs
+   * inspected in a single call (up to {@link MAX_DEQUEUE_BATCH}).
+   *
+   * An alternative would be separate queues per job type, but that adds
+   * operational complexity (more Redis keys, per-queue workers) without
+   * meaningful benefit at our current scale.
    */
   async dequeue(types?: readonly JobType[]): Promise<JobDefinition | null> {
     const currentTime = this.clock();

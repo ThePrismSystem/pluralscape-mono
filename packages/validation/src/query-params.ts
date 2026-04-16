@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 
 import { brandedIdQueryParam } from "./branded-id.js";
 import { LIFECYCLE_EVENT_TYPES } from "./lifecycle-event.js";
+import { RELATIONSHIP_TYPES } from "./relationship.js";
 
 // ── Boolean query param ─────────────────────────────────────────
 
@@ -36,27 +37,13 @@ export const LifecycleEventQuerySchema = z.object({
 
 // ── Relationship query schema ───────────────────────────────────
 
-/** Valid relationship type values for query filtering. */
-const RELATIONSHIP_TYPE_QUERY_VALUES = [
-  "split-from",
-  "fused-from",
-  "sibling",
-  "partner",
-  "parent-child",
-  "protector-of",
-  "caretaker-of",
-  "gatekeeper-of",
-  "source",
-  "custom",
-] as const;
-
 /**
  * Query parameters for the relationships list endpoint.
  * Validates memberId with branded ID prefix check and optional type filter.
  */
 export const RelationshipQuerySchema = z.object({
   memberId: brandedIdQueryParam("mem_").optional(),
-  type: z.enum(RELATIONSHIP_TYPE_QUERY_VALUES).optional(),
+  type: z.enum(RELATIONSHIP_TYPES).optional(),
 });
 
 // ── Inner world entity query schema ─────────────────────────────
