@@ -1,4 +1,4 @@
-import { fromHex, verifyAuthKey } from "@pluralscape/crypto";
+import { assertAuthKey, assertAuthKeyHash, fromHex, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, sessions } from "@pluralscape/db/pg";
 import { DeleteAccountBodySchema } from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
@@ -52,7 +52,10 @@ export async function deleteAccount(
     }
 
     const authKeyHash = ensureUint8Array(account.authKeyHash);
-    const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
+    const authKeyBytes = fromHex(parsed.authKey);
+    assertAuthKey(authKeyBytes);
+    assertAuthKeyHash(authKeyHash);
+    const valid = verifyAuthKey(authKeyBytes, authKeyHash);
     if (!valid) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect auth key");
     }

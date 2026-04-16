@@ -35,6 +35,9 @@ vi.mock("@pluralscape/crypto", async (importOriginal) => {
       mockVerifyAuthKey(authKey, storedHash),
     verifyRecoveryKey: (rawKey: Uint8Array, storedHash: Uint8Array) =>
       mockVerifyRecoveryKey(rawKey, storedHash),
+    assertAuthKey: vi.fn(),
+    assertAuthKeyHash: vi.fn(),
+    assertRecoveryKeyHash: vi.fn(),
   };
 });
 

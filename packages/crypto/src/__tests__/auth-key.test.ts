@@ -22,7 +22,13 @@ import { getSodium } from "../sodium.js";
 
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
-import type { PwhashSalt } from "../types.js";
+import type {
+  AuthKey,
+  AuthKeyHash,
+  ChallengeNonce,
+  PwhashSalt,
+  RecoveryKeyHash,
+} from "../types.js";
 
 beforeAll(setupSodium);
 afterAll(teardownSodium);
@@ -145,7 +151,7 @@ describe("verifyAuthKey", () => {
     const salt = adapter.randomBytes(16) as PwhashSalt;
     const { authKey } = await deriveAuthAndPasswordKeys(toBytes("validpassword"), salt);
     const stored = hashAuthKey(authKey);
-    const zeroKey = new Uint8Array(AUTH_KEY_BYTES);
+    const zeroKey = new Uint8Array(AUTH_KEY_BYTES) as AuthKey;
     expect(verifyAuthKey(zeroKey, stored)).toBe(false);
   });
 
@@ -153,7 +159,7 @@ describe("verifyAuthKey", () => {
     const adapter = getSodium();
     const salt = adapter.randomBytes(16) as PwhashSalt;
     const { authKey } = await deriveAuthAndPasswordKeys(toBytes("validpassword"), salt);
-    const tooShort = new Uint8Array(16);
+    const tooShort = new Uint8Array(16) as AuthKeyHash;
     expect(() => verifyAuthKey(authKey, tooShort)).toThrow(InvalidInputError);
   });
 });
@@ -227,7 +233,7 @@ describe("verifyRecoveryKey", () => {
   it("throws InvalidInputError for wrong-length storedHash", () => {
     const adapter = getSodium();
     const rawKey = adapter.randomBytes(32);
-    const tooShort = new Uint8Array(16);
+    const tooShort = new Uint8Array(16) as RecoveryKeyHash;
     expect(() => verifyRecoveryKey(rawKey, tooShort)).toThrow(InvalidInputError);
   });
 });
@@ -255,7 +261,7 @@ describe("signChallenge / verifyChallenge", () => {
     const kp = adapter.signKeypair();
     const nonce = generateChallengeNonce();
     const sig = signChallenge(nonce, kp.secretKey);
-    const tampered = new Uint8Array(nonce);
+    const tampered = new Uint8Array(nonce) as ChallengeNonce;
     tampered[0] = (tampered[0] ?? 0) ^ 0xff;
     expect(verifyChallenge(tampered, sig, kp.publicKey)).toBe(false);
   });

@@ -145,7 +145,7 @@ describe("system-purge.service (PGlite integration)", () => {
       const { systemId, auth } = await setupSystemWithDependents();
       const audit = spyAudit();
 
-      await purgeSystem(asDb(db), systemId, { authKey: "aabbccdd" }, auth, audit);
+      await purgeSystem(asDb(db), systemId, { authKey: "aa".repeat(32) }, auth, audit);
 
       // Verify system is gone
       const systemRows = await db
@@ -193,7 +193,7 @@ describe("system-purge.service (PGlite integration)", () => {
       const otherMemberId = await pgInsertMember(db, otherSystemId);
 
       // Purge the first system
-      await purgeSystem(asDb(db), systemId, { authKey: "aabbccdd" }, auth, noopAudit);
+      await purgeSystem(asDb(db), systemId, { authKey: "aa".repeat(32) }, auth, noopAudit);
 
       // Other system and its members are still present
       const otherSystemRows = await db
@@ -215,7 +215,7 @@ describe("system-purge.service (PGlite integration)", () => {
       const auth = makeAuth(accountId, systemId);
 
       await assertApiError(
-        purgeSystem(asDb(db), systemId, { authKey: "aabbccdd" }, auth, noopAudit),
+        purgeSystem(asDb(db), systemId, { authKey: "aa".repeat(32) }, auth, noopAudit),
         "NOT_ARCHIVED",
         409,
         "must be archived",
@@ -240,7 +240,7 @@ describe("system-purge.service (PGlite integration)", () => {
       const auth = makeAuth(accountId, fakeSystemId);
 
       await assertApiError(
-        purgeSystem(asDb(db), fakeSystemId, { authKey: "aabbccdd" }, auth, noopAudit),
+        purgeSystem(asDb(db), fakeSystemId, { authKey: "aa".repeat(32) }, auth, noopAudit),
         "NOT_FOUND",
         404,
       );

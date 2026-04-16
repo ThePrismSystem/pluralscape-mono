@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 
 import {
+  assertChallengeNonce,
   assertPwhashSalt,
   deriveAuthAndPasswordKeys,
   encryptPrivateKey,
@@ -63,6 +64,7 @@ test.describe("tRPC auth router", () => {
       const encryptedEncryptionPrivateKey = encryptPrivateKey(encryption.secretKey, masterKey);
       const recovery = generateRecoveryKey(masterKey);
       const nonceBytes = fromHex(initResult.challengeNonce);
+      assertChallengeNonce(nonceBytes);
       const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
       const commitResult = await anonTrpc.auth.registrationCommit.mutate({
@@ -128,6 +130,7 @@ test.describe("tRPC auth router", () => {
     const encryptedEncryptionPrivateKey = encryptPrivateKey(encryption.secretKey, masterKey);
     const recovery = generateRecoveryKey(masterKey);
     const nonceBytes = fromHex(initResult.challengeNonce);
+    assertChallengeNonce(nonceBytes);
     const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
     await anonTrpc.auth.registrationCommit.mutate({

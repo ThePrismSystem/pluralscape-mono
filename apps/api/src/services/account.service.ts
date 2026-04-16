@@ -1,10 +1,12 @@
 import {
+  assertAuthKey,
+  assertAuthKeyHash,
   assertSignPublicKey,
   assertSignature,
   getSodium,
   hashAuthKey,
+  verify,
   verifyAuthKey,
-  verifyChallenge,
 } from "@pluralscape/crypto";
 import { accounts, authKeys, sessions, systems } from "@pluralscape/db/pg";
 import { now, toUnixMillis } from "@pluralscape/types";
@@ -110,8 +112,11 @@ export async function changeEmail(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const authKeyHash = ensureUint8Array(account.authKeyHash);
-  const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
+  const authKeyBytes = fromHex(parsed.authKey);
+  assertAuthKey(authKeyBytes);
+  const storedHash = ensureUint8Array(account.authKeyHash);
+  assertAuthKeyHash(storedHash);
+  const valid = verifyAuthKey(authKeyBytes, storedHash);
   if (!valid) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
@@ -191,14 +196,19 @@ export async function changePassword(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const authKeyHash = ensureUint8Array(account.authKeyHash);
-  const valid = verifyAuthKey(fromHex(parsed.oldAuthKey), authKeyHash);
+  const oldAuthKeyBytes = fromHex(parsed.oldAuthKey);
+  assertAuthKey(oldAuthKeyBytes);
+  const storedHash = ensureUint8Array(account.authKeyHash);
+  assertAuthKeyHash(storedHash);
+  const valid = verifyAuthKey(oldAuthKeyBytes, storedHash);
   if (!valid) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
   // Hash the new auth key (BLAKE2B) — server never sees the raw key again after this point
-  const newAuthKeyHash = hashAuthKey(fromHex(parsed.newAuthKey));
+  const newAuthKeyBytes = fromHex(parsed.newAuthKey);
+  assertAuthKey(newAuthKeyBytes);
+  const newAuthKeyHash = hashAuthKey(newAuthKeyBytes);
 
   // Client sends the re-wrapped master key blob; server stores it opaquely
   const newEncMasterKeyBytes = fromHex(parsed.newEncryptedMasterKey);
@@ -223,7 +233,7 @@ export async function changePassword(
   assertSignature(signatureBytes);
 
   // Client signs the new auth key hash as proof of key derivation
-  const signatureValid = verifyChallenge(newAuthKeyHash, signatureBytes, sigPublicKey);
+  const signatureValid = verify(newAuthKeyHash, signatureBytes, sigPublicKey);
   if (!signatureValid) {
     throw new ValidationError("Invalid challenge signature");
   }

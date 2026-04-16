@@ -1,4 +1,11 @@
-import { hashAuthKey, verifyAuthKey, verifyRecoveryKey } from "@pluralscape/crypto";
+import {
+  assertAuthKey,
+  assertAuthKeyHash,
+  assertRecoveryKeyHash,
+  hashAuthKey,
+  verifyAuthKey,
+  verifyRecoveryKey,
+} from "@pluralscape/crypto";
 import { accounts, recoveryKeys, sessions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
@@ -78,7 +85,10 @@ export async function regenerateRecoveryKeyBackup(
     }
 
     const storedHash = ensureUint8Array(account.authKeyHash);
-    const valid = verifyAuthKey(fromHex(parsed.authKey), storedHash);
+    assertAuthKeyHash(storedHash);
+    const authKeyBytes = fromHex(parsed.authKey);
+    assertAuthKey(authKeyBytes);
+    const valid = verifyAuthKey(authKeyBytes, storedHash);
     if (!valid) {
       throw new ValidationError(INCORRECT_PASSWORD_ERROR);
     }
@@ -173,13 +183,21 @@ export async function resetPasswordWithRecoveryKey(
     throw new NoActiveRecoveryKeyError("No active recovery key found");
   }
 
-  // Verify recovery key hash — reject if no hash stored or hash doesn't match
+  // Verify recovery key hash — reject if no hash stored (pre-migration data)
   if (!activeKey.recoveryKeyHash) {
+    void audit(db, {
+      eventType: "auth.login-failed",
+      actor: { kind: "account", id: account.id },
+      detail: "Recovery key missing server-side hash (pre-migration)",
+    }).catch(() => {
+      // Best-effort audit — don't fail the request if audit write fails
+    });
     await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
   const storedRecoveryHash = ensureUint8Array(activeKey.recoveryKeyHash);
+  assertRecoveryKeyHash(storedRecoveryHash);
   const recoveryKeyValid = verifyRecoveryKey(fromHex(parsed.recoveryKeyHash), storedRecoveryHash);
   if (!recoveryKeyValid) {
     await equalizeAntiEnumTiming(startTime);
@@ -187,7 +205,9 @@ export async function resetPasswordWithRecoveryKey(
   }
 
   try {
-    const newAuthKeyHash = hashAuthKey(fromHex(parsed.newAuthKey));
+    const newAuthKeyBytes = fromHex(parsed.newAuthKey);
+    assertAuthKey(newAuthKeyBytes);
+    const newAuthKeyHash = hashAuthKey(newAuthKeyBytes);
     const newEncryptedMasterKeyBytes = fromHex(parsed.newEncryptedMasterKey);
     const newRecoveryEncryptedMasterKeyBytes = fromHex(parsed.newRecoveryEncryptedMasterKey);
 

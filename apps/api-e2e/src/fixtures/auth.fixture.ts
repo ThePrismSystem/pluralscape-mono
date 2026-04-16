@@ -9,6 +9,7 @@ import crypto from "node:crypto";
 
 import { test as base, type APIRequestContext } from "@playwright/test";
 import {
+  assertChallengeNonce,
   assertPwhashSalt,
   deriveAuthAndPasswordKeys,
   encryptPrivateKey,
@@ -110,6 +111,7 @@ async function registerUniqueAccount(request: APIRequestContext): Promise<Accoun
   const recovery = generateRecoveryKey(masterKey);
 
   const nonceBytes = fromHex(challengeNonce);
+  assertChallengeNonce(nonceBytes);
   const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
   // Phase 3: commit

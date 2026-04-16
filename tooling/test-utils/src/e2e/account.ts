@@ -4,6 +4,7 @@
 import crypto from "node:crypto";
 
 import {
+  assertChallengeNonce,
   assertPwhashSalt,
   deriveAuthAndPasswordKeys,
   encryptPrivateKey,
@@ -103,6 +104,7 @@ export async function registerTestAccount(): Promise<RegisteredAccount> {
   const recoveryKeyHashHex = toHex(recovery.recoveryKeyHash);
 
   const nonceBytes = fromHex(challengeNonce);
+  assertChallengeNonce(nonceBytes);
   const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
   // Phase 3: commit

@@ -89,6 +89,9 @@ export const RECOVERY_KEY_HASH_BYTES = 32;
 /** Size of challenge nonce in bytes (256 bits). */
 export const CHALLENGE_NONCE_BYTES = 32;
 
+/** Minimum encrypted blob size in bytes: nonce (24B) + tag (16B) = 40B. */
+export const ENCRYPTED_BLOB_MIN_BYTES = 40;
+
 // ── KDF (BLAKE2B) ───────────────────────────────────────────────────
 
 /** KDF key size in bytes. */
@@ -175,4 +178,5 @@ export const SODIUM_CONSTANTS = Object.freeze({
   AUTH_KEY_HASH_BYTES,
   RECOVERY_KEY_HASH_BYTES,
   CHALLENGE_NONCE_BYTES,
+  ENCRYPTED_BLOB_MIN_BYTES,
 } as const);

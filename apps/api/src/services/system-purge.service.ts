@@ -1,4 +1,4 @@
-import { fromHex, verifyAuthKey } from "@pluralscape/crypto";
+import { assertAuthKey, assertAuthKeyHash, fromHex, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, systems } from "@pluralscape/db/pg";
 import { PurgeSystemBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
@@ -65,7 +65,10 @@ export async function purgeSystem(
     }
 
     const authKeyHash = ensureUint8Array(account.authKeyHash);
-    const valid = verifyAuthKey(fromHex(parsed.authKey), authKeyHash);
+    const authKeyBytes = fromHex(parsed.authKey);
+    assertAuthKey(authKeyBytes);
+    assertAuthKeyHash(authKeyHash);
+    const valid = verifyAuthKey(authKeyBytes, authKeyHash);
     if (!valid) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect password");
     }

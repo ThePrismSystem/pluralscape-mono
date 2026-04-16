@@ -1,5 +1,7 @@
 import {
   AUTH_KEY_HASH_BYTES,
+  assertAuthKey,
+  assertAuthKeyHash,
   assertSignPublicKey,
   assertSignature,
   generateChallengeNonce,
@@ -19,6 +21,7 @@ import {
 import { and, asc, eq, gt, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
+import { ensureUint8Array } from "../lib/binary.js";
 import { encryptEmail, getEmailEncryptionKey } from "../lib/email-encrypt.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { fromHex, toHex } from "../lib/hex.js";
@@ -41,6 +44,7 @@ import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
+import type { AuthKey, AuthKeyHash, ChallengeNonce } from "@pluralscape/crypto";
 import type { PaginationCursor } from "@pluralscape/types";
 import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -111,6 +115,7 @@ export async function initiateRegistration(
         })
         .from(accounts)
         .where(eq(accounts.emailHash, emailHash))
+        .for("update", { skipLocked: true })
         .limit(1);
 
       if (existing) {
@@ -178,7 +183,7 @@ export async function commitRegistration(
   // Verify registration is still in phase 1 (placeholder auth key hash = all zeros)
   const isPlaceholder = account.authKeyHash.every((b) => b === 0);
   if (!isPlaceholder) {
-    throw new ValidationError("Registration already completed");
+    throw new ValidationError("Invalid or expired registration");
   }
 
   // Verify challenge nonce hasn't expired
@@ -186,7 +191,7 @@ export async function commitRegistration(
     throw new ValidationError("Invalid or expired registration");
   }
   if (account.challengeExpiresAt < now()) {
-    throw new ValidationError("Registration challenge expired");
+    throw new ValidationError("Invalid or expired registration");
   }
 
   // Verify challenge signature against the provided public signing key
@@ -197,16 +202,18 @@ export async function commitRegistration(
   assertSignature(signatureBytes);
 
   const signatureValid = verifyChallenge(
-    account.challengeNonce,
+    account.challengeNonce as ChallengeNonce,
     signatureBytes,
     publicSigningKeyBytes,
   );
   if (!signatureValid) {
-    throw new ValidationError("Invalid challenge signature");
+    throw new ValidationError("Invalid or expired registration");
   }
 
   // Hash the auth key for storage
-  const authKeyHash = hashAuthKey(fromHex(parsed.authKey));
+  const authKeyRaw = fromHex(parsed.authKey);
+  assertAuthKey(authKeyRaw);
+  const authKeyHash = hashAuthKey(authKeyRaw);
 
   // Decode all encrypted blobs from hex; public keys are base64url-encoded
   const encryptedMasterKeyBytes = fromHex(parsed.encryptedMasterKey);
@@ -238,7 +245,7 @@ export async function commitRegistration(
       .returning({ id: accounts.id });
 
     if (updated.length === 0) {
-      throw new ValidationError("Registration already completed");
+      throw new ValidationError("Invalid or expired registration");
     }
 
     if (account.accountType === "system") {
@@ -308,6 +315,7 @@ export interface LoginResult {
   readonly accountId: string;
   readonly systemId: string | null;
   readonly accountType: AccountType;
+  /** Hex-encoded encrypted master key blob — opaque E2E-encrypted data the server cannot read. */
   readonly encryptedMasterKey: string;
   readonly kdfSalt: string;
 }
@@ -333,14 +341,24 @@ export async function loginAccount(
 
   // Pre-auth lookup by emailHash — intentionally outside RLS (no accountId known yet)
   const [account] = await db
-    .select()
+    .select({
+      id: accounts.id,
+      emailHash: accounts.emailHash,
+      authKeyHash: accounts.authKeyHash,
+      accountType: accounts.accountType,
+      encryptedMasterKey: accounts.encryptedMasterKey,
+      kdfSalt: accounts.kdfSalt,
+      auditLogIpTracking: accounts.auditLogIpTracking,
+    })
     .from(accounts)
     .where(eq(accounts.emailHash, emailHash))
     .limit(1);
 
   if (!account) {
-    // Anti-enumeration: compute a dummy hash to equalize timing
-    hashAuthKey(getSodium().randomBytes(AUTH_KEY_HASH_BYTES));
+    // Anti-enumeration: compute a dummy verify to equalize timing
+    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKey;
+    const dummyHash = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyHash;
+    verifyAuthKey(dummyKey, dummyHash);
     // Record failure for throttling
     try {
       await loginStore.recordFailure(emailHash);
@@ -364,8 +382,39 @@ export async function loginAccount(
     return null;
   }
 
+  // Reject placeholder accounts (phase 1 registrations that never completed)
+  const isLoginPlaceholder = account.authKeyHash.every((b) => b === 0);
+  if (isLoginPlaceholder) {
+    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKey;
+    const dummyHash = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyHash;
+    verifyAuthKey(dummyKey, dummyHash);
+    try {
+      await loginStore.recordFailure(emailHash);
+    } catch (throttleErr: unknown) {
+      log.error(
+        "Failed to record login failure for throttle",
+        throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
+      );
+    }
+    void audit(db, {
+      eventType: "auth.login-failed",
+      actor: { kind: "account", id: ANTI_ENUM_SENTINEL_ACCOUNT_ID },
+      detail: "Account not found",
+    }).catch((auditError: unknown) => {
+      log.error("[audit] Failed to write auth.login-failed:", {
+        err: auditError instanceof Error ? auditError : { message: String(auditError) },
+      });
+    });
+    await equalizeAntiEnumTiming(startTime);
+    return null;
+  }
+
   // Verify auth key: BLAKE2B(auth_key) vs stored hash
-  const valid = verifyAuthKey(fromHex(parsed.authKey), account.authKeyHash);
+  const authKeyBytes = fromHex(parsed.authKey);
+  assertAuthKey(authKeyBytes);
+  const storedHash = ensureUint8Array(account.authKeyHash);
+  assertAuthKeyHash(storedHash);
+  const valid = verifyAuthKey(authKeyBytes, storedHash);
   if (!valid) {
     // Record failed attempt
     try {

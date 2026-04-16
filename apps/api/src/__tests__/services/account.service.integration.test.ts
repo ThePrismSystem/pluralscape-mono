@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { fromHex, hashAuthKey, initSodium, signChallenge, toHex } from "@pluralscape/crypto";
+import { assertAuthKey, fromHex, hashAuthKey, initSodium, sign, toHex } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
@@ -24,6 +24,7 @@ import {
 import { ValidationError } from "../../services/auth.service.js";
 import { asDb, noopAudit, registerTestAccount, spyAudit } from "../helpers/integration-setup.js";
 
+import type { SignSecretKey } from "@pluralscape/crypto";
 import type { AccountId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -34,12 +35,11 @@ const DUMMY_BLOB = "aa".repeat(48);
 /** Dummy KDF salt hex (16 bytes = 32 hex chars). */
 const DUMMY_KDF_SALT = "bb".repeat(16);
 /** Sign the new auth key hash with the account's signing key (for changePassword). */
-function signNewAuthKey(
-  newAuthKeyHex: string,
-  signingSecretKey: Parameters<typeof signChallenge>[1],
-): string {
-  const newAuthKeyHash = hashAuthKey(fromHex(newAuthKeyHex));
-  const sig = signChallenge(newAuthKeyHash, signingSecretKey);
+function signNewAuthKey(newAuthKeyHex: string, signingSecretKey: SignSecretKey): string {
+  const authKeyBytes = fromHex(newAuthKeyHex);
+  assertAuthKey(authKeyBytes);
+  const newAuthKeyHash = hashAuthKey(authKeyBytes);
+  const sig = sign(newAuthKeyHash, signingSecretKey);
   return toHex(sig);
 }
 

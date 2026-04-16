@@ -20,6 +20,11 @@ export type Signature = CryptoBrand<"Signature">;
 export type KdfMasterKey = CryptoBrand<"KdfMasterKey">;
 export type PwhashSalt = CryptoBrand<"PwhashSalt">;
 export type EncryptedKeyGrant = CryptoBrand<"EncryptedKeyGrant">;
+export type AuthKey = CryptoBrand<"AuthKey">;
+export type AuthKeyHash = CryptoBrand<"AuthKeyHash">;
+export type RecoveryKeyHash = CryptoBrand<"RecoveryKeyHash">;
+export type ChallengeNonce = CryptoBrand<"ChallengeNonce">;
+export type EncryptedBlob = CryptoBrand<"EncryptedBlob">;
 
 // ── Keypair types ────────────────────────────────────────────────────
 export interface BoxKeypair {

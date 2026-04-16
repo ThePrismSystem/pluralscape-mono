@@ -1,7 +1,7 @@
 import nodeCrypto from "node:crypto";
 
 import { PGlite } from "@electric-sql/pglite";
-import { hashAuthKey, hashRecoveryKey, initSodium } from "@pluralscape/crypto";
+import { assertAuthKey, hashAuthKey, hashRecoveryKey, initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { and, eq, isNull } from "drizzle-orm";
@@ -83,6 +83,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     const email = overrides.email ?? `test-${crypto.randomUUID()}@example.com`;
     const accountId = `acct_${crypto.randomUUID()}` as AccountId;
     const authKeyBytes = randBytes(32);
+    assertAuthKey(authKeyBytes);
     const authKeyHashBytes = hashAuthKey(authKeyBytes);
     const kdfSalt = toHex(randBytes(16));
     const encryptedMasterKey = randBytes(72);
@@ -305,6 +306,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("stores the new authKeyHash derived from newAuthKey", async () => {
       const { email, recoveryKeyHex } = await insertTestAccount();
       const newAuthKeyBytes = randBytes(32);
+      assertAuthKey(newAuthKeyBytes);
       const resetParams = {
         ...makeResetParams(email, recoveryKeyHex),
         newAuthKey: toHex(newAuthKeyBytes),

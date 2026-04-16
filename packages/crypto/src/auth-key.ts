@@ -11,14 +11,24 @@ import {
 } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
-import { assertAeadKey } from "./validation.js";
+import { assertAeadKey, assertAuthKey } from "./validation.js";
 
-import type { AeadKey, PwhashSalt, Signature, SignPublicKey, SignSecretKey } from "./types.js";
+import type {
+  AeadKey,
+  AuthKey,
+  AuthKeyHash,
+  ChallengeNonce,
+  PwhashSalt,
+  RecoveryKeyHash,
+  Signature,
+  SignPublicKey,
+  SignSecretKey,
+} from "./types.js";
 
 /** Result of split key derivation from a password. */
 export interface SplitKeyResult {
   /** First 32 bytes of derivation — used for server-side auth (never stored). */
-  readonly authKey: Uint8Array;
+  readonly authKey: AuthKey;
   /** Last 32 bytes of derivation — used as AEAD key-encryption key on device. */
   readonly passwordKey: AeadKey;
 }
@@ -59,6 +69,7 @@ export function deriveAuthAndPasswordKeys(
 
   // Split: copy out both halves before zeroing the source buffer.
   const authKey = derived.slice(0, AUTH_KEY_BYTES);
+  assertAuthKey(authKey);
   const passwordKeyBytes = derived.slice(AUTH_KEY_BYTES, AUTH_KEY_BYTES + PASSWORD_KEY_BYTES);
   assertAeadKey(passwordKeyBytes);
 
@@ -73,9 +84,9 @@ export function deriveAuthAndPasswordKeys(
  *
  * The hash is stored server-side so the raw authKey never leaves the client.
  */
-export function hashAuthKey(authKey: Uint8Array): Uint8Array {
+export function hashAuthKey(authKey: AuthKey): AuthKeyHash {
   const adapter = getSodium();
-  return adapter.genericHash(AUTH_KEY_HASH_BYTES, authKey);
+  return adapter.genericHash(AUTH_KEY_HASH_BYTES, authKey) as AuthKeyHash;
 }
 
 /**
@@ -86,7 +97,7 @@ export function hashAuthKey(authKey: Uint8Array): Uint8Array {
  *
  * @returns true if `authKey` produces the same hash as `storedHash`.
  */
-export function verifyAuthKey(authKey: Uint8Array, storedHash: Uint8Array): boolean {
+export function verifyAuthKey(authKey: AuthKey, storedHash: AuthKeyHash): boolean {
   if (storedHash.length !== AUTH_KEY_HASH_BYTES) {
     throw new InvalidInputError(
       `storedHash must be ${String(AUTH_KEY_HASH_BYTES)} bytes, got ${String(storedHash.length)}`,
@@ -107,9 +118,9 @@ export function verifyAuthKey(authKey: Uint8Array, storedHash: Uint8Array): bool
  *
  * The hash is stored server-side so the raw recovery key never leaves the client.
  */
-export function hashRecoveryKey(rawKey: Uint8Array): Uint8Array {
+export function hashRecoveryKey(rawKey: Uint8Array): RecoveryKeyHash {
   const adapter = getSodium();
-  return adapter.genericHash(RECOVERY_KEY_HASH_BYTES, rawKey);
+  return adapter.genericHash(RECOVERY_KEY_HASH_BYTES, rawKey) as RecoveryKeyHash;
 }
 
 /**
@@ -117,7 +128,7 @@ export function hashRecoveryKey(rawKey: Uint8Array): Uint8Array {
  *
  * @returns true if `rawKey` produces the same hash as `storedHash`.
  */
-export function verifyRecoveryKey(rawKey: Uint8Array, storedHash: Uint8Array): boolean {
+export function verifyRecoveryKey(rawKey: Uint8Array, storedHash: RecoveryKeyHash): boolean {
   if (storedHash.length !== RECOVERY_KEY_HASH_BYTES) {
     throw new InvalidInputError(
       `storedHash must be ${String(RECOVERY_KEY_HASH_BYTES)} bytes, got ${String(storedHash.length)}`,
@@ -136,9 +147,9 @@ export function verifyRecoveryKey(rawKey: Uint8Array, storedHash: Uint8Array): b
 /**
  * Generate a 32-byte random challenge nonce for authentication.
  */
-export function generateChallengeNonce(): Uint8Array {
+export function generateChallengeNonce(): ChallengeNonce {
   const adapter = getSodium();
-  return adapter.randomBytes(CHALLENGE_NONCE_BYTES);
+  return adapter.randomBytes(CHALLENGE_NONCE_BYTES) as ChallengeNonce;
 }
 
 /**
@@ -147,7 +158,7 @@ export function generateChallengeNonce(): Uint8Array {
  * @param nonce      - The challenge nonce to sign.
  * @param signingKey - The Ed25519 secret key.
  */
-export function signChallenge(nonce: Uint8Array, signingKey: SignSecretKey): Signature {
+export function signChallenge(nonce: ChallengeNonce, signingKey: SignSecretKey): Signature {
   const adapter = getSodium();
   return adapter.signDetached(nonce, signingKey);
 }
@@ -158,7 +169,7 @@ export function signChallenge(nonce: Uint8Array, signingKey: SignSecretKey): Sig
  * @returns true if the signature is valid for this nonce and public key.
  */
 export function verifyChallenge(
-  nonce: Uint8Array,
+  nonce: ChallengeNonce,
   signature: Signature,
   publicKey: SignPublicKey,
 ): boolean {

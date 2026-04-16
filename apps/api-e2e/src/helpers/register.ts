@@ -7,6 +7,7 @@
 import crypto from "node:crypto";
 
 import {
+  assertChallengeNonce,
   assertPwhashSalt,
   deriveAuthAndPasswordKeys,
   encryptPrivateKey,
@@ -92,6 +93,7 @@ export async function registerAccount(
   const recovery = generateRecoveryKey(masterKey);
   const recoveryKeyHashHex = toHex(recovery.recoveryKeyHash);
   const nonceBytes = fromHex(initData.challengeNonce);
+  assertChallengeNonce(nonceBytes);
   const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
   // Phase 2: commit

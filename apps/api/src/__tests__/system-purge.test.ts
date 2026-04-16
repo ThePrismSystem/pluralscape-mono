@@ -14,6 +14,8 @@ vi.mock("@pluralscape/crypto", () => ({
   fromHex: vi.fn((hex: string) => new TextEncoder().encode(hex)),
   verifyAuthKey: (authKey: Uint8Array, storedHash: Uint8Array): boolean =>
     mockVerifyAuthKey(authKey, storedHash),
+  assertAuthKey: vi.fn(),
+  assertAuthKeyHash: vi.fn(),
 }));
 
 vi.mock("../lib/rls-context.js", () => ({
@@ -65,7 +67,7 @@ describe("purgeSystem", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "a".repeat(64) }, stubAuth(), stubAudit()),
     ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND", message: "System not found" }));
   });
 
@@ -74,7 +76,7 @@ describe("purgeSystem", () => {
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: false }]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "a".repeat(64) }, stubAuth(), stubAudit()),
     ).rejects.toThrow(
       expect.objectContaining({
         code: "NOT_ARCHIVED",
@@ -90,7 +92,7 @@ describe("purgeSystem", () => {
     mockVerifyAuthKey.mockReturnValue(false);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { authKey: "wrong" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "b".repeat(64) }, stubAuth(), stubAudit()),
     ).rejects.toThrow(
       expect.objectContaining({ code: "VALIDATION_ERROR", message: "Incorrect password" }),
     );
@@ -102,7 +104,7 @@ describe("purgeSystem", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "a".repeat(64) }, stubAuth(), stubAudit()),
     ).rejects.toThrow(
       expect.objectContaining({ code: "VALIDATION_ERROR", message: "Account not found" }),
     );
@@ -116,7 +118,7 @@ describe("purgeSystem", () => {
     chain.returning.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
 
     const audit = stubAudit();
-    await purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), audit);
+    await purgeSystem(db, SYSTEM_ID, { authKey: "a".repeat(64) }, stubAuth(), audit);
 
     expect(audit).toHaveBeenCalledWith(db, expect.objectContaining({ eventType: "system.purged" }));
     expect(chain.delete).toHaveBeenCalled();
@@ -130,7 +132,7 @@ describe("purgeSystem", () => {
     chain.returning.mockResolvedValueOnce([]);
 
     await expect(
-      purgeSystem(db, SYSTEM_ID, { authKey: "aabbcc" }, stubAuth(), stubAudit()),
+      purgeSystem(db, SYSTEM_ID, { authKey: "a".repeat(64) }, stubAuth(), stubAudit()),
     ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
   });
 

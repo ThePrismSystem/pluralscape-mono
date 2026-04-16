@@ -75,6 +75,9 @@ vi.mock("@pluralscape/crypto", () => ({
   assertAeadNonce: () => undefined,
   assertSignPublicKey: () => undefined,
   assertSignature: () => undefined,
+  assertAuthKey: vi.fn(),
+  assertAuthKeyHash: vi.fn(),
+  assertChallengeNonce: vi.fn(),
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
     memzero: vi.fn(),
@@ -542,7 +545,7 @@ describe("auth service", () => {
         },
       ]);
       await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
-        "Registration already completed",
+        "Invalid or expired registration",
       );
     });
 
@@ -559,7 +562,7 @@ describe("auth service", () => {
       ]);
       mockNow.mockReturnValue(Date.now());
       await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
-        "Registration challenge expired",
+        "Invalid or expired registration",
       );
     });
 
@@ -576,7 +579,7 @@ describe("auth service", () => {
       ]);
       mockVerifyChallenge.mockReturnValueOnce(false);
       await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
-        "Invalid challenge signature",
+        "Invalid or expired registration",
       );
     });
 
@@ -618,7 +621,7 @@ describe("auth service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(commitRegistration(db, validCommitParams, "web", mockAudit)).rejects.toThrow(
-        "Registration already completed",
+        "Invalid or expired registration",
       );
     });
   });

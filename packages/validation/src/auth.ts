@@ -16,7 +16,7 @@ const hexBytes = (byteLen: number) =>
     .regex(/^[0-9a-f]+$/i)
     .length(byteLen * 2);
 
-const authKeyHex = hexBytes(AUTH_KEY_BYTE_LENGTH);
+export const authKeyHex = hexBytes(AUTH_KEY_BYTE_LENGTH);
 const kdfSaltHex = hexBytes(KDF_SALT_BYTE_LENGTH);
 const challengeSigHex = hexBytes(CHALLENGE_SIGNATURE_BYTE_LENGTH);
 const recoveryKeyHashHex = hexBytes(RECOVERY_KEY_HASH_BYTE_LENGTH);

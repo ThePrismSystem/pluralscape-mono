@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 
 import { expect, test } from "@playwright/test";
 import {
+  assertChallengeNonce,
   assertPwhashSalt,
   deriveAuthAndPasswordKeys,
   encryptPrivateKey,
@@ -55,6 +56,7 @@ test.describe("Two-phase registration", () => {
     const encryptedEncryptionPrivateKey = encryptPrivateKey(encryption.secretKey, masterKey);
     const recovery = generateRecoveryKey(masterKey);
     const nonceBytes = fromHex(initBody.data.challengeNonce);
+    assertChallengeNonce(nonceBytes);
     const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
     // Phase 2: commit
@@ -115,6 +117,7 @@ test.describe("Two-phase registration", () => {
     const encryptedEncryptionPrivateKey = encryptPrivateKey(encryption.secretKey, masterKey);
     const recovery = generateRecoveryKey(masterKey);
     const nonceBytes = fromHex(initData1.challengeNonce);
+    assertChallengeNonce(nonceBytes);
     const challengeSignature = signChallenge(nonceBytes, signing.secretKey);
 
     const commit1 = await request.post("/v1/auth/register/commit", {

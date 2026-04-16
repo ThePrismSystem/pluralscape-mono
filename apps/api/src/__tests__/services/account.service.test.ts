@@ -17,13 +17,15 @@ vi.mock("@pluralscape/crypto", () => ({
   assertAeadNonce: () => undefined,
   assertSignPublicKey: () => undefined,
   assertSignature: () => undefined,
+  assertAuthKey: vi.fn(),
+  assertAuthKeyHash: vi.fn(),
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
   }),
   hashAuthKey: () => new Uint8Array(32),
   verifyAuthKey: (_authKey: Uint8Array, storedHash: Uint8Array) =>
     storedHash.every((b) => b === 0xab),
-  verifyChallenge: vi.fn().mockReturnValue(true),
+  verify: vi.fn().mockReturnValue(true),
   generateSalt: () => new Uint8Array(16),
   generateChallengeNonce: () => new Uint8Array(32),
   generateMasterKey: () => new Uint8Array(32),
@@ -54,7 +56,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 const { getAccountInfo, changeEmail, changePassword, updateAccountSettings, ConcurrencyError } =
   await import("../../services/account.service.js");
-const { verifyChallenge } = await import("@pluralscape/crypto");
+const { verify: mockVerify } = await import("@pluralscape/crypto");
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -439,7 +441,7 @@ describe("account service", () => {
         ])
         .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
 
-      vi.mocked(verifyChallenge).mockReturnValueOnce(false);
+      vi.mocked(mockVerify).mockReturnValueOnce(false);
 
       await expect(
         changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),

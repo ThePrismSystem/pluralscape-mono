@@ -5,15 +5,20 @@ export type {
   AeadKey,
   AeadNonce,
   AeadResult,
+  AuthKey,
+  AuthKeyHash,
   BoxKeypair,
   BoxNonce,
   BoxPublicKey,
   BoxSecretKey,
+  ChallengeNonce,
   CryptoKeypair,
+  EncryptedBlob,
   EncryptedKeyGrant,
   KdfMasterKey,
   KeyVersion,
   PwhashSalt,
+  RecoveryKeyHash,
   Signature,
   SignKeypair,
   SignPublicKey,
@@ -70,6 +75,7 @@ export {
   PWHASH_OPSLIMIT_SENSITIVE,
   AUTH_KEY_HASH_BYTES,
   PWHASH_SALT_BYTES,
+  ENCRYPTED_BLOB_MIN_BYTES,
   RECOVERY_KEY_HASH_BYTES,
   SAFETY_NUMBER_HASH_BYTES,
   SAFETY_NUMBER_ITERATIONS,
@@ -171,7 +177,7 @@ export { deserializeRecoveryBackup, serializeRecoveryBackup } from "./recovery-b
 
 // ── Password reset via recovery key ──────────────────────────────────
 export type { PasswordResetParams, PasswordResetResult } from "./password-reset.js";
-export { resetPasswordViaRecoveryKey } from "./password-reset.js";
+export { withPasswordResetResult } from "./password-reset.js";
 
 // ── Recovery key regeneration ─────────────────────────────────────────
 export type { RegenerateResult } from "./recovery-regeneration.js";
@@ -214,8 +220,13 @@ export { MobileKeyLifecycleManager, SECURITY_PRESETS } from "./key-lifecycle.js"
 export {
   assertAeadKey,
   assertAeadNonce,
+  assertAuthKey,
+  assertAuthKeyHash,
   assertBufferLength,
+  assertChallengeNonce,
+  assertEncryptedBlob,
   assertPwhashSalt,
+  assertRecoveryKeyHash,
   assertSignature,
   assertSignPublicKey,
 } from "./validation.js";

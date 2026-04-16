@@ -236,6 +236,7 @@ export type {
   AuthKeyType,
   AccountType,
   DeviceTransferStatus,
+  PendingAccountId,
   Account,
   AuthKey,
   Session,

@@ -39,18 +39,11 @@ info:
     structure. All validation of the decrypted content happens client-side.
 
     ### Master Key and Recovery
-    - The user's password is processed client-side via Argon2id (64 MiB / 4 iterations)
-      to derive two independent keys: an **auth key** (sent to the server for verification)
-      and a **password key** (used only client-side to wrap the master key). The server
-      never sees the raw password.
-    - The **auth key** is further hashed with BLAKE2B before storage — the server verifies
-      a hash, never the auth key itself.
-    - The **master key** is a randomly generated 256-bit key. It is stored server-side
-      wrapped with the password key (client-side encryption) — the server cannot read it.
-    - A **recovery key** (generated at registration) provides an independent encrypted copy
-      of the master key if the password is forgotten — this is the only recovery mechanism.
-    - Changing a password re-wraps the master key with the new password key; the underlying
-      identity and encryption keys remain stable.
+    - The user's **master key** is derived from their password using Argon2id
+    - The master key is stored encrypted on the server (encrypted with itself)
+    - A **recovery key** (generated at registration) can decrypt the master key if
+      the password is forgotten — this is the only recovery mechanism
+    - Changing a password re-wraps the master key; the underlying encryption keys remain stable
 
     ### Privacy Buckets and Friend Sharing
     - Each Privacy Bucket has its own symmetric key (T2 encryption)
@@ -174,15 +167,11 @@ paths:
       operationId: registerInitiate
       tags:
         - Auth
-      summary: Initiate account registration
+      summary: Initiate account registration (phase 1)
       description: |
-        Phase 1 of two-phase registration. Reserves an account slot and returns
-        a KDF salt and challenge nonce.
-
-        **Crypto flow**: The client uses the returned `kdfSalt` to derive the
-        auth key and password key from the user's password via Argon2id. The
-        `challengeNonce` must be signed with the client's Ed25519 signing key
-        and included in the commit phase to bind the keypair to this registration.
+        Two-phase registration. Returns accountId, KDF salt, and challenge nonce.
+        Always returns 201 regardless of whether the email is already registered
+        (anti-enumeration).
 
         Rate limit: 5 req/min (authHeavy)
       security: []
@@ -193,7 +182,7 @@ paths:
             schema:
               $ref: "#/components/schemas/RegistrationInitiateRequest"
       responses:
-        "200":
+        "201":
           description: Registration initiated
           content:
             application/json:
@@ -201,8 +190,6 @@ paths:
                 $ref: "#/components/schemas/RegistrationInitiateResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
-        "409":
-          $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
   /auth/register/commit:
@@ -210,25 +197,11 @@ paths:
       operationId: registerCommit
       tags:
         - Auth
-      summary: Commit account registration
+      summary: Complete account registration (phase 2)
       description: |
-        Phase 2 of two-phase registration. Submits all cryptographic material
-        and creates the account.
-
-        **Crypto flow**: The client derives the auth key and password key via
-        Argon2id using the `kdfSalt` from the initiate phase. The auth key is
-        sent as the credential. The master key is randomly generated client-side
-        and stored wrapped with the password key (`encryptedMasterKey`). The
-        recovery key independently wraps the master key (`recoveryEncryptedMasterKey`).
-        Identity keypairs are derived from the master key and their private keys
-        are stored encrypted (`encryptedSigningPrivateKey`,
-        `encryptedEncryptionPrivateKey`). The `challengeSignature` proves
-        ownership of the Ed25519 signing key by signing the nonce from the
-        initiate phase.
-
-        The recovery key must be stored securely by the client — it is the
-        **only** way to recover the master encryption key if the password is
-        forgotten.
+        Zero-knowledge — the server never sees the password. The client sends
+        pre-encrypted key blobs and a challenge signature proving possession of
+        the signing key.
 
         Rate limit: 5 req/min (authHeavy)
       security: []
@@ -247,23 +220,17 @@ paths:
                 $ref: "#/components/schemas/RegistrationCommitResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
-        "409":
-          $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
   /auth/salt:
     post:
-      operationId: getKdfSalt
+      operationId: getSalt
       tags:
         - Auth
       summary: Fetch KDF salt for an email address
       description: |
-        Returns the Argon2id KDF salt for the given email address, enabling the
-        client to derive the auth key before sending credentials.
-
-        **Anti-enumeration**: The response is identical (valid salt format,
-        equalized timing) whether or not the email is registered, preventing
-        account existence probing.
+        Always returns 200 with a salt — either the real KDF salt for the account
+        or a deterministic fake salt derived from the email (anti-enumeration).
 
         Rate limit: 5 req/min (authHeavy)
       security: []
@@ -275,7 +242,7 @@ paths:
               $ref: "#/components/schemas/SaltRequest"
       responses:
         "200":
-          description: KDF salt returned
+          description: KDF salt
           content:
             application/json:
               schema:
@@ -291,17 +258,10 @@ paths:
         - Auth
       summary: Log in with email and auth key
       description: |
-        Authenticates with email and a pre-derived auth key, returning a session
-        token and the encrypted master key for client-side decryption.
-
-        **Crypto flow**: The client first fetches the KDF salt via `POST /auth/salt`,
-        derives the auth key from the password via Argon2id, then submits it here.
-        The server verifies the BLAKE2B hash of the auth key. On success, the
-        encrypted master key is returned so the client can unwrap it with the
-        password key (also derived locally). The server never sees the raw password.
-
-        **Security**: Timing is equalized across success and failure paths to
-        prevent user-enumeration attacks.
+        Zero-knowledge login. The client derives an auth key from the password
+        via Argon2id and sends only the auth key — the server never sees the
+        plaintext password. Timing is equalized across success and failure paths
+        to prevent user-enumeration attacks.
 
         Rate limit: 5 req/min (authHeavy)
       security: []
@@ -331,19 +291,12 @@ paths:
         - Auth
       summary: Reset password using recovery key
       description: |
-        Resets the account password using the recovery key.
-
-        **Crypto flow**: The client uses the recovery key to decrypt the master
-        key locally, then re-wraps it with a new password key derived from the
-        new password (using `newKdfSalt`). The new auth key, new KDF salt, and
-        two fresh encrypted master key blobs (`newEncryptedMasterKey` for
-        password-based access, `newRecoveryEncryptedMasterKey` for the new
-        recovery key) are all submitted pre-computed. The server replaces the
-        stored blobs atomically. All existing encrypted data remains accessible
-        because the underlying master key is unchanged — only its wrapping
-        changes. The `recoveryKeyHash` authenticates the request by proving
-        the client holds the current recovery key; `newRecoveryKeyHash` records
-        the replacement recovery key hash.
+        Zero-knowledge password reset via recovery key. The client provides
+        hex-encoded blobs: a new auth key, new KDF salt, re-encrypted master
+        key, and a new recovery-encrypted master key. The server never sees
+        the plaintext password or master key. All existing encrypted data
+        remains accessible because the underlying master key is unchanged —
+        only its wrapping changes.
 
         Rate limit: 5 req/min (authHeavy)
       security: []
@@ -557,15 +510,10 @@ paths:
         - Auth
       summary: Regenerate recovery key
       description: |
-        Regenerates the recovery key. Requires current auth key and explicit
-        confirmation.
-
-        **Crypto flow**: The client decrypts the master key locally using the
-        current password key, wraps it with a fresh recovery key to produce
-        `newRecoveryEncryptedMasterKey`, then submits the new blob along with the
-        auth key for identity verification. The `challengeSignature` proves the
-        client holds the signing key. The old recovery key and its encrypted
-        master key copy are permanently invalidated.
+        Regenerates the recovery key backup. The client provides its auth key
+        to prove identity, plus a new recovery-encrypted master key blob and
+        recovery key hash. The server never sees the plaintext recovery key or
+        master key.
 
         Rate limit: 5 req/min (authHeavy)
       security:
@@ -577,18 +525,12 @@ paths:
             schema:
               $ref: "#/components/schemas/RegenerateRecoveryKeyRequest"
       responses:
-        "200":
-          description: Recovery key regenerated
+        "201":
+          description: Recovery key backup regenerated
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - ok
-                properties:
-                  ok:
-                    type: boolean
-                    const: true
+                $ref: "#/components/schemas/RegenerateRecoveryKeyResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -627,7 +569,7 @@ paths:
       summary: Delete account
       description: |
         Permanently deletes the authenticated account and all associated data.
-        Requires the current auth key for confirmation. This action is
+        Requires the current password for confirmation. This action is
         irreversible — all systems, members, sessions, keys, and dependent data
         are cascade-deleted.
 
@@ -656,7 +598,7 @@ paths:
         - Account
       summary: Change account email
       description: |
-        Changes the account email. Requires current auth key for verification.
+        Changes the account email. Requires current password for verification.
 
         Rate limit: 5 req/min (authHeavy)
       security:
@@ -695,14 +637,7 @@ paths:
         - Account
       summary: Change account password
       description: |
-        Changes the account password. Requires current auth key for verification.
-
-        **Crypto flow**: The client derives the new auth key and new password key
-        from the new password using `newKdfSalt`. The master key is re-wrapped
-        with the new password key to produce `newEncryptedMasterKey`. All blobs
-        are submitted pre-computed; the server never sees the raw password or the
-        master key. The `challengeSignature` proves the client holds the Ed25519
-        signing key bound to this account.
+        Changes the account password. Requires current password for verification.
 
         Rate limit: 5 req/min (authHeavy)
       security:
@@ -1950,7 +1885,7 @@ paths:
       summary: Permanently purge a system
       description: |
         Hard-deletes a system and all dependent data via CASCADE. The system must
-        be archived (soft-deleted) first. Auth key confirmation is required to
+        be archived (soft-deleted) first. Password confirmation is required to
         prevent accidental purge.
 
         Rate limit: 60 req/min (write)
@@ -11807,24 +11742,6 @@ components:
           format: int64
           nullable: true
           description: Unix timestamp in milliseconds when archived, null if not archived
-    SaltRequest:
-      type: object
-      required:
-        - email
-      properties:
-        email:
-          type: string
-          format: email
-          example: user@example.com
-    SaltResponse:
-      type: object
-      required:
-        - kdfSalt
-      properties:
-        kdfSalt:
-          type: string
-          description: Hex-encoded 16-byte Argon2id salt for password key derivation
-          example: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
     LoginRequest:
       type: object
       required:
@@ -11837,41 +11754,66 @@ components:
           example: user@example.com
         authKey:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the password via Argon2id
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
+          description: 32-byte hex-encoded auth key derived from password via Argon2id
     LoginResponse:
       type: object
       required:
-        - sessionToken
-        - accountId
-        - accountType
-        - encryptedMasterKey
-        - kdfSalt
+        - data
       properties:
-        sessionToken:
+        data:
+          type: object
+          required:
+            - sessionToken
+            - accountId
+            - accountType
+          properties:
+            sessionToken:
+              type: string
+              description: 32-byte hex-encoded session token (64 characters)
+              example: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+            accountId:
+              type: string
+              example: acct_abc123
+            systemId:
+              type: string
+              nullable: true
+              example: sys_abc123
+            accountType:
+              type: string
+              enum:
+                - system
+                - viewer
+            encryptedMasterKey:
+              type: string
+              pattern: ^[0-9a-f]+$
+              description: E2E-encrypted master key blob (hex-encoded)
+            kdfSalt:
+              type: string
+              pattern: ^[0-9a-f]{32}$
+              description: Hex-encoded 16-byte Argon2id salt
+    SaltRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
           type: string
-          description: 32-byte hex-encoded session token (64 characters)
-          example: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-        accountId:
-          type: string
-          example: acc_abc123
-        systemId:
-          type: string
-          nullable: true
-          example: sys_abc123
-        accountType:
-          type: string
-          enum:
-            - system
-            - viewer
-        encryptedMasterKey:
-          type: string
-          description: Base64-encoded master key wrapped with the password key (XChaCha20-Poly1305)
-        kdfSalt:
-          type: string
-          description: Hex-encoded 16-byte Argon2id salt used to derive the password key
+          format: email
+    SaltResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - kdfSalt
+          properties:
+            kdfSalt:
+              type: string
+              pattern: ^[0-9a-f]{32}$
+              description: Hex-encoded 16-byte Argon2id salt
     RegistrationInitiateRequest:
       type: object
       required:
@@ -11889,21 +11831,24 @@ components:
     RegistrationInitiateResponse:
       type: object
       required:
-        - accountId
-        - kdfSalt
-        - challengeNonce
+        - data
       properties:
-        accountId:
-          type: string
-          description: Reserved account ID to reference in the commit phase
-          example: acc_abc123
-        kdfSalt:
-          type: string
-          description: Hex-encoded 16-byte Argon2id salt generated by the server for this account
-          example: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
-        challengeNonce:
-          type: string
-          description: Hex-encoded 32-byte nonce to be signed with the Ed25519 signing key in the commit phase
+        data:
+          type: object
+          required:
+            - accountId
+            - kdfSalt
+            - challengeNonce
+          properties:
+            accountId:
+              type: string
+              pattern: ^acct_
+            kdfSalt:
+              type: string
+              pattern: ^[0-9a-f]{32}$
+            challengeNonce:
+              type: string
+              pattern: ^[0-9a-f]{64}$
     RegistrationCommitRequest:
       type: object
       required:
@@ -11921,70 +11866,80 @@ components:
       properties:
         accountId:
           type: string
-          description: Account ID from the initiate phase
+          pattern: ^acct_
         authKey:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the password via Argon2id
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
         encryptedMasterKey:
           type: string
-          description: Base64-encoded master key wrapped with the password key (XChaCha20-Poly1305)
+          pattern: ^[0-9a-f]+$
+          minLength: 80
         encryptedSigningPrivateKey:
           type: string
-          description: Base64-encoded Ed25519 signing private key encrypted with the master key
+          pattern: ^[0-9a-f]+$
+          minLength: 80
         encryptedEncryptionPrivateKey:
           type: string
-          description: Base64-encoded X25519 encryption private key encrypted with the master key
+          pattern: ^[0-9a-f]+$
+          minLength: 80
         publicSigningKey:
           type: string
-          description: Hex-encoded Ed25519 public signing key (64 hex chars, 32 bytes)
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
         publicEncryptionKey:
           type: string
-          description: Hex-encoded X25519 public encryption key (64 hex chars, 32 bytes)
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
         recoveryEncryptedMasterKey:
           type: string
-          description: Base64-encoded master key wrapped with the recovery key (XChaCha20-Poly1305)
+          pattern: ^[0-9a-f]+$
+          minLength: 80
         challengeSignature:
           type: string
-          description: Hex-encoded Ed25519 signature of the challenge nonce from the initiate phase
+          pattern: ^[0-9a-f]{128}$
         recoveryKeyBackupConfirmed:
           type: boolean
           const: true
         recoveryKeyHash:
           type: string
-          description: Hex-encoded 32-byte BLAKE2b hash of the raw recovery key (64 hex chars)
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
     RegistrationCommitResponse:
       type: object
       required:
-        - sessionToken
-        - accountId
-        - accountType
+        - data
       properties:
-        sessionToken:
-          type: string
-          description: 32-byte hex-encoded session token
-        accountId:
-          type: string
-        accountType:
-          type: string
-          enum:
-            - system
-            - viewer
+        data:
+          type: object
+          required:
+            - sessionToken
+            - accountId
+            - accountType
+          properties:
+            sessionToken:
+              type: string
+            accountId:
+              type: string
+            accountType:
+              type: string
+              enum:
+                - system
+                - viewer
+    RegenerateRecoveryKeyResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - ok
+          properties:
+            ok:
+              type: boolean
+              const: true
     PasswordResetViaRecoveryKeyRequest:
       type: object
       required:
         - email
+        - recoveryKey
         - newAuthKey
         - newKdfSalt
         - newEncryptedMasterKey
@@ -11995,43 +11950,45 @@ components:
         email:
           type: string
           format: email
+        recoveryKey:
+          type: string
+          minLength: 1
+          maxLength: 200
         newAuthKey:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the new password via Argon2id
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
         newKdfSalt:
           type: string
-          description: Hex-encoded 16-byte Argon2id salt used to derive the new auth key and password key
+          pattern: ^[0-9a-f]{32}$
         newEncryptedMasterKey:
           type: string
-          description: Base64-encoded master key re-wrapped with the new password key
+          pattern: ^[0-9a-f]+$
+          minLength: 80
         newRecoveryEncryptedMasterKey:
           type: string
-          description: Base64-encoded master key wrapped with the new recovery key
+          pattern: ^[0-9a-f]+$
+          minLength: 80
         recoveryKeyHash:
           type: string
-          description: Hex-encoded 32-byte BLAKE2b hash of the current recovery key used to authenticate this reset (64 hex chars)
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
         newRecoveryKeyHash:
           type: string
-          description: Hex-encoded 32-byte BLAKE2b hash of the new recovery key replacing the current one (64 hex chars)
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
     PasswordResetResponse:
       type: object
       required:
-        - sessionToken
-        - accountId
+        - data
       properties:
-        sessionToken:
-          type: string
-        accountId:
-          type: string
+        data:
+          type: object
+          required:
+            - sessionToken
+            - accountId
+          properties:
+            sessionToken:
+              type: string
+            accountId:
+              type: string
     BiometricTokenRequest:
       type: object
       required:
@@ -12107,17 +12064,19 @@ components:
       required:
         - authKey
         - newRecoveryEncryptedMasterKey
+        - recoveryKeyHash
         - confirmed
       properties:
         authKey:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the current password
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          pattern: ^[0-9a-f]{64}$
         newRecoveryEncryptedMasterKey:
           type: string
-          description: Base64-encoded master key wrapped with the newly generated recovery key
+          pattern: ^[0-9a-f]+$
+          minLength: 80
+        recoveryKeyHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
         confirmed:
           type: boolean
           const: true
@@ -12193,48 +12152,28 @@ components:
       type: object
       required:
         - email
-        - authKey
+        - currentPassword
       properties:
         email:
           type: string
           format: email
           example: user@example.com
-        authKey:
+        currentPassword:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the current password
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          minLength: 1
     ChangePasswordRequest:
       type: object
       required:
-        - oldAuthKey
-        - newAuthKey
-        - newKdfSalt
-        - newEncryptedMasterKey
-        - challengeSignature
+        - currentPassword
+        - newPassword
       properties:
-        oldAuthKey:
+        currentPassword:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the current password
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
-        newAuthKey:
+          minLength: 1
+        newPassword:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the new password
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
-        newKdfSalt:
-          type: string
-          description: Hex-encoded 16-byte Argon2id salt used to derive the new auth key and password key
-        newEncryptedMasterKey:
-          type: string
-          description: Base64-encoded master key re-wrapped with the new password key
-        challengeSignature:
-          type: string
-          description: Hex-encoded Ed25519 signature proving ownership of the account signing key
+          minLength: 8
+          maxLength: 1024
     AuditLogQuery:
       type: object
       properties:
@@ -12341,14 +12280,12 @@ components:
     DeleteAccountRequest:
       type: object
       required:
-        - authKey
+        - password
       properties:
-        authKey:
+        password:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the current password for confirmation
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          minLength: 1
+          description: Current account password for confirmation
     VerifyPinResponse:
       type: object
       required:
@@ -12508,14 +12445,12 @@ components:
     PurgeSystemRequest:
       type: object
       required:
-        - authKey
+        - password
       properties:
-        authKey:
+        password:
           type: string
-          description: Hex-encoded 32-byte auth key derived from the current password for confirmation
-          minLength: 64
-          maxLength: 64
-          pattern: "^[0-9a-f]{64}$"
+          minLength: 1
+          description: Account password for confirmation
     MemberResponse:
       description: A member (headmate) within a system. Extends EncryptedEntity with the server-visible `archived` field.
       allOf:
@@ -14307,6 +14242,11 @@ components:
           format: int64
           minimum: 0
           description: Unix milliseconds. Retroactive values are allowed.
+        endTime:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Unix milliseconds when the session ended. Optional; omit for active sessions. Must be after startTime.
         memberId:
           type: string
           description: Member ID (mem_ prefix). At least one subject required.

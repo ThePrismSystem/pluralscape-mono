@@ -17,6 +17,9 @@ export type AccountType = "system" | "viewer";
 /** Status of a device transfer request. */
 export type DeviceTransferStatus = "pending" | "approved" | "expired";
 
+/** Account ID for a phase-1 registration placeholder (not yet committed). */
+export type PendingAccountId = string & { readonly __brand: "PendingAccountId" };
+
 /** A user account — the top-level authentication entity. */
 export interface Account extends AuditMetadata {
   readonly id: AccountId;

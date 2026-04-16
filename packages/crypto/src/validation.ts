@@ -1,10 +1,14 @@
 import {
   AEAD_KEY_BYTES,
   AEAD_NONCE_BYTES,
+  AUTH_KEY_BYTES,
+  AUTH_KEY_HASH_BYTES,
   BOX_NONCE_BYTES,
   BOX_PUBLIC_KEY_BYTES,
   BOX_SECRET_KEY_BYTES,
   BOX_SEED_BYTES,
+  CHALLENGE_NONCE_BYTES,
+  ENCRYPTED_BLOB_MIN_BYTES,
   GENERIC_HASH_BYTES_MAX,
   GENERIC_HASH_BYTES_MIN,
   KDF_BYTES_MAX,
@@ -12,6 +16,7 @@ import {
   KDF_CONTEXT_BYTES,
   KDF_KEY_BYTES,
   PWHASH_SALT_BYTES,
+  RECOVERY_KEY_HASH_BYTES,
   SIGN_BYTES,
   SIGN_PUBLIC_KEY_BYTES,
   SIGN_SECRET_KEY_BYTES,
@@ -22,9 +27,14 @@ import { InvalidInputError } from "./errors.js";
 import type {
   AeadKey,
   AeadNonce,
+  AuthKey,
+  AuthKeyHash,
+  ChallengeNonce,
+  EncryptedBlob,
   KdfMasterKey,
   KeyVersion,
   PwhashSalt,
+  RecoveryKeyHash,
   Signature,
   SignPublicKey,
 } from "./types.js";
@@ -105,6 +115,30 @@ export function assertGenericHashLength(len: number): void {
   if (len < GENERIC_HASH_BYTES_MIN || len > GENERIC_HASH_BYTES_MAX) {
     throw new InvalidInputError(
       `Generic hash length must be between ${String(GENERIC_HASH_BYTES_MIN)} and ${String(GENERIC_HASH_BYTES_MAX)}, got ${String(len)}`,
+    );
+  }
+}
+
+export function assertAuthKey(key: Uint8Array): asserts key is AuthKey {
+  assertBufferLength(key, AUTH_KEY_BYTES, "Auth key");
+}
+
+export function assertAuthKeyHash(hash: Uint8Array): asserts hash is AuthKeyHash {
+  assertBufferLength(hash, AUTH_KEY_HASH_BYTES, "Auth key hash");
+}
+
+export function assertRecoveryKeyHash(hash: Uint8Array): asserts hash is RecoveryKeyHash {
+  assertBufferLength(hash, RECOVERY_KEY_HASH_BYTES, "Recovery key hash");
+}
+
+export function assertChallengeNonce(nonce: Uint8Array): asserts nonce is ChallengeNonce {
+  assertBufferLength(nonce, CHALLENGE_NONCE_BYTES, "Challenge nonce");
+}
+
+export function assertEncryptedBlob(blob: Uint8Array): asserts blob is EncryptedBlob {
+  if (blob.length < ENCRYPTED_BLOB_MIN_BYTES) {
+    throw new InvalidInputError(
+      `Encrypted blob must be at least ${String(ENCRYPTED_BLOB_MIN_BYTES)} bytes, got ${String(blob.length)}`,
     );
   }
 }

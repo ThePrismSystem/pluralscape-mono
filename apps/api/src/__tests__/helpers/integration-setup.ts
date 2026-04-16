@@ -2,6 +2,7 @@
  * Shared setup helpers for API service integration tests (PGlite).
  */
 import {
+  assertChallengeNonce,
   fromHex,
   getSodium,
   serializeEncryptedBlob,
@@ -124,6 +125,7 @@ export async function registerTestAccount(
 
   // Sign the challenge nonce with the signing secret key
   const challengeNonceBytes = fromHex(initResult.challengeNonce);
+  assertChallengeNonce(challengeNonceBytes);
   const challengeSignature = signChallenge(challengeNonceBytes, signingKp.secretKey);
 
   // Random auth key (32 bytes → hex)

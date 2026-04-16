@@ -11,7 +11,13 @@
  * Requires: running PostgreSQL, valid .env with EMAIL_HASH_PEPPER, crypto deps.
  */
 
-import { fromHex, getSodium, signChallenge, toHex } from "@pluralscape/crypto";
+import {
+  assertChallengeNonce,
+  fromHex,
+  getSodium,
+  signChallenge,
+  toHex,
+} from "@pluralscape/crypto";
 
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
@@ -73,6 +79,7 @@ async function runBenchmark(): Promise<BenchmarkResult> {
       const signingKp = sodium.signKeypair();
       const boxKp = sodium.boxKeypair();
       const challengeNonceBytes = fromHex(initResult.challengeNonce);
+      assertChallengeNonce(challengeNonceBytes);
       const challengeSignature = signChallenge(challengeNonceBytes, signingKp.secretKey);
       const authKeyHex = toHex(sodium.randomBytes(32));
       const dummyBlob = toHex(sodium.randomBytes(48));

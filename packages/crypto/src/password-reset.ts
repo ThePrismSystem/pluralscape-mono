@@ -7,7 +7,7 @@ import { getSodium } from "./sodium.js";
 
 import type { RecoveryKeyResult } from "./recovery.js";
 import type { EncryptedPayload } from "./symmetric.js";
-import type { KdfMasterKey, PwhashSalt } from "./types.js";
+import type { AuthKey, KdfMasterKey, PwhashSalt } from "./types.js";
 import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 /** Input for a password reset via recovery key. */
@@ -30,24 +30,30 @@ export interface PasswordResetResult {
   readonly wrappedMasterKey: EncryptedPayload;
   /** Fresh recovery key — the old one was consumed and must be replaced. */
   readonly newRecoveryKey: RecoveryKeyResult;
-  /** Auth key for server-side verification — send to server, never store. Caller must zero after use. */
-  readonly authKey: Uint8Array;
+  /** Auth key for server-side verification — zeroed automatically after callback completes. */
+  readonly authKey: AuthKey;
 }
 
 /**
- * Reset a password using a recovery key.
+ * Reset a password using a recovery key, with automatic authKey zeroing.
  *
- * Flow:
- * 1. Deserialize the encrypted backup blob from the server.
- * 2. Decrypt the MasterKey using the recovery key display string.
- * 3. Generate a new salt + derive split auth/password keys.
- * 4. Re-wrap the MasterKey under the new password key.
- * 5. Generate a new recovery key (the old one is consumed after use).
- *
- * The caller is responsible for persisting wrappedMasterKey, newSalt, and
- * the new recovery key backup to the server, and revoking the old recovery key.
+ * The callback receives the full result including the raw authKey. When the
+ * callback completes (or throws), the authKey is zeroed in a `finally` block.
+ * This prevents callers from forgetting to clean up sensitive key material.
  */
-export async function resetPasswordViaRecoveryKey(
+export async function withPasswordResetResult<T>(
+  params: PasswordResetParams,
+  fn: (result: PasswordResetResult) => Promise<T>,
+): Promise<T> {
+  const result = await resetPasswordViaRecoveryKeyInternal(params);
+  try {
+    return await fn(result);
+  } finally {
+    getSodium().memzero(result.authKey);
+  }
+}
+
+async function resetPasswordViaRecoveryKeyInternal(
   params: PasswordResetParams,
 ): Promise<PasswordResetResult> {
   const adapter = getSodium();

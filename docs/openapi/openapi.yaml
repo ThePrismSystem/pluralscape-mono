@@ -56,7 +56,7 @@ info:
     ephemeral X25519 key exchange session (5-minute TTL).
 
     ## Authentication
-    Most endpoints require a Bearer token obtained from `/auth/login` or `/auth/register`.
+    Most endpoints require a Bearer token obtained from `/auth/login` or `/auth/register/commit`.
     Pass it in the `Authorization` header: `Authorization: Bearer <sessionToken>`.
     Session tokens are 32-byte hex-encoded values (64 characters).
 
@@ -252,10 +252,20 @@ components:
       $ref: "./schemas/auth.yaml#/LoginRequest"
     LoginResponse:
       $ref: "./schemas/auth.yaml#/LoginResponse"
-    RegistrationRequest:
-      $ref: "./schemas/auth.yaml#/RegistrationRequest"
-    RegistrationResponse:
-      $ref: "./schemas/auth.yaml#/RegistrationResponse"
+    SaltRequest:
+      $ref: "./schemas/auth.yaml#/SaltRequest"
+    SaltResponse:
+      $ref: "./schemas/auth.yaml#/SaltResponse"
+    RegistrationInitiateRequest:
+      $ref: "./schemas/auth.yaml#/RegistrationInitiateRequest"
+    RegistrationInitiateResponse:
+      $ref: "./schemas/auth.yaml#/RegistrationInitiateResponse"
+    RegistrationCommitRequest:
+      $ref: "./schemas/auth.yaml#/RegistrationCommitRequest"
+    RegistrationCommitResponse:
+      $ref: "./schemas/auth.yaml#/RegistrationCommitResponse"
+    RegenerateRecoveryKeyResponse:
+      $ref: "./schemas/auth.yaml#/RegenerateRecoveryKeyResponse"
     PasswordResetViaRecoveryKeyRequest:
       $ref: "./schemas/auth.yaml#/PasswordResetViaRecoveryKeyRequest"
     PasswordResetResponse:
@@ -707,8 +717,12 @@ components:
 
 paths:
   # Auth
-  /auth/register:
-    $ref: "./paths/auth.yaml#/~1auth~1register"
+  /auth/register/initiate:
+    $ref: "./paths/auth.yaml#/~1auth~1register~1initiate"
+  /auth/register/commit:
+    $ref: "./paths/auth.yaml#/~1auth~1register~1commit"
+  /auth/salt:
+    $ref: "./paths/auth.yaml#/~1auth~1salt"
   /auth/login:
     $ref: "./paths/auth.yaml#/~1auth~1login"
   /auth/password-reset/recovery-key:

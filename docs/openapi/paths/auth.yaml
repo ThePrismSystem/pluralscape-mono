@@ -1,19 +1,12 @@
-/auth/register:
+/auth/register/initiate:
   post:
-    operationId: register
+    operationId: registerInitiate
     tags: [Auth]
-    summary: Register a new account
+    summary: Initiate account registration (phase 1)
     description: |
-      Creates a new account with email/password authentication.
-
-      **Crypto flow**: The server hashes the password with Argon2id to create
-      the account credential. The client derives the master encryption key from
-      the same password using Argon2id (with a different salt/context) and wraps
-      it for server-side storage. A recovery key is generated that can decrypt
-      the master key independently of the password.
-
-      The recovery key must be stored securely by the client — it is the **only**
-      way to recover the master encryption key if the password is forgotten.
+      Two-phase registration. Returns accountId, KDF salt, and challenge nonce.
+      Always returns 201 regardless of whether the email is already registered
+      (anti-enumeration).
 
       Rate limit: 5 req/min (authHeavy)
     security: []
@@ -22,18 +15,75 @@
       content:
         application/json:
           schema:
-            $ref: "../schemas/auth.yaml#/RegistrationRequest"
+            $ref: "../schemas/auth.yaml#/RegistrationInitiateRequest"
+    responses:
+      "201":
+        description: Registration initiated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/RegistrationInitiateResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/register/commit:
+  post:
+    operationId: registerCommit
+    tags: [Auth]
+    summary: Complete account registration (phase 2)
+    description: |
+      Zero-knowledge — the server never sees the password. The client sends
+      pre-encrypted key blobs and a challenge signature proving possession of
+      the signing key.
+
+      Rate limit: 5 req/min (authHeavy)
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/RegistrationCommitRequest"
     responses:
       "201":
         description: Account created
         content:
           application/json:
             schema:
-              $ref: "../schemas/auth.yaml#/RegistrationResponse"
+              $ref: "../schemas/auth.yaml#/RegistrationCommitResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
-      "409":
-        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/salt:
+  post:
+    operationId: getSalt
+    tags: [Auth]
+    summary: Fetch KDF salt for an email address
+    description: |
+      Always returns 200 with a salt — either the real KDF salt for the account
+      or a deterministic fake salt derived from the email (anti-enumeration).
+
+      Rate limit: 5 req/min (authHeavy)
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/SaltRequest"
+    responses:
+      "200":
+        description: KDF salt
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/SaltResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
@@ -41,14 +91,12 @@
   post:
     operationId: login
     tags: [Auth]
-    summary: Log in with email and password
+    summary: Log in with email and auth key
     description: |
-      Authenticates with email/password and returns a session token.
-
-      **Security**: Timing is equalized across success and failure paths to
-      prevent user-enumeration attacks. The password is verified against an
-      Argon2id hash. Password length is capped at 1024 bytes to prevent
-      Argon2 DoS on this unauthenticated endpoint.
+      Zero-knowledge login. The client derives an auth key from the password
+      via Argon2id and sends only the auth key — the server never sees the
+      plaintext password. Timing is equalized across success and failure paths
+      to prevent user-enumeration attacks.
 
       Rate limit: 5 req/min (authHeavy)
     security: []
@@ -78,13 +126,12 @@
     tags: [Auth]
     summary: Reset password using recovery key
     description: |
-      Resets the account password using the recovery key.
-
-      **Crypto flow**: The recovery key decrypts the master encryption key,
-      which is then re-wrapped with the new password-derived key. A new
-      recovery key is generated (the old one is invalidated). All existing
-      encrypted data remains accessible because the underlying master key is
-      unchanged — only its wrapping changes.
+      Zero-knowledge password reset via recovery key. The client provides
+      hex-encoded blobs: a new auth key, new KDF salt, re-encrypted master
+      key, and a new recovery-encrypted master key. The server never sees
+      the plaintext password or master key. All existing encrypted data
+      remains accessible because the underlying master key is unchanged —
+      only its wrapping changes.
 
       Rate limit: 5 req/min (authHeavy)
     security: []
@@ -298,12 +345,10 @@
     tags: [Auth]
     summary: Regenerate recovery key
     description: |
-      Regenerates the recovery key. Requires current password and explicit confirmation.
-
-      **Crypto flow**: The current password verifies identity and decrypts the
-      master key. A new recovery key is generated and used to create a fresh
-      encrypted copy of the master key. The old recovery key and its encrypted
-      master key copy are permanently invalidated.
+      Regenerates the recovery key backup. The client provides its auth key
+      to prove identity, plus a new recovery-encrypted master key blob and
+      recovery key hash. The server never sees the plaintext recovery key or
+      master key.
 
       Rate limit: 5 req/min (authHeavy)
     security:
@@ -316,15 +361,11 @@
             $ref: "../schemas/auth.yaml#/RegenerateRecoveryKeyRequest"
     responses:
       "201":
-        description: New recovery key generated
+        description: Recovery key backup regenerated
         content:
           application/json:
             schema:
-              type: object
-              required: [recoveryKey]
-              properties:
-                recoveryKey:
-                  type: string
+              $ref: "../schemas/auth.yaml#/RegenerateRecoveryKeyResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
