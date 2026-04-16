@@ -1,11 +1,11 @@
 ---
 # mobile-thuh
 title: Investigate non-table-drive refactor options for row-transforms.test.ts
-status: draft
+status: scrapped
 type: task
 priority: low
 created_at: 2026-04-08T02:02:26Z
-updated_at: 2026-04-08T02:02:26Z
+updated_at: 2026-04-16T06:47:39Z
 ---
 
 During PR #399 review-fix work (ps-1o81), an attempt was made to table-drive apps/mobile/src/data/**tests**/row-transforms.test.ts based on a review suggestion. The refactor was scrapped because the original suggestion was based on a misread of the file's structure.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-04-14T09:29:22Z
-updated_at: 2026-04-14T11:19:43Z
+updated_at: 2026-04-16T06:35:33Z
+parent: ps-ai5y
 ---
 
 AUDIT [API-TC-H4,H5] relationship.service.ts, system-purge/duplicate, all 5 structure-entity services have unit tests but no integration tests hitting real DB. Graph traversal, privacy-bucket intersection, CASCADE deletes untested at I/O boundary.

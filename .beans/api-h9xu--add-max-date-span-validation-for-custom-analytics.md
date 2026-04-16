@@ -1,11 +1,11 @@
 ---
 # api-h9xu
 title: Add max date span validation for custom analytics ranges
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-24T09:25:31Z
-updated_at: 2026-03-24T09:25:31Z
+updated_at: 2026-04-16T06:29:44Z
 parent: ps-4ioj
 ---
 

@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: critical
 created_at: 2026-04-14T09:28:24Z
-updated_at: 2026-04-14T10:24:25Z
+updated_at: 2026-04-16T06:35:32Z
+parent: ps-ai5y
 ---
 
 AUDIT [API-S-C1] mimeType accepts any string up to 255 chars. Clients can declare text/html or application/javascript, creating stored XSS/content-injection risk. File: packages/validation/src/blob.ts:22, apps/api/src/services/blob.service.ts:84. Fix: Validate mimeType in CreateUploadUrlBodySchema against per-purpose allowlist.

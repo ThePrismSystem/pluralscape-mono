@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-04-14T09:28:59Z
-updated_at: 2026-04-14T10:29:30Z
+updated_at: 2026-04-16T06:35:33Z
+parent: ps-ai5y
 ---
 
 AUDIT [SYNC-S-M3] No check that requesting client's systemId is authorized to access docId on FetchChanges, SubmitChange, FetchSnapshot, SubmitSnapshot. Any authenticated user who knows a documentId can fetch or push.

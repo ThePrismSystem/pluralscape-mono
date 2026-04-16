@@ -5,7 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-04-08T02:08:47Z
-updated_at: 2026-04-08T02:08:47Z
+updated_at: 2026-04-16T06:44:45Z
+parent: ps-8coo
 ---
 
 PR #399 raised apps/mobile/src/platform/drivers/expo-sqlite-driver.ts from 0% to 100% coverage via the in-memory expo-sqlite-mock.ts. The mock returns pre-seeded rows keyed by exact SQL string and does not roll back transactions on exception. The wrapper logic is covered, but SQL semantics, transaction rollback, bind-parameter ordering, and statement-handle leaks are not.

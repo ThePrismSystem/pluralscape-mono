@@ -5,7 +5,8 @@ status: todo
 type: feature
 priority: normal
 created_at: 2026-04-02T05:52:30Z
-updated_at: 2026-04-02T08:37:19Z
+updated_at: 2026-04-16T06:41:46Z
+parent: ps-8coo
 ---
 
 The TRPCProvider currently logs the user out on 401. Implement a proper token refresh flow: intercept 401, attempt refresh using stored refresh token, queue pending requests, retry on success, logout on refresh failure.

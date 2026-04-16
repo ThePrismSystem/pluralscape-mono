@@ -1,11 +1,11 @@
 ---
 # api-q642
 title: Wire identity webhook events (9 events)
-status: done
+status: completed
 type: task
 priority: high
 created_at: 2026-03-29T02:07:29Z
-updated_at: 2026-03-29T03:03:50Z
+updated_at: 2026-04-16T06:36:06Z
 parent: api-9wze
 ---
 

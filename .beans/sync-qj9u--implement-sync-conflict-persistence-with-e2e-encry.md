@@ -5,7 +5,8 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-04-16T03:05:40Z
-updated_at: 2026-04-16T03:05:40Z
+updated_at: 2026-04-16T06:41:46Z
+parent: ps-8coo
 ---
 
 The `sync_conflicts` table exists in the PG schema with RLS policies, but no concrete `ConflictPersistenceAdapter` implementation writes to it. Only an in-memory test adapter exists.

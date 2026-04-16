@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-04-14T09:29:02Z
-updated_at: 2026-04-14T10:37:13Z
+updated_at: 2026-04-16T06:35:32Z
+parent: ps-ai5y
 ---
 
 AUDIT [API-S-H1] validateSession returns SESSION_EXPIRED or UNAUTHENTICATED but REST middleware collapses both to generic 401. Handled correctly in WebSocket but not REST. File: apps/api/src/middleware/auth.ts:81-83

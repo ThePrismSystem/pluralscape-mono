@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: high
 created_at: 2026-04-14T09:29:13Z
-updated_at: 2026-04-14T12:00:00Z
+updated_at: 2026-04-16T06:35:33Z
+parent: ps-ai5y
 ---
 
 AUDIT [SYNC-TC-H1..H4] entity-registry.ts (825 lines), base-materializer.ts diff/apply logic, ws-client-adapter.ts reconnect/auth, full materializer pipeline all have zero test coverage. These are core sync components.

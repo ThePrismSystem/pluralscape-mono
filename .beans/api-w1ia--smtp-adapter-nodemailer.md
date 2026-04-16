@@ -1,11 +1,11 @@
 ---
 # api-w1ia
 title: SMTP adapter (Nodemailer)
-status: done
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-29T02:45:38Z
-updated_at: 2026-03-29T03:03:11Z
+updated_at: 2026-04-16T06:36:07Z
 parent: api-7xw0
 blocked_by:
   - api-zeh1
