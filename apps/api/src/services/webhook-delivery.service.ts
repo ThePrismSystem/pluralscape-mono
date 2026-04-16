@@ -1,5 +1,5 @@
 import { webhookDeliveries } from "@pluralscape/db/pg";
-import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { WebhookDeliveryQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, gte, lt, lte } from "drizzle-orm";
 
@@ -80,9 +80,9 @@ function toWebhookDeliveryResult(row: {
   createdAt: number;
 }): WebhookDeliveryResult {
   return {
-    id: row.id as WebhookDeliveryId,
-    webhookId: row.webhookId as WebhookId,
-    systemId: row.systemId as SystemId,
+    id: brandId<WebhookDeliveryId>(row.id),
+    webhookId: brandId<WebhookId>(row.webhookId),
+    systemId: brandId<SystemId>(row.systemId),
     eventType: row.eventType as WebhookEventType,
     status: row.status as WebhookDeliveryStatus,
     httpStatus: row.httpStatus,

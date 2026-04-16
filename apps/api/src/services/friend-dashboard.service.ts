@@ -6,6 +6,7 @@ import {
   members,
   systemStructureEntities,
 } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, countDistinct, eq, inArray, isNull } from "drizzle-orm";
 
 import { filterVisibleEntities, loadBucketTags } from "../lib/bucket-access.js";
@@ -272,10 +273,12 @@ export async function queryVisibleActiveFronting(
   const visible = filterVisibleEntities(rows, friendBucketIds, sessionBucketMap, (r) => r.id);
 
   const sessions = visible.map((r) => ({
-    id: r.id as FrontingSessionId,
-    memberId: r.memberId as MemberId | null,
-    customFrontId: r.customFrontId as CustomFrontId | null,
-    structureEntityId: r.structureEntityId as SystemStructureEntityId | null,
+    id: brandId<FrontingSessionId>(r.id),
+    memberId: r.memberId ? brandId<MemberId>(r.memberId) : null,
+    customFrontId: r.customFrontId ? brandId<CustomFrontId>(r.customFrontId) : null,
+    structureEntityId: r.structureEntityId
+      ? brandId<SystemStructureEntityId>(r.structureEntityId)
+      : null,
     startTime: r.startTime as UnixMillis,
     encryptedData: encryptedBlobToBase64(r.encryptedData),
   }));
@@ -298,13 +301,8 @@ export async function queryVisibleMembers(
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
 ): Promise<FriendDashboardResponse["visibleMembers"]> {
-  return queryVisibleEntities(
-    tx,
-    MEMBER_REF,
-    "member",
-    systemId,
-    friendBucketIds,
-    (id) => id as MemberId,
+  return queryVisibleEntities(tx, MEMBER_REF, "member", systemId, friendBucketIds, (id) =>
+    brandId<MemberId>(id),
   );
 }
 
@@ -320,7 +318,7 @@ export async function queryVisibleCustomFronts(
     "custom-front",
     systemId,
     friendBucketIds,
-    (id) => id as CustomFrontId,
+    (id) => brandId<CustomFrontId>(id),
   );
 }
 
@@ -336,7 +334,7 @@ export async function queryVisibleStructureEntities(
     "structure-entity",
     systemId,
     friendBucketIds,
-    (id) => id as SystemStructureEntityId,
+    (id) => brandId<SystemStructureEntityId>(id),
   );
 }
 
@@ -400,8 +398,8 @@ export async function queryActiveKeyGrants(
     );
 
   return rows.map((r) => ({
-    id: r.id as KeyGrantId,
-    bucketId: r.bucketId as BucketId,
+    id: brandId<KeyGrantId>(r.id),
+    bucketId: brandId<BucketId>(r.bucketId),
     encryptedKey: Buffer.from(r.encryptedKey).toString("base64"),
     keyVersion: r.keyVersion,
   }));

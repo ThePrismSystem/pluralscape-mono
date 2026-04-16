@@ -1,5 +1,5 @@
 import { friendNotificationPreferences } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
@@ -52,9 +52,9 @@ function toPreferenceResult(row: {
   updatedAt: number;
 }): FriendNotificationPreferenceResult {
   return {
-    id: row.id as FriendNotificationPreferenceId,
-    accountId: row.accountId as AccountId,
-    friendConnectionId: row.friendConnectionId as FriendConnectionId,
+    id: brandId<FriendNotificationPreferenceId>(row.id),
+    accountId: brandId<AccountId>(row.accountId),
+    friendConnectionId: brandId<FriendConnectionId>(row.friendConnectionId),
     enabledEventTypes: row.enabledEventTypes,
     createdAt: row.createdAt as UnixMillis,
     updatedAt: row.updatedAt as UnixMillis,
@@ -95,7 +95,9 @@ export async function getOrCreateFriendNotificationPreference(
 
     // Create with defaults
     const timestamp = now();
-    const id = createId(ID_PREFIXES.friendNotificationPreference) as FriendNotificationPreferenceId;
+    const id = brandId<FriendNotificationPreferenceId>(
+      createId(ID_PREFIXES.friendNotificationPreference),
+    );
 
     try {
       const [created] = await tx

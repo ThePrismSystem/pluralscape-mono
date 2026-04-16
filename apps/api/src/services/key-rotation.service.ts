@@ -5,6 +5,7 @@ import {
   keyGrants,
 } from "@pluralscape/db/pg";
 import {
+  brandId,
   ID_PREFIXES,
   KEY_ROTATION,
   ROTATION_ITEM_STATUSES,
@@ -46,8 +47,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 function toRotationResult(row: typeof bucketKeyRotations.$inferSelect): BucketKeyRotation {
   return {
-    id: row.id as BucketKeyRotationId,
-    bucketId: row.bucketId as BucketId,
+    id: brandId<BucketKeyRotationId>(row.id),
+    bucketId: brandId<BucketId>(row.bucketId),
     fromKeyVersion: row.fromKeyVersion,
     toKeyVersion: row.toKeyVersion,
     state: row.state,
@@ -62,7 +63,7 @@ function toRotationResult(row: typeof bucketKeyRotations.$inferSelect): BucketKe
 function toItemResult(row: typeof bucketRotationItems.$inferSelect): BucketRotationItem {
   return {
     id: row.id as BucketRotationItem["id"],
-    rotationId: row.rotationId as BucketKeyRotationId,
+    rotationId: brandId<BucketKeyRotationId>(row.rotationId),
     entityType: row.entityType,
     entityId: row.entityId,
     status: row.status,

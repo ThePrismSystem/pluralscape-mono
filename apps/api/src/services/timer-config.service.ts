@@ -1,5 +1,12 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateTimerConfigBodySchema,
   TimerConfigQuerySchema,
@@ -87,8 +94,8 @@ function toTimerConfigResult(row: {
   updatedAt: number;
 }): TimerConfigResult {
   const base: TimerConfigBase = {
-    id: row.id as TimerId,
-    systemId: row.systemId as SystemId,
+    id: brandId<TimerId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     enabled: row.enabled,
     intervalMinutes: row.intervalMinutes,
     encryptedData: encryptedBlobToBase64(row.encryptedData),

@@ -1,5 +1,5 @@
 import { innerworldCanvas } from "@pluralscape/db/pg";
-import { now, toUnixMillis } from "@pluralscape/types";
+import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateCanvasBodySchema } from "@pluralscape/validation";
 import { eq, sql } from "drizzle-orm";
 
@@ -36,7 +36,7 @@ function toCanvasResult(row: {
   updatedAt: number;
 }): CanvasResult {
   return {
-    systemId: row.systemId as SystemId,
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),

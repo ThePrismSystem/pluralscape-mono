@@ -2,6 +2,7 @@ import { createHmac, randomBytes } from "node:crypto";
 
 import { accounts, apiKeys } from "@pluralscape/db/pg";
 import {
+  brandId,
   API_KEY_TOKEN_PREFIX,
   ID_PREFIXES,
   createId,
@@ -108,8 +109,8 @@ function toApiKeyResult(row: {
   scopedBucketIds: readonly string[] | null;
 }): ApiKeyResult {
   return {
-    id: row.id as ApiKeyId,
-    systemId: row.systemId as SystemId,
+    id: brandId<ApiKeyId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     keyType: row.keyType,
     scopes: row.scopes,
     createdAt: toUnixMillis(row.createdAt),
@@ -338,10 +339,10 @@ export async function validateApiKey(
   if (row.expiresAt !== null && currentTime > row.expiresAt) return null;
 
   return {
-    accountId: row.accountId as AccountId,
-    systemId: row.systemId as SystemId,
+    accountId: brandId<AccountId>(row.accountId),
+    systemId: brandId<SystemId>(row.systemId),
     scopes: row.scopes,
     auditLogIpTracking: row.auditLogIpTracking,
-    keyId: row.id as ApiKeyId,
+    keyId: brandId<ApiKeyId>(row.id),
   };
 }

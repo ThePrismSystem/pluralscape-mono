@@ -1,5 +1,12 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CastVoteBodySchema,
   PollVoteQuerySchema,
@@ -62,9 +69,9 @@ interface ListVoteOpts {
 
 function toVoteResult(row: typeof pollVotes.$inferSelect): PollVoteResult {
   return {
-    id: row.id as PollVoteId,
-    pollId: row.pollId as PollId,
-    optionId: (row.optionId ?? null) as PollOptionId | null,
+    id: brandId<PollVoteId>(row.id),
+    pollId: brandId<PollId>(row.pollId),
+    optionId: row.optionId ? brandId<PollOptionId>(row.optionId) : null,
     voter: row.voter,
     isVeto: row.isVeto,
     votedAt: toUnixMillis(row.votedAt),

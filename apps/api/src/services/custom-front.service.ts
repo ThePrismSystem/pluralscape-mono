@@ -1,5 +1,12 @@
 import { customFronts, frontingSessions, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -58,8 +65,8 @@ function toCustomFrontResult(row: {
   updatedAt: number;
 }): CustomFrontResult {
   return {
-    id: row.id as CustomFrontId,
-    systemId: row.systemId as SystemId,
+    id: brandId<CustomFrontId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     archived: row.archived,
@@ -128,7 +135,7 @@ export async function createCustomFront(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "custom-front.changed", {
-      customFrontId: row.id as CustomFrontId,
+      customFrontId: brandId<CustomFrontId>(row.id),
     });
 
     return toCustomFrontResult(row);

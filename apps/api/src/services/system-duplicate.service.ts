@@ -1,5 +1,5 @@
 import { systemSnapshots, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { DuplicateSystemBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -42,7 +42,7 @@ export async function duplicateSystem(
 
   const { snapshotId } = DuplicateSystemBodySchema.parse(params);
 
-  const newSystemId = createId(ID_PREFIXES.system) as SystemId;
+  const newSystemId = brandId<SystemId>(createId(ID_PREFIXES.system));
   const timestamp = now();
 
   return withAccountTransaction(db, auth.accountId, async (tx) => {
@@ -86,7 +86,7 @@ export async function duplicateSystem(
 
     return {
       id: newSystemId,
-      sourceSnapshotId: snapshot.id as SystemSnapshotId,
+      sourceSnapshotId: brandId<SystemSnapshotId>(snapshot.id),
     };
   });
 }

@@ -5,7 +5,14 @@ import {
   systemStructureEntityMemberLinks,
   systemStructureEntityTypes,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateStructureEntityBodySchema,
   UpdateStructureEntityBodySchema,
@@ -65,9 +72,9 @@ function toStructureEntityResult(row: {
   updatedAt: number;
 }): StructureEntityResult {
   return {
-    id: row.id as SystemStructureEntityId,
-    systemId: row.systemId as SystemId,
-    entityTypeId: row.entityTypeId as SystemStructureEntityTypeId,
+    id: brandId<SystemStructureEntityId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    entityTypeId: brandId<SystemStructureEntityTypeId>(row.entityTypeId),
     sortOrder: row.sortOrder,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,

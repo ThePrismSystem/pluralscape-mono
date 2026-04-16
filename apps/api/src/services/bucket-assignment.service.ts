@@ -1,5 +1,5 @@
 import { friendBucketAssignments, friendConnections, keyGrants } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -72,7 +72,7 @@ async function assertAcceptedConnection(
     );
   }
 
-  return { friendAccountId: connection.friendAccountId as AccountId };
+  return { friendAccountId: brandId<AccountId>(connection.friendAccountId) };
 }
 
 // ── ASSIGN ──────────────────────────────────────────────────────────
@@ -236,9 +236,9 @@ export async function listFriendBucketAssignments(
       );
 
     return rows.map((row) => ({
-      friendConnectionId: row.friendConnectionId as FriendConnectionId,
-      bucketId: row.bucketId as BucketId,
-      friendAccountId: row.friendAccountId as AccountId,
+      friendConnectionId: brandId<FriendConnectionId>(row.friendConnectionId),
+      bucketId: brandId<BucketId>(row.bucketId),
+      friendAccountId: brandId<AccountId>(row.friendAccountId),
     }));
   });
 }

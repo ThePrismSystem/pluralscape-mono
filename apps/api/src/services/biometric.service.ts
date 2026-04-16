@@ -1,6 +1,6 @@
 import { GENERIC_HASH_BYTES_MAX, getSodium } from "@pluralscape/crypto";
 import { biometricTokens, systemSettings } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { BiometricEnrollBodySchema, BiometricVerifyBodySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -70,7 +70,7 @@ export async function enrollBiometric(
     }
 
     const tokenHash = hashToken(parsed.data.token);
-    const id = createId(ID_PREFIXES.biometricToken) as BiometricTokenId;
+    const id = brandId<BiometricTokenId>(createId(ID_PREFIXES.biometricToken));
     const timestamp = now();
 
     await tx.insert(biometricTokens).values({

@@ -7,6 +7,7 @@ import {
   notificationConfigs,
   systems,
 } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
@@ -213,9 +214,9 @@ export async function dispatchSwitchAlertForSession(
             type: "notification-send",
             systemId,
             payload: {
-              accountId: token.accountId as AccountId,
+              accountId: brandId<AccountId>(token.accountId),
               systemId,
-              deviceTokenId: token.id as DeviceTokenId,
+              deviceTokenId: brandId<DeviceTokenId>(token.id),
               platform: token.platform,
               payload: {
                 title: "Switch Alert",
@@ -257,5 +258,5 @@ async function getSystemAccountId(
     .from(systems)
     .where(eq(systems.id, systemId))
     .limit(1);
-  return (row?.accountId ?? null) as AccountId | null;
+  return row?.accountId ? brandId<AccountId>(row.accountId) : null;
 }

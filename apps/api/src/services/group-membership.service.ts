@@ -1,5 +1,5 @@
 import { groupMemberships, groups, members } from "@pluralscape/db/pg";
-import { now, toUnixMillis } from "@pluralscape/types";
+import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { AddGroupMemberBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
@@ -35,9 +35,9 @@ function toMembershipResult(row: {
   createdAt: number;
 }): GroupMembershipResult {
   return {
-    groupId: row.groupId as GroupId,
-    memberId: row.memberId as MemberId,
-    systemId: row.systemId as SystemId,
+    groupId: brandId<GroupId>(row.groupId),
+    memberId: brandId<MemberId>(row.memberId),
+    systemId: brandId<SystemId>(row.systemId),
     createdAt: toUnixMillis(row.createdAt),
   };
 }
@@ -93,7 +93,7 @@ export async function addMember(
         .insert(groupMemberships)
         .values({
           groupId,
-          memberId: memberId as MemberId,
+          memberId: brandId<MemberId>(memberId),
           systemId,
           createdAt: timestamp,
         })

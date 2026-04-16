@@ -1,5 +1,5 @@
 import { members, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -52,7 +52,7 @@ function toSystemProfileResult(row: {
   updatedAt: number;
 }): SystemProfileResult {
   return {
-    id: row.id as SystemId,
+    id: brandId<SystemId>(row.id),
     encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),
@@ -294,7 +294,7 @@ export async function createSystem(
       eventType: "system.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "System created",
-      systemId: systemId as SystemId,
+      systemId: brandId<SystemId>(systemId),
     });
 
     return inserted;

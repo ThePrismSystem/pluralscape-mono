@@ -1,5 +1,12 @@
 import { channels, messages, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { CreateChannelBodySchema, UpdateChannelBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -65,8 +72,8 @@ interface ListChannelOpts {
 
 function toChannelResult(row: typeof channels.$inferSelect): ChannelResult {
   const base = {
-    id: row.id as ChannelId,
-    systemId: row.systemId as SystemId,
+    id: brandId<ChannelId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     sortOrder: row.sortOrder,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
@@ -78,7 +85,11 @@ function toChannelResult(row: typeof channels.$inferSelect): ChannelResult {
   if (row.type === "category") {
     return { ...base, type: "category", parentId: null };
   }
-  return { ...base, type: "channel", parentId: (row.parentId as ChannelId | null) ?? null };
+  return {
+    ...base,
+    type: "channel",
+    parentId: row.parentId ? brandId<ChannelId>(row.parentId) : null,
+  };
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────

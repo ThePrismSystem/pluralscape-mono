@@ -1,6 +1,6 @@
 import { serializeEncryptedBlob } from "@pluralscape/crypto";
 import { systemSettings } from "@pluralscape/db/pg";
-import { now, toUnixMillis } from "@pluralscape/types";
+import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateSystemSettingsBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -53,8 +53,8 @@ export function toSystemSettingsResult(row: {
   updatedAt: number;
 }): SystemSettingsResult {
   return {
-    id: row.id as SystemSettingsId,
-    systemId: row.systemId as SystemId,
+    id: brandId<SystemSettingsId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     locale: row.locale,
     biometricEnabled: row.biometricEnabled,
     encryptedData: Buffer.from(serializeEncryptedBlob(row.encryptedData)).toString("base64"),

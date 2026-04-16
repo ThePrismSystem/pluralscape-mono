@@ -1,5 +1,5 @@
 import { systemSnapshots } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateSnapshotBodySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
@@ -48,8 +48,8 @@ function toSnapshotResult(row: {
   createdAt: number;
 }): SnapshotResult {
   return {
-    id: row.id as SystemSnapshotId,
-    systemId: row.systemId as SystemId,
+    id: brandId<SystemSnapshotId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     snapshotTrigger: row.snapshotTrigger as SnapshotTrigger,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     createdAt: toUnixMillis(row.createdAt),

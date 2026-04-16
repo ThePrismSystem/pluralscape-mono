@@ -1,4 +1,5 @@
 import { authKeys, keyGrants, systems } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
 import type {
@@ -55,11 +56,11 @@ export async function listReceivedKeyGrants(
 
   return {
     grants: rows.map((r) => ({
-      id: r.id as KeyGrantId,
-      bucketId: r.bucketId as BucketId,
+      id: brandId<KeyGrantId>(r.id),
+      bucketId: brandId<BucketId>(r.bucketId),
       encryptedKey: Buffer.from(r.encryptedKey).toString("base64"),
       keyVersion: r.keyVersion,
-      grantorSystemId: r.systemId as SystemId,
+      grantorSystemId: brandId<SystemId>(r.systemId),
       senderBoxPublicKey: Buffer.from(r.senderBoxPublicKey).toString("base64url"),
     })),
   };

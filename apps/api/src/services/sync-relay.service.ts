@@ -1,7 +1,7 @@
 import { assertAeadNonce, assertSignature, assertSignPublicKey } from "@pluralscape/crypto";
 import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
 import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscape/sync";
-import { createId, ID_PREFIXES } from "@pluralscape/types";
+import { brandId, createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
@@ -222,11 +222,11 @@ export class PgSyncRelayService implements SyncRelayService {
         .where(eq(syncDocuments.systemId, systemId));
 
       const documents: SyncManifestEntry[] = rows.map((row) => ({
-        docId: row.documentId as SyncDocumentId,
+        docId: brandId<SyncDocumentId>(row.documentId),
         docType: row.docType,
         keyType: row.keyType,
-        bucketId: row.bucketId as BucketId | null,
-        channelId: row.channelId as ChannelId | null,
+        bucketId: row.bucketId ? brandId<BucketId>(row.bucketId) : null,
+        channelId: row.channelId ? brandId<ChannelId>(row.channelId) : null,
         timePeriod: row.timePeriod,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -249,7 +249,7 @@ export class PgSyncRelayService implements SyncRelayService {
       nonce: row.nonce,
       signature: row.signature,
       authorPublicKey: row.authorPublicKey,
-      documentId: row.documentId as SyncDocumentId,
+      documentId: brandId<SyncDocumentId>(row.documentId),
       seq: row.seq,
     };
   }
@@ -263,7 +263,7 @@ export class PgSyncRelayService implements SyncRelayService {
       nonce: row.nonce,
       signature: row.signature,
       authorPublicKey: row.authorPublicKey,
-      documentId: row.documentId as SyncDocumentId,
+      documentId: brandId<SyncDocumentId>(row.documentId),
       snapshotVersion: row.snapshotVersion,
     };
   }

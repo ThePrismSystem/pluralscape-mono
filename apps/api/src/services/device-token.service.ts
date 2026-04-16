@@ -1,5 +1,5 @@
 import { deviceTokens } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
@@ -68,8 +68,8 @@ function toDeviceTokenResult(row: {
   createdAt: number;
 }): DeviceTokenResult {
   return {
-    id: row.id as DeviceTokenId,
-    systemId: row.systemId as SystemId,
+    id: brandId<DeviceTokenId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
     platform: row.platform,
     tokenHash: row.tokenHash,
     lastActiveAt: (row.lastActiveAt ?? null) as UnixMillis | null,
@@ -96,7 +96,7 @@ export async function registerDeviceToken(
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const timestamp = now();
-    const id = createId(ID_PREFIXES.deviceToken) as DeviceTokenId;
+    const id = brandId<DeviceTokenId>(createId(ID_PREFIXES.deviceToken));
 
     const [row] = await tx
       .insert(deviceTokens)

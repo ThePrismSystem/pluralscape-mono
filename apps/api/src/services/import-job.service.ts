@@ -1,5 +1,6 @@
 import { importJobs } from "@pluralscape/db/pg";
 import {
+  brandId,
   ID_PREFIXES,
   IMPORT_CHECKPOINT_SCHEMA_VERSION,
   createId,
@@ -111,9 +112,9 @@ function parseCheckpointState(raw: unknown): ImportCheckpointState | null {
 
 function toImportJobResult(row: typeof importJobs.$inferSelect): ImportJobResult {
   return {
-    id: row.id as ImportJobId,
-    accountId: row.accountId as AccountId,
-    systemId: row.systemId as SystemId,
+    id: brandId<ImportJobId>(row.id),
+    accountId: brandId<AccountId>(row.accountId),
+    systemId: brandId<SystemId>(row.systemId),
     source: row.source,
     status: row.status,
     progressPercent: row.progressPercent,

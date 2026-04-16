@@ -3,7 +3,14 @@ import {
   frontingSessions,
   systemStructureEntityMemberLinks,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateFrontingSessionBodySchema,
   EndFrontingSessionBodySchema,
@@ -95,11 +102,13 @@ function toFrontingSessionResult(row: {
   updatedAt: number;
 }): FrontingSessionResult {
   return {
-    id: row.id as FrontingSessionId,
-    systemId: row.systemId as SystemId,
-    memberId: row.memberId as MemberId | null,
-    customFrontId: row.customFrontId as CustomFrontId | null,
-    structureEntityId: row.structureEntityId as SystemStructureEntityId | null,
+    id: brandId<FrontingSessionId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    memberId: row.memberId ? brandId<MemberId>(row.memberId) : null,
+    customFrontId: row.customFrontId ? brandId<CustomFrontId>(row.customFrontId) : null,
+    structureEntityId: row.structureEntityId
+      ? brandId<SystemStructureEntityId>(row.structureEntityId)
+      : null,
     startTime: toUnixMillis(row.startTime),
     endTime: toUnixMillisOrNull(row.endTime),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
@@ -165,7 +174,7 @@ export async function createFrontingSession(
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "fronting.started", {
-      sessionId: row.id as FrontingSessionId,
+      sessionId: brandId<FrontingSessionId>(row.id),
     });
     if (parsed.endTime !== undefined) {
       await audit(tx, {
@@ -175,7 +184,7 @@ export async function createFrontingSession(
         systemId,
       });
       await dispatchWebhookEvent(tx, systemId, "fronting.ended", {
-        sessionId: row.id as FrontingSessionId,
+        sessionId: brandId<FrontingSessionId>(row.id),
       });
     }
 

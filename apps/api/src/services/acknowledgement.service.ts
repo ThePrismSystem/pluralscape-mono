@@ -1,5 +1,12 @@
 import { acknowledgements } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   AcknowledgementQuerySchema,
   ConfirmAcknowledgementBodySchema,
@@ -66,9 +73,9 @@ interface ListAcknowledgementOpts {
 
 function toAcknowledgementResult(row: typeof acknowledgements.$inferSelect): AcknowledgementResult {
   return {
-    id: row.id as AcknowledgementId,
-    systemId: row.systemId as SystemId,
-    createdByMemberId: row.createdByMemberId as MemberId | null,
+    id: brandId<AcknowledgementId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    createdByMemberId: row.createdByMemberId ? brandId<MemberId>(row.createdByMemberId) : null,
     confirmed: row.confirmed,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,

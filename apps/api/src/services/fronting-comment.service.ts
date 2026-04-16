@@ -1,5 +1,12 @@
 import { frontingComments, frontingSessions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateFrontingCommentBodySchema,
   UpdateFrontingCommentBodySchema,
@@ -70,12 +77,14 @@ function toFrontingCommentResult(row: {
   updatedAt: number;
 }): FrontingCommentResult {
   return {
-    id: row.id as FrontingCommentId,
-    frontingSessionId: row.frontingSessionId as FrontingSessionId,
-    systemId: row.systemId as SystemId,
-    memberId: row.memberId as MemberId | null,
-    customFrontId: row.customFrontId as CustomFrontId | null,
-    structureEntityId: row.structureEntityId as SystemStructureEntityId | null,
+    id: brandId<FrontingCommentId>(row.id),
+    frontingSessionId: brandId<FrontingSessionId>(row.frontingSessionId),
+    systemId: brandId<SystemId>(row.systemId),
+    memberId: row.memberId ? brandId<MemberId>(row.memberId) : null,
+    customFrontId: row.customFrontId ? brandId<CustomFrontId>(row.customFrontId) : null,
+    structureEntityId: row.structureEntityId
+      ? brandId<SystemStructureEntityId>(row.structureEntityId)
+      : null,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     archived: row.archived,

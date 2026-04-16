@@ -7,7 +7,14 @@ import {
   verifyRecoveryKey,
 } from "@pluralscape/crypto";
 import { accounts, recoveryKeys, sessions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  SESSION_TIMEOUTS,
+  createId,
+  now,
+  toUnixMillis,
+} from "@pluralscape/types";
 import {
   PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
@@ -169,7 +176,7 @@ export async function resetPasswordWithRecoveryKey(
   }
 
   // Fetch active recovery key (account-scoped read)
-  const activeKey = await withAccountRead(db, account.id as AccountId, async (tx) => {
+  const activeKey = await withAccountRead(db, brandId<AccountId>(account.id), async (tx) => {
     const [row] = await tx
       .select({ id: recoveryKeys.id, recoveryKeyHash: recoveryKeys.recoveryKeyHash })
       .from(recoveryKeys)
@@ -219,7 +226,7 @@ export async function resetPasswordWithRecoveryKey(
     const timeouts = SESSION_TIMEOUTS[platform];
     const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
-    await withAccountTransaction(db, account.id as AccountId, async (tx) => {
+    await withAccountTransaction(db, brandId<AccountId>(account.id), async (tx) => {
       // Update account: new auth key hash, KDF salt, encrypted master key
       await tx
         .update(accounts)
@@ -271,13 +278,13 @@ export async function resetPasswordWithRecoveryKey(
         eventType: "auth.password-reset-via-recovery",
         actor: { kind: "account", id: account.id },
         detail: "Password reset via recovery key",
-        accountId: account.id as AccountId,
+        accountId: brandId<AccountId>(account.id),
       });
     });
 
     return {
-      sessionToken: rawToken as SessionId,
-      accountId: account.id as AccountId,
+      sessionToken: brandId<SessionId>(rawToken),
+      accountId: brandId<AccountId>(account.id),
     };
   } finally {
     await equalizeAntiEnumTiming(startTime);

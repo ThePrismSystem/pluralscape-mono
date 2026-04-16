@@ -1,6 +1,6 @@
 import { serializeEncryptedBlob } from "@pluralscape/crypto";
 import { nomenclatureSettings } from "@pluralscape/db/pg";
-import { now, toUnixMillis } from "@pluralscape/types";
+import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateNomenclatureBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -36,7 +36,7 @@ function toResult(row: {
   updatedAt: number;
 }): NomenclatureSettingsResult {
   return {
-    systemId: row.systemId as SystemId,
+    systemId: brandId<SystemId>(row.systemId),
     encryptedData: Buffer.from(serializeEncryptedBlob(row.encryptedData)).toString("base64"),
     version: row.version,
     createdAt: toUnixMillis(row.createdAt),

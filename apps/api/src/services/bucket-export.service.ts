@@ -6,6 +6,8 @@
  * bucket export uses a direct JOIN on bucket_content_tags — entities are
  * either tagged or not, so no overfetch loop is needed.
  */
+import { brandId } from "@pluralscape/types";
+
 import { batchedManifestQueries } from "../lib/batch.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { computeDataEtag, computeManifestEtag } from "../lib/etag.js";
@@ -116,7 +118,7 @@ export async function getBucketExportPage(
     const pageRows = hasMore ? rows.slice(0, limit) : rows;
 
     const items: BucketExportEntity[] = pageRows.map((r: BucketExportRow) => ({
-      id: r.id as ExportEntityId,
+      id: brandId<ExportEntityId>(r.id),
       entityType,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
       updatedAt: r.updatedAt,

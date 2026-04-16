@@ -1,5 +1,12 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreatePollBodySchema,
   PollQuerySchema,
@@ -100,9 +107,9 @@ interface ListPollOpts {
 
 function toPollResult(row: typeof polls.$inferSelect): PollResult {
   return {
-    id: row.id as PollId,
-    systemId: row.systemId as SystemId,
-    createdByMemberId: row.createdByMemberId as MemberId | null,
+    id: brandId<PollId>(row.id),
+    systemId: brandId<SystemId>(row.systemId),
+    createdByMemberId: row.createdByMemberId ? brandId<MemberId>(row.createdByMemberId) : null,
     kind: row.kind,
     status: row.status,
     closedAt: toUnixMillisOrNull(row.closedAt),
