@@ -36,9 +36,15 @@ export function DataLayerProvider({
   if (localDbRef.current === null && platform.storage.backend === "sqlite") {
     const db = createLocalDatabase(platform.storage.driver);
     // Fire-and-forget: initialize() runs CREATE TABLE DDL asynchronously.
-    // Queries issued before init resolves will error; in practice the
-    // microtask completes well before any user interaction produces a query.
-    void db.initialize();
+    // Failures surface via the event bus as `data:error` for UI to observe.
+    const bus = eventBusRef.current;
+    void db.initialize().catch((error: unknown) => {
+      bus.emit("data:error", {
+        type: "data:error",
+        message: "Local database initialization failed",
+        error,
+      });
+    });
     localDbRef.current = db;
   }
 
@@ -57,8 +63,17 @@ export function DataLayerProvider({
   useEffect(() => {
     return () => {
       const db = localDbRef.current;
-      if (db !== null) void db.close();
-      eventBusRef.current?.removeAll();
+      const bus = eventBusRef.current;
+      if (db !== null) {
+        void db.close().catch((error: unknown) => {
+          bus?.emit("data:error", {
+            type: "data:error",
+            message: "Local database close failed",
+            error,
+          });
+        });
+      }
+      bus?.removeAll();
     };
   }, []);
 

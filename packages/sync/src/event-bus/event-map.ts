@@ -45,6 +45,14 @@ export interface SyncErrorEvent {
   readonly error: unknown;
 }
 
+// ── Data-layer events ───────────────────────────────────────────────
+
+export interface DataErrorEvent {
+  readonly type: "data:error";
+  readonly message: string;
+  readonly error: unknown;
+}
+
 // ── Materialization events ──────────────────────────────────────────
 
 export type EntityOperation = "create" | "update" | "delete";
@@ -94,6 +102,7 @@ export interface DataLayerEventMap {
   "sync:changes-merged": SyncChangesMergedEvent;
   "sync:snapshot-applied": SyncSnapshotAppliedEvent;
   "sync:error": SyncErrorEvent;
+  "data:error": DataErrorEvent;
   "materialized:document": MaterializedDocumentEvent;
   "materialized:entity": MaterializedEntityEvent;
   "friend:data-changed": FriendDataChangedEvent;
