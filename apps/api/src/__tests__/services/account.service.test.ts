@@ -201,7 +201,7 @@ describe("account service", () => {
       ).rejects.toThrow("Incorrect password");
     });
 
-    it("returns ok silently when email is unchanged", async () => {
+    it("returns kind:'noop' silently when email is unchanged", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
@@ -217,14 +217,14 @@ describe("account service", () => {
         { email: "same@example.com", authKey: VALID_AUTH_KEY_HEX },
         mockAudit,
       );
-      // No-op change — oldEmail/newEmail both null to signal "don't notify"
-      expect(result).toEqual({ ok: true, oldEmail: null, newEmail: null });
+      // No-op change — discriminant is "noop" so callers skip the notification enqueue.
+      expect(result).toEqual({ kind: "noop" });
       // Transaction is called once for the withAccountRead lookup,
       // but NOT a second time for the write path (email is unchanged)
       expect(chain.transaction).toHaveBeenCalledOnce();
     });
 
-    it("returns ok on successful email change", async () => {
+    it("returns kind:'changed' with post-change version on successful email change", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
@@ -243,7 +243,14 @@ describe("account service", () => {
       );
       // oldEmail is null because resolveAccountEmail needs EMAIL_ENCRYPTION_KEY
       // and the unit mock doesn't configure one; newEmail echoes the input.
-      expect(result).toEqual({ ok: true, oldEmail: null, newEmail: "new@example.com" });
+      // version is preChangeVersion + 1 (1 + 1 = 2) — used by the notification
+      // enqueue idempotency key so retries of the same change dedupe.
+      expect(result).toEqual({
+        kind: "changed",
+        oldEmail: null,
+        newEmail: "new@example.com",
+        version: 2,
+      });
     });
 
     it("throws generic error on duplicate email", async () => {

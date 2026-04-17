@@ -21,6 +21,7 @@ describe("AuditEventType", () => {
     assertType<AuditEventType>("device-token.revoked");
     assertType<AuditEventType>("notification-config.updated");
     assertType<AuditEventType>("friend-notification-preference.updated");
+    assertType<AuditEventType>("auth.email-change-notification-enqueue-failed");
   });
 
   it("rejects invalid event types", () => {
@@ -59,6 +60,7 @@ describe("AuditEventType", () => {
         case "auth.device-transfer-approved":
         case "auth.device-transfer-completed":
         case "auth.email-changed":
+        case "auth.email-change-notification-enqueue-failed":
         case "system.created":
         case "system.profile-updated":
         case "system.deleted":

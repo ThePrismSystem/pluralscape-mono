@@ -33,6 +33,7 @@ vi.mock("../../../services/account.service.js", () => ({
   changeEmail: vi.fn(),
   changePassword: vi.fn(),
   updateAccountSettings: vi.fn(),
+  enqueueAccountEmailChangedNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../services/account-pin.service.js", () => ({
@@ -71,8 +72,13 @@ vi.mock("../../../services/device-transfer.service.js", () => ({
   TransferSessionMismatchError: class TransferSessionMismatchError extends Error {},
 }));
 
-const { getAccountInfo, changeEmail, changePassword, updateAccountSettings } =
-  await import("../../../services/account.service.js");
+const {
+  getAccountInfo,
+  changeEmail,
+  changePassword,
+  updateAccountSettings,
+  enqueueAccountEmailChangedNotification,
+} = await import("../../../services/account.service.js");
 const { setAccountPin, removeAccountPin, verifyAccountPin } =
   await import("../../../services/account-pin.service.js");
 const { enrollBiometric, verifyBiometric } = await import("../../../services/biometric.service.js");
@@ -150,14 +156,17 @@ describe("account router", () => {
       authKey: "ab".repeat(32),
     };
 
-    it("calls changeEmail and returns ok", async () => {
+    it("calls changeEmail and returns ok (no leaked addresses)", async () => {
       vi.mocked(changeEmail).mockResolvedValue({
-        ok: true,
+        kind: "changed",
         oldEmail: "old@example.com",
         newEmail: "new@example.com",
+        version: 5,
       });
       const caller = createCaller();
       const result = await caller.account.changeEmail(input);
+      // Response carries { ok: true } only — old/new plaintext addresses
+      // are intentionally not leaked back to callers.
       expect(result).toEqual({ ok: true });
       expect(vi.mocked(changeEmail)).toHaveBeenCalledWith(
         expect.anything(),
@@ -165,6 +174,30 @@ describe("account router", () => {
         input,
         noopAuditWriter,
       );
+      const helperMock = vi.mocked(enqueueAccountEmailChangedNotification);
+      expect(helperMock).toHaveBeenCalledTimes(1);
+      // Avoid pretty-format introspection of the Proxy db (which throws on
+      // every property access) by reading the recorded call positionally
+      // rather than via toHaveBeenCalledWith.
+      const call = helperMock.mock.calls[0];
+      if (!call) throw new Error("expected helper to be called once");
+      expect(call[1]).toBe(noopAuditWriter);
+      expect(call[3]).toEqual({
+        accountId: MOCK_AUTH.accountId,
+        oldEmail: "old@example.com",
+        newEmail: "new@example.com",
+        version: 5,
+        ipAddress: null,
+      });
+    });
+
+    it("skips the notification helper on kind:'noop'", async () => {
+      vi.mocked(enqueueAccountEmailChangedNotification).mockClear();
+      vi.mocked(changeEmail).mockResolvedValue({ kind: "noop" });
+      const caller = createCaller();
+      const result = await caller.account.changeEmail(input);
+      expect(result).toEqual({ ok: true });
+      expect(vi.mocked(enqueueAccountEmailChangedNotification)).not.toHaveBeenCalled();
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
@@ -513,11 +546,7 @@ describe("account router", () => {
 
   it("applies rate limiting to mutations", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(changeEmail).mockResolvedValue({
-      ok: true,
-      oldEmail: null,
-      newEmail: null,
-    });
+    vi.mocked(changeEmail).mockResolvedValue({ kind: "noop" });
     const caller = createCaller();
     await assertProcedureRateLimited(
       vi.mocked(checkRateLimit),

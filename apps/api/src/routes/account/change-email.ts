@@ -4,13 +4,16 @@ import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { logger } from "../../lib/logger.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { getQueue } from "../../lib/queue.js";
 import { extractIpAddress } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { ConcurrencyError, changeEmail } from "../../services/account.service.js";
+import {
+  ConcurrencyError,
+  changeEmail,
+  enqueueAccountEmailChangedNotification,
+} from "../../services/account.service.js";
 import { ValidationError } from "../../services/auth.service.js";
 
 import { EMAIL_CHANGE_FAILED_ERROR } from "./account.constants.js";
@@ -30,44 +33,22 @@ changeEmailRoute.put("/", async (c) => {
   try {
     const result = await changeEmail(db, auth.accountId, body, audit);
 
-    // Fire-and-forget: notify the OLD email address about the change.
-    // Skipped when:
-    //   - result.oldEmail is null (no-op change, or encrypted email not resolvable)
-    //   - the queue is disabled (local dev without Valkey)
-    // `recipientOverride` sends to the prior address explicitly — by the time
-    // the worker runs, the account's encryptedEmail may already reflect the
-    // new address, so we cannot rely on resolveAccountEmail inside the worker.
-    if (result.oldEmail && result.newEmail) {
-      const queue = getQueue();
-      if (queue) {
-        queue
-          .enqueue({
-            type: "email-send",
-            systemId: null,
-            payload: {
-              accountId: auth.accountId,
-              template: "account-change-email",
-              vars: {
-                oldEmail: result.oldEmail,
-                newEmail: result.newEmail,
-                timestamp: new Date().toISOString(),
-                ...(ipAddress ? { ipAddress } : {}),
-              },
-              recipientOverride: result.oldEmail,
-            },
-            idempotencyKey: `email:account-change:${auth.accountId}:${String(Date.now())}`,
-          })
-          .catch((err: unknown) => {
-            logger.warn("[change-email] failed to enqueue notification to old address", {
-              accountId: auth.accountId,
-              error: err instanceof Error ? err.message : String(err),
-            });
-          });
-      }
+    if (result.kind === "changed") {
+      // Fire-and-forget: notify the OLD address of the change. The helper
+      // owns queue-null/oldEmail-null short-circuiting, failure logging, and
+      // audit-event persistence — we must NOT await or rethrow from it.
+      void enqueueAccountEmailChangedNotification(getQueue(), audit, db, {
+        accountId: auth.accountId,
+        oldEmail: result.oldEmail,
+        newEmail: result.newEmail,
+        version: result.version,
+        ipAddress,
+      });
     }
 
-    // Return the ok flag only — callers do not need the resolved addresses
-    // (they know the new address; the old address is intentionally private).
+    // Response body carries { ok: true } only — the prior/new plaintext
+    // addresses are intentionally private (the client knows the new one and
+    // the old one should not leak back through the API).
     return c.json(envelope({ ok: true as const }));
   } catch (error: unknown) {
     if (error instanceof ConcurrencyError) {

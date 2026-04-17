@@ -12,6 +12,11 @@ const TEST_PEPPER = vi.hoisted(() => "ab".repeat(32));
 vi.mock("../../env.js", () => ({
   env: {
     EMAIL_HASH_PEPPER: TEST_PEPPER,
+    // account.service now imports the logger (for enqueue-failure diagnostics
+    // on the new account-email-change helper). The logger reads LOG_LEVEL at
+    // module-init time — without it pino throws "default level must be
+    // included in custom levels" on first import.
+    LOG_LEVEL: "fatal",
   },
 }));
 
@@ -171,14 +176,18 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       );
 
       // Without EMAIL_ENCRYPTION_KEY configured, resolveAccountEmail returns null
-      // so oldEmail is null; newEmail is always the submitted address.
-      expect(result.ok).toBe(true);
+      // so oldEmail is null; newEmail is always the submitted address;
+      // version is post-change (pre-change 1 + 1 = 2).
+      expect(result.kind).toBe("changed");
+      if (result.kind !== "changed") throw new Error("narrowing");
       expect(result.newEmail).toBe(newEmail);
+      expect(result.oldEmail).toBeNull();
+      expect(result.version).toBe(2);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("auth.email-changed");
     });
 
-    it("returns oldEmail: null, newEmail: null on no-op change (same email)", async () => {
+    it("returns kind:'noop' on no-op change (same email)", async () => {
       const reg = await registerTestAccount(asDb(db));
 
       const result = await changeEmail(
@@ -188,7 +197,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
         noopAudit,
       );
 
-      expect(result).toEqual({ ok: true, oldEmail: null, newEmail: null });
+      expect(result).toEqual({ kind: "noop" });
     });
 
     it("throws ValidationError with wrong auth key", async () => {
