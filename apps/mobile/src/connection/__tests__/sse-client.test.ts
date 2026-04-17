@@ -270,7 +270,8 @@ describe("SseClient", () => {
     client.connect("tok");
     expect(onError).toHaveBeenCalledWith(expect.any(Error));
     const errorArg = onError.mock.calls[0]?.[0] as Error;
-    expect(errorArg.message).toBe("Malformed SSE JSON payload");
+    expect(errorArg.message).toContain("Malformed SSE JSON payload");
+    expect(errorArg.message).toMatch(/\(len=\d+\)$/);
     expect(errorArg.message).not.toContain("not-json{");
   });
 

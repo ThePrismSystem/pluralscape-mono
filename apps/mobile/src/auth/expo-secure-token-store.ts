@@ -25,10 +25,18 @@ export function createExpoSecureTokenStore(): TokenStore {
     async getToken(): Promise<string | null> {
       try {
         return await SecureStore.getItemAsync(SESSION_KEY);
-      } catch {
+      } catch (err: unknown) {
         // Fail-closed: if the keychain is unavailable or the value cannot
         // be read, treat the session as absent so the boot path routes the
         // user to login rather than leaking the error.
+        //
+        // Log for support — permanent keychain corruption would otherwise be
+        // invisible. DEV-only to avoid any accidental PII in production logs.
+        if (__DEV__) {
+          console.warn("[token-store] keychain read failed, treating as logged-out", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
         return null;
       }
     },

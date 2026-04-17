@@ -57,7 +57,7 @@ describe("SseClient error payload redaction (MOBILE-S-L2)", () => {
 
     client.connect("tok");
     const errorArg = onError.mock.calls[0]?.[0] as Error;
-    expect(errorArg.message).toMatch(/malformed sse/i);
+    expect(errorArg.message).toMatch(/^Malformed SSE JSON payload \(len=\d+\)$/);
   });
 
   it("long payloads (>200 chars) are still redacted — no excerpt slice leaks", () => {
@@ -78,6 +78,29 @@ describe("SseClient error payload redaction (MOBILE-S-L2)", () => {
     const errorArg = onError.mock.calls[0]?.[0] as Error;
     expect(errorArg.message).not.toContain("prefix-");
     expect(errorArg.message).not.toContain("suffix-SHHH");
+    // Message is now "Malformed SSE JSON payload (len=N)" where N fits the
+    // budget. The bound is generous enough to absorb realistic length digits
+    // without leaking any payload excerpt.
     expect(errorArg.message.length).toBeLessThan(64);
+  });
+
+  it("includes the raw payload length in the error message as a non-sensitive diagnostic", () => {
+    const onError = vi.fn();
+    const client = new SseClient(
+      { baseUrl: "https://example.com" },
+      { onConnected: vi.fn(), onDisconnected: vi.fn(), onError },
+    );
+
+    const payload = "x".repeat(500);
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onmessage?.({ id: "w", data: payload, event: "", retry: undefined });
+      return Promise.resolve();
+    });
+
+    client.connect("tok");
+    const errorArg = onError.mock.calls[0]?.[0] as Error;
+    expect(errorArg.message).toMatch(/\(len=500\)$/);
+    expect(errorArg.message).not.toContain(payload);
   });
 });

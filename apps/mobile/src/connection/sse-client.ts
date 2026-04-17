@@ -52,9 +52,11 @@ export class SseClient {
           parsed = JSON.parse(ev.data) as unknown;
         } catch {
           // Deliberately omit the raw payload — it may contain server-side
-          // secrets, PII, or attacker-controlled content that should not be
-          // threaded through logs, analytics, or user-facing error UIs.
-          this.callbacks.onError(new Error("Malformed SSE JSON payload"));
+          // secrets, PII, or attacker-controlled content. The length alone is
+          // a non-sensitive diagnostic signal and meaningfully improves field
+          // support triage of malformed-frame bugs.
+          const length = typeof ev.data === "string" ? ev.data.length : -1;
+          this.callbacks.onError(new Error(`Malformed SSE JSON payload (len=${String(length)})`));
           return;
         }
         const event = { type: "message" as const, data: parsed };
