@@ -143,7 +143,7 @@ describe("useMemberPhoto", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.id).toBe("mp_1");
     expect(result.current.data?.memberId).toBe(TEST_MEMBER_ID);
@@ -162,7 +162,7 @@ describe("useMemberPhotosList", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

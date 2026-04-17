@@ -129,7 +129,6 @@ describe("BucketKeyProvider", () => {
     });
 
     const entry = result.current?.get(TEST_BUCKET_ID);
-    expect(entry).toBeDefined();
     expect(entry?.key).toBe(FAKE_AEAD_KEY);
     expect(entry?.keyVersion).toBe(1);
   });
@@ -153,10 +152,8 @@ describe("BucketKeyProvider", () => {
     });
 
     await waitFor(() => {
-      expect(result.current).toBeDefined();
+      expect(result.current?.keyVersion).toBe(2);
     });
-
-    expect(result.current?.keyVersion).toBe(2);
   });
 
   it("skips grants that fail to decrypt with DecryptionFailedError", async () => {

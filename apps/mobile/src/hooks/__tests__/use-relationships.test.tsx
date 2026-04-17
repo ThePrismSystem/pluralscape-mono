@@ -157,7 +157,7 @@ describe("useRelationship", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.label).toBe("Label rel_1");
     expect(result.current.data?.type).toBe("sibling");
@@ -171,7 +171,7 @@ describe("useRelationship", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.label).toBeNull();
   });
@@ -194,7 +194,7 @@ describe("useRelationship", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -211,7 +211,7 @@ describe("useRelationshipsList", () => {
     const { result } = renderHookWithProviders(() => useRelationshipsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -238,7 +238,7 @@ describe("useRelationshipsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useRelationshipsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -250,7 +250,7 @@ describe("useRelationshipsList", () => {
     const { result } = renderHookWithProviders(() => useRelationshipsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

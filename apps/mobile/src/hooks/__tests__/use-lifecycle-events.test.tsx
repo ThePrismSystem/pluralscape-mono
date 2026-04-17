@@ -167,7 +167,7 @@ describe("useLifecycleEvent", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     expect(data?.eventType).toBe("discovery");
@@ -194,7 +194,7 @@ describe("useLifecycleEvent", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -211,7 +211,7 @@ describe("useLifecycleEventsList", () => {
     const { result } = renderHookWithProviders(() => useLifecycleEventsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -244,7 +244,7 @@ describe("useLifecycleEventsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useLifecycleEventsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -256,7 +256,7 @@ describe("useLifecycleEventsList", () => {
     const { result } = renderHookWithProviders(() => useLifecycleEventsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -387,7 +387,7 @@ describe("useLifecycleEvent (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("lifecycle_events"), [
@@ -408,7 +408,7 @@ describe("useLifecycleEvent (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ id: "evt-local-1" });
@@ -425,7 +425,7 @@ describe("useLifecycleEventsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -451,7 +451,7 @@ describe("useLifecycleEventsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

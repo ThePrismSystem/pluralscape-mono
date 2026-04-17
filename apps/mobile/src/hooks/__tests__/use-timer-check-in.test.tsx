@@ -196,7 +196,7 @@ describe("useTimerConfig", () => {
     let data: Awaited<ReturnType<typeof useTimerConfig>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.promptText).toBe("How are you?");
     expect(data?.enabled).toBe(true);
@@ -219,7 +219,7 @@ describe("useTimerConfig", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -236,7 +236,7 @@ describe("useTimerConfigsList", () => {
     const { result } = renderHookWithProviders(() => useTimerConfigsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const timerData = result.current.data;
     const pages = timerData && "pages" in timerData ? timerData.pages : [];
@@ -256,7 +256,7 @@ describe("useTimerConfigsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useTimerConfigsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -273,7 +273,7 @@ describe("useCheckInHistory", () => {
     const { result } = renderHookWithProviders(() => useCheckInHistory());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const checkInData = result.current.data;
     const pages = checkInData && "pages" in checkInData ? checkInData.pages : [];
@@ -291,7 +291,7 @@ describe("useCheckInHistory", () => {
     const { result } = renderHookWithProviders(() => useCheckInHistory(), { masterKey: null });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const d = result.current.data;
     expect(d && "pages" in d ? d.pages[0]?.data[0]?.id : undefined).toBe("cir-1");
@@ -353,7 +353,7 @@ describe("useTimerConfig (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("timer_configs"), [
@@ -379,7 +379,7 @@ describe("useTimerConfig (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.promptText).toBe("Local timer prompt");
@@ -396,7 +396,7 @@ describe("useTimerConfigsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -422,7 +422,7 @@ describe("useTimerConfigsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
@@ -442,7 +442,7 @@ describe("useCheckInHistory (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -467,7 +467,7 @@ describe("useCheckInHistory (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toHaveLength(1);

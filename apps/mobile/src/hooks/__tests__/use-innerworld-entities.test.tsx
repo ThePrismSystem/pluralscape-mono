@@ -207,7 +207,7 @@ describe("useInnerWorldEntity", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     expect(data?.entityType).toBe("member");
@@ -226,7 +226,7 @@ describe("useInnerWorldEntity", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     expect(data?.entityType).toBe("landmark");
@@ -245,7 +245,7 @@ describe("useInnerWorldEntity", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     expect(data?.entityType).toBe("structure-entity");
@@ -272,7 +272,7 @@ describe("useInnerWorldEntity", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -289,7 +289,7 @@ describe("useInnerWorldEntitiesList", () => {
     const { result } = renderHookWithProviders(() => useInnerWorldEntitiesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -316,7 +316,7 @@ describe("useInnerWorldEntitiesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useInnerWorldEntitiesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -328,7 +328,7 @@ describe("useInnerWorldEntitiesList", () => {
     const { result } = renderHookWithProviders(() => useInnerWorldEntitiesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -466,7 +466,7 @@ describe("useInnerWorldEntity (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("innerworld_entities"), [
@@ -491,7 +491,7 @@ describe("useInnerWorldEntity (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ id: "e-local-1" });
@@ -508,7 +508,7 @@ describe("useInnerWorldEntitiesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -534,7 +534,7 @@ describe("useInnerWorldEntitiesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
@@ -552,7 +552,7 @@ describe("useInnerWorldEntitiesList (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(

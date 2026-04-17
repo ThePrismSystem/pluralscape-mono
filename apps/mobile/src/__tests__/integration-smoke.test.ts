@@ -33,7 +33,8 @@ describe("M8 Foundation Integration Smoke Test", () => {
 
     // Layer 3: Query client
     const qc = createAppQueryClient();
-    expect(qc).toBeDefined();
+    expect(typeof qc.mount).toBe("function");
+    expect(typeof qc.getQueryCache).toBe("function");
 
     // Simulate login
     const creds: AuthCredentials = {

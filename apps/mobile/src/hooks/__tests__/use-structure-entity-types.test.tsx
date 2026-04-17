@@ -164,7 +164,7 @@ describe("useStructureEntityType", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.name).toBe("Type stet_1");
     expect(result.current.data?.description).toBe("A test entity type");
@@ -187,7 +187,7 @@ describe("useStructureEntityType", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -204,7 +204,7 @@ describe("useStructureEntityTypesList", () => {
     const { result } = renderHookWithProviders(() => useStructureEntityTypesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -231,7 +231,7 @@ describe("useStructureEntityTypesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useStructureEntityTypesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();

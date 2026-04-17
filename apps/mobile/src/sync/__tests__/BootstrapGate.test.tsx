@@ -40,7 +40,11 @@ describe("BootstrapGate", () => {
     );
 
     expect(screen.queryByText("child content")).toBeNull();
-    expect(screen.getByText(/Setting up offline data/)).toBeDefined();
+    // getByText throws if the element is missing; the textContent check
+    // confirms the exact user-visible copy rendered by the loading state.
+    expect(screen.getByText(/Setting up offline data/).textContent).toMatch(
+      /^Setting up offline data/,
+    );
   });
 
   it("renders children when bootstrapped", () => {
@@ -52,7 +56,7 @@ describe("BootstrapGate", () => {
       </BootstrapGate>,
     );
 
-    expect(screen.getByText("child content")).toBeDefined();
+    expect(screen.getByText("child content").textContent).toBe("child content");
   });
 
   it("renders error state with retry button when bootstrapError is set", () => {
@@ -71,10 +75,11 @@ describe("BootstrapGate", () => {
     );
 
     expect(screen.queryByText("child content")).toBeNull();
-    expect(screen.getByText(/disk full/)).toBeDefined();
-    expect(screen.getByText(/attempt 1/)).toBeDefined();
+    const errorText = screen.getByText(/Offline setup failed \(attempt 1\): disk full/);
+    expect(errorText.textContent).toMatch(/disk full/);
+    expect(errorText.textContent).toMatch(/attempt 1/);
     const retryBtn = screen.getByRole("button", { name: "Retry offline setup" });
-    expect(retryBtn).toBeDefined();
+    expect(retryBtn.textContent).toBe("Retry");
   });
 
   it("retry button calls retryBootstrap on press", () => {
@@ -105,8 +110,9 @@ describe("BootstrapGate", () => {
       </BootstrapGate>,
     );
 
-    expect(screen.getByText("child content")).toBeDefined();
-    expect(screen.getByText(/Couldn't set up offline data/)).toBeDefined();
+    expect(screen.getByText("child content").textContent).toBe("child content");
+    const banner = screen.getByText(/Couldn't set up offline data/);
+    expect(banner.textContent).toMatch(/using online mode/);
   });
 
   it("error state is not shown when fallbackToRemote is true (fallback takes priority)", () => {
@@ -124,6 +130,6 @@ describe("BootstrapGate", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Retry offline setup" })).toBeNull();
-    expect(screen.getByText("child content")).toBeDefined();
+    expect(screen.getByText("child content").textContent).toBe("child content");
   });
 });

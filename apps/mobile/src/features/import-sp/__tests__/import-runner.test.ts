@@ -153,8 +153,8 @@ describe("runSpImport", () => {
     expect(result.outcome).toBe("completed");
     // Final completion call should have fired.
     const calls = updateJobFn.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
     const lastCall = calls[calls.length - 1];
-    expect(lastCall).toBeDefined();
     expect(lastCall?.[0]).toBe(TEST_JOB_ID);
     expect(lastCall?.[1]).toEqual(
       expect.objectContaining({
@@ -194,9 +194,10 @@ describe("runSpImport", () => {
     // a checkpointState and current progressPercent.
     expect(onProgress).toHaveBeenCalled();
     const firstCall = onProgress.mock.calls[0];
-    expect(firstCall).toBeDefined();
     const snapshot = firstCall?.[0] as { checkpointState: ImportCheckpointState };
-    expect(snapshot.checkpointState).toBeDefined();
+    // A real checkpointState carries schemaVersion and a checkpoint record.
+    expect(snapshot.checkpointState.schemaVersion).toBe(1);
+    expect(typeof snapshot.checkpointState.checkpoint).toBe("object");
   });
 
   it("marks the job failed when the source throws a fatal error", async () => {
@@ -240,11 +241,12 @@ describe("runSpImport", () => {
     const failingCall = updateJobFn.mock.calls.find(
       (call) => (call[1] as { status?: string } | undefined)?.status === "failed",
     );
-    expect(failingCall).toBeDefined();
+    expect(failingCall?.[0]).toBe(TEST_JOB_ID);
     const patch = failingCall?.[1] as Partial<ImportJob> & {
       checkpointState?: ImportCheckpointState | null;
     };
-    expect(patch.checkpointState).toBeDefined();
+    // checkpointState must be preserved (not wiped) when marking the job failed.
+    expect(patch.checkpointState?.schemaVersion).toBe(1);
   });
 
   it("threads initialCheckpoint into the engine's runImport", async () => {
@@ -323,7 +325,6 @@ describe("runSpImport", () => {
     expect(firstCall?.[0]).toBe(TEST_JOB_ID);
     const patch = firstCall?.[1] as { status?: string; checkpointState?: ImportCheckpointState };
     expect(patch.status).toBe("importing");
-    expect(patch.checkpointState).toBeDefined();
     expect(patch.checkpointState?.options.avatarMode).toBe(avatarMode);
   });
 
@@ -355,8 +356,8 @@ describe("runSpImport", () => {
       abortSignal: controller.signal,
     });
 
-    // Result must be returned without throwing.
-    expect(result).toBeDefined();
+    // Result must be returned without throwing and must carry an outcome.
+    expect(result.outcome).toBe("aborted");
 
     // No terminal call with "completed" or "failed" status.
     const terminalCall = updateJobFn.mock.calls.find((call) => {
@@ -397,7 +398,8 @@ describe("runSpImport", () => {
       updateJobFn,
     });
 
-    expect(result).toBeDefined();
+    // The import itself must still report completed even when the terminal
+    // updateJobFn persistence throws — swallow behavior is the point here.
     expect(result.outcome).toBe("completed");
   });
 });

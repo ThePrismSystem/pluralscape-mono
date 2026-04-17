@@ -169,7 +169,7 @@ describe("useMessage", () => {
     let data: Awaited<ReturnType<typeof useMessage>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.content).toBe("hello");
     expect(data?.archived).toBe(false);
@@ -193,7 +193,7 @@ describe("useMessage", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -210,7 +210,7 @@ describe("useMessagesList", () => {
     const { result } = renderHookWithProviders(() => useMessagesList(CHANNEL_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -234,7 +234,7 @@ describe("useMessagesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useMessagesList(CHANNEL_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -386,7 +386,7 @@ describe("useMessage (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_messages"), [
@@ -409,7 +409,7 @@ describe("useMessage (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.content).toBe("hello from sqlite");
@@ -426,7 +426,7 @@ describe("useMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -452,7 +452,7 @@ describe("useMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

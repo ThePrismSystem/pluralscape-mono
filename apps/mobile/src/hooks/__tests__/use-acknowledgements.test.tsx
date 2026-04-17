@@ -163,7 +163,7 @@ describe("useAcknowledgement", () => {
     let data: Awaited<ReturnType<typeof useAcknowledgement>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.message).toBe("Please read");
     expect(data?.targetMemberId).toBe("m-1");
@@ -188,7 +188,7 @@ describe("useAcknowledgement", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -205,7 +205,7 @@ describe("useAcknowledgementsList", () => {
     const { result } = renderHookWithProviders(() => useAcknowledgementsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -230,7 +230,7 @@ describe("useAcknowledgementsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useAcknowledgementsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -362,7 +362,7 @@ describe("useAcknowledgement (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_acknowledgements"), [
@@ -385,7 +385,7 @@ describe("useAcknowledgement (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.message).toBe("Please acknowledge this");
@@ -402,7 +402,7 @@ describe("useAcknowledgementsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -428,7 +428,7 @@ describe("useAcknowledgementsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

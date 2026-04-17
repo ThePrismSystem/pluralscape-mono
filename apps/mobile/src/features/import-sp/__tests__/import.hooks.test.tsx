@@ -204,8 +204,8 @@ describe("useStartImport", () => {
     await waitFor(() => {
       expect(runSpImportMock).toHaveBeenCalled();
     });
+    expect(runSpImportMock.mock.calls.length).toBe(1);
     const firstCall = runSpImportMock.mock.calls[0];
-    expect(firstCall).toBeDefined();
     const passedArgs = firstCall?.[0] as { importJobId: ImportJobId };
     expect(passedArgs).toEqual(expect.objectContaining({ importJobId: "ij_test" }));
   });
@@ -238,9 +238,11 @@ describe("useStartImport", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("exposes abortControllerRef", () => {
+  it("exposes abortControllerRef as a React ref object", () => {
     const { result } = renderHookWithProviders(() => useStartImport());
-    expect(result.current.abortControllerRef).toBeDefined();
+    // A React ref always has a `current` property; the initial value is null.
+    expect(result.current.abortControllerRef).toHaveProperty("current");
+    expect(result.current.abortControllerRef.current).toBeNull();
   });
 
   it("sets error state when runSpImport rejects", async () => {
@@ -370,7 +372,7 @@ describe("useImportProgress", () => {
     renderHookWithProviders(() => useImportProgress(brandId<ImportJobId>("ij_poll")));
 
     await waitFor(() => {
-      expect(fixtures.get("importJob.get.lastRefetchInterval")).toBeDefined();
+      expect(typeof fixtures.get("importJob.get.lastRefetchInterval")).toBe("function");
     });
 
     // Exercise the function form with a synthetic query-like shape and
@@ -610,9 +612,11 @@ describe("useResumeActiveImport", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("exposes abortControllerRef", () => {
+  it("exposes abortControllerRef as a React ref object", () => {
     const { result } = renderHookWithProviders(() => useResumeActiveImport());
-    expect(result.current.abortControllerRef).toBeDefined();
+    // A React ref always has a `current` property; the initial value is null.
+    expect(result.current.abortControllerRef).toHaveProperty("current");
+    expect(result.current.abortControllerRef.current).toBeNull();
   });
 
   it("sets error state when runSpImport rejects during resume", async () => {
@@ -727,7 +731,7 @@ describe("useCancelImport", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.job.data).toBeDefined();
+      expect(result.current.job.isSuccess).toBe(true);
     });
 
     await act(async () => {

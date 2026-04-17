@@ -155,7 +155,7 @@ describe("useChannel", () => {
     let data: Awaited<ReturnType<typeof useChannel>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("general");
     expect(data?.archived).toBe(false);
@@ -176,7 +176,7 @@ describe("useChannel", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -193,7 +193,7 @@ describe("useChannelsList", () => {
     const { result } = renderHookWithProviders(() => useChannelsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -215,7 +215,7 @@ describe("useChannelsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useChannelsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -346,7 +346,7 @@ describe("useChannel (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_channels"), [
@@ -368,7 +368,7 @@ describe("useChannel (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.name).toBe("general");
@@ -385,7 +385,7 @@ describe("useChannelsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -411,7 +411,7 @@ describe("useChannelsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

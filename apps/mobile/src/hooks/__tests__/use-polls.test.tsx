@@ -255,7 +255,7 @@ describe("usePoll", () => {
     let data: Awaited<ReturnType<typeof usePoll>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.title).toBe("Poll p-1");
     expect(data?.description).toBeNull();
@@ -277,7 +277,7 @@ describe("usePoll", () => {
     const { result, rerender } = renderHookWithProviders(() => usePoll(brandId<PollId>("p-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -294,7 +294,7 @@ describe("usePollsList", () => {
     const { result } = renderHookWithProviders(() => usePollsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -314,7 +314,7 @@ describe("usePollsList", () => {
     const { result, rerender } = renderHookWithProviders(() => usePollsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -335,7 +335,7 @@ describe("usePollResults", () => {
     const { result } = renderHookWithProviders(() => usePollResults(brandId<PollId>("p-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data as typeof resultsFixture;
     expect(data.totalVotes).toBe(5);
@@ -351,7 +351,7 @@ describe("usePollVotes", () => {
     const { result } = renderHookWithProviders(() => usePollVotes(brandId<PollId>("p-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const pages = result.current.data?.pages ?? [];
     expect(pages).toHaveLength(1);
@@ -375,7 +375,7 @@ describe("usePollVotes", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -604,7 +604,7 @@ describe("usePoll (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_polls"), [
@@ -627,7 +627,7 @@ describe("usePoll (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.title).toBe("Favorite color?");
@@ -644,7 +644,7 @@ describe("usePollsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -670,7 +670,7 @@ describe("usePollsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

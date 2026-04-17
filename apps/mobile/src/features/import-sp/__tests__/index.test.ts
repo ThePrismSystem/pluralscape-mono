@@ -9,34 +9,22 @@ import { describe, expect, it } from "vitest";
 import * as barrel from "../index.js";
 
 describe("import-sp barrel", () => {
-  it("exports every public runtime symbol", () => {
-    expect(barrel.createMobileAvatarFetcher).toBeDefined();
-    expect(barrel.createSpTokenStorage).toBeDefined();
-    expect(barrel.createMobilePersister).toBeDefined();
-    expect(barrel.runSpImport).toBeDefined();
-    expect(barrel.useCancelImport).toBeDefined();
-    expect(barrel.useImportJob).toBeDefined();
-    expect(barrel.useImportProgress).toBeDefined();
-    expect(barrel.useImportSummary).toBeDefined();
-    expect(barrel.useResumeActiveImport).toBeDefined();
-    expect(barrel.useStartImport).toBeDefined();
-  });
+  it("exports every public runtime symbol as a function", () => {
+    const runtimeExports = {
+      createMobileAvatarFetcher: barrel.createMobileAvatarFetcher,
+      createSpTokenStorage: barrel.createSpTokenStorage,
+      createMobilePersister: barrel.createMobilePersister,
+      runSpImport: barrel.runSpImport,
+      useCancelImport: barrel.useCancelImport,
+      useImportJob: barrel.useImportJob,
+      useImportProgress: barrel.useImportProgress,
+      useImportSummary: barrel.useImportSummary,
+      useResumeActiveImport: barrel.useResumeActiveImport,
+      useStartImport: barrel.useStartImport,
+    } as const;
 
-  it("every exported value is a function", () => {
-    const runtimeExports = [
-      barrel.createMobileAvatarFetcher,
-      barrel.createSpTokenStorage,
-      barrel.createMobilePersister,
-      barrel.runSpImport,
-      barrel.useCancelImport,
-      barrel.useImportJob,
-      barrel.useImportProgress,
-      barrel.useImportSummary,
-      barrel.useResumeActiveImport,
-      barrel.useStartImport,
-    ];
-    for (const value of runtimeExports) {
-      expect(typeof value).toBe("function");
+    for (const [name, value] of Object.entries(runtimeExports)) {
+      expect(typeof value, `${name} should be a function`).toBe("function");
     }
   });
 });

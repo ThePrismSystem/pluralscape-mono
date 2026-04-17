@@ -44,9 +44,8 @@ const SP_ENGINE_UNUSED: readonly ImportEntityType[] = [
 ];
 
 describe("PERSISTER_DISPATCH", () => {
-  it("exposes a defined entry for every entity type the SP engine emits", () => {
+  it("exposes create+update persister functions for every entity type the SP engine emits", () => {
     for (const entityType of SP_ENGINE_EMITS) {
-      expect(PERSISTER_DISPATCH[entityType]).toBeDefined();
       expect(typeof PERSISTER_DISPATCH[entityType].create).toBe("function");
       expect(typeof PERSISTER_DISPATCH[entityType].update).toBe("function");
     }

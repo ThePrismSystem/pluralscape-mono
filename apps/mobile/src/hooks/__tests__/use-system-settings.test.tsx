@@ -281,7 +281,7 @@ describe("useSystemSettings", () => {
     let data: Awaited<ReturnType<typeof useSystemSettings>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.theme).toBe("dark");
     expect(data?.id).toBe(SETTINGS_ID);
@@ -301,7 +301,7 @@ describe("useSystemSettings", () => {
     const { result, rerender } = renderHookWithProviders(() => useSystemSettings());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -316,7 +316,7 @@ describe("useSystemSettings", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.theme).toBe("dark");
@@ -349,7 +349,7 @@ describe("useNomenclature", () => {
     let data: Awaited<ReturnType<typeof useNomenclature>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data).toMatchObject({ collective: "System", individual: "Member", version: 1 });
   });
@@ -367,7 +367,7 @@ describe("useNomenclature", () => {
     const { result, rerender } = renderHookWithProviders(() => useNomenclature());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -405,7 +405,7 @@ describe("useNomenclature", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ collective: "Collective", individual: "Part" });
@@ -441,7 +441,7 @@ describe("useNomenclature", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ collective: "System", individual: "Member" });

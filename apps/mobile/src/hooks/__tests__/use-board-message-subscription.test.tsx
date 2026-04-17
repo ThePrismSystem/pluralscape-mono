@@ -54,7 +54,6 @@ describe("useBoardMessageSubscription", () => {
     renderHookWithProviders(() => {
       useBoardMessageSubscription();
     });
-    expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 

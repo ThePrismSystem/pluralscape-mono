@@ -97,7 +97,7 @@ describe("useSetupStatus", () => {
     const { result } = renderHookWithProviders(() => useSetupStatus(TEST_SYSTEM_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data).toEqual(statusData);
   });

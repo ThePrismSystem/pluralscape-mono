@@ -133,7 +133,7 @@ describe("useSystem", () => {
     const { result } = renderHookWithProviders(() => useSystem());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.id).toBe("sys_1");
     expect(result.current.data?.version).toBe(1);
@@ -149,7 +149,7 @@ describe("useSystemsList", () => {
     const { result } = renderHookWithProviders(() => useSystemsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

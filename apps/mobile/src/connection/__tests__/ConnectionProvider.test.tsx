@@ -75,7 +75,8 @@ describe("ConnectionProvider", () => {
 
     expect(ref.value).not.toBeNull();
     expect(ref.value?.manager).toBe(manager);
-    expect(ref.value?.status).toBeDefined();
+    // The server snapshot path yields "disconnected" for unauthenticated users.
+    expect(ref.value?.status).toBe("disconnected");
   });
 
   it("reports disconnected status when unauthenticated (server snapshot)", () => {

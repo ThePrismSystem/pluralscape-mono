@@ -175,7 +175,7 @@ describe("useGroup", () => {
     let data: Awaited<ReturnType<typeof useGroup>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("Group g-1");
     expect(data?.description).toBe("A test group");
@@ -195,7 +195,7 @@ describe("useGroup", () => {
     const { result, rerender } = renderHookWithProviders(() => useGroup(brandId<GroupId>("g-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -212,7 +212,7 @@ describe("useGroupsList", () => {
     const { result } = renderHookWithProviders(() => useGroupsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -233,7 +233,7 @@ describe("useGroupsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useGroupsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();

@@ -189,7 +189,7 @@ describe("useOfflineFirstQuery (encrypted)", () => {
     const { result } = renderHookWithProviders(() => useEncryptedGet("e-1"));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.decryptedName).toBe("decrypted:Alice");
   });
@@ -208,7 +208,7 @@ describe("useOfflineFirstQuery (encrypted)", () => {
     const { result, rerender } = renderHookWithProviders(() => useEncryptedGet("e-1"));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -223,7 +223,7 @@ describe("useOfflineFirstQuery (plaintext)", () => {
     const { result } = renderHookWithProviders(() => usePlaintextGet("p-1"));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     // Plaintext: no select transform, raw data passes through directly
     expect(result.current.data?.name).toBe("Bob");
@@ -236,7 +236,7 @@ describe("useOfflineFirstQuery (plaintext)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.name).toBe("Bob");
   });
@@ -252,7 +252,7 @@ describe("useOfflineFirstQuery (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("test_entities"), [
@@ -275,7 +275,7 @@ describe("useOfflineFirstQuery (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(customFn).toHaveBeenCalledWith(localDb, TEST_SYSTEM_ID);
@@ -291,7 +291,7 @@ describe("useOfflineFirstInfiniteQuery (encrypted)", () => {
     const { result } = renderHookWithProviders(() => useEncryptedList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
@@ -323,7 +323,7 @@ describe("useOfflineFirstInfiniteQuery (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -340,7 +340,7 @@ describe("useOfflineFirstInfiniteQuery (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -361,7 +361,7 @@ describe("useOfflineFirstInfiniteQuery (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
@@ -386,7 +386,7 @@ describe("useOfflineFirstInfiniteQuery (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
@@ -425,7 +425,7 @@ describe("useOfflineFirstInfiniteQuery (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(customFn).toHaveBeenCalledWith(localDb, TEST_SYSTEM_ID, { offset: 0, limit: 20 });
@@ -440,7 +440,7 @@ describe("useOfflineFirstInfiniteQuery (plaintext)", () => {
     const { result } = renderHookWithProviders(() => usePlaintextList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
@@ -519,7 +519,7 @@ describe("useRemoteOnlyQuery", () => {
     const { result } = renderHookWithProviders(() => useRemoteOnlyGet("r-1"));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.name).toBe("Remote");
   });
@@ -532,7 +532,7 @@ describe("useRemoteOnlyQuery", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.name).toBe("Override");
   });

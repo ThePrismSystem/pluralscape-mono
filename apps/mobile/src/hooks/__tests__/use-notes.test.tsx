@@ -157,7 +157,7 @@ describe("useNote", () => {
     let data: Awaited<ReturnType<typeof useNote>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.title).toBe("Note");
     expect(data?.content).toBe("Body");
@@ -179,7 +179,7 @@ describe("useNote", () => {
     const { result, rerender } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -196,7 +196,7 @@ describe("useNotesList", () => {
     const { result } = renderHookWithProviders(() => useNotesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -216,7 +216,7 @@ describe("useNotesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useNotesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -348,7 +348,7 @@ describe("useNote (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_notes"), [
@@ -370,7 +370,7 @@ describe("useNote (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.title).toBe("My Local Note");
@@ -387,7 +387,7 @@ describe("useNotesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -413,7 +413,7 @@ describe("useNotesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

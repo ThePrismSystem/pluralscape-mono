@@ -135,7 +135,7 @@ describe("useSnapshot", () => {
     let data: Awaited<ReturnType<typeof useSnapshot>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.content.name).toBe("Test Snapshot");
     expect(data?.content.members).toEqual([]);
@@ -161,7 +161,7 @@ describe("useSnapshot", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -178,7 +178,7 @@ describe("useSnapshotsList", () => {
     const { result } = renderHookWithProviders(() => useSnapshotsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data1 = result.current.data;
     const pages = data1 && "pages" in data1 ? data1.pages : [];
@@ -200,7 +200,7 @@ describe("useSnapshotsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useSnapshotsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -212,7 +212,7 @@ describe("useSnapshotsList", () => {
     const { result } = renderHookWithProviders(() => useSnapshotsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data2 = result.current.data;
     const pages = data2 && "pages" in data2 ? data2.pages : [];

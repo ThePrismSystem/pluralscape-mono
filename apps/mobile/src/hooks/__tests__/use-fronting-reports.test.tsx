@@ -129,7 +129,7 @@ describe("useFrontingReport", () => {
     let data: Awaited<ReturnType<typeof useFrontingReport>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.id).toBe("fr-1");
     expect(data?.systemId).toBe(TEST_SYSTEM_ID);
@@ -155,7 +155,7 @@ describe("useFrontingReport", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -172,7 +172,7 @@ describe("useFrontingReportsList", () => {
     const { result } = renderHookWithProviders(() => useFrontingReportsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -197,7 +197,7 @@ describe("useFrontingReportsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useFrontingReportsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();

@@ -181,7 +181,7 @@ describe("useInnerWorldRegion", () => {
     let data: Awaited<ReturnType<typeof useInnerWorldRegion>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("Region r-1");
     expect(data?.description).toBe("A test region");
@@ -209,7 +209,7 @@ describe("useInnerWorldRegion", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -226,7 +226,7 @@ describe("useInnerWorldRegionsList", () => {
     const { result } = renderHookWithProviders(() => useInnerWorldRegionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -253,7 +253,7 @@ describe("useInnerWorldRegionsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useInnerWorldRegionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -388,7 +388,7 @@ describe("useInnerWorldRegion (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("innerworld_regions"), [
@@ -411,7 +411,7 @@ describe("useInnerWorldRegion (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ id: "r-local-1" });
@@ -428,7 +428,7 @@ describe("useInnerWorldRegionsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -454,7 +454,7 @@ describe("useInnerWorldRegionsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

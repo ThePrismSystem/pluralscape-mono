@@ -186,7 +186,7 @@ describe("useStructureEntity", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.name).toBe("Entity ste_1");
     expect(result.current.data?.description).toBe("A test entity");
@@ -209,7 +209,7 @@ describe("useStructureEntity", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -226,7 +226,7 @@ describe("useStructureEntityHierarchy", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data).toEqual(hierarchyData);
   });
@@ -241,7 +241,7 @@ describe("useStructureEntitiesList", () => {
     const { result } = renderHookWithProviders(() => useStructureEntitiesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -268,7 +268,7 @@ describe("useStructureEntitiesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useStructureEntitiesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -280,7 +280,7 @@ describe("useStructureEntitiesList", () => {
     const { result } = renderHookWithProviders(() => useStructureEntitiesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

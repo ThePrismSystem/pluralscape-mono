@@ -59,7 +59,6 @@ describe("useMessageSubscription", () => {
     renderHookWithProviders(() => {
       useMessageSubscription(CHANNEL_ID);
     });
-    expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 

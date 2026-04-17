@@ -146,7 +146,7 @@ describe("useFrontingComment", () => {
     let data: Awaited<ReturnType<typeof useFrontingComment>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.content).toBe("Comment fc-1");
     expect(data?.frontingSessionId).toBe(SESSION_ID);
@@ -169,7 +169,7 @@ describe("useFrontingComment", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -186,7 +186,7 @@ describe("useFrontingCommentsList", () => {
     const { result } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -208,7 +208,7 @@ describe("useFrontingCommentsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();

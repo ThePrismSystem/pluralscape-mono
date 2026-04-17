@@ -59,7 +59,6 @@ describe("usePollSubscription", () => {
     renderHookWithProviders(() => {
       usePollSubscription();
     });
-    expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 

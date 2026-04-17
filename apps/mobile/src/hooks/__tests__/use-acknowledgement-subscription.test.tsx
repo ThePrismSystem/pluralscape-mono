@@ -54,7 +54,6 @@ describe("useAcknowledgementSubscription", () => {
     renderHookWithProviders(() => {
       useAcknowledgementSubscription();
     });
-    expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 

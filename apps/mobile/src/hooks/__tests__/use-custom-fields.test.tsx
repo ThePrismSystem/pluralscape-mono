@@ -188,7 +188,7 @@ describe("useFieldDefinition", () => {
     let data: Awaited<ReturnType<typeof useFieldDefinition>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("Field fd-1");
     expect(data?.description).toBe("A test field");
@@ -212,7 +212,7 @@ describe("useFieldDefinition", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -229,7 +229,7 @@ describe("useFieldDefinitionsList", () => {
     const { result } = renderHookWithProviders(() => useFieldDefinitionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -255,7 +255,7 @@ describe("useFieldDefinitionsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useFieldDefinitionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -273,7 +273,7 @@ describe("useMemberFieldValues", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data).toHaveLength(2);
     expect(result.current.data?.[0]).toMatchObject({ fieldType: "text", value: "hello" });

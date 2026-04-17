@@ -164,7 +164,7 @@ describe("useMember", () => {
     let data: Awaited<ReturnType<typeof useMember>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("Member m-1");
     expect(data?.pronouns).toEqual(["they/them"]);
@@ -185,7 +185,7 @@ describe("useMember", () => {
     const { result, rerender } = renderHookWithProviders(() => useMember(brandId<MemberId>("m-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -202,7 +202,7 @@ describe("useMembersList", () => {
     const { result } = renderHookWithProviders(() => useMembersList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -224,7 +224,7 @@ describe("useMembersList", () => {
     const { result, rerender } = renderHookWithProviders(() => useMembersList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -356,7 +356,7 @@ describe("useMember (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("members"), [
@@ -380,7 +380,7 @@ describe("useMember (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     // The tRPC mock is backed by fixtures — if fixture is unset, data would
@@ -399,7 +399,7 @@ describe("useMembersList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -425,7 +425,7 @@ describe("useMembersList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

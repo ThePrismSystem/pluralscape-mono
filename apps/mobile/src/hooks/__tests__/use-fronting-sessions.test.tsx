@@ -177,7 +177,7 @@ describe("useFrontingSession", () => {
     let data: Awaited<ReturnType<typeof useFrontingSession>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.comment).toBe("Session fs-1");
     expect(data?.positionality).toBe("close");
@@ -202,7 +202,7 @@ describe("useFrontingSession", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -219,7 +219,7 @@ describe("useFrontingSessionsList", () => {
     const { result } = renderHookWithProviders(() => useFrontingSessionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -241,7 +241,7 @@ describe("useFrontingSessionsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useFrontingSessionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -262,7 +262,7 @@ describe("useActiveFronters", () => {
     const { result } = renderHookWithProviders(hook);
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.isCofronting).toBe(true);
     expect(result.current.data?.entityMemberMap).toEqual({ "m-1": ["fs-1"] });
@@ -288,7 +288,7 @@ describe("useActiveFronters", () => {
     const { result, rerender } = renderHookWithProviders(hook);
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -337,7 +337,7 @@ describe("useFrontingSession (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("fronting_sessions"), [
@@ -361,7 +361,7 @@ describe("useFrontingSession (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.comment).toBe("Local session");
@@ -378,7 +378,7 @@ describe("useFrontingSessionsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -404,7 +404,7 @@ describe("useFrontingSessionsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

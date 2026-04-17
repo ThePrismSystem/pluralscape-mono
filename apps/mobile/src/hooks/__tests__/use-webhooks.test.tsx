@@ -217,7 +217,7 @@ describe("useWebhookConfig", () => {
     const { result } = renderHookWithProviders(() => useWebhookConfig(brandId<WebhookId>("wh_1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.url).toBe("https://example.com/webhook/wh_1");
     expect(result.current.data?.enabled).toBe(true);
@@ -234,7 +234,7 @@ describe("useWebhookConfigsList", () => {
     const { result } = renderHookWithProviders(() => useWebhookConfigsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -374,7 +374,7 @@ describe("useWebhookDelivery", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.webhookId).toBe("wh_1");
     expect(result.current.data?.status).toBe("success");
@@ -391,7 +391,7 @@ describe("useWebhookDeliveriesList", () => {
     const { result } = renderHookWithProviders(() => useWebhookDeliveriesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

@@ -131,8 +131,9 @@ describe("ConnectionManager", () => {
     manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connected");
 
-    // Simulate connection lost — schedules backoff then reconnect
-    expect(sseCallbacks).toBeDefined();
+    // Simulate connection lost — schedules backoff then reconnect.
+    // The SSE wrapper must have captured onerror/onopen handlers by now.
+    expect(typeof sseCallbacks?.onerror).toBe("function");
     try {
       sseCallbacks?.onerror?.(new Error("connection dropped"));
     } catch {

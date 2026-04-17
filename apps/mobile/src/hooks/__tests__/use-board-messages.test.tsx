@@ -187,7 +187,7 @@ describe("useBoardMessage", () => {
     let data: Awaited<ReturnType<typeof useBoardMessage>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.content).toBe("Board post");
     expect(data?.pinned).toBe(false);
@@ -212,7 +212,7 @@ describe("useBoardMessage", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -229,7 +229,7 @@ describe("useBoardMessagesList", () => {
     const { result } = renderHookWithProviders(() => useBoardMessagesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -256,7 +256,7 @@ describe("useBoardMessagesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useBoardMessagesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -437,7 +437,7 @@ describe("useBoardMessage (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_board_messages"), [
@@ -459,7 +459,7 @@ describe("useBoardMessage (local source)", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.content).toBe("Board message content");
@@ -476,7 +476,7 @@ describe("useBoardMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -502,7 +502,7 @@ describe("useBoardMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
