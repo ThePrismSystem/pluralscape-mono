@@ -33,18 +33,23 @@ function mockCache(overrides: MockCacheOverrides = {}): ChainedBackendCache {
 
 /**
  * The spec forbids constructing a Response with a null-body status (204/205/304),
- * so we fabricate a minimal Response-like fake for those cases.
+ * so we subclass Response and override status to emit a 304 without hitting the
+ * constructor's null-body check.
  */
+class NotModifiedResponse extends Response {
+  constructor() {
+    super(null, { status: 200 });
+  }
+  override get status(): number {
+    return 304;
+  }
+  override get ok(): boolean {
+    return false;
+  }
+}
+
 function notModifiedResponse(): Response {
-  const headers = new Headers();
-  const fake: Pick<Response, "status" | "headers" | "json" | "text" | "ok"> = {
-    status: 304,
-    ok: false,
-    headers,
-    json: (): Promise<unknown> => Promise.resolve(undefined),
-    text: (): Promise<string> => Promise.resolve(""),
-  };
-  return fake as Response;
+  return new NotModifiedResponse();
 }
 
 function resolveOnce(
