@@ -9,19 +9,20 @@
  * access may interleave safely at the SQLite level but nested transactions
  * are a caller bug.
  */
-import { SQLITE_OK, SQLITE_ROW } from "./wa-sqlite.constants.js";
+import { MAX_STMT_HANDLES, SQLITE_OK, SQLITE_ROW } from "./wa-sqlite.constants.js";
 
 import type { BindParam, Req, Res, Row, StmtHandle } from "./opfs-worker-protocol.js";
 
 const DB_NAME = "pluralscape-sync.db";
 
-/** Max concurrently-tracked prepared statements before LRU eviction. */
-const MAX_STMT_HANDLES = 128;
+/** Length of the "txn-" prefix on txn-begin/commit/rollback request kinds. */
+const TXN_PREFIX_LEN = 4;
 
 interface WorkerState {
   sqlite3: SQLiteAPI;
   db: number;
   stmts: Map<StmtHandle, { sql: string; ptr: number }>;
+  sqlIndex: Map<string, StmtHandle>;
   nextStmtHandle: number;
 }
 
@@ -53,7 +54,7 @@ async function handleInit(): Promise<void> {
   const vfs = await OPFSCoopSyncVFS.create(DB_NAME, waModule);
   sqlite3.vfs_register(vfs, true);
   const db = await sqlite3.open_v2(DB_NAME);
-  state = { sqlite3, db, stmts: new Map(), nextStmtHandle: 1 };
+  state = { sqlite3, db, stmts: new Map(), sqlIndex: new Map(), nextStmtHandle: 1 };
 }
 
 function requireState(): WorkerState {
@@ -109,6 +110,19 @@ async function stepAll(s: WorkerState, ptr: number): Promise<Row[]> {
 
 async function handlePrepare(sql: string): Promise<StmtHandle> {
   const s = requireState();
+  // True LRU: if SQL is already cached, bump its recency by re-inserting into
+  // the Map (insertion order == recency) and return the existing handle.
+  const existing = s.sqlIndex.get(sql);
+  if (existing !== undefined) {
+    const entry = s.stmts.get(existing);
+    if (entry !== undefined) {
+      s.stmts.delete(existing);
+      s.stmts.set(existing, entry);
+      return existing;
+    }
+    // Stale index — fall through to fresh prepare and overwrite.
+    s.sqlIndex.delete(sql);
+  }
   // Compile via statements() with `unscoped: true` so the returned ptr stays
   // valid outside the iterator. Adapters always send single statements — if we
   // encounter multi, finalize the first and throw rather than silently drop.
@@ -138,6 +152,7 @@ async function handlePrepare(sql: string): Promise<StmtHandle> {
   }
   const handle = s.nextStmtHandle++;
   s.stmts.set(handle, { sql, ptr });
+  s.sqlIndex.set(sql, handle);
   if (s.stmts.size > MAX_STMT_HANDLES) {
     // LRU: evict oldest entry and free its sqlite statement (Map preserves
     // insertion order). Without this finalize, evicted ptrs would leak until
@@ -146,7 +161,10 @@ async function handlePrepare(sql: string): Promise<StmtHandle> {
     if (oldest !== undefined && oldest !== handle) {
       const evicted = s.stmts.get(oldest);
       s.stmts.delete(oldest);
-      if (evicted !== undefined) await s.sqlite3.finalize(evicted.ptr);
+      if (evicted !== undefined) {
+        s.sqlIndex.delete(evicted.sql);
+        await s.sqlite3.finalize(evicted.ptr);
+      }
     }
   }
   return handle;
@@ -157,11 +175,16 @@ async function handleExec(sql: string): Promise<void> {
   await s.sqlite3.exec(s.db, sql);
 }
 
-function bindAndReset(s: WorkerState, handle: StmtHandle, params: readonly BindParam[]): number {
+async function bindAndReset(
+  s: WorkerState,
+  handle: StmtHandle,
+  params: readonly BindParam[],
+): Promise<number> {
   const entry = s.stmts.get(handle);
   if (entry === undefined) {
     throw new Error(`OPFS worker: unknown statement handle ${String(handle)}`);
   }
+  await s.sqlite3.reset(entry.ptr);
   const bindParams = toBindParams(params);
   const rc = s.sqlite3.bind_collection(entry.ptr, bindParams);
   if (rc !== SQLITE_OK) {
@@ -172,16 +195,13 @@ function bindAndReset(s: WorkerState, handle: StmtHandle, params: readonly BindP
 
 async function handleRun(handle: StmtHandle, params: readonly BindParam[]): Promise<void> {
   const s = requireState();
-  const ptr = bindAndReset(s, handle, params);
-  // Drain step() until DONE.
-  while ((await s.sqlite3.step(ptr)) === SQLITE_ROW) {
-    /* drain */
-  }
+  const ptr = await bindAndReset(s, handle, params);
+  await stepAll(s, ptr);
 }
 
 async function handleAll(handle: StmtHandle, params: readonly BindParam[]): Promise<Row[]> {
   const s = requireState();
-  const ptr = bindAndReset(s, handle, params);
+  const ptr = await bindAndReset(s, handle, params);
   return stepAll(s, ptr);
 }
 
@@ -190,7 +210,7 @@ async function handleGet(
   params: readonly BindParam[],
 ): Promise<Row | undefined> {
   const s = requireState();
-  const ptr = bindAndReset(s, handle, params);
+  const ptr = await bindAndReset(s, handle, params);
   const rc = await s.sqlite3.step(ptr);
   if (rc === SQLITE_ROW) {
     return recordsFromStmt(s, ptr);
@@ -203,21 +223,32 @@ async function handleFinalize(handle: StmtHandle): Promise<void> {
   const entry = s.stmts.get(handle);
   if (entry === undefined) return; // idempotent
   s.stmts.delete(handle);
+  s.sqlIndex.delete(entry.sql);
   await s.sqlite3.finalize(entry.ptr);
 }
 
 async function handleClose(): Promise<void> {
   const s = state;
   if (s === null) return;
-  // Finalize any still-registered statements before closing. sqlite3_close_v2
-  // will also clean up, but explicit finalize keeps the registry and SQLite
-  // state consistent for diagnostics.
-  for (const entry of s.stmts.values()) {
-    await s.sqlite3.finalize(entry.ptr);
+  try {
+    // Finalize any still-registered statements concurrently. allSettled so a
+    // single failing finalize cannot orphan the remaining handles or block the
+    // sqlite3_close call below.
+    const finalizes = [...s.stmts.values()].map((entry) => s.sqlite3.finalize(entry.ptr));
+    await Promise.allSettled(finalizes);
+    s.stmts.clear();
+    s.sqlIndex.clear();
+    await s.sqlite3.close(s.db).catch((err: unknown) => {
+      // Surface close failures via the panic channel instead of swallowing —
+      // eslint bans direct console usage in production workers and the
+      // dispatch envelope has already been determined by the caller's path.
+      const msg = err instanceof Error ? err.message : String(err);
+      postPanic("sqlite3_close", msg);
+    });
+  } finally {
+    // Null state even if the try block throws so re-init can proceed.
+    state = null;
   }
-  s.stmts.clear();
-  await s.sqlite3.close(s.db);
-  state = null;
 }
 
 async function dispatch(req: Req): Promise<Res> {
@@ -239,14 +270,14 @@ async function dispatch(req: Req): Promise<Res> {
       case "get":
         return { id: req.id, ok: true, result: await handleGet(req.stmt, req.params) };
       case "txn-begin":
-        await handleExec("BEGIN");
-        return { id: req.id, ok: true, result: undefined };
       case "txn-commit":
-        await handleExec("COMMIT");
+      case "txn-rollback": {
+        // req.kind is "txn-<verb>" — slice off "txn-" and uppercase to get the
+        // matching SQL keyword (BEGIN/COMMIT/ROLLBACK).
+        const sql = req.kind.slice(TXN_PREFIX_LEN).toUpperCase();
+        await handleExec(sql);
         return { id: req.id, ok: true, result: undefined };
-      case "txn-rollback":
-        await handleExec("ROLLBACK");
-        return { id: req.id, ok: true, result: undefined };
+      }
       case "finalize":
         await handleFinalize(req.stmt);
         return { id: req.id, ok: true, result: undefined };
@@ -260,10 +291,23 @@ async function dispatch(req: Req): Promise<Res> {
     }
   } catch (err: unknown) {
     const e = err instanceof Error ? err : new Error(String(err));
+    // wa-sqlite errors carry a numeric `code` matching SQLite's rescode.h.
+    // Propagate it so main-thread callers (e.g. ps-gexi) can branch on
+    // SQLITE_FULL without string-matching message text.
+    const code =
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      typeof (err as { code: unknown }).code === "number"
+        ? (err as { code: number }).code
+        : undefined;
     return {
       id: req.id,
       ok: false,
-      error: { message: e.message, name: e.name },
+      error:
+        code !== undefined
+          ? { message: e.message, name: e.name, code }
+          : { message: e.message, name: e.name },
     };
   }
 }
@@ -283,4 +327,57 @@ self.addEventListener("message", (ev: MessageEvent<Req>) => {
       });
     }
   });
+});
+
+function reasonToMessage(reason: unknown): string {
+  if (reason instanceof Error) {
+    return reason.message;
+  }
+  if (reason === null || reason === undefined) {
+    return "(no reason)";
+  }
+  if (typeof reason === "string") {
+    return reason;
+  }
+  if (typeof reason === "number" || typeof reason === "bigint" || typeof reason === "boolean") {
+    return String(reason);
+  }
+  // Objects without a useful toString — JSON-stringify defensively so we don't
+  // surface "[object Object]" to the main thread.
+  try {
+    return JSON.stringify(reason);
+  } catch {
+    return "(unserialisable reason)";
+  }
+}
+
+/**
+ * Post an out-of-band panic envelope (id === -1) so a main-thread driver that
+ * already lost the correlation id of the triggering request still has a signal
+ * it can surface as worker death. Failures of postMessage itself are swallowed
+ * — the worker is in a bad state already and we have no other channel.
+ */
+function postPanic(name: string, message: string): void {
+  try {
+    self.postMessage({
+      id: -1,
+      ok: false,
+      panic: true,
+      error: { name, message },
+    });
+  } catch {
+    // postMessage may throw if the worker is in shutdown; nothing we can do.
+  }
+}
+
+self.addEventListener("error", (ev: ErrorEvent) => {
+  postPanic("error", ev.message !== "" ? ev.message : "uncaught worker error");
+});
+
+self.addEventListener("messageerror", (ev: MessageEvent) => {
+  postPanic("messageerror", String(ev.data ?? "non-cloneable message"));
+});
+
+self.addEventListener("unhandledrejection", (ev: PromiseRejectionEvent) => {
+  postPanic("unhandledrejection", reasonToMessage(ev.reason));
 });

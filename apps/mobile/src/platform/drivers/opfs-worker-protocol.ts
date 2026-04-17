@@ -33,9 +33,12 @@ export type Req =
 
 export type OkResult = undefined | Row[] | Row | StmtHandle;
 
+export type ErrorPayload = { message: string; code?: number; name?: string };
+
 export type Res =
   | { id: number; ok: true; result: OkResult }
-  | { id: number; ok: false; error: { message: string; code?: number; name?: string } };
+  | { id: number; ok: false; error: ErrorPayload }
+  | { id: -1; ok: false; panic: true; error: ErrorPayload };
 
 // ── Error classes ─────────────────────────────────────────────────────
 
