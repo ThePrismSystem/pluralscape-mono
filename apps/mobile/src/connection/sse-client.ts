@@ -51,8 +51,10 @@ export class SseClient {
         try {
           parsed = JSON.parse(ev.data) as unknown;
         } catch {
-          const excerpt = typeof ev.data === "string" ? ev.data.slice(0, 200) : String(ev.data);
-          this.callbacks.onError(new Error(`Malformed SSE JSON payload: ${excerpt}`));
+          // Deliberately omit the raw payload — it may contain server-side
+          // secrets, PII, or attacker-controlled content that should not be
+          // threaded through logs, analytics, or user-facing error UIs.
+          this.callbacks.onError(new Error("Malformed SSE JSON payload"));
           return;
         }
         const event = { type: "message" as const, data: parsed };

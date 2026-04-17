@@ -255,7 +255,7 @@ describe("SseClient", () => {
     expect(mockFetchEventSource).toHaveBeenCalledTimes(2);
   });
 
-  it("propagates malformed JSON to onError callback with raw payload excerpt", () => {
+  it("propagates malformed JSON to onError callback without leaking raw payload", () => {
     const onError = vi.fn();
     const client = new SseClient(
       { baseUrl: "https://example.com" },
@@ -270,8 +270,8 @@ describe("SseClient", () => {
     client.connect("tok");
     expect(onError).toHaveBeenCalledWith(expect.any(Error));
     const errorArg = onError.mock.calls[0]?.[0] as Error;
-    expect(errorArg.message).toContain("Malformed SSE JSON payload");
-    expect(errorArg.message).toContain("not-json{");
+    expect(errorArg.message).toBe("Malformed SSE JSON payload");
+    expect(errorArg.message).not.toContain("not-json{");
   });
 
   it("invokes onDisconnected callback on close", () => {

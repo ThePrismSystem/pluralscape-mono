@@ -22,11 +22,11 @@ describe("expo-secure-token-store", () => {
       expect(result).toBe("test-token-abc123");
     });
 
-    it("propagates errors thrown by getItemAsync", async () => {
+    it("returns null when getItemAsync throws so boot path treats session as absent", async () => {
       const store = createExpoSecureTokenStore();
       const err = new Error("keychain unavailable");
       secureStore.__throwOnNext("getItemAsync", err);
-      await expect(store.getToken()).rejects.toThrow("keychain unavailable");
+      await expect(store.getToken()).resolves.toBeNull();
     });
   });
 
@@ -37,6 +37,13 @@ describe("expo-secure-token-store", () => {
       expect(secureStore.__snapshot()).toMatchObject({
         pluralscape_session_token: "stored-value-xyz",
       });
+    });
+
+    it("persists with WHEN_UNLOCKED_THIS_DEVICE_ONLY so the token does not travel in device backups", async () => {
+      const store = createExpoSecureTokenStore();
+      await store.setToken("accessibility-check");
+      const opts = secureStore.__lastOptions("pluralscape_session_token");
+      expect(opts?.keychainAccessible).toBe(secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY);
     });
 
     it("propagates errors thrown by setItemAsync", async () => {

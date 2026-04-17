@@ -3,7 +3,15 @@
 // In-memory mock of expo-secure-store for vitest.
 // Tests can override individual methods via vi.spyOn or set throwOnNext to drive error branches.
 
+interface SecureStoreOptions {
+  readonly keychainAccessible?: string;
+  readonly keychainService?: string;
+  readonly requireAuthentication?: boolean;
+  readonly authenticationPrompt?: string;
+}
+
 const store = new Map<string, string>();
+const lastOptions = new Map<string, SecureStoreOptions | undefined>();
 let throwOnNextOp: { method: string; error: Error } | null = null;
 
 // Mock the real expo-secure-store KeychainAccessibilityConstant values (strings,
@@ -29,9 +37,14 @@ export function getItemAsync(key: string): Promise<string | null> {
   return Promise.resolve(store.has(key) ? (store.get(key) ?? null) : null);
 }
 
-export function setItemAsync(key: string, value: string): Promise<void> {
+export function setItemAsync(
+  key: string,
+  value: string,
+  options?: SecureStoreOptions,
+): Promise<void> {
   maybeThrow("setItemAsync");
   store.set(key, value);
+  lastOptions.set(key, options);
   return Promise.resolve();
 }
 
@@ -48,7 +61,12 @@ export function isAvailableAsync(): Promise<boolean> {
 // Test helpers — not part of the real expo-secure-store API.
 export function __reset(): void {
   store.clear();
+  lastOptions.clear();
   throwOnNextOp = null;
+}
+
+export function __lastOptions(key: string): SecureStoreOptions | undefined {
+  return lastOptions.get(key);
 }
 
 export function __throwOnNext(
