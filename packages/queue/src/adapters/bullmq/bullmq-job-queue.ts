@@ -7,6 +7,7 @@ import {
   IdempotencyConflictError,
   InvalidJobTransitionError,
   JobNotFoundError,
+  QueueCorruptionError,
 } from "../../errors.js";
 import { fireHook } from "../../fire-hook.js";
 import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js";
@@ -445,8 +446,8 @@ export class BullMQJobQueue implements JobQueue {
       let parsed: StoredJobData;
       try {
         parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
-      } catch {
-        throw new Error(`Corrupt stored data for job ${jobId}`);
+      } catch (err) {
+        throw new QueueCorruptionError(jobId, { cause: err });
       }
       if (parsed.status !== "dead-letter") {
         throw new InvalidJobTransitionError(jobId, parsed.status, "retry");
@@ -492,8 +493,8 @@ export class BullMQJobQueue implements JobQueue {
       let parsed: StoredJobData;
       try {
         parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
-      } catch {
-        throw new Error(`Corrupt stored data for job ${jobId}`);
+      } catch (err) {
+        throw new QueueCorruptionError(jobId, { cause: err });
       }
       if (parsed.status === "completed") {
         throw new InvalidJobTransitionError(jobId, "completed", "cancel");
@@ -521,9 +522,24 @@ export class BullMQJobQueue implements JobQueue {
   }
 
   async getJob(jobId: JobId): Promise<JobDefinition | null> {
-    // Check BullMQ first
-    const job = await this.queue.getJob(jobId);
+    // Check BullMQ first. BullMQ calls `JSON.parse(json.data)` inside Job.fromJSON,
+    // so a malformed `data` field surfaces as a raw SyntaxError from the SDK.
+    // Wrap that path so callers always see a typed QueueCorruptionError.
+    let job;
+    try {
+      job = await this.queue.getJob(jobId);
+    } catch (err) {
+      if (err instanceof SyntaxError) throw new QueueCorruptionError(jobId, { cause: err });
+      throw err;
+    }
     if (job !== undefined) {
+      // Validate the deserialized shape — BullMQ happily returns partial data
+      // if fields were never stored, which would produce a silently-malformed
+      // JobDefinition downstream.
+      const parseResult = StoredJobDataSchema.safeParse(job.data);
+      if (!parseResult.success) {
+        throw new QueueCorruptionError(jobId, { cause: parseResult.error });
+      }
       return fromStoredData(jobIdOf(job), job.data as StoredJobData);
     }
 
@@ -533,8 +549,8 @@ export class BullMQJobQueue implements JobQueue {
       let parsed: StoredJobData;
       try {
         parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
-      } catch {
-        throw new Error(`Corrupt stored data for job ${jobId}`);
+      } catch (err) {
+        throw new QueueCorruptionError(jobId, { cause: err });
       }
       return fromStoredData(jobId, parsed);
     }

@@ -51,8 +51,23 @@ describe("createCrdtQueryBridge", () => {
     expect(opts.queryFn()).toBe(42);
   });
 
-  it("queryFn throws when the document is not loaded", () => {
+  it("queryFn throws when the document is not loaded (null snapshot)", () => {
     const { engine } = makeEngine(null);
+    const bridge = createCrdtQueryBridge({ engine });
+    const opts = bridge.documentQueryOptions({
+      queryKey: ["doc", DOC_ID],
+      documentId: DOC_ID,
+      project: (d) => d,
+    });
+    expect(() => opts.queryFn()).toThrow(`Document ${DOC_ID} not loaded in sync engine`);
+  });
+
+  it("queryFn throws when the document is not loaded (undefined snapshot)", () => {
+    // Covers the `undefined` branch of the not-loaded guard: sync engines may
+    // return `undefined` for documents that have never been subscribed to,
+    // while returning `null` for ones that are explicitly empty. Both must
+    // fail loud so callers don't silently see stale / empty data.
+    const { engine } = makeEngine(undefined);
     const bridge = createCrdtQueryBridge({ engine });
     const opts = bridge.documentQueryOptions({
       queryKey: ["doc", DOC_ID],

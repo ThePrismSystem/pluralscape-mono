@@ -46,25 +46,22 @@ async function requestUploadUrl(
 }
 
 /**
- * Upload a blob to a presigned POST URL using multipart form data.
- * Uses native fetch instead of Playwright's request context to avoid
- * the global Content-Type: application/json header interfering with
- * the multipart/form-data encoding required by S3 POST policy.
+ * Upload a blob to a presigned PUT URL.
+ *
+ * The S3 adapter signs `If-None-Match: *` into the URL (write-once
+ * enforcement), so the client must forward that header for the signature
+ * to validate. Uses native fetch to bypass Playwright's default headers.
  */
-async function postToPresignedUrl(
-  uploadUrl: string,
-  fields: Record<string, string> | undefined,
-): Promise<void> {
-  const formData = new FormData();
-  if (fields) {
-    for (const [key, value] of Object.entries(fields)) {
-      formData.append(key, value);
-    }
-  }
-  // S3 POST policy requires the file field to be last
-  formData.append("file", new Blob([Buffer.alloc(BLOB_SIZE_BYTES, 0x42)], { type: "image/png" }));
-
-  const res = await fetch(uploadUrl, { method: "POST", body: formData });
+async function putToPresignedUrl(uploadUrl: string): Promise<void> {
+  const body = Buffer.alloc(BLOB_SIZE_BYTES, 0x42);
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    body,
+    headers: {
+      "Content-Type": "image/png",
+      "If-None-Match": "*",
+    },
+  });
   expect(res.ok).toBe(true);
 }
 
@@ -77,7 +74,7 @@ async function uploadAndConfirmBlob(
   systemId: string,
   upload: UploadUrlResponse,
 ): Promise<void> {
-  await postToPresignedUrl(upload.uploadUrl, upload.fields);
+  await putToPresignedUrl(upload.uploadUrl);
 
   const confirmRes = await request.post(`/v1/systems/${systemId}/blobs/${upload.blobId}/confirm`, {
     headers: authHeaders,
@@ -102,7 +99,7 @@ test.describe("Blobs CRUD", () => {
     await test.step("get upload url and upload file", async () => {
       const upload = await requestUploadUrl(request, authHeaders, systemId);
       blobId = upload.blobId;
-      await postToPresignedUrl(upload.uploadUrl, upload.fields);
+      await putToPresignedUrl(upload.uploadUrl);
     });
 
     await test.step("confirm upload", async () => {

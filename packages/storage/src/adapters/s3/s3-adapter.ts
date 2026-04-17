@@ -5,7 +5,6 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { MS_PER_SECOND, toUnixMillis } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
@@ -193,18 +192,24 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     const expiryMs = params.expiresInMs ?? this.presignedUploadExpiryMs;
     const expiresInSeconds = Math.ceil(expiryMs / MS_PER_SECOND);
 
+    // Use a signed PUT instead of a POST policy so the `If-None-Match: *`
+    // precondition is baked into the signature (STORAGE-TC-L1). POST policies
+    // have no equivalent condition — S3 would happily overwrite an existing
+    // object if a client replayed or reused a presigned POST URL.
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: params.storageKey,
+      ContentType: params.mimeType ?? "application/octet-stream",
+      ContentLength: params.sizeBytes,
+      IfNoneMatch: "*",
+    });
+
     try {
-      const { url, fields } = await createPresignedPost(this.client, {
-        Bucket: this.bucket,
-        Key: params.storageKey,
-        Expires: expiresInSeconds,
-        Conditions: [
-          ["content-length-range", 1, params.sizeBytes],
-          ["eq", "$Content-Type", params.mimeType ?? "application/octet-stream"],
-        ],
-        Fields: {
-          "Content-Type": params.mimeType ?? "application/octet-stream",
-        },
+      const url = await getSignedUrl(this.client, command, {
+        expiresIn: expiresInSeconds,
+        // `IfNoneMatch` must be part of the signed headers so S3 cannot be
+        // tricked into ignoring it by a client that drops the header.
+        signableHeaders: new Set(["if-none-match"]),
       });
       const expiresAt = toUnixMillis(now() + expiryMs);
 
@@ -212,7 +217,6 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
         supported: true,
         url,
         expiresAt,
-        fields,
       };
     } catch (err) {
       mapS3Error(err, params.storageKey);

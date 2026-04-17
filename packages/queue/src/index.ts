@@ -28,5 +28,6 @@ export {
   InvalidJobTransitionError,
   JobNotFoundError,
   NoHandlersRegisteredError,
+  QueueCorruptionError,
   WorkerAlreadyRunningError,
 } from "./errors.js";
