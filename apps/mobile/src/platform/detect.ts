@@ -1,44 +1,32 @@
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { Platform } from "react-native";
 
+import { OPFS_INIT_FAILED_PREFIX, OPFS_UNAVAILABLE_REASON } from "./detect.constants.js";
 import { createIndexedDbOfflineQueueAdapter } from "./drivers/indexeddb-offline-queue-adapter.js";
 import { createIndexedDbStorageAdapter } from "./drivers/indexeddb-storage-adapter.js";
 
 import type { PlatformContext } from "./types.js";
 import type { NativeMemzero } from "@pluralscape/crypto";
 
-function hasOpfsSupport(): boolean {
+function canUseOpfsSqlite(): boolean {
   try {
-    return typeof navigator !== "undefined" && typeof navigator.storage.getDirectory === "function";
+    return (
+      typeof navigator !== "undefined" &&
+      typeof navigator.storage.getDirectory === "function" &&
+      typeof Worker === "function"
+    );
   } catch {
     // navigator.storage may throw in restrictive contexts
     return false;
   }
 }
 
-async function detectWeb(): Promise<PlatformContext> {
-  const crypto = new WasmSodiumAdapter();
-  await crypto.init();
-
-  if (hasOpfsSupport()) {
-    const { createOpfsSqliteDriver } = await import("./drivers/opfs-sqlite-driver.js");
-    const driver = await createOpfsSqliteDriver();
-    return {
-      capabilities: {
-        hasSecureStorage: false,
-        hasBiometric: false,
-        hasBackgroundSync: false,
-        hasNativeMemzero: false,
-        storageBackend: "sqlite",
-      },
-      storage: { backend: "sqlite", driver },
-      crypto,
-    };
-  }
-
+function buildIndexedDbContext(
+  crypto: PlatformContext["crypto"],
+  fallbackReason: string,
+): PlatformContext {
   const storageAdapter = createIndexedDbStorageAdapter();
   const offlineQueueAdapter = createIndexedDbOfflineQueueAdapter();
-
   return {
     capabilities: {
       hasSecureStorage: false,
@@ -46,10 +34,43 @@ async function detectWeb(): Promise<PlatformContext> {
       hasBackgroundSync: false,
       hasNativeMemzero: false,
       storageBackend: "indexeddb",
+      storageFallbackReason: fallbackReason,
     },
     storage: { backend: "indexeddb", storageAdapter, offlineQueueAdapter },
     crypto,
   };
+}
+
+async function detectWeb(): Promise<PlatformContext> {
+  const crypto = new WasmSodiumAdapter();
+  await crypto.init();
+
+  if (canUseOpfsSqlite()) {
+    try {
+      const { createOpfsSqliteDriver } = await import("./drivers/opfs-sqlite-driver.js");
+      const driver = await createOpfsSqliteDriver();
+      return {
+        capabilities: {
+          hasSecureStorage: false,
+          hasBiometric: false,
+          hasBackgroundSync: false,
+          hasNativeMemzero: false,
+          storageBackend: "sqlite",
+        },
+        storage: { backend: "sqlite", driver },
+        crypto,
+      };
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      globalThis.console.error(
+        "[pluralscape] OPFS storage unavailable, falling back to IndexedDB",
+        { reason },
+      );
+      return buildIndexedDbContext(crypto, `${OPFS_INIT_FAILED_PREFIX}${reason}`);
+    }
+  }
+
+  return buildIndexedDbContext(crypto, OPFS_UNAVAILABLE_REASON);
 }
 
 async function detectNative(): Promise<PlatformContext> {

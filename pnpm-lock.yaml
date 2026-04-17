@@ -20,6 +20,7 @@ overrides:
   '@tanstack/query-core': 5.99.0
   follow-redirects: '>=1.16.0'
   dompurify: '>=3.4.0'
+  protobufjs: '>=7.5.5'
 
 importers:
 
@@ -202,6 +203,9 @@ importers:
       '@expo/metro-runtime':
         specifier: ~55.0.6
         version: 55.0.9(@expo/dom-webview@55.0.5)(expo@55.0.15)(react-dom@19.2.5(react@19.2.5))(react-native@0.85.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
+      '@journeyapps/wa-sqlite':
+        specifier: ^1.6.0
+        version: 1.6.0
       '@microsoft/fetch-event-source':
         specifier: ^2.0.1
         version: 2.0.1
@@ -323,6 +327,36 @@ importers:
       vitest-mock-extended:
         specifier: ^4.0.0
         version: 4.0.0(typescript@6.0.2)(vitest@4.1.4)
+
+  apps/mobile-web-e2e:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.59.1
+        version: 1.59.1
+      '@pluralscape/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
+      '@pluralscape/mobile':
+        specifier: workspace:*
+        version: link:../mobile
+      '@pluralscape/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
+      '@pluralscape/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
+      '@pluralscape/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@types/node':
+        specifier: ^24.12.2
+        version: 24.12.2
+      esbuild:
+        specifier: '>=0.25.0'
+        version: 0.27.4
+      typescript:
+        specifier: ^6.0.0
+        version: 6.0.2
 
   packages/api-client:
     dependencies:
@@ -2019,6 +2053,9 @@ packages:
   '@jest/types@29.6.3':
     resolution: {integrity: sha512-u3UPsIilWKOM3F9CXtrG8LEJmNxwoCQC/XVj4IKYXvvpx7QIi/Kg1LI5uDmDpKlac62NUtX7eLjRh+jVZcLOzw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
+
+  '@journeyapps/wa-sqlite@1.6.0':
+    resolution: {integrity: sha512-ZhHCTQiGGGoJz6LJPTH880BMO0kR0uVepoNTGCUpl65ZQ82r1RUHXGUpGWY3yndsjWKNveOxsqCCAgvI+TTu2w==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -6130,8 +6167,8 @@ packages:
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
-  protobufjs@7.5.4:
-    resolution: {integrity: sha512-CvexbZtbov6jW2eXAvLukXjXUW1TzFaivC46BpWc/3BpcCysb5Vffu+B3XHMm8lVEuy2Mm4XGex8hBSg1yapPg==}
+  protobufjs@8.0.1:
+    resolution: {integrity: sha512-NWWCCscLjs+cOKF/s/XVNFRW7Yih0fdH+9brffR5NZCy8k42yRdl5KlWKMVXuI1vfCoy4o1z80XR/W/QUb3V3w==}
     engines: {node: '>=12.0.0'}
 
   proxy-from-env@2.1.0:
@@ -8990,6 +9027,8 @@ snapshots:
       '@types/yargs': 17.0.35
       chalk: 4.1.2
 
+  '@journeyapps/wa-sqlite@1.6.0': {}
+
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -9108,7 +9147,7 @@ snapshots:
       '@opentelemetry/sdk-logs': 0.202.0(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-metrics': 2.0.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/sdk-trace-base': 2.0.1(@opentelemetry/api@1.9.1)
-      protobufjs: 7.5.4
+      protobufjs: 8.0.1
 
   '@opentelemetry/resources@2.0.1(@opentelemetry/api@1.9.1)':
     dependencies:
@@ -13420,7 +13459,7 @@ snapshots:
       object-assign: 4.1.1
       react-is: 16.13.1
 
-  protobufjs@7.5.4:
+  protobufjs@8.0.1:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
       '@protobufjs/base64': 1.1.2

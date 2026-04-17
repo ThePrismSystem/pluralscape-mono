@@ -10,3 +10,10 @@ export const SQLITE_OK = 0;
 export const SQLITE_ROW = 100;
 /** Result from sqlite3_step indicating the statement has finished executing. */
 export const SQLITE_DONE = 101;
+
+/**
+ * Max concurrently-tracked prepared statements before LRU eviction.
+ * SqliteStorageAdapter.CachedStatements caps active handles at 8 per adapter;
+ * 128 leaves comfortable headroom for multiple adapters + ad-hoc statements.
+ */
+export const MAX_STMT_HANDLES = 128;

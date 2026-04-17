@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "expo start",
     "dev:web": "expo start --web",
-    "build": "expo export",
+    "bundle": "expo export",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --max-warnings 0 .",
     "lint:fix": "eslint --fix --max-warnings 0 .",
@@ -16,6 +16,7 @@
   "dependencies": {
     "@expo/dom-webview": "~55.0.5",
     "@expo/metro-runtime": "~55.0.6",
+    "@journeyapps/wa-sqlite": "^1.6.0",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@pluralscape/api-client": "workspace:*",
     "@pluralscape/crypto": "workspace:*",

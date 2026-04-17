@@ -1,11 +1,11 @@
 ---
 # mobile-shr0
 title: OPFS Web Worker driver with async SqliteStatement contract
-status: in-progress
+status: completed
 type: feature
 priority: normal
 created_at: 2026-04-16T16:21:59Z
-updated_at: 2026-04-16T18:47:48Z
+updated_at: 2026-04-16T22:28:39Z
 parent: ps-0enb
 blocking:
   - ps-0azs
@@ -61,3 +61,26 @@ Full design (architecture tradeoffs, wire protocol, module structure, migration 
 - ps-pn2y — future evaluation of upgrading to architecture (A) two-worker full hoist.
 - ps-vwn0 — broader E2E directory rename.
 - ps-gexi — OPFS quota-exhaustion UX + recovery.
+
+## Summary of Changes
+
+Phase 1 (PR #460):
+
+- Changed SqliteStatement.run/.all/.get and SqliteDriver.transaction to async across all driver implementations.
+- Added SqliteStorageAdapter.create() and SqliteOfflineQueueAdapter.create() factories.
+- SyncProvider.tsx awaits the new factory.
+
+Phase 2 (this PR):
+
+- Wrote opfs-worker.ts hosting wa-sqlite + OPFSCoopSyncVFS in a dedicated Web Worker.
+- Rewrote opfs-sqlite-driver.ts as a thin main-thread proxy over postMessage.
+- Added @journeyapps/wa-sqlite@^1.6.0 dep; removed obsolete ambient declarations from types/global.d.ts in favor of the package's real SQLiteAPI/SQLiteVFS/SQLiteCompatibleType.
+- Worker registers a prepared-statement registry with MAX_STMT_HANDLES=128 LRU eviction (with sqlite3.finalize on evict and on close).
+- Driver proxy serializes transactions via a promise-chain mutex; on worker error sets terminated=true so subsequent calls reject synchronously instead of hanging; clears request timeout timers on success.
+- Updated detect.ts to gracefully fall back to IndexedDB when OPFS worker init fails, recording the reason in capabilities.storageFallbackReason.
+- Added apps/mobile-web-e2e/ Playwright suite with esbuild-based harness (round-trip, persistence, concurrency, large-blob, fallback) — 5/5 passing.
+- Worker unit tests: 19 covering init/dispatch/prepare/run/all/get/finalize/close/LRU/blob/postMessage fallback/exhaustive default.
+- Driver proxy unit tests: 11 covering init/prepare+run/all/transaction serialization/error rejection/worker-terminated synchronous reject/init timeout/init failure terminate/get/rollback identity.
+- CI: pnpm test:e2e:web runs in the existing E2E job.
+- No SharedArrayBuffer, no cross-origin isolation required.
+- Unblocks ps-0azs (completed alongside).
