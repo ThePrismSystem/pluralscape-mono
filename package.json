@@ -80,7 +80,8 @@
       "vite": "8.0.8",
       "@tanstack/query-core": "5.99.0",
       "follow-redirects": ">=1.16.0",
-      "dompurify": ">=3.4.0"
+      "dompurify": ">=3.4.0",
+      "protobufjs": ">=7.5.5"
     },
     "onlyBuiltDependencies": [
       "better-sqlite3-multiple-ciphers",
