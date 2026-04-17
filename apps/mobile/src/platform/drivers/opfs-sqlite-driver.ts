@@ -48,7 +48,7 @@ export async function createOpfsSqliteDriver(
   let terminated = false;
   // Tri-state timeout convention used throughout: undefined → fall back to
   // perCallTimeoutMs, null → disabled, number → explicit ms. Applies to the
-  // option here and to send()/call()'s per-request override.
+  // option here and to send()'s per-request override.
   const perCallTimeoutMs: number | null =
     options.callTimeoutMs === undefined ? CALL_TIMEOUT_MS : options.callTimeoutMs;
   // Promise-based mutex: transaction() acquires this chain before sending
@@ -136,8 +136,6 @@ export async function createOpfsSqliteDriver(
         name: res.error.name,
       });
     }
-    // Single boundary cast: Res.result is the unioned OkResult and TS can't
-    // narrow it from req.kind without this assertion.
     return res.result as ResultFor<K>;
   }
 

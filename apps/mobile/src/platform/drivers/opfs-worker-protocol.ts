@@ -37,23 +37,22 @@ export type Res =
   | { id: number; ok: false; error: ErrorPayload }
   | { id: -1; ok: false; panic: true; error: ErrorPayload };
 
-export type ResultFor<K extends Req["kind"]> = K extends "prepare"
-  ? StmtHandle
-  : K extends "all"
-    ? Row[]
-    : K extends "get"
-      ? Row | undefined
-      : K extends
-            | "run"
-            | "exec"
-            | "txn-begin"
-            | "txn-commit"
-            | "txn-rollback"
-            | "finalize"
-            | "close"
-            | "init"
-        ? undefined
-        : never;
+/** Per-kind response payload type for typed dispatch in send<K>. */
+type ResultMap = {
+  init: undefined;
+  prepare: StmtHandle;
+  run: undefined;
+  all: Row[];
+  get: Row | undefined;
+  exec: undefined;
+  "txn-begin": undefined;
+  "txn-commit": undefined;
+  "txn-rollback": undefined;
+  finalize: undefined;
+  close: undefined;
+};
+
+export type ResultFor<K extends Req["kind"]> = ResultMap[K];
 
 // ── Error classes ─────────────────────────────────────────────────────
 
