@@ -332,7 +332,7 @@ describe("S3BlobStorageAdapter.generatePresignedUploadUrl", () => {
     }
   });
 
-  it("signs If-None-Match so S3 enforces write-once on the presigned URL", async () => {
+  it("signs If-None-Match, Content-Type, and Content-Length so S3 enforces them on the presigned URL", async () => {
     const { adapter } = makeAdapter();
     mockGetSignedUrl.mockResolvedValueOnce("https://signed.example/upload");
     await adapter.generatePresignedUploadUrl({
@@ -344,11 +344,16 @@ describe("S3BlobStorageAdapter.generatePresignedUploadUrl", () => {
     const callArgs = mockGetSignedUrl.mock.calls[0] as unknown[];
     const command = callArgs[1] as { input: { IfNoneMatch?: string } };
     expect(command.input.IfNoneMatch).toBe("*");
-    // The `if-none-match` header must be in the signable set, otherwise S3
-    // will accept a request that omits it and silently overwrite the blob.
+    // Each of these headers must be in the signable set, otherwise S3 will
+    // accept a request that omits/mutates it:
+    //  - `if-none-match` — silent overwrite
+    //  - `content-type` — client uploads arbitrary MIME under the signed URL
+    //  - `content-length` — oversized bodies past server quota
     const signOptions = callArgs[2] as { signableHeaders?: Set<string> };
     expect(signOptions.signableHeaders).toBeInstanceOf(Set);
     expect(signOptions.signableHeaders?.has("if-none-match")).toBe(true);
+    expect(signOptions.signableHeaders?.has("content-type")).toBe(true);
+    expect(signOptions.signableHeaders?.has("content-length")).toBe(true);
   });
 
   it("uses configured presignedUploadExpiryMs default when no override", async () => {

@@ -184,4 +184,59 @@ test.describe("Blobs CRUD", () => {
     });
     expect(res.status()).toBe(404);
   });
+
+  /**
+   * Negative test: the presigned PUT signs the exact Content-Length that
+   * `requestUploadUrl` sent in `sizeBytes`. Sending a larger body must be
+   * rejected by S3 signature enforcement — otherwise a client could upload
+   * arbitrarily large blobs past the server-side quota.
+   */
+  test("oversized PUT body rejected by S3 signature", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const upload = await requestUploadUrl(request, authHeaders, systemId);
+
+    const oversize = Buffer.alloc(BLOB_SIZE_BYTES + 1024, 0x42);
+    const res = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      body: oversize,
+      headers: {
+        "Content-Type": "image/png",
+        "Content-Length": String(oversize.length),
+        "If-None-Match": "*",
+      },
+    });
+    expect(res.ok).toBe(false);
+    // S3/MinIO return 400 (BadRequest) or 403 (SignatureDoesNotMatch) for
+    // Content-Length mismatches. Either is an acceptable rejection.
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+  });
+
+  /**
+   * Negative test: the presigned PUT signs `Content-Type: image/png` into
+   * the URL. Sending a mismatched Content-Type must fail signature
+   * verification — prevents a client from uploading an arbitrary MIME
+   * type under cover of a URL requested for `image/png`.
+   */
+  test("PUT with mismatched Content-Type rejected by S3 signature", async ({
+    request,
+    authHeaders,
+  }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const upload = await requestUploadUrl(request, authHeaders, systemId);
+
+    const body = Buffer.alloc(BLOB_SIZE_BYTES, 0x42);
+    const res = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      body,
+      headers: {
+        // URL was signed for image/png; application/pdf breaks the signature.
+        "Content-Type": "application/pdf",
+        "If-None-Match": "*",
+      },
+    });
+    expect(res.ok).toBe(false);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+  });
 });

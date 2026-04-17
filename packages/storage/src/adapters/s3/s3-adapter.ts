@@ -207,9 +207,17 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     try {
       const url = await getSignedUrl(this.client, command, {
         expiresIn: expiresInSeconds,
-        // `IfNoneMatch` must be part of the signed headers so S3 cannot be
-        // tricked into ignoring it by a client that drops the header.
-        signableHeaders: new Set(["if-none-match"]),
+        // Bind these headers into the signature so S3 cannot be tricked
+        // into ignoring them by a client that drops/mutates a header:
+        //  - `if-none-match` — enforces write-once (STORAGE-TC-L1); must be
+        //    signed so S3 cannot be tricked into ignoring it by a client
+        //    that drops the header.
+        //  - `content-type` AND `content-length` — must be signed to prevent
+        //    a client from uploading with different headers than were
+        //    signed. MinIO (and some S3-compat backends) do NOT auto-sign
+        //    these by default, which previously permitted Content-Type
+        //    spoofing and oversized uploads on presigned PUTs.
+        signableHeaders: new Set(["if-none-match", "content-type", "content-length"]),
       });
       const expiresAt = toUnixMillis(now() + expiryMs);
 
