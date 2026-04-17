@@ -7,6 +7,7 @@
  * multi-step blob uploads.
  */
 
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { createTRPCPersisterApi } from "../trpc-persister-api.js";
@@ -17,7 +18,7 @@ import type { Mock } from "vitest";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-const TEST_SYSTEM_ID = "sys_bridge_test" as SystemId;
+const TEST_SYSTEM_ID = brandId<SystemId>("sys_bridge_test");
 
 /** Query leaf where `.query` is a vi.fn mock. */
 interface MockQuery<TInput, TOutput> {

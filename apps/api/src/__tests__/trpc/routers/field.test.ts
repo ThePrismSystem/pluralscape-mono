@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -62,9 +63,9 @@ const { fieldRouter } = await import("../../../trpc/routers/field.js");
 
 const createCaller = makeCallerFactory({ field: fieldRouter });
 
-const FIELD_DEF_ID = "fld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FieldDefinitionId;
-const BUCKET_ID = "bkt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BucketId;
-const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
+const FIELD_DEF_ID = brandId<FieldDefinitionId>("fld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const BUCKET_ID = brandId<BucketId>("bkt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const MEMBER_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JmaWVsZA==";
 
 const MOCK_FIELD_DEF_RESULT = {
@@ -81,7 +82,7 @@ const MOCK_FIELD_DEF_RESULT = {
   updatedAt: 1_700_000_000_000 as UnixMillis,
 };
 
-const FIELD_VALUE_ID = "fv_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FieldValueId;
+const FIELD_VALUE_ID = brandId<FieldValueId>("fv_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_FIELD_VALUE_RESULT = {
   id: FIELD_VALUE_ID,

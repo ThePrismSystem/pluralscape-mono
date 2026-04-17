@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -72,8 +73,8 @@ const { systemRoutes } = await import("../../../routes/systems/index.js");
 // ── Helpers ──────────────────────────────────────────────────────
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
-const ENTITY_ID = "ste_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityId;
-const ET_ID = "stet_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityTypeId;
+const ENTITY_ID = brandId<SystemStructureEntityId>("ste_550e8400-e29b-41d4-a716-446655440000");
+const ET_ID = brandId<SystemStructureEntityTypeId>("stet_550e8400-e29b-41d4-a716-446655440000");
 const BASE = `/systems/${SYS_ID}/structure/entities`;
 
 const createApp = () => createRouteApp("/systems", systemRoutes);

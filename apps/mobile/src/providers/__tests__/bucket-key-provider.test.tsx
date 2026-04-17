@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -80,7 +81,7 @@ const { BucketKeyProvider, useBucketKeys, useBucketKey } =
   await import("../bucket-key-provider.js");
 
 const TEST_KEYPAIR = makeBoxKeypair();
-const TEST_BUCKET_ID = "bucket_test1" as BucketId;
+const TEST_BUCKET_ID = brandId<BucketId>("bucket_test1");
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -128,7 +129,6 @@ describe("BucketKeyProvider", () => {
     });
 
     const entry = result.current?.get(TEST_BUCKET_ID);
-    expect(entry).toBeDefined();
     expect(entry?.key).toBe(FAKE_AEAD_KEY);
     expect(entry?.keyVersion).toBe(1);
   });
@@ -152,10 +152,8 @@ describe("BucketKeyProvider", () => {
     });
 
     await waitFor(() => {
-      expect(result.current).toBeDefined();
+      expect(result.current?.keyVersion).toBe(2);
     });
-
-    expect(result.current?.keyVersion).toBe(2);
   });
 
   it("skips grants that fail to decrypt with DecryptionFailedError", async () => {
@@ -168,7 +166,7 @@ describe("BucketKeyProvider", () => {
       grants: [
         {
           id: "kg_bad",
-          bucketId: "bucket_bad" as BucketId,
+          bucketId: brandId<BucketId>("bucket_bad"),
           encryptedKey: btoa(String.fromCharCode(...new Uint8Array(100))),
           keyVersion: 1,
           grantorSystemId: "sys_friend1",
@@ -234,7 +232,7 @@ describe("BucketKeyProvider", () => {
       grants: [
         {
           id: "kg_err",
-          bucketId: "bucket_err" as BucketId,
+          bucketId: brandId<BucketId>("bucket_err"),
           encryptedKey: btoa(String.fromCharCode(...new Uint8Array(100))),
           keyVersion: 1,
           grantorSystemId: "sys_friend1",

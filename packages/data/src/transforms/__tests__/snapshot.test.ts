@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -41,8 +41,8 @@ function makeSnapshotContent(): SnapshotContent {
 
 function makeRawSnapshot(overrides?: Partial<SnapshotRaw>): SnapshotRaw {
   return {
-    id: "snap_001" as SystemSnapshotId,
-    systemId: "sys_test" as SystemId,
+    id: brandId<SystemSnapshotId>("snap_001"),
+    systemId: brandId<SystemId>("sys_test"),
     snapshotTrigger: "manual",
     createdAt: NOW,
     encryptedData: encryptAndEncodeT1(makeSnapshotContent(), masterKey),

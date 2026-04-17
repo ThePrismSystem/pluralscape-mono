@@ -7,7 +7,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, ID_PREFIXES, now } from "@pluralscape/types";
+import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -33,7 +33,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 const { fieldBucketVisibility, fieldDefinitions, buckets } = schema;
 
 function genFieldDefinitionId(): FieldDefinitionId {
-  return `fld_${crypto.randomUUID()}` as FieldDefinitionId;
+  return brandId<FieldDefinitionId>(`fld_${crypto.randomUUID()}`);
 }
 
 describe("field-bucket-visibility.service (PGlite integration)", () => {
@@ -57,8 +57,8 @@ describe("field-bucket-visibility.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.webhookDeliveries);
     await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -84,7 +84,7 @@ describe("field-bucket-visibility.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as BucketId;
+    return brandId<BucketId>(id);
   }
 
   async function insertFieldDefinition(): Promise<FieldDefinitionId> {
@@ -100,7 +100,7 @@ describe("field-bucket-visibility.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as FieldDefinitionId;
+    return brandId<FieldDefinitionId>(id);
   }
 
   // ── setFieldBucketVisibility ─────────────────────────────────────────

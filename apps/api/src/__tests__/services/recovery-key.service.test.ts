@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -115,7 +116,7 @@ describe("recovery-key service", () => {
         { id: "rk_abc", accountId: "acct_123", createdAt: 1000, revokedAt: null },
       ]);
 
-      const result = await getRecoveryKeyStatus(db, "acct_123" as AccountId);
+      const result = await getRecoveryKeyStatus(db, brandId<AccountId>("acct_123"));
       expect(result).toEqual({ hasActiveKey: true, createdAt: 1000 });
     });
 
@@ -123,7 +124,7 @@ describe("recovery-key service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await getRecoveryKeyStatus(db, "acct_123" as AccountId);
+      const result = await getRecoveryKeyStatus(db, brandId<AccountId>("acct_123"));
       expect(result).toEqual({ hasActiveKey: false, createdAt: null });
     });
   });
@@ -151,7 +152,7 @@ describe("recovery-key service", () => {
 
       const result = await regenerateRecoveryKeyBackup(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         validParams,
         mockAudit,
       );
@@ -165,7 +166,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([{ id: "rk_old" }]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit);
+      await regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), validParams, mockAudit);
 
       expect(mockVerifyAuthKey).toHaveBeenCalledOnce();
       // Second arg should be the stored hash (or a Uint8Array copy of it)
@@ -179,7 +180,7 @@ describe("recovery-key service", () => {
       mockVerifyAuthKey.mockReturnValueOnce(false);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
+        regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), validParams, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -188,7 +189,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_missing" as AccountId, validParams, mockAudit),
+        regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_missing"), validParams, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -198,7 +199,7 @@ describe("recovery-key service", () => {
       await expect(
         regenerateRecoveryKeyBackup(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { ...validParams, confirmed: false },
           mockAudit,
         ),
@@ -212,7 +213,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
+        regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), validParams, mockAudit),
       ).rejects.toThrow(NoActiveRecoveryKeyError);
     });
 
@@ -220,7 +221,7 @@ describe("recovery-key service", () => {
       const { db } = mockDb();
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, {}, mockAudit),
+        regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), {}, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
@@ -232,7 +233,7 @@ describe("recovery-key service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
+        regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), validParams, mockAudit),
       ).rejects.toThrow("Recovery key not found during revocation");
     });
 
@@ -242,7 +243,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([{ id: "rk_old" }]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit);
+      await regenerateRecoveryKeyBackup(db, brandId<AccountId>("acct_123"), validParams, mockAudit);
 
       expect(chain.transaction).toHaveBeenCalledOnce();
     });

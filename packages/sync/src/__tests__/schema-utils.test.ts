@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { entityEntries, entityKeys } from "../schemas/schema-utils.js";
@@ -34,7 +35,7 @@ describe("entityEntries", () => {
     const entries = entityEntries(record);
     expect(entries).toHaveLength(2);
     expect(entries.map(([k]) => k)).toContain("mem_1");
-    expect(entries.find(([k]) => k === ("mem_1" as MemberId))?.[1]).toEqual({ name: "Alice" });
+    expect(entries.find(([k]) => k === brandId<MemberId>("mem_1"))?.[1]).toEqual({ name: "Alice" });
   });
 
   it("returns empty array for empty record", () => {

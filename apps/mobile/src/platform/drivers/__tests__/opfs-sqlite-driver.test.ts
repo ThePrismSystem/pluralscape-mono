@@ -262,7 +262,10 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     expect(initReq?.kind).toBe("init");
     if (initReq === undefined) throw new Error("init request missing");
     fakeWorker.fireMessage({ id: initReq.id, ok: true, result: undefined });
-    await expect(pending).resolves.toBeDefined();
+    const driver = await pending;
+    // Resolved driver must expose the SqliteDriver contract.
+    expect(typeof driver.prepare).toBe("function");
+    expect(typeof driver.transaction).toBe("function");
   });
 
   it("prepare() returns synchronously; run() posts prepare then run with the resolved handle", async () => {
@@ -377,8 +380,8 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     // Commit MUST have posted — otherwise a release-without-commit regression
     // would silently pass the begin-count assertion below.
     const commit1 = fakeWorker.posted.find((r) => r.kind === "txn-commit");
-    expect(commit1).toBeDefined();
     if (commit1 === undefined) throw new Error("expected txn-commit for t1");
+    expect(commit1.kind).toBe("txn-commit");
 
     // Crucial assertion: while t1's commit is in flight, t2's BEGIN must not
     // have been posted. The mutex releases only after commit resolves.

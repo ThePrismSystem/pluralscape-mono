@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -45,8 +46,8 @@ const { memberPhotoRouter } = await import("../../../trpc/routers/member-photo.j
 
 const createCaller = makeCallerFactory({ memberPhoto: memberPhotoRouter });
 
-const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
-const PHOTO_ID = "mp_11111111-2222-3333-4444-555555555555" as MemberPhotoId;
+const MEMBER_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const PHOTO_ID = brandId<MemberPhotoId>("mp_11111111-2222-3333-4444-555555555555");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_PHOTO_RESULT = {
@@ -101,7 +102,7 @@ describe("memberPhoto router", () => {
       await expect(
         caller.memberPhoto.create({
           systemId: MOCK_SYSTEM_ID,
-          memberId: "not-a-member-id" as MemberId,
+          memberId: brandId<MemberId>("not-a-member-id"),
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -133,7 +134,7 @@ describe("memberPhoto router", () => {
         caller.memberPhoto.get({
           systemId: MOCK_SYSTEM_ID,
           memberId: MEMBER_ID,
-          photoId: "not-a-photo-id" as MemberPhotoId,
+          photoId: brandId<MemberPhotoId>("not-a-photo-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

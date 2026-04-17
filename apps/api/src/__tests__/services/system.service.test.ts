@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor } from "../../lib/pagination.js";
@@ -36,7 +36,7 @@ const { listSystems, getSystemProfile, updateSystemProfile, archiveSystem, creat
   await import("../../services/system.service.js");
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -177,7 +177,7 @@ describe("getSystemProfile", () => {
   it("throws 404 when system not found", async () => {
     const { db } = mockDb();
 
-    await expect(getSystemProfile(db, "sys_nonexistent" as SystemId, AUTH)).rejects.toThrow(
+    await expect(getSystemProfile(db, brandId<SystemId>("sys_nonexistent"), AUTH)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
@@ -185,7 +185,7 @@ describe("getSystemProfile", () => {
   it("throws 404 for system owned by different account", async () => {
     const { db } = mockDb();
 
-    await expect(getSystemProfile(db, "sys_other" as SystemId, AUTH)).rejects.toThrow(
+    await expect(getSystemProfile(db, brandId<SystemId>("sys_other"), AUTH)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
@@ -256,7 +256,7 @@ describe("updateSystemProfile", () => {
     await expect(
       updateSystemProfile(
         db,
-        "sys_nonexistent" as SystemId,
+        brandId<SystemId>("sys_nonexistent"),
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
         mockAudit,
@@ -332,9 +332,9 @@ describe("archiveSystem", () => {
   it("throws 404 when system not found", async () => {
     const { db } = mockDb();
 
-    await expect(archiveSystem(db, "sys_nonexistent" as SystemId, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-    );
+    await expect(
+      archiveSystem(db, brandId<SystemId>("sys_nonexistent"), AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("throws 409 when it is the last system", async () => {

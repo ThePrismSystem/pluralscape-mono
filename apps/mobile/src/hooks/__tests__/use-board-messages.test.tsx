@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptBoardMessageInput } from "@pluralscape/data/transforms/board-message";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -153,11 +154,11 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 function makeRawBoardMessage(id: string): BoardMessageRaw {
   const encrypted = encryptBoardMessageInput(
-    { content: "Board post", senderId: "m-1" as MemberId },
+    { content: "Board post", senderId: brandId<MemberId>("m-1") },
     TEST_MASTER_KEY,
   );
   return {
-    id: id as BoardMessageId,
+    id: brandId<BoardMessageId>(id),
     systemId: TEST_SYSTEM_ID,
     pinned: false,
     sortOrder: 0,
@@ -179,12 +180,14 @@ beforeEach(() => {
 describe("useBoardMessage", () => {
   it("returns decrypted board message data", async () => {
     fixtures.set("boardMessage.get", makeRawBoardMessage("bm-1"));
-    const { result } = renderHookWithProviders(() => useBoardMessage("bm-1" as BoardMessageId));
+    const { result } = renderHookWithProviders(() =>
+      useBoardMessage(brandId<BoardMessageId>("bm-1")),
+    );
 
     let data: Awaited<ReturnType<typeof useBoardMessage>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.content).toBe("Board post");
     expect(data?.pinned).toBe(false);
@@ -192,9 +195,12 @@ describe("useBoardMessage", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useBoardMessage("bm-1" as BoardMessageId), {
-      masterKey: null,
-    });
+    const { result } = renderHookWithProviders(
+      () => useBoardMessage(brandId<BoardMessageId>("bm-1")),
+      {
+        masterKey: null,
+      },
+    );
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -202,11 +208,11 @@ describe("useBoardMessage", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("boardMessage.get", makeRawBoardMessage("bm-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useBoardMessage("bm-1" as BoardMessageId),
+      useBoardMessage(brandId<BoardMessageId>("bm-1")),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -223,7 +229,7 @@ describe("useBoardMessagesList", () => {
     const { result } = renderHookWithProviders(() => useBoardMessagesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -250,7 +256,7 @@ describe("useBoardMessagesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useBoardMessagesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -426,12 +432,12 @@ describe("useBoardMessage (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW]);
     const { result } = renderHookWithProviders(
-      () => useBoardMessage("bm-local-1" as BoardMessageId),
+      () => useBoardMessage(brandId<BoardMessageId>("bm-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_board_messages"), [
@@ -448,12 +454,12 @@ describe("useBoardMessage (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW]);
     const { result } = renderHookWithProviders(
-      () => useBoardMessage("bm-local-1" as BoardMessageId),
+      () => useBoardMessage(brandId<BoardMessageId>("bm-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.content).toBe("Board message content");
@@ -470,7 +476,7 @@ describe("useBoardMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -496,7 +502,7 @@ describe("useBoardMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

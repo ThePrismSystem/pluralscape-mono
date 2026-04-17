@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -28,8 +29,8 @@ beforeAll(async () => {
 });
 
 const BASE_DEFINITION_RESULT = {
-  id: "fld_test123" as FieldDefinitionId,
-  systemId: "sys_test456" as SystemId,
+  id: brandId<FieldDefinitionId>("fld_test123"),
+  systemId: brandId<SystemId>("sys_test456"),
   fieldType: "text" as const,
   required: true,
   sortOrder: 1,
@@ -41,12 +42,12 @@ const BASE_DEFINITION_RESULT = {
 };
 
 const BASE_VALUE_RESULT = {
-  id: "fv_test789" as FieldValueId,
-  fieldDefinitionId: "fld_test123" as FieldDefinitionId,
+  id: brandId<FieldValueId>("fv_test789"),
+  fieldDefinitionId: brandId<FieldDefinitionId>("fld_test123"),
   memberId: null,
   structureEntityId: null,
   groupId: null,
-  systemId: "sys_test456" as SystemId,
+  systemId: brandId<SystemId>("sys_test456"),
   version: 1,
   createdAt: 1_700_000_000_000 as import("@pluralscape/types").UnixMillis,
   updatedAt: 1_700_000_001_000 as import("@pluralscape/types").UnixMillis,
@@ -161,12 +162,12 @@ describe("decryptFieldDefinitionPage", () => {
       data: [
         {
           ...BASE_DEFINITION_RESULT,
-          id: "fld_001" as FieldDefinitionId,
+          id: brandId<FieldDefinitionId>("fld_001"),
           encryptedData: makeBase64Blob(enc1, masterKey),
         },
         {
           ...BASE_DEFINITION_RESULT,
-          id: "fld_002" as FieldDefinitionId,
+          id: brandId<FieldDefinitionId>("fld_002"),
           fieldType: "multi-select" as const,
           encryptedData: makeBase64Blob(enc2, masterKey),
         },
@@ -291,12 +292,12 @@ describe("decryptFieldValueList", () => {
     const raw = [
       {
         ...BASE_VALUE_RESULT,
-        id: "fv_001" as FieldValueId,
+        id: brandId<FieldValueId>("fv_001"),
         encryptedData: makeBase64Blob(enc1, masterKey),
       },
       {
         ...BASE_VALUE_RESULT,
-        id: "fv_002" as FieldValueId,
+        id: brandId<FieldValueId>("fv_002"),
         encryptedData: makeBase64Blob(enc2, masterKey),
       },
     ];

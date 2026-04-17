@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -42,7 +43,7 @@ const { customFrontRouter } = await import("../../../trpc/routers/custom-front.j
 
 const createCaller = makeCallerFactory({ customFront: customFrontRouter });
 
-const CUSTOM_FRONT_ID = "cf_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as CustomFrontId;
+const CUSTOM_FRONT_ID = brandId<CustomFrontId>("cf_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JjZg==";
 
 const MOCK_CUSTOM_FRONT_RESULT = {
@@ -88,7 +89,7 @@ describe("customFront router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.customFront.create({
@@ -121,7 +122,7 @@ describe("customFront router", () => {
       await expect(
         caller.customFront.get({
           systemId: MOCK_SYSTEM_ID,
-          customFrontId: "not-a-custom-front-id" as CustomFrontId,
+          customFrontId: brandId<CustomFrontId>("not-a-custom-front-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

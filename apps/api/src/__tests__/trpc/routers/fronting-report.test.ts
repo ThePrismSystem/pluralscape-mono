@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -40,7 +41,7 @@ const { frontingReportRouter } = await import("../../../trpc/routers/fronting-re
 
 const createCaller = makeCallerFactory({ frontingReport: frontingReportRouter });
 
-const REPORT_ID = "fr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingReportId;
+const REPORT_ID = brandId<FrontingReportId>("fr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_REPORT_RESULT = {
@@ -92,7 +93,7 @@ describe("frontingReport router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.frontingReport.create({
@@ -139,7 +140,7 @@ describe("frontingReport router", () => {
       await expect(
         caller.frontingReport.get({
           systemId: MOCK_SYSTEM_ID,
-          reportId: "not-a-report-id" as FrontingReportId,
+          reportId: brandId<FrontingReportId>("not-a-report-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

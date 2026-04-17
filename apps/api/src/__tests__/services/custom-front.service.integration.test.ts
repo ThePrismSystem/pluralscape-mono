@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -51,8 +52,8 @@ describe("custom-front.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgFrontingTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 

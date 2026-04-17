@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { createIndexedDbOfflineQueueAdapter } from "../indexeddb-offline-queue-adapter.js";
@@ -8,7 +9,7 @@ import type { EncryptedChangeEnvelope } from "@pluralscape/sync";
 import type { OfflineQueueAdapter } from "@pluralscape/sync/adapters";
 import type { SyncDocumentId } from "@pluralscape/types";
 
-const DOC_A = "doc-a" as SyncDocumentId;
+const DOC_A = brandId<SyncDocumentId>("doc-a");
 
 let dbCounter = 0;
 function freshAdapter(): OfflineQueueAdapter {
@@ -99,7 +100,7 @@ describe("createIndexedDbOfflineQueueAdapter", () => {
 
   it("concurrent enqueue operations complete without data loss", async () => {
     const adapter = freshAdapter();
-    const DOC_B = "doc-b" as SyncDocumentId;
+    const DOC_B = brandId<SyncDocumentId>("doc-b");
     const results = await Promise.all([
       adapter.enqueue(DOC_A, makeEnvelope(DOC_A)),
       adapter.enqueue(DOC_B, makeEnvelope(DOC_B)),

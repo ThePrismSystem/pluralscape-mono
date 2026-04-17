@@ -1,4 +1,5 @@
 import { createEventBus } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createWsManager } from "../ws-manager.js";
@@ -8,7 +9,7 @@ import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
 import type { SystemId } from "@pluralscape/types";
 
 function asSystemId(id: string): SystemId {
-  return id as SystemId;
+  return brandId<SystemId>(id);
 }
 
 // ── Mock createWsClientAdapter ──────────────────────────────────────

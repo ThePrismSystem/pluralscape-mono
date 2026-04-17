@@ -46,25 +46,22 @@ async function requestUploadUrl(
 }
 
 /**
- * Upload a blob to a presigned POST URL using multipart form data.
- * Uses native fetch instead of Playwright's request context to avoid
- * the global Content-Type: application/json header interfering with
- * the multipart/form-data encoding required by S3 POST policy.
+ * Upload a blob to a presigned PUT URL.
+ *
+ * The S3 adapter signs `If-None-Match: *` into the URL (write-once
+ * enforcement), so the client must forward that header for the signature
+ * to validate. Uses native fetch to bypass Playwright's default headers.
  */
-async function postToPresignedUrl(
-  uploadUrl: string,
-  fields: Record<string, string> | undefined,
-): Promise<void> {
-  const formData = new FormData();
-  if (fields) {
-    for (const [key, value] of Object.entries(fields)) {
-      formData.append(key, value);
-    }
-  }
-  // S3 POST policy requires the file field to be last
-  formData.append("file", new Blob([Buffer.alloc(BLOB_SIZE_BYTES, 0x42)], { type: "image/png" }));
-
-  const res = await fetch(uploadUrl, { method: "POST", body: formData });
+async function putToPresignedUrl(uploadUrl: string): Promise<void> {
+  const body = Buffer.alloc(BLOB_SIZE_BYTES, 0x42);
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    body,
+    headers: {
+      "Content-Type": "image/png",
+      "If-None-Match": "*",
+    },
+  });
   expect(res.ok).toBe(true);
 }
 
@@ -77,7 +74,7 @@ async function uploadAndConfirmBlob(
   systemId: string,
   upload: UploadUrlResponse,
 ): Promise<void> {
-  await postToPresignedUrl(upload.uploadUrl, upload.fields);
+  await putToPresignedUrl(upload.uploadUrl);
 
   const confirmRes = await request.post(`/v1/systems/${systemId}/blobs/${upload.blobId}/confirm`, {
     headers: authHeaders,
@@ -102,7 +99,7 @@ test.describe("Blobs CRUD", () => {
     await test.step("get upload url and upload file", async () => {
       const upload = await requestUploadUrl(request, authHeaders, systemId);
       blobId = upload.blobId;
-      await postToPresignedUrl(upload.uploadUrl, upload.fields);
+      await putToPresignedUrl(upload.uploadUrl);
     });
 
     await test.step("confirm upload", async () => {
@@ -186,5 +183,60 @@ test.describe("Blobs CRUD", () => {
       headers: authHeaders,
     });
     expect(res.status()).toBe(404);
+  });
+
+  /**
+   * Negative test: the presigned PUT signs the exact Content-Length that
+   * `requestUploadUrl` sent in `sizeBytes`. Sending a larger body must be
+   * rejected by S3 signature enforcement — otherwise a client could upload
+   * arbitrarily large blobs past the server-side quota.
+   */
+  test("oversized PUT body rejected by S3 signature", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const upload = await requestUploadUrl(request, authHeaders, systemId);
+
+    const oversize = Buffer.alloc(BLOB_SIZE_BYTES + 1024, 0x42);
+    const res = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      body: oversize,
+      headers: {
+        "Content-Type": "image/png",
+        "Content-Length": String(oversize.length),
+        "If-None-Match": "*",
+      },
+    });
+    expect(res.ok).toBe(false);
+    // S3/MinIO return 400 (BadRequest) or 403 (SignatureDoesNotMatch) for
+    // Content-Length mismatches. Either is an acceptable rejection.
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+  });
+
+  /**
+   * Negative test: the presigned PUT signs `Content-Type: image/png` into
+   * the URL. Sending a mismatched Content-Type must fail signature
+   * verification — prevents a client from uploading an arbitrary MIME
+   * type under cover of a URL requested for `image/png`.
+   */
+  test("PUT with mismatched Content-Type rejected by S3 signature", async ({
+    request,
+    authHeaders,
+  }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const upload = await requestUploadUrl(request, authHeaders, systemId);
+
+    const body = Buffer.alloc(BLOB_SIZE_BYTES, 0x42);
+    const res = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      body,
+      headers: {
+        // URL was signed for image/png; application/pdf breaks the signature.
+        "Content-Type": "application/pdf",
+        "If-None-Match": "*",
+      },
+    });
+    expect(res.ok).toBe(false);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
   });
 });

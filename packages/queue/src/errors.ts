@@ -69,6 +69,24 @@ export class DuplicateHandlerError extends Error {
 }
 
 /**
+ * Thrown when stored job data in the backing store (Redis hash, SQLite row)
+ * cannot be parsed into a valid {@link StoredJobData} shape.
+ *
+ * Wraps the underlying parse error as `cause` so diagnostics are preserved
+ * without leaking a bare `SyntaxError` / Zod `ZodError` across the queue API
+ * boundary. Callers receive a typed, stable error they can branch on.
+ */
+export class QueueCorruptionError extends Error {
+  override readonly name = "QueueCorruptionError" as const;
+  readonly jobId: JobId;
+
+  constructor(jobId: JobId, options?: ErrorOptions) {
+    super(`Corrupt stored data for job "${jobId}".`, options);
+    this.jobId = jobId;
+  }
+}
+
+/**
  * Thrown when a state transition is attempted on a job whose current status
  * does not permit it (e.g. acknowledging a pending job).
  */

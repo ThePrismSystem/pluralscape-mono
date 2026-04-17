@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../../adapter/wasm-adapter.js";
@@ -80,7 +81,7 @@ describe("encryptBlob / decryptBlob", () => {
         data,
         tier: 2,
         bucketKey,
-        bucketId: "bucket_test" as BucketId,
+        bucketId: brandId<BucketId>("bucket_test"),
       });
 
       expect(result.metadata.tier).toBe(2);
@@ -119,7 +120,7 @@ describe("encryptBlob / decryptBlob", () => {
         data,
         tier: 2,
         bucketKey,
-        bucketId: "bucket_x" as BucketId,
+        bucketId: brandId<BucketId>("bucket_x"),
       });
 
       const wrongKey = adapter.aeadKeygen();

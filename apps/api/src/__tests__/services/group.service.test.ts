@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { toCursor } from "../../lib/pagination.js";
@@ -56,8 +57,8 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const GROUP_ID = "grp_test-group" as GroupId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const GROUP_ID = brandId<GroupId>("grp_test-group");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -277,9 +278,9 @@ describe("getGroup", () => {
   it("throws 404 when group not found", async () => {
     const { db } = mockDb();
 
-    await expect(getGroup(db, SYSTEM_ID, "grp_nonexistent" as GroupId, AUTH)).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-    );
+    await expect(
+      getGroup(db, SYSTEM_ID, brandId<GroupId>("grp_nonexistent"), AUTH),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
 
@@ -381,7 +382,7 @@ describe("deleteGroup", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteGroup(db, SYSTEM_ID, "grp_nonexistent" as GroupId, AUTH, mockAudit),
+      deleteGroup(db, SYSTEM_ID, brandId<GroupId>("grp_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -464,7 +465,7 @@ describe("moveGroup", () => {
 
   it("moves group to new parent", async () => {
     const { db, chain } = mockDb();
-    const parentId = "grp_parent" as GroupId;
+    const parentId = brandId<GroupId>("grp_parent");
     // target parent lookup
     chain.limit
       .mockResolvedValueOnce([{ id: parentId, parentGroupId: null }])
@@ -538,7 +539,7 @@ describe("moveGroup", () => {
 
   it("throws 409 on circular reference", async () => {
     const { db, chain } = mockDb();
-    const childId = "grp_child" as GroupId;
+    const childId = brandId<GroupId>("grp_child");
     // target exists, its parent is GROUP_ID → cycle
     chain.limit
       .mockResolvedValueOnce([{ id: childId, parentGroupId: GROUP_ID }])
@@ -692,7 +693,7 @@ describe("archiveGroup", () => {
     const { db } = mockDb();
 
     await expect(
-      archiveGroup(db, SYSTEM_ID, "grp_nonexistent" as GroupId, AUTH, mockAudit),
+      archiveGroup(db, SYSTEM_ID, brandId<GroupId>("grp_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -723,7 +724,7 @@ describe("restoreGroup", () => {
     const { db } = mockDb();
 
     await expect(
-      restoreGroup(db, SYSTEM_ID, "grp_nonexistent" as GroupId, AUTH, mockAudit),
+      restoreGroup(db, SYSTEM_ID, brandId<GroupId>("grp_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

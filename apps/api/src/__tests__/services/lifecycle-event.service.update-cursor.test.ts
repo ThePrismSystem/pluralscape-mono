@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -44,8 +45,8 @@ const { updateLifecycleEvent, createLifecycleEvent, listLifecycleEvents, getLife
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const EVENT_ID = "evt_test-event" as LifecycleEventId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const EVENT_ID = brandId<LifecycleEventId>("evt_test-event");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

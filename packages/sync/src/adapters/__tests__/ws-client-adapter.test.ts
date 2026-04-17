@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { nonce, pubkey, sig } from "../../__tests__/test-crypto-helpers.js";
@@ -22,11 +23,11 @@ import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 // ── Branded type helpers ────────────────────────────────────────────
 
 function asSyncDocId(id: string): SyncDocumentId {
-  return id as SyncDocumentId;
+  return brandId<SyncDocumentId>(id);
 }
 
 function asSystemId(id: string): SystemId {
-  return id as SystemId;
+  return brandId<SystemId>(id);
 }
 
 // ── MockWebSocket ───────────────────────────────────────────────────

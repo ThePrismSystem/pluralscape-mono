@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptInnerWorldRegionInput } from "@pluralscape/data/transforms/innerworld-region";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -152,7 +153,7 @@ function makeRawRegion(id: string): InnerWorldRegionRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as InnerWorldRegionId,
+    id: brandId<InnerWorldRegionId>(id),
     systemId: TEST_SYSTEM_ID,
     parentRegionId: null,
     version: 1,
@@ -174,13 +175,13 @@ describe("useInnerWorldRegion", () => {
   it("returns decrypted region data", async () => {
     fixtures.set("innerworld.region.get", makeRawRegion("r-1"));
     const { result } = renderHookWithProviders(() =>
-      useInnerWorldRegion("r-1" as InnerWorldRegionId),
+      useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
     );
 
     let data: Awaited<ReturnType<typeof useInnerWorldRegion>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("Region r-1");
     expect(data?.description).toBe("A test region");
@@ -194,7 +195,7 @@ describe("useInnerWorldRegion", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useInnerWorldRegion("r-1" as InnerWorldRegionId),
+      () => useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -204,11 +205,11 @@ describe("useInnerWorldRegion", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("innerworld.region.get", makeRawRegion("r-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useInnerWorldRegion("r-1" as InnerWorldRegionId),
+      useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -225,7 +226,7 @@ describe("useInnerWorldRegionsList", () => {
     const { result } = renderHookWithProviders(() => useInnerWorldRegionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -252,7 +253,7 @@ describe("useInnerWorldRegionsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useInnerWorldRegionsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -382,12 +383,12 @@ describe("useInnerWorldRegion (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_REGION_ROW]);
     const { result } = renderHookWithProviders(
-      () => useInnerWorldRegion("r-local-1" as InnerWorldRegionId),
+      () => useInnerWorldRegion(brandId<InnerWorldRegionId>("r-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("innerworld_regions"), [
@@ -405,12 +406,12 @@ describe("useInnerWorldRegion (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_REGION_ROW]);
     const { result } = renderHookWithProviders(
-      () => useInnerWorldRegion("r-local-1" as InnerWorldRegionId),
+      () => useInnerWorldRegion(brandId<InnerWorldRegionId>("r-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ id: "r-local-1" });
@@ -427,7 +428,7 @@ describe("useInnerWorldRegionsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -453,7 +454,7 @@ describe("useInnerWorldRegionsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

@@ -7,6 +7,7 @@ import { JOB_STATUSES, JOB_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
+import type { JobPayload } from "./jobs.types.js";
 import type { JobId, JobResult, JobStatus, JobType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -23,7 +24,7 @@ export const jobs = sqliteTable(
     id: text("id").primaryKey().$type<JobId>(),
     systemId: text("system_id").references(() => systems.id, { onDelete: "cascade" }),
     type: text("type").notNull().$type<JobType>(),
-    payload: sqliteJson("payload").notNull(),
+    payload: sqliteJson("payload").notNull().$type<JobPayload>(),
     status: text("status").notNull().default("pending").$type<JobStatus>(),
     attempts: integer("attempts").notNull().default(0),
     maxAttempts: integer("max_attempts").notNull().default(DEFAULT_MAX_ATTEMPTS),

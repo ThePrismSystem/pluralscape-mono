@@ -8,6 +8,13 @@
       "when": 1776317850772,
       "tag": "0000_big_yellow_claw",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776418214897,
+      "tag": "0001_sour_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }

@@ -204,7 +204,6 @@ describe("useFriendConnection — local mode", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(result.current).toBeDefined();
     expect(result.current.isError).toBe(false);
   });
 
@@ -244,7 +243,7 @@ describe("useFriendConnection — local mode", () => {
     expect(queryOneMock).not.toHaveBeenCalled();
   });
 
-  it("returns a defined query when source is remote", () => {
+  it("returns a query shape with isError=false when source is remote", () => {
     mockUseQuerySource.mockReturnValue("remote");
     mockUseLocalDb.mockReturnValue(null);
 
@@ -252,7 +251,7 @@ describe("useFriendConnection — local mode", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(result.current).toBeDefined();
+    expect(result.current.isError).toBe(false);
   });
 });
 
@@ -268,7 +267,6 @@ describe("useFriendConnectionsList — local mode", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(result.current).toBeDefined();
     expect(result.current.isError).toBe(false);
   });
 
@@ -295,7 +293,7 @@ describe("useFriendConnectionsList — local mode", () => {
     expect(queryAllMock).not.toHaveBeenCalled();
   });
 
-  it("returns a defined query when filtering by status in local mode", () => {
+  it("returns a query shape with isError=false when filtering by status in local mode", () => {
     const { db } = makeLocalDb(undefined, []);
     mockUseQuerySource.mockReturnValue("local");
     mockUseLocalDb.mockReturnValue(db);
@@ -304,7 +302,7 @@ describe("useFriendConnectionsList — local mode", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(result.current).toBeDefined();
+    expect(result.current.isError).toBe(false);
   });
 });
 
@@ -318,7 +316,6 @@ describe("useFriendCodesList — local mode", () => {
 
     const { result } = renderHook(() => useFriendCodesList(), { wrapper: makeWrapper() });
 
-    expect(result.current).toBeDefined();
     expect(result.current.isError).toBe(false);
   });
 
@@ -354,7 +351,6 @@ describe("usePrivacyBucket — local mode", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(result.current).toBeDefined();
     expect(result.current.isError).toBe(false);
   });
 
@@ -379,7 +375,6 @@ describe("usePrivacyBucketsList — local mode", () => {
 
     const { result } = renderHook(() => usePrivacyBucketsList(), { wrapper: makeWrapper() });
 
-    expect(result.current).toBeDefined();
     expect(result.current.isError).toBe(false);
   });
 
@@ -393,7 +388,7 @@ describe("usePrivacyBucketsList — local mode", () => {
     expect(queryAllMock).not.toHaveBeenCalled();
   });
 
-  it("returns a defined query when includeArchived is false", () => {
+  it("returns a query shape with isError=false when includeArchived is false", () => {
     const { db } = makeLocalDb(undefined, []);
     mockUseQuerySource.mockReturnValue("local");
     mockUseLocalDb.mockReturnValue(db);
@@ -402,6 +397,6 @@ describe("usePrivacyBucketsList — local mode", () => {
       wrapper: makeWrapper(),
     });
 
-    expect(result.current).toBeDefined();
+    expect(result.current.isError).toBe(false);
   });
 });

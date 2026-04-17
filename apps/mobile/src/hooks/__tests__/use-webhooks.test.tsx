@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -175,7 +176,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 function makeWebhookConfig(id: string): WebhookConfig {
   return {
-    id: id as WebhookId,
+    id: brandId<WebhookId>(id),
     systemId: TEST_SYSTEM_ID,
     url: `https://example.com/webhook/${id}`,
     secret: new Uint8Array([1, 2, 3]) as ServerSecret,
@@ -191,9 +192,9 @@ function makeWebhookConfig(id: string): WebhookConfig {
 
 function makeWebhookDelivery(id: string, webhookId: string): WebhookDelivery {
   return {
-    id: id as WebhookDeliveryId,
+    id: brandId<WebhookDeliveryId>(id),
     systemId: TEST_SYSTEM_ID,
-    webhookId: webhookId as WebhookId,
+    webhookId: brandId<WebhookId>(webhookId),
     eventType: "member.created",
     status: "success",
     httpStatus: 200,
@@ -213,10 +214,10 @@ beforeEach(() => {
 describe("useWebhookConfig", () => {
   it("returns webhook config data", async () => {
     fixtures.set("webhookConfig.get", makeWebhookConfig("wh_1"));
-    const { result } = renderHookWithProviders(() => useWebhookConfig("wh_1" as WebhookId));
+    const { result } = renderHookWithProviders(() => useWebhookConfig(brandId<WebhookId>("wh_1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.url).toBe("https://example.com/webhook/wh_1");
     expect(result.current.data?.enabled).toBe(true);
@@ -233,7 +234,7 @@ describe("useWebhookConfigsList", () => {
     const { result } = renderHookWithProviders(() => useWebhookConfigsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -369,11 +370,11 @@ describe("useWebhookDelivery", () => {
   it("returns webhook delivery data", async () => {
     fixtures.set("webhookDelivery.get", makeWebhookDelivery("wd_1", "wh_1"));
     const { result } = renderHookWithProviders(() =>
-      useWebhookDelivery("wd_1" as WebhookDeliveryId),
+      useWebhookDelivery(brandId<WebhookDeliveryId>("wd_1")),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.webhookId).toBe("wh_1");
     expect(result.current.data?.status).toBe("success");
@@ -390,7 +391,7 @@ describe("useWebhookDeliveriesList", () => {
     const { result } = renderHookWithProviders(() => useWebhookDeliveriesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

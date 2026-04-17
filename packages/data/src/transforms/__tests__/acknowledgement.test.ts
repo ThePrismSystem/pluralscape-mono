@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -28,7 +28,7 @@ beforeAll(async () => {
 function makeEncryptedFields(): AcknowledgementEncryptedFields {
   return {
     message: "Please acknowledge this.",
-    targetMemberId: "mem_target" as MemberId,
+    targetMemberId: brandId<MemberId>("mem_target"),
     confirmedAt: null,
   };
 }
@@ -38,9 +38,9 @@ function makeServerAcknowledgement(
   overrides?: Partial<{ confirmed: boolean; archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
-    id: "ack_abc123" as AcknowledgementId,
-    systemId: "sys_xyz789" as SystemId,
-    createdByMemberId: "mem_creator" as MemberId,
+    id: brandId<AcknowledgementId>("ack_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
+    createdByMemberId: brandId<MemberId>("mem_creator"),
     confirmed: false as boolean,
     encryptedData: encryptAndEncodeT1(fields, masterKey),
     version: 1,

@@ -14,6 +14,7 @@
  */
 import { initSodium } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Disable envelope signature verification — mock data has invalid signatures.
@@ -36,11 +37,11 @@ const mockValidateSession = vi.fn().mockResolvedValue({
   ok: true,
   auth: {
     authMethod: "session" as const,
-    accountId: "acct_mr2" as AccountId,
-    systemId: "sys_mr2" as SystemId,
-    sessionId: "sess_mr2" as SessionId,
+    accountId: brandId<AccountId>("acct_mr2"),
+    systemId: brandId<SystemId>("sys_mr2"),
+    sessionId: brandId<SessionId>("sess_mr2"),
     accountType: "system",
-    ownedSystemIds: new Set(["sys_mr2" as SystemId]),
+    ownedSystemIds: new Set([brandId<SystemId>("sys_mr2")]),
     auditLogIpTracking: false,
   } satisfies AuthContext,
   session: {},
@@ -142,14 +143,14 @@ function makeAuthenticatedState(
     connectionId,
     {
       authMethod: "session" as const,
-      accountId: "acct_mr2" as AccountId,
-      systemId: "sys_mr2" as SystemId,
-      sessionId: "sess_mr2" as SessionId,
+      accountId: brandId<AccountId>("acct_mr2"),
+      systemId: brandId<SystemId>("sys_mr2"),
+      sessionId: brandId<SessionId>("sess_mr2"),
       accountType: "system",
-      ownedSystemIds: new Set(["sys_mr2" as SystemId]),
+      ownedSystemIds: new Set([brandId<SystemId>("sys_mr2")]),
       auditLogIpTracking: false,
     },
-    "sys_mr2" as SystemId,
+    brandId<SystemId>("sys_mr2"),
     "owner-full",
   );
   const state = manager.get(connectionId);
@@ -389,7 +390,7 @@ describe("message-router branch coverage", () => {
       const ctx = createRouterContext(1000, manager);
       const state = makeAuthenticatedState("conn-fc-deny", ws, manager);
 
-      ctx.documentOwnership.set("doc-fc-denied", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-fc-denied", brandId<SystemId>("sys_other"));
 
       await routeMessage(
         JSON.stringify({
@@ -462,7 +463,7 @@ describe("message-router branch coverage", () => {
       const ctx = createRouterContext(1000, manager);
       const state = makeAuthenticatedState("conn-ss-deny", ws, manager);
 
-      ctx.documentOwnership.set("doc-ss-denied", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-ss-denied", brandId<SystemId>("sys_other"));
 
       const snapshot = {
         ciphertext: base64urlOfLength(32, 1),

@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -26,8 +27,8 @@ let masterKey: KdfMasterKey;
 /** Build a minimal valid SystemSettings fixture. */
 function makeSystemSettings(overrides?: Partial<SystemSettings>): SystemSettings {
   return {
-    id: "sys-settings-1" as SystemSettingsId,
-    systemId: "system-1" as SystemId,
+    id: brandId<SystemSettingsId>("sys-settings-1"),
+    systemId: brandId<SystemId>("system-1"),
     theme: "system",
     fontScale: 1,
     locale: null,
@@ -110,8 +111,8 @@ function makeNomenclature(overrides?: Partial<NomenclatureSettings>): Nomenclatu
 /** Build a mock system settings server response. */
 function makeRawSystemSettings(encryptedData: string, version = 1) {
   return {
-    id: "sys-settings-1" as SystemSettingsId,
-    systemId: "system-1" as SystemId,
+    id: brandId<SystemSettingsId>("sys-settings-1"),
+    systemId: brandId<SystemId>("system-1"),
     locale: null as Locale | null,
     biometricEnabled: false,
     encryptedData,
@@ -124,7 +125,7 @@ function makeRawSystemSettings(encryptedData: string, version = 1) {
 /** Build a mock nomenclature settings server response. */
 function makeRawNomenclature(encryptedData: string, version = 1) {
   return {
-    systemId: "system-1" as SystemId,
+    systemId: brandId<SystemId>("system-1"),
     encryptedData,
     version,
     createdAt: 0 as UnixMillis,
@@ -159,8 +160,8 @@ describe("decryptSystemSettings", () => {
     // Override wire metadata to differ from blob
     const rawWithWireMeta = {
       ...raw,
-      id: "sys-settings-wire" as SystemSettingsId,
-      systemId: "system-wire" as SystemId,
+      id: brandId<SystemSettingsId>("sys-settings-wire"),
+      systemId: brandId<SystemId>("system-wire"),
       version: 5,
       createdAt: 999 as UnixMillis,
       updatedAt: 1000 as UnixMillis,

@@ -7,6 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -67,9 +68,9 @@ describe("member-photo.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgMemberTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
-    memberId = (await pgInsertMember(db, systemId)) as MemberId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
+    memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -130,7 +131,7 @@ describe("member-photo.service (PGlite integration)", () => {
       // because we're inserting via DB, not the service). We need 500 system photos
       // to trigger the system quota branch. Use a second member to avoid hitting the
       // per-member check first (the service checks per-member before system quota).
-      const secondMemberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const secondMemberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       // Seed 100 members × 5 photos = 500 via direct insert across multiple members
       // to stay within per-member limit. Simplification: seed all 500 on secondMember
       // directly (bypassing the service) to trigger the system-wide path.
@@ -283,7 +284,7 @@ describe("member-photo.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND when photo id does not exist at all", async () => {
-      const nonExistent = `mp_${crypto.randomUUID()}` as MemberPhotoId;
+      const nonExistent = brandId<MemberPhotoId>(`mp_${crypto.randomUUID()}`);
       await assertApiError(
         restoreMemberPhoto(asDb(db), systemId, memberId, nonExistent, auth, noopAudit),
         "NOT_FOUND",
@@ -354,7 +355,7 @@ describe("member-photo.service (PGlite integration)", () => {
         .where(eq(memberPhotos.id, photoToRestore.id));
 
       // Seed 500 active photos on a second member to hit system quota
-      const extraMemberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const extraMemberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       await seedPhotos(db, systemId, extraMemberId, 500);
 
       // Restore should fail with system QUOTA_EXCEEDED

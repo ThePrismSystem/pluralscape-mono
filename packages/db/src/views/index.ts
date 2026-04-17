@@ -13,8 +13,5 @@ export type {
   UnconfirmedAcknowledgement,
 } from "./types.js";
 
-export { mapStructureEntityAssociationRow } from "./mappers.js";
-export type { RawStructureEntityAssociationRow } from "./mappers.js";
-
 export * as pgViews from "./pg.js";
 export * as sqliteViews from "./sqlite.js";

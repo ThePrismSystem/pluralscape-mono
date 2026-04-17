@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MemberId, SystemId } from "@pluralscape/types";
@@ -81,9 +82,9 @@ const { clearWebhookConfigCache, dispatchWebhookEvent, invalidateWebhookConfigCa
 // ── Tests ────────────────────────────────────────────────────────
 
 describe("dispatchWebhookEvent", () => {
-  const systemId = "sys_test-system-id" as SystemId;
+  const systemId = brandId<SystemId>("sys_test-system-id");
   const eventType = "member.created" as const;
-  const payload = { memberId: "mem_test" as MemberId };
+  const payload = { memberId: brandId<MemberId>("mem_test") };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -213,7 +214,7 @@ describe("dispatchWebhookEvent", () => {
   });
 
   it("does not share cache between systems", async () => {
-    const otherSystemId = "sys_other" as SystemId;
+    const otherSystemId = brandId<SystemId>("sys_other");
     mockWhere
       .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }])
       .mockResolvedValueOnce([]);

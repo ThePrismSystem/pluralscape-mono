@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
@@ -33,7 +34,7 @@ function wireChain(): void {
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -89,7 +90,7 @@ const { tagContent, untagContent, listTagsByBucket, parseTagQuery } =
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const BUCKET_ID = "bkt_test-bucket" as BucketId;
+const BUCKET_ID = brandId<BucketId>("bkt_test-bucket");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const ENTITY_TYPE: BucketContentEntityType = "member";

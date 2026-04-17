@@ -7,6 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -38,8 +39,8 @@ describe("analytics.service (PGlite integration)", () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgFrontingTables(client);
-    const accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    const accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -94,7 +95,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("computes breakdown for a single member session fully within range", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       await insertSession({
         memberId,
         startTime: baseTime - 2 * MS_PER_HOUR,
@@ -114,7 +115,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("clamps session starting before date range", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       await insertSession({
         memberId,
         startTime: baseTime - 5 * MS_PER_HOUR,
@@ -129,7 +130,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("clamps session ending after date range", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       await insertSession({
         memberId,
         startTime: baseTime - 4 * MS_PER_HOUR,
@@ -144,7 +145,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("excludes sessions entirely outside date range", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       await insertSession({
         memberId,
         startTime: baseTime - 10 * MS_PER_HOUR,
@@ -158,8 +159,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("handles multiple subjects with correct percentages", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Member A: 3-hour session
       await insertSession({
@@ -187,7 +188,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("excludes archived sessions", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       await insertSession({
         memberId,
         archived: true,
@@ -201,8 +202,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("sorts breakdowns by total duration descending", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Member A: 1-hour session
       await insertSession({
@@ -240,8 +241,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("detects overlapping member sessions", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Member A: -3h to -1h
       await insertSession({
@@ -265,8 +266,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("returns empty pairs when sessions do not overlap", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Member A: -4h to -3h
       await insertSession({
@@ -289,7 +290,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("excludes customFront sessions from co-fronting", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Insert a custom front row (FK requirement)
       const cfId = `cf_${crypto.randomUUID()}`;
@@ -326,9 +327,9 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("detects multiple overlapping pairs", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberC = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberC = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // All three overlap across -3h to now
       await insertSession({
@@ -356,8 +357,8 @@ describe("analytics.service (PGlite integration)", () => {
 
     it("uses canonical ordering with smaller ID first in pair", async () => {
       // Insert members with known IDs to control lexicographic order
-      const laterId = `mem_z${crypto.randomUUID()}` as MemberId;
-      const earlierId = `mem_a${crypto.randomUUID()}` as MemberId;
+      const laterId = brandId<MemberId>(`mem_z${crypto.randomUUID()}`);
+      const earlierId = brandId<MemberId>(`mem_a${crypto.randomUUID()}`);
 
       await pgInsertMember(db, systemId, laterId);
       await pgInsertMember(db, systemId, earlierId);
@@ -383,8 +384,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("skips co-fronting pair when sessions only touch at boundary (overlap === 0)", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Session A ends exactly when session B starts — no actual overlap
       await insertSession({
@@ -405,8 +406,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("skips sessions that collapse to zero-length bounds after date-range clamping", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Session A spans the whole range — valid
       await insertSession({
@@ -436,8 +437,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("accumulates overlapping pair duration across multiple co-front intervals", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // First overlap: -4h to -3h (1 hour)
       await insertSession({
@@ -477,7 +478,7 @@ describe("analytics.service (PGlite integration)", () => {
 
   describe("all-time preset", () => {
     it("computeFrontingBreakdown returns all sessions regardless of time", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       await insertSession({
         memberId,
         startTime: baseTime - 100 * MS_PER_HOUR,
@@ -494,7 +495,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("computeFrontingBreakdown handles open-ended session with all-time preset", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const sessionStart = Date.now() - MS_PER_HOUR;
 
       // No endTime — session is still ongoing
@@ -515,8 +516,8 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("computeCoFrontingBreakdown uses all-time preset and detects overlap", async () => {
-      const memberA = (await pgInsertMember(db, systemId)) as MemberId;
-      const memberB = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       await insertSession({
         memberId: memberA,
@@ -542,7 +543,7 @@ describe("analytics.service (PGlite integration)", () => {
 
   describe("computeFrontingBreakdown edge cases", () => {
     it("excludes sessions clamped to zero duration from breakdown", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Session starts exactly at range end — clamped duration will be 0
       await insertSession({
@@ -559,7 +560,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("handles open-ended session in custom range", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const sessionStart = Date.now() - MS_PER_HOUR;
 
       // No endTime — still ongoing; within the range
@@ -579,7 +580,7 @@ describe("analytics.service (PGlite integration)", () => {
     });
 
     it("computes correct averageSessionLength with multiple sessions", async () => {
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
 
       // Two sessions: 1 hour and 3 hours → average 2 hours
       await insertSession({

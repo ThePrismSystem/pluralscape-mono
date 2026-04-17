@@ -6,6 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -63,8 +64,8 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgStructureTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
 
     // Create an entity type to use in all tests
@@ -165,7 +166,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
 
     it("rejects cross-system access", async () => {
       const otherAccountId = genAccountId();
-      const otherSystemId = `sys_${crypto.randomUUID()}` as SystemId;
+      const otherSystemId = brandId<SystemId>(`sys_${crypto.randomUUID()}`);
       const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
       await assertApiError(
@@ -401,7 +402,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const memberId = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const now = Date.now();
       await db.insert(systemStructureEntityMemberLinks).values({
         id: `steml_${crypto.randomUUID()}`,

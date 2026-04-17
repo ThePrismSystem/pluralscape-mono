@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -62,8 +63,8 @@ describe("import-job.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgImportExportTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -120,7 +121,7 @@ describe("import-job.service (PGlite integration)", () => {
     });
 
     it("rejects when systemId does not belong to the caller", async () => {
-      const otherSystemId = "sys_other" as SystemId;
+      const otherSystemId = brandId<SystemId>("sys_other");
       await assertApiError(
         createImportJob(
           asDb(db),
@@ -168,7 +169,7 @@ describe("import-job.service (PGlite integration)", () => {
 
     it("returns NOT_FOUND for an unknown id", async () => {
       await assertApiError(
-        getImportJob(asDb(db), systemId, "ij_does-not-exist" as ImportJobId, auth),
+        getImportJob(asDb(db), systemId, brandId<ImportJobId>("ij_does-not-exist"), auth),
         "NOT_FOUND",
         404,
       );
@@ -182,7 +183,7 @@ describe("import-job.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const otherSystemId = "sys_other" as SystemId;
+      const otherSystemId = brandId<SystemId>("sys_other");
       await assertApiError(
         getImportJob(asDb(db), otherSystemId, created.id, auth),
         "NOT_FOUND",
@@ -259,7 +260,7 @@ describe("import-job.service (PGlite integration)", () => {
     });
 
     it("rejects when systemId does not belong to the caller", async () => {
-      const otherSystemId = "sys_other" as SystemId;
+      const otherSystemId = brandId<SystemId>("sys_other");
       await assertApiError(listImportJobs(asDb(db), otherSystemId, auth, {}), "NOT_FOUND", 404);
     });
   });
@@ -401,7 +402,7 @@ describe("import-job.service (PGlite integration)", () => {
         updateImportJob(
           asDb(db),
           systemId,
-          "ij_does-not-exist" as ImportJobId,
+          brandId<ImportJobId>("ij_does-not-exist"),
           { status: "importing" },
           auth,
           noopAudit,
@@ -435,7 +436,7 @@ describe("import-job.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const otherSystemId = "sys_other" as SystemId;
+      const otherSystemId = brandId<SystemId>("sys_other");
       await assertApiError(
         updateImportJob(
           asDb(db),

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -30,7 +31,7 @@ const { notificationConfigRouter } = await import("../../../trpc/routers/notific
 
 const createCaller = makeCallerFactory({ notificationConfig: notificationConfigRouter });
 
-const CONFIG_ID = "nc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as NotificationConfigId;
+const CONFIG_ID = brandId<NotificationConfigId>("nc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const EVENT_TYPE: NotificationEventType = "check-in-due";
 
 const MOCK_CONFIG_RESULT = {
@@ -73,7 +74,7 @@ describe("notificationConfig router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.notificationConfig.get({ systemId: foreignSystemId, eventType: EVENT_TYPE }),

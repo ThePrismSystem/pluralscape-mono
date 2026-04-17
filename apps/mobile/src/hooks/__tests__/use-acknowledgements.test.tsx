@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptAcknowledgementInput } from "@pluralscape/data/transforms/acknowledgement";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -127,13 +128,13 @@ function makeRawAcknowledgement(id: string): AcknowledgementRaw {
   const encrypted = encryptAcknowledgementInput(
     {
       message: "Please read",
-      targetMemberId: "m-1" as MemberId,
+      targetMemberId: brandId<MemberId>("m-1"),
       confirmedAt: null,
     },
     TEST_MASTER_KEY,
   );
   return {
-    id: id as AcknowledgementId,
+    id: brandId<AcknowledgementId>(id),
     systemId: TEST_SYSTEM_ID,
     createdByMemberId: null,
     confirmed: false,
@@ -156,13 +157,13 @@ describe("useAcknowledgement", () => {
   it("returns decrypted acknowledgement data", async () => {
     fixtures.set("acknowledgement.get", makeRawAcknowledgement("ack-1"));
     const { result } = renderHookWithProviders(() =>
-      useAcknowledgement("ack-1" as AcknowledgementId),
+      useAcknowledgement(brandId<AcknowledgementId>("ack-1")),
     );
 
     let data: Awaited<ReturnType<typeof useAcknowledgement>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.message).toBe("Please read");
     expect(data?.targetMemberId).toBe("m-1");
@@ -173,7 +174,7 @@ describe("useAcknowledgement", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useAcknowledgement("ack-1" as AcknowledgementId),
+      () => useAcknowledgement(brandId<AcknowledgementId>("ack-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -183,11 +184,11 @@ describe("useAcknowledgement", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("acknowledgement.get", makeRawAcknowledgement("ack-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useAcknowledgement("ack-1" as AcknowledgementId),
+      useAcknowledgement(brandId<AcknowledgementId>("ack-1")),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -204,7 +205,7 @@ describe("useAcknowledgementsList", () => {
     const { result } = renderHookWithProviders(() => useAcknowledgementsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -229,7 +230,7 @@ describe("useAcknowledgementsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useAcknowledgementsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -356,12 +357,12 @@ describe("useAcknowledgement (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_ACK_ROW]);
     const { result } = renderHookWithProviders(
-      () => useAcknowledgement("ack-local-1" as AcknowledgementId),
+      () => useAcknowledgement(brandId<AcknowledgementId>("ack-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_acknowledgements"), [
@@ -379,12 +380,12 @@ describe("useAcknowledgement (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_ACK_ROW]);
     const { result } = renderHookWithProviders(
-      () => useAcknowledgement("ack-local-1" as AcknowledgementId),
+      () => useAcknowledgement(brandId<AcknowledgementId>("ack-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.message).toBe("Please acknowledge this");
@@ -401,7 +402,7 @@ describe("useAcknowledgementsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -427,7 +428,7 @@ describe("useAcknowledgementsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -31,7 +32,7 @@ const { apiKeyRouter } = await import("../../../trpc/routers/api-key.js");
 
 const createCaller = makeCallerFactory({ apiKey: apiKeyRouter });
 
-const API_KEY_ID = "ak_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ApiKeyId;
+const API_KEY_ID = brandId<ApiKeyId>("ak_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_API_KEY_RESULT = {
   id: API_KEY_ID,
@@ -85,7 +86,7 @@ describe("apiKey router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.apiKey.create({ ...VALID_CREATE_INPUT, systemId: foreignSystemId }),
@@ -161,7 +162,10 @@ describe("apiKey router", () => {
     it("rejects invalid apiKeyId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.apiKey.revoke({ systemId: MOCK_SYSTEM_ID, apiKeyId: "invalid-id" as ApiKeyId }),
+        caller.apiKey.revoke({
+          systemId: MOCK_SYSTEM_ID,
+          apiKeyId: brandId<ApiKeyId>("invalid-id"),
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 

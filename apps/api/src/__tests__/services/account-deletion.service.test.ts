@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeTestAuth } from "../helpers/test-auth.js";
@@ -78,7 +79,7 @@ const { deleteAccount } = await import("../../services/account-deletion.service.
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acct_test" as AccountId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test");
 const VALID_HASH = new Uint8Array(32).fill(1);
 
 function makeMockDb(): Record<string, unknown> {

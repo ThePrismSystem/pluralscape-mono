@@ -7,6 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -63,8 +64,8 @@ describe("poll.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgCommunicationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     const memId = `mem_${crypto.randomUUID()}`;
     memberId = await pgInsertMember(db, systemId, memId);
     auth = makeAuth(accountId, systemId);
@@ -454,7 +455,7 @@ describe("poll.service (PGlite integration)", () => {
         id: genPollVoteId(),
         pollId: created.id,
         systemId,
-        voter: { entityType: "member", entityId: "mem_test-voter" as MemberId },
+        voter: { entityType: "member", entityId: brandId<MemberId>("mem_test-voter") },
         votedAt: voteNow,
         encryptedData: testBlob(),
         createdAt: voteNow,
@@ -507,7 +508,7 @@ describe("poll.service (PGlite integration)", () => {
     it("cannot access another system's poll by ID", async () => {
       const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       await assertApiError(
@@ -520,7 +521,7 @@ describe("poll.service (PGlite integration)", () => {
     it("list does not return another system's polls", async () => {
       await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       const result = await listPolls(asDb(db), otherSystemId, otherAuth);

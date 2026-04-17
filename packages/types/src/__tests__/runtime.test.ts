@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
+import { brandId } from "../brand-utils.js";
 import { createId, extractErrorMessage, now, toISO } from "../runtime.js";
 import { toUnixMillis } from "../timestamps.js";
 
@@ -26,7 +27,7 @@ describe("createId", () => {
   });
 
   it("returns a string that can be cast to a branded ID", () => {
-    const id = createId("sys_") as SystemId;
+    const id = brandId<SystemId>(createId("sys_"));
     expectTypeOf(id).toEqualTypeOf<SystemId>();
   });
 

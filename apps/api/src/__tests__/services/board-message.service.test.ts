@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -96,8 +97,8 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const BM_ID = "bm_test-board-message" as BoardMessageId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const BM_ID = brandId<BoardMessageId>("bm_test-board-message");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

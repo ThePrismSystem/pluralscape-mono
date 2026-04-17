@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -39,7 +40,7 @@ const { blobRouter } = await import("../../../trpc/routers/blob.js");
 
 const createCaller = makeCallerFactory({ blob: blobRouter });
 
-const BLOB_ID = "blob_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BlobId;
+const BLOB_ID = brandId<BlobId>("blob_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_BLOB_RESULT = {
   id: BLOB_ID,
@@ -98,7 +99,7 @@ describe("blob router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.blob.createUploadUrl({ ...VALID_UPLOAD_INPUT, systemId: foreignSystemId }),
@@ -141,7 +142,7 @@ describe("blob router", () => {
       await expect(
         caller.blob.confirmUpload({
           ...VALID_CONFIRM_INPUT,
-          blobId: "invalid-id" as BlobId,
+          blobId: brandId<BlobId>("invalid-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -174,7 +175,7 @@ describe("blob router", () => {
     it("rejects invalid blobId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.blob.get({ systemId: MOCK_SYSTEM_ID, blobId: "invalid-id" as BlobId }),
+        caller.blob.get({ systemId: MOCK_SYSTEM_ID, blobId: brandId<BlobId>("invalid-id") }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 

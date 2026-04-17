@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor } from "../../lib/pagination.js";
@@ -21,9 +21,9 @@ const { addMember, removeMember, listGroupMembers, listMemberGroupMemberships } 
   await import("../../services/group-membership.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const GROUP_ID = "grp_test-group" as GroupId;
-const MEMBER_ID = "mem_test-member" as MemberId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const GROUP_ID = brandId<GroupId>("grp_test-group");
+const MEMBER_ID = brandId<MemberId>("mem_test-member");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",

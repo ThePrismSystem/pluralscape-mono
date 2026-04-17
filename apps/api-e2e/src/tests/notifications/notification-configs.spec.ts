@@ -45,7 +45,9 @@ test.describe("Notification configs", () => {
       const body = (await res.json()) as { data: NotificationConfigResponse };
       expect(body.data.eventType).toBe("friend-switch-alert");
       expect(body.data.enabled).toBe(false);
-      expect(body.data.pushEnabled).toBe(true);
+      // Fail-closed default (see VALUES.md): a freshly-created config that
+      // did not explicitly set pushEnabled stays opted-out.
+      expect(body.data.pushEnabled).toBe(false);
     });
 
     await test.step("list includes updated config", async () => {

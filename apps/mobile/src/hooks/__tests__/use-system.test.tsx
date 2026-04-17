@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -112,7 +113,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 function makeSystem(id: string) {
   return {
-    id: id as SystemId,
+    id: brandId<SystemId>(id),
     encryptedData: "base64_encrypted_system_data",
     version: 1,
     createdAt: NOW,
@@ -132,7 +133,7 @@ describe("useSystem", () => {
     const { result } = renderHookWithProviders(() => useSystem());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.id).toBe("sys_1");
     expect(result.current.data?.version).toBe(1);
@@ -148,7 +149,7 @@ describe("useSystemsList", () => {
     const { result } = renderHookWithProviders(() => useSystemsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

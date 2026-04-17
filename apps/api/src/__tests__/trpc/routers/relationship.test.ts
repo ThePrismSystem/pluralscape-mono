@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -42,9 +43,9 @@ const { relationshipRouter } = await import("../../../trpc/routers/relationship.
 
 const createCaller = makeCallerFactory({ relationship: relationshipRouter });
 
-const RELATIONSHIP_ID = "rel_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as RelationshipId;
-const SOURCE_MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
-const TARGET_MEMBER_ID = "mem_bbbbbbbb-cccc-dddd-eeee-ffffffffffff" as MemberId;
+const RELATIONSHIP_ID = brandId<RelationshipId>("rel_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const SOURCE_MEMBER_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const TARGET_MEMBER_ID = brandId<MemberId>("mem_bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JyZWxhdGlvbnNoaXA=";
 
 const MOCK_RELATIONSHIP_RESULT = {
@@ -102,7 +103,7 @@ describe("relationship router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.relationship.create({
@@ -139,7 +140,7 @@ describe("relationship router", () => {
       await expect(
         caller.relationship.get({
           systemId: MOCK_SYSTEM_ID,
-          relationshipId: "not-a-relationship-id" as RelationshipId,
+          relationshipId: brandId<RelationshipId>("not-a-relationship-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

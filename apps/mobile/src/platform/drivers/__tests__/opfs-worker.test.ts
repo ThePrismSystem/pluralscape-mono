@@ -279,8 +279,8 @@ describe("OPFS worker dispatch", () => {
     expect(mockVfsRegister).toHaveBeenCalled();
     // vfs_register must be called with makeDefault === true so opens without
     // an explicit vfs name route through OPFSCoopSyncVFS.
+    expect(mockVfsRegister.mock.calls.length).toBeGreaterThan(0);
     const firstCall = mockVfsRegister.mock.calls[0];
-    expect(firstCall).toBeDefined();
     if (firstCall !== undefined) {
       expect(firstCall[1]).toBe(true);
     }
@@ -577,8 +577,8 @@ describe("OPFS worker dispatch", () => {
       const rows = res.result;
       expect(Array.isArray(rows)).toBe(true);
       if (Array.isArray(rows)) {
+        expect(rows).toHaveLength(1);
         const first = rows[0];
-        expect(first).toBeDefined();
         if (first !== undefined && typeof first === "object" && first !== null) {
           const rec: Record<string, unknown> = first as Record<string, unknown>;
           const data = rec.data;
@@ -672,8 +672,9 @@ describe("OPFS worker dispatch", () => {
     // Invocation-order check: reset's single call precedes bind_collection's.
     const resetOrder = mockReset.mock.invocationCallOrder[0];
     const bindOrder = mockBindCollection.mock.invocationCallOrder[0];
-    expect(resetOrder).toBeDefined();
-    expect(bindOrder).toBeDefined();
+    // Both mocks asserted as called above, so invocationCallOrder entries exist.
+    expect(typeof resetOrder).toBe("number");
+    expect(typeof bindOrder).toBe("number");
     if (resetOrder !== undefined && bindOrder !== undefined) {
       expect(resetOrder).toBeLessThan(bindOrder);
     }

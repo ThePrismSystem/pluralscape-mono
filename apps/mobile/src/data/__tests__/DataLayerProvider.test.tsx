@@ -100,10 +100,12 @@ describe("DataLayerProvider", () => {
 
     expect(snapshots).toHaveLength(1);
     const ctx = snapshots[0];
-    expect(ctx).toBeDefined();
+    // ctx is defined iff the DataLayerProvider wired the context value.
+    // Asserting on the specific fields narrows the type and proves shape.
     expect(typeof ctx?.eventBus.emit).toBe("function");
     expect(typeof ctx?.eventBus.on).toBe("function");
-    expect(ctx?.localDb).toBeDefined();
+    expect(typeof ctx?.localDb.execute).toBe("function");
+    expect(typeof ctx?.localDb.queryAll).toBe("function");
   });
 
   it("useDataLayer throws when used outside DataLayerProvider", () => {

@@ -1,4 +1,5 @@
 import * as Automerge from "@automerge/automerge";
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { fromDoc } from "../../factories/document-factory.js";
@@ -54,8 +55,8 @@ function makePrivacyConfigDoc(): Automerge.Doc<PrivacyConfigDocument> {
 
 function makeFriendCodeInput(overrides?: Partial<FriendCodeInput>): FriendCodeInput {
   return {
-    id: "fcode_1" as FriendCodeId,
-    accountId: "acc_1" as AccountId,
+    id: brandId<FriendCodeId>("fcode_1"),
+    accountId: brandId<AccountId>("acc_1"),
     code: "ABCD-EFGH-1234",
     createdAt: 1000,
     expiresAt: 2000,
@@ -67,9 +68,9 @@ function makeFriendConnectionInput(
   overrides?: Partial<FriendConnectionInput>,
 ): FriendConnectionInput {
   return {
-    id: "fc_1" as FriendConnectionId,
-    accountId: "acc_1" as AccountId,
-    friendAccountId: "acc_2" as AccountId,
+    id: brandId<FriendConnectionId>("fc_1"),
+    accountId: brandId<AccountId>("acc_1"),
+    friendAccountId: brandId<AccountId>("acc_2"),
     status: "pending" as FriendConnectionStatus,
     visibility: JSON.stringify({
       showMembers: true,
@@ -77,7 +78,7 @@ function makeFriendConnectionInput(
       showStructure: false,
       allowFrontingNotifications: true,
     }),
-    assignedBucketIds: ["bkt_1" as BucketId, "bkt_2" as BucketId],
+    assignedBucketIds: [brandId<BucketId>("bkt_1"), brandId<BucketId>("bkt_2")],
     createdAt: 1000,
     updatedAt: 1000,
     ...overrides,
@@ -86,9 +87,9 @@ function makeFriendConnectionInput(
 
 function makeKeyGrantInput(overrides?: Partial<KeyGrantInput>): KeyGrantInput {
   return {
-    id: "kg_1" as KeyGrantId,
-    bucketId: "bkt_1" as BucketId,
-    friendAccountId: "acc_2" as AccountId,
+    id: brandId<KeyGrantId>("kg_1"),
+    bucketId: brandId<BucketId>("bkt_1"),
+    friendAccountId: brandId<AccountId>("acc_2"),
     encryptedBucketKey: "base64encodedkey==",
     keyVersion: 1,
     createdAt: 1000,
@@ -373,7 +374,7 @@ describe("addBucketAssignmentProjection", () => {
   });
 
   it("is idempotent when adding existing bucket", () => {
-    const input = makeFriendConnectionInput({ assignedBucketIds: ["bkt_1" as BucketId] });
+    const input = makeFriendConnectionInput({ assignedBucketIds: [brandId<BucketId>("bkt_1")] });
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
@@ -412,7 +413,7 @@ describe("addBucketAssignmentProjection", () => {
 describe("removeBucketAssignmentProjection", () => {
   it("removes bucketId from assignedBuckets map", () => {
     const input = makeFriendConnectionInput({
-      assignedBucketIds: ["bkt_1" as BucketId, "bkt_2" as BucketId],
+      assignedBucketIds: [brandId<BucketId>("bkt_1"), brandId<BucketId>("bkt_2")],
     });
     let doc = makePrivacyConfigDoc();
 
@@ -433,7 +434,7 @@ describe("removeBucketAssignmentProjection", () => {
   });
 
   it("is a no-op when removing a bucket that is not assigned", () => {
-    const input = makeFriendConnectionInput({ assignedBucketIds: ["bkt_1" as BucketId] });
+    const input = makeFriendConnectionInput({ assignedBucketIds: [brandId<BucketId>("bkt_1")] });
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
@@ -471,7 +472,7 @@ describe("removeBucketAssignmentProjection", () => {
 
   it("does not log when connection exists", () => {
     const input = makeFriendConnectionInput({
-      assignedBucketIds: ["bkt_1" as BucketId],
+      assignedBucketIds: [brandId<BucketId>("bkt_1")],
     });
     let doc = makePrivacyConfigDoc();
     const logger = { warn: vi.fn() };

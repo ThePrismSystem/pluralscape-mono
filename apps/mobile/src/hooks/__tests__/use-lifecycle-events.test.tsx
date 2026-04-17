@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptLifecycleEventInput } from "@pluralscape/data/transforms/lifecycle-event";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -134,7 +135,7 @@ function makeRawEvent(
 ): LifecycleEventRaw {
   const encrypted = encryptLifecycleEventInput(payload, TEST_MASTER_KEY);
   return {
-    id: id as LifecycleEventId,
+    id: brandId<LifecycleEventId>(id),
     systemId: TEST_SYSTEM_ID,
     eventType: eventType as LifecycleEventRaw["eventType"],
     occurredAt: NOW,
@@ -162,11 +163,11 @@ describe("useLifecycleEvent", () => {
   it("decrypts a discovery event", async () => {
     fixtures.set("lifecycleEvent.get", makeDiscoveryEvent("evt-1", "mem-1"));
     const { result } = renderHookWithProviders(() =>
-      useLifecycleEvent("evt-1" as LifecycleEventId),
+      useLifecycleEvent(brandId<LifecycleEventId>("evt-1")),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     expect(data?.eventType).toBe("discovery");
@@ -179,7 +180,7 @@ describe("useLifecycleEvent", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useLifecycleEvent("evt-1" as LifecycleEventId),
+      () => useLifecycleEvent(brandId<LifecycleEventId>("evt-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -189,11 +190,11 @@ describe("useLifecycleEvent", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("lifecycleEvent.get", makeDiscoveryEvent("evt-1", "mem-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useLifecycleEvent("evt-1" as LifecycleEventId),
+      useLifecycleEvent(brandId<LifecycleEventId>("evt-1")),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -210,7 +211,7 @@ describe("useLifecycleEventsList", () => {
     const { result } = renderHookWithProviders(() => useLifecycleEventsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -243,7 +244,7 @@ describe("useLifecycleEventsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useLifecycleEventsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -255,7 +256,7 @@ describe("useLifecycleEventsList", () => {
     const { result } = renderHookWithProviders(() => useLifecycleEventsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const listData = result.current.data;
     const pages = listData && "pages" in listData ? listData.pages : [];
@@ -381,12 +382,12 @@ describe("useLifecycleEvent (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_LIFECYCLE_EVENT_ROW]);
     const { result } = renderHookWithProviders(
-      () => useLifecycleEvent("evt-local-1" as LifecycleEventId),
+      () => useLifecycleEvent(brandId<LifecycleEventId>("evt-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("lifecycle_events"), [
@@ -402,12 +403,12 @@ describe("useLifecycleEvent (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_LIFECYCLE_EVENT_ROW]);
     const { result } = renderHookWithProviders(
-      () => useLifecycleEvent("evt-local-1" as LifecycleEventId),
+      () => useLifecycleEvent(brandId<LifecycleEventId>("evt-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ id: "evt-local-1" });
@@ -424,7 +425,7 @@ describe("useLifecycleEventsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -450,7 +451,7 @@ describe("useLifecycleEventsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

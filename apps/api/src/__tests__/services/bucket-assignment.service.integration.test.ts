@@ -8,7 +8,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, ID_PREFIXES, now } from "@pluralscape/types";
+import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -60,10 +60,10 @@ describe("bucket-assignment.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.webhookDeliveries);
     await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
-    friendAccountId = (await pgInsertAccount(db)) as AccountId;
+    friendAccountId = brandId<AccountId>(await pgInsertAccount(db));
   });
 
   afterAll(async () => {
@@ -90,7 +90,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as BucketId;
+    return brandId<BucketId>(id);
   }
 
   async function insertConnection(
@@ -108,7 +108,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
       archived: opts.archived ?? false,
       archivedAt: opts.archived ? ts : null,
     });
-    return id as FriendConnectionId;
+    return brandId<FriendConnectionId>(id);
   }
 
   function makeAssignParams(connectionId: FriendConnectionId): {
@@ -222,7 +222,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
 
     it("throws NOT_FOUND for non-existent connection", async () => {
       const bucketId = await insertBucket();
-      const fakeConnectionId = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+      const fakeConnectionId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
 
       await assertApiError(
         assignBucketToFriend(
@@ -330,7 +330,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
       const connectionId1 = await insertConnection();
 
       // Need a second friend account for a second connection
-      const friendAccount2 = (await pgInsertAccount(db)) as AccountId;
+      const friendAccount2 = brandId<AccountId>(await pgInsertAccount(db));
       const connectionId2 = createId(ID_PREFIXES.friendConnection);
       const ts = now();
       await db.insert(friendConnections).values({
@@ -355,7 +355,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
         systemId,
         bucketId,
         {
-          connectionId: connectionId2 as FriendConnectionId,
+          connectionId: brandId<FriendConnectionId>(connectionId2),
           encryptedBucketKey: Buffer.from("key-2").toString("base64"),
           keyVersion: 1,
         },

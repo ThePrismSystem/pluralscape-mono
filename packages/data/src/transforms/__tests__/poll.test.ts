@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -43,7 +43,7 @@ beforeAll(async () => {
 
 function makePollOption(id: string): PollOption {
   return {
-    id: id as PollOptionId,
+    id: brandId<PollOptionId>(id),
     label: `Option ${id}`,
     voteCount: 0,
     color: "#aabbcc" as HexColor,
@@ -64,9 +64,9 @@ function makeServerPoll(
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
-    id: "poll_abc123" as PollId,
-    systemId: "sys_xyz789" as SystemId,
-    createdByMemberId: "mem_creator" as MemberId,
+    id: brandId<PollId>("poll_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
+    createdByMemberId: brandId<MemberId>("mem_creator"),
     kind: "custom" as PollKind,
     status: "open" as PollStatus,
     closedAt: null as UnixMillis | null,
@@ -98,9 +98,9 @@ function makeServerPollVote(overrides?: {
   voter?: EntityReference<"member" | "structure-entity"> | null;
 }) {
   return {
-    id: "pv_abc123" as PollVoteId,
-    pollId: "poll_abc123" as PollId,
-    optionId: "opt_001" as PollOptionId,
+    id: brandId<PollVoteId>("pv_abc123"),
+    pollId: brandId<PollId>("poll_abc123"),
+    optionId: brandId<PollOptionId>("opt_001"),
     voter: { entityType: "member" as const, entityId: "mem_voter" } as EntityReference<
       "member" | "structure-entity"
     >,

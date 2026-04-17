@@ -5,7 +5,6 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { MS_PER_SECOND, toUnixMillis } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
@@ -193,18 +192,32 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     const expiryMs = params.expiresInMs ?? this.presignedUploadExpiryMs;
     const expiresInSeconds = Math.ceil(expiryMs / MS_PER_SECOND);
 
+    // Use a signed PUT instead of a POST policy so the `If-None-Match: *`
+    // precondition is baked into the signature (STORAGE-TC-L1). POST policies
+    // have no equivalent condition — S3 would happily overwrite an existing
+    // object if a client replayed or reused a presigned POST URL.
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: params.storageKey,
+      ContentType: params.mimeType ?? "application/octet-stream",
+      ContentLength: params.sizeBytes,
+      IfNoneMatch: "*",
+    });
+
     try {
-      const { url, fields } = await createPresignedPost(this.client, {
-        Bucket: this.bucket,
-        Key: params.storageKey,
-        Expires: expiresInSeconds,
-        Conditions: [
-          ["content-length-range", 1, params.sizeBytes],
-          ["eq", "$Content-Type", params.mimeType ?? "application/octet-stream"],
-        ],
-        Fields: {
-          "Content-Type": params.mimeType ?? "application/octet-stream",
-        },
+      const url = await getSignedUrl(this.client, command, {
+        expiresIn: expiresInSeconds,
+        // Bind these headers into the signature so S3 cannot be tricked
+        // into ignoring them by a client that drops/mutates a header:
+        //  - `if-none-match` — enforces write-once (STORAGE-TC-L1); must be
+        //    signed so S3 cannot be tricked into ignoring it by a client
+        //    that drops the header.
+        //  - `content-type` AND `content-length` — must be signed to prevent
+        //    a client from uploading with different headers than were
+        //    signed. MinIO (and some S3-compat backends) do NOT auto-sign
+        //    these by default, which previously permitted Content-Type
+        //    spoofing and oversized uploads on presigned PUTs.
+        signableHeaders: new Set(["if-none-match", "content-type", "content-length"]),
       });
       const expiresAt = toUnixMillis(now() + expiryMs);
 
@@ -212,7 +225,6 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
         supported: true,
         url,
         expiresAt,
-        fields,
       };
     } catch (err) {
       mapS3Error(err, params.storageKey);

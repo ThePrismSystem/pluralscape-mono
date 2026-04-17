@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -42,7 +43,7 @@ const { channelRouter } = await import("../../../trpc/routers/channel.js");
 
 const createCaller = makeCallerFactory({ channel: channelRouter });
 
-const CHANNEL_ID = "ch_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ChannelId;
+const CHANNEL_ID = brandId<ChannelId>("ch_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JjaGFubmVs";
 
 const MOCK_CHANNEL_RESULT = {
@@ -97,7 +98,7 @@ describe("channel router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.channel.create({
@@ -128,7 +129,10 @@ describe("channel router", () => {
     it("rejects invalid channelId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.channel.get({ systemId: MOCK_SYSTEM_ID, channelId: "invalid-id" as ChannelId }),
+        caller.channel.get({
+          systemId: MOCK_SYSTEM_ID,
+          channelId: brandId<ChannelId>("invalid-id"),
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 

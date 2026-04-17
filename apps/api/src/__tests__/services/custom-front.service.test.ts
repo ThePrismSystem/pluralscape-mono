@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { toCursor } from "../../lib/pagination.js";
@@ -52,8 +53,8 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const CF_ID = "cf_test-custom-front" as CustomFrontId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const CF_ID = brandId<CustomFrontId>("cf_test-custom-front");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -207,7 +208,7 @@ describe("getCustomFront", () => {
     const { db } = mockDb();
 
     await expect(
-      getCustomFront(db, SYSTEM_ID, "cf_nonexistent" as CustomFrontId, AUTH),
+      getCustomFront(db, SYSTEM_ID, brandId<CustomFrontId>("cf_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -295,7 +296,7 @@ describe("deleteCustomFront", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteCustomFront(db, SYSTEM_ID, "cf_nonexistent" as CustomFrontId, AUTH, mockAudit),
+      deleteCustomFront(db, SYSTEM_ID, brandId<CustomFrontId>("cf_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -338,7 +339,7 @@ describe("archiveCustomFront", () => {
     const { db } = mockDb();
 
     await expect(
-      archiveCustomFront(db, SYSTEM_ID, "cf_nonexistent" as CustomFrontId, AUTH, mockAudit),
+      archiveCustomFront(db, SYSTEM_ID, brandId<CustomFrontId>("cf_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -367,7 +368,7 @@ describe("restoreCustomFront", () => {
     const { db } = mockDb();
 
     await expect(
-      restoreCustomFront(db, SYSTEM_ID, "cf_nonexistent" as CustomFrontId, AUTH, mockAudit),
+      restoreCustomFront(db, SYSTEM_ID, brandId<CustomFrontId>("cf_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

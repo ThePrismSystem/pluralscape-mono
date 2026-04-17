@@ -7,6 +7,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -48,8 +49,8 @@ describe("device-token.service (PGlite integration)", () => {
 
     await createPgNotificationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -191,7 +192,13 @@ describe("device-token.service (PGlite integration)", () => {
 
   it("returns 404 when revoking non-existent token", async () => {
     await assertApiError(
-      revokeDeviceToken(asDb(db), systemId, "dt_nonexistent" as DeviceTokenId, auth, noopAudit),
+      revokeDeviceToken(
+        asDb(db),
+        systemId,
+        brandId<DeviceTokenId>("dt_nonexistent"),
+        auth,
+        noopAudit,
+      ),
       "NOT_FOUND",
       404,
     );
@@ -269,8 +276,8 @@ describe("device-token.service (PGlite integration)", () => {
     );
 
     // Account B tries to register the same token+platform
-    const otherAccountId = (await pgInsertAccount(db)) as AccountId;
-    const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+    const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
     const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
     const audit = spyAudit();
@@ -361,8 +368,8 @@ describe("device-token.service (PGlite integration)", () => {
   // ── Authorization ────────────────────────────────────────────────────
 
   it("returns 404 when system not owned by auth context", async () => {
-    const otherAccountId = (await pgInsertAccount(db)) as AccountId;
-    const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+    const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
     const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
     await assertApiError(

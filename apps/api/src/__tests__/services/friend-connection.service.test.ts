@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -102,9 +103,9 @@ const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acc_test-account" as AccountId;
-const FRIEND_ACCOUNT_ID = "acc_test-friend" as AccountId;
-const CONNECTION_ID = "fc_test-connection" as FriendConnectionId;
+const ACCOUNT_ID = brandId<AccountId>("acc_test-account");
+const FRIEND_ACCOUNT_ID = brandId<AccountId>("acc_test-friend");
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_test-connection");
 const AUTH = makeTestAuth({ accountId: ACCOUNT_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -167,7 +168,7 @@ describe("friend-connection service", () => {
 
     it("throws 404 when accountId does not match auth", async () => {
       const { db } = mockDb();
-      const otherAccountId = "acc_other" as AccountId;
+      const otherAccountId = brandId<AccountId>("acc_other");
 
       await expect(listFriendConnections(db, otherAccountId, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
@@ -198,7 +199,7 @@ describe("friend-connection service", () => {
 
     it("throws 404 when accountId does not match auth", async () => {
       const { db } = mockDb();
-      const otherAccountId = "acc_other" as AccountId;
+      const otherAccountId = brandId<AccountId>("acc_other");
 
       await expect(getFriendConnection(db, otherAccountId, CONNECTION_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
@@ -257,7 +258,7 @@ describe("friend-connection service", () => {
 
     it("throws 404 when accountId does not match auth", async () => {
       const { db } = mockDb();
-      const otherAccountId = "acc_other" as AccountId;
+      const otherAccountId = brandId<AccountId>("acc_other");
 
       await expect(
         acceptFriendConnection(db, otherAccountId, CONNECTION_ID, AUTH, mockAudit),

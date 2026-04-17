@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
@@ -33,7 +34,7 @@ function wireChain(): void {
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -93,7 +94,7 @@ const { getOrCreateNotificationConfig, updateNotificationConfig, listNotificatio
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const CONFIG_ID = "ncfg_test-config" as NotificationConfigId;
+const CONFIG_ID = brandId<NotificationConfigId>("ncfg_test-config");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const EVENT_TYPE: NotificationEventType = "switch-reminder";
@@ -103,8 +104,9 @@ function makeConfigRow(overrides: Record<string, unknown> = {}): Record<string, 
     id: CONFIG_ID,
     systemId: SYSTEM_ID,
     eventType: EVENT_TYPE,
-    enabled: true,
-    pushEnabled: true,
+    // Default to fail-closed to mirror DB defaults (see VALUES.md).
+    enabled: false,
+    pushEnabled: false,
     archived: false,
     archivedAt: null,
     createdAt: 1000,
@@ -128,7 +130,7 @@ describe("notification-config service", () => {
 
   describe("getOrCreateNotificationConfig", () => {
     it("returns existing config when found", async () => {
-      mockTx.limit.mockResolvedValueOnce([makeConfigRow()]);
+      mockTx.limit.mockResolvedValueOnce([makeConfigRow({ enabled: true })]);
 
       const result = await getOrCreateNotificationConfig({} as never, SYSTEM_ID, EVENT_TYPE, AUTH);
 
@@ -137,15 +139,15 @@ describe("notification-config service", () => {
       expect(result.enabled).toBe(true);
     });
 
-    it("creates new config with defaults when not found", async () => {
+    it("auto-creates a config row with fail-closed defaults (enabled: false, pushEnabled: false)", async () => {
       mockTx.limit.mockResolvedValueOnce([]); // no existing config
       mockTx.returning.mockResolvedValueOnce([makeConfigRow({ id: "ncfg_test-id" })]);
 
       const result = await getOrCreateNotificationConfig({} as never, SYSTEM_ID, EVENT_TYPE, AUTH);
 
       expect(result.id).toBe("ncfg_test-id");
-      expect(result.enabled).toBe(true);
-      expect(result.pushEnabled).toBe(true);
+      expect(result.enabled).toBe(false);
+      expect(result.pushEnabled).toBe(false);
     });
 
     it("throws when insert returns no rows", async () => {

@@ -7,6 +7,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -93,11 +94,11 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     await pgExec(client, PG_DDL.friendNotificationPreferences);
     await pgExec(client, PG_DDL.friendNotificationPreferencesIndexes);
 
-    accountIdA = (await pgInsertAccount(db)) as AccountId;
-    systemIdA = (await pgInsertSystem(db, accountIdA)) as SystemId;
+    accountIdA = brandId<AccountId>(await pgInsertAccount(db));
+    systemIdA = brandId<SystemId>(await pgInsertSystem(db, accountIdA));
 
-    accountIdB = (await pgInsertAccount(db)) as AccountId;
-    systemIdB = (await pgInsertSystem(db, accountIdB)) as SystemId;
+    accountIdB = brandId<AccountId>(await pgInsertAccount(db));
+    systemIdB = brandId<SystemId>(await pgInsertSystem(db, accountIdB));
   });
 
   afterAll(async () => {
@@ -134,13 +135,13 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     bucketId: BucketId;
   }> {
     const now = Date.now();
-    const memberId = `mem_${crypto.randomUUID()}` as MemberId;
-    const bucketId = `bkt_${crypto.randomUUID()}` as BucketId;
-    const connectionId = `fc_${crypto.randomUUID()}` as FriendConnectionId;
-    const reverseConnectionId = `fc_${crypto.randomUUID()}` as FriendConnectionId;
-    const deviceTokenId = `dt_${crypto.randomUUID()}` as DeviceTokenId;
-    const configId = `nc_${crypto.randomUUID()}` as NotificationConfigId;
-    const prefId = `fnp_${crypto.randomUUID()}` as FriendNotificationPreferenceId;
+    const memberId = brandId<MemberId>(`mem_${crypto.randomUUID()}`);
+    const bucketId = brandId<BucketId>(`bkt_${crypto.randomUUID()}`);
+    const connectionId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
+    const reverseConnectionId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
+    const deviceTokenId = brandId<DeviceTokenId>(`dt_${crypto.randomUUID()}`);
+    const configId = brandId<NotificationConfigId>(`nc_${crypto.randomUUID()}`);
+    const prefId = brandId<FriendNotificationPreferenceId>(`fnp_${crypto.randomUUID()}`);
 
     // Forward connection: A -> B, accepted
     await db.insert(friendConnections).values({
@@ -243,7 +244,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("enqueues one notification-send job per device token for eligible friend", async () => {
     const { memberId } = await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
     await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
@@ -259,7 +260,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("does not enqueue when notification config is disabled", async () => {
     const { memberId } = await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 
     // Disable the config
     await db.update(notificationConfigs).set({ enabled: false });
@@ -272,7 +273,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("does not enqueue when pushEnabled is false but enabled is true", async () => {
     const { memberId } = await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 
     await db.update(notificationConfigs).set({ pushEnabled: false, enabled: true });
 
@@ -282,9 +283,22 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     expect(enqueuedJobs).toHaveLength(0);
   });
 
-  it("enqueues when no notification config row exists (default-enabled)", async () => {
+  it("does NOT dispatch when no notification_config row exists (fail-closed)", async () => {
     const { memberId } = await setupEligibleFriend({ skipConfig: true });
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    const { queue, enqueuedJobs } = createMockQueue();
+
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
+
+    expect(enqueuedJobs).toHaveLength(0);
+  });
+
+  it("dispatches when a row exists with enabled=true and pushEnabled=true (explicit opt-in)", async () => {
+    // setupEligibleFriend() writes the config with enabled=true & pushEnabled=true;
+    // this test makes the explicit-opt-in contract first-class rather than relying
+    // on the broader "enqueues one notification-send job..." happy-path assertion.
+    const { memberId } = await setupEligibleFriend();
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
     await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
@@ -294,7 +308,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("enqueues when friend has no preference row (default-enabled via LEFT JOIN)", async () => {
     const { memberId } = await setupEligibleFriend({ skipPreference: true });
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
     await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
@@ -304,7 +318,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("does not enqueue when friend preference disables the event type", async () => {
     const { memberId, reverseConnectionId } = await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 
     // Clear enabled event types on B's preference
     await db
@@ -325,7 +339,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("does not enqueue when friend connection is not accepted", async () => {
     const { memberId } = await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 
     // Block both connections
     await db.update(friendConnections).set({ status: "blocked" });
@@ -338,8 +352,8 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("does not enqueue when member is not in any of friend's buckets", async () => {
     await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
-    const untaggedMemberId = `mem_${crypto.randomUUID()}` as MemberId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    const untaggedMemberId = brandId<MemberId>(`mem_${crypto.randomUUID()}`);
 
     const { queue, enqueuedJobs } = createMockQueue();
     await dispatchSwitchAlertForSession(
@@ -356,7 +370,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("does not enqueue when friend has no active device tokens", async () => {
     const { memberId } = await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 
     // Revoke the device token
     await db.update(deviceTokens).set({ revokedAt: Date.now() });
@@ -368,9 +382,9 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
   });
 
   it("enqueues when customFrontId is provided (custom-front entity type)", async () => {
-    const customFrontId = `cf_${crypto.randomUUID()}` as CustomFrontId;
+    const customFrontId = brandId<CustomFrontId>(`cf_${crypto.randomUUID()}`);
     await setupEligibleFriend({ customFrontId });
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
     await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, null, customFrontId, queue);
@@ -381,7 +395,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("does not enqueue when both memberId and customFrontId are null", async () => {
     await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
     await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, null, null, queue);
@@ -390,9 +404,9 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
   });
 
   it("does not enqueue for non-existent system (getSystemAccountId returns null)", async () => {
-    const fakeSystemId = `sys_${crypto.randomUUID()}` as SystemId;
-    const memberId = `mem_${crypto.randomUUID()}` as MemberId;
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const fakeSystemId = brandId<SystemId>(`sys_${crypto.randomUUID()}`);
+    const memberId = brandId<MemberId>(`mem_${crypto.randomUUID()}`);
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
     await dispatchSwitchAlertForSession(asDb(db), fakeSystemId, sessionId, memberId, null, queue);
@@ -402,11 +416,11 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
 
   it("continues enqueuing after one token fails (per-token resilience)", async () => {
     const { memberId } = await setupEligibleFriend();
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 
     // Add a second device token for friend B
     await db.insert(deviceTokens).values({
-      id: `dt_${crypto.randomUUID()}` as DeviceTokenId,
+      id: brandId<DeviceTokenId>(`dt_${crypto.randomUUID()}`),
       accountId: accountIdB,
       systemId: systemIdB,
       platform: "android",
@@ -428,8 +442,8 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     await setupEligibleFriend();
 
     // Set up friend C
-    const accountIdC = (await pgInsertAccount(db)) as AccountId;
-    const systemIdC = (await pgInsertSystem(db, accountIdC)) as SystemId;
+    const accountIdC = brandId<AccountId>(await pgInsertAccount(db));
+    const systemIdC = brandId<SystemId>(await pgInsertSystem(db, accountIdC));
 
     // Clean up and create a manual multi-friend setup
     await db.delete(friendNotificationPreferences);
@@ -441,12 +455,12 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     await db.delete(buckets).catch(() => {});
 
     const now = Date.now();
-    const sharedMemberId = `mem_${crypto.randomUUID()}` as MemberId;
-    const bucketId = `bkt_${crypto.randomUUID()}` as BucketId;
+    const sharedMemberId = brandId<MemberId>(`mem_${crypto.randomUUID()}`);
+    const bucketId = brandId<BucketId>(`bkt_${crypto.randomUUID()}`);
 
     // Notification config
     await db.insert(notificationConfigs).values({
-      id: `nc_${crypto.randomUUID()}` as NotificationConfigId,
+      id: brandId<NotificationConfigId>(`nc_${crypto.randomUUID()}`),
       systemId: systemIdA,
       eventType: "friend-switch-alert",
       enabled: true,
@@ -476,8 +490,8 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     });
 
     // Friend B: forward + reverse connections, preference, bucket assignment, 2 tokens
-    const connAB = `fc_${crypto.randomUUID()}` as FriendConnectionId;
-    const connBA = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+    const connAB = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
+    const connBA = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
     await db.insert(friendConnections).values([
       {
         id: connAB,
@@ -503,7 +517,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
       },
     ]);
     await db.insert(friendNotificationPreferences).values({
-      id: `fnp_${crypto.randomUUID()}` as FriendNotificationPreferenceId,
+      id: brandId<FriendNotificationPreferenceId>(`fnp_${crypto.randomUUID()}`),
       accountId: accountIdB,
       friendConnectionId: connBA,
       enabledEventTypes: ["friend-switch-alert"],
@@ -519,7 +533,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     });
     await db.insert(deviceTokens).values([
       {
-        id: `dt_${crypto.randomUUID()}` as DeviceTokenId,
+        id: brandId<DeviceTokenId>(`dt_${crypto.randomUUID()}`),
         accountId: accountIdB,
         systemId: systemIdB,
         platform: "ios",
@@ -529,7 +543,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
         revokedAt: null,
       },
       {
-        id: `dt_${crypto.randomUUID()}` as DeviceTokenId,
+        id: brandId<DeviceTokenId>(`dt_${crypto.randomUUID()}`),
         accountId: accountIdB,
         systemId: systemIdB,
         platform: "android",
@@ -541,8 +555,8 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     ]);
 
     // Friend C: forward + reverse connections, preference, bucket assignment, 1 token
-    const connAC = `fc_${crypto.randomUUID()}` as FriendConnectionId;
-    const connCA = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+    const connAC = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
+    const connCA = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
     await db.insert(friendConnections).values([
       {
         id: connAC,
@@ -568,7 +582,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
       },
     ]);
     await db.insert(friendNotificationPreferences).values({
-      id: `fnp_${crypto.randomUUID()}` as FriendNotificationPreferenceId,
+      id: brandId<FriendNotificationPreferenceId>(`fnp_${crypto.randomUUID()}`),
       accountId: accountIdC,
       friendConnectionId: connCA,
       enabledEventTypes: ["friend-switch-alert"],
@@ -583,7 +597,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
       systemId: systemIdA,
     });
     await db.insert(deviceTokens).values({
-      id: `dt_${crypto.randomUUID()}` as DeviceTokenId,
+      id: brandId<DeviceTokenId>(`dt_${crypto.randomUUID()}`),
       accountId: accountIdC,
       systemId: systemIdC,
       platform: "web",
@@ -593,7 +607,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
       revokedAt: null,
     });
 
-    const sessionId = `fs_${crypto.randomUUID()}` as FrontingSessionId;
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
     await dispatchSwitchAlertForSession(

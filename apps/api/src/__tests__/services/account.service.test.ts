@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
@@ -94,7 +95,7 @@ describe("account service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await getAccountInfo(db, "acct_notfound" as AccountId);
+      const result = await getAccountInfo(db, brandId<AccountId>("acct_notfound"));
       expect(result).toBeNull();
     });
 
@@ -113,7 +114,7 @@ describe("account service", () => {
         ])
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
-      const result = await getAccountInfo(db, "acct_123" as AccountId);
+      const result = await getAccountInfo(db, brandId<AccountId>("acct_123"));
       expect(result).toEqual({
         accountId: "acct_123",
         accountType: "system",
@@ -138,7 +139,7 @@ describe("account service", () => {
         },
       ]);
 
-      const result = await getAccountInfo(db, "acct_789" as AccountId);
+      const result = await getAccountInfo(db, brandId<AccountId>("acct_789"));
       expect(result).not.toBeNull();
       expect(result?.systemId).toBeNull();
     });
@@ -158,7 +159,7 @@ describe("account service", () => {
         ])
         .mockResolvedValueOnce([]);
 
-      const result = await getAccountInfo(db, "acct_123" as AccountId);
+      const result = await getAccountInfo(db, brandId<AccountId>("acct_123"));
       expect(result?.systemId).toBeNull();
     });
   });
@@ -179,7 +180,7 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { email: "new@example.com", authKey: INVALID_AUTH_KEY_HEX },
           mockAudit,
         ),
@@ -193,14 +194,14 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_missing" as AccountId,
+          brandId<AccountId>("acct_missing"),
           { email: "new@example.com", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
       ).rejects.toThrow("Incorrect password");
     });
 
-    it("returns ok silently when email is unchanged", async () => {
+    it("returns kind:'noop' silently when email is unchanged", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
@@ -212,17 +213,18 @@ describe("account service", () => {
 
       const result = await changeEmail(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         { email: "same@example.com", authKey: VALID_AUTH_KEY_HEX },
         mockAudit,
       );
-      expect(result).toEqual({ ok: true });
+      // No-op change — discriminant is "noop" so callers skip the notification enqueue.
+      expect(result).toEqual({ kind: "noop" });
       // Transaction is called once for the withAccountRead lookup,
       // but NOT a second time for the write path (email is unchanged)
       expect(chain.transaction).toHaveBeenCalledOnce();
     });
 
-    it("returns ok on successful email change", async () => {
+    it("returns kind:'changed' with post-change version on successful email change", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
@@ -235,11 +237,20 @@ describe("account service", () => {
 
       const result = await changeEmail(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         { email: "new@example.com", authKey: VALID_AUTH_KEY_HEX },
         mockAudit,
       );
-      expect(result).toEqual({ ok: true });
+      // oldEmail is null because resolveAccountEmail needs EMAIL_ENCRYPTION_KEY
+      // and the unit mock doesn't configure one; newEmail echoes the input.
+      // version is preChangeVersion + 1 (1 + 1 = 2) — used by the notification
+      // enqueue idempotency key so retries of the same change dedupe.
+      expect(result).toEqual({
+        kind: "changed",
+        oldEmail: null,
+        newEmail: "new@example.com",
+        version: 2,
+      });
     });
 
     it("throws generic error on duplicate email", async () => {
@@ -269,7 +280,7 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { email: "taken@example.com", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
@@ -281,7 +292,7 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { email: "not-an-email", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
@@ -303,7 +314,7 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { email: "new@example.com", authKey: VALID_AUTH_KEY_HEX },
           mockAudit,
         ),
@@ -326,7 +337,7 @@ describe("account service", () => {
       await expect(
         changePassword(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { ...VALID_CHANGE_PASSWORD_PARAMS, oldAuthKey: INVALID_AUTH_KEY_HEX },
           mockAudit,
         ),
@@ -338,7 +349,12 @@ describe("account service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_missing" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+        changePassword(
+          db,
+          brandId<AccountId>("acct_missing"),
+          VALID_CHANGE_PASSWORD_PARAMS,
+          mockAudit,
+        ),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -346,7 +362,12 @@ describe("account service", () => {
       const { db } = mockDb();
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, { oldAuthKey: VALID_AUTH_KEY_HEX }, mockAudit),
+        changePassword(
+          db,
+          brandId<AccountId>("acct_123"),
+          { oldAuthKey: VALID_AUTH_KEY_HEX },
+          mockAudit,
+        ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
@@ -366,7 +387,7 @@ describe("account service", () => {
 
       const result = await changePassword(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         VALID_CHANGE_PASSWORD_PARAMS,
         mockAudit,
       );
@@ -385,7 +406,12 @@ describe("account service", () => {
         .mockResolvedValueOnce([{ publicKey: VALID_SIGN_PUBLIC_KEY }]);
       chain.returning.mockResolvedValueOnce([{ id: "acct_123" }]).mockResolvedValueOnce([]);
 
-      await changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit);
+      await changePassword(
+        db,
+        brandId<AccountId>("acct_123"),
+        VALID_CHANGE_PASSWORD_PARAMS,
+        mockAudit,
+      );
       // Three transaction calls: withAccountRead (account) + withAccountRead (signing key) + withAccountTransaction (write)
       expect(chain.transaction).toHaveBeenCalledTimes(3);
     });
@@ -403,14 +429,14 @@ describe("account service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+        changePassword(db, brandId<AccountId>("acct_123"), VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
       ).rejects.toThrow("Account was modified concurrently");
     });
 
     it("throws ZodError on invalid Zod input", async () => {
       const { db } = mockDb();
       await expect(
-        changePassword(db, "acct_123" as AccountId, { oldAuthKey: "" }, mockAudit),
+        changePassword(db, brandId<AccountId>("acct_123"), { oldAuthKey: "" }, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
@@ -426,7 +452,7 @@ describe("account service", () => {
         .mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+        changePassword(db, brandId<AccountId>("acct_123"), VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
       ).rejects.toThrow("No signing key found");
     });
 
@@ -444,7 +470,7 @@ describe("account service", () => {
       vi.mocked(mockVerify).mockReturnValueOnce(false);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
+        changePassword(db, brandId<AccountId>("acct_123"), VALID_CHANGE_PASSWORD_PARAMS, mockAudit),
       ).rejects.toThrow("Invalid challenge signature");
     });
   });
@@ -458,7 +484,7 @@ describe("account service", () => {
 
       const result = await updateAccountSettings(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         { auditLogIpTracking: true, version: 1 },
         mockAudit,
       );
@@ -472,7 +498,7 @@ describe("account service", () => {
       await expect(
         updateAccountSettings(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { auditLogIpTracking: true, version: 1 },
           mockAudit,
         ),
@@ -484,7 +510,7 @@ describe("account service", () => {
       await expect(
         updateAccountSettings(
           db,
-          "acct_123" as AccountId,
+          brandId<AccountId>("acct_123"),
           { auditLogIpTracking: "yes" },
           mockAudit,
         ),
@@ -494,7 +520,12 @@ describe("account service", () => {
     it("throws ZodError when version is missing", async () => {
       const { db } = mockDb();
       await expect(
-        updateAccountSettings(db, "acct_123" as AccountId, { auditLogIpTracking: true }, mockAudit),
+        updateAccountSettings(
+          db,
+          brandId<AccountId>("acct_123"),
+          { auditLogIpTracking: true },
+          mockAudit,
+        ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
@@ -504,7 +535,7 @@ describe("account service", () => {
 
       await updateAccountSettings(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         { auditLogIpTracking: true, version: 1 },
         mockAudit,
       );
@@ -525,7 +556,7 @@ describe("account service", () => {
 
       await updateAccountSettings(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         { auditLogIpTracking: false, version: 2 },
         mockAudit,
       );
@@ -546,7 +577,7 @@ describe("account service", () => {
 
       await updateAccountSettings(
         db,
-        "acct_123" as AccountId,
+        brandId<AccountId>("acct_123"),
         { auditLogIpTracking: true, version: 1 },
         mockAudit,
       );

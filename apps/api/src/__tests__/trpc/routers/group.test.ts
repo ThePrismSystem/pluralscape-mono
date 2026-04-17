@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -59,8 +60,8 @@ const { groupRouter } = await import("../../../trpc/routers/group.js");
 
 const createCaller = makeCallerFactory({ group: groupRouter });
 
-const GROUP_ID = "grp_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as GroupId;
-const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
+const GROUP_ID = brandId<GroupId>("grp_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const MEMBER_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_GROUP_RESULT = {
@@ -119,7 +120,7 @@ describe("group router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.group.create({
@@ -149,7 +150,7 @@ describe("group router", () => {
     it("rejects invalid groupId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.group.get({ systemId: MOCK_SYSTEM_ID, groupId: "not-a-group-id" as GroupId }),
+        caller.group.get({ systemId: MOCK_SYSTEM_ID, groupId: brandId<GroupId>("not-a-group-id") }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 

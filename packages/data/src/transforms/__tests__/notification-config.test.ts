@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { narrowNotificationConfig, narrowNotificationConfigPage } from "../notification-config.js";
@@ -15,8 +16,8 @@ const LATER = 1_700_002_000_000 as UnixMillis;
 
 function makeRaw(overrides?: Partial<NotificationConfigRaw>): NotificationConfigRaw {
   return {
-    id: "nc_test0001" as NotificationConfigId,
-    systemId: "sys_test001" as SystemId,
+    id: brandId<NotificationConfigId>("nc_test0001"),
+    systemId: brandId<SystemId>("sys_test001"),
     eventType: "switch-reminder" as NotificationEventType,
     enabled: true,
     pushEnabled: false,

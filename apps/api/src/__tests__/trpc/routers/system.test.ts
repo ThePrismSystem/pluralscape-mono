@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -102,7 +103,7 @@ describe("system router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(caller.system.get({ systemId: foreignSystemId })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
@@ -111,9 +112,9 @@ describe("system router", () => {
 
     it("rejects invalid systemId format", async () => {
       const caller = createCaller();
-      await expect(caller.system.get({ systemId: "not-a-system-id" as SystemId })).rejects.toThrow(
-        expect.objectContaining({ code: "BAD_REQUEST" }),
-      );
+      await expect(
+        caller.system.get({ systemId: brandId<SystemId>("not-a-system-id") }),
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

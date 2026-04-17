@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 
+import { brandId } from "@pluralscape/types";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IDBFactory } from "fake-indexeddb";
 import React from "react";
@@ -25,8 +26,8 @@ import type { AccountId, SystemId } from "@pluralscape/types";
 
 const fakeCredentials: AuthCredentials = {
   sessionToken: "tok-abc",
-  accountId: "acct_123" as AccountId,
-  systemId: "sys_456" as SystemId,
+  accountId: brandId<AccountId>("acct_123"),
+  systemId: brandId<SystemId>("sys_456"),
   salt: new Uint8Array(16) as PwhashSalt,
 };
 

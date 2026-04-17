@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptMessageInput } from "@pluralscape/data/transforms/message";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -124,7 +125,7 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const NOW = 1_700_000_000_000 as UnixMillis;
-const CHANNEL_ID = "ch-1" as ChannelId;
+const CHANNEL_ID = brandId<ChannelId>("ch-1");
 
 function makeRawMessage(id: string): MessageRaw {
   const encrypted = encryptMessageInput(
@@ -132,12 +133,12 @@ function makeRawMessage(id: string): MessageRaw {
       content: "hello",
       attachments: [],
       mentions: [],
-      senderId: "m-1" as MemberId,
+      senderId: brandId<MemberId>("m-1"),
     },
     TEST_MASTER_KEY,
   );
   return {
-    id: id as MessageId,
+    id: brandId<MessageId>(id),
     channelId: CHANNEL_ID,
     systemId: TEST_SYSTEM_ID,
     replyToId: null,
@@ -161,21 +162,26 @@ beforeEach(() => {
 describe("useMessage", () => {
   it("returns decrypted message data", async () => {
     fixtures.set("message.get", makeRawMessage("msg-1"));
-    const { result } = renderHookWithProviders(() => useMessage(CHANNEL_ID, "msg-1" as MessageId));
+    const { result } = renderHookWithProviders(() =>
+      useMessage(CHANNEL_ID, brandId<MessageId>("msg-1")),
+    );
 
     let data: Awaited<ReturnType<typeof useMessage>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.content).toBe("hello");
     expect(data?.archived).toBe(false);
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useMessage(CHANNEL_ID, "msg-1" as MessageId), {
-      masterKey: null,
-    });
+    const { result } = renderHookWithProviders(
+      () => useMessage(CHANNEL_ID, brandId<MessageId>("msg-1")),
+      {
+        masterKey: null,
+      },
+    );
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -183,11 +189,11 @@ describe("useMessage", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("message.get", makeRawMessage("msg-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useMessage(CHANNEL_ID, "msg-1" as MessageId),
+      useMessage(CHANNEL_ID, brandId<MessageId>("msg-1")),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -204,7 +210,7 @@ describe("useMessagesList", () => {
     const { result } = renderHookWithProviders(() => useMessagesList(CHANNEL_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -228,7 +234,7 @@ describe("useMessagesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useMessagesList(CHANNEL_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -375,12 +381,12 @@ describe("useMessage (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_MESSAGE_ROW]);
     const { result } = renderHookWithProviders(
-      () => useMessage(CHANNEL_ID, "msg-local-1" as MessageId),
+      () => useMessage(CHANNEL_ID, brandId<MessageId>("msg-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_messages"), [
@@ -398,12 +404,12 @@ describe("useMessage (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_MESSAGE_ROW]);
     const { result } = renderHookWithProviders(
-      () => useMessage(CHANNEL_ID, "msg-local-1" as MessageId),
+      () => useMessage(CHANNEL_ID, brandId<MessageId>("msg-local-1")),
       { querySource: "local", localDb },
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.content).toBe("hello from sqlite");
@@ -420,7 +426,7 @@ describe("useMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -446,7 +452,7 @@ describe("useMessagesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

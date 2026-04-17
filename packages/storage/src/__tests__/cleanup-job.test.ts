@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { MemoryBlobStorageAdapter } from "../adapters/memory-adapter.js";
@@ -32,7 +33,7 @@ describe("BlobCleanupHandler", () => {
     const detector = new OrphanBlobDetector(mockOrphanQuery([key1, key2]));
     const handler = new BlobCleanupHandler(adapter, detector, archiver);
 
-    const result = await handler.cleanup("sys_a" as SystemId);
+    const result = await handler.cleanup(brandId<SystemId>("sys_a"));
 
     expect(result.deletedCount).toBe(2);
     expect(result.storageKeys).toEqual([key1, key2]);
@@ -52,7 +53,7 @@ describe("BlobCleanupHandler", () => {
     const detector = new OrphanBlobDetector(mockOrphanQuery([]));
     const handler = new BlobCleanupHandler(adapter, detector, archiver);
 
-    const result = await handler.cleanup("sys_clean" as SystemId);
+    const result = await handler.cleanup(brandId<SystemId>("sys_clean"));
 
     expect(result.deletedCount).toBe(0);
     expect(result.storageKeys).toEqual([]);
@@ -68,8 +69,8 @@ describe("BlobCleanupHandler", () => {
     const detector = new OrphanBlobDetector(mockOrphanQuery([key]));
     const handler = new BlobCleanupHandler(adapter, detector, archiver);
 
-    const first = await handler.cleanup("sys_a" as SystemId);
-    const second = await handler.cleanup("sys_a" as SystemId);
+    const first = await handler.cleanup(brandId<SystemId>("sys_a"));
+    const second = await handler.cleanup(brandId<SystemId>("sys_a"));
 
     expect(first.deletedCount).toBe(1);
     expect(first.failedCount).toBe(0);
@@ -89,7 +90,7 @@ describe("BlobCleanupHandler", () => {
     const detector = new OrphanBlobDetector(mockOrphanQuery([orphanKey]));
     const handler = new BlobCleanupHandler(adapter, detector, archiver);
 
-    await handler.cleanup("sys_a" as SystemId);
+    await handler.cleanup(brandId<SystemId>("sys_a"));
 
     expect(await adapter.exists(orphanKey)).toBe(false);
     expect(await adapter.exists(keptKey)).toBe(true);
@@ -114,7 +115,7 @@ describe("BlobCleanupHandler", () => {
     const detector = new OrphanBlobDetector(mockOrphanQuery([key1, key2, key3]));
     const handler = new BlobCleanupHandler(adapter, detector, archiver);
 
-    const result = await handler.cleanup("sys_a" as SystemId);
+    const result = await handler.cleanup(brandId<SystemId>("sys_a"));
 
     expect(result.deletedCount).toBe(2);
     expect(result.storageKeys).toEqual([key1, key3]);
@@ -131,6 +132,6 @@ describe("BlobCleanupHandler", () => {
     const detector = new OrphanBlobDetector(failingQuery);
     const handler = new BlobCleanupHandler(adapter, detector, archiver);
 
-    await expect(handler.cleanup("sys_a" as SystemId)).rejects.toThrow("DB unavailable");
+    await expect(handler.cleanup(brandId<SystemId>("sys_a"))).rejects.toThrow("DB unavailable");
   });
 });

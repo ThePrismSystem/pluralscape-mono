@@ -1,10 +1,21 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as secureStore from "../../__tests__/expo-secure-store-mock";
 import { createExpoSecureTokenStore } from "../expo-secure-token-store";
 
+// React Native's runtime exposes __DEV__ as a global — vitest (Node) does not.
+// Stub it truthy so the DEV-only diagnostic warn in getToken's catch runs.
+interface GlobalWithDev {
+  __DEV__: boolean;
+}
+
+beforeEach(() => {
+  (globalThis as Partial<GlobalWithDev>).__DEV__ = true;
+});
+
 afterEach(() => {
   secureStore.__reset();
+  delete (globalThis as Partial<GlobalWithDev>).__DEV__;
 });
 
 describe("expo-secure-token-store", () => {
@@ -22,11 +33,23 @@ describe("expo-secure-token-store", () => {
       expect(result).toBe("test-token-abc123");
     });
 
-    it("propagates errors thrown by getItemAsync", async () => {
+    it("returns null when getItemAsync throws so boot path treats session as absent", async () => {
       const store = createExpoSecureTokenStore();
       const err = new Error("keychain unavailable");
       secureStore.__throwOnNext("getItemAsync", err);
-      await expect(store.getToken()).rejects.toThrow("keychain unavailable");
+      await expect(store.getToken()).resolves.toBeNull();
+    });
+
+    it("logs a warning when getItemAsync throws (dev only) so keychain failures leave a support breadcrumb", async () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const err = new Error("keychain corrupt");
+      secureStore.__throwOnNext("getItemAsync", err);
+      const store = createExpoSecureTokenStore();
+      await expect(store.getToken()).resolves.toBeNull();
+      expect(warnSpy).toHaveBeenCalledOnce();
+      const firstArg = warnSpy.mock.calls[0]?.[0];
+      expect(String(firstArg)).toContain("token-store");
+      warnSpy.mockRestore();
     });
   });
 
@@ -37,6 +60,13 @@ describe("expo-secure-token-store", () => {
       expect(secureStore.__snapshot()).toMatchObject({
         pluralscape_session_token: "stored-value-xyz",
       });
+    });
+
+    it("persists with WHEN_UNLOCKED_THIS_DEVICE_ONLY so the token does not travel in device backups", async () => {
+      const store = createExpoSecureTokenStore();
+      await store.setToken("accessibility-check");
+      const opts = secureStore.__lastOptions("pluralscape_session_token");
+      expect(opts?.keychainAccessible).toBe(secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY);
     });
 
     it("propagates errors thrown by setItemAsync", async () => {

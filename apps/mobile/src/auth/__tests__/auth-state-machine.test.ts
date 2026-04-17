@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { AuthStateMachine } from "../auth-state-machine.js";
@@ -15,8 +16,8 @@ import type { AccountId, SystemId } from "@pluralscape/types";
 
 const fakeCredentials: AuthCredentials = {
   sessionToken: "tok-abc",
-  accountId: "acct_123" as AccountId,
-  systemId: "sys_456" as SystemId,
+  accountId: brandId<AccountId>("acct_123"),
+  systemId: brandId<SystemId>("sys_456"),
   salt: new Uint8Array(16) as PwhashSalt,
 };
 
@@ -187,8 +188,8 @@ describe("AuthStateMachine", () => {
       type: "LOGIN",
       credentials: {
         sessionToken: "tok-other",
-        accountId: "acct_other" as AccountId,
-        systemId: "sys_other" as SystemId,
+        accountId: brandId<AccountId>("acct_other"),
+        systemId: brandId<SystemId>("sys_other"),
         salt: new Uint8Array(16) as PwhashSalt,
       },
       masterKey: fakeMasterKey,
@@ -213,8 +214,8 @@ describe("AuthStateMachine", () => {
       type: "LOGIN",
       credentials: {
         sessionToken: "tok-other",
-        accountId: "acct_other" as AccountId,
-        systemId: "sys_other" as SystemId,
+        accountId: brandId<AccountId>("acct_other"),
+        systemId: brandId<SystemId>("sys_other"),
         salt: new Uint8Array(16) as PwhashSalt,
       },
       masterKey: fakeMasterKey,

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { fireHook } from "../fire-hook.js";
@@ -5,7 +6,7 @@ import { fireHook } from "../fire-hook.js";
 import type { JobEventHooks } from "../event-hooks.js";
 import type { JobDefinition, JobId, Logger } from "@pluralscape/types";
 
-const fakeJob = { id: "job_test" as JobId, type: "sync-push" } as JobDefinition;
+const fakeJob = { id: brandId<JobId>("job_test"), type: "sync-push" } as JobDefinition;
 
 function makeLogger(): { logger: Logger; errorFn: ReturnType<typeof vi.fn> } {
   const errorFn = vi.fn();

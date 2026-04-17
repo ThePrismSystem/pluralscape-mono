@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -44,9 +44,9 @@ function makeEncryptedFields(): StructureEntityEncryptedFields {
 
 function makeRaw(overrides?: Partial<StructureEntityRaw>): StructureEntityRaw {
   return {
-    id: "se_001" as SystemStructureEntityId,
-    systemId: "sys_test" as SystemId,
-    entityTypeId: "set_001" as SystemStructureEntityTypeId,
+    id: brandId<SystemStructureEntityId>("se_001"),
+    systemId: brandId<SystemId>("sys_test"),
+    entityTypeId: brandId<SystemStructureEntityTypeId>("set_001"),
     sortOrder: 0,
     encryptedData: encryptAndEncodeT1(makeEncryptedFields(), masterKey),
     archived: false,

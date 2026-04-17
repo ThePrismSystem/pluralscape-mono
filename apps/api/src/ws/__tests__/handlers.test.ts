@@ -39,6 +39,7 @@ import {
   SnapshotSizeLimitExceededError,
   SnapshotVersionConflictError,
 } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Disable envelope signature verification before module load.
@@ -118,7 +119,7 @@ function mockRelay(): {
   return { relay, submit, getEnvelopesSince, submitSnapshot, getLatestSnapshot, getManifest };
 }
 
-const TEST_ACCOUNT_ID = "acct_h_test" as AccountId;
+const TEST_ACCOUNT_ID = brandId<AccountId>("acct_h_test");
 
 /**
  * Create a mock DB that returns the given public keys for the test account.
@@ -157,7 +158,7 @@ function makeEnvelope(docId: string, seq: number, fill = 0): EncryptedChangeEnve
     nonce,
     signature: sig,
     authorPublicKey: key,
-    documentId: docId as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(docId),
     seq,
   };
 }
@@ -174,7 +175,7 @@ function makeSnapshotEnvelope(docId: string, snapshotVersion: number): Encrypted
     nonce,
     signature: sig,
     authorPublicKey: key,
-    documentId: docId as SyncDocumentId,
+    documentId: brandId<SyncDocumentId>(docId),
     snapshotVersion,
   };
 }
@@ -188,14 +189,14 @@ function makeConnectionState(connectionId: string) {
     connectionId,
     {
       authMethod: "session" as const,
-      accountId: "acct_h_test" as AccountId,
-      systemId: "sys_h_test" as SystemId,
-      sessionId: "sess_h_test" as SessionId,
+      accountId: brandId<AccountId>("acct_h_test"),
+      systemId: brandId<SystemId>("sys_h_test"),
+      sessionId: brandId<SessionId>("sess_h_test"),
       accountType: "system",
-      ownedSystemIds: new Set(["sys_h_test" as SystemId]),
+      ownedSystemIds: new Set([brandId<SystemId>("sys_h_test")]),
       auditLogIpTracking: false,
     },
-    "sys_h_test" as SystemId,
+    brandId<SystemId>("sys_h_test"),
     "owner-full",
   );
   const state = manager.get(connectionId);
@@ -241,7 +242,7 @@ describe("handleManifestRequest", () => {
     const message: ManifestRequest = {
       type: "ManifestRequest",
       correlationId: "corr-m-1",
-      systemId: "sys_h_test" as SystemId,
+      systemId: brandId<SystemId>("sys_h_test"),
     };
 
     const result = await handleManifestRequest(message, relay);
@@ -260,7 +261,7 @@ describe("handleFetchSnapshot", () => {
     const message: FetchSnapshotRequest = {
       type: "FetchSnapshotRequest",
       correlationId: "corr-fs-1",
-      docId: "doc-fs-1" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-fs-1"),
     };
 
     const result = await handleFetchSnapshot(message, relay);
@@ -277,7 +278,7 @@ describe("handleFetchSnapshot", () => {
     const message: FetchSnapshotRequest = {
       type: "FetchSnapshotRequest",
       correlationId: "corr-fs-2",
-      docId: "doc-fs-2" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-fs-2"),
     };
 
     const result = await handleFetchSnapshot(message, relay);
@@ -294,7 +295,7 @@ describe("handleFetchChanges", () => {
     const message: FetchChangesRequest = {
       type: "FetchChangesRequest",
       correlationId: "corr-fc-1",
-      docId: "doc-fc-1" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-fc-1"),
       sinceSeq: 0,
     };
 
@@ -317,7 +318,7 @@ describe("handleFetchChanges", () => {
     const message: FetchChangesRequest = {
       type: "FetchChangesRequest",
       correlationId: "corr-fc-paged",
-      docId: "doc-fc-paged" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-fc-paged"),
       sinceSeq: 0,
     };
 
@@ -338,7 +339,7 @@ describe("handleFetchChanges", () => {
     const message: FetchChangesRequest = {
       type: "FetchChangesRequest",
       correlationId: "corr-fc-empty",
-      docId: "doc-fc-empty" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-fc-empty"),
       sinceSeq: 0,
     };
 
@@ -356,13 +357,13 @@ describe("handleSubmitChange", () => {
     return {
       type: "SubmitChangeRequest",
       correlationId: "corr-sc",
-      docId: docId as SyncDocumentId,
+      docId: brandId<SyncDocumentId>(docId),
       change: {
         ciphertext: ct,
         nonce,
         signature: sig,
         authorPublicKey: key,
-        documentId: docId as SyncDocumentId,
+        documentId: brandId<SyncDocumentId>(docId),
       },
     };
   }
@@ -523,13 +524,13 @@ describe("handleSubmitSnapshot", () => {
     return {
       type: "SubmitSnapshotRequest",
       correlationId: "corr-ss",
-      docId: docId as SyncDocumentId,
+      docId: brandId<SyncDocumentId>(docId),
       snapshot: {
         ciphertext: ct,
         nonce,
         signature: sig,
         authorPublicKey: key,
-        documentId: docId as SyncDocumentId,
+        documentId: brandId<SyncDocumentId>(docId),
         snapshotVersion: 5,
       },
     };
@@ -654,7 +655,7 @@ describe("handleSubscribeRequest", () => {
       type: "SubscribeRequest",
       correlationId: "corr-sub-cap",
       documents: [
-        { docId: "doc-cap-1" as SyncDocumentId, lastSyncedSeq: 0, lastSnapshotVersion: 0 },
+        { docId: brandId<SyncDocumentId>("doc-cap-1"), lastSyncedSeq: 0, lastSnapshotVersion: 0 },
       ],
     };
 
@@ -676,7 +677,11 @@ describe("handleSubscribeRequest", () => {
       type: "SubscribeRequest",
       correlationId: "corr-sub-null",
       documents: [
-        { docId: "doc-sub-null-1" as SyncDocumentId, lastSyncedSeq: 0, lastSnapshotVersion: 0 },
+        {
+          docId: brandId<SyncDocumentId>("doc-sub-null-1"),
+          lastSyncedSeq: 0,
+          lastSnapshotVersion: 0,
+        },
       ],
     };
 
@@ -699,7 +704,11 @@ describe("handleSubscribeRequest", () => {
       type: "SubscribeRequest",
       correlationId: "corr-sub-snap",
       documents: [
-        { docId: "doc-sub-snap" as SyncDocumentId, lastSyncedSeq: 0, lastSnapshotVersion: 5 },
+        {
+          docId: brandId<SyncDocumentId>("doc-sub-snap"),
+          lastSyncedSeq: 0,
+          lastSnapshotVersion: 5,
+        },
       ],
     };
 
@@ -726,7 +735,11 @@ describe("handleSubscribeRequest", () => {
       type: "SubscribeRequest",
       correlationId: "corr-sub-nosnap",
       documents: [
-        { docId: "doc-sub-nosnap" as SyncDocumentId, lastSyncedSeq: 0, lastSnapshotVersion: 5 },
+        {
+          docId: brandId<SyncDocumentId>("doc-sub-nosnap"),
+          lastSyncedSeq: 0,
+          lastSnapshotVersion: 5,
+        },
       ],
     };
 
@@ -749,7 +762,11 @@ describe("handleSubscribeRequest", () => {
       type: "SubscribeRequest",
       correlationId: "corr-sub-err",
       documents: [
-        { docId: "doc-sub-err-1" as SyncDocumentId, lastSyncedSeq: 0, lastSnapshotVersion: 0 },
+        {
+          docId: brandId<SyncDocumentId>("doc-sub-err-1"),
+          lastSyncedSeq: 0,
+          lastSnapshotVersion: 0,
+        },
       ],
     };
 
@@ -767,16 +784,16 @@ describe("handleSubscribeRequest", () => {
 describe("handleUnsubscribeRequest", () => {
   it("removes subscription via manager (idempotent)", () => {
     const { state, manager } = makeConnectionState("conn-unsub");
-    manager.addSubscription("conn-unsub", "doc-unsub-1" as SyncDocumentId);
+    manager.addSubscription("conn-unsub", brandId<SyncDocumentId>("doc-unsub-1"));
 
     const message: UnsubscribeRequest = {
       type: "UnsubscribeRequest",
       correlationId: "corr-unsub",
-      docId: "doc-unsub-1" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-unsub-1"),
     };
 
     handleUnsubscribeRequest(message, state, manager);
-    expect(manager.getSubscribers("doc-unsub-1" as SyncDocumentId).size).toBe(0);
+    expect(manager.getSubscribers(brandId<SyncDocumentId>("doc-unsub-1")).size).toBe(0);
 
     manager.closeAll(1001, "test cleanup");
   });
@@ -791,7 +808,7 @@ describe("handleDocumentLoad", () => {
     const message: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
       correlationId: "corr-dl-1",
-      docId: "doc-dl-1" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-dl-1"),
       persist: true,
     };
 
@@ -811,7 +828,7 @@ describe("handleDocumentLoad", () => {
     const message: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
       correlationId: "corr-dl-2",
-      docId: "doc-dl-2" as SyncDocumentId,
+      docId: brandId<SyncDocumentId>("doc-dl-2"),
       persist: true,
     };
 
@@ -832,7 +849,7 @@ describe("verifyEnvelopeOrError", () => {
     const result = verifyEnvelopeOrError(
       { authorPublicKey: key, nonce, signature: sig, ciphertext: ct },
       "corr-ve-1",
-      "doc-ve-1" as SyncDocumentId,
+      brandId<SyncDocumentId>("doc-ve-1"),
     );
     expect(result).toBeNull();
   });
@@ -846,7 +863,7 @@ describe("verifyEnvelopeOrError", () => {
     const result = verifyEnvelopeOrError(
       { authorPublicKey: key, nonce, signature: sig, ciphertext: ct },
       "corr-ve-2",
-      "doc-ve-2" as SyncDocumentId,
+      brandId<SyncDocumentId>("doc-ve-2"),
     );
     expect(result).not.toBeNull();
     expect(result?.code).toBe("INVALID_ENVELOPE");
@@ -861,7 +878,7 @@ describe("verifyEnvelopeOrError", () => {
     const result = verifyEnvelopeOrError(
       { authorPublicKey: key, nonce, signature: sig, ciphertext: ct },
       "corr-ve-3",
-      "doc-ve-3" as SyncDocumentId,
+      brandId<SyncDocumentId>("doc-ve-3"),
     );
     expect(result).toBeNull();
   });
@@ -879,7 +896,7 @@ describe("verifyKeyOwnership", () => {
       TEST_ACCOUNT_ID,
       key,
       "corr-ko-1",
-      "doc-ko-1" as SyncDocumentId,
+      brandId<SyncDocumentId>("doc-ko-1"),
     );
     expect(result).toBeNull();
   });
@@ -894,7 +911,7 @@ describe("verifyKeyOwnership", () => {
       TEST_ACCOUNT_ID,
       envelopeKey,
       "corr-ko-2",
-      "doc-ko-2" as SyncDocumentId,
+      brandId<SyncDocumentId>("doc-ko-2"),
     );
     expect(result).not.toBeNull();
     expect(result?.code).toBe("UNAUTHORIZED_KEY");
@@ -909,7 +926,7 @@ describe("verifyKeyOwnership", () => {
       TEST_ACCOUNT_ID,
       envelopeKey,
       "corr-ko-3",
-      "doc-ko-3" as SyncDocumentId,
+      brandId<SyncDocumentId>("doc-ko-3"),
     );
     expect(result).not.toBeNull();
     expect(result?.code).toBe("UNAUTHORIZED_KEY");
@@ -925,7 +942,7 @@ describe("verifyKeyOwnership", () => {
       TEST_ACCOUNT_ID,
       envelopeKey,
       "corr-ko-4",
-      "doc-ko-4" as SyncDocumentId,
+      brandId<SyncDocumentId>("doc-ko-4"),
     );
     expect(result).toBeNull();
   });

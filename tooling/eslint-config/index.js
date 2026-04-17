@@ -172,6 +172,20 @@ export default tseslint.config(
     },
   },
   {
+    // Mobile app has no shared structured logger (React Native runtime).
+    // `console.warn` gated on `__DEV__` is the idiomatic diagnostic sink for
+    // specific fail-closed paths where silent failure would be undebuggable.
+    files: [
+      "**/apps/mobile/src/auth/expo-secure-token-store.ts",
+      "**/apps/mobile/src/connection/sse-client.ts",
+      "src/auth/expo-secure-token-store.ts",
+      "src/connection/sse-client.ts",
+    ],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
     files: ["**/*.js", "**/*.cjs"],
     ...tseslint.configs.disableTypeChecked,
     rules: {

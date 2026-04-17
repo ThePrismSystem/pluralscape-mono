@@ -1,5 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import { brandId } from "../brand-utils.js";
+
 import type {
   AccountId,
   AccountPurgeRequestId,
@@ -398,13 +400,13 @@ describe("ImportCheckpointState", () => {
 describe("ImportEntityRef", () => {
   it("records the mapping from a source entity ID to a Pluralscape entity ID", () => {
     const ref: ImportEntityRef = {
-      id: "ier_01HX000000000000000000000A" as ImportEntityRefId,
-      accountId: "acc_01HX000000000000000000000B" as AccountId,
-      systemId: "sys_01HX000000000000000000000C" as SystemId,
+      id: brandId<ImportEntityRefId>("ier_01HX000000000000000000000A"),
+      accountId: brandId<AccountId>("acc_01HX000000000000000000000B"),
+      systemId: brandId<SystemId>("sys_01HX000000000000000000000C"),
       source: "simply-plural",
       sourceEntityType: "member",
       sourceEntityId: "507f1f77bcf86cd799439011",
-      pluralscapeEntityId: "mem_01HX000000000000000000000D" as MemberId,
+      pluralscapeEntityId: brandId<MemberId>("mem_01HX000000000000000000000D"),
       importedAt: 1234567890 as UnixMillis,
     };
     expectTypeOf(ref.source).toExtend<ImportSourceFormat>();

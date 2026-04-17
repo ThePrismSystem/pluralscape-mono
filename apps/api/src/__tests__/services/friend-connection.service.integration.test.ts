@@ -8,7 +8,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, ID_PREFIXES, now } from "@pluralscape/types";
+import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -93,9 +93,9 @@ describe("friend-connection.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.webhookDeliveries);
     await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    friendAccountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    friendAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -124,8 +124,8 @@ describe("friend-connection.service (PGlite integration)", () => {
 
     it("supports composite cursor pagination", async () => {
       // Create 3 connections with different friend accounts
-      const friend2 = (await pgInsertAccount(db)) as AccountId;
-      const friend3 = (await pgInsertAccount(db)) as AccountId;
+      const friend2 = brandId<AccountId>(await pgInsertAccount(db));
+      const friend3 = brandId<AccountId>(await pgInsertAccount(db));
       await insertConnection(db, { accountId, friendAccountId });
       await insertConnection(db, { accountId, friendAccountId: friend2 });
       await insertConnection(db, { accountId, friendAccountId: friend3 });
@@ -144,7 +144,7 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("filters by accountId", async () => {
-      const otherAccount = (await pgInsertAccount(db)) as AccountId;
+      const otherAccount = brandId<AccountId>(await pgInsertAccount(db));
       await insertConnection(db, { accountId, friendAccountId });
       await insertConnection(db, { accountId: otherAccount, friendAccountId: accountId });
 
@@ -167,7 +167,7 @@ describe("friend-connection.service (PGlite integration)", () => {
         archived: true,
         archivedAt: now(),
       });
-      const friend2 = (await pgInsertAccount(db)) as AccountId;
+      const friend2 = brandId<AccountId>(await pgInsertAccount(db));
       const activeId = await insertConnection(db, {
         accountId,
         friendAccountId: friend2,
@@ -187,7 +187,7 @@ describe("friend-connection.service (PGlite integration)", () => {
         archived: true,
         archivedAt: now(),
       });
-      const friend2 = (await pgInsertAccount(db)) as AccountId;
+      const friend2 = brandId<AccountId>(await pgInsertAccount(db));
       await insertConnection(db, {
         accountId,
         friendAccountId: friend2,
@@ -213,10 +213,12 @@ describe("friend-connection.service (PGlite integration)", () => {
 
   describe("getFriendConnection", () => {
     it("returns connection by id", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       const result = await getFriendConnection(asDb(db), accountId, connId, auth);
 
@@ -227,7 +229,7 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("returns 404 for missing connection", async () => {
-      const fakeId = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+      const fakeId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
 
       await assertApiError(
         getFriendConnection(asDb(db), accountId, fakeId, auth),
@@ -237,12 +239,14 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("returns 404 for archived connection", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        archived: true,
-        archivedAt: now(),
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          archived: true,
+          archivedAt: now(),
+        }),
+      );
 
       await assertApiError(
         getFriendConnection(asDb(db), accountId, connId, auth),
@@ -256,11 +260,13 @@ describe("friend-connection.service (PGlite integration)", () => {
 
   describe("blockFriendConnection", () => {
     it("blocks accepted connection", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "accepted",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "accepted",
+        }),
+      );
 
       const result = await blockFriendConnection(asDb(db), accountId, connId, auth, noopAudit);
 
@@ -268,11 +274,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 409 when already blocked", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "blocked",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "blocked",
+        }),
+      );
 
       await assertApiError(
         blockFriendConnection(asDb(db), accountId, connId, auth, noopAudit),
@@ -282,11 +290,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 409 when already removed", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "removed",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "removed",
+        }),
+      );
 
       await assertApiError(
         blockFriendConnection(asDb(db), accountId, connId, auth, noopAudit),
@@ -297,11 +307,13 @@ describe("friend-connection.service (PGlite integration)", () => {
 
     it("blocking A->B also blocks B->A (bilateral)", async () => {
       // Create bidirectional connections
-      const abId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "accepted",
-      })) as FriendConnectionId;
+      const abId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "accepted",
+        }),
+      );
 
       const friendAuth = makeAuth(friendAccountId, systemId);
       await insertConnection(db, {
@@ -320,11 +332,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("writes audit event", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "accepted",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "accepted",
+        }),
+      );
 
       const audit = spyAudit();
       await blockFriendConnection(asDb(db), accountId, connId, auth, audit);
@@ -338,11 +352,13 @@ describe("friend-connection.service (PGlite integration)", () => {
 
   describe("removeFriendConnection", () => {
     it("removes accepted connection", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "accepted",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "accepted",
+        }),
+      );
 
       const result = await removeFriendConnection(asDb(db), accountId, connId, auth, noopAudit);
 
@@ -350,11 +366,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("removes blocked connection", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "blocked",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "blocked",
+        }),
+      );
 
       const result = await removeFriendConnection(asDb(db), accountId, connId, auth, noopAudit);
 
@@ -362,11 +380,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 409 when already removed", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "removed",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "removed",
+        }),
+      );
 
       await assertApiError(
         removeFriendConnection(asDb(db), accountId, connId, auth, noopAudit),
@@ -376,11 +396,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("deletes bucket assignments on remove", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "accepted",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "accepted",
+        }),
+      );
 
       // Create a bucket and assignment
       const bucketTimestamp = now();
@@ -409,11 +431,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("revokes key grants on remove", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "accepted",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "accepted",
+        }),
+      );
 
       // Create a bucket, assignment, and key grant
       const bucketTimestamp = now();
@@ -450,11 +474,13 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("writes audit event", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-        status: "accepted",
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+          status: "accepted",
+        }),
+      );
 
       const audit = spyAudit();
       await removeFriendConnection(asDb(db), accountId, connId, auth, audit);
@@ -468,10 +494,12 @@ describe("friend-connection.service (PGlite integration)", () => {
 
   describe("updateFriendVisibility", () => {
     it("updates with correct version and bumps version", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       const result = await updateFriendVisibility(
         asDb(db),
@@ -487,10 +515,12 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 409 CONFLICT on stale version", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       await assertApiError(
         updateFriendVisibility(
@@ -507,7 +537,7 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 404 for missing connection", async () => {
-      const fakeId = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+      const fakeId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
 
       await assertApiError(
         updateFriendVisibility(
@@ -524,10 +554,12 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("writes audit event", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       const audit = spyAudit();
       await updateFriendVisibility(
@@ -548,10 +580,12 @@ describe("friend-connection.service (PGlite integration)", () => {
 
   describe("archiveFriendConnection", () => {
     it("archives successfully", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       await archiveFriendConnection(asDb(db), accountId, connId, auth, noopAudit);
 
@@ -564,7 +598,7 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 404 for missing connection", async () => {
-      const fakeId = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+      const fakeId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
 
       await assertApiError(
         archiveFriendConnection(asDb(db), accountId, fakeId, auth, noopAudit),
@@ -574,10 +608,12 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 409 for already archived connection", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       await archiveFriendConnection(asDb(db), accountId, connId, auth, noopAudit);
 
@@ -589,10 +625,12 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("writes audit event", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       const audit = spyAudit();
       await archiveFriendConnection(asDb(db), accountId, connId, auth, audit);
@@ -606,10 +644,12 @@ describe("friend-connection.service (PGlite integration)", () => {
 
   describe("restoreFriendConnection", () => {
     it("restores successfully", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       await archiveFriendConnection(asDb(db), accountId, connId, auth, noopAudit);
 
@@ -620,10 +660,12 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 404 for non-archived connection", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       await assertApiError(
         restoreFriendConnection(asDb(db), accountId, connId, auth, noopAudit),
@@ -633,7 +675,7 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("throws 404 for missing connection", async () => {
-      const fakeId = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+      const fakeId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
 
       await assertApiError(
         restoreFriendConnection(asDb(db), accountId, fakeId, auth, noopAudit),
@@ -643,10 +685,12 @@ describe("friend-connection.service (PGlite integration)", () => {
     });
 
     it("writes audit event", async () => {
-      const connId = (await insertConnection(db, {
-        accountId,
-        friendAccountId,
-      })) as FriendConnectionId;
+      const connId = brandId<FriendConnectionId>(
+        await insertConnection(db, {
+          accountId,
+          friendAccountId,
+        }),
+      );
 
       await archiveFriendConnection(asDb(db), accountId, connId, auth, noopAudit);
 

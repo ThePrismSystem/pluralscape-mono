@@ -170,6 +170,83 @@ describe("renderTemplate", () => {
     });
   });
 
+  describe("account-change-email", () => {
+    const vars = {
+      oldEmail: "old@example.com",
+      newEmail: "new@example.com",
+      timestamp: "2026-04-17T12:00:00Z",
+    } as const;
+
+    it("returns subject, html, and text", () => {
+      const result = renderTemplate("account-change-email", vars);
+      expect(result.subject).toBe("Your Pluralscape account email was changed");
+      expect(typeof result.html).toBe("string");
+      expect(typeof result.text).toBe("string");
+    });
+
+    it("includes old and new email in html", () => {
+      const result = renderTemplate("account-change-email", vars);
+      expect(result.html).toContain(vars.oldEmail);
+      expect(result.html).toContain(vars.newEmail);
+    });
+
+    it("includes timestamp in html and text", () => {
+      const result = renderTemplate("account-change-email", vars);
+      expect(result.html).toContain(vars.timestamp);
+      expect(result.text).toContain(vars.timestamp);
+    });
+
+    it("includes old and new email in text", () => {
+      const result = renderTemplate("account-change-email", vars);
+      expect(result.text).toContain(vars.oldEmail);
+      expect(result.text).toContain(vars.newEmail);
+    });
+
+    it("includes security guidance in text", () => {
+      const result = renderTemplate("account-change-email", vars);
+      expect(result.text).toContain("If you did not");
+      expect(result.text).toContain("recovery key");
+    });
+
+    it("omits IP line when ipAddress not provided", () => {
+      const result = renderTemplate("account-change-email", vars);
+      expect(result.html).not.toContain("Request IP");
+      expect(result.text).not.toContain("Request IP");
+    });
+
+    it("includes IP line when ipAddress provided", () => {
+      const result = renderTemplate("account-change-email", {
+        ...vars,
+        ipAddress: "203.0.113.42",
+      });
+      expect(result.html).toContain("Request IP");
+      expect(result.html).toContain("203.0.113.42");
+      expect(result.text).toContain("Request IP");
+      expect(result.text).toContain("203.0.113.42");
+    });
+
+    it("escapes HTML in email addresses (XSS prevention)", () => {
+      const result = renderTemplate("account-change-email", {
+        oldEmail: "<script>alert(1)</script>@old.example",
+        newEmail: '"><img src=x onerror=alert(1)>@new.example',
+        timestamp: "2026-04-17T12:00:00Z",
+      });
+      expect(result.html).not.toContain("<script>");
+      expect(result.html).not.toContain("<img");
+      expect(result.html).toContain("&lt;script&gt;");
+      expect(result.html).toContain("&lt;img");
+    });
+
+    it("escapes HTML in ipAddress (XSS prevention)", () => {
+      const result = renderTemplate("account-change-email", {
+        ...vars,
+        ipAddress: '<img src=x onerror="alert(1)">',
+      });
+      expect(result.html).not.toContain("<img");
+      expect(result.html).toContain("&lt;img");
+    });
+  });
+
   describe("base layout", () => {
     it("wraps html in a full document", () => {
       const result = renderTemplate("password-changed", { timestamp: "now" });

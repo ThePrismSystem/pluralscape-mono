@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,11 +43,11 @@ const { trpcRoute } = await import("../../routes/trpc.js");
 
 const MOCK_AUTH: AuthContext = {
   authMethod: "session" as const,
-  accountId: "acct_550e8400-e29b-41d4-a716-446655440000" as AccountId,
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId,
-  sessionId: "sess_550e8400-e29b-41d4-a716-446655440000" as SessionId,
+  accountId: brandId<AccountId>("acct_550e8400-e29b-41d4-a716-446655440000"),
+  systemId: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
+  sessionId: brandId<SessionId>("sess_550e8400-e29b-41d4-a716-446655440000"),
   accountType: "system",
-  ownedSystemIds: new Set(["sys_550e8400-e29b-41d4-a716-446655440000" as SystemId]),
+  ownedSystemIds: new Set([brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000")]),
   auditLogIpTracking: false,
 };
 

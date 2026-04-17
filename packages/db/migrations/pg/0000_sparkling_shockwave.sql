@@ -668,8 +668,8 @@ CREATE TABLE "notification_configs" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"system_id" varchar(50) NOT NULL,
 	"event_type" varchar(50) NOT NULL,
-	"enabled" boolean DEFAULT true NOT NULL,
-	"push_enabled" boolean DEFAULT true NOT NULL,
+	"enabled" boolean DEFAULT false NOT NULL,
+	"push_enabled" boolean DEFAULT false NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
@@ -1155,7 +1155,7 @@ CREATE INDEX "acknowledgements_system_archived_created_idx" ON "acknowledgements
 CREATE INDEX "api_keys_account_id_idx" ON "api_keys" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "api_keys_system_id_idx" ON "api_keys" USING btree ("system_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "api_keys_token_hash_idx" ON "api_keys" USING btree ("token_hash");--> statement-breakpoint
-CREATE INDEX "api_keys_revoked_at_idx" ON "api_keys" USING btree ("revoked_at");--> statement-breakpoint
+CREATE INDEX "api_keys_revoked_at_idx" ON "api_keys" USING btree ("revoked_at") WHERE "api_keys"."revoked_at" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX "api_keys_key_type_idx" ON "api_keys" USING btree ("key_type");--> statement-breakpoint
 CREATE INDEX "audit_log_account_timestamp_idx" ON "audit_log" USING btree ("account_id","timestamp");--> statement-breakpoint
 CREATE INDEX "audit_log_system_timestamp_idx" ON "audit_log" USING btree ("system_id","timestamp");--> statement-breakpoint
@@ -1275,7 +1275,6 @@ CREATE INDEX "sessions_account_id_idx" ON "sessions" USING btree ("account_id");
 CREATE UNIQUE INDEX "sessions_token_hash_idx" ON "sessions" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX "sessions_revoked_last_active_idx" ON "sessions" USING btree ("revoked","last_active");--> statement-breakpoint
 CREATE INDEX "sessions_expires_at_idx" ON "sessions" USING btree ("expires_at") WHERE "sessions"."expires_at" IS NOT NULL;--> statement-breakpoint
-CREATE INDEX "sessions_ttl_duration_ms_idx" ON "sessions" USING btree ((CAST(EXTRACT(EPOCH FROM ("expires_at" - "created_at")) * 1000 AS bigint)));--> statement-breakpoint
 CREATE UNIQUE INDEX "sync_changes_document_id_seq_idx" ON "sync_changes" USING btree ("document_id","seq");--> statement-breakpoint
 CREATE UNIQUE INDEX "sync_changes_dedup_idx" ON "sync_changes" USING btree ("document_id","author_public_key","nonce");--> statement-breakpoint
 CREATE INDEX "sync_conflicts_document_id_idx" ON "sync_conflicts" USING btree ("document_id");--> statement-breakpoint

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MOCK_AUTH, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
@@ -70,8 +71,8 @@ const { friendRouter } = await import("../../../trpc/routers/friend.js");
 
 const createCaller = makeCallerFactory({ friend: friendRouter });
 
-const CONNECTION_ID = "fc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FriendConnectionId;
-const FRIEND_ACCOUNT_ID = "acc_ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee" as AccountId;
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const FRIEND_ACCOUNT_ID = brandId<AccountId>("acc_ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_CONNECTION = {
   id: CONNECTION_ID,
@@ -160,7 +161,7 @@ describe("friend router", () => {
     it("rejects invalid connectionId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.friend.get({ connectionId: "not-a-connection" as FriendConnectionId }),
+        caller.friend.get({ connectionId: brandId<FriendConnectionId>("not-a-connection") }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });

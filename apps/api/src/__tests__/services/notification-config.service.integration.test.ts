@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -41,8 +42,8 @@ describe("notification-config.service (PGlite integration)", () => {
 
     await createPgNotificationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -56,7 +57,7 @@ describe("notification-config.service (PGlite integration)", () => {
 
   // ── getOrCreateNotificationConfig ────────────────────────────────────
 
-  it("creates config with defaults on first access", async () => {
+  it("creates config with fail-closed defaults on first access (enabled: false, pushEnabled: false)", async () => {
     const result = await getOrCreateNotificationConfig(
       asDb(db),
       systemId,
@@ -67,8 +68,8 @@ describe("notification-config.service (PGlite integration)", () => {
     expect(result.id).toMatch(/^nc_/);
     expect(result.systemId).toBe(systemId);
     expect(result.eventType).toBe("friend-switch-alert");
-    expect(result.enabled).toBe(true);
-    expect(result.pushEnabled).toBe(true);
+    expect(result.enabled).toBe(false);
+    expect(result.pushEnabled).toBe(false);
     expect(result.createdAt).toBeTypeOf("number");
     expect(result.updatedAt).toBeTypeOf("number");
   });
@@ -84,7 +85,15 @@ describe("notification-config.service (PGlite integration)", () => {
   // ── updateNotificationConfig ─────────────────────────────────────────
 
   it("updates enabled flag", async () => {
-    await getOrCreateNotificationConfig(asDb(db), systemId, "friend-switch-alert", auth);
+    // Seed with explicit enabled:true so we can observe the flip to false.
+    await updateNotificationConfig(
+      asDb(db),
+      systemId,
+      "friend-switch-alert",
+      { enabled: true, pushEnabled: true },
+      auth,
+      noopAudit,
+    );
 
     const updated = await updateNotificationConfig(
       asDb(db),
@@ -100,7 +109,16 @@ describe("notification-config.service (PGlite integration)", () => {
   });
 
   it("updates pushEnabled flag", async () => {
-    await getOrCreateNotificationConfig(asDb(db), systemId, "check-in-due", auth);
+    // Seed with explicit enabled:true so we can observe pushEnabled flipping
+    // independently while enabled remains true.
+    await updateNotificationConfig(
+      asDb(db),
+      systemId,
+      "check-in-due",
+      { enabled: true, pushEnabled: true },
+      auth,
+      noopAudit,
+    );
 
     const updated = await updateNotificationConfig(
       asDb(db),
@@ -132,7 +150,7 @@ describe("notification-config.service (PGlite integration)", () => {
     expect(audit.calls[0]?.eventType).toBe("notification-config.updated");
   });
 
-  it("auto-creates config when updating non-existent event type", async () => {
+  it("auto-creates config when updating non-existent event type (fail-closed for unspecified flags)", async () => {
     const result = await updateNotificationConfig(
       asDb(db),
       systemId,
@@ -145,7 +163,8 @@ describe("notification-config.service (PGlite integration)", () => {
     expect(result.id).toMatch(/^nc_/);
     expect(result.eventType).toBe("message-received");
     expect(result.enabled).toBe(false);
-    expect(result.pushEnabled).toBe(true);
+    // pushEnabled not provided -> falls back to fail-closed default.
+    expect(result.pushEnabled).toBe(false);
   });
 
   it("updates both enabled and pushEnabled simultaneously", async () => {
@@ -188,8 +207,8 @@ describe("notification-config.service (PGlite integration)", () => {
   // ── Authorization ────────────────────────────────────────────────────
 
   it("returns 404 when system not owned by auth context", async () => {
-    const otherAccountId = (await pgInsertAccount(db)) as AccountId;
-    const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+    const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
     const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
     await assertApiError(

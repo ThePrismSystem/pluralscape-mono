@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -76,8 +77,8 @@ describe("POST /password-reset/recovery-key", () => {
 
   it("returns 200 with session data on successful reset", async () => {
     vi.mocked(resetPasswordWithRecoveryKey).mockResolvedValueOnce({
-      sessionToken: "sess_new" as SessionId,
-      accountId: "acct_123" as AccountId,
+      sessionToken: brandId<SessionId>("sess_new"),
+      accountId: brandId<AccountId>("acct_123"),
     });
 
     const app = createApp();

@@ -1,4 +1,4 @@
-import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "@pluralscape/types";
+import { ROTATION_ITEM_STATUSES, ROTATION_STATES, brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -29,9 +29,9 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const BUCKET_ID = "bkt_test-bucket" as BucketId;
-const ROTATION_ID = "bkr_test-rotation" as BucketKeyRotationId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const BUCKET_ID = brandId<BucketId>("bkt_test-bucket");
+const ROTATION_ID = brandId<BucketKeyRotationId>("bkr_test-rotation");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",

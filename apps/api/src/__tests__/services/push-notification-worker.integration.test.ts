@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -34,8 +35,8 @@ describe("push-notification-worker (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgNotificationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
   });
 
   afterAll(async () => {
@@ -50,7 +51,7 @@ describe("push-notification-worker (PGlite integration)", () => {
   async function insertToken(opts?: {
     revokedAt?: number;
   }): Promise<{ id: DeviceTokenId; tokenHash: string }> {
-    const id = `dt_${crypto.randomUUID()}` as DeviceTokenId;
+    const id = brandId<DeviceTokenId>(`dt_${crypto.randomUUID()}`);
     const tokenHash = `hash-${crypto.randomUUID()}`;
     const now = Date.now();
     await db.insert(deviceTokens).values({
@@ -110,7 +111,7 @@ describe("push-notification-worker (PGlite integration)", () => {
     const { id: tokenId } = await insertToken();
     const sendSpy = vi.fn();
     const provider: PushProvider = { send: sendSpy };
-    const wrongAccountId = `acct_${crypto.randomUUID()}` as AccountId;
+    const wrongAccountId = brandId<AccountId>(`acct_${crypto.randomUUID()}`);
 
     await processPushNotification(
       asDb(db),
@@ -137,7 +138,7 @@ describe("push-notification-worker (PGlite integration)", () => {
 
     await processPushNotification(
       asDb(db),
-      makePayload("dt_nonexistent" as DeviceTokenId),
+      makePayload(brandId<DeviceTokenId>("dt_nonexistent")),
       provider,
     );
 
@@ -179,7 +180,11 @@ describe("push-notification-worker (PGlite integration)", () => {
   it("stub provider does not throw", async () => {
     const stub = new StubPushProvider();
     await expect(
-      stub.send("dt_test-token-id" as DeviceTokenId, "ios", { title: "T", body: "B", data: null }),
+      stub.send(brandId<DeviceTokenId>("dt_test-token-id"), "ios", {
+        title: "T",
+        body: "B",
+        data: null,
+      }),
     ).resolves.toBeUndefined();
   });
 });

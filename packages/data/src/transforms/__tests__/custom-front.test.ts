@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -39,8 +40,8 @@ function makeRawCustomFront(
   }>,
 ) {
   return {
-    id: "cf_abc123" as CustomFrontId,
-    systemId: "sys_xyz" as SystemId,
+    id: brandId<CustomFrontId>("cf_abc123"),
+    systemId: brandId<SystemId>("sys_xyz"),
     encryptedData: makeBase64Blob(fields, key),
     version: 1,
     archived: false as boolean,
@@ -148,8 +149,8 @@ describe("decryptCustomFrontPage", () => {
       color: null,
       emoji: "✨",
     };
-    const raw1 = makeRawCustomFront(fields1, masterKey, { id: "cf_001" as CustomFrontId });
-    const raw2 = makeRawCustomFront(fields2, masterKey, { id: "cf_002" as CustomFrontId });
+    const raw1 = makeRawCustomFront(fields1, masterKey, { id: brandId<CustomFrontId>("cf_001") });
+    const raw2 = makeRawCustomFront(fields2, masterKey, { id: brandId<CustomFrontId>("cf_002") });
 
     const page = {
       data: [raw1, raw2] as const,

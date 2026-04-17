@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -84,7 +84,7 @@ const { getSetupStatus, setupNomenclatureStep, setupProfileStep, setupComplete }
 
 const AUTH = makeTestAuth();
 
-const SYSTEM_ID = "sys_test" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test");
 
 const VALID_ENCRYPTED_DATA = Buffer.from(new Uint8Array(32)).toString("base64");
 

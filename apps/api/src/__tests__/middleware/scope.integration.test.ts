@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 
@@ -7,10 +8,10 @@ import { scopeGateMiddleware } from "../../middleware/scope-gate.js";
 import type { AuthContext, AuthEnv, SessionAuthContext } from "../../lib/auth-context.js";
 import type { AccountId, ApiKeyId, ApiKeyScope, SessionId, SystemId } from "@pluralscape/types";
 
-const TEST_ACCOUNT_ID = "acc_test" as AccountId;
-const TEST_SYSTEM_ID = "sys_test" as SystemId;
-const TEST_SESSION_ID = "ses_test" as SessionId;
-const TEST_KEY_ID = "ak_test" as ApiKeyId;
+const TEST_ACCOUNT_ID = brandId<AccountId>("acc_test");
+const TEST_SYSTEM_ID = brandId<SystemId>("sys_test");
+const TEST_SESSION_ID = brandId<SessionId>("ses_test");
+const TEST_KEY_ID = brandId<ApiKeyId>("ak_test");
 
 const sessionAuth: SessionAuthContext = {
   authMethod: "session",

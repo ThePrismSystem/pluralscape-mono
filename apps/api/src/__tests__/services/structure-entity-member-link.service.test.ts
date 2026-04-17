@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -62,9 +63,9 @@ const { createEntityMemberLink, listEntityMemberLinks, deleteEntityMemberLink } 
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const LINK_ID = "seml_test-link" as SystemStructureEntityMemberLinkId;
-const MEMBER_ID = "mem_test" as MemberId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const LINK_ID = brandId<SystemStructureEntityMemberLinkId>("seml_test-link");
+const MEMBER_ID = brandId<MemberId>("mem_test");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

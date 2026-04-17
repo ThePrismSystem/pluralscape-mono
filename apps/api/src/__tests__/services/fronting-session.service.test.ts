@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
@@ -55,11 +56,11 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as SystemId;
-const FS_ID = "fs_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as FrontingSessionId;
-const MEMBER_ID = "mem_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as MemberId;
-const CF_ID = "cf_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as CustomFrontId;
-const SE_ID = "ste_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as SystemStructureEntityId;
+const SYSTEM_ID = brandId<SystemId>("sys_a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+const FS_ID = brandId<FrontingSessionId>("fs_a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+const MEMBER_ID = brandId<MemberId>("mem_a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+const CF_ID = brandId<CustomFrontId>("cf_a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+const SE_ID = brandId<SystemStructureEntityId>("ste_a1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
 const AUTH = makeTestAuth({
   accountId: "acct_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -386,7 +387,7 @@ describe("getFrontingSession", () => {
       getFrontingSession(
         db,
         SYSTEM_ID,
-        "fs_00000000-0000-0000-0000-000000000000" as FrontingSessionId,
+        brandId<FrontingSessionId>("fs_00000000-0000-0000-0000-000000000000"),
         AUTH,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
@@ -594,7 +595,7 @@ describe("deleteFrontingSession", () => {
       deleteFrontingSession(
         db,
         SYSTEM_ID,
-        "fs_00000000-0000-0000-0000-000000000000" as FrontingSessionId,
+        brandId<FrontingSessionId>("fs_00000000-0000-0000-0000-000000000000"),
         AUTH,
         mockAudit,
       ),
@@ -656,7 +657,7 @@ describe("archiveFrontingSession", () => {
       archiveFrontingSession(
         db,
         SYSTEM_ID,
-        "fs_00000000-0000-0000-0000-000000000000" as FrontingSessionId,
+        brandId<FrontingSessionId>("fs_00000000-0000-0000-0000-000000000000"),
         AUTH,
         mockAudit,
       ),
@@ -691,7 +692,7 @@ describe("restoreFrontingSession", () => {
       restoreFrontingSession(
         db,
         SYSTEM_ID,
-        "fs_00000000-0000-0000-0000-000000000000" as FrontingSessionId,
+        brandId<FrontingSessionId>("fs_00000000-0000-0000-0000-000000000000"),
         AUTH,
         mockAudit,
       ),
@@ -812,7 +813,7 @@ describe("getActiveFronting", () => {
   });
 
   it("handles multiple entities in entityMemberMap", async () => {
-    const seId2 = "ste_00000000-0000-0000-0000-000000000002" as SystemStructureEntityId;
+    const seId2 = brandId<SystemStructureEntityId>("ste_00000000-0000-0000-0000-000000000002");
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([
       makeFSRow({ id: "fs_00000000-0000-0000-0000-000000000001", structureEntityId: SE_ID }),

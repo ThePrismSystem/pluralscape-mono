@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
@@ -23,14 +24,14 @@ function mockLog(): AppLogger {
   };
 }
 
-function mockAuth(accountId = "acct_test" as AccountId) {
+function mockAuth(accountId = brandId<AccountId>("acct_test")) {
   return {
     authMethod: "session" as const,
     accountId,
-    systemId: "sys_test" as SystemId,
-    sessionId: "sess_test" as SessionId,
+    systemId: brandId<SystemId>("sys_test"),
+    sessionId: brandId<SessionId>("sess_test"),
     accountType: "system" as const,
-    ownedSystemIds: new Set(["sys_test" as SystemId]),
+    ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
     auditLogIpTracking: false,
   };
 }
@@ -63,9 +64,9 @@ describe("broadcastDocumentUpdate", () => {
     manager.register("conn-1", ws1 as never, Date.now());
     manager.register("conn-2", ws2 as never, Date.now());
     manager.register("conn-3", ws3 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
-    manager.authenticate("conn-2", mockAuth(), "sys_test" as SystemId, "owner-full");
-    manager.authenticate("conn-3", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
+    manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
+    manager.authenticate("conn-3", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-1");
     manager.addSubscription("conn-3", "doc-1");
@@ -87,7 +88,7 @@ describe("broadcastDocumentUpdate", () => {
     const ws2 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
     manager.register("conn-2", ws2 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     // conn-2 stays unauthenticated
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-1");
@@ -107,14 +108,14 @@ describe("broadcastDocumentUpdate", () => {
     const ws2 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
     manager.register("conn-2", ws2 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
-    manager.authenticate("conn-2", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
+    manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-1");
 
     // conn-submitter is a separate connection
     manager.register("conn-sub", mockWs() as never, Date.now());
-    manager.authenticate("conn-sub", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-sub", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-sub", "doc-1");
 
     broadcastDocumentUpdate(makeUpdate(), "conn-sub", manager, log);
@@ -130,12 +131,12 @@ describe("broadcastDocumentUpdate", () => {
     });
     manager.reserveUnauthSlot();
     manager.register("conn-dead", ws1 as never, Date.now());
-    manager.authenticate("conn-dead", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-dead", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-dead", "doc-1");
 
     manager.reserveUnauthSlot();
     manager.register("conn-sub", mockWs() as never, Date.now());
-    manager.authenticate("conn-sub", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-sub", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-sub", "doc-1");
 
     broadcastDocumentUpdate(makeUpdate(), "conn-sub", manager, log);
@@ -150,8 +151,8 @@ describe("broadcastDocumentUpdate", () => {
     const ws2 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
     manager.register("conn-2", ws2 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
-    manager.authenticate("conn-2", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
+    manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-1");
 
@@ -165,7 +166,7 @@ describe("broadcastDocumentUpdate", () => {
   it("returns early on serialization failure", () => {
     const ws1 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
 
     // Create an update with a circular reference to trigger serialization failure
@@ -186,8 +187,8 @@ describe("broadcastDocumentUpdate", () => {
     const ws2 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
     manager.register("conn-2", ws2 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
-    manager.authenticate("conn-2", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
+    manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-2");
 

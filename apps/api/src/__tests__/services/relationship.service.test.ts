@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor, toCursor } from "../../lib/pagination.js";
@@ -48,8 +48,8 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const RELATIONSHIP_ID = "rel_test-relationship" as RelationshipId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const RELATIONSHIP_ID = brandId<RelationshipId>("rel_test-relationship");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -335,7 +335,7 @@ describe("getRelationship", () => {
     const { db } = mockDb();
 
     await expect(
-      getRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH),
+      getRelationship(db, SYSTEM_ID, brandId<RelationshipId>("rel_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -408,7 +408,7 @@ describe("updateRelationship", () => {
       updateRelationship(
         db,
         SYSTEM_ID,
-        "rel_nonexistent" as RelationshipId,
+        brandId<RelationshipId>("rel_nonexistent"),
         { type: "sibling", bidirectional: true, encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
         mockAudit,
@@ -466,7 +466,13 @@ describe("deleteRelationship", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH, mockAudit),
+      deleteRelationship(
+        db,
+        SYSTEM_ID,
+        brandId<RelationshipId>("rel_nonexistent"),
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -505,7 +511,13 @@ describe("archiveRelationship", () => {
     const { db } = mockDb();
 
     await expect(
-      archiveRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH, mockAudit),
+      archiveRelationship(
+        db,
+        SYSTEM_ID,
+        brandId<RelationshipId>("rel_nonexistent"),
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -549,7 +561,13 @@ describe("restoreRelationship", () => {
     const { db } = mockDb();
 
     await expect(
-      restoreRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH, mockAudit),
+      restoreRelationship(
+        db,
+        SYSTEM_ID,
+        brandId<RelationshipId>("rel_nonexistent"),
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 

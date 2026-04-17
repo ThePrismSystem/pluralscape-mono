@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -68,11 +69,11 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const ENTITY_TYPE_ID = "set_test-entity-type" as SystemStructureEntityTypeId;
-const MISSING_ENTITY_TYPE_ID = "set_missing" as SystemStructureEntityTypeId;
-const ENTITY_ID = "sse_test-entity" as SystemStructureEntityId;
-const MISSING_ENTITY_ID = "sse_missing" as SystemStructureEntityId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const ENTITY_TYPE_ID = brandId<SystemStructureEntityTypeId>("set_test-entity-type");
+const MISSING_ENTITY_TYPE_ID = brandId<SystemStructureEntityTypeId>("set_missing");
+const ENTITY_ID = brandId<SystemStructureEntityId>("sse_test-entity");
+const MISSING_ENTITY_ID = brandId<SystemStructureEntityId>("sse_missing");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",

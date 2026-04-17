@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -33,8 +34,8 @@ describe("import-entity-ref.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgImportExportTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -118,7 +119,7 @@ describe("import-entity-ref.service (PGlite integration)", () => {
     });
 
     it("rejects when systemId does not belong to the caller", async () => {
-      const otherSystemId = "sys_other" as SystemId;
+      const otherSystemId = brandId<SystemId>("sys_other");
       await assertApiError(
         recordImportEntityRef(
           asDb(db),
@@ -184,7 +185,7 @@ describe("import-entity-ref.service (PGlite integration)", () => {
     });
 
     it("rejects when systemId does not belong to the caller", async () => {
-      const otherSystemId = "sys_other" as SystemId;
+      const otherSystemId = brandId<SystemId>("sys_other");
       await assertApiError(
         lookupImportEntityRef(
           asDb(db),
@@ -296,7 +297,7 @@ describe("import-entity-ref.service (PGlite integration)", () => {
     });
 
     it("rejects when systemId does not belong to the caller", async () => {
-      const otherSystemId = "sys_other" as SystemId;
+      const otherSystemId = brandId<SystemId>("sys_other");
       await assertApiError(
         listImportEntityRefs(asDb(db), otherSystemId, auth, {}),
         "NOT_FOUND",

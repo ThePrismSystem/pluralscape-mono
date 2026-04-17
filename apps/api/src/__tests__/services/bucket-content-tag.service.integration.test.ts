@@ -8,7 +8,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, ID_PREFIXES, now } from "@pluralscape/types";
+import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -53,8 +53,8 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.webhookDeliveries);
     await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -80,7 +80,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as BucketId;
+    return brandId<BucketId>(id);
   }
 
   // ── tagContent ──────────────────────────────────────────────────────

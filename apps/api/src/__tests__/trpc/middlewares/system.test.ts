@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v4";
 
@@ -8,7 +9,7 @@ import { MOCK_AUTH, MOCK_SYSTEM_ID, makeContext } from "../test-helpers.js";
 import type { SystemId } from "@pluralscape/types";
 
 const OWNED_SYSTEM_ID = MOCK_SYSTEM_ID;
-const OTHER_SYSTEM_ID = "sys_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemId;
+const OTHER_SYSTEM_ID = brandId<SystemId>("sys_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const testRouter = router({
   echo: systemProcedure.input(z.object({ value: z.string() })).query(({ ctx, input }) => ({

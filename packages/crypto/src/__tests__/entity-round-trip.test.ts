@@ -8,6 +8,7 @@
  * original payload is recovered intact.
  */
 
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
@@ -323,7 +324,7 @@ describe("T2 bucket-encrypted round-trip", () => {
       tier: 2,
       algorithm: "xchacha20-poly1305",
       keyVersion: 1,
-      bucketId: "bkt_test" as BucketId,
+      bucketId: brandId<BucketId>("bkt_test"),
     };
     const serialized = serializeEncryptedBlob(blob);
     const deserialized = deserializeEncryptedBlob(serialized);

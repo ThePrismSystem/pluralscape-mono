@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptGroupInput } from "@pluralscape/data/transforms/group";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -147,7 +148,7 @@ function makeRawGroup(id: string): GroupRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as GroupId,
+    id: brandId<GroupId>(id),
     systemId: TEST_SYSTEM_ID,
     parentGroupId: null,
     sortOrder: 0,
@@ -169,12 +170,12 @@ beforeEach(() => {
 describe("useGroup", () => {
   it("returns decrypted group data", async () => {
     fixtures.set("group.get", makeRawGroup("g-1"));
-    const { result } = renderHookWithProviders(() => useGroup("g-1" as GroupId));
+    const { result } = renderHookWithProviders(() => useGroup(brandId<GroupId>("g-1")));
 
     let data: Awaited<ReturnType<typeof useGroup>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("Group g-1");
     expect(data?.description).toBe("A test group");
@@ -182,7 +183,7 @@ describe("useGroup", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useGroup("g-1" as GroupId), {
+    const { result } = renderHookWithProviders(() => useGroup(brandId<GroupId>("g-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -191,10 +192,10 @@ describe("useGroup", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("group.get", makeRawGroup("g-1"));
-    const { result, rerender } = renderHookWithProviders(() => useGroup("g-1" as GroupId));
+    const { result, rerender } = renderHookWithProviders(() => useGroup(brandId<GroupId>("g-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -211,7 +212,7 @@ describe("useGroupsList", () => {
     const { result } = renderHookWithProviders(() => useGroupsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -232,7 +233,7 @@ describe("useGroupsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useGroupsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();

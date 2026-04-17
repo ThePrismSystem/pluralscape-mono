@@ -35,6 +35,7 @@ export type AuditEventType =
   | "auth.device-transfer-approved"
   | "auth.device-transfer-completed"
   | "auth.email-changed"
+  | "auth.email-change-notification-enqueue-failed"
   | "system.created"
   | "system.profile-updated"
   | "system.deleted"

@@ -19,15 +19,21 @@ import { and, eq } from "drizzle-orm";
 
 import { ensureUint8Array } from "../lib/binary.js";
 import { hashEmail } from "../lib/email-hash.js";
+import { resolveAccountEmail } from "../lib/email-resolve.js";
 import { fromHex, toHex } from "../lib/hex.js";
+import { logger } from "../lib/logger.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
-import { EMAIL_CHANGE_FAILED_ERROR } from "../routes/account/account.constants.js";
+import {
+  buildAccountEmailChangeIdempotencyKey,
+  EMAIL_CHANGE_FAILED_ERROR,
+} from "../routes/account/account.constants.js";
 import { EMAIL_SALT_BYTES } from "../routes/auth/auth.constants.js";
 
 import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { isDuplicateEmailError, ValidationError } from "./auth.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
+import type { JobQueue } from "@pluralscape/queue";
 import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -87,12 +93,42 @@ export async function getAccountInfo(
 
 // ── Change Email ──────────────────────────────────────────────────
 
+/**
+ * Outcome of a successful `changeEmail` call.
+ *
+ * Discriminated on `kind` so callers can branch on whether the change actually
+ * mutated anything. The "changed" variant carries the plaintext addresses and
+ * the post-change `version` — the version is the idempotency-key suffix used by
+ * {@link enqueueAccountEmailChangedNotification} so retries of the same change
+ * deduplicate and a subsequent legitimate change (different version) enqueues
+ * a fresh notification.
+ */
+export type ChangeEmailResult =
+  | { readonly kind: "noop" }
+  | {
+      readonly kind: "changed";
+      /**
+       * Plaintext OLD email before the change. `null` when it could not be
+       * resolved (no encryptedEmail on file, or `EMAIL_ENCRYPTION_KEY`
+       * missing) — in which case no notification is sent to the prior
+       * address.
+       */
+      readonly oldEmail: string | null;
+      /** Plaintext NEW email (post-change). */
+      readonly newEmail: string;
+      /**
+       * Post-change `accounts.version`. Used as the idempotency-key suffix
+       * for the fire-and-forget notification enqueue.
+       */
+      readonly version: number;
+    };
+
 export async function changeEmail(
   db: PostgresJsDatabase,
   accountId: AccountId,
   params: unknown,
   audit: AuditWriter,
-): Promise<{ ok: true }> {
+): Promise<ChangeEmailResult> {
   const parsed = ChangeEmailSchema.parse(params);
 
   const account = await withAccountRead(db, accountId, async (tx) => {
@@ -123,8 +159,14 @@ export async function changeEmail(
 
   const newEmailHash = hashEmail(parsed.email);
   if (newEmailHash === account.emailHash) {
-    return { ok: true };
+    return { kind: "noop" };
   }
+
+  // Capture the plaintext OLD email before mutating anything. This is the
+  // address we need to notify after the change commits. Resolution may return
+  // null (pre-encrypted-email accounts, missing EMAIL_ENCRYPTION_KEY) — in
+  // which case the route skips the notification rather than failing the change.
+  const oldEmail = await resolveAccountEmail(db, accountId);
 
   const adapter = getSodium();
   /** Stored for potential future per-account salting; current hashEmail() uses global pepper. */
@@ -161,7 +203,101 @@ export async function changeEmail(
     throw error;
   }
 
-  return { ok: true };
+  return {
+    kind: "changed",
+    oldEmail,
+    newEmail: parsed.email,
+    // The UPDATE above set version = account.version + 1, so this is the
+    // post-change value — stable across the commit, safe to key on.
+    version: account.version + 1,
+  };
+}
+
+// ── Email Change Notification ─────────────────────────────────────
+
+/** Arguments describing which notification to enqueue. */
+export interface EnqueueAccountEmailChangedNotificationArgs {
+  readonly accountId: AccountId;
+  /** Plaintext prior address. `null` disables the enqueue. */
+  readonly oldEmail: string | null;
+  /** Plaintext new address (post-change). */
+  readonly newEmail: string;
+  /** Post-change `accounts.version` — the idempotency-key suffix. */
+  readonly version: number;
+  /** Caller IP, surfaced in the template vars when non-null. */
+  readonly ipAddress: string | null;
+}
+
+/**
+ * Fire-and-forget enqueue of the `account-change-email` notification to the
+ * OLD email address after a successful email change.
+ *
+ * Short-circuits when (a) the queue is null (local dev / queue disabled) or
+ * (b) `oldEmail` is null (unresolvable via `resolveAccountEmail`). Enqueue
+ * failures are caught, logged, and persisted as an audit event under the
+ * `auth.email-change-notification-enqueue-failed` type so SOC/IR tooling can
+ * query per-account for a missed breach-alert signal.
+ *
+ * Idempotency: keyed on `accountId + version`. Retries of the same change
+ * produce identical keys and deduplicate; a later legitimate change bumps
+ * `version` and gets its own key.
+ *
+ * `db` is only consulted if the enqueue fails (to write the audit row). It is
+ * deliberately a positional parameter so callers do not nest the connection
+ * handle inside the args shape that tests assert against.
+ *
+ * This helper never throws — callers should `void` the returned promise.
+ */
+export async function enqueueAccountEmailChangedNotification(
+  queue: JobQueue | null,
+  audit: AuditWriter,
+  db: PostgresJsDatabase,
+  args: EnqueueAccountEmailChangedNotificationArgs,
+): Promise<void> {
+  if (!queue || !args.oldEmail) return;
+
+  const { accountId, oldEmail, newEmail, version, ipAddress } = args;
+
+  try {
+    await queue.enqueue({
+      type: "email-send",
+      systemId: null,
+      payload: {
+        accountId,
+        template: "account-change-email",
+        vars: {
+          oldEmail,
+          newEmail,
+          timestamp: new Date().toISOString(),
+          ...(ipAddress ? { ipAddress } : {}),
+        },
+        recipientOverride: oldEmail,
+      },
+      idempotencyKey: buildAccountEmailChangeIdempotencyKey(accountId, version),
+    });
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.warn("[account-notify] change-email enqueue failed", {
+      accountId,
+      error: errorMessage,
+    });
+    // Persist a forensic trail so ops can query which accounts missed a
+    // breach-alert signal. Swallow secondary failures — we are already in a
+    // fire-and-forget path and cannot surface errors to the caller.
+    try {
+      await audit(db, {
+        eventType: "auth.email-change-notification-enqueue-failed",
+        actor: { kind: "account", id: accountId },
+        detail: `Enqueue failed: ${errorMessage}`,
+      });
+    } catch (auditErr: unknown) {
+      const auditMessage = auditErr instanceof Error ? auditErr.message : String(auditErr);
+      logger.error("[account-notify] audit write failed after enqueue failure", {
+        accountId,
+        error: auditMessage,
+      });
+    }
+  }
 }
 
 // ── Change Password ───────────────────────────────────────────────

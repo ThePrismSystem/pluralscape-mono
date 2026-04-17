@@ -10,6 +10,7 @@
  *   - remove(): docSet.size > 0 after delete (multi-subscriber doc)
  *   - gracefulShutdown: force-close path (connections don't drain before timeout)
  */
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionManager } from "../connection-manager.js";
@@ -26,11 +27,11 @@ function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi
 function makeAuth(accountId: string): AuthContext {
   return {
     authMethod: "session" as const,
-    accountId: accountId as AccountId,
-    systemId: "sys_cm_test" as SystemId,
-    sessionId: "sess_cm_test" as SessionId,
+    accountId: brandId<AccountId>(accountId),
+    systemId: brandId<SystemId>("sys_cm_test"),
+    sessionId: brandId<SessionId>("sess_cm_test"),
     accountType: "system",
-    ownedSystemIds: new Set(["sys_cm_test" as SystemId]),
+    ownedSystemIds: new Set([brandId<SystemId>("sys_cm_test")]),
     auditLogIpTracking: false,
   };
 }
@@ -43,7 +44,12 @@ function registerAndAuthenticate(
 ): void {
   manager.reserveUnauthSlot(ip);
   manager.register(connectionId, mockWs() as never, Date.now(), ip);
-  manager.authenticate(connectionId, makeAuth(accountId), "sys_cm_test" as SystemId, "owner-full");
+  manager.authenticate(
+    connectionId,
+    makeAuth(accountId),
+    brandId<SystemId>("sys_cm_test"),
+    "owner-full",
+  );
 }
 
 afterEach(() => {

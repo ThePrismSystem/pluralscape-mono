@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JobHandlerContext } from "@pluralscape/queue";
@@ -19,7 +19,7 @@ const { createWebhookDeliveryCleanupHandler } = await import("../jobs/webhook-de
 
 function stubJob(): JobDefinition<"webhook-delivery-cleanup"> {
   return {
-    id: "job_test" as JobId,
+    id: brandId<JobId>("job_test"),
     systemId: null,
     type: "webhook-delivery-cleanup" as const,
     status: "running",

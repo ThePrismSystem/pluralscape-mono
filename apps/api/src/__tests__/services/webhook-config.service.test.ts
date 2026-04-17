@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
@@ -54,8 +55,8 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_00000000-0000-4000-a000-000000000001" as SystemId;
-const WH_ID = "wh_00000000-0000-4000-a000-000000000002" as WebhookId;
+const SYSTEM_ID = brandId<SystemId>("sys_00000000-0000-4000-a000-000000000001");
+const WH_ID = brandId<WebhookId>("wh_00000000-0000-4000-a000-000000000002");
 
 const AUTH = makeTestAuth({
   accountId: "acct_00000000-0000-4000-a000-000000000003",
@@ -223,7 +224,13 @@ describe("webhook-config service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        createWebhookConfig(db, "sys_other" as SystemId, validCreatePayload, AUTH, mockAudit),
+        createWebhookConfig(
+          db,
+          brandId<SystemId>("sys_other"),
+          validCreatePayload,
+          AUTH,
+          mockAudit,
+        ),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -341,7 +348,7 @@ describe("webhook-config service", () => {
       const { db } = mockDb();
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(listWebhookConfigs(db, "sys_other" as SystemId, AUTH)).rejects.toThrow(
+      await expect(listWebhookConfigs(db, brandId<SystemId>("sys_other"), AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
       );
     });
@@ -369,7 +376,7 @@ describe("webhook-config service", () => {
         getWebhookConfig(
           db,
           SYSTEM_ID,
-          "wh_00000000-0000-4000-a000-000000000099" as WebhookId,
+          brandId<WebhookId>("wh_00000000-0000-4000-a000-000000000099"),
           AUTH,
         ),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
@@ -379,9 +386,9 @@ describe("webhook-config service", () => {
       const { db } = mockDb();
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-      await expect(getWebhookConfig(db, "sys_other" as SystemId, WH_ID, AUTH)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-      );
+      await expect(
+        getWebhookConfig(db, brandId<SystemId>("sys_other"), WH_ID, AUTH),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
     it("maps row fields correctly via toWebhookConfigResult", async () => {
@@ -404,7 +411,7 @@ describe("webhook-config service", () => {
       const result = await getWebhookConfig(
         db,
         SYSTEM_ID,
-        "wh_00000000-0000-4000-a000-000000000010" as WebhookId,
+        brandId<WebhookId>("wh_00000000-0000-4000-a000-000000000010"),
         AUTH,
       );
 
@@ -513,7 +520,7 @@ describe("webhook-config service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        updateWebhookConfig(db, "sys_other" as SystemId, WH_ID, {}, AUTH, mockAudit),
+        updateWebhookConfig(db, brandId<SystemId>("sys_other"), WH_ID, {}, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -591,7 +598,7 @@ describe("webhook-config service", () => {
         deleteWebhookConfig(
           db,
           SYSTEM_ID,
-          "wh_00000000-0000-4000-a000-000000000099" as WebhookId,
+          brandId<WebhookId>("wh_00000000-0000-4000-a000-000000000099"),
           AUTH,
           mockAudit,
         ),
@@ -621,7 +628,7 @@ describe("webhook-config service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        deleteWebhookConfig(db, "sys_other" as SystemId, WH_ID, AUTH, mockAudit),
+        deleteWebhookConfig(db, brandId<SystemId>("sys_other"), WH_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 

@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor } from "../../lib/pagination.js";
@@ -35,8 +35,8 @@ const { QuotaExceededError } = await import("@pluralscape/storage");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const BLOB_ID = "blob_test-blob" as BlobId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const BLOB_ID = brandId<BlobId>("blob_test-blob");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",

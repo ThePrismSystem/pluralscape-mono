@@ -65,8 +65,8 @@ export const notificationConfigs = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     eventType: text("event_type").notNull().$type<NotificationEventType>(),
-    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-    pushEnabled: integer("push_enabled", { mode: "boolean" }).notNull().default(true),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    pushEnabled: integer("push_enabled", { mode: "boolean" }).notNull().default(false),
     ...timestamps(),
     ...versioned(),
     ...archivable(),

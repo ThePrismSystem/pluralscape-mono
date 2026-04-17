@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -47,8 +48,8 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const FIELD_ID = "fld_test-field" as FieldDefinitionId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const FIELD_ID = brandId<FieldDefinitionId>("fld_test-field");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -238,7 +239,7 @@ describe("getFieldDefinition", () => {
     const { db } = mockDb();
 
     await expect(
-      getFieldDefinition(db, SYSTEM_ID, "fld_nonexistent" as FieldDefinitionId, AUTH),
+      getFieldDefinition(db, SYSTEM_ID, brandId<FieldDefinitionId>("fld_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -369,7 +370,7 @@ describe("archiveFieldDefinition", () => {
       archiveFieldDefinition(
         db,
         SYSTEM_ID,
-        "fld_nonexistent" as FieldDefinitionId,
+        brandId<FieldDefinitionId>("fld_nonexistent"),
         AUTH,
         mockAudit,
       ),
@@ -410,7 +411,7 @@ describe("restoreFieldDefinition", () => {
       restoreFieldDefinition(
         db,
         SYSTEM_ID,
-        "fld_nonexistent" as FieldDefinitionId,
+        brandId<FieldDefinitionId>("fld_nonexistent"),
         AUTH,
         mockAudit,
       ),
@@ -449,7 +450,13 @@ describe("deleteFieldDefinition", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteFieldDefinition(db, SYSTEM_ID, "fld_nonexistent" as FieldDefinitionId, AUTH, mockAudit),
+      deleteFieldDefinition(
+        db,
+        SYSTEM_ID,
+        brandId<FieldDefinitionId>("fld_nonexistent"),
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 

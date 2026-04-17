@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "../blob-codec.js";
@@ -9,7 +10,7 @@ import type { BucketId, EncryptedBlob, T1EncryptedBlob } from "@pluralscape/type
 const HEADER_BYTES = 8;
 
 function makeBucketId(raw: string): BucketId {
-  return raw as BucketId;
+  return brandId<BucketId>(raw);
 }
 
 function makeNonce(fill = 0xaa): Uint8Array {

@@ -6,7 +6,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, ID_PREFIXES, now } from "@pluralscape/types";
+import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -31,7 +31,7 @@ describe("loadBucketTags (PGlite integration)", () => {
     await createPgPrivacyTables(client);
 
     const accountId = await pgInsertAccount(db);
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
   });
 
   afterAll(async () => {

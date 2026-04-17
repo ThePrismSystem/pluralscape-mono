@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -53,7 +54,7 @@ const { boardMessageRouter } = await import("../../../trpc/routers/board-message
 
 const createCaller = makeCallerFactory({ boardMessage: boardMessageRouter });
 
-const BOARD_MESSAGE_ID = "bm_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BoardMessageId;
+const BOARD_MESSAGE_ID = brandId<BoardMessageId>("bm_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3Jib2FyZA==";
 
 const MOCK_BOARD_MESSAGE_RESULT = {
@@ -103,7 +104,7 @@ describe("board-message router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.boardMessage.create({
@@ -137,7 +138,7 @@ describe("board-message router", () => {
       await expect(
         caller.boardMessage.get({
           systemId: MOCK_SYSTEM_ID,
-          boardMessageId: "invalid-id" as BoardMessageId,
+          boardMessageId: brandId<BoardMessageId>("invalid-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -377,7 +378,7 @@ describe("board-message router", () => {
       await expect(
         caller.boardMessage.pin({
           systemId: MOCK_SYSTEM_ID,
-          boardMessageId: "invalid-id" as BoardMessageId,
+          boardMessageId: brandId<BoardMessageId>("invalid-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

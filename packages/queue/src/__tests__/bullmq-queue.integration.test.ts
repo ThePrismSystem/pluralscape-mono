@@ -1,10 +1,14 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { BullMQJobQueue } from "../adapters/bullmq/bullmq-job-queue.js";
 import { BullMQJobWorker } from "../adapters/bullmq/bullmq-job-worker.js";
 import { createValkeyConnection } from "../adapters/bullmq/connection.js";
-import { IdempotencyConflictError, InvalidJobTransitionError } from "../errors.js";
+import {
+  IdempotencyConflictError,
+  InvalidJobTransitionError,
+  QueueCorruptionError,
+} from "../errors.js";
 
 import { delay, dequeueOrFail, makeJobParams, testSystemId } from "./helpers.js";
 import { runJobQueueContract } from "./job-queue.contract.js";
@@ -371,7 +375,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
     activeQueues.push(q);
     if (redis === null) throw new Error("Valkey not available");
     // Manually inject a completed job into the cancelled store
-    const fakeId = `job_fake_${crypto.randomUUID()}` as JobId;
+    const fakeId = brandId<JobId>(`job_fake_${crypto.randomUUID()}`);
     const fakeData = {
       systemId: null,
       type: "sync-push",
@@ -603,7 +607,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
     activeQueues.push(q);
     if (redis === null) throw new Error("Valkey not available");
     // Inject a dead-letter job directly into the cancelled store
-    const fakeId = `job_fake_dl_${crypto.randomUUID()}` as JobId;
+    const fakeId = brandId<JobId>(`job_fake_dl_${crypto.randomUUID()}`);
     const deadLetterData = {
       systemId: null,
       type: "sync-push",
@@ -662,6 +666,119 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
   });
 
   // ── findStalledJobs: active job whose stored status is not 'running' (L561 false branch) ──
+
+  // ── Data corruption surfacing (QUEUE-TC-L1) ──────────────────────────
+  //
+  // Stored job data can become corrupt through operational mishaps (Redis
+  // migrations, manual key edits, partial writes, schema drift). When it
+  // does, callers must receive a typed QueueCorruptionError rather than a
+  // bare SyntaxError / ZodError leaking across the abstraction boundary.
+
+  it("getJob throws QueueCorruptionError on corrupt JSON in the cancelled store", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    const fakeId = brandId<JobId>(`job_corrupt_${crypto.randomUUID()}`);
+    // Syntactically invalid JSON in the cancelled store
+    await redis.set(`psq:${q.name}:cancelled:${fakeId}`, "{not-valid-json");
+
+    await expect(q.getJob(fakeId)).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
+  it("getJob wraps schema mismatches (missing fields) as QueueCorruptionError", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    const fakeId = brandId<JobId>(`job_partial_${crypto.randomUUID()}`);
+    // Valid JSON but missing required StoredJobData fields
+    await redis.set(
+      `psq:${q.name}:cancelled:${fakeId}`,
+      JSON.stringify({ type: "sync-push", status: "cancelled" }),
+    );
+
+    await expect(q.getJob(fakeId)).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
+  it("getJob throws QueueCorruptionError when BullMQ-store data blob is malformed", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    // Enqueue a real job so BullMQ sets up its hash, then overwrite the
+    // JSON data field with a malformed payload.
+    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
+    const rawKey = `bull:${q.name}:${job.id}`;
+    await redis.hset(rawKey, "data", "{truncated-");
+
+    await expect(q.getJob(job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
+  it("getJob throws QueueCorruptionError when type/payload disagree", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    // Enqueue a real sync-push job, then rewrite its stored data so the type
+    // advertises "webhook-deliver" (which requires `deliveryId`) while the
+    // payload is still the empty sync-push shape. The discriminated schema
+    // must reject this mismatched (type, payload) pair rather than surfacing
+    // a silently-malformed JobDefinition.
+    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
+    const rawKey = `bull:${q.name}:${job.id}`;
+    const current = await redis.hget(rawKey, "data");
+    if (current === null) throw new Error("expected BullMQ hash to contain `data`");
+    const parsed = JSON.parse(current) as Record<string, unknown>;
+    parsed["type"] = "webhook-deliver";
+    parsed["payload"] = { notADeliveryId: true };
+    await redis.hset(rawKey, "data", JSON.stringify(parsed));
+
+    await expect(q.getJob(job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
+  it("listJobs throws QueueCorruptionError when a stored row has mismatched type/payload", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    // Same corruption pattern as the getJob variant: inject a malformed row
+    // and verify listJobs fails closed rather than silently returning a
+    // malformed JobDefinition to callers who expect the discriminated union
+    // invariant to hold.
+    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
+    const rawKey = `bull:${q.name}:${job.id}`;
+    const current = await redis.hget(rawKey, "data");
+    if (current === null) throw new Error("expected BullMQ hash to contain `data`");
+    const parsed = JSON.parse(current) as Record<string, unknown>;
+    parsed["type"] = "webhook-deliver";
+    parsed["payload"] = { notADeliveryId: true };
+    await redis.hset(rawKey, "data", JSON.stringify(parsed));
+
+    await expect(q.listJobs({ status: "pending" })).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
+  it("retry throws QueueCorruptionError when cancelled-store data is corrupt", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    const fakeId = brandId<JobId>(`job_retry_corrupt_${crypto.randomUUID()}`);
+    await redis.set(`psq:${q.name}:cancelled:${fakeId}`, "][");
+
+    await expect(q.retry(fakeId)).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
+  it("cancel throws QueueCorruptionError when cancelled-store data is corrupt", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    const fakeId = brandId<JobId>(`job_cancel_corrupt_${crypto.randomUUID()}`);
+    await redis.set(`psq:${q.name}:cancelled:${fakeId}`, "][");
+
+    await expect(q.cancel(fakeId)).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
 
   it("findStalledJobs skips a job whose stored status differs from running", async () => {
     const q = createQueue();

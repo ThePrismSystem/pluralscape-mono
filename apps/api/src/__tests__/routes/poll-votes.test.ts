@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -50,7 +51,7 @@ const MOCK_VOTE = {
   id: VOTE_ID as never,
   pollId: POLL_ID as never,
   optionId: "opt_550e8400-e29b-41d4-a716-446655440003" as never,
-  voter: { entityType: "member" as const, entityId: "mem_test" as MemberId },
+  voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem_test") },
   isVeto: false,
   votedAt: 1000 as never,
   encryptedData: "dGVzdA==",

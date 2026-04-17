@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -57,7 +58,7 @@ const { logger } = await import("../../lib/logger.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acct_test-email" as AccountId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test-email");
 
 function makeJobPayload(
   overrides?: Partial<JobPayloadMap["email-send"]>,
@@ -69,6 +70,7 @@ function makeJobPayload(
       timestamp: "2026-03-29T00:00:00Z",
       deviceInfo: "Test Browser",
     },
+    recipientOverride: null,
     ...overrides,
   };
 }
@@ -192,6 +194,48 @@ describe("email-worker", () => {
           to: "user@example.com",
           subject: expect.any(String),
         }),
+      );
+    });
+
+    it("uses recipientOverride instead of resolveAccountEmail when provided", async () => {
+      const { db } = mockDb();
+
+      await processEmailJob(
+        db,
+        makeJobPayload({
+          template: "account-change-email",
+          vars: {
+            oldEmail: "old@example.com",
+            newEmail: "new@example.com",
+            timestamp: "2026-04-17T12:00:00Z",
+          },
+          recipientOverride: "old@example.com",
+        }),
+      );
+
+      expect(mockResolveAccountEmail).not.toHaveBeenCalled();
+      expect(mockAdapter.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "old@example.com",
+          subject: "Your Pluralscape account email was changed",
+        }),
+      );
+    });
+
+    it("falls back to resolveAccountEmail when recipientOverride is null", async () => {
+      const { db } = mockDb();
+      mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
+
+      await processEmailJob(
+        db,
+        makeJobPayload({
+          recipientOverride: null,
+        }),
+      );
+
+      expect(mockResolveAccountEmail).toHaveBeenCalledWith(db, ACCOUNT_ID);
+      expect(mockAdapter.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "user@example.com" }),
       );
     });
   });

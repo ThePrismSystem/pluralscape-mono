@@ -1,4 +1,5 @@
 import { fieldDefinitions, members } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -8,7 +9,7 @@ import { mockDb } from "../helpers/mock-db.js";
 
 import type { FieldDefinitionId, MemberId, SystemId } from "@pluralscape/types";
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 
 describe("assertMemberActive", () => {
   afterEach(() => {
@@ -17,7 +18,7 @@ describe("assertMemberActive", () => {
 
   it("resolves when member is found and active", async () => {
     const { db, chain } = mockDb();
-    const memberId = "mem_active-member" as MemberId;
+    const memberId = brandId<MemberId>("mem_active-member");
     chain.limit.mockResolvedValueOnce([{ id: memberId }]);
 
     await expect(assertMemberActive(db, SYSTEM_ID, memberId)).resolves.toBeUndefined();
@@ -34,7 +35,7 @@ describe("assertMemberActive", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    const err = await assertMemberActive(db, SYSTEM_ID, "mem_nonexistent" as MemberId).catch(
+    const err = await assertMemberActive(db, SYSTEM_ID, brandId<MemberId>("mem_nonexistent")).catch(
       (e: unknown) => e,
     );
 
@@ -47,7 +48,7 @@ describe("assertMemberActive", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    const err = await assertMemberActive(db, SYSTEM_ID, "mem_gone" as MemberId).catch(
+    const err = await assertMemberActive(db, SYSTEM_ID, brandId<MemberId>("mem_gone")).catch(
       (e: unknown) => e,
     );
 
@@ -56,8 +57,8 @@ describe("assertMemberActive", () => {
 
   it("queries with the correct systemId and memberId combination", async () => {
     const { db, chain } = mockDb();
-    const otherSystemId = "sys_other-system" as SystemId;
-    const memberId = "mem_specific" as MemberId;
+    const otherSystemId = brandId<SystemId>("sys_other-system");
+    const memberId = brandId<MemberId>("mem_specific");
     chain.limit.mockResolvedValueOnce([{ id: memberId }]);
 
     await assertMemberActive(db, otherSystemId, memberId);
@@ -79,7 +80,7 @@ describe("assertFieldDefinitionActive", () => {
 
   it("resolves when field definition is found and active", async () => {
     const { db, chain } = mockDb();
-    const fieldDefId = "fd_active-field" as FieldDefinitionId;
+    const fieldDefId = brandId<FieldDefinitionId>("fd_active-field");
     chain.limit.mockResolvedValueOnce([{ id: fieldDefId }]);
 
     await expect(assertFieldDefinitionActive(db, SYSTEM_ID, fieldDefId)).resolves.toBeUndefined();
@@ -103,7 +104,7 @@ describe("assertFieldDefinitionActive", () => {
     const err = await assertFieldDefinitionActive(
       db,
       SYSTEM_ID,
-      "fd_nonexistent" as FieldDefinitionId,
+      brandId<FieldDefinitionId>("fd_nonexistent"),
     ).catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(ApiHttpError);
@@ -118,7 +119,7 @@ describe("assertFieldDefinitionActive", () => {
     const err = await assertFieldDefinitionActive(
       db,
       SYSTEM_ID,
-      "fd_missing" as FieldDefinitionId,
+      brandId<FieldDefinitionId>("fd_missing"),
     ).catch((e: unknown) => e);
 
     expect((err as ApiHttpError).message).toBe("Field definition not found");
@@ -126,8 +127,8 @@ describe("assertFieldDefinitionActive", () => {
 
   it("queries with the correct systemId and fieldDefId combination", async () => {
     const { db, chain } = mockDb();
-    const otherSystemId = "sys_other-system" as SystemId;
-    const fieldDefId = "fd_specific" as FieldDefinitionId;
+    const otherSystemId = brandId<SystemId>("sys_other-system");
+    const fieldDefId = brandId<FieldDefinitionId>("fd_specific");
     chain.limit.mockResolvedValueOnce([{ id: fieldDefId }]);
 
     await assertFieldDefinitionActive(db, otherSystemId, fieldDefId);

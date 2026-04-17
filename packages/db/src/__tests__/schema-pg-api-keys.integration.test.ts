@@ -387,4 +387,14 @@ describe("PG api_keys schema", () => {
     const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
     expect(rows[0]?.encryptedData).toEqual(blob);
   });
+
+  describe("partial indexes", () => {
+    it("api_keys_revoked_at_idx has WHERE revoked_at IS NOT NULL", async () => {
+      const result = await client.query<{ indexdef: string }>(
+        `SELECT indexdef FROM pg_indexes WHERE indexname = 'api_keys_revoked_at_idx'`,
+      );
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]?.indexdef).toMatch(/WHERE.*revoked_at IS NOT NULL/i);
+    });
+  });
 });

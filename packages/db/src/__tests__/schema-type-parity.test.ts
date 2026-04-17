@@ -785,8 +785,6 @@ describe("BUCKET_CONTENT_ENTITY_TYPES invariants", () => {
  * Key: index name, Value: reason for the divergence.
  */
 const KNOWN_PG_ONLY_INDEXES = new Set([
-  // Expression index using EXTRACT(EPOCH …) — not available in SQLite
-  "sessions_ttl_duration_ms_idx",
   // Denormalized session_start_time index for partitioned FK — not needed in SQLite
   "fronting_comments_session_start_idx",
   // PG serial column uses a simple seq index; SQLite integer uses system_id-prefixed index

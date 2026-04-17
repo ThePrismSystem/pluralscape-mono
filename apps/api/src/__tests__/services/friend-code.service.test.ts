@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -22,9 +23,9 @@ const { generateFriendCode, listFriendCodes, archiveFriendCode, redeemFriendCode
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acct_test-account" as AccountId;
-const OTHER_ACCOUNT_ID = "acct_other" as AccountId;
-const CODE_ID = "frc_test-code" as FriendCodeId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test-account");
+const OTHER_ACCOUNT_ID = brandId<AccountId>("acct_other");
+const CODE_ID = brandId<FriendCodeId>("frc_test-code");
 
 const AUTH = makeTestAuth({
   accountId: ACCOUNT_ID,

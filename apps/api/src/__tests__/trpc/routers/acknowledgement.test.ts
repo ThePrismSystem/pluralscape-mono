@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -47,7 +48,7 @@ const { acknowledgementRouter } = await import("../../../trpc/routers/acknowledg
 
 const createCaller = makeCallerFactory({ acknowledgement: acknowledgementRouter });
 
-const ACK_ID = "ack_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as AcknowledgementId;
+const ACK_ID = brandId<AcknowledgementId>("ack_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JhY2s=";
 
 const MOCK_ACK_RESULT = {
@@ -97,7 +98,7 @@ describe("acknowledgement router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.acknowledgement.create({
@@ -128,7 +129,7 @@ describe("acknowledgement router", () => {
       await expect(
         caller.acknowledgement.get({
           systemId: MOCK_SYSTEM_ID,
-          ackId: "invalid-id" as AcknowledgementId,
+          ackId: brandId<AcknowledgementId>("invalid-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

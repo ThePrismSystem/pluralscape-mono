@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { writeAuditLog } from "../../lib/audit-log.js";
@@ -28,8 +29,8 @@ function createMockDb(): { db: PostgresJsDatabase; valuesSpy: ReturnType<typeof 
 
 function baseParams(overrides?: Partial<WriteAuditLogParams>): WriteAuditLogParams {
   return {
-    accountId: "acc_test-account" as AccountId,
-    systemId: "sys_test-system" as SystemId,
+    accountId: brandId<AccountId>("acc_test-account"),
+    systemId: brandId<SystemId>("sys_test-system"),
     eventType: "auth.login",
     actor: { kind: "account", id: "acc_test-account" },
     ...overrides,
@@ -54,7 +55,10 @@ describe("writeAuditLog", () => {
     const { db, valuesSpy } = createMockDb();
     await writeAuditLog(
       db,
-      baseParams({ accountId: "acc_abc" as AccountId, systemId: "sys_xyz" as SystemId }),
+      baseParams({
+        accountId: brandId<AccountId>("acc_abc"),
+        systemId: brandId<SystemId>("sys_xyz"),
+      }),
     );
 
     const insertedRow = valuesSpy.mock.calls[0]?.[0] as Record<string, unknown>;

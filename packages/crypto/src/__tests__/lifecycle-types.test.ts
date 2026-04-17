@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
@@ -89,7 +90,7 @@ describe("KeyLifecycleManager", () => {
   it("getBucketKey accepts bucketId, encryptedKey, and keyVersion", () => {
     type GetBucketKey = KeyLifecycleManager["getBucketKey"];
     expectTypeOf<GetBucketKey>().toBeCallableWith(
-      "" as BucketId,
+      brandId<BucketId>(""),
       new Uint8Array(),
       1 as KeyVersion,
     );

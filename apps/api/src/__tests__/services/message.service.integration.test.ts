@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -49,8 +50,8 @@ describe("message.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgCommunicationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -494,7 +495,7 @@ describe("message.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       await assertApiError(
@@ -514,7 +515,7 @@ describe("message.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       // Create a channel for the other system to use as a list target

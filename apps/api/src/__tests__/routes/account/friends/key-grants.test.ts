@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -62,11 +63,11 @@ describe("GET /account/friends/key-grants", () => {
     const mockResult: ReceivedKeyGrantsResponse = {
       grants: [
         {
-          id: "kg_1" as KeyGrantId,
-          bucketId: "bkt_abc" as BucketId,
+          id: brandId<KeyGrantId>("kg_1"),
+          bucketId: brandId<BucketId>("bkt_abc"),
           encryptedKey: "base64key",
           keyVersion: 1,
-          grantorSystemId: "sys_xyz" as SystemId,
+          grantorSystemId: brandId<SystemId>("sys_xyz"),
           senderBoxPublicKey: "base64urlpubkey",
         },
       ],

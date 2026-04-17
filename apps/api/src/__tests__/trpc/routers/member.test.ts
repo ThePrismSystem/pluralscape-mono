@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -46,7 +47,7 @@ const { memberRouter } = await import("../../../trpc/routers/member.js");
 
 const createCaller = makeCallerFactory({ member: memberRouter });
 
-const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
+const MEMBER_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_MEMBER_RESULT = {
@@ -89,7 +90,7 @@ describe("member router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.member.create({ systemId: foreignSystemId, encryptedData: VALID_ENCRYPTED_DATA }),
@@ -100,7 +101,7 @@ describe("member router", () => {
       const caller = createCaller();
       await expect(
         caller.member.create({
-          systemId: "not-a-system-id" as SystemId,
+          systemId: brandId<SystemId>("not-a-system-id"),
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -126,7 +127,7 @@ describe("member router", () => {
       await expect(
         caller.member.get({
           systemId: MOCK_SYSTEM_ID,
-          memberId: "not-a-member-id" as MemberId,
+          memberId: brandId<MemberId>("not-a-member-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

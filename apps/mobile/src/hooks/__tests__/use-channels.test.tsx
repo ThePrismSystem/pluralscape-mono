@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptChannelInput } from "@pluralscape/data/transforms/channel";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -126,7 +127,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 function makeRawChannel(id: string): ChannelRaw {
   const encrypted = encryptChannelInput({ name: "general" }, TEST_MASTER_KEY);
   return {
-    id: id as ChannelId,
+    id: brandId<ChannelId>(id),
     systemId: TEST_SYSTEM_ID,
     type: "channel",
     parentId: null,
@@ -149,19 +150,19 @@ beforeEach(() => {
 describe("useChannel", () => {
   it("returns decrypted channel data", async () => {
     fixtures.set("channel.get", makeRawChannel("ch-1"));
-    const { result } = renderHookWithProviders(() => useChannel("ch-1" as ChannelId));
+    const { result } = renderHookWithProviders(() => useChannel(brandId<ChannelId>("ch-1")));
 
     let data: Awaited<ReturnType<typeof useChannel>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.name).toBe("general");
     expect(data?.archived).toBe(false);
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useChannel("ch-1" as ChannelId), {
+    const { result } = renderHookWithProviders(() => useChannel(brandId<ChannelId>("ch-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -170,10 +171,12 @@ describe("useChannel", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("channel.get", makeRawChannel("ch-1"));
-    const { result, rerender } = renderHookWithProviders(() => useChannel("ch-1" as ChannelId));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useChannel(brandId<ChannelId>("ch-1")),
+    );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -190,7 +193,7 @@ describe("useChannelsList", () => {
     const { result } = renderHookWithProviders(() => useChannelsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -212,7 +215,7 @@ describe("useChannelsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useChannelsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -337,13 +340,13 @@ const LOCAL_CHANNEL_ROW: Record<string, unknown> = {
 describe("useChannel (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_CHANNEL_ROW]);
-    const { result } = renderHookWithProviders(() => useChannel("ch-local-1" as ChannelId), {
+    const { result } = renderHookWithProviders(() => useChannel(brandId<ChannelId>("ch-local-1")), {
       querySource: "local",
       localDb,
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_channels"), [
@@ -359,13 +362,13 @@ describe("useChannel (local source)", () => {
 
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_CHANNEL_ROW]);
-    const { result } = renderHookWithProviders(() => useChannel("ch-local-1" as ChannelId), {
+    const { result } = renderHookWithProviders(() => useChannel(brandId<ChannelId>("ch-local-1")), {
       querySource: "local",
       localDb,
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.name).toBe("general");
@@ -382,7 +385,7 @@ describe("useChannelsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -408,7 +411,7 @@ describe("useChannelsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

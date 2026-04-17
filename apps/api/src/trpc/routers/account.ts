@@ -23,6 +23,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { requireSession } from "../../lib/auth-context.js";
+import { getQueue } from "../../lib/queue.js";
 import {
   MAX_TRANSFER_CODE_ATTEMPTS,
   TRANSFER_INITIATION_LIMIT,
@@ -36,6 +37,7 @@ import {
 import {
   changeEmail,
   changePassword,
+  enqueueAccountEmailChangedNotification,
   getAccountInfo,
   updateAccountSettings,
 } from "../../services/account.service.js";
@@ -166,7 +168,24 @@ export const accountRouter = router({
     .input(ChangeEmailSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return changeEmail(ctx.db, ctx.auth.accountId, input, audit);
+      const result = await changeEmail(ctx.db, ctx.auth.accountId, input, audit);
+
+      if (result.kind === "changed") {
+        // Fire-and-forget: notify the OLD address. The helper owns
+        // queue-null/oldEmail-null short-circuiting, failure logging, and
+        // audit-event persistence — we must NOT await or rethrow from it.
+        void enqueueAccountEmailChangedNotification(getQueue(), audit, ctx.db, {
+          accountId: ctx.auth.accountId,
+          oldEmail: result.oldEmail,
+          newEmail: result.newEmail,
+          version: result.version,
+          ipAddress: ctx.requestMeta.ipAddress,
+        });
+      }
+
+      // Do not leak oldEmail/newEmail via the tRPC response — they are only
+      // used internally for routing the notification.
+      return { ok: true as const };
     }),
 
   /** Change account password. Revokes all active sessions. */

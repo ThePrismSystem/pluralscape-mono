@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -121,11 +122,16 @@ describe("detectAncestorCycle", () => {
   it("works correctly with branded ID types", async () => {
     const getParentId = vi
       .fn<(id: string) => Promise<string | null>>()
-      .mockResolvedValueOnce("grp_parent" as GroupId)
+      .mockResolvedValueOnce(brandId<GroupId>("grp_parent"))
       .mockResolvedValueOnce(null);
 
     await expect(
-      detectAncestorCycle(getParentId, "grp_child" as GroupId, "grp_other" as GroupId, "Group"),
+      detectAncestorCycle(
+        getParentId,
+        brandId<GroupId>("grp_child"),
+        brandId<GroupId>("grp_other"),
+        "Group",
+      ),
     ).resolves.toBeUndefined();
 
     expect(getParentId).toHaveBeenCalledWith("grp_child");

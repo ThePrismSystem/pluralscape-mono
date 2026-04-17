@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptNoteInput } from "@pluralscape/data/transforms/note";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -129,7 +130,7 @@ function makeRawNote(id: string): NoteRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as NoteId,
+    id: brandId<NoteId>(id),
     systemId: TEST_SYSTEM_ID,
     authorEntityType: null,
     authorEntityId: null,
@@ -151,12 +152,12 @@ beforeEach(() => {
 describe("useNote", () => {
   it("returns decrypted note data", async () => {
     fixtures.set("note.get", makeRawNote("note-1"));
-    const { result } = renderHookWithProviders(() => useNote("note-1" as NoteId));
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-1")));
 
     let data: Awaited<ReturnType<typeof useNote>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.title).toBe("Note");
     expect(data?.content).toBe("Body");
@@ -166,7 +167,7 @@ describe("useNote", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useNote("note-1" as NoteId), {
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -175,10 +176,10 @@ describe("useNote", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("note.get", makeRawNote("note-1"));
-    const { result, rerender } = renderHookWithProviders(() => useNote("note-1" as NoteId));
+    const { result, rerender } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-1")));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -195,7 +196,7 @@ describe("useNotesList", () => {
     const { result } = renderHookWithProviders(() => useNotesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -215,7 +216,7 @@ describe("useNotesList", () => {
     const { result, rerender } = renderHookWithProviders(() => useNotesList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -341,13 +342,13 @@ const LOCAL_NOTE_ROW: Record<string, unknown> = {
 describe("useNote (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_NOTE_ROW]);
-    const { result } = renderHookWithProviders(() => useNote("note-local-1" as NoteId), {
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-local-1")), {
       querySource: "local",
       localDb,
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_notes"), [
@@ -363,13 +364,13 @@ describe("useNote (local source)", () => {
 
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_NOTE_ROW]);
-    const { result } = renderHookWithProviders(() => useNote("note-local-1" as NoteId), {
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-local-1")), {
       querySource: "local",
       localDb,
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.title).toBe("My Local Note");
@@ -386,7 +387,7 @@ describe("useNotesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -412,7 +413,7 @@ describe("useNotesList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;

@@ -1,4 +1,5 @@
 import { DecryptionFailedError, decrypt, encrypt } from "@pluralscape/crypto";
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { processChunk } from "../chunk-processor.js";
@@ -48,7 +49,7 @@ const NEW_KEY_VERSION = 2;
 const OLD_KEY = new Uint8Array(32).fill(0xaa) as AeadKey;
 const NEW_KEY = new Uint8Array(32).fill(0xbb) as AeadKey;
 
-const BUCKET_ID = "bucket-abc" as BucketId;
+const BUCKET_ID = brandId<BucketId>("bucket-abc");
 const ROTATION_ID = "rotation-001";
 
 function makePayload(): EncryptedPayload {

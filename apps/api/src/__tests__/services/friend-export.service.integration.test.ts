@@ -8,7 +8,13 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, FRIEND_EXPORT_ENTITY_TYPES, ID_PREFIXES, now } from "@pluralscape/types";
+import {
+  createId,
+  FRIEND_EXPORT_ENTITY_TYPES,
+  ID_PREFIXES,
+  now,
+  brandId,
+} from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -93,9 +99,9 @@ describe("friend-export.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.fieldValues);
     await pgExec(client, PG_DDL.fieldValuesIndexes);
 
-    ownerAccountId = (await pgInsertAccount(db)) as AccountId;
-    friendAccountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, ownerAccountId)) as SystemId;
+    ownerAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    friendAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, ownerAccountId));
     friendAuth = makeAuth(friendAccountId, systemId);
   });
 
@@ -117,8 +123,8 @@ describe("friend-export.service (PGlite integration)", () => {
     ownerConnectionId: FriendConnectionId;
     friendConnectionId: FriendConnectionId;
   }> {
-    const ownerConnectionId = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
-    const friendConnectionId = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
+    const ownerConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
+    const friendConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
     const ts = now();
 
     await db.insert(friendConnections).values([
@@ -153,7 +159,7 @@ describe("friend-export.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as BucketId;
+    return brandId<BucketId>(id);
   }
 
   async function insertBucketAssignment(
@@ -177,7 +183,7 @@ describe("friend-export.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as MemberId;
+    return brandId<MemberId>(id);
   }
 
   async function insertBucketTag(
@@ -430,7 +436,7 @@ describe("friend-export.service (PGlite integration)", () => {
   // ── Error tests ───────────────────────────────────────────────────
 
   it("throws NOT_FOUND for non-existent connection", async () => {
-    const fakeConnectionId = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
+    const fakeConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
 
     await assertApiError(
       getFriendExportManifest(asDb(db), fakeConnectionId, friendAuth),

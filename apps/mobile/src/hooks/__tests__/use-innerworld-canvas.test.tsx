@@ -102,7 +102,7 @@ describe("useCanvas", () => {
     const { result } = renderHookWithProviders(() => useCanvas());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.viewportX).toBe(0);
     expect(result.current.data?.viewportY).toBe(0);
@@ -121,7 +121,7 @@ describe("useCanvas", () => {
     const { result, rerender } = renderHookWithProviders(() => useCanvas());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();

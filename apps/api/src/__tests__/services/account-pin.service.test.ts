@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AccountId, SystemId } from "@pluralscape/types";
@@ -78,8 +79,8 @@ const { setAccountPin, removeAccountPin, verifyAccountPin } =
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acct_test-account" as AccountId;
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test-account");
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const VALID_PIN = "1234";
 

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { generateBucketKey } from "../bucket-keys.js";
@@ -16,7 +17,7 @@ beforeAll(setupSodium);
 afterAll(teardownSodium);
 
 function makeBucketId(s = "bucket-abc"): BucketId {
-  return s as BucketId;
+  return brandId<BucketId>(s);
 }
 
 function makeBoxKeypair(): BoxKeypair {

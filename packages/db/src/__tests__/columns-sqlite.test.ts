@@ -1,4 +1,5 @@
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -85,7 +86,7 @@ describe("sqliteEncryptedBlob mapping", () => {
       tier: 2,
       algorithm: "xchacha20-poly1305",
       keyVersion: 7,
-      bucketId: "bucket-xyz" as BucketId,
+      bucketId: brandId<BucketId>("bucket-xyz"),
     };
     const result = encryptedBlobFromDriver(encryptedBlobToDriver(blob));
     expect(result.ciphertext).toEqual(blob.ciphertext);

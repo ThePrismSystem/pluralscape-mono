@@ -1,4 +1,5 @@
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
@@ -44,12 +45,12 @@ function mockLog(): AppLogger {
 type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
 
 function validAuth(): AuthContextWithSystem {
-  const systemId = crypto.randomUUID() as SystemId;
+  const systemId = brandId<SystemId>(crypto.randomUUID());
   return {
     authMethod: "session" as const,
-    accountId: crypto.randomUUID() as AccountId,
+    accountId: brandId<AccountId>(crypto.randomUUID()),
     systemId,
-    sessionId: crypto.randomUUID() as SessionId,
+    sessionId: brandId<SessionId>(crypto.randomUUID()),
     accountType: "system",
     ownedSystemIds: new Set([systemId]),
     auditLogIpTracking: false,
@@ -107,7 +108,7 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_FAILED for invalid token", async () => {
-    const systemId = crypto.randomUUID() as SystemId;
+    const systemId = brandId<SystemId>(crypto.randomUUID());
     mockValidateSession.mockResolvedValue({ ok: false, error: "UNAUTHENTICATED" });
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
@@ -122,7 +123,7 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_EXPIRED for expired session", async () => {
-    const systemId = crypto.randomUUID() as SystemId;
+    const systemId = brandId<SystemId>(crypto.randomUUID());
     mockValidateSession.mockResolvedValue({ ok: false, error: "SESSION_EXPIRED" });
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
@@ -264,7 +265,7 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_FAILED when getDb throws", async () => {
-    const systemId = crypto.randomUUID() as SystemId;
+    const systemId = brandId<SystemId>(crypto.randomUUID());
     mockGetDb.mockRejectedValueOnce(new Error("DB connection failed"));
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
@@ -279,7 +280,7 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_FAILED when validateSession throws", async () => {
-    const systemId = crypto.randomUUID() as SystemId;
+    const systemId = brandId<SystemId>(crypto.randomUUID());
     mockValidateSession.mockRejectedValueOnce(new Error("session service down"));
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());

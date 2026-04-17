@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -19,7 +19,7 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, jobs };
 
-const newJobId = (): JobId => `job_${crypto.randomUUID()}` as JobId;
+const newJobId = (): JobId => brandId<JobId>(`job_${crypto.randomUUID()}`);
 
 describe("SQLite jobs schema", () => {
   let client: InstanceType<typeof Database>;

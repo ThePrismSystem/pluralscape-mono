@@ -18,8 +18,6 @@ import { friendConnections } from "../schema/pg/privacy.js";
 import { systemStructureEntityAssociations } from "../schema/pg/structure.js";
 import { webhookDeliveries } from "../schema/pg/webhooks.js";
 
-import { mapStructureEntityAssociationRow as mapAssociationRow } from "./mappers.js";
-
 import type {
   ActiveApiKey,
   ActiveDeviceToken,
@@ -248,17 +246,18 @@ export async function getStructureEntityAssociations(
   db: PgDb,
   systemId: string,
 ): Promise<StructureEntityAssociationRow[]> {
+  // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
+  // (camelCase columns, `createdAt` as unix millis via `pgTimestamp`), so no
+  // snake_case round-trip through `mapStructureEntityAssociationRow` is needed.
   const rows = await db
-    .select()
+    .select({
+      id: systemStructureEntityAssociations.id,
+      systemId: systemStructureEntityAssociations.systemId,
+      sourceEntityId: systemStructureEntityAssociations.sourceEntityId,
+      targetEntityId: systemStructureEntityAssociations.targetEntityId,
+      createdAt: systemStructureEntityAssociations.createdAt,
+    })
     .from(systemStructureEntityAssociations)
     .where(eq(systemStructureEntityAssociations.systemId, systemId));
-  return rows.map((r) =>
-    mapAssociationRow({
-      id: r.id,
-      system_id: r.systemId,
-      source_entity_id: r.sourceEntityId,
-      target_entity_id: r.targetEntityId,
-      created_at: r.createdAt,
-    }),
-  );
+  return rows;
 }

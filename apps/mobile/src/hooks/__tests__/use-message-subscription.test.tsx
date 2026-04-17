@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
@@ -31,7 +32,7 @@ vi.mock("@pluralscape/api-client/trpc", () => ({
 
 const { useMessageSubscription } = await import("../use-message-subscription.js");
 
-const CHANNEL_ID = "ch-1" as ChannelId;
+const CHANNEL_ID = brandId<ChannelId>("ch-1");
 
 // ── Tests ────────────────────────────────────────────────────────────
 describe("useMessageSubscription", () => {
@@ -58,7 +59,6 @@ describe("useMessageSubscription", () => {
     renderHookWithProviders(() => {
       useMessageSubscription(CHANNEL_ID);
     });
-    expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 

@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -44,8 +44,8 @@ function makeServerNote(
   }>,
 ) {
   return {
-    id: "note_abc123" as NoteId,
-    systemId: "sys_xyz789" as SystemId,
+    id: brandId<NoteId>("note_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
     authorEntityType: "member" as NoteAuthorEntityType | null,
     authorEntityId: "mem_author" as string | null,
     encryptedData: encryptAndEncodeT1(fields, masterKey),

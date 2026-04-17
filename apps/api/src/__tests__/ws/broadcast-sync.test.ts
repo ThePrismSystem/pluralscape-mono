@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { broadcastDocumentUpdateWithSync } from "../../ws/broadcast.js";
@@ -18,14 +19,14 @@ interface MockPubSub {
   readonly connected: boolean;
 }
 
-function mockAuth(accountId = "acct_test" as AccountId) {
+function mockAuth(accountId = brandId<AccountId>("acct_test")) {
   return {
     authMethod: "session" as const,
     accountId,
-    systemId: "sys_test" as SystemId,
-    sessionId: "sess_test" as SessionId,
+    systemId: brandId<SystemId>("sys_test"),
+    sessionId: brandId<SessionId>("sess_test"),
     accountType: "system" as const,
-    ownedSystemIds: new Set(["sys_test" as SystemId]),
+    ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
     auditLogIpTracking: false,
   };
 }
@@ -71,8 +72,8 @@ describe("broadcastDocumentUpdateWithSync", () => {
     const ws2 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
     manager.register("conn-2", ws2 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
-    manager.authenticate("conn-2", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
+    manager.authenticate("conn-2", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-1");
 
@@ -102,7 +103,7 @@ describe("broadcastDocumentUpdateWithSync", () => {
   it("falls back to local-only when pubsub is null", async () => {
     const ws1 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
 
     const result = await broadcastDocumentUpdateWithSync(
@@ -121,7 +122,7 @@ describe("broadcastDocumentUpdateWithSync", () => {
   it("continues local delivery when Valkey publish returns false", async () => {
     const ws1 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
 
     const { pubsub, publishMock } = mockPubSub();
@@ -148,7 +149,7 @@ describe("broadcastDocumentUpdateWithSync", () => {
   it("reports syncPublished false when Valkey publish throws", async () => {
     const ws1 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", mockAuth(), brandId<SystemId>("sys_test"), "owner-full");
     manager.addSubscription("conn-1", "doc-1");
 
     const { pubsub, publishMock } = mockPubSub();

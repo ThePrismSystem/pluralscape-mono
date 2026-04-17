@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeTestAuth } from "../helpers/test-auth.js";
@@ -12,10 +13,10 @@ import type {
 
 // ── Mock data ───────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_target" as SystemId;
-const CONNECTION_ID = "fc_test-connection" as FriendConnectionId;
+const SYSTEM_ID = brandId<SystemId>("sys_target");
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_test-connection");
 const AUTH = makeTestAuth({ accountId: "acct_test", systemId: "sys_mine" });
-const BUCKET_IDS: readonly BucketId[] = ["bkt_1" as BucketId, "bkt_2" as BucketId];
+const BUCKET_IDS: readonly BucketId[] = [brandId<BucketId>("bkt_1"), brandId<BucketId>("bkt_2")];
 
 const MOCK_ACCESS = {
   targetAccountId: "acct_target" as never,

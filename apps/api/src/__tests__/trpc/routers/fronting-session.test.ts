@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -41,8 +42,8 @@ const { frontingSessionRouter } = await import("../../../trpc/routers/fronting-s
 
 const createCaller = makeCallerFactory({ frontingSession: frontingSessionRouter });
 
-const SESSION_ID = "fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingSessionId;
-const MEMBER_ID = "mem_11111111-2222-3333-4444-555555555555" as MemberId;
+const SESSION_ID = brandId<FrontingSessionId>("fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const MEMBER_ID = brandId<MemberId>("mem_11111111-2222-3333-4444-555555555555");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const START_TIME = 1_700_000_000_000 as UnixMillis;
 
@@ -138,7 +139,7 @@ describe("frontingSession router", () => {
       await expect(
         caller.frontingSession.get({
           systemId: MOCK_SYSTEM_ID,
-          sessionId: "not-a-session-id" as FrontingSessionId,
+          sessionId: brandId<FrontingSessionId>("not-a-session-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { ObservableJobWorker } from "../observability/observable-worker.js";
@@ -6,7 +7,7 @@ import type { JobHandler, JobWorker } from "../job-worker.js";
 import type { JobDefinition, JobId, JobType, Logger } from "@pluralscape/types";
 
 const fakeJob = {
-  id: "job_test" as JobId,
+  id: brandId<JobId>("job_test"),
   type: "sync-push" as JobType,
 } as JobDefinition;
 

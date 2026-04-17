@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptTimerConfigInput } from "@pluralscape/data/transforms/timer-check-in";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -151,7 +152,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 function makeRawTimer(id: string): TimerConfigRaw {
   const encrypted = encryptTimerConfigInput({ promptText: "How are you?" }, TEST_MASTER_KEY);
   return {
-    id: id as TimerId,
+    id: brandId<TimerId>(id),
     systemId: TEST_SYSTEM_ID,
     enabled: true,
     intervalMinutes: 60,
@@ -169,8 +170,8 @@ function makeRawTimer(id: string): TimerConfigRaw {
 
 function makeRawCheckIn(id: string): CheckInRecordRaw {
   return {
-    id: id as CheckInRecordId,
-    timerConfigId: "tmr-1" as TimerId,
+    id: brandId<CheckInRecordId>(id),
+    timerConfigId: brandId<TimerId>("tmr-1"),
     systemId: TEST_SYSTEM_ID,
     scheduledAt: NOW,
     respondedByMemberId: null,
@@ -190,12 +191,12 @@ beforeEach(() => {
 describe("useTimerConfig", () => {
   it("returns decrypted timer config data", async () => {
     fixtures.set("timerConfig.get", makeRawTimer("tmr-1"));
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId));
+    const { result } = renderHookWithProviders(() => useTimerConfig(brandId<TimerId>("tmr-1")));
 
     let data: Awaited<ReturnType<typeof useTimerConfig>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.promptText).toBe("How are you?");
     expect(data?.enabled).toBe(true);
@@ -204,7 +205,7 @@ describe("useTimerConfig", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId), {
+    const { result } = renderHookWithProviders(() => useTimerConfig(brandId<TimerId>("tmr-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -213,10 +214,12 @@ describe("useTimerConfig", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("timerConfig.get", makeRawTimer("tmr-1"));
-    const { result, rerender } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useTimerConfig(brandId<TimerId>("tmr-1")),
+    );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -233,7 +236,7 @@ describe("useTimerConfigsList", () => {
     const { result } = renderHookWithProviders(() => useTimerConfigsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const timerData = result.current.data;
     const pages = timerData && "pages" in timerData ? timerData.pages : [];
@@ -253,7 +256,7 @@ describe("useTimerConfigsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useTimerConfigsList());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -270,7 +273,7 @@ describe("useCheckInHistory", () => {
     const { result } = renderHookWithProviders(() => useCheckInHistory());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const checkInData = result.current.data;
     const pages = checkInData && "pages" in checkInData ? checkInData.pages : [];
@@ -288,7 +291,7 @@ describe("useCheckInHistory", () => {
     const { result } = renderHookWithProviders(() => useCheckInHistory(), { masterKey: null });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const d = result.current.data;
     expect(d && "pages" in d ? d.pages[0]?.data[0]?.id : undefined).toBe("cir-1");
@@ -341,13 +344,16 @@ const LOCAL_CHECK_IN_ROW: Record<string, unknown> = {
 describe("useTimerConfig (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_TIMER_ROW]);
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-local-1" as TimerId), {
-      querySource: "local",
-      localDb,
-    });
+    const { result } = renderHookWithProviders(
+      () => useTimerConfig(brandId<TimerId>("tmr-local-1")),
+      {
+        querySource: "local",
+        localDb,
+      },
+    );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("timer_configs"), [
@@ -364,13 +370,16 @@ describe("useTimerConfig (local source)", () => {
 
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_TIMER_ROW]);
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-local-1" as TimerId), {
-      querySource: "local",
-      localDb,
-    });
+    const { result } = renderHookWithProviders(
+      () => useTimerConfig(brandId<TimerId>("tmr-local-1")),
+      {
+        querySource: "local",
+        localDb,
+      },
+    );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.promptText).toBe("Local timer prompt");
@@ -387,7 +396,7 @@ describe("useTimerConfigsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -413,7 +422,7 @@ describe("useTimerConfigsList (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     const data = result.current.data;
@@ -433,7 +442,7 @@ describe("useCheckInHistory (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(localDb.queryAll).toHaveBeenCalledWith(
@@ -458,7 +467,7 @@ describe("useCheckInHistory (local source)", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toHaveLength(1);

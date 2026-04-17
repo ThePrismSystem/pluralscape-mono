@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { noopAuditWriter } from "../../../__tests__/trpc/test-helpers.js";
@@ -8,27 +9,27 @@ import type { ApiKeyAuthContext, AuthContext } from "../../../lib/auth-context.j
 import type { TRPCContext } from "../../context.js";
 import type { AccountId, ApiKeyId, ApiKeyScope, SessionId, SystemId } from "@pluralscape/types";
 
-const TEST_SYSTEM_ID = "sys_test" as SystemId;
+const TEST_SYSTEM_ID = brandId<SystemId>("sys_test");
 
 const sessionAuth: AuthContext = {
   authMethod: "session",
-  accountId: "acc_test" as AccountId,
+  accountId: brandId<AccountId>("acc_test"),
   systemId: TEST_SYSTEM_ID,
   accountType: "system",
   ownedSystemIds: new Set([TEST_SYSTEM_ID]),
   auditLogIpTracking: false,
-  sessionId: "ses_test" as SessionId,
+  sessionId: brandId<SessionId>("ses_test"),
 };
 
 function apiKeyAuth(scopes: readonly ApiKeyScope[]): ApiKeyAuthContext {
   return {
     authMethod: "apiKey",
-    accountId: "acc_test" as AccountId,
+    accountId: brandId<AccountId>("acc_test"),
     systemId: TEST_SYSTEM_ID,
     accountType: "system",
     ownedSystemIds: new Set([TEST_SYSTEM_ID]),
     auditLogIpTracking: false,
-    keyId: "ak_test" as ApiKeyId,
+    keyId: brandId<ApiKeyId>("ak_test"),
     apiKeyScopes: scopes,
   };
 }

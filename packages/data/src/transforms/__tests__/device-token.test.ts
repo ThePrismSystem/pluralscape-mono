@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { narrowDeviceToken, narrowDeviceTokenPage } from "../device-token.js";
@@ -15,9 +16,9 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 function makeRaw(overrides?: Partial<DeviceTokenRaw>): DeviceTokenRaw {
   return {
-    id: "dt_test0001" as DeviceTokenId,
-    accountId: "acc_test001" as AccountId,
-    systemId: "sys_test001" as SystemId,
+    id: brandId<DeviceTokenId>("dt_test0001"),
+    accountId: brandId<AccountId>("acc_test001"),
+    systemId: brandId<SystemId>("sys_test001"),
     platform: "ios" as DeviceTokenPlatform,
     token: "device-push-token-abc123",
     lastActiveAt: NOW,

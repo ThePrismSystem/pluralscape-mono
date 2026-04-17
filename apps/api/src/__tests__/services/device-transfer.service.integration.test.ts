@@ -9,6 +9,7 @@ import {
 } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, pgInsertAccount } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -74,7 +75,7 @@ async function insertSession(
   db: PgliteDatabase<typeof schema>,
   accountId: string,
 ): Promise<SessionId> {
-  const sessionId = `sess_${randomUUID()}` as SessionId;
+  const sessionId = brandId<SessionId>(`sess_${randomUUID()}`);
   const now = Date.now();
   await db.insert(sessions).values({
     id: sessionId,
@@ -100,7 +101,7 @@ describe("device-transfer.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgAuthTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
     sessionId = await insertSession(db, accountId);
   }, 60_000);
 
@@ -275,7 +276,7 @@ describe("device-transfer.service (PGlite integration)", () => {
       );
 
       // Create a separate account
-      const otherAccountId = (await pgInsertAccount(db)) as AccountId;
+      const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
       const otherSessionId = await insertSession(db, otherAccountId);
 
       await expect(

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { assertFriendAccess } from "../../lib/friend-access.js";
@@ -14,21 +15,21 @@ import type {
 
 // ── Test helpers ────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acc_owner" as AccountId;
-const FRIEND_ACCOUNT_ID = "acc_friend" as AccountId;
-const CONNECTION_ID = "fc_conn1" as FriendConnectionId;
-const INVERSE_CONNECTION_ID = "fc_inverse" as FriendConnectionId;
-const SYSTEM_ID = "sys_target" as SystemId;
-const SYSTEM_ID_B = "sys_other" as SystemId;
-const BUCKET_A = "bkt_aaa" as BucketId;
-const BUCKET_B = "bkt_bbb" as BucketId;
+const ACCOUNT_ID = brandId<AccountId>("acc_owner");
+const FRIEND_ACCOUNT_ID = brandId<AccountId>("acc_friend");
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_conn1");
+const INVERSE_CONNECTION_ID = brandId<FriendConnectionId>("fc_inverse");
+const SYSTEM_ID = brandId<SystemId>("sys_target");
+const SYSTEM_ID_B = brandId<SystemId>("sys_other");
+const BUCKET_A = brandId<BucketId>("bkt_aaa");
+const BUCKET_B = brandId<BucketId>("bkt_bbb");
 
 function makeAuth(accountId: AccountId = ACCOUNT_ID): AuthContext {
   return {
     authMethod: "session" as const,
     accountId,
     systemId: null,
-    sessionId: "sess_test" as SessionId,
+    sessionId: brandId<SessionId>("sess_test"),
     accountType: "system" as const,
     ownedSystemIds: new Set<SystemId>(),
     auditLogIpTracking: false,

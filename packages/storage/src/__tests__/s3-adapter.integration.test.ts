@@ -44,10 +44,11 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       });
       expect(result.supported).toBe(true);
       if (result.supported) {
-        // POST-based presigned uploads put the signature in fields, not the URL
-        expect(result.fields).toBeDefined();
-        expect(result.fields?.["X-Amz-Signature"]).toBeDefined();
+        // PUT-based presigned upload: signature is in the URL itself.
+        expect(result.url).toContain("X-Amz-Signature");
         expect(result.expiresAt).toBeGreaterThan(Date.now());
+        // No multipart fields for PUT uploads.
+        expect(result.fields).toBeUndefined();
       }
     });
 
@@ -71,6 +72,59 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
         expect(result.url).toContain("X-Amz-Signature");
         expect(result.expiresAt).toBeGreaterThan(Date.now());
       }
+    });
+
+    // STORAGE-TC-L1: presigned URL must inherit the write-once precondition
+    // so a second PUT to the same key is rejected server-side, and the
+    // original bytes remain intact.
+    it("rejects a second upload to the same key via a fresh presigned URL", async (context) => {
+      if (!ctx.available) {
+        context.skip();
+        return;
+      }
+      const adapter = new S3BlobStorageAdapter(ctx.config);
+      const storageKey = `sys_test/blob_write_once_${Date.now().toString()}` as StorageKey;
+      const mimeType = "application/octet-stream";
+
+      // First upload — signed URL, PUT, should succeed
+      const firstUrl = await adapter.generatePresignedUploadUrl({
+        storageKey,
+        mimeType,
+        sizeBytes: 5,
+      });
+      if (!firstUrl.supported) throw new Error("presigned uploads must be supported");
+
+      const firstBody = new Uint8Array([1, 2, 3, 4, 5]);
+      const firstResponse = await fetch(firstUrl.url, {
+        method: "PUT",
+        body: firstBody,
+        headers: { "Content-Type": mimeType, "If-None-Match": "*" },
+      });
+      expect(firstResponse.ok).toBe(true);
+
+      // Second upload against the same key — different content — must fail.
+      // We regenerate a fresh presigned URL to simulate a replay / accidental
+      // re-issue, and verify S3 rejects the request with a 4xx.
+      const secondUrl = await adapter.generatePresignedUploadUrl({
+        storageKey,
+        mimeType,
+        sizeBytes: 5,
+      });
+      if (!secondUrl.supported) throw new Error("presigned uploads must be supported");
+
+      const secondBody = new Uint8Array([9, 9, 9, 9, 9]);
+      const secondResponse = await fetch(secondUrl.url, {
+        method: "PUT",
+        body: secondBody,
+        headers: { "Content-Type": mimeType, "If-None-Match": "*" },
+      });
+      expect(secondResponse.ok).toBe(false);
+      expect(secondResponse.status).toBeGreaterThanOrEqual(400);
+      expect(secondResponse.status).toBeLessThan(500);
+
+      // Blob must still hold the FIRST upload's bytes.
+      const downloaded = await adapter.download(storageKey);
+      expect(downloaded).toEqual(firstBody);
     });
 
     it("respects custom expiry durations", async (context) => {

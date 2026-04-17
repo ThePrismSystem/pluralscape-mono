@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -111,11 +112,11 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const NOW = 1_700_000_000_000 as UnixMillis;
-const TEST_MEMBER_ID = "mem_test_member_1" as MemberId;
+const TEST_MEMBER_ID = brandId<MemberId>("mem_test_member_1");
 
 function makeMemberPhoto(id: string) {
   return {
-    id: id as MemberPhotoId,
+    id: brandId<MemberPhotoId>(id),
     memberId: TEST_MEMBER_ID,
     systemId: TEST_SYSTEM_ID,
     sortOrder: 0,
@@ -138,11 +139,11 @@ describe("useMemberPhoto", () => {
   it("returns member photo data", async () => {
     fixtures.set("memberPhoto.get", makeMemberPhoto("mp_1"));
     const { result } = renderHookWithProviders(() =>
-      useMemberPhoto("mp_1" as MemberPhotoId, { memberId: TEST_MEMBER_ID }),
+      useMemberPhoto(brandId<MemberPhotoId>("mp_1"), { memberId: TEST_MEMBER_ID }),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.id).toBe("mp_1");
     expect(result.current.data?.memberId).toBe(TEST_MEMBER_ID);
@@ -161,7 +162,7 @@ describe("useMemberPhotosList", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];

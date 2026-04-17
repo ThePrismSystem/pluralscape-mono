@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor, toCursor } from "../../lib/pagination.js";
@@ -85,8 +85,8 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const REGION_ID = "iwr_test-region" as InnerWorldRegionId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const REGION_ID = brandId<InnerWorldRegionId>("iwr_test-region");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -154,7 +154,7 @@ describe("createRegion", () => {
 
   it("creates a region with parentRegionId when parent exists", async () => {
     const { db, chain } = mockDb();
-    const parentId = "iwr_parent-region" as InnerWorldRegionId;
+    const parentId = brandId<InnerWorldRegionId>("iwr_parent-region");
     chain.limit.mockResolvedValueOnce([{ id: parentId }]); // parent found
     chain.returning.mockResolvedValueOnce([makeRegionRow({ parentRegionId: parentId })]);
 
@@ -183,7 +183,7 @@ describe("createRegion", () => {
         SYSTEM_ID,
         {
           encryptedData: VALID_BLOB_BASE64,
-          parentRegionId: "iwr_nonexistent" as InnerWorldRegionId,
+          parentRegionId: brandId<InnerWorldRegionId>("iwr_nonexistent"),
         },
         AUTH,
         mockAudit,
@@ -322,7 +322,7 @@ describe("getRegion", () => {
     const { db } = mockDb();
 
     await expect(
-      getRegion(db, SYSTEM_ID, "iwr_nonexistent" as InnerWorldRegionId, AUTH),
+      getRegion(db, SYSTEM_ID, brandId<InnerWorldRegionId>("iwr_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -418,7 +418,7 @@ describe("archiveRegion", () => {
     const { db } = mockDb();
 
     await expect(
-      archiveRegion(db, SYSTEM_ID, "iwr_nonexistent" as InnerWorldRegionId, AUTH, mockAudit),
+      archiveRegion(db, SYSTEM_ID, brandId<InnerWorldRegionId>("iwr_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -448,7 +448,7 @@ describe("restoreRegion", () => {
 
   it("promotes to root when parent is archived", async () => {
     const { db, chain } = mockDb();
-    const parentId = "iwr_archived-parent" as InnerWorldRegionId;
+    const parentId = brandId<InnerWorldRegionId>("iwr_archived-parent");
     // existing archived region with a parent
     chain.limit
       .mockResolvedValueOnce([{ id: REGION_ID, parentRegionId: parentId }])
@@ -472,7 +472,7 @@ describe("restoreRegion", () => {
     const { db } = mockDb();
 
     await expect(
-      restoreRegion(db, SYSTEM_ID, "iwr_nonexistent" as InnerWorldRegionId, AUTH, mockAudit),
+      restoreRegion(db, SYSTEM_ID, brandId<InnerWorldRegionId>("iwr_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -521,7 +521,7 @@ describe("deleteRegion", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteRegion(db, SYSTEM_ID, "iwr_nonexistent" as InnerWorldRegionId, AUTH, mockAudit),
+      deleteRegion(db, SYSTEM_ID, brandId<InnerWorldRegionId>("iwr_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

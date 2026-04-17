@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -46,8 +47,8 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
                 const stubbed = fixtures.get("importJob.create.return");
                 return Promise.resolve(
                   stubbed ?? {
-                    id: "ij_test" as ImportJobId,
-                    systemId: "sys_test" as SystemId,
+                    id: brandId<ImportJobId>("ij_test"),
+                    systemId: brandId<SystemId>("sys_test"),
                   },
                 );
               },
@@ -125,9 +126,9 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 function makeJob(id: string, status: ImportJob["status"]): ImportJob {
   return {
-    id: id as ImportJobId,
+    id: brandId<ImportJobId>(id),
     accountId: "acc_test" as ImportJob["accountId"],
-    systemId: "sys_test" as SystemId,
+    systemId: brandId<SystemId>("sys_test"),
     source: "simply-plural",
     status,
     progressPercent: status === "completed" ? 100 : 0,
@@ -165,8 +166,8 @@ beforeEach(() => {
 describe("useStartImport", () => {
   it("startWithToken creates a job with source: simply-plural and returns the id", async () => {
     fixtures.set("importJob.create.return", {
-      id: "ij_new" as ImportJobId,
-      systemId: "sys_test" as SystemId,
+      id: brandId<ImportJobId>("ij_new"),
+      systemId: brandId<SystemId>("sys_test"),
     });
 
     const { result } = renderHookWithProviders(() => useStartImport());
@@ -203,8 +204,8 @@ describe("useStartImport", () => {
     await waitFor(() => {
       expect(runSpImportMock).toHaveBeenCalled();
     });
+    expect(runSpImportMock.mock.calls.length).toBe(1);
     const firstCall = runSpImportMock.mock.calls[0];
-    expect(firstCall).toBeDefined();
     const passedArgs = firstCall?.[0] as { importJobId: ImportJobId };
     expect(passedArgs).toEqual(expect.objectContaining({ importJobId: "ij_test" }));
   });
@@ -237,9 +238,11 @@ describe("useStartImport", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("exposes abortControllerRef", () => {
+  it("exposes abortControllerRef as a React ref object", () => {
     const { result } = renderHookWithProviders(() => useStartImport());
-    expect(result.current.abortControllerRef).toBeDefined();
+    // A React ref always has a `current` property; the initial value is null.
+    expect(result.current.abortControllerRef).toHaveProperty("current");
+    expect(result.current.abortControllerRef.current).toBeNull();
   });
 
   it("sets error state when runSpImport rejects", async () => {
@@ -341,7 +344,7 @@ describe("useImportJob", () => {
     const job = makeJob("ij_1", "importing");
     fixtures.set("importJob.get", job);
 
-    const { result } = renderHookWithProviders(() => useImportJob("ij_1" as ImportJobId));
+    const { result } = renderHookWithProviders(() => useImportJob(brandId<ImportJobId>("ij_1")));
 
     await waitFor(() => {
       expect(result.current.data).toEqual(job);
@@ -366,10 +369,10 @@ describe("useImportProgress", () => {
     const job = makeJob("ij_poll", "importing");
     fixtures.set("importJob.get", job);
 
-    renderHookWithProviders(() => useImportProgress("ij_poll" as ImportJobId));
+    renderHookWithProviders(() => useImportProgress(brandId<ImportJobId>("ij_poll")));
 
     await waitFor(() => {
-      expect(fixtures.get("importJob.get.lastRefetchInterval")).toBeDefined();
+      expect(typeof fixtures.get("importJob.get.lastRefetchInterval")).toBe("function");
     });
 
     // Exercise the function form with a synthetic query-like shape and
@@ -418,7 +421,9 @@ describe("useImportProgress", () => {
       },
     });
 
-    const { result } = renderHookWithProviders(() => useImportProgress("ij_snap" as ImportJobId));
+    const { result } = renderHookWithProviders(() =>
+      useImportProgress(brandId<ImportJobId>("ij_snap")),
+    );
 
     await waitFor(() => {
       expect(result.current).not.toBeNull();
@@ -442,7 +447,7 @@ describe("useImportProgress", () => {
     });
 
     const { result } = renderHookWithProviders(() =>
-      useImportProgress("ij_null_cp" as ImportJobId),
+      useImportProgress(brandId<ImportJobId>("ij_null_cp")),
     );
 
     await waitFor(() => {
@@ -495,7 +500,9 @@ describe("useImportSummary", () => {
       },
     });
 
-    const { result } = renderHookWithProviders(() => useImportSummary("ij_sum" as ImportJobId));
+    const { result } = renderHookWithProviders(() =>
+      useImportSummary(brandId<ImportJobId>("ij_sum")),
+    );
 
     await waitFor(() => {
       expect(result.current).not.toBeNull();
@@ -522,7 +529,7 @@ describe("useImportSummary", () => {
     });
 
     const { result } = renderHookWithProviders(() =>
-      useImportSummary("ij_sum_null" as ImportJobId),
+      useImportSummary(brandId<ImportJobId>("ij_sum_null")),
     );
 
     await waitFor(() => {
@@ -605,9 +612,11 @@ describe("useResumeActiveImport", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("exposes abortControllerRef", () => {
+  it("exposes abortControllerRef as a React ref object", () => {
     const { result } = renderHookWithProviders(() => useResumeActiveImport());
-    expect(result.current.abortControllerRef).toBeDefined();
+    // A React ref always has a `current` property; the initial value is null.
+    expect(result.current.abortControllerRef).toHaveProperty("current");
+    expect(result.current.abortControllerRef.current).toBeNull();
   });
 
   it("sets error state when runSpImport rejects during resume", async () => {
@@ -716,13 +725,13 @@ describe("useCancelImport", () => {
     // Render both useCancelImport and useImportJob so we can wait for
     // the job get query to populate cache before triggering cancel.
     const { result } = renderHookWithProviders(() => {
-      const job = useImportJob("ij_cancel" as ImportJobId);
-      const cancel = useCancelImport("ij_cancel" as ImportJobId);
+      const job = useImportJob(brandId<ImportJobId>("ij_cancel"));
+      const cancel = useCancelImport(brandId<ImportJobId>("ij_cancel"));
       return { job, cancel };
     });
 
     await waitFor(() => {
-      expect(result.current.job.data).toBeDefined();
+      expect(result.current.job.isSuccess).toBe(true);
     });
 
     await act(async () => {

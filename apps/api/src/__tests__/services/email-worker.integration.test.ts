@@ -3,6 +3,7 @@ import { initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, pgInsertAccount } from "@pluralscape/db/test-helpers/pg-helpers";
 import { InMemoryEmailAdapter } from "@pluralscape/email/testing";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -39,7 +40,7 @@ describe("email-worker (PGlite integration)", () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgAuthTables(client);
-    accountId = (await pgInsertAccount(db)) as AccountId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
     emailAdapter = new InMemoryEmailAdapter();
     setEmailAdapterForTesting(emailAdapter);
   });
@@ -67,6 +68,7 @@ describe("email-worker (PGlite integration)", () => {
         timestamp: "2026-03-29T00:00:00Z",
         deviceInfo: "Integration Test Browser",
       },
+      recipientOverride: null,
       ...overrides,
     };
   }
@@ -79,7 +81,7 @@ describe("email-worker (PGlite integration)", () => {
   });
 
   it("skips sending when account does not exist", async () => {
-    const nonexistentId = `acc_${crypto.randomUUID()}` as AccountId;
+    const nonexistentId = brandId<AccountId>(`acc_${crypto.randomUUID()}`);
 
     await processEmailJob(asDb(db), makePayload({ accountId: nonexistentId }));
 

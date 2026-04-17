@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -47,8 +47,8 @@ const createApp = () => createRouteApp("/:systemId/settings", settingsRoutes);
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_SETTINGS = {
-  id: "sset_abc" as SystemSettingsId,
-  systemId: SYS_ID as SystemId,
+  id: brandId<SystemSettingsId>("sset_abc"),
+  systemId: brandId<SystemId>(SYS_ID),
   locale: "en-US",
   biometricEnabled: false,
   encryptedData: "base64data",

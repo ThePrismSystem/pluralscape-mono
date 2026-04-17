@@ -7,6 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -58,8 +59,8 @@ describe("system-purge.service (PGlite integration)", () => {
     systemId: SystemId;
     auth: AuthContext;
   }> {
-    const accountId = (await pgInsertAccount(db)) as AccountId;
-    const systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    const accountId = brandId<AccountId>(await pgInsertAccount(db));
+    const systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     const auth = makeAuth(accountId, systemId);
 
     // Add members
@@ -189,7 +190,7 @@ describe("system-purge.service (PGlite integration)", () => {
 
     it("does not affect other systems", async () => {
       const { auth, accountId, systemId } = await setupSystemWithDependents();
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherMemberId = await pgInsertMember(db, otherSystemId);
 
       // Purge the first system
@@ -210,8 +211,8 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     it("rejects purge on non-archived system", async () => {
-      const accountId = (await pgInsertAccount(db)) as AccountId;
-      const systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const accountId = brandId<AccountId>(await pgInsertAccount(db));
+      const systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const auth = makeAuth(accountId, systemId);
 
       await assertApiError(
@@ -235,8 +236,8 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     it("rejects purge for nonexistent system", async () => {
-      const accountId = (await pgInsertAccount(db)) as AccountId;
-      const fakeSystemId = `sys_${crypto.randomUUID()}` as SystemId;
+      const accountId = brandId<AccountId>(await pgInsertAccount(db));
+      const fakeSystemId = brandId<SystemId>(`sys_${crypto.randomUUID()}`);
       const auth = makeAuth(accountId, fakeSystemId);
 
       await assertApiError(

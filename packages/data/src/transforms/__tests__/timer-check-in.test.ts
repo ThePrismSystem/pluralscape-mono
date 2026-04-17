@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -20,10 +21,10 @@ import type { CheckInRecordId, MemberId, SystemId, TimerId, UnixMillis } from "@
 
 let masterKey: KdfMasterKey;
 
-const TIMER_ID = "tmr_test001" as TimerId;
-const SYSTEM_ID = "sys_test" as SystemId;
+const TIMER_ID = brandId<TimerId>("tmr_test001");
+const SYSTEM_ID = brandId<SystemId>("sys_test");
 const NOW = 1700000000000 as UnixMillis;
-const RECORD_ID = "cir_test001" as CheckInRecordId;
+const RECORD_ID = brandId<CheckInRecordId>("cir_test001");
 
 const ENCRYPTED_FIELDS: TimerConfigEncryptedFields = {
   promptText: "Who is fronting right now?",
@@ -152,7 +153,7 @@ describe("decryptCheckInRecord", () => {
   it("maps a responded record", () => {
     const result = decryptCheckInRecord(
       makeRawCheckInRecord({
-        respondedByMemberId: "mem_abc" as MemberId,
+        respondedByMemberId: brandId<MemberId>("mem_abc"),
         respondedAt: NOW,
       }),
     );

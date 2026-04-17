@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -77,11 +78,15 @@ const { systemRoutes } = await import("../../../routes/systems/index.js");
 // ── Helpers ──────────────────────────────────────────────────────
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
-const LINK_ID = "stel_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityLinkId;
-const ML_ID = "steml_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityMemberLinkId;
-const ASSOC_ID = "stea_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityAssociationId;
-const ENTITY_ID = "ste_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityId;
-const MEMBER_ID = "mem_550e8400-e29b-41d4-a716-446655440000" as MemberId;
+const LINK_ID = brandId<SystemStructureEntityLinkId>("stel_550e8400-e29b-41d4-a716-446655440000");
+const ML_ID = brandId<SystemStructureEntityMemberLinkId>(
+  "steml_550e8400-e29b-41d4-a716-446655440000",
+);
+const ASSOC_ID = brandId<SystemStructureEntityAssociationId>(
+  "stea_550e8400-e29b-41d4-a716-446655440000",
+);
+const ENTITY_ID = brandId<SystemStructureEntityId>("ste_550e8400-e29b-41d4-a716-446655440000");
+const MEMBER_ID = brandId<MemberId>("mem_550e8400-e29b-41d4-a716-446655440000");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
@@ -297,7 +302,7 @@ const MOCK_ASSOC: EntityAssociationResult = {
   id: ASSOC_ID,
   systemId: SYS_ID as never,
   sourceEntityId: ENTITY_ID,
-  targetEntityId: "ste_660e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityId,
+  targetEntityId: brandId<SystemStructureEntityId>("ste_660e8400-e29b-41d4-a716-446655440000"),
   createdAt: 1000 as never,
 };
 

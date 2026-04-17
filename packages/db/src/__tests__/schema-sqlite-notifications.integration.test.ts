@@ -227,7 +227,7 @@ describe("SQLite notifications schema", () => {
   });
 
   describe("notification_configs", () => {
-    it("round-trips with defaults", () => {
+    it("round-trips with fail-closed defaults (enabled=false, push_enabled=false)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -249,8 +249,8 @@ describe("SQLite notifications schema", () => {
         .where(eq(notificationConfigs.id, id))
         .all();
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.enabled).toBe(true);
-      expect(rows[0]?.pushEnabled).toBe(true);
+      expect(rows[0]?.enabled).toBe(false);
+      expect(rows[0]?.pushEnabled).toBe(false);
     });
 
     it("enforces unique (system_id, event_type)", () => {

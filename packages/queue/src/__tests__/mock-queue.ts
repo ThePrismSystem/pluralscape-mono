@@ -63,7 +63,12 @@ export class InMemoryJobQueue implements JobQueue {
     const id = createId("job_") as JobId;
     const policy = this.getRetryPolicy(params.type);
     const maxAttempts = params.maxAttempts ?? policy.maxRetries + 1;
-    const job: JobDefinition = {
+    // `params` carries the correlated `(type, payload)` pair via
+    // `JobEnqueueParams<T>`, but once we destructure into a fresh object the
+    // two fields are typed independently (`JobType` and `Readonly<JobPayloadMap[T]>`).
+    // The cast re-asserts the correlated union — safe because the enqueue
+    // input already enforces it at the call site.
+    const job = {
       id,
       systemId: params.systemId ?? null,
       type: params.type,
@@ -82,7 +87,7 @@ export class InMemoryJobQueue implements JobQueue {
       timeoutMs: params.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       scheduledFor: params.scheduledFor ?? null,
       priority: params.priority ?? 0,
-    };
+    } as JobDefinition;
 
     this.jobs.set(id, job);
     this.idempotencyIndex.set(params.idempotencyKey, id);

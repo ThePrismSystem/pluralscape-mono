@@ -6,6 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -52,9 +53,9 @@ describe("check-in-record.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgTimerTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
-    memberId = (await pgInsertMember(db, systemId, genMemberId())) as MemberId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
+    memberId = brandId<MemberId>(await pgInsertMember(db, systemId, genMemberId()));
 
     auth = makeAuth(accountId, systemId);
 

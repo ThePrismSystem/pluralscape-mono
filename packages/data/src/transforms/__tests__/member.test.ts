@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -49,8 +49,8 @@ function makeServerMember(
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
-    id: "mem_abc123" as MemberId,
-    systemId: "sys_xyz789" as SystemId,
+    id: brandId<MemberId>("mem_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
     encryptedData: encryptAndEncodeT1(fields, masterKey),
     version: 3,
     createdAt: toUnixMillis(1_700_000_000_000),
@@ -318,6 +318,53 @@ describe("decryptMemberPage", () => {
     const result = decryptMemberPage(page, masterKey);
     expect(result.data).toEqual([]);
     expect(result.nextCursor).toBeNull();
+  });
+
+  // ── Failed-decryption propagation (DATA-TC-L2) ──────────────────────
+  //
+  // A corrupt member entry in a page must propagate as a thrown error, not
+  // be silently dropped from the returned list. Silently skipping corrupt
+  // entries would let a single tampered/broken row disappear from the UI
+  // without any caller signal — breaking our fail-loud posture for
+  // cryptographic errors.
+
+  it("throws when every member in the page has corrupt encryptedData", () => {
+    const page = {
+      data: [
+        { ...makeServerMember(), encryptedData: "not-valid-base64!!!" },
+        { ...makeServerMember(), encryptedData: "also-garbage!!!" },
+      ],
+      nextCursor: null,
+    };
+    expect(() => decryptMemberPage(page, masterKey)).toThrow();
+  });
+
+  it("throws when any member in a mixed page has corrupt encryptedData", () => {
+    const page = {
+      data: [
+        makeServerMember(), // good
+        { ...makeServerMember(), encryptedData: "not-valid-base64!!!" }, // corrupt
+        makeServerMember(), // good
+      ],
+      nextCursor: "cursor-x",
+    };
+    expect(() => decryptMemberPage(page, masterKey)).toThrow();
+  });
+
+  it("throws when a member in the page is missing required decrypted fields", () => {
+    // Blob decrypts cleanly but fails the field-shape assertion — this too
+    // must propagate rather than silently drop the entry.
+    const badFields = { name: "River" }; // missing pronouns, etc.
+    const page = {
+      data: [
+        makeServerMember(),
+        { ...makeServerMember(), encryptedData: makeBase64Blob(badFields, masterKey) },
+      ],
+      nextCursor: null,
+    };
+    expect(() => decryptMemberPage(page, masterKey)).toThrow(
+      "missing required array field: pronouns",
+    );
   });
 });
 

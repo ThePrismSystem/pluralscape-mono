@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptFrontingCommentInput } from "@pluralscape/data/transforms/fronting-comment";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -109,15 +110,15 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const NOW = 1_700_000_000_000 as UnixMillis;
-const SESSION_ID = "fs-1" as FrontingSessionId;
+const SESSION_ID = brandId<FrontingSessionId>("fs-1");
 
 function makeRawComment(id: string): FrontingCommentRaw {
   const encrypted = encryptFrontingCommentInput({ content: `Comment ${id}` }, TEST_MASTER_KEY);
   return {
-    id: id as FrontingCommentId,
+    id: brandId<FrontingCommentId>(id),
     frontingSessionId: SESSION_ID,
     systemId: TEST_SYSTEM_ID,
-    memberId: "m-1" as MemberId,
+    memberId: brandId<MemberId>("m-1"),
     customFrontId: null,
     structureEntityId: null,
     version: 1,
@@ -139,13 +140,13 @@ describe("useFrontingComment", () => {
   it("returns decrypted comment data", async () => {
     fixtures.set("frontingComment.get", makeRawComment("fc-1"));
     const { result } = renderHookWithProviders(() =>
-      useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID),
+      useFrontingComment(brandId<FrontingCommentId>("fc-1"), SESSION_ID),
     );
 
     let data: Awaited<ReturnType<typeof useFrontingComment>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.content).toBe("Comment fc-1");
     expect(data?.frontingSessionId).toBe(SESSION_ID);
@@ -154,7 +155,7 @@ describe("useFrontingComment", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID),
+      () => useFrontingComment(brandId<FrontingCommentId>("fc-1"), SESSION_ID),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -164,11 +165,11 @@ describe("useFrontingComment", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("frontingComment.get", makeRawComment("fc-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID),
+      useFrontingComment(brandId<FrontingCommentId>("fc-1"), SESSION_ID),
     );
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -185,7 +186,7 @@ describe("useFrontingCommentsList", () => {
     const { result } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const data = result.current.data;
     const pages = data && "pages" in data ? data.pages : [];
@@ -207,7 +208,7 @@ describe("useFrontingCommentsList", () => {
     const { result, rerender } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -237,7 +238,7 @@ describe("useUpdateComment", () => {
 
     await act(() =>
       result.current.mutateAsync({
-        commentId: "fc-1" as FrontingCommentId,
+        commentId: brandId<FrontingCommentId>("fc-1"),
         sessionId: SESSION_ID,
       } as never),
     );
@@ -262,7 +263,7 @@ describe("useDeleteComment", () => {
 
     await act(() =>
       result.current.mutateAsync({
-        commentId: "fc-2" as FrontingCommentId,
+        commentId: brandId<FrontingCommentId>("fc-2"),
         sessionId: SESSION_ID,
       } as never),
     );

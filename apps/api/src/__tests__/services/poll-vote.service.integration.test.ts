@@ -6,6 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -63,8 +64,8 @@ describe("poll-vote.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgCommunicationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     const memId = `mem_${crypto.randomUUID()}`;
     memberId = await pgInsertMember(db, systemId, memId);
     auth = makeAuth(accountId, systemId);
@@ -372,7 +373,7 @@ describe("poll-vote.service (PGlite integration)", () => {
       const poll = await createTestPoll();
       await castVote(asDb(db), systemId, poll.id, makeVoteParams(), auth, noopAudit);
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       await assertApiError(
@@ -386,7 +387,7 @@ describe("poll-vote.service (PGlite integration)", () => {
       const pollA = await createTestPoll();
       await castVote(asDb(db), systemId, pollA.id, makeVoteParams(), auth, noopAudit);
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
       const pollB = await createPoll(
         asDb(db),

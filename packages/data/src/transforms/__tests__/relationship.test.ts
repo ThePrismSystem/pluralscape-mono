@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -29,10 +29,10 @@ const NOW = toUnixMillis(1_700_000_000_000);
 
 function makeRawRelationship(overrides?: Partial<RelationshipRaw>): RelationshipRaw {
   return {
-    id: "rel_001" as RelationshipId,
-    systemId: "sys_test" as SystemId,
-    sourceMemberId: "mem_1" as MemberId,
-    targetMemberId: "mem_2" as MemberId,
+    id: brandId<RelationshipId>("rel_001"),
+    systemId: brandId<SystemId>("sys_test"),
+    sourceMemberId: brandId<MemberId>("mem_1"),
+    targetMemberId: brandId<MemberId>("mem_2"),
     type: "sibling" as RelationshipType,
     bidirectional: true,
     createdAt: NOW,

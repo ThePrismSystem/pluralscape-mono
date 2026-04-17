@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -87,7 +88,7 @@ beforeEach(() => {
 
 describe("useBlob", () => {
   it("passes blobId and systemId to query", () => {
-    renderHookWithProviders(() => useBlob("blob_test" as BlobId));
+    renderHookWithProviders(() => useBlob(brandId<BlobId>("blob_test")));
     expect(lastGetInput["blobId"]).toBe("blob_test");
     expect(lastGetInput["systemId"]).toBe(TEST_SYSTEM_ID);
   });
@@ -107,13 +108,13 @@ describe("useBlobsList", () => {
 
 describe("useBlobDownloadUrl", () => {
   it("passes blobId and systemId to query", () => {
-    renderHookWithProviders(() => useBlobDownloadUrl("blob_dl" as BlobId));
+    renderHookWithProviders(() => useBlobDownloadUrl(brandId<BlobId>("blob_dl")));
     expect(lastDownloadInput["blobId"]).toBe("blob_dl");
     expect(lastDownloadInput["systemId"]).toBe(TEST_SYSTEM_ID);
   });
 
   it("sets staleTime and gcTime to prevent serving expired presigned URLs", () => {
-    renderHookWithProviders(() => useBlobDownloadUrl("blob_dl" as BlobId));
+    renderHookWithProviders(() => useBlobDownloadUrl(brandId<BlobId>("blob_dl")));
     expect(lastDownloadOpts["staleTime"]).toBe(300_000);
     expect(lastDownloadOpts["gcTime"]).toBe(300_000);
   });

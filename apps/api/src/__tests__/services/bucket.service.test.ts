@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MAX_PAGE_LIMIT } from "../../service.constants.js";
@@ -96,7 +97,7 @@ function wireChain(): void {
   mockTx.execute.mockResolvedValue(undefined);
 }
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 
 vi.mock("../../lib/rls-context.js", () => ({
   withTenantTransaction: vi.fn(
@@ -170,7 +171,7 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const BUCKET_ID = "bkt_test-bucket" as BucketId;
+const BUCKET_ID = brandId<BucketId>("bkt_test-bucket");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

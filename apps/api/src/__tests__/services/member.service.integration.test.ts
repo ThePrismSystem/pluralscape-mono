@@ -6,6 +6,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -66,8 +67,8 @@ describe("member.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgAllTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -134,8 +135,8 @@ describe("member.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for unknown system (assertSystemOwnership)", async () => {
-      const otherAccountId = (await pgInsertAccount(db)) as AccountId;
-      const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+      const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
       const wrongAuth = makeAuth(accountId, systemId); // auth for systemId, not otherSystemId
       await assertApiError(
         createMember(
@@ -182,8 +183,8 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const otherAccountId = (await pgInsertAccount(db)) as AccountId;
-      const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+      const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
       const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
       await assertApiError(

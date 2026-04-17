@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -49,7 +50,7 @@ describe("POST /biometric/enroll", () => {
 
   it("returns 201 with result on success", async () => {
     vi.mocked(enrollBiometric).mockResolvedValueOnce({
-      id: "bt_test123" as BiometricTokenId,
+      id: brandId<BiometricTokenId>("bt_test123"),
     });
 
     const app = createApp();

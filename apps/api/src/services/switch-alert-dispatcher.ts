@@ -47,7 +47,8 @@ export async function dispatchSwitchAlertForSession(
 ): Promise<void> {
   try {
     // 1. Check system-level config: is friend-switch-alert enabled?
-    // Missing config row = treat as enabled by default (new systems have no rows yet)
+    // Fail-closed: missing config row = DO NOT dispatch. Explicit opt-in required
+    // via `notificationConfigs.enabled && pushEnabled` set true.
     const [config] = await db
       .select({
         enabled: notificationConfigs.enabled,
@@ -63,7 +64,7 @@ export async function dispatchSwitchAlertForSession(
       )
       .limit(1);
 
-    if (config && (!config.enabled || !config.pushEnabled)) {
+    if (!config || !config.enabled || !config.pushEnabled) {
       return;
     }
 

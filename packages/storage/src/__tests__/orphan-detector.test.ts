@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_GRACE_PERIOD_MS, OrphanBlobDetector } from "../quota/orphan-detector.js";
@@ -19,7 +20,7 @@ describe("OrphanBlobDetector", () => {
     const { query } = mockOrphanQuery(orphans);
     const detector = new OrphanBlobDetector(query);
 
-    const result = await detector.findOrphans("sys_a" as SystemId);
+    const result = await detector.findOrphans(brandId<SystemId>("sys_a"));
     expect(result).toEqual(orphans);
   });
 
@@ -27,7 +28,7 @@ describe("OrphanBlobDetector", () => {
     const { query } = mockOrphanQuery([]);
     const detector = new OrphanBlobDetector(query);
 
-    const result = await detector.findOrphans("sys_clean" as SystemId);
+    const result = await detector.findOrphans(brandId<SystemId>("sys_clean"));
     expect(result).toEqual([]);
   });
 
@@ -35,16 +36,16 @@ describe("OrphanBlobDetector", () => {
     const { query, queryFn } = mockOrphanQuery([]);
     const detector = new OrphanBlobDetector(query);
 
-    await detector.findOrphans("sys_a" as SystemId);
-    expect(queryFn).toHaveBeenCalledWith("sys_a" as SystemId, DEFAULT_GRACE_PERIOD_MS);
+    await detector.findOrphans(brandId<SystemId>("sys_a"));
+    expect(queryFn).toHaveBeenCalledWith(brandId<SystemId>("sys_a"), DEFAULT_GRACE_PERIOD_MS);
   });
 
   it("uses custom grace period when configured", async () => {
     const { query, queryFn } = mockOrphanQuery([]);
     const detector = new OrphanBlobDetector(query, { gracePeriodMs: 3_600_000 });
 
-    await detector.findOrphans("sys_a" as SystemId);
-    expect(queryFn).toHaveBeenCalledWith("sys_a" as SystemId, 3_600_000);
+    await detector.findOrphans(brandId<SystemId>("sys_a"));
+    expect(queryFn).toHaveBeenCalledWith(brandId<SystemId>("sys_a"), 3_600_000);
   });
 
   it("propagates query errors", async () => {
@@ -53,6 +54,6 @@ describe("OrphanBlobDetector", () => {
     };
     const detector = new OrphanBlobDetector(failingQuery);
 
-    await expect(detector.findOrphans("sys_a" as SystemId)).rejects.toThrow("Query failed");
+    await expect(detector.findOrphans(brandId<SystemId>("sys_a"))).rejects.toThrow("Query failed");
   });
 });

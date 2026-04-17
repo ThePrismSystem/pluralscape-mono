@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -40,7 +41,7 @@ const { timerConfigRouter } = await import("../../../trpc/routers/timer-config.j
 
 const createCaller = makeCallerFactory({ timerConfig: timerConfigRouter });
 
-const TIMER_ID = "tmr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as TimerId;
+const TIMER_ID = brandId<TimerId>("tmr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3J0aW1lcg==";
 
 const MOCK_TIMER_RESULT = {
@@ -91,7 +92,7 @@ describe("timerConfig router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.timerConfig.create({
@@ -121,7 +122,7 @@ describe("timerConfig router", () => {
       await expect(
         caller.timerConfig.get({
           systemId: MOCK_SYSTEM_ID,
-          timerId: "not-a-timer-id" as TimerId,
+          timerId: brandId<TimerId>("not-a-timer-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

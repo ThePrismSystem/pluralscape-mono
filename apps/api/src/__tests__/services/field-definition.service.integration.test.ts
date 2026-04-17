@@ -7,7 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, ID_PREFIXES, now } from "@pluralscape/types";
+import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -58,8 +58,8 @@ describe("field-definition.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgCustomFieldsTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -93,7 +93,7 @@ describe("field-definition.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as FieldDefinitionId;
+    return brandId<FieldDefinitionId>(id);
   }
 
   async function insertBucket(): Promise<string> {
@@ -216,7 +216,7 @@ describe("field-definition.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for unknown id", async () => {
-      const fakeId = `fld_${crypto.randomUUID()}` as FieldDefinitionId;
+      const fakeId = brandId<FieldDefinitionId>(`fld_${crypto.randomUUID()}`);
       await assertApiError(getFieldDefinition(asDb(db), systemId, fakeId, auth), "NOT_FOUND", 404);
     });
   });
@@ -259,7 +259,7 @@ describe("field-definition.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for unknown field id", async () => {
-      const fakeId = `fld_${crypto.randomUUID()}` as FieldDefinitionId;
+      const fakeId = brandId<FieldDefinitionId>(`fld_${crypto.randomUUID()}`);
       await assertApiError(
         updateFieldDefinition(
           asDb(db),
@@ -431,7 +431,7 @@ describe("field-definition.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for unknown field id", async () => {
-      const fakeId = `fld_${crypto.randomUUID()}` as FieldDefinitionId;
+      const fakeId = brandId<FieldDefinitionId>(`fld_${crypto.randomUUID()}`);
       await assertApiError(
         deleteFieldDefinition(asDb(db), systemId, fakeId, auth, noopAudit),
         "NOT_FOUND",

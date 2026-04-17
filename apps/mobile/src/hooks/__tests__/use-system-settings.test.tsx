@@ -5,6 +5,7 @@ import {
   encryptNomenclatureUpdate,
   encryptSystemSettingsUpdate,
 } from "@pluralscape/data/transforms/system-settings";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -124,7 +125,7 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const NOW = 1_700_000_000_000 as UnixMillis;
-const SETTINGS_ID = "ss-1" as SystemSettingsId;
+const SETTINGS_ID = brandId<SystemSettingsId>("ss-1");
 
 function makeSystemSettingsPayload() {
   return {
@@ -280,7 +281,7 @@ describe("useSystemSettings", () => {
     let data: Awaited<ReturnType<typeof useSystemSettings>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data?.theme).toBe("dark");
     expect(data?.id).toBe(SETTINGS_ID);
@@ -300,7 +301,7 @@ describe("useSystemSettings", () => {
     const { result, rerender } = renderHookWithProviders(() => useSystemSettings());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -315,7 +316,7 @@ describe("useSystemSettings", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data?.theme).toBe("dark");
@@ -348,7 +349,7 @@ describe("useNomenclature", () => {
     let data: Awaited<ReturnType<typeof useNomenclature>>["data"] | undefined;
     await waitFor(() => {
       data = result.current.data;
-      expect(data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     expect(data).toMatchObject({ collective: "System", individual: "Member", version: 1 });
   });
@@ -366,7 +367,7 @@ describe("useNomenclature", () => {
     const { result, rerender } = renderHookWithProviders(() => useNomenclature());
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
     const ref1 = result.current.data;
     rerender();
@@ -404,7 +405,7 @@ describe("useNomenclature", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ collective: "Collective", individual: "Part" });
@@ -440,7 +441,7 @@ describe("useNomenclature", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined();
+      expect(result.current.isSuccess).toBe(true);
     });
 
     expect(result.current.data).toMatchObject({ collective: "System", individual: "Member" });

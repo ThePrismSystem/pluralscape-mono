@@ -1,4 +1,5 @@
 import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PgSyncRelayService } from "../../services/sync-relay.service.js";
@@ -266,7 +267,7 @@ describe("PgSyncRelayService", () => {
         },
       ]);
 
-      const manifest = await service.getManifest("sys-1" as SystemId);
+      const manifest = await service.getManifest(brandId<SystemId>("sys-1"));
 
       expect(manifest.systemId).toBe("sys-1");
       expect(manifest.documents).toHaveLength(1);
@@ -281,7 +282,7 @@ describe("PgSyncRelayService", () => {
 
       chain.where.mockResolvedValueOnce([]);
 
-      const manifest = await service.getManifest("sys-nonexistent" as SystemId);
+      const manifest = await service.getManifest(brandId<SystemId>("sys-nonexistent"));
 
       expect(manifest.systemId).toBe("sys-nonexistent");
       expect(manifest.documents).toEqual([]);

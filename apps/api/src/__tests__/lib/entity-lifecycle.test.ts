@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -30,7 +31,7 @@ vi.mock("../../lib/account-ownership.js", () => ({
 
 const MOCK_AUTH = makeTestAuth();
 
-const SYSTEM_ID = "sys_test" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test");
 const ACCOUNT_ID = MOCK_AUTH.accountId;
 const ENTITY_ID = "ent_test-id";
 

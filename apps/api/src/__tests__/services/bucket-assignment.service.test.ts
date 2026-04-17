@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb, type MockChain } from "../helpers/mock-db.js";
@@ -73,10 +74,10 @@ const { assignBucketToFriend, unassignBucketFromFriend, listFriendBucketAssignme
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const BUCKET_ID = "bkt_test-bucket" as BucketId;
-const CONNECTION_ID = "fc_test-connection" as FriendConnectionId;
-const FRIEND_ACCOUNT_ID = "acc_test-friend" as AccountId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const BUCKET_ID = brandId<BucketId>("bkt_test-bucket");
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_test-connection");
+const FRIEND_ACCOUNT_ID = brandId<AccountId>("acc_test-friend");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

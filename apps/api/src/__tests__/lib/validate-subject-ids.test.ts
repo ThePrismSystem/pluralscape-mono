@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import type { SystemId } from "@pluralscape/types";
@@ -9,7 +10,7 @@ const { validateSubjectIds } = await import("../../lib/validate-subject-ids.js")
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000");
 
 function createMockTx(queryResult: Array<{ id: string } | undefined>): PostgresJsDatabase {
   let callIndex = 0;

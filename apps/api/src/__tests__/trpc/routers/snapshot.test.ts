@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -32,7 +33,7 @@ const { snapshotRouter } = await import("../../../trpc/routers/snapshot.js");
 
 const createCaller = makeCallerFactory({ snapshot: snapshotRouter });
 
-const SNAPSHOT_ID = "snap_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemSnapshotId;
+const SNAPSHOT_ID = brandId<SystemSnapshotId>("snap_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_SNAPSHOT_RESULT = {
   id: SNAPSHOT_ID,
@@ -74,7 +75,7 @@ describe("snapshot router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.snapshot.create({ ...VALID_CREATE_INPUT, systemId: foreignSystemId }),
@@ -114,7 +115,7 @@ describe("snapshot router", () => {
       await expect(
         caller.snapshot.get({
           systemId: MOCK_SYSTEM_ID,
-          snapshotId: "invalid-id" as SystemSnapshotId,
+          snapshotId: brandId<SystemSnapshotId>("invalid-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -199,7 +200,7 @@ describe("snapshot router", () => {
       await expect(
         caller.snapshot.delete({
           systemId: MOCK_SYSTEM_ID,
-          snapshotId: "invalid-id" as SystemSnapshotId,
+          snapshotId: brandId<SystemSnapshotId>("invalid-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

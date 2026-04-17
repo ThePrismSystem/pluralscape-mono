@@ -5,7 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { ALL_API_KEY_SCOPES } from "@pluralscape/types";
+import { ALL_API_KEY_SCOPES, brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -62,8 +62,8 @@ describe("api-key.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgApiKeysTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -308,7 +308,7 @@ describe("api-key.service (PGlite integration)", () => {
   });
 
   it("revoke throws NOT_FOUND for non-existent key", async () => {
-    const fakeId = "ak_00000000-0000-0000-0000-000000000000" as ApiKeyId;
+    const fakeId = brandId<ApiKeyId>("ak_00000000-0000-0000-0000-000000000000");
     await assertApiError(
       revokeApiKey(asDb(db), systemId, fakeId, auth, noopAudit),
       "NOT_FOUND",

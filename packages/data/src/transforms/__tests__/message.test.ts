@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -37,7 +37,7 @@ function makeEncryptedFields(): MessageEncryptedFields {
     content: "Hello, world!",
     attachments: [],
     mentions: [],
-    senderId: "mem_sender1" as MemberId,
+    senderId: brandId<MemberId>("mem_sender1"),
   };
 }
 
@@ -46,9 +46,9 @@ function makeServerMessage(
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
-    id: "msg_abc123" as MessageId,
-    channelId: "ch_channel1" as ChannelId,
-    systemId: "sys_xyz789" as SystemId,
+    id: brandId<MessageId>("msg_abc123"),
+    channelId: brandId<ChannelId>("ch_channel1"),
+    systemId: brandId<SystemId>("sys_xyz789"),
     replyToId: null as MessageId | null,
     timestamp: toUnixMillis(1_700_000_000_000),
     editedAt: null as UnixMillis | null,
@@ -85,9 +85,9 @@ describe("decryptMessage", () => {
   it("handles attachments and mentions", () => {
     const fields: MessageEncryptedFields = {
       content: "Check this out",
-      attachments: ["blob_001" as BlobId, "blob_002" as BlobId],
-      mentions: ["mem_xyz" as MemberId],
-      senderId: "mem_sender1" as MemberId,
+      attachments: [brandId<BlobId>("blob_001"), brandId<BlobId>("blob_002")],
+      mentions: [brandId<MemberId>("mem_xyz")],
+      senderId: brandId<MemberId>("mem_sender1"),
     };
     const raw = makeServerMessage(fields);
     const result = decryptMessage(raw, masterKey);
@@ -97,7 +97,7 @@ describe("decryptMessage", () => {
   });
 
   it("handles replyToId", () => {
-    const raw = { ...makeServerMessage(), replyToId: "msg_parent" as MessageId };
+    const raw = { ...makeServerMessage(), replyToId: brandId<MessageId>("msg_parent") };
     const result = decryptMessage(raw, masterKey);
     expect(result.replyToId).toBe("msg_parent");
   });

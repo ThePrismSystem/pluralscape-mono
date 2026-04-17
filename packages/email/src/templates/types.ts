@@ -31,6 +31,14 @@ export interface WebhookFailureDigestVars {
   readonly timeRangeEnd: string;
 }
 
+/** Variables for the account-change-email template. */
+export interface AccountChangeEmailVars {
+  readonly oldEmail: string;
+  readonly newEmail: string;
+  readonly timestamp: string;
+  readonly ipAddress?: string;
+}
+
 /**
  * Typed mapping from template name to its variable type.
  * Analogous to JobPayloadMap in the queue package.
@@ -41,6 +49,7 @@ export interface EmailTemplateMap {
   "password-changed": PasswordChangedVars;
   "two-factor-changed": TwoFactorChangedVars;
   "webhook-failure-digest": WebhookFailureDigestVars;
+  "account-change-email": AccountChangeEmailVars;
 }
 
 /** Valid template names (union type). */

@@ -1,4 +1,5 @@
 import { createAppQueryClient } from "@pluralscape/data";
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import "fake-indexeddb/auto";
@@ -32,13 +33,14 @@ describe("M8 Foundation Integration Smoke Test", () => {
 
     // Layer 3: Query client
     const qc = createAppQueryClient();
-    expect(qc).toBeDefined();
+    expect(typeof qc.mount).toBe("function");
+    expect(typeof qc.getQueryCache).toBe("function");
 
     // Simulate login
     const creds: AuthCredentials = {
       sessionToken: "ps_sess_smoke",
-      accountId: "acct_1" as AccountId,
-      systemId: "sys_1" as SystemId,
+      accountId: brandId<AccountId>("acct_1"),
+      systemId: brandId<SystemId>("sys_1"),
       salt: new Uint8Array(16) as PwhashSalt,
     };
     const masterKey = new Uint8Array(32) as KdfMasterKey;
@@ -57,7 +59,11 @@ describe("M8 Foundation Integration Smoke Test", () => {
     expect(auth.getSnapshot().state).toBe("unlocked");
 
     // Connection responds to auth
-    conn.dispatch({ type: "CONNECT", token: creds.sessionToken, systemId: "sys_1" as SystemId });
+    conn.dispatch({
+      type: "CONNECT",
+      token: creds.sessionToken,
+      systemId: brandId<SystemId>("sys_1"),
+    });
     expect(conn.getSnapshot()).toBe("connecting");
 
     conn.dispatch({ type: "CONNECTED" });

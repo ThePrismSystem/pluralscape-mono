@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,7 +7,7 @@ import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js
 
 import type { FriendConnectionId } from "@pluralscape/types";
 
-const CONNECTION_ID = "fc_export" as FriendConnectionId;
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_export");
 
 const mockManifestData = {
   systemId: "sys_abc",

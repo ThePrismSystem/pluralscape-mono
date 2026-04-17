@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthContext } from "../../lib/auth-context.js";
@@ -83,9 +84,9 @@ const { getFriendDashboardSync } = await import("../../services/friend-dashboard
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
-const CONNECTION_ID = "fc_conn-test" as FriendConnectionId;
-const SYSTEM_ID = "sys_target" as SystemId;
-const BUCKET_A = "bkt_aaa" as BucketId;
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_conn-test");
+const SYSTEM_ID = brandId<SystemId>("sys_target");
+const BUCKET_A = brandId<BucketId>("bkt_aaa");
 
 function makeAuth(): AuthContext {
   return {

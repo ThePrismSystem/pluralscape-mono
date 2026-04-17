@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
@@ -14,7 +15,7 @@ import type {
 
 // ── Mock external deps ───────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_ier-test" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_ier-test");
 
 const mockTx: MockChain & { onConflictDoUpdate: ReturnType<typeof vi.fn> } = {
   select: vi.fn(),
@@ -115,8 +116,8 @@ function makeRefRow(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return {
-    id: "ier_test-row-001" as ImportEntityRefId,
-    accountId: "acct_ier-test" as AccountId,
+    id: brandId<ImportEntityRefId>("ier_test-row-001"),
+    accountId: brandId<AccountId>("acct_ier-test"),
     systemId: SYSTEM_ID,
     source: SOURCE,
     sourceEntityType,

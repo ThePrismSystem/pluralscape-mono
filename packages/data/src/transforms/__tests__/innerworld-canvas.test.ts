@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -31,7 +31,7 @@ function makeCanvasFields(): CanvasEncryptedFields {
 
 function makeRawCanvas(overrides?: Partial<CanvasRaw>): CanvasRaw {
   return {
-    systemId: "sys_test" as SystemId,
+    systemId: brandId<SystemId>("sys_test"),
     encryptedData: encryptAndEncodeT1(makeCanvasFields(), masterKey),
     version: 1,
     createdAt: toUnixMillis(1_700_000_000_000),
