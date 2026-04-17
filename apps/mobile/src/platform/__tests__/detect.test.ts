@@ -156,3 +156,50 @@ describe("detectPlatform — web + OPFS driver init fails", () => {
     expect(ctx.capabilities.storageFallbackReason).toMatch(/worker boot failed/);
   });
 });
+
+describe("detectPlatform — IndexedDB context shape", () => {
+  afterEach(() => {
+    resetNavigator();
+    resetWorker();
+    vi.resetModules();
+  });
+
+  it("populates storageFallbackReason on the no-OPFS path", async () => {
+    setNavigator({ storage: undefined });
+    const { detectPlatform: detectFresh } = await import("../detect.js");
+    const ctx = await detectFresh();
+    expect(ctx.capabilities.storageBackend).toBe("indexeddb");
+    expect(ctx.capabilities.storageFallbackReason).toBe("opfs-unavailable");
+  });
+});
+
+describe("detectPlatform — observable fallback", () => {
+  afterEach(() => {
+    resetNavigator();
+    resetWorker();
+    vi.doUnmock("../drivers/opfs-sqlite-driver.js");
+    vi.resetModules();
+  });
+
+  it("logs console.error when OPFS init throws", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    setNavigator({ storage: { getDirectory: () => Promise.resolve({}) } });
+    setWorker(function FakeWorker(): void {});
+    vi.doMock("../drivers/opfs-sqlite-driver.js", () => ({
+      createOpfsSqliteDriver: () => Promise.reject(new Error("worker boot failed")),
+    }));
+    vi.doMock("../drivers/indexeddb-storage-adapter.js", () => ({
+      createIndexedDbStorageAdapter: () => ({ __type: "storage-adapter" }),
+    }));
+    vi.doMock("../drivers/indexeddb-offline-queue-adapter.js", () => ({
+      createIndexedDbOfflineQueueAdapter: () => ({ __type: "offline-queue-adapter" }),
+    }));
+    const { detectPlatform: detectFresh } = await import("../detect.js");
+    await detectFresh();
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining("OPFS storage unavailable"),
+      expect.objectContaining({ reason: expect.stringContaining("worker boot failed") as unknown }),
+    );
+    errSpy.mockRestore();
+  });
+});

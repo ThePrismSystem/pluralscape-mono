@@ -41,26 +41,20 @@ async function detectWeb(): Promise<PlatformContext> {
       };
     } catch (err: unknown) {
       const reason = err instanceof Error ? err.message : String(err);
-      const storageAdapter = createIndexedDbStorageAdapter();
-      const offlineQueueAdapter = createIndexedDbOfflineQueueAdapter();
-      return {
-        capabilities: {
-          hasSecureStorage: false,
-          hasBiometric: false,
-          hasBackgroundSync: false,
-          hasNativeMemzero: false,
-          storageBackend: "indexeddb",
-          storageFallbackReason: `OPFS init failed: ${reason}`,
-        },
-        storage: { backend: "indexeddb", storageAdapter, offlineQueueAdapter },
-        crypto,
-      };
+      globalThis.console.error(
+        "[pluralscape] OPFS storage unavailable, falling back to IndexedDB",
+        { reason },
+      );
+      return buildIndexedDbContext(crypto, `OPFS init failed: ${reason}`);
     }
   }
 
+  return buildIndexedDbContext(crypto, "opfs-unavailable");
+}
+
+function buildIndexedDbContext(crypto: WasmSodiumAdapter, fallbackReason: string): PlatformContext {
   const storageAdapter = createIndexedDbStorageAdapter();
   const offlineQueueAdapter = createIndexedDbOfflineQueueAdapter();
-
   return {
     capabilities: {
       hasSecureStorage: false,
@@ -68,6 +62,7 @@ async function detectWeb(): Promise<PlatformContext> {
       hasBackgroundSync: false,
       hasNativeMemzero: false,
       storageBackend: "indexeddb",
+      storageFallbackReason: fallbackReason,
     },
     storage: { backend: "indexeddb", storageAdapter, offlineQueueAdapter },
     crypto,
