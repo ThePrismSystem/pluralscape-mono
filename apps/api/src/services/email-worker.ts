@@ -38,9 +38,11 @@ export async function processEmailJob(
 
   // Prefer an explicit recipient override (used when notifying an address no
   // longer attached to the account — e.g. account-change-email goes to the
-  // OLD email after the new one was already persisted).
+  // OLD email after the new one was already persisted). `recipientOverride`
+  // is required and nullable at the type level; `null` means "resolve from
+  // the account".
   let recipientEmail: string | null;
-  if (recipientOverride !== undefined && recipientOverride !== "") {
+  if (recipientOverride !== null) {
     recipientEmail = recipientOverride;
   } else {
     recipientEmail = await resolveAccountEmail(db, accountId);

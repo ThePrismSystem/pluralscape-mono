@@ -8,6 +8,7 @@ export {
   DEFAULT_TIMEOUT_MS,
   WEBHOOK_DELIVERY_CLEANUP_CRON,
 } from "./queue.constants.js";
+export { PayloadSchemaByType } from "./payload-schemas.js";
 export type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "./types.js";
 
 // ── Base classes ────────────────────────────────────────────────────

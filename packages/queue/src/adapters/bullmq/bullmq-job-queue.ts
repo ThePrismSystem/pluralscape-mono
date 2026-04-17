@@ -10,6 +10,7 @@ import {
   QueueCorruptionError,
 } from "../../errors.js";
 import { fireHook } from "../../fire-hook.js";
+import { PayloadSchemaByType } from "../../payload-schemas.js";
 import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js";
 import {
   DEFAULT_TIMEOUT_MS,
@@ -39,25 +40,44 @@ import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 import type { RedisOptions } from "ioredis";
 
-const StoredJobDataSchema = z.object({
-  systemId: z.string().nullable(),
-  type: z.string(),
-  payload: z.record(z.string(), z.unknown()),
-  status: z.string(),
-  attempts: z.number(),
-  maxAttempts: z.number(),
-  nextRetryAt: z.number().nullable(),
-  error: z.string().nullable(),
-  result: z.unknown().nullable(),
-  createdAt: z.number(),
-  startedAt: z.number().nullable(),
-  completedAt: z.number().nullable(),
-  idempotencyKey: z.string().nullable(),
-  lastHeartbeatAt: z.number().nullable(),
-  timeoutMs: z.number(),
-  scheduledFor: z.number().nullable(),
-  priority: z.number(),
-});
+const StoredJobDataSchema = z
+  .object({
+    systemId: z.string().nullable(),
+    type: z.string(),
+    payload: z.unknown(),
+    status: z.string(),
+    attempts: z.number(),
+    maxAttempts: z.number(),
+    nextRetryAt: z.number().nullable(),
+    error: z.string().nullable(),
+    result: z.unknown().nullable(),
+    createdAt: z.number(),
+    startedAt: z.number().nullable(),
+    completedAt: z.number().nullable(),
+    idempotencyKey: z.string().nullable(),
+    lastHeartbeatAt: z.number().nullable(),
+    timeoutMs: z.number(),
+    scheduledFor: z.number().nullable(),
+    priority: z.number(),
+  })
+  .superRefine((data, ctx) => {
+    // `data.type` is `string` at the deserialization boundary — look it up via
+    // `Object.hasOwn` + a narrowed access so TS treats the index result as
+    // possibly-undefined. Casting `data.type as JobType` here would tell TS
+    // the access is total and trip `no-unnecessary-condition` on the guard.
+    if (!Object.hasOwn(PayloadSchemaByType, data.type)) {
+      ctx.addIssue({ code: "custom", message: `Unknown job type: ${data.type}` });
+      return;
+    }
+    const schema = PayloadSchemaByType[data.type as JobType];
+    const r = schema.safeParse(data.payload);
+    if (!r.success) {
+      ctx.addIssue({
+        code: "custom",
+        message: `Payload mismatch for type ${data.type}: ${r.error.message}`,
+      });
+    }
+  });
 
 function jobIdOf(job: BullMQJob): JobId {
   const id = job.id;
@@ -525,7 +545,7 @@ export class BullMQJobQueue implements JobQueue {
     // Check BullMQ first. BullMQ calls `JSON.parse(json.data)` inside Job.fromJSON,
     // so a malformed `data` field surfaces as a raw SyntaxError from the SDK.
     // Wrap that path so callers always see a typed QueueCorruptionError.
-    let job;
+    let job: BullMQJob | undefined;
     try {
       job = await this.queue.getJob(jobId);
     } catch (err) {
@@ -540,7 +560,7 @@ export class BullMQJobQueue implements JobQueue {
       if (!parseResult.success) {
         throw new QueueCorruptionError(jobId, { cause: parseResult.error });
       }
-      return fromStoredData(jobIdOf(job), job.data as StoredJobData);
+      return fromStoredData(jobIdOf(job), parseResult.data as StoredJobData);
     }
 
     // Check cancelled store
@@ -563,9 +583,16 @@ export class BullMQJobQueue implements JobQueue {
     const bullmqStates = this.mapStatusToBullMQStates(filter.status);
     const bullmqJobs = bullmqStates.length > 0 ? await this.queue.getJobs(bullmqStates) : [];
 
-    const allJobs: JobDefinition[] = bullmqJobs.map((j) =>
-      fromStoredData(jobIdOf(j), j.data as StoredJobData),
-    );
+    const allJobs: JobDefinition[] = bullmqJobs.map((j) => {
+      // Same fail-closed contract as getJob: a mismatched (type, payload) or
+      // missing field in the stored data must surface as QueueCorruptionError
+      // rather than silently yielding a malformed JobDefinition to callers.
+      const parseResult = StoredJobDataSchema.safeParse(j.data);
+      if (!parseResult.success) {
+        throw new QueueCorruptionError(jobIdOf(j), { cause: parseResult.error });
+      }
+      return fromStoredData(jobIdOf(j), parseResult.data as StoredJobData);
+    });
 
     if (filter.status === undefined || filter.status === "cancelled") {
       const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);

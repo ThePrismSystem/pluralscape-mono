@@ -70,6 +70,7 @@ function makeJobPayload(
       timestamp: "2026-03-29T00:00:00Z",
       deviceInfo: "Test Browser",
     },
+    recipientOverride: null,
     ...overrides,
   };
 }
@@ -221,14 +222,14 @@ describe("email-worker", () => {
       );
     });
 
-    it("falls back to resolveAccountEmail when recipientOverride is empty string", async () => {
+    it("falls back to resolveAccountEmail when recipientOverride is null", async () => {
       const { db } = mockDb();
       mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
 
       await processEmailJob(
         db,
         makeJobPayload({
-          recipientOverride: "",
+          recipientOverride: null,
         }),
       );
 

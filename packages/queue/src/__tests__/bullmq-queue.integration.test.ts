@@ -715,6 +715,49 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
     await expect(q.getJob(job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
   });
 
+  it("getJob throws QueueCorruptionError when type/payload disagree", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    // Enqueue a real sync-push job, then rewrite its stored data so the type
+    // advertises "webhook-deliver" (which requires `deliveryId`) while the
+    // payload is still the empty sync-push shape. The discriminated schema
+    // must reject this mismatched (type, payload) pair rather than surfacing
+    // a silently-malformed JobDefinition.
+    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
+    const rawKey = `bull:${q.name}:${job.id}`;
+    const current = await redis.hget(rawKey, "data");
+    if (current === null) throw new Error("expected BullMQ hash to contain `data`");
+    const parsed = JSON.parse(current) as Record<string, unknown>;
+    parsed["type"] = "webhook-deliver";
+    parsed["payload"] = { notADeliveryId: true };
+    await redis.hset(rawKey, "data", JSON.stringify(parsed));
+
+    await expect(q.getJob(job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
+  it("listJobs throws QueueCorruptionError when a stored row has mismatched type/payload", async () => {
+    const q = createQueue();
+    activeQueues.push(q);
+    if (redis === null) throw new Error("Valkey not available");
+
+    // Same corruption pattern as the getJob variant: inject a malformed row
+    // and verify listJobs fails closed rather than silently returning a
+    // malformed JobDefinition to callers who expect the discriminated union
+    // invariant to hold.
+    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
+    const rawKey = `bull:${q.name}:${job.id}`;
+    const current = await redis.hget(rawKey, "data");
+    if (current === null) throw new Error("expected BullMQ hash to contain `data`");
+    const parsed = JSON.parse(current) as Record<string, unknown>;
+    parsed["type"] = "webhook-deliver";
+    parsed["payload"] = { notADeliveryId: true };
+    await redis.hset(rawKey, "data", JSON.stringify(parsed));
+
+    await expect(q.listJobs({ status: "pending" })).rejects.toBeInstanceOf(QueueCorruptionError);
+  });
+
   it("retry throws QueueCorruptionError when cancelled-store data is corrupt", async () => {
     const q = createQueue();
     activeQueues.push(q);

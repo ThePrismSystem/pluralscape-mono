@@ -105,8 +105,12 @@ export interface JobPayloadMap {
      * Used by flows that must notify an address no longer attached to the
      * account (e.g. account-change-email sends to the OLD address after the
      * new one has already been persisted).
+     *
+     * `null` means "no override — resolve the account's current email".
+     * The field is required (never `undefined`) so producers cannot silently
+     * omit it and workers never see the empty-string footgun.
      */
-    readonly recipientOverride?: string;
+    readonly recipientOverride: string | null;
   };
 }
 
@@ -117,13 +121,11 @@ export interface JobResult {
   readonly completedAt: UnixMillis;
 }
 
-/** A background job definition. */
-export interface JobDefinition<T extends JobType = JobType> {
+/** Common fields shared by every job variant. */
+export interface JobCommonFields {
   readonly id: JobId;
   readonly systemId: SystemId | null;
-  readonly type: T;
   readonly status: JobStatus;
-  readonly payload: Readonly<JobPayloadMap[T]>;
   readonly attempts: number;
   readonly maxAttempts: number;
   readonly nextRetryAt: UnixMillis | null;
@@ -140,3 +142,27 @@ export interface JobDefinition<T extends JobType = JobType> {
   /** Lower value = higher priority (0 is highest). Matches BullMQ convention. */
   readonly priority: number;
 }
+
+/**
+ * A background job definition, correlated between `type` and `payload`.
+ *
+ * Written as a mapped-over-union so that `JobDefinition` (no generic) is the
+ * *distributive* union of each per-type variant — narrowing on `type` also
+ * narrows `payload` to the exact shape from `JobPayloadMap[type]`. Workers no
+ * longer need unchecked casts; `if (job.type === "email-send")` is enough.
+ */
+export type JobDefinition<T extends JobType = JobType> = {
+  [K in T]: JobCommonFields & {
+    readonly type: K;
+    readonly payload: Readonly<JobPayloadMap[K]>;
+  };
+}[T];
+
+/**
+ * Distributive union of every concrete job payload shape.
+ *
+ * Used by storage-layer `$type<>()` bindings (drizzle) where the sibling
+ * `type` column carries the discriminator. Prefer the narrowed
+ * `JobPayloadMap[SpecificType]` in worker code.
+ */
+export type JobPayload = JobPayloadMap[JobType];

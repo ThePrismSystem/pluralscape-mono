@@ -59,6 +59,7 @@ recoveryKeyRoutes.post(
                 timestamp: new Date().toISOString(),
                 deviceInfo: c.req.header("user-agent") ?? "Unknown device",
               },
+              recipientOverride: null,
             },
             idempotencyKey: `email:recovery-key-regen:${auth.accountId}:${String(Date.now())}`,
           })

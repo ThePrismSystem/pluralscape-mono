@@ -89,6 +89,9 @@ function stubQueue(overrides: Partial<JobQueue> = {}): JobQueue {
 }
 
 function makeJob(overrides: Partial<JobDefinition> = {}): JobDefinition {
+  // Independently typing `type` and `payload` here yields the cross-product of
+  // the discriminated union; cast to `JobDefinition` after the object literal
+  // so the two fields are treated as correlated.
   return {
     id: brandId<JobId>(crypto.randomUUID()),
     systemId: null,
@@ -109,7 +112,7 @@ function makeJob(overrides: Partial<JobDefinition> = {}): JobDefinition {
     scheduledFor: null,
     priority: 0,
     ...overrides,
-  };
+  } as JobDefinition;
 }
 
 const noop: JobHandler = () => Promise.resolve();

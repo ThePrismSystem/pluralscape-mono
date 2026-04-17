@@ -427,6 +427,8 @@ export type {
   JobType,
   JobStatus,
   JobPayloadMap,
+  JobPayload,
+  JobCommonFields,
   RetryPolicy,
   JobResult,
   JobDefinition,

@@ -33,7 +33,14 @@ export interface StoredJobData {
   priority: number;
 }
 
-/** Reconstructs a JobDefinition from serialized StoredJobData + a job ID. */
+/**
+ * Reconstructs a JobDefinition from serialized StoredJobData + a job ID.
+ *
+ * Callers are responsible for validating `data` (via `StoredJobDataSchema` in
+ * the bullmq adapter) before invoking this. Post-validation the correlated
+ * discriminated union `JobDefinition` cannot be proved from two independently
+ * typed fields (`type`, `payload`); the trailing cast is the minimal bridge.
+ */
 export function fromStoredData(id: JobId, data: StoredJobData): JobDefinition {
   return {
     id,
@@ -54,5 +61,5 @@ export function fromStoredData(id: JobId, data: StoredJobData): JobDefinition {
     timeoutMs: data.timeoutMs,
     scheduledFor: toUnixMillisOrNull(data.scheduledFor ?? null),
     priority: data.priority,
-  };
+  } as JobDefinition;
 }
