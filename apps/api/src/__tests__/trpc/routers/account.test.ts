@@ -151,7 +151,11 @@ describe("account router", () => {
     };
 
     it("calls changeEmail and returns ok", async () => {
-      vi.mocked(changeEmail).mockResolvedValue({ ok: true });
+      vi.mocked(changeEmail).mockResolvedValue({
+        ok: true,
+        oldEmail: "old@example.com",
+        newEmail: "new@example.com",
+      });
       const caller = createCaller();
       const result = await caller.account.changeEmail(input);
       expect(result).toEqual({ ok: true });
@@ -509,7 +513,11 @@ describe("account router", () => {
 
   it("applies rate limiting to mutations", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(changeEmail).mockResolvedValue({ ok: true });
+    vi.mocked(changeEmail).mockResolvedValue({
+      ok: true,
+      oldEmail: null,
+      newEmail: null,
+    });
     const caller = createCaller();
     await assertProcedureRateLimited(
       vi.mocked(checkRateLimit),

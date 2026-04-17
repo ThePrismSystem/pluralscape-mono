@@ -19,6 +19,7 @@ import { and, eq } from "drizzle-orm";
 
 import { ensureUint8Array } from "../lib/binary.js";
 import { hashEmail } from "../lib/email-hash.js";
+import { resolveAccountEmail } from "../lib/email-resolve.js";
 import { fromHex, toHex } from "../lib/hex.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { EMAIL_CHANGE_FAILED_ERROR } from "../routes/account/account.constants.js";
@@ -87,12 +88,30 @@ export async function getAccountInfo(
 
 // ── Change Email ──────────────────────────────────────────────────
 
+/** Outcome of a successful email change. */
+export interface ChangeEmailResult {
+  readonly ok: true;
+  /**
+   * The plaintext email that was on the account prior to the change, or null
+   * when it could not be resolved (no encrypted email on file, or the
+   * EMAIL_ENCRYPTION_KEY is not configured).
+   *
+   * Returned so the route layer can enqueue an `account-change-email`
+   * notification to the previous address — see `apps/api/src/routes/account/change-email.ts`.
+   * Null when the submitted email hashes to the same value as the stored hash
+   * (no-op change) — no notification needs to be sent in that case.
+   */
+  readonly oldEmail: string | null;
+  /** The new plaintext email (post-change). Null on no-op change. */
+  readonly newEmail: string | null;
+}
+
 export async function changeEmail(
   db: PostgresJsDatabase,
   accountId: AccountId,
   params: unknown,
   audit: AuditWriter,
-): Promise<{ ok: true }> {
+): Promise<ChangeEmailResult> {
   const parsed = ChangeEmailSchema.parse(params);
 
   const account = await withAccountRead(db, accountId, async (tx) => {
@@ -123,8 +142,14 @@ export async function changeEmail(
 
   const newEmailHash = hashEmail(parsed.email);
   if (newEmailHash === account.emailHash) {
-    return { ok: true };
+    return { ok: true, oldEmail: null, newEmail: null };
   }
+
+  // Capture the plaintext OLD email before mutating anything. This is the
+  // address we need to notify after the change commits. Resolution may return
+  // null (pre-encrypted-email accounts, missing EMAIL_ENCRYPTION_KEY) — in
+  // which case the route skips the notification rather than failing the change.
+  const oldEmail = await resolveAccountEmail(db, accountId);
 
   const adapter = getSodium();
   /** Stored for potential future per-account salting; current hashEmail() uses global pepper. */
@@ -161,7 +186,7 @@ export async function changeEmail(
     throw error;
   }
 
-  return { ok: true };
+  return { ok: true, oldEmail, newEmail: parsed.email };
 }
 
 // ── Change Password ───────────────────────────────────────────────

@@ -195,5 +195,47 @@ describe("email-worker", () => {
         }),
       );
     });
+
+    it("uses recipientOverride instead of resolveAccountEmail when provided", async () => {
+      const { db } = mockDb();
+
+      await processEmailJob(
+        db,
+        makeJobPayload({
+          template: "account-change-email",
+          vars: {
+            oldEmail: "old@example.com",
+            newEmail: "new@example.com",
+            timestamp: "2026-04-17T12:00:00Z",
+          },
+          recipientOverride: "old@example.com",
+        }),
+      );
+
+      expect(mockResolveAccountEmail).not.toHaveBeenCalled();
+      expect(mockAdapter.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "old@example.com",
+          subject: "Your Pluralscape account email was changed",
+        }),
+      );
+    });
+
+    it("falls back to resolveAccountEmail when recipientOverride is empty string", async () => {
+      const { db } = mockDb();
+      mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
+
+      await processEmailJob(
+        db,
+        makeJobPayload({
+          recipientOverride: "",
+        }),
+      );
+
+      expect(mockResolveAccountEmail).toHaveBeenCalledWith(db, ACCOUNT_ID);
+      expect(mockAdapter.send).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "user@example.com" }),
+      );
+    });
   });
 });

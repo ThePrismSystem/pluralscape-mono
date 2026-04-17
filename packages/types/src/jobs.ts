@@ -15,7 +15,8 @@ export type EmailTemplateName =
   | "new-device-login"
   | "password-changed"
   | "two-factor-changed"
-  | "webhook-failure-digest";
+  | "webhook-failure-digest"
+  | "account-change-email";
 
 /** The kind of background job. */
 export type JobType =
@@ -98,6 +99,14 @@ export interface JobPayloadMap {
     readonly accountId: AccountId;
     readonly template: EmailTemplateName;
     readonly vars: Readonly<Record<string, unknown>>;
+    /**
+     * Explicit recipient email that overrides the account's current address.
+     *
+     * Used by flows that must notify an address no longer attached to the
+     * account (e.g. account-change-email sends to the OLD address after the
+     * new one has already been persisted).
+     */
+    readonly recipientOverride?: string;
   };
 }
 

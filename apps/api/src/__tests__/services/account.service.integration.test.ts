@@ -170,9 +170,25 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
         audit,
       );
 
-      expect(result).toEqual({ ok: true });
+      // Without EMAIL_ENCRYPTION_KEY configured, resolveAccountEmail returns null
+      // so oldEmail is null; newEmail is always the submitted address.
+      expect(result.ok).toBe(true);
+      expect(result.newEmail).toBe(newEmail);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("auth.email-changed");
+    });
+
+    it("returns oldEmail: null, newEmail: null on no-op change (same email)", async () => {
+      const reg = await registerTestAccount(asDb(db));
+
+      const result = await changeEmail(
+        asDb(db),
+        brandId<AccountId>(reg.accountId),
+        { email: reg.email, authKey: reg.authKeyHex },
+        noopAudit,
+      );
+
+      expect(result).toEqual({ ok: true, oldEmail: null, newEmail: null });
     });
 
     it("throws ValidationError with wrong auth key", async () => {

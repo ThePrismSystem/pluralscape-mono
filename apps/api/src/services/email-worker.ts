@@ -34,10 +34,18 @@ export async function processEmailJob(
   db: PostgresJsDatabase,
   jobPayload: JobPayloadMap["email-send"],
 ): Promise<void> {
-  const { accountId, template, vars } = jobPayload;
+  const { accountId, template, vars, recipientOverride } = jobPayload;
 
-  // Resolve recipient email address
-  const recipientEmail = await resolveAccountEmail(db, accountId);
+  // Prefer an explicit recipient override (used when notifying an address no
+  // longer attached to the account — e.g. account-change-email goes to the
+  // OLD email after the new one was already persisted).
+  let recipientEmail: string | null;
+  if (recipientOverride !== undefined && recipientOverride !== "") {
+    recipientEmail = recipientOverride;
+  } else {
+    recipientEmail = await resolveAccountEmail(db, accountId);
+  }
+
   if (!recipientEmail) {
     logger.warn("[email-worker] no email address found for account, skipping", { accountId });
     return;

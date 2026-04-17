@@ -1,3 +1,4 @@
+import { render as renderAccountChangeEmail } from "./account-change-email.js";
 import { render as renderNewDeviceLogin } from "./new-device-login.js";
 import { render as renderPasswordChanged } from "./password-changed.js";
 import { render as renderRecoveryKeyRegenerated } from "./recovery-key-regenerated.js";
@@ -27,6 +28,8 @@ export function renderTemplate<T extends EmailTemplateName>(
       return renderTwoFactorChanged(vars as EmailTemplateMap["two-factor-changed"]);
     case "webhook-failure-digest":
       return renderWebhookFailureDigest(vars as EmailTemplateMap["webhook-failure-digest"]);
+    case "account-change-email":
+      return renderAccountChangeEmail(vars as EmailTemplateMap["account-change-email"]);
     default: {
       const _exhaustive: never = name;
       throw new Error(`Unknown email template: ${String(_exhaustive)}`);

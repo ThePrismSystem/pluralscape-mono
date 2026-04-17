@@ -23,6 +23,8 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { requireSession } from "../../lib/auth-context.js";
+import { logger } from "../../lib/logger.js";
+import { getQueue } from "../../lib/queue.js";
 import {
   MAX_TRANSFER_CODE_ATTEMPTS,
   TRANSFER_INITIATION_LIMIT,
@@ -166,7 +168,44 @@ export const accountRouter = router({
     .input(ChangeEmailSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return changeEmail(ctx.db, ctx.auth.accountId, input, audit);
+      const result = await changeEmail(ctx.db, ctx.auth.accountId, input, audit);
+
+      // Fire-and-forget notification to the OLD address. Mirrors the REST
+      // route behavior (see `apps/api/src/routes/account/change-email.ts`).
+      if (result.oldEmail && result.newEmail) {
+        const queue = getQueue();
+        if (queue) {
+          const { accountId } = ctx.auth;
+          const { ipAddress } = ctx.requestMeta;
+          queue
+            .enqueue({
+              type: "email-send",
+              systemId: null,
+              payload: {
+                accountId,
+                template: "account-change-email",
+                vars: {
+                  oldEmail: result.oldEmail,
+                  newEmail: result.newEmail,
+                  timestamp: new Date().toISOString(),
+                  ...(ipAddress ? { ipAddress } : {}),
+                },
+                recipientOverride: result.oldEmail,
+              },
+              idempotencyKey: `email:account-change:${accountId}:${String(Date.now())}`,
+            })
+            .catch((err: unknown) => {
+              logger.warn("[trpc.account.changeEmail] failed to enqueue notification", {
+                accountId,
+                error: err instanceof Error ? err.message : String(err),
+              });
+            });
+        }
+      }
+
+      // Do not leak oldEmail via the tRPC response — it is only used internally
+      // for routing the notification.
+      return { ok: true as const };
     }),
 
   /** Change account password. Revokes all active sessions. */

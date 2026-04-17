@@ -217,7 +217,8 @@ describe("account service", () => {
         { email: "same@example.com", authKey: VALID_AUTH_KEY_HEX },
         mockAudit,
       );
-      expect(result).toEqual({ ok: true });
+      // No-op change — oldEmail/newEmail both null to signal "don't notify"
+      expect(result).toEqual({ ok: true, oldEmail: null, newEmail: null });
       // Transaction is called once for the withAccountRead lookup,
       // but NOT a second time for the write path (email is unchanged)
       expect(chain.transaction).toHaveBeenCalledOnce();
@@ -240,7 +241,9 @@ describe("account service", () => {
         { email: "new@example.com", authKey: VALID_AUTH_KEY_HEX },
         mockAudit,
       );
-      expect(result).toEqual({ ok: true });
+      // oldEmail is null because resolveAccountEmail needs EMAIL_ENCRYPTION_KEY
+      // and the unit mock doesn't configure one; newEmail echoes the input.
+      expect(result).toEqual({ ok: true, oldEmail: null, newEmail: "new@example.com" });
     });
 
     it("throws generic error on duplicate email", async () => {
