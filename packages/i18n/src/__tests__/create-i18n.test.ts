@@ -95,4 +95,45 @@ describe("createI18nInstance", () => {
       createI18nInstance({ missingKeyMode: "warn" });
     }).toThrow("Logger is required when missingKeyMode is 'warn'");
   });
+
+  it("registers a provided backend plugin and uses it to load namespaces", async () => {
+    const read = vi.fn(
+      (
+        _language: string,
+        _namespace: string,
+        callback: (err: Error | null, data: Readonly<Record<string, string>>) => void,
+      ): void => {
+        callback(null, { hello: "Hello" });
+      },
+    );
+    const backend = {
+      type: "backend" as const,
+      read,
+    };
+
+    const instance = createI18nInstance({
+      missingKeyMode: "warn",
+      logger: mockWarnLogger,
+      backend,
+    });
+    instance.use(initReactI18next);
+
+    await instance.init({
+      lng: "en",
+      fallbackLng: DEFAULT_LOCALE,
+      defaultNS: DEFAULT_NAMESPACE,
+      ns: [DEFAULT_NAMESPACE],
+      partialBundledLanguages: true,
+    });
+
+    await instance.loadNamespaces(DEFAULT_NAMESPACE);
+
+    expect(read).toHaveBeenCalled();
+    expect(instance.t("hello", { ns: DEFAULT_NAMESPACE })).toBe("Hello");
+  });
+
+  it("works without a backend (backward compatible)", () => {
+    const instance = createI18nInstance({ missingKeyMode: "warn", logger: mockWarnLogger });
+    expect(instance).toBeDefined();
+  });
 });
