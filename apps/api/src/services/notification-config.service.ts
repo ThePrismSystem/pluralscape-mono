@@ -60,8 +60,8 @@ function toNotificationConfigResult(row: {
 // ── Internal helpers ─────────────────────────────────────────────────
 
 /**
- * Insert a new notification config row with the given overrides merged
- * over defaults (enabled: true, pushEnabled: true).
+ * Insert a new notification config row with the given overrides merged over
+ * defaults (`enabled: false, pushEnabled: false` — fail-closed per VALUES.md).
  *
  * Shared by {@link getOrCreateNotificationConfig} and
  * {@link updateNotificationConfig} to avoid duplicating the insert block.
@@ -81,8 +81,8 @@ async function insertNotificationConfig(
       id,
       systemId,
       eventType,
-      enabled: overrides.enabled ?? true,
-      pushEnabled: overrides.pushEnabled ?? true,
+      enabled: overrides.enabled ?? false,
+      pushEnabled: overrides.pushEnabled ?? false,
       createdAt: timestamp,
       updatedAt: timestamp,
       archived: false,
@@ -101,7 +101,7 @@ async function insertNotificationConfig(
 
 /**
  * Get the notification config for a specific event type, creating it with
- * defaults (enabled: true, pushEnabled: true) if it doesn't exist yet.
+ * defaults (`enabled: false, pushEnabled: false`) if it doesn't exist yet.
  */
 export async function getOrCreateNotificationConfig(
   db: PostgresJsDatabase,

@@ -283,8 +283,21 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     expect(enqueuedJobs).toHaveLength(0);
   });
 
-  it("enqueues when no notification config row exists (default-enabled)", async () => {
+  it("does NOT dispatch when no notification_config row exists (fail-closed)", async () => {
     const { memberId } = await setupEligibleFriend({ skipConfig: true });
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    const { queue, enqueuedJobs } = createMockQueue();
+
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
+
+    expect(enqueuedJobs).toHaveLength(0);
+  });
+
+  it("dispatches when a row exists with enabled=true and pushEnabled=true (explicit opt-in)", async () => {
+    // setupEligibleFriend() writes the config with enabled=true & pushEnabled=true;
+    // this test makes the explicit-opt-in contract first-class rather than relying
+    // on the broader "enqueues one notification-send job..." happy-path assertion.
+    const { memberId } = await setupEligibleFriend();
     const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     const { queue, enqueuedJobs } = createMockQueue();
 
