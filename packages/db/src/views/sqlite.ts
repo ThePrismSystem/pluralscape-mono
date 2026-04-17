@@ -12,8 +12,6 @@ import { friendConnections } from "../schema/sqlite/privacy.js";
 import { systemStructureEntityAssociations } from "../schema/sqlite/structure.js";
 import { webhookDeliveries } from "../schema/sqlite/webhooks.js";
 
-import { mapStructureEntityAssociationRow as mapAssociationRow } from "./mappers.js";
-
 import type {
   ActiveApiKey,
   ActiveDeviceToken,
@@ -257,18 +255,19 @@ export function getStructureEntityAssociations(
   db: BetterSQLite3Database,
   systemId: string,
 ): StructureEntityAssociationRow[] {
-  const rows = db
-    .select()
+  // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
+  // (camelCase columns, `createdAt` as unix millis via `sqliteTimestamp`), so
+  // no snake_case round-trip through `mapStructureEntityAssociationRow` is
+  // needed.
+  return db
+    .select({
+      id: systemStructureEntityAssociations.id,
+      systemId: systemStructureEntityAssociations.systemId,
+      sourceEntityId: systemStructureEntityAssociations.sourceEntityId,
+      targetEntityId: systemStructureEntityAssociations.targetEntityId,
+      createdAt: systemStructureEntityAssociations.createdAt,
+    })
     .from(systemStructureEntityAssociations)
     .where(eq(systemStructureEntityAssociations.systemId, systemId))
     .all();
-  return rows.map((r) =>
-    mapAssociationRow({
-      id: r.id,
-      system_id: r.systemId,
-      source_entity_id: r.sourceEntityId,
-      target_entity_id: r.targetEntityId,
-      created_at: r.createdAt,
-    }),
-  );
 }

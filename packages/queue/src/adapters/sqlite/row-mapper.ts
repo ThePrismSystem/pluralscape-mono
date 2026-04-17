@@ -15,7 +15,7 @@ export function rowToJob(row: JobRow): JobDefinition {
     systemId: row.systemId ? brandId<SystemId>(row.systemId) : null,
     type: row.type,
     status: row.status,
-    payload: (row.payload ?? {}) as Readonly<Record<string, unknown>>,
+    payload: row.payload,
     attempts: row.attempts,
     maxAttempts: row.maxAttempts,
     nextRetryAt: toUnixMillisOrNull(row.nextRetryAt ?? null),
