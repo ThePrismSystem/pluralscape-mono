@@ -6,7 +6,7 @@ import {
   WorkerTerminatedError,
 } from "./opfs-worker-protocol.js";
 
-import type { BindParam, Req, Res, Row, StmtHandle } from "./opfs-worker-protocol.js";
+import type { BindParam, Req, Res, ResultFor, StmtHandle } from "./opfs-worker-protocol.js";
 import type { SqliteDriver, SqliteStatement } from "@pluralscape/sync/adapters";
 
 /**
@@ -95,13 +95,14 @@ export async function createOpfsSqliteDriver(
     pending.clear();
   });
 
-  function send(req: ReqWithoutId, timeoutMs?: number | null): Promise<Res> {
-    if (terminated) {
-      return Promise.reject(new WorkerTerminatedError());
-    }
+  async function send<K extends Req["kind"]>(
+    req: Extract<ReqWithoutId, { kind: K }>,
+    timeoutMs?: number | null,
+  ): Promise<ResultFor<K>> {
+    if (terminated) throw new WorkerTerminatedError();
     const id = nextId++;
     const effective = timeoutMs === undefined ? perCallTimeoutMs : timeoutMs;
-    return new Promise<Res>((resolve, reject) => {
+    const res = await new Promise<Res>((resolve, reject) => {
       const slot: PendingSlot = { resolve, reject };
       pending.set(id, slot);
       const full = { ...req, id } as Req;
@@ -129,21 +130,19 @@ export async function createOpfsSqliteDriver(
         }, effective);
       }
     });
-  }
-
-  async function call<T>(req: ReqWithoutId, timeoutMs?: number | null): Promise<T> {
-    const res = await send(req, timeoutMs);
     if (!res.ok) {
       throw new OpfsDriverError(res.error.message, {
         code: res.error.code,
         name: res.error.name,
       });
     }
-    return res.result as T;
+    // Single boundary cast: Res.result is the unioned OkResult and TS can't
+    // narrow it from req.kind without this assertion.
+    return res.result as ResultFor<K>;
   }
 
   try {
-    await call<undefined>({ kind: "init" }, INIT_TIMEOUT_MS);
+    await send({ kind: "init" }, INIT_TIMEOUT_MS);
   } catch (err) {
     worker.terminate();
     terminated = true;
@@ -152,7 +151,7 @@ export async function createOpfsSqliteDriver(
   }
 
   const finalizer = new FinalizationRegistry<StmtHandle>((handle) => {
-    void call<undefined>({ kind: "finalize", stmt: handle }).catch((err: unknown) => {
+    void send({ kind: "finalize", stmt: handle }).catch((err: unknown) => {
       globalThis.console.warn("opfs finalize failed", err);
     });
   });
@@ -161,15 +160,15 @@ export async function createOpfsSqliteDriver(
     prepare<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
       // prepare is async on the worker but the interface returns sync — we return
       // a "lazy" statement backed by a handle promise. Each method awaits it.
-      const handlePromise = call<StmtHandle>({ kind: "prepare", sql });
+      const handlePromise = send({ kind: "prepare", sql });
       const wrapper: SqliteStatement<TRow> = {
         async run(...params: unknown[]): Promise<void> {
           const handle = await handlePromise;
-          await call<undefined>({ kind: "run", stmt: handle, params: params as BindParam[] });
+          await send({ kind: "run", stmt: handle, params: params as BindParam[] });
         },
         async all(...params: unknown[]): Promise<TRow[]> {
           const handle = await handlePromise;
-          const rows = await call<Row[]>({
+          const rows = await send({
             kind: "all",
             stmt: handle,
             params: params as BindParam[],
@@ -178,7 +177,7 @@ export async function createOpfsSqliteDriver(
         },
         async get(...params: unknown[]): Promise<TRow | undefined> {
           const handle = await handlePromise;
-          const row = await call<Row | undefined>({
+          const row = await send({
             kind: "get",
             stmt: handle,
             params: params as BindParam[],
@@ -194,8 +193,8 @@ export async function createOpfsSqliteDriver(
       return wrapper;
     },
 
-    exec(sql: string): Promise<void> {
-      return call<undefined>({ kind: "exec", sql });
+    async exec(sql: string): Promise<void> {
+      await send({ kind: "exec", sql });
     },
 
     async transaction<T>(fn: () => T | Promise<T>): Promise<T> {
@@ -208,13 +207,13 @@ export async function createOpfsSqliteDriver(
       transactionLock = next;
       await prev;
       try {
-        await call<undefined>({ kind: "txn-begin" });
+        await send({ kind: "txn-begin" });
         try {
           const result = await fn();
-          await call<undefined>({ kind: "txn-commit" });
+          await send({ kind: "txn-commit" });
           return result;
         } catch (err) {
-          await call<undefined>({ kind: "txn-rollback" }).catch((rollbackErr: unknown) => {
+          await send({ kind: "txn-rollback" }).catch((rollbackErr: unknown) => {
             globalThis.console.warn("opfs txn rollback failed", rollbackErr);
           });
           throw err;
@@ -226,7 +225,7 @@ export async function createOpfsSqliteDriver(
 
     async close(): Promise<void> {
       try {
-        await call<undefined>({ kind: "close" }).catch((err: unknown) => {
+        await send({ kind: "close" }).catch((err: unknown) => {
           // If the worker already crashed, close's own message won't round-trip.
           // Swallow the terminated signal so close() remains idempotent.
           if (!(err instanceof WorkerTerminatedError)) throw err;

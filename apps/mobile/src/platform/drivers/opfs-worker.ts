@@ -37,10 +37,8 @@ let state: WorkerState | null = null;
 type WaSqliteEsmFactory = (config?: object) => Promise<unknown>;
 
 async function handleInit(): Promise<void> {
-  if (state !== null) return; // idempotent
-  // The package declares wa-sqlite.mjs with `export = ModuleFactory` returning
-  // `Promise<any>`. Assert the factory's shape explicitly to keep
-  // no-unsafe-assignment happy without `as any`/double-casts.
+  if (state !== null) return;
+  // Emscripten ESM default export is typed Promise<any>.
   const [factoryMod, SQLite, { OPFSCoopSyncVFS }] = await Promise.all([
     import("@journeyapps/wa-sqlite/dist/wa-sqlite.mjs") as Promise<{
       default: WaSqliteEsmFactory;
@@ -221,7 +219,7 @@ async function handleGet(
 async function handleFinalize(handle: StmtHandle): Promise<void> {
   const s = requireState();
   const entry = s.stmts.get(handle);
-  if (entry === undefined) return; // idempotent
+  if (entry === undefined) return;
   s.stmts.delete(handle);
   s.sqlIndex.delete(entry.sql);
   await s.sqlite3.finalize(entry.ptr);
