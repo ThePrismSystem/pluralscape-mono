@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
@@ -25,8 +26,8 @@ const { webhookDeliveryRouter } = await import("../../../trpc/routers/webhook-de
 
 const createCaller = makeCallerFactory({ webhookDelivery: webhookDeliveryRouter });
 
-const DELIVERY_ID = "wd_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as WebhookDeliveryId;
-const WEBHOOK_ID = "wh_bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee" as WebhookId;
+const DELIVERY_ID = brandId<WebhookDeliveryId>("wd_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const WEBHOOK_ID = brandId<WebhookId>("wh_bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_DELIVERY = {
   id: DELIVERY_ID,
@@ -116,7 +117,7 @@ describe("webhookDelivery router", () => {
       await expect(
         caller.webhookDelivery.get({
           systemId: MOCK_SYSTEM_ID,
-          deliveryId: "not-a-delivery" as WebhookDeliveryId,
+          deliveryId: brandId<WebhookDeliveryId>("not-a-delivery"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

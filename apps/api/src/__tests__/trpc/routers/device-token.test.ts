@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -32,7 +33,7 @@ const { deviceTokenRouter } = await import("../../../trpc/routers/device-token.j
 
 const createCaller = makeCallerFactory({ deviceToken: deviceTokenRouter });
 
-const TOKEN_ID = "dt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as DeviceTokenId;
+const TOKEN_ID = brandId<DeviceTokenId>("dt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_TOKEN_RESULT = {
   id: TOKEN_ID,
@@ -77,7 +78,7 @@ describe("deviceToken router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.deviceToken.register({
@@ -146,7 +147,7 @@ describe("deviceToken router", () => {
       await expect(
         caller.deviceToken.revoke({
           systemId: MOCK_SYSTEM_ID,
-          tokenId: "not-a-token-id" as DeviceTokenId,
+          tokenId: brandId<DeviceTokenId>("not-a-token-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

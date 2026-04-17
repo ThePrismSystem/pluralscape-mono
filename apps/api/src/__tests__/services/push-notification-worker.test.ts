@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -54,9 +55,9 @@ const { logger } = await import("../../lib/logger.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const DEVICE_TOKEN_ID = "dt_test-token" as DeviceTokenId;
-const ACCOUNT_ID = "acct_test" as AccountId;
-const SYSTEM_ID = "sys_test" as SystemId;
+const DEVICE_TOKEN_ID = brandId<DeviceTokenId>("dt_test-token");
+const ACCOUNT_ID = brandId<AccountId>("acct_test");
+const SYSTEM_ID = brandId<SystemId>("sys_test");
 const PLATFORM: DeviceTokenPlatform = "ios";
 
 const MOCK_PAYLOAD: PushPayload = {

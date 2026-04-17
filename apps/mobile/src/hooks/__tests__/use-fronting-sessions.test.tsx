@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptFrontingSessionInput } from "@pluralscape/data/transforms/fronting-session";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -140,9 +141,9 @@ function makeRawSession(id: string): FrontingSessionRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as FrontingSessionId,
+    id: brandId<FrontingSessionId>(id),
     systemId: TEST_SYSTEM_ID,
-    memberId: "m-1" as MemberId,
+    memberId: brandId<MemberId>("m-1"),
     customFrontId: null,
     structureEntityId: null,
     startTime: NOW,
@@ -170,7 +171,7 @@ describe("useFrontingSession", () => {
   it("returns decrypted session data", async () => {
     fixtures.set("frontingSession.get", makeRawSession("fs-1"));
     const { result } = renderHookWithProviders(() =>
-      useFrontingSession("fs-1" as FrontingSessionId),
+      useFrontingSession(brandId<FrontingSessionId>("fs-1")),
     );
 
     let data: Awaited<ReturnType<typeof useFrontingSession>>["data"] | undefined;
@@ -187,7 +188,7 @@ describe("useFrontingSession", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useFrontingSession("fs-1" as FrontingSessionId),
+      () => useFrontingSession(brandId<FrontingSessionId>("fs-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -197,7 +198,7 @@ describe("useFrontingSession", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("frontingSession.get", makeRawSession("fs-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useFrontingSession("fs-1" as FrontingSessionId),
+      useFrontingSession(brandId<FrontingSessionId>("fs-1")),
     );
 
     await waitFor(() => {
@@ -331,7 +332,7 @@ describe("useFrontingSession (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_SESSION_ROW]);
     const { result } = renderHookWithProviders(
-      () => useFrontingSession("fs-local-1" as FrontingSessionId),
+      () => useFrontingSession(brandId<FrontingSessionId>("fs-local-1")),
       { querySource: "local", localDb },
     );
 
@@ -355,7 +356,7 @@ describe("useFrontingSession (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_SESSION_ROW]);
     const { result } = renderHookWithProviders(
-      () => useFrontingSession("fs-local-1" as FrontingSessionId),
+      () => useFrontingSession(brandId<FrontingSessionId>("fs-local-1")),
       { querySource: "local", localDb },
     );
 
@@ -439,7 +440,7 @@ describe("useEndSession", () => {
     const { result } = renderHookWithProviders(() => useEndSession());
 
     await act(() =>
-      result.current.mutateAsync({ sessionId: "fs-1" as FrontingSessionId } as never),
+      result.current.mutateAsync({ sessionId: brandId<FrontingSessionId>("fs-1") } as never),
     );
 
     await waitFor(() => {
@@ -469,7 +470,7 @@ describe("useEndSession", () => {
 
     // Verify getData is called during onMutate (via cancel step)
     await act(() =>
-      result.current.mutateAsync({ sessionId: "fs-1" as FrontingSessionId } as never),
+      result.current.mutateAsync({ sessionId: brandId<FrontingSessionId>("fs-1") } as never),
     );
 
     await waitFor(() => {
@@ -486,7 +487,7 @@ describe("useUpdateSession", () => {
     const { result } = renderHookWithProviders(() => useUpdateSession());
 
     await act(() =>
-      result.current.mutateAsync({ sessionId: "fs-1" as FrontingSessionId } as never),
+      result.current.mutateAsync({ sessionId: brandId<FrontingSessionId>("fs-1") } as never),
     );
 
     await waitFor(() => {

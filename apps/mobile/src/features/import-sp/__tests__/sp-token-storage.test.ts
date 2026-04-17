@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it } from "vitest";
 
 import * as secureStore from "../../../__tests__/expo-secure-store-mock.js";
@@ -5,8 +6,8 @@ import { createSpTokenStorage } from "../sp-token-storage.js";
 
 import type { SystemId } from "@pluralscape/types";
 
-const SYSTEM_A = "sys_aaaaaaaaaaaaaaaaaaaaaaaaa" as SystemId;
-const SYSTEM_B = "sys_bbbbbbbbbbbbbbbbbbbbbbbbb" as SystemId;
+const SYSTEM_A = brandId<SystemId>("sys_aaaaaaaaaaaaaaaaaaaaaaaaa");
+const SYSTEM_B = brandId<SystemId>("sys_bbbbbbbbbbbbbbbbbbbbbbbbb");
 
 afterEach(() => {
   secureStore.__reset();

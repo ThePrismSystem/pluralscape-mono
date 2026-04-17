@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -57,7 +58,7 @@ const { getNomenclatureSettings, updateNomenclatureSettings } =
 
 const AUTH = makeTestAuth();
 
-const SYSTEM_ID = "sys_test" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test");
 
 const NOMENCLATURE_ROW = {
   systemId: SYSTEM_ID,

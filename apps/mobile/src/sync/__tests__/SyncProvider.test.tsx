@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -77,11 +78,11 @@ function makeSalt(): PwhashSalt {
 }
 
 function makeAccountId(s: string): AccountId {
-  return s as AccountId;
+  return brandId<AccountId>(s);
 }
 
 function makeSystemId(s: string): SystemId {
-  return s as SystemId;
+  return brandId<SystemId>(s);
 }
 
 // ── Test fixtures ───────────────────────────────────────────────────

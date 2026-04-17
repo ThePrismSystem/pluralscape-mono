@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptSnapshotInput } from "@pluralscape/data/transforms/snapshot";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -110,7 +111,7 @@ function makeRawSnapshot(id: string): SnapshotRaw {
   const content = makeSnapshotContent();
   const encrypted = encryptSnapshotInput(content, TEST_MASTER_KEY);
   return {
-    id: id as SystemSnapshotId,
+    id: brandId<SystemSnapshotId>(id),
     systemId: TEST_SYSTEM_ID,
     snapshotTrigger: "manual",
     createdAt: NOW,
@@ -127,7 +128,9 @@ beforeEach(() => {
 describe("useSnapshot", () => {
   it("returns decrypted snapshot data", async () => {
     fixtures.set("snapshot.get", makeRawSnapshot("snap_1"));
-    const { result } = renderHookWithProviders(() => useSnapshot("snap_1" as SystemSnapshotId));
+    const { result } = renderHookWithProviders(() =>
+      useSnapshot(brandId<SystemSnapshotId>("snap_1")),
+    );
 
     let data: Awaited<ReturnType<typeof useSnapshot>>["data"] | undefined;
     await waitFor(() => {
@@ -141,9 +144,12 @@ describe("useSnapshot", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useSnapshot("snap_1" as SystemSnapshotId), {
-      masterKey: null,
-    });
+    const { result } = renderHookWithProviders(
+      () => useSnapshot(brandId<SystemSnapshotId>("snap_1")),
+      {
+        masterKey: null,
+      },
+    );
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -151,7 +157,7 @@ describe("useSnapshot", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("snapshot.get", makeRawSnapshot("snap_1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useSnapshot("snap_1" as SystemSnapshotId),
+      useSnapshot(brandId<SystemSnapshotId>("snap_1")),
     );
 
     await waitFor(() => {

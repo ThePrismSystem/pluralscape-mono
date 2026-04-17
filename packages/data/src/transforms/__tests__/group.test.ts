@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -41,8 +42,8 @@ function makeRawGroup(overrides?: Partial<RawGroup>): RawGroup {
     masterKey,
   );
   return {
-    id: "grp_01abc" as GroupId,
-    systemId: "sys_01abc" as SystemId,
+    id: brandId<GroupId>("grp_01abc"),
+    systemId: brandId<SystemId>("sys_01abc"),
     parentGroupId: null,
     sortOrder: 1,
     encryptedData: encrypted,
@@ -97,7 +98,7 @@ describe("decryptGroup", () => {
   });
 
   it("preserves parentGroupId when set", () => {
-    const raw = makeRawGroup({ parentGroupId: "grp_parent" as GroupId });
+    const raw = makeRawGroup({ parentGroupId: brandId<GroupId>("grp_parent") });
     const group = decryptGroup(raw, masterKey);
     expect(group.parentGroupId).toBe("grp_parent");
   });
@@ -130,7 +131,7 @@ describe("decryptGroup", () => {
 describe("decryptGroupPage", () => {
   it("decrypts all items and preserves nextCursor", () => {
     const raw1 = makeRawGroup();
-    const raw2 = makeRawGroup({ id: "grp_02xyz" as GroupId, sortOrder: 2 });
+    const raw2 = makeRawGroup({ id: brandId<GroupId>("grp_02xyz"), sortOrder: 2 });
     const page = decryptGroupPage({ data: [raw1, raw2], nextCursor: "cursor_abc" }, masterKey);
 
     expect(page.data).toHaveLength(2);

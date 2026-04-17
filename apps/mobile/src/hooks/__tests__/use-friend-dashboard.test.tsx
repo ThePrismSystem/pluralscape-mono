@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
@@ -10,10 +11,10 @@ type CapturedOpts = Record<string, unknown>;
 let lastQueryOpts: CapturedOpts = {};
 let lastQueryInput: Record<string, unknown> = {};
 
-const MOCK_BUCKET_ID = "bkt_test" as BucketId;
+const MOCK_BUCKET_ID = brandId<BucketId>("bkt_test");
 
 const mockDecrypted: DecryptedFriendDashboard = {
-  systemId: "sys_friend" as SystemId,
+  systemId: brandId<SystemId>("sys_friend"),
   memberCount: 2,
   activeFronting: { sessions: [], isCofronting: false },
   visibleMembers: [],
@@ -61,34 +62,34 @@ beforeEach(() => {
 
 describe("useFriendDashboard", () => {
   it("passes connectionId to query input", () => {
-    renderHookWithProviders(() => useFriendDashboard("fc_abc" as FriendConnectionId));
+    renderHookWithProviders(() => useFriendDashboard(brandId<FriendConnectionId>("fc_abc")));
     expect(lastQueryInput["connectionId"]).toBe("fc_abc");
   });
 
   it("is enabled when bucket keys are available", () => {
-    renderHookWithProviders(() => useFriendDashboard("fc_abc" as FriendConnectionId));
+    renderHookWithProviders(() => useFriendDashboard(brandId<FriendConnectionId>("fc_abc")));
     expect(lastQueryOpts["enabled"]).toBe(true);
   });
 
   it("is disabled when bucket keys are null (loading)", () => {
     mockBucketKeys = null;
-    renderHookWithProviders(() => useFriendDashboard("fc_abc" as FriendConnectionId));
+    renderHookWithProviders(() => useFriendDashboard(brandId<FriendConnectionId>("fc_abc")));
     expect(lastQueryOpts["enabled"]).toBe(false);
   });
 
   it("is disabled when bucket keys map is empty", () => {
     mockBucketKeys = new Map();
-    renderHookWithProviders(() => useFriendDashboard("fc_abc" as FriendConnectionId));
+    renderHookWithProviders(() => useFriendDashboard(brandId<FriendConnectionId>("fc_abc")));
     expect(lastQueryOpts["enabled"]).toBe(false);
   });
 
   it("provides a select callback", () => {
-    renderHookWithProviders(() => useFriendDashboard("fc_abc" as FriendConnectionId));
+    renderHookWithProviders(() => useFriendDashboard(brandId<FriendConnectionId>("fc_abc")));
     expect(lastQueryOpts["select"]).toBeTypeOf("function");
   });
 
   it("select callback calls decryptFriendDashboard with resolver", () => {
-    renderHookWithProviders(() => useFriendDashboard("fc_abc" as FriendConnectionId));
+    renderHookWithProviders(() => useFriendDashboard(brandId<FriendConnectionId>("fc_abc")));
     const selectFn = lastQueryOpts["select"] as (raw: unknown) => DecryptedFriendDashboard;
     const rawData = { fake: "data" };
     const result = selectFn(rawData);

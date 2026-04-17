@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptStructureEntityInput } from "@pluralscape/data/transforms/structure-entity";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -143,7 +144,7 @@ const {
 } = await import("../use-structure-entities.js");
 
 const NOW = 1_700_000_000_000 as UnixMillis;
-const ENTITY_TYPE_ID = "stet_default" as SystemStructureEntityTypeId;
+const ENTITY_TYPE_ID = brandId<SystemStructureEntityTypeId>("stet_default");
 
 function makeRawEntity(id: string): StructureEntityRaw {
   const encrypted = encryptStructureEntityInput(
@@ -157,7 +158,7 @@ function makeRawEntity(id: string): StructureEntityRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as SystemStructureEntityId,
+    id: brandId<SystemStructureEntityId>(id),
     systemId: TEST_SYSTEM_ID,
     entityTypeId: ENTITY_TYPE_ID,
     sortOrder: 0,
@@ -181,7 +182,7 @@ describe("useStructureEntity", () => {
   it("returns decrypted entity data", async () => {
     fixtures.set("structure.entity.get", makeRawEntity("ste_1"));
     const { result } = renderHookWithProviders(() =>
-      useStructureEntity("ste_1" as SystemStructureEntityId),
+      useStructureEntity(brandId<SystemStructureEntityId>("ste_1")),
     );
 
     await waitFor(() => {
@@ -194,7 +195,7 @@ describe("useStructureEntity", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useStructureEntity("ste_1" as SystemStructureEntityId),
+      () => useStructureEntity(brandId<SystemStructureEntityId>("ste_1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -204,7 +205,7 @@ describe("useStructureEntity", () => {
   it("select is stable across rerenders", async () => {
     fixtures.set("structure.entity.get", makeRawEntity("ste_1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useStructureEntity("ste_1" as SystemStructureEntityId),
+      useStructureEntity(brandId<SystemStructureEntityId>("ste_1")),
     );
 
     await waitFor(() => {
@@ -221,7 +222,7 @@ describe("useStructureEntityHierarchy", () => {
     const hierarchyData = { ancestors: [], children: [] };
     fixtures.set("structure.entity.getHierarchy", hierarchyData);
     const { result } = renderHookWithProviders(() =>
-      useStructureEntityHierarchy("ste_1" as SystemStructureEntityId),
+      useStructureEntityHierarchy(brandId<SystemStructureEntityId>("ste_1")),
     );
 
     await waitFor(() => {

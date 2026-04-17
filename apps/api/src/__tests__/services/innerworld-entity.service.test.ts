@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor, toCursor } from "../../lib/pagination.js";
@@ -83,9 +83,9 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const ENTITY_ID = "iwe_test-entity" as InnerWorldEntityId;
-const REGION_ID = "iwr_test-region" as InnerWorldRegionId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const ENTITY_ID = brandId<InnerWorldEntityId>("iwe_test-entity");
+const REGION_ID = brandId<InnerWorldRegionId>("iwr_test-region");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -329,7 +329,7 @@ describe("getEntity", () => {
     const { db } = mockDb();
 
     await expect(
-      getEntity(db, SYSTEM_ID, "iwe_nonexistent" as InnerWorldEntityId, AUTH),
+      getEntity(db, SYSTEM_ID, brandId<InnerWorldEntityId>("iwe_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -427,7 +427,7 @@ describe("archiveEntity", () => {
     const { db } = mockDb();
 
     await expect(
-      archiveEntity(db, SYSTEM_ID, "iwe_nonexistent" as InnerWorldEntityId, AUTH, mockAudit),
+      archiveEntity(db, SYSTEM_ID, brandId<InnerWorldEntityId>("iwe_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -480,7 +480,7 @@ describe("restoreEntity", () => {
     const { db } = mockDb();
 
     await expect(
-      restoreEntity(db, SYSTEM_ID, "iwe_nonexistent" as InnerWorldEntityId, AUTH, mockAudit),
+      restoreEntity(db, SYSTEM_ID, brandId<InnerWorldEntityId>("iwe_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -508,7 +508,7 @@ describe("deleteEntity", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteEntity(db, SYSTEM_ID, "iwe_nonexistent" as InnerWorldEntityId, AUTH, mockAudit),
+      deleteEntity(db, SYSTEM_ID, brandId<InnerWorldEntityId>("iwe_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

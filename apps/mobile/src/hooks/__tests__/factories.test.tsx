@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -525,7 +526,7 @@ describe("useRemoteOnlyQuery", () => {
 
   it("respects systemIdOverride", async () => {
     fixtures.set("member.get", { name: "Override" });
-    const overrideId = "sys-override" as SystemId;
+    const overrideId = brandId<SystemId>("sys-override");
     const { result } = renderHookWithProviders(() =>
       useRemoteOnlyGetWithOverride("r-2", overrideId),
     );

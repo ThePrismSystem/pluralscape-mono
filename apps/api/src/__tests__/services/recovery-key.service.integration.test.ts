@@ -4,6 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { assertAuthKey, hashAuthKey, hashRecoveryKey, initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -81,7 +82,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     recoveryKeyHex: string;
   }> {
     const email = overrides.email ?? `test-${crypto.randomUUID()}@example.com`;
-    const accountId = `acct_${crypto.randomUUID()}` as AccountId;
+    const accountId = brandId<AccountId>(`acct_${crypto.randomUUID()}`);
     const authKeyBytes = randBytes(32);
     assertAuthKey(authKeyBytes);
     const authKeyHashBytes = hashAuthKey(authKeyBytes);
@@ -162,7 +163,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     });
 
     it("returns hasActiveKey false for nonexistent account", async () => {
-      const fakeAccountId = `acct_${crypto.randomUUID()}` as AccountId;
+      const fakeAccountId = brandId<AccountId>(`acct_${crypto.randomUUID()}`);
 
       const status = await getRecoveryKeyStatus(asDb(db), fakeAccountId);
 
@@ -412,7 +413,10 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
         .select({ encryptedMasterKey: recoveryKeys.encryptedMasterKey })
         .from(recoveryKeys)
         .where(
-          and(eq(recoveryKeys.accountId, acct.id as AccountId), isNull(recoveryKeys.revokedAt)),
+          and(
+            eq(recoveryKeys.accountId, brandId<AccountId>(acct.id)),
+            isNull(recoveryKeys.revokedAt),
+          ),
         )
         .limit(1);
 

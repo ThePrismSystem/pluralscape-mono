@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { createIndexedDbStorageAdapter } from "../indexeddb-storage-adapter.js";
@@ -8,8 +9,8 @@ import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "@plural
 import type { SyncStorageAdapter } from "@pluralscape/sync/adapters";
 import type { SyncDocumentId } from "@pluralscape/types";
 
-const DOC_A = "doc-a" as SyncDocumentId;
-const DOC_B = "doc-b" as SyncDocumentId;
+const DOC_A = brandId<SyncDocumentId>("doc-a");
+const DOC_B = brandId<SyncDocumentId>("doc-b");
 
 let dbCounter = 0;
 function freshAdapter(): SyncStorageAdapter {

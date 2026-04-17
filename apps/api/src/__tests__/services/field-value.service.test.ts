@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -50,9 +51,9 @@ const { InvalidInputError } = await import("@pluralscape/crypto");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const MEMBER_ID = "mem_test-member" as MemberId;
-const FIELD_DEF_ID = "fld_test-field" as FieldDefinitionId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const MEMBER_ID = brandId<MemberId>("mem_test-member");
+const FIELD_DEF_ID = brandId<FieldDefinitionId>("fld_test-field");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -446,8 +447,8 @@ describe("deleteFieldValueForOwner (member path)", () => {
 
 // ── Polymorphic owner paths (ForOwner variants) ─────────────────────
 
-const GROUP_ID = "grp_test-group" as GroupId;
-const STRUCTURE_ENTITY_ID = "sse_test-entity" as SystemStructureEntityId;
+const GROUP_ID = brandId<GroupId>("grp_test-group");
+const STRUCTURE_ENTITY_ID = brandId<SystemStructureEntityId>("sse_test-entity");
 
 describe("setFieldValueForOwner", () => {
   afterEach(() => {

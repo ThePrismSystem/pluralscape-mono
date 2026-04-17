@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
@@ -40,8 +41,8 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_timer-test-system" as SystemId;
-const TIMER_ID = "tmr_timer-test-config" as TimerId;
+const SYSTEM_ID = brandId<SystemId>("sys_timer-test-system");
+const TIMER_ID = brandId<TimerId>("tmr_timer-test-config");
 
 const AUTH = makeTestAuth({
   accountId: "acct_timer-test-account",
@@ -368,9 +369,9 @@ describe("getTimerConfig", () => {
   it("throws 404 when not found", async () => {
     const { db } = mockDb();
 
-    await expect(getTimerConfig(db, SYSTEM_ID, "tmr_nonexistent" as TimerId, AUTH)).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-    );
+    await expect(
+      getTimerConfig(db, SYSTEM_ID, brandId<TimerId>("tmr_nonexistent"), AUTH),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("throws 404 for system ownership failure", async () => {
@@ -728,7 +729,7 @@ describe("deleteTimerConfig", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteTimerConfig(db, SYSTEM_ID, "tmr_nonexistent" as TimerId, AUTH, mockAudit),
+      deleteTimerConfig(db, SYSTEM_ID, brandId<TimerId>("tmr_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -791,7 +792,7 @@ describe("archiveTimerConfig", () => {
     const { db } = mockDb();
 
     await expect(
-      archiveTimerConfig(db, SYSTEM_ID, "tmr_nonexistent" as TimerId, AUTH, mockAudit),
+      archiveTimerConfig(db, SYSTEM_ID, brandId<TimerId>("tmr_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -847,7 +848,7 @@ describe("restoreTimerConfig", () => {
       .mockResolvedValueOnce([]); // select existence check finds nothing
 
     await expect(
-      restoreTimerConfig(db, SYSTEM_ID, "tmr_nonexistent" as TimerId, AUTH, mockAudit),
+      restoreTimerConfig(db, SYSTEM_ID, brandId<TimerId>("tmr_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 

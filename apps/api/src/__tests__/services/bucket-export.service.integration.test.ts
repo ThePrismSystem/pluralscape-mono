@@ -8,7 +8,13 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { BUCKET_CONTENT_ENTITY_TYPES, createId, ID_PREFIXES, now } from "@pluralscape/types";
+import {
+  BUCKET_CONTENT_ENTITY_TYPES,
+  createId,
+  ID_PREFIXES,
+  now,
+  brandId,
+} from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -95,11 +101,11 @@ describe("bucket-export.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.fieldValues);
     await pgExec(client, PG_DDL.fieldValuesIndexes);
 
-    ownerAccountId = (await pgInsertAccount(db)) as AccountId;
-    otherAccountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, ownerAccountId)) as SystemId;
+    ownerAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, ownerAccountId));
     ownerAuth = makeAuth(ownerAccountId, systemId);
-    otherAuth = makeAuth(otherAccountId, `sys_${crypto.randomUUID()}` as SystemId);
+    otherAuth = makeAuth(otherAccountId, brandId<SystemId>(`sys_${crypto.randomUUID()}`));
   });
 
   afterAll(async () => {
@@ -128,7 +134,7 @@ describe("bucket-export.service (PGlite integration)", () => {
       archived,
       archivedAt: archived ? ts : null,
     });
-    return id as BucketId;
+    return brandId<BucketId>(id);
   }
 
   async function insertMember(updatedAt?: number): Promise<MemberId> {
@@ -141,7 +147,7 @@ describe("bucket-export.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as MemberId;
+    return brandId<MemberId>(id);
   }
 
   async function insertGroup(updatedAt?: number): Promise<GroupId> {
@@ -155,7 +161,7 @@ describe("bucket-export.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as GroupId;
+    return brandId<GroupId>(id);
   }
 
   async function insertCustomFront(updatedAt?: number): Promise<CustomFrontId> {
@@ -168,7 +174,7 @@ describe("bucket-export.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as CustomFrontId;
+    return brandId<CustomFrontId>(id);
   }
 
   async function insertBucketTag(
@@ -270,7 +276,7 @@ describe("bucket-export.service (PGlite integration)", () => {
   });
 
   it("throws 404 for non-existent bucket", async () => {
-    const fakeBucketId = `bkt_${crypto.randomUUID()}` as BucketId;
+    const fakeBucketId = brandId<BucketId>(`bkt_${crypto.randomUUID()}`);
 
     await assertApiError(
       getBucketExportManifest(asDb(db), systemId, fakeBucketId, ownerAuth),
@@ -426,7 +432,7 @@ describe("bucket-export.service (PGlite integration)", () => {
   });
 
   it("throws 404 for non-existent bucket (page)", async () => {
-    const fakeBucketId = `bkt_${crypto.randomUUID()}` as BucketId;
+    const fakeBucketId = brandId<BucketId>(`bkt_${crypto.randomUUID()}`);
 
     await assertApiError(
       getBucketExportPage(asDb(db), systemId, fakeBucketId, ownerAuth, "member", 10),

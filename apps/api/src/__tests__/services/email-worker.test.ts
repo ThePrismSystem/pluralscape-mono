@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -57,7 +58,7 @@ const { logger } = await import("../../lib/logger.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acct_test-email" as AccountId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test-email");
 
 function makeJobPayload(
   overrides?: Partial<JobPayloadMap["email-send"]>,

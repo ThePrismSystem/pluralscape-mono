@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -54,9 +55,9 @@ vi.mock("@pluralscape/types", async () => {
   };
 });
 
-const ACCOUNT_ID = "acc_test-account" as AccountId;
-const SESSION_ID = "sess_test-session" as SessionId;
-const TARGET_SESSION_ID = "sess_target-session" as SessionId;
+const ACCOUNT_ID = brandId<AccountId>("acc_test-account");
+const SESSION_ID = brandId<SessionId>("sess_test-session");
+const TARGET_SESSION_ID = brandId<SessionId>("sess_target-session");
 
 /** 16-byte salt hex (32 hex chars = 16 bytes). */
 const VALID_SALT_HEX = "00".repeat(16);
@@ -372,7 +373,7 @@ describe("device-transfer.service", () => {
     });
 
     it("throws TransferNotFoundError for wrong accountId (empty SELECT)", async () => {
-      const OTHER_ACCOUNT = "acc_other-account" as AccountId;
+      const OTHER_ACCOUNT = brandId<AccountId>("acc_other-account");
       chain.limit.mockResolvedValue([]);
 
       await expect(

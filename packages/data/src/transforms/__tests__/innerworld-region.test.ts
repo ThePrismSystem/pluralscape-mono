@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -44,15 +44,15 @@ function makeRegionFields(): InnerWorldRegionEncryptedFields {
       imageSource: null,
       externalUrl: null,
     },
-    gatekeeperMemberIds: ["mem_1" as MemberId],
+    gatekeeperMemberIds: [brandId<MemberId>("mem_1")],
     accessType: "gatekept",
   };
 }
 
 function makeRawRegion(overrides?: Partial<InnerWorldRegionRaw>): InnerWorldRegionRaw {
   return {
-    id: "reg_001" as InnerWorldRegionId,
-    systemId: "sys_test" as SystemId,
+    id: brandId<InnerWorldRegionId>("reg_001"),
+    systemId: brandId<SystemId>("sys_test"),
     parentRegionId: null,
     encryptedData: encryptAndEncodeT1(makeRegionFields(), masterKey),
     archived: false,
@@ -108,7 +108,7 @@ describe("decryptInnerWorldRegion", () => {
   });
 
   it("passes through parentRegionId", () => {
-    const raw = makeRawRegion({ parentRegionId: "reg_parent" as InnerWorldRegionId });
+    const raw = makeRawRegion({ parentRegionId: brandId<InnerWorldRegionId>("reg_parent") });
     const result = decryptInnerWorldRegion(raw, masterKey);
     expect(result.parentRegionId).toBe("reg_parent");
   });

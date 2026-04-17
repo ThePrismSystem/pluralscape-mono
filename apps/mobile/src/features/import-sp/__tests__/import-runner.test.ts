@@ -7,6 +7,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { createFakeImportSource } from "@pluralscape/import-sp/fake-source";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { runSpImport } from "../import-runner.js";
@@ -27,7 +28,7 @@ import type {
   ImportJobId,
 } from "@pluralscape/types";
 
-const TEST_JOB_ID = "ij_test_runner" as ImportJobId;
+const TEST_JOB_ID = brandId<ImportJobId>("ij_test_runner");
 const AVATAR_MODE: ImportAvatarMode = "skip";
 const ALL_CATEGORIES_SELECTED: Record<string, boolean> = {};
 

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
@@ -40,7 +41,7 @@ const { webhookConfigRouter } = await import("../../../trpc/routers/webhook-conf
 
 const createCaller = makeCallerFactory({ webhookConfig: webhookConfigRouter });
 
-const WEBHOOK_ID = "wh_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as WebhookId;
+const WEBHOOK_ID = brandId<WebhookId>("wh_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_WEBHOOK = {
   id: WEBHOOK_ID,
@@ -134,7 +135,7 @@ describe("webhookConfig router", () => {
       await expect(
         caller.webhookConfig.get({
           systemId: MOCK_SYSTEM_ID,
-          webhookId: "not-a-webhook" as WebhookId,
+          webhookId: brandId<WebhookId>("not-a-webhook"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -58,7 +59,7 @@ function createAuth(overrides?: Partial<SessionAuthContext>): AuthContext {
     authMethod: "session" as const,
     accountId: "acct_abc" as AuthContext["accountId"],
     systemId: "sys_xyz" as AuthContext["systemId"],
-    sessionId: "sess_001" as SessionId,
+    sessionId: brandId<SessionId>("sess_001"),
     accountType: "system",
     ownedSystemIds: new Set(["sys_xyz" as AuthContext["systemId"] & string]),
     auditLogIpTracking: false,
@@ -88,7 +89,7 @@ describe("enrollBiometric", () => {
 
     const result = await enrollBiometric(db, VALID_ENROLL_BODY, createAuth(), mockAudit);
 
-    expect(result).toEqual({ id: "bt_test123" as BiometricTokenId });
+    expect(result).toEqual({ id: brandId<BiometricTokenId>("bt_test123") });
     expect(chain.insert).toHaveBeenCalledOnce();
   });
 

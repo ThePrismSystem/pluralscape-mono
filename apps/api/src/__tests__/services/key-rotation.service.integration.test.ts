@@ -8,7 +8,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "@pluralscape/types";
+import { ROTATION_ITEM_STATUSES, ROTATION_STATES, brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -54,8 +54,8 @@ describe("key-rotation.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.bucketRotationItems);
     await pgExec(client, PG_DDL.bucketRotationItemsIndexes);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -83,7 +83,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return resolvedId as BucketId;
+    return brandId<BucketId>(resolvedId);
   }
 
   async function insertContentTags(bucketId: BucketId, count: number): Promise<string[]> {
@@ -381,7 +381,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       const bucketId = await insertBucket();
 
       // Insert a completed rotation directly
-      const rotationId = `bkr_${crypto.randomUUID()}` as BucketKeyRotationId;
+      const rotationId = brandId<BucketKeyRotationId>(`bkr_${crypto.randomUUID()}`);
       await db.insert(bucketKeyRotations).values({
         id: rotationId,
         bucketId,
@@ -526,7 +526,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       const bucketId = await insertBucket();
 
       // Insert a rotation in initiated state (not migrating)
-      const rotationId = `bkr_${crypto.randomUUID()}` as BucketKeyRotationId;
+      const rotationId = brandId<BucketKeyRotationId>(`bkr_${crypto.randomUUID()}`);
       await db.insert(bucketKeyRotations).values({
         id: rotationId,
         bucketId,

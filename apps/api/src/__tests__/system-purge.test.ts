@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "./helpers/mock-db.js";
@@ -35,15 +36,15 @@ const { purgeSystem } = await import("../services/system-purge.service.js");
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_00000000-0000-0000-0000-000000000001" as SystemId;
-const ACCOUNT_ID = "acc_00000000-0000-0000-0000-000000000001" as AccountId;
+const SYSTEM_ID = brandId<SystemId>("sys_00000000-0000-0000-0000-000000000001");
+const ACCOUNT_ID = brandId<AccountId>("acc_00000000-0000-0000-0000-000000000001");
 
 function stubAuth(overrides?: Partial<SessionAuthContext>): AuthContext {
   return {
     authMethod: "session" as const,
     accountId: ACCOUNT_ID,
     systemId: SYSTEM_ID,
-    sessionId: "ses_00000000-0000-0000-0000-000000000001" as SessionId,
+    sessionId: brandId<SessionId>("ses_00000000-0000-0000-0000-000000000001"),
     accountType: "system",
     ownedSystemIds: new Set([SYSTEM_ID]),
     auditLogIpTracking: false,

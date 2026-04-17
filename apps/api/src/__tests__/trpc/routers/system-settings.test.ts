@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -54,7 +55,7 @@ const createCaller = makeCallerFactory({ systemSettings: systemSettingsRouter })
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_SETTINGS_RESULT = {
-  id: "sset_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemSettingsId,
+  id: brandId<SystemSettingsId>("sset_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
   systemId: MOCK_SYSTEM_ID,
   locale: "en",
   biometricEnabled: false,

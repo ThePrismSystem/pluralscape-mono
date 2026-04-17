@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { createCrdtQueryBridge } from "../crdt-query-bridge.js";
@@ -5,7 +6,7 @@ import { createCrdtQueryBridge } from "../crdt-query-bridge.js";
 import type { DocumentSnapshotProvider } from "../crdt-query-bridge.js";
 import type { SyncDocumentId } from "@pluralscape/types";
 
-const DOC_ID = "doc-abc-123" as SyncDocumentId;
+const DOC_ID = brandId<SyncDocumentId>("doc-abc-123");
 
 function makeEngine(snapshot: unknown): {
   engine: DocumentSnapshotProvider;

@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptTimerConfigInput } from "@pluralscape/data/transforms/timer-check-in";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -151,7 +152,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 function makeRawTimer(id: string): TimerConfigRaw {
   const encrypted = encryptTimerConfigInput({ promptText: "How are you?" }, TEST_MASTER_KEY);
   return {
-    id: id as TimerId,
+    id: brandId<TimerId>(id),
     systemId: TEST_SYSTEM_ID,
     enabled: true,
     intervalMinutes: 60,
@@ -169,8 +170,8 @@ function makeRawTimer(id: string): TimerConfigRaw {
 
 function makeRawCheckIn(id: string): CheckInRecordRaw {
   return {
-    id: id as CheckInRecordId,
-    timerConfigId: "tmr-1" as TimerId,
+    id: brandId<CheckInRecordId>(id),
+    timerConfigId: brandId<TimerId>("tmr-1"),
     systemId: TEST_SYSTEM_ID,
     scheduledAt: NOW,
     respondedByMemberId: null,
@@ -190,7 +191,7 @@ beforeEach(() => {
 describe("useTimerConfig", () => {
   it("returns decrypted timer config data", async () => {
     fixtures.set("timerConfig.get", makeRawTimer("tmr-1"));
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId));
+    const { result } = renderHookWithProviders(() => useTimerConfig(brandId<TimerId>("tmr-1")));
 
     let data: Awaited<ReturnType<typeof useTimerConfig>>["data"] | undefined;
     await waitFor(() => {
@@ -204,7 +205,7 @@ describe("useTimerConfig", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId), {
+    const { result } = renderHookWithProviders(() => useTimerConfig(brandId<TimerId>("tmr-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -213,7 +214,9 @@ describe("useTimerConfig", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("timerConfig.get", makeRawTimer("tmr-1"));
-    const { result, rerender } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useTimerConfig(brandId<TimerId>("tmr-1")),
+    );
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -341,10 +344,13 @@ const LOCAL_CHECK_IN_ROW: Record<string, unknown> = {
 describe("useTimerConfig (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_TIMER_ROW]);
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-local-1" as TimerId), {
-      querySource: "local",
-      localDb,
-    });
+    const { result } = renderHookWithProviders(
+      () => useTimerConfig(brandId<TimerId>("tmr-local-1")),
+      {
+        querySource: "local",
+        localDb,
+      },
+    );
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -364,10 +370,13 @@ describe("useTimerConfig (local source)", () => {
 
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_TIMER_ROW]);
-    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-local-1" as TimerId), {
-      querySource: "local",
-      localDb,
-    });
+    const { result } = renderHookWithProviders(
+      () => useTimerConfig(brandId<TimerId>("tmr-local-1")),
+      {
+        querySource: "local",
+        localDb,
+      },
+    );
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();

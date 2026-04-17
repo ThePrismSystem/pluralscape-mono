@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
@@ -66,9 +67,9 @@ const { createSnapshot, getSnapshot, listSnapshots, deleteSnapshot } =
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_00000000-0000-0000-0000-000000000001" as SystemId;
-const SNAPSHOT_ID = "snap_00000000-0000-0000-0000-000000000001" as SystemSnapshotId;
-const ACCOUNT_ID = "acc_00000000-0000-0000-0000-000000000001" as AccountId;
+const SYSTEM_ID = brandId<SystemId>("sys_00000000-0000-0000-0000-000000000001");
+const SNAPSHOT_ID = brandId<SystemSnapshotId>("snap_00000000-0000-0000-0000-000000000001");
+const ACCOUNT_ID = brandId<AccountId>("acc_00000000-0000-0000-0000-000000000001");
 
 /** Stub T1 blob satisfying the EncryptedBlob discriminated union. */
 const FAKE_BLOB: EncryptedBlob = {
@@ -85,7 +86,7 @@ function stubAuth(overrides?: Partial<SessionAuthContext>): AuthContext {
     authMethod: "session" as const,
     accountId: ACCOUNT_ID,
     systemId: SYSTEM_ID,
-    sessionId: "ses_00000000-0000-0000-0000-000000000001" as SessionId,
+    sessionId: brandId<SessionId>("ses_00000000-0000-0000-0000-000000000001"),
     accountType: "system",
     ownedSystemIds: new Set([SYSTEM_ID]),
     auditLogIpTracking: false,

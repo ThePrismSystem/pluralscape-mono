@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
@@ -33,7 +34,7 @@ function wireChain(): void {
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -93,7 +94,7 @@ const { getOrCreateNotificationConfig, updateNotificationConfig, listNotificatio
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const CONFIG_ID = "ncfg_test-config" as NotificationConfigId;
+const CONFIG_ID = brandId<NotificationConfigId>("ncfg_test-config");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const EVENT_TYPE: NotificationEventType = "switch-reminder";

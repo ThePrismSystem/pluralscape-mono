@@ -5,6 +5,7 @@ import {
   encryptNomenclatureUpdate,
   encryptSystemSettingsUpdate,
 } from "@pluralscape/data/transforms/system-settings";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -124,7 +125,7 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const NOW = 1_700_000_000_000 as UnixMillis;
-const SETTINGS_ID = "ss-1" as SystemSettingsId;
+const SETTINGS_ID = brandId<SystemSettingsId>("ss-1");
 
 function makeSystemSettingsPayload() {
   return {

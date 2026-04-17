@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -35,7 +36,7 @@ const { noteRouter } = await import("../../../trpc/routers/note.js");
 
 const createCaller = makeCallerFactory({ note: noteRouter });
 
-const NOTE_ID = "note_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as NoteId;
+const NOTE_ID = brandId<NoteId>("note_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3Jub3Rl";
 
 const MOCK_NOTE_RESULT = {
@@ -80,7 +81,7 @@ describe("note router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.note.create({ systemId: foreignSystemId, encryptedData: VALID_ENCRYPTED_DATA }),
@@ -105,7 +106,7 @@ describe("note router", () => {
     it("rejects invalid noteId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.note.get({ systemId: MOCK_SYSTEM_ID, noteId: "invalid-id" as NoteId }),
+        caller.note.get({ systemId: MOCK_SYSTEM_ID, noteId: brandId<NoteId>("invalid-id") }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 

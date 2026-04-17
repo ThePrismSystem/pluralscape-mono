@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { assertProcedureRateLimited, makeCallerFactory, MOCK_SYSTEM_ID } from "../test-helpers.js";
@@ -37,9 +38,9 @@ const { importEntityRefRouter } = await import("../../../trpc/routers/import-ent
 
 const createCaller = makeCallerFactory({ importEntityRef: importEntityRefRouter });
 
-const REF_ID = "ier_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ImportEntityRefId;
-const ACCOUNT_ID = "acct_test001" as AccountId;
-const MEMBER_PS_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
+const REF_ID = brandId<ImportEntityRefId>("ier_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const ACCOUNT_ID = brandId<AccountId>("acct_test001");
+const MEMBER_PS_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_REF: ImportEntityRef = {
   id: REF_ID,

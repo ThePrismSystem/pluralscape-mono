@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -10,7 +11,7 @@ const { queryAuditLog } = await import("../../services/audit-log-query.service.j
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acct_test-account" as AccountId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test-account");
 
 const BASE_PARAMS = {
   from: 1_000_000,
@@ -20,7 +21,7 @@ const BASE_PARAMS = {
 
 function makeAuditRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    id: "al_entry-001" as AuditLogEntryId,
+    id: brandId<AuditLogEntryId>("al_entry-001"),
     accountId: ACCOUNT_ID,
     systemId: "sys_test-system",
     eventType: "member.created",

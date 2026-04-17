@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConnectionStateMachine } from "../connection-state-machine.js";
@@ -17,20 +18,20 @@ describe("ConnectionStateMachine", () => {
 
   it("CONNECT from disconnected transitions to connecting", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     expect(machine.getSnapshot()).toBe("connecting");
   });
 
   it("CONNECTED from connecting transitions to connected", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTED" });
     expect(machine.getSnapshot()).toBe("connected");
   });
 
   it("CONNECTION_LOST from connected transitions to reconnecting", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTED" });
     machine.dispatch({ type: "CONNECTION_LOST" });
     expect(machine.getSnapshot()).toBe("reconnecting");
@@ -38,7 +39,7 @@ describe("ConnectionStateMachine", () => {
 
   it("DISCONNECT from connected transitions to disconnected", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTED" });
     machine.dispatch({ type: "DISCONNECT" });
     expect(machine.getSnapshot()).toBe("disconnected");
@@ -46,14 +47,14 @@ describe("ConnectionStateMachine", () => {
 
   it("DISCONNECT from connecting transitions to disconnected", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "DISCONNECT" });
     expect(machine.getSnapshot()).toBe("disconnected");
   });
 
   it("DISCONNECT from reconnecting transitions to disconnected", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTED" });
     machine.dispatch({ type: "CONNECTION_LOST" });
     machine.dispatch({ type: "DISCONNECT" });
@@ -62,14 +63,14 @@ describe("ConnectionStateMachine", () => {
 
   it("CONNECTION_LOST from connecting transitions to backoff", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTION_LOST" });
     expect(machine.getSnapshot()).toBe("backoff");
   });
 
   it("BACKOFF_COMPLETE from backoff transitions to reconnecting", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTION_LOST" });
     machine.dispatch({ type: "BACKOFF_COMPLETE" });
     expect(machine.getSnapshot()).toBe("reconnecting");
@@ -77,7 +78,7 @@ describe("ConnectionStateMachine", () => {
 
   it("RETRY from reconnecting transitions to connecting", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTED" });
     machine.dispatch({ type: "CONNECTION_LOST" });
     machine.dispatch({ type: "RETRY" });
@@ -91,7 +92,7 @@ describe("ConnectionStateMachine", () => {
       maxBackoffMs: 30_000,
     });
     // retryCount = 0 initially → first backoff after first loss
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTION_LOST" }); // retryCount = 1
     // 1000 * 2^1 = 2000, jitter ±25% → [1500, 2500]
     const delay = machine.getBackoffMs();
@@ -104,7 +105,7 @@ describe("ConnectionStateMachine", () => {
       baseUrl: "http://test",
       maxBackoffMs: 5_000,
     });
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     for (let i = 0; i < 10; i++) {
       machine.dispatch({ type: "CONNECTION_LOST" });
       if (i < 9) {
@@ -122,7 +123,7 @@ describe("ConnectionStateMachine", () => {
       baseBackoffMs: 1_000,
       maxBackoffMs: 30_000,
     });
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTION_LOST" }); // retryCount = 1
     machine.dispatch({ type: "BACKOFF_COMPLETE" });
     machine.dispatch({ type: "RETRY" });
@@ -137,7 +138,7 @@ describe("ConnectionStateMachine", () => {
     const machine = makeMachine();
     const listener = vi.fn();
     machine.subscribe(listener);
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     expect(listener).toHaveBeenCalledOnce();
     const firstCall = listener.mock.calls[0] as [ConnectionState];
     expect(firstCall[0]).toBe("connecting");
@@ -149,7 +150,7 @@ describe("ConnectionStateMachine", () => {
     const l2 = vi.fn();
     machine.subscribe(l1);
     machine.subscribe(l2);
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     expect(l1).toHaveBeenCalledOnce();
     expect(l2).toHaveBeenCalledOnce();
   });
@@ -159,7 +160,7 @@ describe("ConnectionStateMachine", () => {
     const listener = vi.fn();
     const unsubscribe = machine.subscribe(listener);
     unsubscribe();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -173,16 +174,16 @@ describe("ConnectionStateMachine", () => {
   it("snapshot changes after dispatch", () => {
     const machine = makeMachine();
     const before = machine.getSnapshot();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     const after = machine.getSnapshot();
     expect(after).not.toBe(before);
   });
 
   it("CONNECT is ignored when already connecting", () => {
     const machine = makeMachine();
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     const snapshot = machine.getSnapshot();
-    machine.dispatch({ type: "CONNECT", token: "tok2", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok2", systemId: brandId<SystemId>("sys") });
     expect(machine.getSnapshot()).toBe(snapshot);
   });
 });
@@ -212,7 +213,7 @@ describe("ConnectionStateMachine.getBackoffMs jitter", () => {
 
   it("respects max backoff cap with jitter", () => {
     const machine = new ConnectionStateMachine({ baseUrl: "http://test" });
-    machine.dispatch({ type: "CONNECT", token: "t", systemId: "sys-1" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "t", systemId: brandId<SystemId>("sys-1") });
     for (let i = 0; i < 20; i++) {
       machine.dispatch({ type: "CONNECTION_LOST" });
       machine.dispatch({ type: "BACKOFF_COMPLETE" });
@@ -226,7 +227,7 @@ describe("ConnectionStateMachine.getBackoffMs jitter", () => {
 
   it("returns values within jittered range for retry 1", () => {
     const machine = new ConnectionStateMachine({ baseUrl: "http://test" });
-    machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+    machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
     machine.dispatch({ type: "CONNECTION_LOST" }); // retryCount = 1
     for (let i = 0; i < SAMPLE_COUNT; i++) {
       const delay = machine.getBackoffMs();
@@ -278,7 +279,7 @@ describe("ConnectionStateMachine.getBackoffMs jitter", () => {
   describe("CONNECTED from reconnecting", () => {
     it("transitions reconnecting → connected", () => {
       const machine = makeMachine();
-      machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+      machine.dispatch({ type: "CONNECT", token: "tok", systemId: brandId<SystemId>("sys") });
       machine.dispatch({ type: "CONNECTED" });
       machine.dispatch({ type: "CONNECTION_LOST" }); // → reconnecting
       expect(machine.getSnapshot()).toBe("reconnecting");

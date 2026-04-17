@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptStructureEntityTypeInput } from "@pluralscape/data/transforms/structure-entity-type";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -138,7 +139,7 @@ function makeRawEntityType(id: string): StructureEntityTypeRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as SystemStructureEntityTypeId,
+    id: brandId<SystemStructureEntityTypeId>(id),
     systemId: TEST_SYSTEM_ID,
     sortOrder: 0,
     version: 1,
@@ -159,7 +160,7 @@ describe("useStructureEntityType", () => {
   it("returns decrypted entity type data", async () => {
     fixtures.set("structure.entityType.get", makeRawEntityType("stet_1"));
     const { result } = renderHookWithProviders(() =>
-      useStructureEntityType("stet_1" as SystemStructureEntityTypeId),
+      useStructureEntityType(brandId<SystemStructureEntityTypeId>("stet_1")),
     );
 
     await waitFor(() => {
@@ -172,7 +173,7 @@ describe("useStructureEntityType", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useStructureEntityType("stet_1" as SystemStructureEntityTypeId),
+      () => useStructureEntityType(brandId<SystemStructureEntityTypeId>("stet_1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -182,7 +183,7 @@ describe("useStructureEntityType", () => {
   it("select is stable across rerenders", async () => {
     fixtures.set("structure.entityType.get", makeRawEntityType("stet_1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useStructureEntityType("stet_1" as SystemStructureEntityTypeId),
+      useStructureEntityType(brandId<SystemStructureEntityTypeId>("stet_1")),
     );
 
     await waitFor(() => {

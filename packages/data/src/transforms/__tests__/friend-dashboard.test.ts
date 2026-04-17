@@ -1,6 +1,6 @@
 import { configureSodium, generateBucketKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT2 } from "../decode-blob.js";
@@ -26,8 +26,8 @@ import type {
 } from "@pluralscape/types";
 
 let bucketKey: AeadKey;
-const BUCKET_ID = "bkt_test1" as BucketId;
-const SYSTEM_ID = "sys_abc" as SystemId;
+const BUCKET_ID = brandId<BucketId>("bkt_test1");
+const SYSTEM_ID = brandId<SystemId>("sys_abc");
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -81,8 +81,8 @@ function makeRawResponse(key: AeadKey, bucketId: BucketId): FriendDashboardRespo
     activeFronting: {
       sessions: [
         {
-          id: "fs_s1" as FrontingSessionId,
-          memberId: "mem_m1" as MemberId,
+          id: brandId<FrontingSessionId>("fs_s1"),
+          memberId: brandId<MemberId>("mem_m1"),
           customFrontId: null,
           structureEntityId: null,
           startTime: toUnixMillis(1_700_000_000_000),
@@ -93,25 +93,25 @@ function makeRawResponse(key: AeadKey, bucketId: BucketId): FriendDashboardRespo
     },
     visibleMembers: [
       {
-        id: "mem_m1" as MemberId,
+        id: brandId<MemberId>("mem_m1"),
         encryptedData: encryptAndEncodeT2(makeMemberBlob(), key, bucketId),
       },
     ],
     visibleCustomFronts: [
       {
-        id: "cf_c1" as CustomFrontId,
+        id: brandId<CustomFrontId>("cf_c1"),
         encryptedData: encryptAndEncodeT2(makeCustomFrontBlob(), key, bucketId),
       },
     ],
     visibleStructureEntities: [
       {
-        id: "ste_s1" as SystemStructureEntityId,
+        id: brandId<SystemStructureEntityId>("ste_s1"),
         encryptedData: encryptAndEncodeT2(makeStructureEntityBlob(), key, bucketId),
       },
     ],
     keyGrants: [
       {
-        id: "kg_1" as KeyGrantId,
+        id: brandId<KeyGrantId>("kg_1"),
         bucketId,
         encryptedKey: "unused-in-transform",
         keyVersion: 1,
@@ -125,7 +125,7 @@ function makeRawResponse(key: AeadKey, bucketId: BucketId): FriendDashboardRespo
 describe("decryptDashboardMember", () => {
   it("decrypts T2 member blob and returns expected fields", () => {
     const raw = {
-      id: "mem_m1" as MemberId,
+      id: brandId<MemberId>("mem_m1"),
       encryptedData: encryptAndEncodeT2(makeMemberBlob(), bucketKey, BUCKET_ID),
     };
     const result = decryptDashboardMember(raw, bucketKey);
@@ -139,7 +139,7 @@ describe("decryptDashboardMember", () => {
 
   it("defaults missing optional fields", () => {
     const raw = {
-      id: "mem_m2" as MemberId,
+      id: brandId<MemberId>("mem_m2"),
       encryptedData: encryptAndEncodeT2({ name: "Kai" }, bucketKey, BUCKET_ID),
     };
     const result = decryptDashboardMember(raw, bucketKey);
@@ -151,7 +151,7 @@ describe("decryptDashboardMember", () => {
 
   it("throws on non-object blob", () => {
     const raw = {
-      id: "mem_bad" as MemberId,
+      id: brandId<MemberId>("mem_bad"),
       encryptedData: encryptAndEncodeT2("not-an-object", bucketKey, BUCKET_ID),
     };
     expect(() => decryptDashboardMember(raw, bucketKey)).toThrow("not an object");
@@ -159,7 +159,7 @@ describe("decryptDashboardMember", () => {
 
   it("throws on missing name field", () => {
     const raw = {
-      id: "mem_bad" as MemberId,
+      id: brandId<MemberId>("mem_bad"),
       encryptedData: encryptAndEncodeT2({ pronouns: [] }, bucketKey, BUCKET_ID),
     };
     expect(() => decryptDashboardMember(raw, bucketKey)).toThrow("missing required string field");
@@ -169,8 +169,8 @@ describe("decryptDashboardMember", () => {
 describe("decryptDashboardFrontingSession", () => {
   it("decrypts T2 fronting session blob", () => {
     const raw = {
-      id: "fs_s1" as FrontingSessionId,
-      memberId: "mem_m1" as MemberId,
+      id: brandId<FrontingSessionId>("fs_s1"),
+      memberId: brandId<MemberId>("mem_m1"),
       customFrontId: null,
       structureEntityId: null,
       startTime: toUnixMillis(1_700_000_000_000),
@@ -188,9 +188,9 @@ describe("decryptDashboardFrontingSession", () => {
 
   it("defaults all nullable fields when blob is empty object", () => {
     const raw = {
-      id: "fs_s2" as FrontingSessionId,
+      id: brandId<FrontingSessionId>("fs_s2"),
       memberId: null,
-      customFrontId: "cf_c1" as CustomFrontId,
+      customFrontId: brandId<CustomFrontId>("cf_c1"),
       structureEntityId: null,
       startTime: toUnixMillis(1_700_000_000_000),
       encryptedData: encryptAndEncodeT2({}, bucketKey, BUCKET_ID),
@@ -207,7 +207,7 @@ describe("decryptDashboardFrontingSession", () => {
 describe("decryptDashboardCustomFront", () => {
   it("decrypts T2 custom front blob", () => {
     const raw = {
-      id: "cf_c1" as CustomFrontId,
+      id: brandId<CustomFrontId>("cf_c1"),
       encryptedData: encryptAndEncodeT2(makeCustomFrontBlob(), bucketKey, BUCKET_ID),
     };
     const result = decryptDashboardCustomFront(raw, bucketKey);
@@ -223,7 +223,7 @@ describe("decryptDashboardCustomFront", () => {
 describe("decryptDashboardStructureEntity", () => {
   it("decrypts T2 structure entity blob", () => {
     const raw = {
-      id: "ste_s1" as SystemStructureEntityId,
+      id: brandId<SystemStructureEntityId>("ste_s1"),
       encryptedData: encryptAndEncodeT2(makeStructureEntityBlob(), bucketKey, BUCKET_ID),
     };
     const result = decryptDashboardStructureEntity(raw, bucketKey);
@@ -273,7 +273,7 @@ describe("decryptFriendDashboard", () => {
 
   it("skips entities that fail decryption with available keys", () => {
     const otherKey = generateBucketKey();
-    const otherBucketId = "bkt_other" as BucketId;
+    const otherBucketId = brandId<BucketId>("bkt_other");
 
     // Build response where entities are encrypted with bucketKey
     // but resolver only has otherKey
@@ -283,7 +283,7 @@ describe("decryptFriendDashboard", () => {
       ...raw,
       keyGrants: [
         {
-          id: "kg_2" as KeyGrantId,
+          id: brandId<KeyGrantId>("kg_2"),
           bucketId: otherBucketId,
           encryptedKey: "unused",
           keyVersion: 1,
@@ -319,7 +319,7 @@ describe("decryptFriendDashboard", () => {
       activeFronting: { sessions: [], isCofronting: false },
       visibleMembers: [
         {
-          id: "mem_corrupt" as MemberId,
+          id: brandId<MemberId>("mem_corrupt"),
           // Valid T2 header with right bucketId but corrupted ciphertext
           encryptedData:
             encryptAndEncodeT2({ name: "Valid" }, bucketKey, BUCKET_ID).slice(0, -4) + "AAAA",
@@ -329,7 +329,7 @@ describe("decryptFriendDashboard", () => {
       visibleStructureEntities: [],
       keyGrants: [
         {
-          id: "kg_1" as KeyGrantId,
+          id: brandId<KeyGrantId>("kg_1"),
           bucketId: BUCKET_ID,
           encryptedKey: "unused",
           keyVersion: 1,
@@ -350,7 +350,7 @@ describe("decryptFriendDashboard", () => {
       visibleStructureEntities: [],
       keyGrants: [
         {
-          id: "kg_1" as KeyGrantId,
+          id: brandId<KeyGrantId>("kg_1"),
           bucketId: BUCKET_ID,
           encryptedKey: "unused",
           keyVersion: 1,

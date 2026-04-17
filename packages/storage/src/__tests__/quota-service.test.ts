@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { QuotaExceededError } from "../errors.js";
@@ -16,7 +17,7 @@ describe("BlobQuotaService", () => {
       const query = mockUsageQuery(500);
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, query);
 
-      const usage = await service.getUsage("sys_abc" as SystemId);
+      const usage = await service.getUsage(brandId<SystemId>("sys_abc"));
       expect(usage).toEqual({ usedBytes: 500, quotaBytes: 1000 });
     });
 
@@ -25,12 +26,12 @@ describe("BlobQuotaService", () => {
       const service = new BlobQuotaService(
         {
           defaultQuotaBytes: 1000,
-          perSystemOverrides: { ["sys_vip" as SystemId]: 5000 },
+          perSystemOverrides: { [brandId<SystemId>("sys_vip")]: 5000 },
         },
         query,
       );
 
-      const usage = await service.getUsage("sys_vip" as SystemId);
+      const usage = await service.getUsage(brandId<SystemId>("sys_vip"));
       expect(usage).toEqual({ usedBytes: 200, quotaBytes: 5000 });
     });
 
@@ -39,12 +40,12 @@ describe("BlobQuotaService", () => {
       const service = new BlobQuotaService(
         {
           defaultQuotaBytes: 1000,
-          perSystemOverrides: { ["sys_other" as SystemId]: 5000 },
+          perSystemOverrides: { [brandId<SystemId>("sys_other")]: 5000 },
         },
         query,
       );
 
-      const usage = await service.getUsage("sys_nomatch" as SystemId);
+      const usage = await service.getUsage(brandId<SystemId>("sys_nomatch"));
       expect(usage).toEqual({ usedBytes: 100, quotaBytes: 1000 });
     });
   });
@@ -53,28 +54,28 @@ describe("BlobQuotaService", () => {
     it("allows upload within quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(400));
 
-      const result = await service.checkQuota("sys_abc" as SystemId, 500);
+      const result = await service.checkQuota(brandId<SystemId>("sys_abc"), 500);
       expect(result).toEqual({ allowed: true, usedBytes: 400, quotaBytes: 1000 });
     });
 
     it("allows upload at exact quota boundary", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(500));
 
-      const result = await service.checkQuota("sys_abc" as SystemId, 500);
+      const result = await service.checkQuota(brandId<SystemId>("sys_abc"), 500);
       expect(result).toEqual({ allowed: true, usedBytes: 500, quotaBytes: 1000 });
     });
 
     it("rejects upload exceeding quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(800));
 
-      const result = await service.checkQuota("sys_abc" as SystemId, 300);
+      const result = await service.checkQuota(brandId<SystemId>("sys_abc"), 300);
       expect(result).toEqual({ allowed: false, usedBytes: 800, quotaBytes: 1000 });
     });
 
     it("rejects when already at quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(1000));
 
-      const result = await service.checkQuota("sys_abc" as SystemId, 1);
+      const result = await service.checkQuota(brandId<SystemId>("sys_abc"), 1);
       expect(result).toEqual({ allowed: false, usedBytes: 1000, quotaBytes: 1000 });
     });
   });
@@ -82,12 +83,12 @@ describe("BlobQuotaService", () => {
   describe("assertQuota", () => {
     it("does not throw when within quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(100));
-      await expect(service.assertQuota("sys_abc" as SystemId, 500)).resolves.toBeUndefined();
+      await expect(service.assertQuota(brandId<SystemId>("sys_abc"), 500)).resolves.toBeUndefined();
     });
 
     it("throws QuotaExceededError when over quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(900));
-      await expect(service.assertQuota("sys_abc" as SystemId, 200)).rejects.toThrow(
+      await expect(service.assertQuota(brandId<SystemId>("sys_abc"), 200)).rejects.toThrow(
         QuotaExceededError,
       );
     });
@@ -95,7 +96,7 @@ describe("BlobQuotaService", () => {
     it("includes all relevant info in the error", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(800));
       try {
-        await service.assertQuota("sys_abc" as SystemId, 300);
+        await service.assertQuota(brandId<SystemId>("sys_abc"), 300);
         expect.fail("Should have thrown");
       } catch (err) {
         if (!(err instanceof QuotaExceededError)) throw err;
@@ -111,7 +112,7 @@ describe("BlobQuotaService", () => {
     it("creates service with default quota", async () => {
       const query = mockUsageQuery(0);
       const service = createQuotaService(query);
-      const usage = await service.getUsage("sys_abc" as SystemId);
+      const usage = await service.getUsage(brandId<SystemId>("sys_abc"));
       // DEFAULT_QUOTA_BYTES = 1 GiB
       expect(usage.quotaBytes).toBe(1_073_741_824);
     });
@@ -119,7 +120,7 @@ describe("BlobQuotaService", () => {
     it("accepts partial config overrides", async () => {
       const query = mockUsageQuery(0);
       const service = createQuotaService(query, { defaultQuotaBytes: 500 });
-      const usage = await service.getUsage("sys_abc" as SystemId);
+      const usage = await service.getUsage(brandId<SystemId>("sys_abc"));
       expect(usage.quotaBytes).toBe(500);
     });
   });
@@ -127,17 +128,21 @@ describe("BlobQuotaService", () => {
   describe("reserveQuota (advisory)", () => {
     it("resolves when upload is within quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(100));
-      await expect(service.reserveQuota("sys_abc" as SystemId, 500)).resolves.toBeUndefined();
+      await expect(
+        service.reserveQuota(brandId<SystemId>("sys_abc"), 500),
+      ).resolves.toBeUndefined();
     });
 
     it("resolves at exact quota boundary", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(500));
-      await expect(service.reserveQuota("sys_abc" as SystemId, 500)).resolves.toBeUndefined();
+      await expect(
+        service.reserveQuota(brandId<SystemId>("sys_abc"), 500),
+      ).resolves.toBeUndefined();
     });
 
     it("throws QuotaExceededError when over quota", async () => {
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, mockUsageQuery(900));
-      await expect(service.reserveQuota("sys_abc" as SystemId, 200)).rejects.toThrow(
+      await expect(service.reserveQuota(brandId<SystemId>("sys_abc"), 200)).rejects.toThrow(
         QuotaExceededError,
       );
     });
@@ -150,7 +155,9 @@ describe("BlobQuotaService", () => {
       };
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, failingQuery);
 
-      await expect(service.getUsage("sys_abc" as SystemId)).rejects.toThrow("DB connection lost");
+      await expect(service.getUsage(brandId<SystemId>("sys_abc"))).rejects.toThrow(
+        "DB connection lost",
+      );
     });
 
     it("propagates usage query errors through checkQuota", async () => {
@@ -159,7 +166,7 @@ describe("BlobQuotaService", () => {
       };
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, failingQuery);
 
-      await expect(service.checkQuota("sys_abc" as SystemId, 100)).rejects.toThrow(
+      await expect(service.checkQuota(brandId<SystemId>("sys_abc"), 100)).rejects.toThrow(
         "DB connection lost",
       );
     });
@@ -170,7 +177,7 @@ describe("BlobQuotaService", () => {
       };
       const service = new BlobQuotaService({ defaultQuotaBytes: 1000 }, failingQuery);
 
-      await expect(service.assertQuota("sys_abc" as SystemId, 100)).rejects.toThrow(
+      await expect(service.assertQuota(brandId<SystemId>("sys_abc"), 100)).rejects.toThrow(
         "DB connection lost",
       );
     });

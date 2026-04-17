@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../../adapter/wasm-adapter.js";
@@ -124,7 +125,7 @@ describe("prepareUpload", () => {
       mimeType: "image/webp",
       tier: 2,
       bucketKey,
-      bucketId: "bucket_upload_test" as BucketId,
+      bucketId: brandId<BucketId>("bucket_upload_test"),
     });
 
     expect(prepared.encryptionMetadata.tier).toBe(2);

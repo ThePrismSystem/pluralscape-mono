@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptPollInput, encryptPollVoteInput } from "@pluralscape/data/transforms/poll";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -193,13 +194,19 @@ function makeRawPoll(id: string): PollRaw {
       title: `Poll ${id}`,
       description: null,
       options: [
-        { id: "opt-1" as PollOptionId, label: "Yes", voteCount: 0, color: null, emoji: null },
+        {
+          id: brandId<PollOptionId>("opt-1"),
+          label: "Yes",
+          voteCount: 0,
+          color: null,
+          emoji: null,
+        },
       ],
     },
     TEST_MASTER_KEY,
   );
   return {
-    id: id as PollId,
+    id: brandId<PollId>(id),
     systemId: TEST_SYSTEM_ID,
     createdByMemberId: null,
     kind: "standard",
@@ -222,9 +229,9 @@ function makeRawPoll(id: string): PollRaw {
 function makeRawPollVote(id: string, pollId: string): PollVoteRaw {
   const encrypted = encryptPollVoteInput({ comment: "My comment" }, TEST_MASTER_KEY);
   return {
-    id: id as PollVoteId,
-    pollId: pollId as PollId,
-    optionId: "opt-1" as PollOptionId,
+    id: brandId<PollVoteId>(id),
+    pollId: brandId<PollId>(pollId),
+    optionId: brandId<PollOptionId>("opt-1"),
     voter: null,
     isVeto: false,
     votedAt: NOW,
@@ -243,7 +250,7 @@ beforeEach(() => {
 describe("usePoll", () => {
   it("returns decrypted poll data", async () => {
     fixtures.set("poll.get", makeRawPoll("p-1"));
-    const { result } = renderHookWithProviders(() => usePoll("p-1" as PollId));
+    const { result } = renderHookWithProviders(() => usePoll(brandId<PollId>("p-1")));
 
     let data: Awaited<ReturnType<typeof usePoll>>["data"] | undefined;
     await waitFor(() => {
@@ -258,7 +265,7 @@ describe("usePoll", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => usePoll("p-1" as PollId), {
+    const { result } = renderHookWithProviders(() => usePoll(brandId<PollId>("p-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -267,7 +274,7 @@ describe("usePoll", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("poll.get", makeRawPoll("p-1"));
-    const { result, rerender } = renderHookWithProviders(() => usePoll("p-1" as PollId));
+    const { result, rerender } = renderHookWithProviders(() => usePoll(brandId<PollId>("p-1")));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -318,14 +325,14 @@ describe("usePollsList", () => {
 describe("usePollResults", () => {
   it("returns poll results data", async () => {
     const resultsFixture = {
-      pollId: "p-1" as PollId,
+      pollId: brandId<PollId>("p-1"),
       totalVotes: 5,
       vetoCount: 0,
-      optionCounts: [{ optionId: "opt-1" as PollOptionId, count: 5 }],
+      optionCounts: [{ optionId: brandId<PollOptionId>("opt-1"), count: 5 }],
     };
     fixtures.set("poll.results", resultsFixture);
 
-    const { result } = renderHookWithProviders(() => usePollResults("p-1" as PollId));
+    const { result } = renderHookWithProviders(() => usePollResults(brandId<PollId>("p-1")));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -341,7 +348,7 @@ describe("usePollVotes", () => {
     const rawVote = makeRawPollVote("v-1", "p-1");
     fixtures.set("poll.listVotes", { data: [rawVote], nextCursor: null });
 
-    const { result } = renderHookWithProviders(() => usePollVotes("p-1" as PollId));
+    const { result } = renderHookWithProviders(() => usePollVotes(brandId<PollId>("p-1")));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -354,7 +361,7 @@ describe("usePollVotes", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => usePollVotes("p-1" as PollId), {
+    const { result } = renderHookWithProviders(() => usePollVotes(brandId<PollId>("p-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -363,7 +370,9 @@ describe("usePollVotes", () => {
   it("select is stable across rerenders", async () => {
     const rawVote = makeRawPollVote("v-1", "p-1");
     fixtures.set("poll.listVotes", { data: [rawVote], nextCursor: null });
-    const { result, rerender } = renderHookWithProviders(() => usePollVotes("p-1" as PollId));
+    const { result, rerender } = renderHookWithProviders(() =>
+      usePollVotes(brandId<PollId>("p-1")),
+    );
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -589,7 +598,7 @@ const LOCAL_POLL_ROW: Record<string, unknown> = {
 describe("usePoll (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_POLL_ROW]);
-    const { result } = renderHookWithProviders(() => usePoll("poll-local-1" as PollId), {
+    const { result } = renderHookWithProviders(() => usePoll(brandId<PollId>("poll-local-1")), {
       querySource: "local",
       localDb,
     });
@@ -612,7 +621,7 @@ describe("usePoll (local source)", () => {
 
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_POLL_ROW]);
-    const { result } = renderHookWithProviders(() => usePoll("poll-local-1" as PollId), {
+    const { result } = renderHookWithProviders(() => usePoll(brandId<PollId>("poll-local-1")), {
       querySource: "local",
       localDb,
     });

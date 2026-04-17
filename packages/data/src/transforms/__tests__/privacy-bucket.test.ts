@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -37,8 +37,8 @@ function makeServerBucket(
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ): PrivacyBucketRaw {
   return {
-    id: "bkt_test0001" as BucketId,
-    systemId: "sys_test001" as SystemId,
+    id: brandId<BucketId>("bkt_test0001"),
+    systemId: brandId<SystemId>("sys_test001"),
     encryptedData: encryptAndEncodeT1(fields, masterKey),
     version: 1,
     createdAt: toUnixMillis(1_700_000_000_000),

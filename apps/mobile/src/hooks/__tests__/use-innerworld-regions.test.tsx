@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptInnerWorldRegionInput } from "@pluralscape/data/transforms/innerworld-region";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -152,7 +153,7 @@ function makeRawRegion(id: string): InnerWorldRegionRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as InnerWorldRegionId,
+    id: brandId<InnerWorldRegionId>(id),
     systemId: TEST_SYSTEM_ID,
     parentRegionId: null,
     version: 1,
@@ -174,7 +175,7 @@ describe("useInnerWorldRegion", () => {
   it("returns decrypted region data", async () => {
     fixtures.set("innerworld.region.get", makeRawRegion("r-1"));
     const { result } = renderHookWithProviders(() =>
-      useInnerWorldRegion("r-1" as InnerWorldRegionId),
+      useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
     );
 
     let data: Awaited<ReturnType<typeof useInnerWorldRegion>>["data"] | undefined;
@@ -194,7 +195,7 @@ describe("useInnerWorldRegion", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useInnerWorldRegion("r-1" as InnerWorldRegionId),
+      () => useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -204,7 +205,7 @@ describe("useInnerWorldRegion", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("innerworld.region.get", makeRawRegion("r-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useInnerWorldRegion("r-1" as InnerWorldRegionId),
+      useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
     );
 
     await waitFor(() => {
@@ -382,7 +383,7 @@ describe("useInnerWorldRegion (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_REGION_ROW]);
     const { result } = renderHookWithProviders(
-      () => useInnerWorldRegion("r-local-1" as InnerWorldRegionId),
+      () => useInnerWorldRegion(brandId<InnerWorldRegionId>("r-local-1")),
       { querySource: "local", localDb },
     );
 
@@ -405,7 +406,7 @@ describe("useInnerWorldRegion (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_REGION_ROW]);
     const { result } = renderHookWithProviders(
-      () => useInnerWorldRegion("r-local-1" as InnerWorldRegionId),
+      () => useInnerWorldRegion(brandId<InnerWorldRegionId>("r-local-1")),
       { querySource: "local", localDb },
     );
 

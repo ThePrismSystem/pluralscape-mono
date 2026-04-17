@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -326,7 +327,7 @@ describe("account router", () => {
     const input = { token: "biometric-token-value" };
 
     it("calls enrollBiometric with auth context and returns id", async () => {
-      const mockId = "btok_abc123" as BiometricTokenId;
+      const mockId = brandId<BiometricTokenId>("btok_abc123");
       vi.mocked(enrollBiometric).mockResolvedValue({ id: mockId });
       const caller = createCaller();
       const result = await caller.account.enrollBiometric(input);

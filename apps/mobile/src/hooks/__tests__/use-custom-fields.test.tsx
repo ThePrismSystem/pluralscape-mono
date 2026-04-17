@@ -5,6 +5,7 @@ import {
   encryptFieldDefinitionInput,
   encryptFieldValueInput,
 } from "@pluralscape/data/transforms/custom-field";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -141,7 +142,7 @@ function makeRawFieldDefinition(id: string): FieldDefinitionRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as FieldDefinitionId,
+    id: brandId<FieldDefinitionId>(id),
     systemId: TEST_SYSTEM_ID,
     fieldType: "text",
     required: false,
@@ -158,9 +159,9 @@ function makeRawFieldDefinition(id: string): FieldDefinitionRaw {
 function makeRawFieldValue(id: string): FieldValueRaw {
   const encrypted = encryptFieldValueInput({ fieldType: "text", value: "hello" }, TEST_MASTER_KEY);
   return {
-    id: id as FieldValueId,
-    fieldDefinitionId: "fd-1" as FieldDefinitionId,
-    memberId: "m-1" as MemberId,
+    id: brandId<FieldValueId>(id),
+    fieldDefinitionId: brandId<FieldDefinitionId>("fd-1"),
+    memberId: brandId<MemberId>("m-1"),
     structureEntityId: null,
     groupId: null,
     systemId: TEST_SYSTEM_ID,
@@ -181,7 +182,7 @@ describe("useFieldDefinition", () => {
   it("returns decrypted field definition data", async () => {
     fixtures.set("field.definition.get", makeRawFieldDefinition("fd-1"));
     const { result } = renderHookWithProviders(() =>
-      useFieldDefinition("fd-1" as FieldDefinitionId),
+      useFieldDefinition(brandId<FieldDefinitionId>("fd-1")),
     );
 
     let data: Awaited<ReturnType<typeof useFieldDefinition>>["data"] | undefined;
@@ -197,7 +198,7 @@ describe("useFieldDefinition", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useFieldDefinition("fd-1" as FieldDefinitionId),
+      () => useFieldDefinition(brandId<FieldDefinitionId>("fd-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -207,7 +208,7 @@ describe("useFieldDefinition", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("field.definition.get", makeRawFieldDefinition("fd-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useFieldDefinition("fd-1" as FieldDefinitionId),
+      useFieldDefinition(brandId<FieldDefinitionId>("fd-1")),
     );
 
     await waitFor(() => {
@@ -267,7 +268,9 @@ describe("useMemberFieldValues", () => {
     const raw = [makeRawFieldValue("fv-1"), makeRawFieldValue("fv-2")];
     fixtures.set("field.value.list", raw);
 
-    const { result } = renderHookWithProviders(() => useMemberFieldValues("m-1" as MemberId));
+    const { result } = renderHookWithProviders(() =>
+      useMemberFieldValues(brandId<MemberId>("m-1")),
+    );
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -277,9 +280,12 @@ describe("useMemberFieldValues", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useMemberFieldValues("m-1" as MemberId), {
-      masterKey: null,
-    });
+    const { result } = renderHookWithProviders(
+      () => useMemberFieldValues(brandId<MemberId>("m-1")),
+      {
+        masterKey: null,
+      },
+    );
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -340,7 +346,7 @@ describe("useUpdateMemberFieldValues", () => {
   it("invalidates field value list on success", async () => {
     const { result } = renderHookWithProviders(() => useUpdateMemberFieldValues());
 
-    const owner = { kind: "member" as const, id: "m-1" as MemberId };
+    const owner = { kind: "member" as const, id: brandId<MemberId>("m-1") };
     await act(() => result.current.mutateAsync({ owner } as never));
 
     await waitFor(() => {

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
@@ -7,8 +8,8 @@ import type { BucketContentEntityType, BucketId, SystemId, UnixMillis } from "@p
 
 // ── Mock data ───────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const BUCKET_ID = "bkt_test-bucket" as BucketId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const BUCKET_ID = brandId<BucketId>("bkt_test-bucket");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 
 const MOCK_MANIFEST_COUNT = { count: 5, maxUpdatedAt: 2000 as UnixMillis | null };

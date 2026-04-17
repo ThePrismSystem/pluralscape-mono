@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -12,8 +13,8 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const OTHER_SYSTEM_ID = "sys_other-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const OTHER_SYSTEM_ID = brandId<SystemId>("sys_other-system");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -32,7 +33,7 @@ describe("assertSystemOwnership", () => {
 
   it("throws 404 when system is not in ownedSystemIds", () => {
     expect(() => {
-      assertSystemOwnership("sys_not-owned" as SystemId, AUTH);
+      assertSystemOwnership(brandId<SystemId>("sys_not-owned"), AUTH);
     }).toThrow(
       expect.objectContaining({
         status: 404,
@@ -73,7 +74,7 @@ describe("assertSystemOwnership", () => {
 
   it("throws ApiHttpError (not a generic Error)", () => {
     expect(() => {
-      assertSystemOwnership("sys_unowned" as SystemId, AUTH);
+      assertSystemOwnership(brandId<SystemId>("sys_unowned"), AUTH);
     }).toThrow(ApiHttpError);
   });
 

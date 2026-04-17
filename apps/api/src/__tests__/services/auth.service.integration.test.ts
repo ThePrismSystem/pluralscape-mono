@@ -2,6 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -249,7 +250,10 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
           logger,
         );
         expect(res).not.toBeNull();
-        const { sessions: all } = await listSessions(asDb(db), registration.accountId as AccountId);
+        const { sessions: all } = await listSessions(
+          asDb(db),
+          brandId<AccountId>(registration.accountId),
+        );
         firstSessionIds.push(all[all.length - 1]?.id ?? "");
       }
 
@@ -261,7 +265,10 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
         logger,
       );
 
-      const { sessions: after } = await listSessions(asDb(db), registration.accountId as AccountId);
+      const { sessions: after } = await listSessions(
+        asDb(db),
+        brandId<AccountId>(registration.accountId),
+      );
       expect(after.length).toBeLessThanOrEqual(MAX_SESSIONS_PER_ACCOUNT);
     });
   });
@@ -272,7 +279,10 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("returns at least one session after registration", async () => {
       const reg = await registerTestAccount(asDb(db));
 
-      const { sessions: sessionList } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: sessionList } = await listSessions(
+        asDb(db),
+        brandId<AccountId>(reg.accountId),
+      );
 
       expect(sessionList.length).toBeGreaterThanOrEqual(1);
       const first = sessionList[0];
@@ -295,17 +305,17 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
         createMockLogger().logger,
       );
 
-      const all = await listSessions(asDb(db), reg.accountId as AccountId);
+      const all = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       expect(all.sessions.length).toBeGreaterThanOrEqual(2);
 
-      const page1 = await listSessions(asDb(db), reg.accountId as AccountId, undefined, 1);
+      const page1 = await listSessions(asDb(db), brandId<AccountId>(reg.accountId), undefined, 1);
       expect(page1.sessions).toHaveLength(1);
       expect(page1.nextCursor).not.toBeNull();
 
       const rawCursor = page1.sessions[0]?.id;
       expect(rawCursor).toBeDefined();
 
-      const page2 = await listSessions(asDb(db), reg.accountId as AccountId, rawCursor, 1);
+      const page2 = await listSessions(asDb(db), brandId<AccountId>(reg.accountId), rawCursor, 1);
       expect(page2.sessions).toHaveLength(1);
       expect(page2.sessions[0]?.id).not.toBe(rawCursor);
     });
@@ -317,7 +327,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("revokes a session and removes it from the active list", async () => {
       const reg = await registerTestAccount(asDb(db));
 
-      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: before } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       expect(before.length).toBeGreaterThanOrEqual(1);
       const firstSession = before[0];
       expect(firstSession).toBeDefined();
@@ -327,12 +337,12 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const revoked = await revokeSession(
         asDb(db),
         firstSession.id,
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         audit,
       );
       expect(revoked).toBe(true);
 
-      const { sessions: after } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: after } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       const found = after.find((s) => s.id === firstSession.id);
       expect(found).toBeUndefined();
 
@@ -347,16 +357,16 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("returns false when revoking an already-revoked session", async () => {
       const reg = await registerTestAccount(asDb(db));
 
-      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: before } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       const firstSession = before[0];
       if (!firstSession) return;
 
-      await revokeSession(asDb(db), firstSession.id, reg.accountId as AccountId, noopAudit);
+      await revokeSession(asDb(db), firstSession.id, brandId<AccountId>(reg.accountId), noopAudit);
 
       const result = await revokeSession(
         asDb(db),
         firstSession.id,
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         noopAudit,
       );
       expect(result).toBe(false);
@@ -368,7 +378,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       const { sessions: otherSessions } = await listSessions(
         asDb(db),
-        other.accountId as AccountId,
+        brandId<AccountId>(other.accountId),
       );
       const otherSession = otherSessions[0];
       if (!otherSession) return;
@@ -376,7 +386,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const result = await revokeSession(
         asDb(db),
         otherSession.id,
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         noopAudit,
       );
       expect(result).toBe(false);
@@ -397,7 +407,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
         logger,
       );
 
-      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: before } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       expect(before.length).toBeGreaterThanOrEqual(2);
       const keepSession = before[0];
       if (!keepSession) return;
@@ -405,14 +415,14 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const audit = spyAudit();
       const count = await revokeAllSessions(
         asDb(db),
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         keepSession.id,
         audit,
       );
 
       expect(count).toBeGreaterThanOrEqual(1);
 
-      const { sessions: after } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: after } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       expect(after).toHaveLength(1);
       expect(after[0]?.id).toBe(keepSession.id);
 
@@ -423,13 +433,13 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("returns 0 when no other sessions exist", async () => {
       const reg = await registerTestAccount(asDb(db));
 
-      const { sessions: all } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: all } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       const only = all[0];
       if (!only) return;
 
       const count = await revokeAllSessions(
         asDb(db),
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         only.id,
         noopAudit,
       );
@@ -443,14 +453,14 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("revokes the current session so it no longer appears in listSessions", async () => {
       const reg = await registerTestAccount(asDb(db));
 
-      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: before } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       const current = before[0];
       if (!current) return;
 
       const audit = spyAudit();
-      await logoutCurrentSession(asDb(db), current.id, reg.accountId as AccountId, audit);
+      await logoutCurrentSession(asDb(db), current.id, brandId<AccountId>(reg.accountId), audit);
 
-      const { sessions: after } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const { sessions: after } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       expect(after.find((s) => s.id === current.id)).toBeUndefined();
 
       expect(audit.calls[0]?.eventType).toBe("auth.logout");

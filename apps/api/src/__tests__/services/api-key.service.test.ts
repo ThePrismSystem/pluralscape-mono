@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeTestAuth } from "../helpers/test-auth.js";
@@ -38,8 +39,8 @@ function wireChain(): void {
 
 // ── Mocks ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const API_KEY_ID = "ak_test-key" as ApiKeyId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const API_KEY_ID = brandId<ApiKeyId>("ak_test-key");
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -398,7 +399,7 @@ describe("getApiKey", () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
     await expect(
-      getApiKey({} as never, SYSTEM_ID, "ak_nonexistent" as ApiKeyId, AUTH),
+      getApiKey({} as never, SYSTEM_ID, brandId<ApiKeyId>("ak_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -437,7 +438,7 @@ describe("revokeApiKey", () => {
     mockTx.limit.mockResolvedValueOnce([]);
 
     await expect(
-      revokeApiKey({} as never, SYSTEM_ID, "ak_nonexistent" as ApiKeyId, AUTH, mockAudit),
+      revokeApiKey({} as never, SYSTEM_ID, brandId<ApiKeyId>("ak_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

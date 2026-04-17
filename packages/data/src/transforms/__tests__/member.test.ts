@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -49,8 +49,8 @@ function makeServerMember(
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
-    id: "mem_abc123" as MemberId,
-    systemId: "sys_xyz789" as SystemId,
+    id: brandId<MemberId>("mem_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
     encryptedData: encryptAndEncodeT1(fields, masterKey),
     version: 3,
     createdAt: toUnixMillis(1_700_000_000_000),

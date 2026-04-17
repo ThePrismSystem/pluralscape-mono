@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -62,12 +63,12 @@ describe("friend-code.service (PGlite integration)", () => {
 
     await createPgPrivacyTables(client);
 
-    accountIdA = (await pgInsertAccount(db)) as AccountId;
-    systemIdA = (await pgInsertSystem(db, accountIdA)) as SystemId;
+    accountIdA = brandId<AccountId>(await pgInsertAccount(db));
+    systemIdA = brandId<SystemId>(await pgInsertSystem(db, accountIdA));
     authA = makeAccountAuth(accountIdA, systemIdA);
 
-    accountIdB = (await pgInsertAccount(db)) as AccountId;
-    systemIdB = (await pgInsertSystem(db, accountIdB)) as SystemId;
+    accountIdB = brandId<AccountId>(await pgInsertAccount(db));
+    systemIdB = brandId<SystemId>(await pgInsertSystem(db, accountIdB));
     authB = makeAccountAuth(accountIdB, systemIdB);
   });
 
@@ -184,7 +185,7 @@ describe("friend-code.service (PGlite integration)", () => {
         archiveFriendCode(
           asDb(db),
           accountIdA,
-          "frc_nonexistent" as FriendCodeId,
+          brandId<FriendCodeId>("frc_nonexistent"),
           authA,
           noopAudit,
         ),

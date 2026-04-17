@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -51,7 +51,7 @@ function makeMemberPayload(): InnerWorldEntityEncryptedPayload {
     positionX: 10,
     positionY: 20,
     visual: VISUAL,
-    linkedMemberId: "mem_abc" as MemberId,
+    linkedMemberId: brandId<MemberId>("mem_abc"),
   };
 }
 
@@ -72,7 +72,7 @@ function makeStructureEntityPayload(): InnerWorldEntityEncryptedPayload {
     positionX: 50,
     positionY: 60,
     visual: VISUAL,
-    linkedStructureEntityId: "se_xyz" as SystemStructureEntityId,
+    linkedStructureEntityId: brandId<SystemStructureEntityId>("se_xyz"),
   };
 }
 
@@ -81,9 +81,9 @@ function makeRaw(
   overrides?: Partial<InnerWorldEntityRaw>,
 ): InnerWorldEntityRaw {
   return {
-    id: "iwe_001" as InnerWorldEntityId,
-    systemId: "sys_test" as SystemId,
-    regionId: "reg_001" as InnerWorldRegionId,
+    id: brandId<InnerWorldEntityId>("iwe_001"),
+    systemId: brandId<SystemId>("sys_test"),
+    regionId: brandId<InnerWorldRegionId>("reg_001"),
     encryptedData: encryptAndEncodeT1(payload, masterKey),
     archived: false,
     archivedAt: null,

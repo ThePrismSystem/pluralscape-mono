@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
@@ -40,10 +41,10 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 // ── Fixtures ─────────────────────────────────────────────────────────
 
 // IDs that pass through brandedIdQueryParam validation must be prefix + valid UUID
-const SYSTEM_ID = "sys_00000000-0000-4000-a000-000000000001" as SystemId;
-const RECORD_ID = "cir_00000000-0000-4000-a000-000000000002" as CheckInRecordId;
-const TIMER_ID = "tmr_00000000-0000-4000-a000-000000000003" as TimerId;
-const MEMBER_ID = "mem_00000000-0000-4000-a000-000000000004" as MemberId;
+const SYSTEM_ID = brandId<SystemId>("sys_00000000-0000-4000-a000-000000000001");
+const RECORD_ID = brandId<CheckInRecordId>("cir_00000000-0000-4000-a000-000000000002");
+const TIMER_ID = brandId<TimerId>("tmr_00000000-0000-4000-a000-000000000003");
+const MEMBER_ID = brandId<MemberId>("mem_00000000-0000-4000-a000-000000000004");
 
 const AUTH = makeTestAuth({
   accountId: "acct_00000000-0000-4000-a000-000000000005",
@@ -432,7 +433,7 @@ describe("getCheckInRecord", () => {
       getCheckInRecord(
         db,
         SYSTEM_ID,
-        "cir_00000000-0000-4000-a000-000000000099" as CheckInRecordId,
+        brandId<CheckInRecordId>("cir_00000000-0000-4000-a000-000000000099"),
         AUTH,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
@@ -853,7 +854,7 @@ describe("deleteCheckInRecord", () => {
       deleteCheckInRecord(
         db,
         SYSTEM_ID,
-        "cir_00000000-0000-4000-a000-000000000099" as CheckInRecordId,
+        brandId<CheckInRecordId>("cir_00000000-0000-4000-a000-000000000099"),
         AUTH,
         mockAudit,
       ),

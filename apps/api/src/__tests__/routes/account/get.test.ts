@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -43,9 +43,9 @@ describe("GET /account", () => {
 
   it("returns account info for authenticated user", async () => {
     const mockInfo = {
-      accountId: "acct_test001" as AccountId,
+      accountId: brandId<AccountId>("acct_test001"),
       accountType: "system" as AccountType,
-      systemId: "sys_test" as SystemId,
+      systemId: brandId<SystemId>("sys_test"),
       auditLogIpTracking: false,
       version: 1,
       createdAt: toUnixMillis(1000),
@@ -78,7 +78,7 @@ describe("GET /account", () => {
   describe("Cache-Control", () => {
     it("sets Cache-Control: no-store on successful response", async () => {
       vi.mocked(getAccountInfo).mockResolvedValueOnce({
-        accountId: "acct_cc" as AccountId,
+        accountId: brandId<AccountId>("acct_cc"),
         accountType: "system" as AccountType,
         systemId: null,
         auditLogIpTracking: false,

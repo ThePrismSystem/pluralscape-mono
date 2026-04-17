@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
@@ -58,11 +59,11 @@ const {
 function makeAuth(accountId: string, systemId: string) {
   return {
     authMethod: "session" as const,
-    accountId: accountId as AccountId,
-    systemId: systemId as SystemId,
-    sessionId: "sess_test" as SessionId,
+    accountId: brandId<AccountId>(accountId),
+    systemId: brandId<SystemId>(systemId),
+    sessionId: brandId<SessionId>("sess_test"),
     accountType: "system" as const,
-    ownedSystemIds: new Set([systemId as SystemId]),
+    ownedSystemIds: new Set([brandId<SystemId>(systemId)]),
     auditLogIpTracking: false,
   };
 }
@@ -101,7 +102,7 @@ describe("webhook-delivery service", () => {
     async function callListWithFilter(opts = {}): Promise<MockChain> {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
-      await listWebhookDeliveries(db, "sys_base1" as SystemId, WD_AUTH, opts);
+      await listWebhookDeliveries(db, brandId<SystemId>("sys_base1"), WD_AUTH, opts);
       return chain;
     }
 
@@ -116,7 +117,7 @@ describe("webhook-delivery service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       const auth = makeAuth("acct_ls1", "sys_ls1");
-      await listWebhookDeliveries(db, "sys_ls1" as SystemId, auth);
+      await listWebhookDeliveries(db, brandId<SystemId>("sys_ls1"), auth);
 
       expect(assertSystemOwnership).toHaveBeenCalledWith("sys_ls1", auth);
     });
@@ -127,7 +128,7 @@ describe("webhook-delivery service", () => {
       chain.limit.mockResolvedValueOnce([row]);
 
       const auth = makeAuth("acct_nf1", "sys_nf1");
-      const result = await listWebhookDeliveries(db, "sys_nf1" as SystemId, auth);
+      const result = await listWebhookDeliveries(db, brandId<SystemId>("sys_nf1"), auth);
 
       expect(buildPaginatedResult).toHaveBeenCalledWith([row], 25, expect.any(Function));
       expect(result.data).toHaveLength(1);
@@ -136,7 +137,7 @@ describe("webhook-delivery service", () => {
 
     it("passes webhookId filter when provided", async () => {
       const chain = await callListWithFilter({
-        webhookId: "wh_filter1" as WebhookId,
+        webhookId: brandId<WebhookId>("wh_filter1"),
       });
 
       expect(chain.select).toHaveBeenCalled();
@@ -173,7 +174,7 @@ describe("webhook-delivery service", () => {
 
     it("passes all filters simultaneously", async () => {
       const chain = await callListWithFilter({
-        webhookId: "wh_all1" as WebhookId,
+        webhookId: brandId<WebhookId>("wh_all1"),
         status: "success" as WebhookDeliveryStatus,
         eventType: "member.updated" as WebhookEventType,
         cursor: "wd_cursor_all",
@@ -189,7 +190,7 @@ describe("webhook-delivery service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       const auth = makeAuth("acct_max1", "sys_max1");
-      await listWebhookDeliveries(db, "sys_max1" as SystemId, auth, {
+      await listWebhookDeliveries(db, brandId<SystemId>("sys_max1"), auth, {
         limit: 500,
       });
 
@@ -202,7 +203,7 @@ describe("webhook-delivery service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       const auth = makeAuth("acct_def1", "sys_def1");
-      await listWebhookDeliveries(db, "sys_def1" as SystemId, auth);
+      await listWebhookDeliveries(db, brandId<SystemId>("sys_def1"), auth);
 
       // DEFAULT_PAGE_LIMIT is 25, so limit(25+1=26) should be called
       expect(chain.limit).toHaveBeenCalledWith(26);
@@ -213,7 +214,7 @@ describe("webhook-delivery service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       const auth = makeAuth("acct_lim1", "sys_lim1");
-      await listWebhookDeliveries(db, "sys_lim1" as SystemId, auth, {
+      await listWebhookDeliveries(db, brandId<SystemId>("sys_lim1"), auth, {
         limit: 10,
       });
 
@@ -237,7 +238,7 @@ describe("webhook-delivery service", () => {
       chain.limit.mockResolvedValueOnce([row]);
 
       const auth = makeAuth("acct_map1", "sys_map1");
-      const result = await listWebhookDeliveries(db, "sys_map1" as SystemId, auth);
+      const result = await listWebhookDeliveries(db, brandId<SystemId>("sys_map1"), auth);
 
       expect(result.data[0]).toEqual({
         id: "wd_map1",
@@ -264,7 +265,7 @@ describe("webhook-delivery service", () => {
       chain.limit.mockResolvedValueOnce([row]);
 
       const auth = makeAuth("acct_null1", "sys_null1");
-      const result = await listWebhookDeliveries(db, "sys_null1" as SystemId, auth);
+      const result = await listWebhookDeliveries(db, brandId<SystemId>("sys_null1"), auth);
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0]?.lastAttemptAt).toBeNull();
@@ -279,7 +280,7 @@ describe("webhook-delivery service", () => {
         throw new Error("System not found");
       });
 
-      await expect(listWebhookDeliveries(db, "sys_other" as SystemId, auth)).rejects.toThrow(
+      await expect(listWebhookDeliveries(db, brandId<SystemId>("sys_other"), auth)).rejects.toThrow(
         "System not found",
       );
     });
@@ -305,8 +306,8 @@ describe("webhook-delivery service", () => {
       const auth = makeAuth("acct_get1", "sys_get1");
       const result = await getWebhookDelivery(
         db,
-        "sys_get1" as SystemId,
-        "wd_get1" as WebhookDeliveryId,
+        brandId<SystemId>("sys_get1"),
+        brandId<WebhookDeliveryId>("wd_get1"),
         auth,
       );
 
@@ -322,7 +323,12 @@ describe("webhook-delivery service", () => {
 
       const auth = makeAuth("acct_gn1", "sys_gn1");
       await expect(
-        getWebhookDelivery(db, "sys_gn1" as SystemId, "wd_missing" as WebhookDeliveryId, auth),
+        getWebhookDelivery(
+          db,
+          brandId<SystemId>("sys_gn1"),
+          brandId<WebhookDeliveryId>("wd_missing"),
+          auth,
+        ),
       ).rejects.toThrow("Webhook delivery not found");
     });
 
@@ -334,8 +340,8 @@ describe("webhook-delivery service", () => {
       try {
         await getWebhookDelivery(
           db,
-          "sys_gn2" as SystemId,
-          "wd_missing2" as WebhookDeliveryId,
+          brandId<SystemId>("sys_gn2"),
+          brandId<WebhookDeliveryId>("wd_missing2"),
           auth,
         );
         expect.unreachable("Should have thrown");
@@ -354,7 +360,12 @@ describe("webhook-delivery service", () => {
       });
 
       await expect(
-        getWebhookDelivery(db, "sys_other" as SystemId, "wd_go1" as WebhookDeliveryId, auth),
+        getWebhookDelivery(
+          db,
+          brandId<SystemId>("sys_other"),
+          brandId<WebhookDeliveryId>("wd_go1"),
+          auth,
+        ),
       ).rejects.toThrow("System not found");
     });
   });
@@ -369,8 +380,8 @@ describe("webhook-delivery service", () => {
       const auth = makeAuth("acct_del1", "sys_del1");
       await deleteWebhookDelivery(
         db,
-        "sys_del1" as SystemId,
-        "wd_del1" as WebhookDeliveryId,
+        brandId<SystemId>("sys_del1"),
+        brandId<WebhookDeliveryId>("wd_del1"),
         auth,
         mockAudit,
       );
@@ -396,8 +407,8 @@ describe("webhook-delivery service", () => {
       await expect(
         deleteWebhookDelivery(
           db,
-          "sys_dn1" as SystemId,
-          "wd_missing" as WebhookDeliveryId,
+          brandId<SystemId>("sys_dn1"),
+          brandId<WebhookDeliveryId>("wd_missing"),
           auth,
           mockAudit,
         ),
@@ -412,8 +423,8 @@ describe("webhook-delivery service", () => {
       try {
         await deleteWebhookDelivery(
           db,
-          "sys_dn2" as SystemId,
-          "wd_miss2" as WebhookDeliveryId,
+          brandId<SystemId>("sys_dn2"),
+          brandId<WebhookDeliveryId>("wd_miss2"),
           auth,
           mockAudit,
         );
@@ -432,8 +443,8 @@ describe("webhook-delivery service", () => {
       await expect(
         deleteWebhookDelivery(
           db,
-          "sys_na1" as SystemId,
-          "wd_na1" as WebhookDeliveryId,
+          brandId<SystemId>("sys_na1"),
+          brandId<WebhookDeliveryId>("wd_na1"),
           auth,
           mockAudit,
         ),
@@ -453,8 +464,8 @@ describe("webhook-delivery service", () => {
       await expect(
         deleteWebhookDelivery(
           db,
-          "sys_other" as SystemId,
-          "wd_do1" as WebhookDeliveryId,
+          brandId<SystemId>("sys_other"),
+          brandId<WebhookDeliveryId>("wd_do1"),
           auth,
           mockAudit,
         ),

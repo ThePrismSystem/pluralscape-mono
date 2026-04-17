@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { parseTimeToMinutes } from "@pluralscape/validation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -80,7 +80,7 @@ describe("computeIdempotencyKey", () => {
 
 function stubJob(): JobDefinition<"check-in-generate"> {
   return {
-    id: "job_test" as JobId,
+    id: brandId<JobId>("job_test"),
     systemId: null,
     type: "check-in-generate" as const,
     status: "running",

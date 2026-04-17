@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MOCK_AUTH, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
@@ -26,9 +27,9 @@ const { friendCodeRouter } = await import("../../../trpc/routers/friend-code.js"
 
 const createCaller = makeCallerFactory({ friendCode: friendCodeRouter });
 
-const CODE_ID = "frc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FriendCodeId;
-const CONNECTION_ID_A = "fc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FriendConnectionId;
-const CONNECTION_ID_B = "fc_ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee" as FriendConnectionId;
+const CODE_ID = brandId<FriendCodeId>("frc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const CONNECTION_ID_A = brandId<FriendConnectionId>("fc_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const CONNECTION_ID_B = brandId<FriendConnectionId>("fc_ffffffff-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_CODE_RESULT = {
   id: CODE_ID,
@@ -151,7 +152,7 @@ describe("friendCode router", () => {
     it("rejects invalid codeId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.friendCode.archive({ codeId: "not-a-code-id" as FriendCodeId }),
+        caller.friendCode.archive({ codeId: brandId<FriendCodeId>("not-a-code-id") }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });

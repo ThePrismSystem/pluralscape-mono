@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import { renderToString } from "react-dom/server";
@@ -113,7 +114,7 @@ describe("ConnectionProvider", () => {
       </ConnectionProvider>,
     );
 
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(spy).toHaveBeenCalledWith("tok", "sys_1");
     expect(manager.getSnapshot()).toBe("connecting");
   });
@@ -125,8 +126,8 @@ describe("ConnectionProvider", () => {
 
     const credentials: AuthCredentials = {
       sessionToken: "tok_1",
-      accountId: "acc_1" as AccountId,
-      systemId: "sys_1" as SystemId,
+      accountId: brandId<AccountId>("acc_1"),
+      systemId: brandId<SystemId>("sys_1"),
       salt: new Uint8Array(16) as AuthCredentials["salt"],
     };
 

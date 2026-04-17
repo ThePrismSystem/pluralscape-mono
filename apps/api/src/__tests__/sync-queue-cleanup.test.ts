@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import type { JobHandlerContext } from "@pluralscape/queue";
@@ -47,7 +47,7 @@ function mockConflictPersistenceAdapter(): {
 
 function stubJob(): JobDefinition<"sync-queue-cleanup"> {
   return {
-    id: "job_test" as JobId,
+    id: brandId<JobId>("job_test"),
     systemId: null,
     type: "sync-queue-cleanup" as const,
     status: "running",

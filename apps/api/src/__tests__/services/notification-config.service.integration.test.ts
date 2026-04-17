@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -41,8 +42,8 @@ describe("notification-config.service (PGlite integration)", () => {
 
     await createPgNotificationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -188,8 +189,8 @@ describe("notification-config.service (PGlite integration)", () => {
   // ── Authorization ────────────────────────────────────────────────────
 
   it("returns 404 when system not owned by auth context", async () => {
-    const otherAccountId = (await pgInsertAccount(db)) as AccountId;
-    const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+    const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
     const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
     await assertApiError(

@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -35,8 +35,8 @@ function makeRaw(
   overrides?: Partial<LifecycleEventRaw>,
 ): LifecycleEventRaw {
   return {
-    id: "evt_001" as LifecycleEventId,
-    systemId: "sys_test" as SystemId,
+    id: brandId<LifecycleEventId>("evt_001"),
+    systemId: brandId<SystemId>("sys_test"),
     eventType,
     occurredAt: NOW,
     recordedAt: NOW,
@@ -120,7 +120,7 @@ describe("decryptLifecycleEvent — dormancy-start", () => {
   it("decrypts dormancy-start with relatedLifecycleEventId", () => {
     const payload: LifecycleEventEncryptedPayload = {
       notes: null,
-      relatedLifecycleEventId: "evt_related" as LifecycleEventId,
+      relatedLifecycleEventId: brandId<LifecycleEventId>("evt_related"),
     };
     const meta = { memberIds: ["mem_a"] };
     const result = decryptLifecycleEvent(makeRaw("dormancy-start", payload, meta), masterKey);
@@ -152,7 +152,7 @@ describe("decryptLifecycleEvent — dormancy-end", () => {
   it("decrypts dormancy-end event", () => {
     const payload: LifecycleEventEncryptedPayload = {
       notes: "Woke up",
-      relatedLifecycleEventId: "evt_start" as LifecycleEventId,
+      relatedLifecycleEventId: brandId<LifecycleEventId>("evt_start"),
     };
     const meta = { memberIds: ["mem_a"] };
     const result = decryptLifecycleEvent(makeRaw("dormancy-end", payload, meta), masterKey);

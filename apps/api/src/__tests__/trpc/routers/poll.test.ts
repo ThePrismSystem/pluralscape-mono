@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -60,8 +61,8 @@ const { pollRouter } = await import("../../../trpc/routers/poll.js");
 
 const createCaller = makeCallerFactory({ poll: pollRouter });
 
-const POLL_ID = "poll_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as PollId;
-const VOTE_ID = "pv_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as PollVoteId;
+const POLL_ID = brandId<PollId>("poll_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const VOTE_ID = brandId<PollVoteId>("pv_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3Jwb2xs";
 
 const MOCK_POLL_RESULT = {
@@ -141,7 +142,7 @@ describe("poll router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.poll.create({
@@ -175,7 +176,7 @@ describe("poll router", () => {
     it("rejects invalid pollId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.poll.get({ systemId: MOCK_SYSTEM_ID, pollId: "invalid-id" as PollId }),
+        caller.poll.get({ systemId: MOCK_SYSTEM_ID, pollId: brandId<PollId>("invalid-id") }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 

@@ -1,11 +1,11 @@
 ---
 # ps-5rbg
 title: Missing unit and integration tests across packages
-status: todo
+status: in-progress
 type: task
 priority: low
 created_at: 2026-04-16T06:58:59Z
-updated_at: 2026-04-16T06:58:59Z
+updated_at: 2026-04-17T06:30:26Z
 parent: ps-0enb
 ---
 

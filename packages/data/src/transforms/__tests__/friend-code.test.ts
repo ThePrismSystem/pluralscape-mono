@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { narrowFriendCode, narrowFriendCodePage } from "../friend-code.js";
@@ -11,8 +12,8 @@ const EXPIRES = 1_700_086_400_000 as UnixMillis;
 
 function makeRaw(overrides?: Partial<FriendCodeRaw>): FriendCodeRaw {
   return {
-    id: "fcd_test001" as FriendCodeId,
-    accountId: "acc_test001" as AccountId,
+    id: brandId<FriendCodeId>("fcd_test001"),
+    accountId: brandId<AccountId>("acc_test001"),
     code: "ABCD-1234",
     createdAt: NOW,
     expiresAt: EXPIRES,

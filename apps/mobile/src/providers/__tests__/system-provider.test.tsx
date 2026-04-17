@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -16,7 +17,7 @@ function makeWrapper(systemId: SystemId | null) {
 describe("useActiveSystemId", () => {
   it("returns the systemId from the provider", () => {
     const { result } = renderHook(() => useActiveSystemId(), {
-      wrapper: makeWrapper("sys_test123" as SystemId),
+      wrapper: makeWrapper(brandId<SystemId>("sys_test123")),
     });
     expect(result.current).toBe("sys_test123");
   });

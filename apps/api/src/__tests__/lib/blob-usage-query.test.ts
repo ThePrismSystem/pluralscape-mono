@@ -1,4 +1,5 @@
 import { blobMetadata } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, isNotNull, sum } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -7,7 +8,7 @@ import { mockDb } from "../helpers/mock-db.js";
 
 import type { SystemId } from "@pluralscape/types";
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 
 describe("BlobUsageQueryImpl", () => {
   afterEach(() => {

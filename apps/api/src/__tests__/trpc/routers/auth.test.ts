@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -69,7 +70,7 @@ const { authRouter } = await import("../../../trpc/routers/auth.js");
 
 const createCaller = makeCallerFactory({ auth: authRouter });
 
-const MOCK_OTHER_SESSION_ID = "sess_660e8400-e29b-41d4-a716-446655440002" as SessionId;
+const MOCK_OTHER_SESSION_ID = brandId<SessionId>("sess_660e8400-e29b-41d4-a716-446655440002");
 
 describe("auth router", () => {
   beforeEach(() => {
@@ -236,7 +237,7 @@ describe("auth router", () => {
     };
 
     const resetResult = {
-      sessionToken: "sess_550e8400-e29b-41d4-a716-446655440099" as SessionId,
+      sessionToken: brandId<SessionId>("sess_550e8400-e29b-41d4-a716-446655440099"),
       accountId: MOCK_AUTH.accountId,
     };
 
@@ -372,7 +373,7 @@ describe("auth router", () => {
     it("rejects invalid sessionId format", async () => {
       const caller = createCaller(MOCK_AUTH);
       await expect(
-        caller.auth.session.revoke({ sessionId: "not-valid" as SessionId }),
+        caller.auth.session.revoke({ sessionId: brandId<SessionId>("not-valid") }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });

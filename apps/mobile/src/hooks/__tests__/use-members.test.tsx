@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptMemberInput } from "@pluralscape/data/transforms/member";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -138,7 +139,7 @@ function makeRawMember(id: string): MemberRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as MemberId,
+    id: brandId<MemberId>(id),
     systemId: TEST_SYSTEM_ID,
     version: 1,
     createdAt: NOW,
@@ -158,7 +159,7 @@ beforeEach(() => {
 describe("useMember", () => {
   it("returns decrypted member data", async () => {
     fixtures.set("member.get", makeRawMember("m-1"));
-    const { result } = renderHookWithProviders(() => useMember("m-1" as MemberId));
+    const { result } = renderHookWithProviders(() => useMember(brandId<MemberId>("m-1")));
 
     let data: Awaited<ReturnType<typeof useMember>>["data"] | undefined;
     await waitFor(() => {
@@ -172,7 +173,7 @@ describe("useMember", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useMember("m-1" as MemberId), {
+    const { result } = renderHookWithProviders(() => useMember(brandId<MemberId>("m-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -181,7 +182,7 @@ describe("useMember", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("member.get", makeRawMember("m-1"));
-    const { result, rerender } = renderHookWithProviders(() => useMember("m-1" as MemberId));
+    const { result, rerender } = renderHookWithProviders(() => useMember(brandId<MemberId>("m-1")));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -349,7 +350,7 @@ const LOCAL_MEMBER_ROW: Record<string, unknown> = {
 describe("useMember (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_MEMBER_ROW]);
-    const { result } = renderHookWithProviders(() => useMember("m-local-1" as MemberId), {
+    const { result } = renderHookWithProviders(() => useMember(brandId<MemberId>("m-local-1")), {
       querySource: "local",
       localDb,
     });
@@ -373,7 +374,7 @@ describe("useMember (local source)", () => {
 
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_MEMBER_ROW]);
-    const { result } = renderHookWithProviders(() => useMember("m-local-1" as MemberId), {
+    const { result } = renderHookWithProviders(() => useMember(brandId<MemberId>("m-local-1")), {
       querySource: "local",
       localDb,
     });

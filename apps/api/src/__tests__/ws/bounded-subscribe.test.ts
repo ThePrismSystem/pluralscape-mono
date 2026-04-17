@@ -5,6 +5,7 @@
  * batches of WS_SUBSCRIBE_CONCURRENCY rather than unbounded Promise.all.
  */
 import { EncryptedRelay } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
@@ -41,12 +42,14 @@ function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi
   return { close: vi.fn(), send: vi.fn() };
 }
 
-function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
+type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
+
+function mockAuth(accountId = brandId<AccountId>(crypto.randomUUID())): AuthContextWithSystem {
   return {
     authMethod: "session" as const,
     accountId,
-    systemId: crypto.randomUUID() as SystemId,
-    sessionId: crypto.randomUUID() as SessionId,
+    systemId: brandId<SystemId>(crypto.randomUUID()),
+    sessionId: brandId<SessionId>(crypto.randomUUID()),
     accountType: "system",
     ownedSystemIds: new Set(),
     auditLogIpTracking: false,
@@ -88,7 +91,7 @@ describe("bounded subscribe concurrency", () => {
     // Register and authenticate connection
     manager.reserveUnauthSlot();
     manager.register(connId, mockWs() as never, Date.now());
-    manager.authenticate(connId, auth, systemId as SystemId, "owner-full");
+    manager.authenticate(connId, auth, brandId<SystemId>(systemId), "owner-full");
     const state = manager.get(connId);
     if (!state) throw new Error("Connection not found");
 
@@ -125,7 +128,7 @@ describe("bounded subscribe concurrency", () => {
 
     manager.reserveUnauthSlot();
     manager.register(connId, mockWs() as never, Date.now());
-    manager.authenticate(connId, auth, systemId as SystemId, "owner-full");
+    manager.authenticate(connId, auth, brandId<SystemId>(systemId), "owner-full");
     const state = manager.get(connId);
     if (!state) throw new Error("Connection not found");
 
@@ -157,7 +160,7 @@ describe("bounded subscribe concurrency", () => {
 
     manager.reserveUnauthSlot();
     manager.register(connId, mockWs() as never, Date.now());
-    manager.authenticate(connId, auth, systemId as SystemId, "owner-full");
+    manager.authenticate(connId, auth, brandId<SystemId>(systemId), "owner-full");
     const state = manager.get(connId);
     if (!state) throw new Error("Connection not found");
 
@@ -188,7 +191,7 @@ describe("bounded subscribe concurrency", () => {
 
     manager.reserveUnauthSlot();
     manager.register(connId, mockWs() as never, Date.now());
-    manager.authenticate(connId, auth, auth.systemId as SystemId, "owner-full");
+    manager.authenticate(connId, auth, auth.systemId, "owner-full");
     const state = manager.get(connId);
     if (!state) throw new Error("Connection not found");
 

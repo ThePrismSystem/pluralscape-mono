@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AuthContext, SessionAuthContext } from "../../lib/auth-context.js";
@@ -20,11 +21,11 @@ const { createTRPCContext } = await import("../../trpc/context.js");
 
 const MOCK_AUTH: SessionAuthContext = {
   authMethod: "session" as const,
-  accountId: "acct_ctx001" as AccountId,
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId,
-  sessionId: "sess_ctx001" as SessionId,
+  accountId: brandId<AccountId>("acct_ctx001"),
+  systemId: brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000"),
+  sessionId: brandId<SessionId>("sess_ctx001"),
   accountType: "system",
-  ownedSystemIds: new Set(["sys_550e8400-e29b-41d4-a716-446655440000" as SystemId]),
+  ownedSystemIds: new Set([brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000")]),
   auditLogIpTracking: false,
 };
 

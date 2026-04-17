@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -72,7 +73,7 @@ beforeEach(() => {
 
 describe("useApiKey", () => {
   it("passes apiKeyId and systemId to query", () => {
-    renderHookWithProviders(() => useApiKey("ak_test" as ApiKeyId));
+    renderHookWithProviders(() => useApiKey(brandId<ApiKeyId>("ak_test")));
     expect(lastQueryInput["apiKeyId"]).toBe("ak_test");
     expect(lastQueryInput["systemId"]).toBe(TEST_SYSTEM_ID);
   });

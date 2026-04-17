@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -42,7 +43,7 @@ const { lifecycleEventRouter } = await import("../../../trpc/routers/lifecycle-e
 
 const createCaller = makeCallerFactory({ lifecycleEvent: lifecycleEventRouter });
 
-const EVENT_ID = "evt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as LifecycleEventId;
+const EVENT_ID = brandId<LifecycleEventId>("evt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JsaWZlY3ljbGU=";
 
 const MOCK_EVENT_RESULT = {
@@ -95,7 +96,7 @@ describe("lifecycleEvent router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.lifecycleEvent.create({
@@ -130,7 +131,7 @@ describe("lifecycleEvent router", () => {
       await expect(
         caller.lifecycleEvent.get({
           systemId: MOCK_SYSTEM_ID,
-          eventId: "not-an-event-id" as LifecycleEventId,
+          eventId: brandId<LifecycleEventId>("not-an-event-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

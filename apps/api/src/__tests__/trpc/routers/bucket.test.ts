@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -68,8 +69,8 @@ const { bucketRouter } = await import("../../../trpc/routers/bucket.js");
 
 const createCaller = makeCallerFactory({ bucket: bucketRouter });
 
-const BUCKET_ID = "bkt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BucketId;
-const CONNECTION_ID = "fc_11111111-2222-3333-4444-555555555555" as FriendConnectionId;
+const BUCKET_ID = brandId<BucketId>("bkt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_11111111-2222-3333-4444-555555555555");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JidWNrZXQ=";
 
 const MOCK_BUCKET_RESULT = {
@@ -119,7 +120,7 @@ describe("bucket router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.bucket.create({ systemId: foreignSystemId, encryptedData: VALID_ENCRYPTED_DATA }),
@@ -144,7 +145,10 @@ describe("bucket router", () => {
     it("rejects invalid bucketId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.bucket.get({ systemId: MOCK_SYSTEM_ID, bucketId: "not-a-bucket-id" as BucketId }),
+        caller.bucket.get({
+          systemId: MOCK_SYSTEM_ID,
+          bucketId: brandId<BucketId>("not-a-bucket-id"),
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
@@ -315,7 +319,7 @@ describe("bucket router", () => {
       const mockResult = {
         friendConnectionId: CONNECTION_ID,
         bucketId: BUCKET_ID,
-        friendAccountId: "acct_friend001" as AccountId,
+        friendAccountId: brandId<AccountId>("acct_friend001"),
       };
       vi.mocked(assignBucketToFriend).mockResolvedValue(mockResult);
       const caller = createCaller();
@@ -393,7 +397,7 @@ describe("bucket router", () => {
         {
           friendConnectionId: CONNECTION_ID,
           bucketId: BUCKET_ID,
-          friendAccountId: "acct_friend001" as AccountId,
+          friendAccountId: brandId<AccountId>("acct_friend001"),
         },
       ];
       vi.mocked(listFriendBucketAssignments).mockResolvedValue(mockResult);

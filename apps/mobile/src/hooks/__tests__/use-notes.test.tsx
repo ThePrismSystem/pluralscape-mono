@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptNoteInput } from "@pluralscape/data/transforms/note";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -129,7 +130,7 @@ function makeRawNote(id: string): NoteRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as NoteId,
+    id: brandId<NoteId>(id),
     systemId: TEST_SYSTEM_ID,
     authorEntityType: null,
     authorEntityId: null,
@@ -151,7 +152,7 @@ beforeEach(() => {
 describe("useNote", () => {
   it("returns decrypted note data", async () => {
     fixtures.set("note.get", makeRawNote("note-1"));
-    const { result } = renderHookWithProviders(() => useNote("note-1" as NoteId));
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-1")));
 
     let data: Awaited<ReturnType<typeof useNote>>["data"] | undefined;
     await waitFor(() => {
@@ -166,7 +167,7 @@ describe("useNote", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useNote("note-1" as NoteId), {
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-1")), {
       masterKey: null,
     });
     expect(result.current.fetchStatus).toBe("idle");
@@ -175,7 +176,7 @@ describe("useNote", () => {
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("note.get", makeRawNote("note-1"));
-    const { result, rerender } = renderHookWithProviders(() => useNote("note-1" as NoteId));
+    const { result, rerender } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-1")));
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -341,7 +342,7 @@ const LOCAL_NOTE_ROW: Record<string, unknown> = {
 describe("useNote (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_NOTE_ROW]);
-    const { result } = renderHookWithProviders(() => useNote("note-local-1" as NoteId), {
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-local-1")), {
       querySource: "local",
       localDb,
     });
@@ -363,7 +364,7 @@ describe("useNote (local source)", () => {
 
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_NOTE_ROW]);
-    const { result } = renderHookWithProviders(() => useNote("note-local-1" as NoteId), {
+    const { result } = renderHookWithProviders(() => useNote(brandId<NoteId>("note-local-1")), {
       querySource: "local",
       localDb,
     });

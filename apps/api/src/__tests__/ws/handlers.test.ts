@@ -1,5 +1,6 @@
 import { getSodium, initSodium } from "@pluralscape/crypto";
 import { EncryptedRelay } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Disable envelope signature verification before module load.
@@ -72,12 +73,12 @@ function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi
   return { close: vi.fn(), send: vi.fn() };
 }
 
-function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
+function mockAuth(accountId = brandId<AccountId>(crypto.randomUUID())): AuthContext {
   return {
     authMethod: "session" as const,
     accountId,
-    systemId: crypto.randomUUID() as SystemId,
-    sessionId: crypto.randomUUID() as SessionId,
+    systemId: brandId<SystemId>(crypto.randomUUID()),
+    sessionId: brandId<SessionId>(crypto.randomUUID()),
     accountType: "system",
     ownedSystemIds: new Set(),
     auditLogIpTracking: false,
@@ -118,7 +119,7 @@ function isSubmitChangeResult(
 }
 
 const log = mockLog();
-const TEST_ACCOUNT_ID = crypto.randomUUID() as AccountId;
+const TEST_ACCOUNT_ID = brandId<AccountId>(crypto.randomUUID());
 
 /**
  * Create a mock PostgresJsDatabase that satisfies verifyKeyOwnership.
@@ -142,7 +143,7 @@ function mockDb(authorPublicKey: Uint8Array = pubkey(10)) {
 describe("handleManifestRequest", () => {
   it("returns a ManifestResponse with an empty document list", async () => {
     const relay = new EncryptedRelay();
-    const systemId = crypto.randomUUID() as SystemId;
+    const systemId = brandId<SystemId>(crypto.randomUUID());
     const correlationId = crypto.randomUUID();
     const message: ManifestRequest = {
       type: "ManifestRequest",
@@ -162,7 +163,7 @@ describe("handleManifestRequest", () => {
   it("echoes the correlationId from the request", async () => {
     const relay = new EncryptedRelay();
     const correlationId = crypto.randomUUID();
-    const systemId = crypto.randomUUID() as SystemId;
+    const systemId = brandId<SystemId>(crypto.randomUUID());
     const message: ManifestRequest = {
       type: "ManifestRequest",
       correlationId,
@@ -189,7 +190,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     // Submit a change so catchup has data
     await relay.submit(mockChangeWithoutSeq(docId));
@@ -218,7 +219,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     await relay.submitSnapshot(mockSnapshot(docId, 1));
     await relay.submit(mockChangeWithoutSeq(docId));
@@ -243,7 +244,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     // Submit and then subscribe with the current seq
     const seq = await relay.submit(mockChangeWithoutSeq(docId));
@@ -266,7 +267,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     const message: SubscribeRequest = {
       type: "SubscribeRequest",
@@ -285,7 +286,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     // Fill subscription cap (WS_MAX_SUBSCRIPTIONS_PER_CONNECTION defaults to 500)
     for (let i = 0; i < 500; i++) {
@@ -316,7 +317,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     await relay.submit(mockChangeWithoutSeq(docId));
 
@@ -346,7 +347,7 @@ describe("handleUnsubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     // Subscribe first
     const subMsg: SubscribeRequest = {
@@ -374,7 +375,7 @@ describe("handleUnsubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+    const state = createAuthenticatedState(manager, connId, auth, brandId<SystemId>(systemId));
 
     const message: UnsubscribeRequest = {
       type: "UnsubscribeRequest",

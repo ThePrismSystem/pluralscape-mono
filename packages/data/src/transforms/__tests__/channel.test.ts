@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -34,8 +34,8 @@ function makeServerChannel(
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
-    id: "ch_abc123" as ChannelId,
-    systemId: "sys_xyz789" as SystemId,
+    id: brandId<ChannelId>("ch_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
     type: "channel" as const,
     parentId: null as ChannelId | null,
     sortOrder: 0,
@@ -72,7 +72,7 @@ describe("decryptChannel", () => {
     const raw = {
       ...makeServerChannel(),
       type: "category" as const,
-      parentId: "ch_parent" as ChannelId,
+      parentId: brandId<ChannelId>("ch_parent"),
     };
     const result = decryptChannel(raw, masterKey);
     expect(result.type).toBe("category");

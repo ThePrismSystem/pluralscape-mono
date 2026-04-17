@@ -1,4 +1,5 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source";
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionManager } from "../connection-manager.js";
@@ -28,7 +29,7 @@ describe("ConnectionManager", () => {
 
   it("transitions to connecting (not connected) when connect is called", () => {
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connecting");
   });
 
@@ -39,7 +40,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connected");
   });
 
@@ -50,7 +51,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connected");
     manager.disconnect();
     expect(manager.getSnapshot()).toBe("disconnected");
@@ -63,7 +64,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     manager.disconnect();
     expect(manager.getSnapshot()).toBe("disconnected");
   });
@@ -72,7 +73,7 @@ describe("ConnectionManager", () => {
     const manager = makeManager();
     const listener = vi.fn();
     manager.subscribe(listener);
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(listener).toHaveBeenCalled();
   });
 
@@ -81,7 +82,7 @@ describe("ConnectionManager", () => {
     const listener = vi.fn();
     const unsub = manager.subscribe(listener);
     unsub();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -92,7 +93,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     manager.disconnect();
     expect(manager.getSnapshot()).toBe("disconnected");
   });
@@ -110,7 +111,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     // After onopen -> connected, then onerror -> handleConnectionLost
     // connected -> CONNECTION_LOST -> reconnecting (backoff timer scheduled)
     expect(manager.getSnapshot()).toBe("reconnecting");
@@ -127,7 +128,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connected");
 
     // Simulate connection lost — schedules backoff then reconnect
@@ -160,7 +161,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     // connecting -> CONNECTION_LOST -> backoff
     expect(manager.getSnapshot()).toBe("backoff");
 
@@ -186,7 +187,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connected");
 
     // Trigger connection lost to enter backoff/reconnecting
@@ -201,7 +202,7 @@ describe("ConnectionManager", () => {
 
     // Disconnect and reconnect to trigger connection lost
     manager.disconnect();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     // Now connecting — trigger error to enter backoff
     expect(manager.getSnapshot()).toBe("backoff");
 
@@ -229,7 +230,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getLastError()).toBe(sseError);
   });
 
@@ -246,7 +247,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connected");
     expect(manager.getLastError()).toBeNull();
 
@@ -268,26 +269,26 @@ describe("ConnectionManager", () => {
 
   it("connect returns true when connection is initiated", () => {
     const manager = makeManager();
-    const result = manager.connect("tok", "sys_1" as SystemId);
+    const result = manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(result).toBe(true);
   });
 
   it("connect returns false when already connecting", () => {
     mockFetchEventSource.mockImplementation(() => Promise.resolve());
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
-    const result = manager.connect("tok2", "sys_2" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
+    const result = manager.connect("tok2", brandId<SystemId>("sys_2"));
     expect(result).toBe(false);
   });
 
   it("ignores duplicate connect when already connecting", () => {
     mockFetchEventSource.mockImplementation(() => Promise.resolve());
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getSnapshot()).toBe("connecting");
     expect(mockFetchEventSource).toHaveBeenCalledTimes(1);
 
-    manager.connect("tok2", "sys_2" as SystemId);
+    manager.connect("tok2", brandId<SystemId>("sys_2"));
     expect(mockFetchEventSource).toHaveBeenCalledTimes(1);
   });
 
@@ -304,7 +305,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.connect("tok", "sys_1" as SystemId);
+    manager.connect("tok", brandId<SystemId>("sys_1"));
     expect(manager.getLastError()).toBe(sseError);
 
     manager.disconnect();

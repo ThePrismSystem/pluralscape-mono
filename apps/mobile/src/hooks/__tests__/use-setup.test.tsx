@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -157,7 +158,7 @@ describe("useSetupComplete", () => {
 describe("useSetupStatus (disabled)", () => {
   it("does not fetch when systemId is empty", () => {
     fixtures.set("setup.getStatus", { isComplete: false });
-    const { result } = renderHookWithProviders(() => useSetupStatus("" as SystemId));
+    const { result } = renderHookWithProviders(() => useSetupStatus(brandId<SystemId>("")));
 
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();

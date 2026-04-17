@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -11,7 +12,7 @@ const { assertAccountOwnership } = await import("../../lib/account-ownership.js"
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const ACCOUNT_ID = "acct_test-account" as AccountId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test-account");
 
 const AUTH = makeTestAuth({
   accountId: ACCOUNT_ID as string,
@@ -29,7 +30,7 @@ describe("assertAccountOwnership", () => {
 
   it("throws 404 when accountId does not match", () => {
     expect(() => {
-      assertAccountOwnership("acct_other" as AccountId, AUTH);
+      assertAccountOwnership(brandId<AccountId>("acct_other"), AUTH);
     }).toThrow(
       expect.objectContaining({
         status: 404,
@@ -41,7 +42,7 @@ describe("assertAccountOwnership", () => {
 
   it("throws ApiHttpError (not a generic Error)", () => {
     expect(() => {
-      assertAccountOwnership("acct_other" as AccountId, AUTH);
+      assertAccountOwnership(brandId<AccountId>("acct_other"), AUTH);
     }).toThrow(ApiHttpError);
   });
 

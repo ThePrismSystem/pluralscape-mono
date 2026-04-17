@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -96,14 +97,18 @@ const createCaller = makeCallerFactory({ structure: structureRouter });
 
 // ── IDs ──────────────────────────────────────────────────────────────
 
-const ENTITY_TYPE_ID = "stet_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityTypeId;
-const ENTITY_ID = "ste_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityId;
-const LINK_ID = "stel_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityLinkId;
-const MEMBER_LINK_ID =
-  "steml_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityMemberLinkId;
-const ASSOCIATION_ID =
-  "stea_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityAssociationId;
-const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
+const ENTITY_TYPE_ID = brandId<SystemStructureEntityTypeId>(
+  "stet_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+);
+const ENTITY_ID = brandId<SystemStructureEntityId>("ste_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const LINK_ID = brandId<SystemStructureEntityLinkId>("stel_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const MEMBER_LINK_ID = brandId<SystemStructureEntityMemberLinkId>(
+  "steml_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+);
+const ASSOCIATION_ID = brandId<SystemStructureEntityAssociationId>(
+  "stea_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+);
+const MEMBER_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const NOW = 1_700_000_000_000 as UnixMillis;
@@ -195,7 +200,7 @@ describe("structure router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.structure.entityType.create({
@@ -229,7 +234,7 @@ describe("structure router", () => {
       await expect(
         caller.structure.entityType.get({
           systemId: MOCK_SYSTEM_ID,
-          entityTypeId: "not-a-type-id" as SystemStructureEntityTypeId,
+          entityTypeId: brandId<SystemStructureEntityTypeId>("not-a-type-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -414,7 +419,7 @@ describe("structure router", () => {
       await expect(
         caller.structure.entity.get({
           systemId: MOCK_SYSTEM_ID,
-          entityId: "not-an-entity-id" as SystemStructureEntityId,
+          entityId: brandId<SystemStructureEntityId>("not-an-entity-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -653,7 +658,7 @@ describe("structure router", () => {
       await expect(
         caller.structure.link.delete({
           systemId: MOCK_SYSTEM_ID,
-          linkId: "not-a-link-id" as SystemStructureEntityLinkId,
+          linkId: brandId<SystemStructureEntityLinkId>("not-a-link-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -733,7 +738,7 @@ describe("structure router", () => {
       await expect(
         caller.structure.memberLink.delete({
           systemId: MOCK_SYSTEM_ID,
-          memberLinkId: "not-a-member-link-id" as SystemStructureEntityMemberLinkId,
+          memberLinkId: brandId<SystemStructureEntityMemberLinkId>("not-a-member-link-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -808,7 +813,7 @@ describe("structure router", () => {
       await expect(
         caller.structure.association.delete({
           systemId: MOCK_SYSTEM_ID,
-          associationId: "not-an-association-id" as SystemStructureEntityAssociationId,
+          associationId: brandId<SystemStructureEntityAssociationId>("not-an-association-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

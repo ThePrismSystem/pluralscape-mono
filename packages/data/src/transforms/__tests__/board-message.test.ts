@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -28,7 +28,7 @@ beforeAll(async () => {
 function makeEncryptedFields(): BoardMessageEncryptedFields {
   return {
     content: "A board message from the host.",
-    senderId: "mem_host001" as MemberId,
+    senderId: brandId<MemberId>("mem_host001"),
   };
 }
 
@@ -37,8 +37,8 @@ function makeServerBoardMessage(
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
-    id: "bm_abc123" as BoardMessageId,
-    systemId: "sys_xyz789" as SystemId,
+    id: brandId<BoardMessageId>("bm_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
     pinned: false,
     sortOrder: 0,
     encryptedData: encryptAndEncodeT1(fields, masterKey),

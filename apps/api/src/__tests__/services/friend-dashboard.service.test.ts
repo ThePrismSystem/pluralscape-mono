@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock dependencies before imports
@@ -92,12 +93,12 @@ import type {
 
 // ── Test helpers ────────────────────────────────────────────────
 
-const CONNECTION_ID = "fc_conn1" as FriendConnectionId;
-const SYSTEM_ID = "sys_target" as SystemId;
-const ACCOUNT_ID = "acc_caller" as AccountId;
-const TARGET_ACCOUNT_ID = "acc_target" as AccountId;
-const BUCKET_A = "bkt_aaa" as BucketId;
-const BUCKET_B = "bkt_bbb" as BucketId;
+const CONNECTION_ID = brandId<FriendConnectionId>("fc_conn1");
+const SYSTEM_ID = brandId<SystemId>("sys_target");
+const ACCOUNT_ID = brandId<AccountId>("acc_caller");
+const TARGET_ACCOUNT_ID = brandId<AccountId>("acc_target");
+const BUCKET_A = brandId<BucketId>("bkt_aaa");
+const BUCKET_B = brandId<BucketId>("bkt_bbb");
 
 /** Placeholder encrypted data -- the mock encryptedBlobToBase64 calls String() on it. */
 const STUB_ENCRYPTED_DATA = "enc_stub";
@@ -107,7 +108,7 @@ function makeAuth(): AuthContext {
     authMethod: "session" as const,
     accountId: ACCOUNT_ID,
     systemId: null,
-    sessionId: "sess_test" as SessionId,
+    sessionId: brandId<SessionId>("sess_test"),
     accountType: "system" as const,
     ownedSystemIds: new Set<SystemId>(),
     auditLogIpTracking: false,

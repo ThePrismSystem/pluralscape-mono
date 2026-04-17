@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { narrowFriendConnection, narrowFriendConnectionPage } from "../friend-connection.js";
@@ -24,11 +25,11 @@ const DEFAULT_VISIBILITY: FriendVisibilitySettings = {
 
 function makeRaw(overrides?: Partial<FriendConnectionRaw>): FriendConnectionRaw {
   return {
-    id: "fc_test0001" as FriendConnectionId,
-    accountId: "acc_test001" as AccountId,
-    friendAccountId: "acc_test002" as AccountId,
+    id: brandId<FriendConnectionId>("fc_test0001"),
+    accountId: brandId<AccountId>("acc_test001"),
+    friendAccountId: brandId<AccountId>("acc_test002"),
     status: "accepted" as FriendConnectionStatus,
-    assignedBucketIds: ["bkt_test0001" as BucketId],
+    assignedBucketIds: [brandId<BucketId>("bkt_test0001")],
     visibility: DEFAULT_VISIBILITY,
     version: 1,
     createdAt: NOW,

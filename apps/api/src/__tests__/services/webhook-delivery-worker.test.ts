@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { buildIpPinnedFetchArgs } from "../../lib/ip-validation.js";
@@ -163,7 +164,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await processWebhookDelivery(db, "wd_missing" as WebhookDeliveryId);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_missing"));
 
     expect(chain.update).not.toHaveBeenCalled();
   });
@@ -174,7 +175,7 @@ describe("processWebhookDelivery (unit)", () => {
       { ...JOINED_ROW, configUrl: null, configSecret: null, configEnabled: null },
     ]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"));
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -183,7 +184,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configEnabled: false }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"));
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -192,7 +193,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configSecret: null }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"));
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -204,7 +205,7 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
     // Bun's fetch includes a static `preconnect` method that vi.fn() can't satisfy
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
@@ -221,7 +222,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     const call = mockFetch.mock.calls[0] ?? [];
     const options = call[1] as RequestInit;
@@ -238,7 +239,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "success" }));
   });
@@ -249,7 +250,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -266,7 +267,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -277,7 +278,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -291,7 +292,7 @@ describe("processWebhookDelivery (unit)", () => {
     const abortErr = new DOMException("The operation was aborted", "AbortError");
     const mockFetch = vi.fn().mockRejectedValue(abortErr);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -305,7 +306,7 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error("unexpected"));
 
     await expect(
-      processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never),
+      processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never),
     ).rejects.toThrow("unexpected");
   });
 
@@ -319,7 +320,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"));
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -333,7 +334,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"));
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -347,7 +348,7 @@ describe("processWebhookDelivery (unit)", () => {
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+    await processWebhookDelivery(db, brandId<WebhookDeliveryId>("wd_test"), mockFetch as never);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];

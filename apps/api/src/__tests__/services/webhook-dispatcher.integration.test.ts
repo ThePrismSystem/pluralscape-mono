@@ -6,6 +6,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -39,8 +40,8 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgWebhookTables(client);
-    const accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    const accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -64,7 +65,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     );
 
     const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
-      sessionId: "ses_test" as FrontingSessionId,
+      sessionId: brandId<FrontingSessionId>("ses_test"),
     });
     expect(ids.length).toBe(1);
 
@@ -93,7 +94,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     );
 
     const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
-      sessionId: "ses_test" as FrontingSessionId,
+      sessionId: brandId<FrontingSessionId>("ses_test"),
     });
     expect(ids.length).toBe(2);
 
@@ -115,7 +116,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     );
 
     const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
-      sessionId: "ses_test" as FrontingSessionId,
+      sessionId: brandId<FrontingSessionId>("ses_test"),
     });
     expect(ids.length).toBe(0);
   });
@@ -135,7 +136,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
       .where(eq(webhookConfigs.id, wh.id));
 
     const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
-      sessionId: "ses_test" as FrontingSessionId,
+      sessionId: brandId<FrontingSessionId>("ses_test"),
     });
     expect(ids.length).toBe(0);
   });
@@ -150,7 +151,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     );
 
     const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
-      sessionId: "ses_test" as FrontingSessionId,
+      sessionId: brandId<FrontingSessionId>("ses_test"),
     });
     expect(ids.length).toBe(0);
   });

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../../lib/api-error.js";
@@ -60,7 +61,7 @@ const createApp = () => createRouteApp("/account", accountRoutes);
 const CONNECTION_ID = "fc_550e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_SYNC_RESPONSE: FriendDashboardSyncResponse = {
-  systemId: "sys_target" as SystemId,
+  systemId: brandId<SystemId>("sys_target"),
   entries: [
     { entityType: "member", count: 5, latestUpdatedAt: 1000 as UnixMillis },
     { entityType: "custom-front", count: 2, latestUpdatedAt: 900 as UnixMillis },

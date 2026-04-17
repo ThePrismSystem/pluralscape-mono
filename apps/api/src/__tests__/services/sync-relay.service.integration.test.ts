@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import * as schema from "@pluralscape/db/pg";
 import { SnapshotVersionConflictError } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -273,7 +274,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
     it("returns docs for systemId", async () => {
       const docId = await insertDoc();
 
-      const manifest = await service.getManifest(systemId as SystemId);
+      const manifest = await service.getManifest(brandId<SystemId>(systemId));
 
       expect(manifest.systemId).toBe(systemId);
       expect(manifest.documents).toHaveLength(1);
@@ -281,7 +282,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
     });
 
     it("returns empty for unknown system", async () => {
-      const manifest = await service.getManifest("sys_unknown" as SystemId);
+      const manifest = await service.getManifest(brandId<SystemId>("sys_unknown"));
 
       expect(manifest.systemId).toBe("sys_unknown");
       expect(manifest.documents).toEqual([]);

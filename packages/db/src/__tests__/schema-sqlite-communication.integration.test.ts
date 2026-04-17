@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -1110,7 +1111,7 @@ describe("SQLite communication schema", () => {
           pollId,
           systemId,
           optionId: "opt-1",
-          voter: { entityType: "member", entityId: "m-1" as MemberId },
+          voter: { entityType: "member", entityId: brandId<MemberId>("m-1") },
           isVeto: true,
           votedAt,
           encryptedData: testBlob(new Uint8Array([1])),

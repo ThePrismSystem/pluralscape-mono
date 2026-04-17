@@ -7,6 +7,7 @@
  * 3. Wait for in-flight handlers (with timeout)
  * 4. Force-close remaining connections
  */
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionManager } from "../../ws/connection-manager.js";
@@ -19,13 +20,15 @@ function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi
   return { close: vi.fn(), send: vi.fn() };
 }
 
-function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
-  const systemId = crypto.randomUUID() as SystemId;
+type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
+
+function mockAuth(accountId = brandId<AccountId>(crypto.randomUUID())): AuthContextWithSystem {
+  const systemId = brandId<SystemId>(crypto.randomUUID());
   return {
     authMethod: "session" as const,
     accountId,
     systemId,
-    sessionId: crypto.randomUUID() as SessionId,
+    sessionId: brandId<SessionId>(crypto.randomUUID()),
     accountType: "system",
     ownedSystemIds: new Set([systemId]),
     auditLogIpTracking: false,
@@ -65,7 +68,7 @@ describe("graceful shutdown", () => {
     const auth = mockAuth();
     manager.reserveUnauthSlot();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+    manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
     manager.reserveUnauthSlot();
     manager.register("conn-2", ws2 as never, Date.now());
 
@@ -81,7 +84,7 @@ describe("graceful shutdown", () => {
     const auth = mockAuth();
     manager.reserveUnauthSlot();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+    manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
     manager.addSubscription("conn-1", "doc-a");
 
     await manager.gracefulShutdown(1_000);

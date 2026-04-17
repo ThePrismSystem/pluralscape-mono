@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AccountId, ApiKeyId, ApiKeyScope, SystemId } from "@pluralscape/types";
@@ -66,9 +67,9 @@ const { validateApiKey } = await import("../../services/api-key.service.js");
 // ── Fixtures ────────────────────────────────────────────────────────
 
 const TOKEN = "ps_key_abc123";
-const ACCOUNT_ID = "acct_test-account" as AccountId;
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const KEY_ID = "ak_test-key" as ApiKeyId;
+const ACCOUNT_ID = brandId<AccountId>("acct_test-account");
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const KEY_ID = brandId<ApiKeyId>("ak_test-key");
 const SCOPES: ApiKeyScope[] = ["read:members"];
 
 function makeValidRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {

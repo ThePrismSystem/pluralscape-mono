@@ -1,5 +1,6 @@
 import { initSodium } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Disable envelope signature verification before module load.
@@ -25,11 +26,11 @@ vi.mock("../../lib/session-auth.js", () => ({
     ok: true,
     auth: {
       authMethod: "session" as const,
-      accountId: "acct_test" as AccountId,
-      systemId: "sys_test" as SystemId,
-      sessionId: "sess_test" as SessionId,
+      accountId: brandId<AccountId>("acct_test"),
+      systemId: brandId<SystemId>("sys_test"),
+      sessionId: brandId<SessionId>("sess_test"),
       accountType: "system",
-      ownedSystemIds: new Set(["sys_test" as SystemId]),
+      ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
       auditLogIpTracking: false,
     } satisfies AuthContext,
     session: {},
@@ -374,7 +375,7 @@ describe("message-router", () => {
     });
 
     it("SubscribeRequest permits some docs and denies others", async () => {
-      ctx.documentOwnership.set("doc-owned-by-other", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-owned-by-other", brandId<SystemId>("sys_other"));
 
       await routeMessage(
         JSON.stringify({
@@ -611,7 +612,7 @@ describe("message-router", () => {
     });
 
     it("rejects submit to doc owned by another system", async () => {
-      ctx.documentOwnership.set("doc-acl-2", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-acl-2", brandId<SystemId>("sys_other"));
 
       const change = makeChangePayload("doc-acl-2");
       await routeMessage(
@@ -632,7 +633,7 @@ describe("message-router", () => {
     });
 
     it("rejects read on doc owned by another system", async () => {
-      ctx.documentOwnership.set("doc-acl-3", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-acl-3", brandId<SystemId>("sys_other"));
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-3" }),
@@ -647,7 +648,7 @@ describe("message-router", () => {
     });
 
     it("allows read on doc owned by same system", async () => {
-      ctx.documentOwnership.set("doc-acl-4", "sys_test" as SystemId);
+      ctx.documentOwnership.set("doc-acl-4", brandId<SystemId>("sys_test"));
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-4" }),
@@ -673,7 +674,7 @@ describe("message-router", () => {
     });
 
     it("rejects DocumentLoadRequest on doc owned by another system", async () => {
-      ctx.documentOwnership.set("doc-acl-5", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-acl-5", brandId<SystemId>("sys_other"));
 
       await routeMessage(
         JSON.stringify({
@@ -704,14 +705,14 @@ describe("message-router", () => {
         "conn-broken",
         {
           authMethod: "session" as const,
-          accountId: "acct_test" as AccountId,
-          systemId: "sys_test" as SystemId,
-          sessionId: "sess_test" as SessionId,
+          accountId: brandId<AccountId>("acct_test"),
+          systemId: brandId<SystemId>("sys_test"),
+          sessionId: brandId<SessionId>("sess_test"),
           accountType: "system",
-          ownedSystemIds: new Set(["sys_test" as SystemId]),
+          ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
           auditLogIpTracking: false,
         },
-        "sys_test" as SystemId,
+        brandId<SystemId>("sys_test"),
         "owner-full",
       );
       const brokenState = brokenManager.get("conn-broken");
@@ -726,14 +727,14 @@ describe("message-router", () => {
         "conn-sub",
         {
           authMethod: "session" as const,
-          accountId: "acct_test" as AccountId,
-          systemId: "sys_test" as SystemId,
-          sessionId: "sess_test" as SessionId,
+          accountId: brandId<AccountId>("acct_test"),
+          systemId: brandId<SystemId>("sys_test"),
+          sessionId: brandId<SessionId>("sess_test"),
           accountType: "system",
-          ownedSystemIds: new Set(["sys_test" as SystemId]),
+          ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
           auditLogIpTracking: false,
         },
-        "sys_test" as SystemId,
+        brandId<SystemId>("sys_test"),
         "owner-full",
       );
       brokenManager.addSubscription("conn-sub", "doc-bc");
@@ -916,14 +917,14 @@ describe("message-router", () => {
         "conn-sub",
         {
           authMethod: "session" as const,
-          accountId: "acct_test" as AccountId,
-          systemId: "sys_sub" as SystemId,
-          sessionId: "sess_sub" as SessionId,
+          accountId: brandId<AccountId>("acct_test"),
+          systemId: brandId<SystemId>("sys_sub"),
+          sessionId: brandId<SessionId>("sess_sub"),
           accountType: "system",
-          ownedSystemIds: new Set(["sys_sub" as SystemId]),
+          ownedSystemIds: new Set([brandId<SystemId>("sys_sub")]),
           auditLogIpTracking: false,
         },
-        "sys_sub" as SystemId,
+        brandId<SystemId>("sys_sub"),
         "owner-full",
       );
       manager.addSubscription("conn-sub", "doc-sig-fail");
@@ -1120,14 +1121,14 @@ describe("message-router", () => {
         "conn-broken-mfst",
         {
           authMethod: "session" as const,
-          accountId: "acct_test" as AccountId,
-          systemId: "sys_test" as SystemId,
-          sessionId: "sess_test" as SessionId,
+          accountId: brandId<AccountId>("acct_test"),
+          systemId: brandId<SystemId>("sys_test"),
+          sessionId: brandId<SessionId>("sess_test"),
           accountType: "system",
-          ownedSystemIds: new Set(["sys_test" as SystemId]),
+          ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
           auditLogIpTracking: false,
         },
-        "sys_test" as SystemId,
+        brandId<SystemId>("sys_test"),
         "owner-full",
       );
       const brokenState = brokenManager.get("conn-broken-mfst");
@@ -1162,14 +1163,14 @@ describe("message-router", () => {
         "conn-broken-sub",
         {
           authMethod: "session" as const,
-          accountId: "acct_test" as AccountId,
-          systemId: "sys_test" as SystemId,
-          sessionId: "sess_test" as SessionId,
+          accountId: brandId<AccountId>("acct_test"),
+          systemId: brandId<SystemId>("sys_test"),
+          sessionId: brandId<SessionId>("sess_test"),
           accountType: "system",
-          ownedSystemIds: new Set(["sys_test" as SystemId]),
+          ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
           auditLogIpTracking: false,
         },
-        "sys_test" as SystemId,
+        brandId<SystemId>("sys_test"),
         "owner-full",
       );
       const brokenState = brokenManager.get("conn-broken-sub");
@@ -1204,14 +1205,14 @@ describe("message-router", () => {
         "conn-broken-snap",
         {
           authMethod: "session" as const,
-          accountId: "acct_test" as AccountId,
-          systemId: "sys_test" as SystemId,
-          sessionId: "sess_test" as SessionId,
+          accountId: brandId<AccountId>("acct_test"),
+          systemId: brandId<SystemId>("sys_test"),
+          sessionId: brandId<SessionId>("sess_test"),
           accountType: "system",
-          ownedSystemIds: new Set(["sys_test" as SystemId]),
+          ownedSystemIds: new Set([brandId<SystemId>("sys_test")]),
           auditLogIpTracking: false,
         },
-        "sys_test" as SystemId,
+        brandId<SystemId>("sys_test"),
         "owner-full",
       );
       const brokenState = brokenManager.get("conn-broken-snap");
@@ -1279,8 +1280,8 @@ describe("message-router", () => {
     });
 
     it("sends empty SubscribeResponse when all documents are denied", async () => {
-      ctx.documentOwnership.set("doc-denied-1", "sys_other" as SystemId);
-      ctx.documentOwnership.set("doc-denied-2", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-denied-1", brandId<SystemId>("sys_other"));
+      ctx.documentOwnership.set("doc-denied-2", brandId<SystemId>("sys_other"));
 
       await routeMessage(
         JSON.stringify({
@@ -1362,7 +1363,7 @@ describe("message-router", () => {
     });
 
     it("skips DB lookup when cache already has ownership", async () => {
-      ctx.documentOwnership.set("doc-cached", "sys_test" as SystemId);
+      ctx.documentOwnership.set("doc-cached", brandId<SystemId>("sys_test"));
       mockDb.select.mockClear();
 
       await routeMessage(

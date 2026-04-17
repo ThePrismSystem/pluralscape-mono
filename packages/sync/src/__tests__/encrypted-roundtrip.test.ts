@@ -8,6 +8,7 @@ import {
   initSodium,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
@@ -94,7 +95,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
   });
 
   it("bucket-key roundtrip: sync changes with per-bucket key", async () => {
-    const bucketId = "bkt_rt1" as BucketId;
+    const bucketId = brandId<BucketId>("bkt_rt1");
     const bucketKey = generateBucketKey();
     bucketKeyCache.set(bucketId, bucketKey);
 
@@ -140,7 +141,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
   });
 
   it("cross-key isolation: master-key change cannot be decrypted by bucket-key session", async () => {
-    const bucketId = "bkt_iso1" as BucketId;
+    const bucketId = brandId<BucketId>("bkt_iso1");
     const bucketKey = generateBucketKey();
     bucketKeyCache.set(bucketId, bucketKey);
 

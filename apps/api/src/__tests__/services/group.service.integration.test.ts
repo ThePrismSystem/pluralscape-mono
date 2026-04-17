@@ -8,6 +8,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -78,8 +79,8 @@ describe("group.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.fieldValues);
     await pgExec(client, PG_DDL.fieldValuesIndexes);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -516,7 +517,7 @@ describe("group.service (PGlite integration)", () => {
 
     it("throws HAS_DEPENDENTS when group has memberships", async () => {
       const g = await createGroup(asDb(db), systemId, groupParams(), auth, noopAudit);
-      const memberId = (await pgInsertMember(db, systemId, genMemberId())) as MemberId;
+      const memberId = brandId<MemberId>(await pgInsertMember(db, systemId, genMemberId()));
 
       await addMember(asDb(db), systemId, g.id, { memberId }, auth, noopAudit);
 
@@ -551,7 +552,7 @@ describe("group.service (PGlite integration)", () => {
     let memberId: MemberId;
 
     beforeAll(async () => {
-      memberId = (await pgInsertMember(db, systemId, genMemberId())) as MemberId;
+      memberId = brandId<MemberId>(await pgInsertMember(db, systemId, genMemberId()));
     });
 
     it("adds a member to a group", async () => {

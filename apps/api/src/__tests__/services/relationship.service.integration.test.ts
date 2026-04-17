@@ -6,6 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -48,11 +49,11 @@ describe("relationship.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgStructureTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
-    memberA = (await pgInsertMember(db, systemId)) as MemberId;
-    memberB = (await pgInsertMember(db, systemId)) as MemberId;
+    memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+    memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
   });
 
   afterAll(async () => {
@@ -125,7 +126,7 @@ describe("relationship.service (PGlite integration)", () => {
 
     it("rejects cross-system access", async () => {
       const otherAccountId = genAccountId();
-      const otherSystemId = `sys_${crypto.randomUUID()}` as SystemId;
+      const otherSystemId = brandId<SystemId>(`sys_${crypto.randomUUID()}`);
       const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
       await assertApiError(
@@ -150,7 +151,12 @@ describe("relationship.service (PGlite integration)", () => {
 
     it("throws NOT_FOUND for nonexistent id", async () => {
       await assertApiError(
-        getRelationship(asDb(db), systemId, `rel_${crypto.randomUUID()}` as RelationshipId, auth),
+        getRelationship(
+          asDb(db),
+          systemId,
+          brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
+          auth,
+        ),
         "NOT_FOUND",
         404,
       );
@@ -175,7 +181,7 @@ describe("relationship.service (PGlite integration)", () => {
     });
 
     it("filters by memberId (source or target)", async () => {
-      const memberC = (await pgInsertMember(db, systemId)) as MemberId;
+      const memberC = brandId<MemberId>(await pgInsertMember(db, systemId));
       await createRelationship(asDb(db), systemId, relParams(), auth, noopAudit);
       await createRelationship(
         asDb(db),
@@ -290,7 +296,7 @@ describe("relationship.service (PGlite integration)", () => {
         deleteRelationship(
           asDb(db),
           systemId,
-          `rel_${crypto.randomUUID()}` as RelationshipId,
+          brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
           auth,
           noopAudit,
         ),

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -44,9 +45,9 @@ const { checkInRecordRouter } = await import("../../../trpc/routers/check-in-rec
 
 const createCaller = makeCallerFactory({ checkInRecord: checkInRecordRouter });
 
-const RECORD_ID = "cir_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as CheckInRecordId;
-const TIMER_ID = "tmr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as TimerId;
-const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
+const RECORD_ID = brandId<CheckInRecordId>("cir_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const TIMER_ID = brandId<TimerId>("tmr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const MEMBER_ID = brandId<MemberId>("mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
 const MOCK_PENDING_RESULT = {
   id: RECORD_ID,
@@ -112,7 +113,7 @@ describe("checkInRecord router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.checkInRecord.create({
@@ -146,7 +147,7 @@ describe("checkInRecord router", () => {
       await expect(
         caller.checkInRecord.get({
           systemId: MOCK_SYSTEM_ID,
-          recordId: "not-a-record-id" as CheckInRecordId,
+          recordId: brandId<CheckInRecordId>("not-a-record-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

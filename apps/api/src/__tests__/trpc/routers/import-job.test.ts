@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { assertProcedureRateLimited, makeCallerFactory, MOCK_SYSTEM_ID } from "../test-helpers.js";
@@ -27,8 +28,8 @@ const { importJobRouter } = await import("../../../trpc/routers/import-job.js");
 
 const createCaller = makeCallerFactory({ importJob: importJobRouter });
 
-const JOB_ID = "ij_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ImportJobId;
-const ACCOUNT_ID = "acct_test001" as AccountId;
+const JOB_ID = brandId<ImportJobId>("ij_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const ACCOUNT_ID = brandId<AccountId>("acct_test001");
 
 const MOCK_JOB: ImportJobResult = {
   id: JOB_ID,
@@ -105,7 +106,7 @@ describe("importJob router", () => {
       await expect(
         caller.importJob.get({
           systemId: MOCK_SYSTEM_ID,
-          importJobId: "not-a-job-id" as ImportJobId,
+          importJobId: brandId<ImportJobId>("not-a-job-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -177,7 +178,7 @@ describe("importJob router", () => {
       await expect(
         caller.importJob.update({
           systemId: MOCK_SYSTEM_ID,
-          importJobId: "bad-id" as ImportJobId,
+          importJobId: brandId<ImportJobId>("bad-id"),
           status: "importing",
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));

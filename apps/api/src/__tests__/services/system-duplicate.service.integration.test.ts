@@ -6,6 +6,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -39,8 +40,8 @@ describe("system-duplicate.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgSnapshotTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
 
     // Create a snapshot for the source system
@@ -105,7 +106,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
     });
 
     it("rejects duplication for nonexistent source system", async () => {
-      const fakeSystemId = `sys_${crypto.randomUUID()}` as SystemId;
+      const fakeSystemId = brandId<SystemId>(`sys_${crypto.randomUUID()}`);
 
       await assertApiError(
         duplicateSystem(asDb(db), fakeSystemId, { snapshotId }, auth, noopAudit),

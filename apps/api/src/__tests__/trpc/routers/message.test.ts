@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { callProcedure } from "@trpc/server/unstable-core-do-not-import";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -53,9 +54,9 @@ const { messageRouter } = await import("../../../trpc/routers/message.js");
 
 const createCaller = makeCallerFactory({ message: messageRouter });
 
-const CHANNEL_ID = "ch_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ChannelId;
-const OTHER_CHANNEL_ID = "ch_bbbbbbbb-cccc-dddd-eeee-ffffffffffff" as ChannelId;
-const MESSAGE_ID = "msg_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MessageId;
+const CHANNEL_ID = brandId<ChannelId>("ch_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const OTHER_CHANNEL_ID = brandId<ChannelId>("ch_bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+const MESSAGE_ID = brandId<MessageId>("msg_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZXNzYWdl";
 const VALID_TIMESTAMP = 1_700_000_000_000 as UnixMillis;
 
@@ -131,7 +132,7 @@ describe("message router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.message.create({
@@ -149,7 +150,7 @@ describe("message router", () => {
       await expect(
         caller.message.create({
           systemId: MOCK_SYSTEM_ID,
-          channelId: "invalid-id" as ChannelId,
+          channelId: brandId<ChannelId>("invalid-id"),
           encryptedData: VALID_ENCRYPTED_DATA,
           timestamp: VALID_TIMESTAMP,
           replyToId: undefined,
@@ -182,7 +183,7 @@ describe("message router", () => {
         caller.message.get({
           systemId: MOCK_SYSTEM_ID,
           channelId: CHANNEL_ID,
-          messageId: "invalid-id" as MessageId,
+          messageId: brandId<MessageId>("invalid-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

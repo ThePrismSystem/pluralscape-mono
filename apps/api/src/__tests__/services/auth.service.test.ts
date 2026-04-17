@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockEnv = vi.hoisted(() => ({
@@ -33,8 +33,8 @@ import { createMockLogger } from "../helpers/mock-logger.js";
 import type { AccountId } from "@pluralscape/types";
 import type { Context } from "hono";
 
-const TEST_ACCOUNT_ID = "acct_123" as AccountId;
-const ATTACKER_ACCOUNT_ID = "acct_attacker" as AccountId;
+const TEST_ACCOUNT_ID = brandId<AccountId>("acct_123");
+const ATTACKER_ACCOUNT_ID = brandId<AccountId>("acct_attacker");
 
 // ── Local test interfaces ─────────────────────────────────────────────
 

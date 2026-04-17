@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { generateStorageKey, parseStorageKey } from "../storage-key.js";
@@ -6,14 +7,14 @@ import type { BlobId, SystemId } from "@pluralscape/types";
 
 describe("generateStorageKey", () => {
   it("produces {systemId}/{blobId} format", () => {
-    const systemId = "sys_abc" as SystemId;
-    const blobId = "blob_xyz" as BlobId;
+    const systemId = brandId<SystemId>("sys_abc");
+    const blobId = brandId<BlobId>("blob_xyz");
     expect(generateStorageKey(systemId, blobId)).toBe("sys_abc/blob_xyz");
   });
 
   it("preserves UUID-style IDs", () => {
-    const systemId = "sys_00000000-0000-0000-0000-000000000001" as SystemId;
-    const blobId = "blob_00000000-0000-0000-0000-000000000002" as BlobId;
+    const systemId = brandId<SystemId>("sys_00000000-0000-0000-0000-000000000001");
+    const blobId = brandId<BlobId>("blob_00000000-0000-0000-0000-000000000002");
     const key = generateStorageKey(systemId, blobId);
     expect(key).toBe(
       "sys_00000000-0000-0000-0000-000000000001/blob_00000000-0000-0000-0000-000000000002",
@@ -46,8 +47,8 @@ describe("parseStorageKey", () => {
   });
 
   it("round-trips with generateStorageKey", () => {
-    const systemId = "sys_round" as SystemId;
-    const blobId = "blob_trip" as BlobId;
+    const systemId = brandId<SystemId>("sys_round");
+    const blobId = brandId<BlobId>("blob_trip");
     const key = generateStorageKey(systemId, blobId);
     const parsed = parseStorageKey(key);
     expect(parsed?.systemId).toBe(systemId);

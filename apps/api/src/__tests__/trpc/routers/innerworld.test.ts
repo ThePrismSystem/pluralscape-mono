@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -53,8 +54,8 @@ const { innerworldRouter } = await import("../../../trpc/routers/innerworld.js")
 
 const createCaller = makeCallerFactory({ innerworld: innerworldRouter });
 
-const ENTITY_ID = "iwe_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as InnerWorldEntityId;
-const REGION_ID = "iwr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as InnerWorldRegionId;
+const ENTITY_ID = brandId<InnerWorldEntityId>("iwe_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const REGION_ID = brandId<InnerWorldRegionId>("iwr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_ENTITY_RESULT = {
@@ -121,7 +122,7 @@ describe("innerworld router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.innerworld.entity.create({
@@ -154,7 +155,7 @@ describe("innerworld router", () => {
       await expect(
         caller.innerworld.entity.get({
           systemId: MOCK_SYSTEM_ID,
-          entityId: "not-an-entity-id" as InnerWorldEntityId,
+          entityId: brandId<InnerWorldEntityId>("not-an-entity-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
@@ -316,7 +317,7 @@ describe("innerworld router", () => {
       await expect(
         caller.innerworld.region.get({
           systemId: MOCK_SYSTEM_ID,
-          regionId: "not-a-region-id" as InnerWorldRegionId,
+          regionId: brandId<InnerWorldRegionId>("not-a-region-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

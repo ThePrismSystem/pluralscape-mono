@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -56,8 +57,8 @@ const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycl
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const EVENT_ID = "evt_test-event" as LifecycleEventId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const EVENT_ID = brandId<LifecycleEventId>("evt_test-event");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -257,7 +258,7 @@ describe("getLifecycleEvent", () => {
     const { db } = mockDb();
 
     await expect(
-      getLifecycleEvent(db, SYSTEM_ID, "evt_nonexistent" as LifecycleEventId, AUTH),
+      getLifecycleEvent(db, SYSTEM_ID, brandId<LifecycleEventId>("evt_nonexistent"), AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

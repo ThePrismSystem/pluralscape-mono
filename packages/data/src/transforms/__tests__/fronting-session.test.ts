@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -45,9 +46,9 @@ function makeRawSession(
     outtriggerSentiment: "negative",
   };
   return {
-    id: "fs_abc123" as FrontingSessionId,
-    systemId: "sys_001" as SystemId,
-    memberId: "mem_001" as MemberId,
+    id: brandId<FrontingSessionId>("fs_abc123"),
+    systemId: brandId<SystemId>("sys_001"),
+    memberId: brandId<MemberId>("mem_001"),
     customFrontId: null,
     structureEntityId: null,
     startTime: 1700000000000 as UnixMillis,

@@ -6,7 +6,7 @@
  * onError/onConflict callbacks functional.
  */
 import { SODIUM_CONSTANTS } from "@pluralscape/crypto";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEventBus } from "../../event-bus/event-bus.js";
@@ -24,11 +24,11 @@ import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 // ── Test constants ────────────────────────────────────────────────────
 
 function asSyncDocId(id: string): SyncDocumentId {
-  return id as SyncDocumentId;
+  return brandId<SyncDocumentId>(id);
 }
 
 function sysId(id: string): SystemId {
-  return id as SystemId;
+  return brandId<SystemId>(id);
 }
 
 const SYSTEM_CORE_DOC_ID = asSyncDocId("system-core-sys_test");

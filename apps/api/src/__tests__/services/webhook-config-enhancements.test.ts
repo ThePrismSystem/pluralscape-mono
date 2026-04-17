@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { WEBHOOK_SECRET_BYTES } from "../../service.constants.js";
@@ -54,8 +55,8 @@ const { rotateWebhookSecret, testWebhookConfig } =
 
 // -- Fixtures -------------------------------------------------------------
 
-const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
-const WH_ID = "wh_550e8400-e29b-41d4-a716-446655440001" as WebhookId;
+const SYS_ID = brandId<SystemId>("sys_550e8400-e29b-41d4-a716-446655440000");
+const WH_ID = brandId<WebhookId>("wh_550e8400-e29b-41d4-a716-446655440001");
 
 const AUTH = makeTestAuth({ systemId: SYS_ID });
 

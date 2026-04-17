@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -52,7 +53,7 @@ const createApp = () => createRouteApp("/account", accountRoutes);
 const CONNECTION_ID = "fc_550e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_MANIFEST: FriendExportManifestResponse = {
-  systemId: "sys_target" as SystemId,
+  systemId: brandId<SystemId>("sys_target"),
   entries: [{ entityType: "member", count: 5, lastUpdatedAt: 2000 as UnixMillis }],
   keyGrants: [],
   etag: "test-etag",

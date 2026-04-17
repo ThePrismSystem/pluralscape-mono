@@ -1,11 +1,11 @@
 ---
 # db-l0u9
 title: DB security, indexing, and typing
-status: todo
+status: in-progress
 type: task
 priority: low
 created_at: 2026-04-16T06:58:37Z
-updated_at: 2026-04-16T06:58:37Z
+updated_at: 2026-04-17T06:30:26Z
 parent: ps-0enb
 ---
 

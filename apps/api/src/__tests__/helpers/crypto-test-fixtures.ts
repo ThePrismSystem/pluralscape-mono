@@ -4,13 +4,15 @@
  * These produce branded byte arrays for use in tests that need
  * cryptographic-looking data without real cryptographic material.
  */
+import { brandId } from "@pluralscape/types";
+
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "@pluralscape/sync";
 import type { SyncDocumentId } from "@pluralscape/types";
 
 /** Cast a plain string to a branded SyncDocumentId for use in tests. */
 export function asSyncDocId(id: string): SyncDocumentId {
-  return id as SyncDocumentId;
+  return brandId<SyncDocumentId>(id);
 }
 
 /** Create a test AeadNonce (24 bytes) filled with the given value. */

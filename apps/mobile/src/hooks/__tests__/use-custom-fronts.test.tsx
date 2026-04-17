@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptCustomFrontInput } from "@pluralscape/data/transforms/custom-front";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -114,7 +115,7 @@ function makeRawCustomFront(id: string): CustomFrontRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as CustomFrontId,
+    id: brandId<CustomFrontId>(id),
     systemId: TEST_SYSTEM_ID,
     version: 1,
     createdAt: NOW,
@@ -134,7 +135,9 @@ beforeEach(() => {
 describe("useCustomFront", () => {
   it("returns decrypted custom front data", async () => {
     fixtures.set("customFront.get", makeRawCustomFront("cf-1"));
-    const { result } = renderHookWithProviders(() => useCustomFront("cf-1" as CustomFrontId));
+    const { result } = renderHookWithProviders(() =>
+      useCustomFront(brandId<CustomFrontId>("cf-1")),
+    );
 
     let data: Awaited<ReturnType<typeof useCustomFront>>["data"] | undefined;
     await waitFor(() => {
@@ -147,9 +150,12 @@ describe("useCustomFront", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useCustomFront("cf-1" as CustomFrontId), {
-      masterKey: null,
-    });
+    const { result } = renderHookWithProviders(
+      () => useCustomFront(brandId<CustomFrontId>("cf-1")),
+      {
+        masterKey: null,
+      },
+    );
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -157,7 +163,7 @@ describe("useCustomFront", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("customFront.get", makeRawCustomFront("cf-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useCustomFront("cf-1" as CustomFrontId),
+      useCustomFront(brandId<CustomFrontId>("cf-1")),
     );
 
     await waitFor(() => {

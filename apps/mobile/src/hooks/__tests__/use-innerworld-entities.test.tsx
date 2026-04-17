@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptInnerWorldEntityInput } from "@pluralscape/data/transforms/innerworld-entity";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -149,7 +150,7 @@ const DEFAULT_VISUAL: VisualProperties = {
 function makeRawEntity(id: string, payload: InnerWorldEntityEncryptedPayload): InnerWorldEntityRaw {
   const encrypted = encryptInnerWorldEntityInput(payload, TEST_MASTER_KEY);
   return {
-    id: id as InnerWorldEntityId,
+    id: brandId<InnerWorldEntityId>(id),
     systemId: TEST_SYSTEM_ID,
     regionId: null,
     version: 1,
@@ -167,7 +168,7 @@ function makeMemberPayload(memberId: string): InnerWorldEntityEncryptedPayload {
     positionX: 10,
     positionY: 20,
     visual: DEFAULT_VISUAL,
-    linkedMemberId: memberId as MemberId,
+    linkedMemberId: brandId<MemberId>(memberId),
   };
 }
 
@@ -188,7 +189,7 @@ function makeStructureEntityPayload(structureId: string): InnerWorldEntityEncryp
     positionX: 50,
     positionY: 60,
     visual: DEFAULT_VISUAL,
-    linkedStructureEntityId: structureId as SystemStructureEntityId,
+    linkedStructureEntityId: brandId<SystemStructureEntityId>(structureId),
   };
 }
 
@@ -202,7 +203,7 @@ describe("useInnerWorldEntity", () => {
   it("decrypts a member entity variant", async () => {
     fixtures.set("innerworld.entity.get", makeRawEntity("e-1", makeMemberPayload("mem-1")));
     const { result } = renderHookWithProviders(() =>
-      useInnerWorldEntity("e-1" as InnerWorldEntityId),
+      useInnerWorldEntity(brandId<InnerWorldEntityId>("e-1")),
     );
 
     await waitFor(() => {
@@ -221,7 +222,7 @@ describe("useInnerWorldEntity", () => {
   it("decrypts a landmark entity variant", async () => {
     fixtures.set("innerworld.entity.get", makeRawEntity("e-2", makeLandmarkPayload("The Forest")));
     const { result } = renderHookWithProviders(() =>
-      useInnerWorldEntity("e-2" as InnerWorldEntityId),
+      useInnerWorldEntity(brandId<InnerWorldEntityId>("e-2")),
     );
 
     await waitFor(() => {
@@ -240,7 +241,7 @@ describe("useInnerWorldEntity", () => {
   it("decrypts a structure-entity variant", async () => {
     fixtures.set("innerworld.entity.get", makeRawEntity("e-3", makeStructureEntityPayload("se-1")));
     const { result } = renderHookWithProviders(() =>
-      useInnerWorldEntity("e-3" as InnerWorldEntityId),
+      useInnerWorldEntity(brandId<InnerWorldEntityId>("e-3")),
     );
 
     await waitFor(() => {
@@ -257,7 +258,7 @@ describe("useInnerWorldEntity", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useInnerWorldEntity("e-1" as InnerWorldEntityId),
+      () => useInnerWorldEntity(brandId<InnerWorldEntityId>("e-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -267,7 +268,7 @@ describe("useInnerWorldEntity", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("innerworld.entity.get", makeRawEntity("e-1", makeMemberPayload("mem-1")));
     const { result, rerender } = renderHookWithProviders(() =>
-      useInnerWorldEntity("e-1" as InnerWorldEntityId),
+      useInnerWorldEntity(brandId<InnerWorldEntityId>("e-1")),
     );
 
     await waitFor(() => {
@@ -460,7 +461,7 @@ describe("useInnerWorldEntity (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_ENTITY_ROW]);
     const { result } = renderHookWithProviders(
-      () => useInnerWorldEntity("e-local-1" as InnerWorldEntityId),
+      () => useInnerWorldEntity(brandId<InnerWorldEntityId>("e-local-1")),
       { querySource: "local", localDb },
     );
 
@@ -485,7 +486,7 @@ describe("useInnerWorldEntity (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_ENTITY_ROW]);
     const { result } = renderHookWithProviders(
-      () => useInnerWorldEntity("e-local-1" as InnerWorldEntityId),
+      () => useInnerWorldEntity(brandId<InnerWorldEntityId>("e-local-1")),
       { querySource: "local", localDb },
     );
 
@@ -546,7 +547,7 @@ describe("useInnerWorldEntitiesList (local source)", () => {
     const regionRow = { ...LOCAL_ENTITY_ROW, id: "e-local-3", region_id: "r-1" };
     const localDb = createMockLocalDb([regionRow]);
     const { result } = renderHookWithProviders(
-      () => useInnerWorldEntitiesList({ regionId: "r-1" as InnerWorldRegionId }),
+      () => useInnerWorldEntitiesList({ regionId: brandId<InnerWorldRegionId>("r-1") }),
       { querySource: "local", localDb },
     );
 

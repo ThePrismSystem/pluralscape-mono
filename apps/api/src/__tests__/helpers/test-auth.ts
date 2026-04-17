@@ -4,11 +4,13 @@
  * Centralizes default values so adding fields to AuthContext does not
  * require updating every test file individually.
  */
+import { brandId } from "@pluralscape/types";
+
 import type { SessionAuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 /** Default system ID used across service unit tests. */
-const DEFAULT_SYSTEM_ID = "sys_test" as SystemId;
+const DEFAULT_SYSTEM_ID = brandId<SystemId>("sys_test");
 
 /**
  * Relaxed override type so callers can pass plain strings without branded casts.
@@ -25,12 +27,12 @@ interface TestAuthOverrides {
 
 /** Create a test SessionAuthContext with sensible defaults. Override any field via the options. */
 export function makeTestAuth(overrides?: TestAuthOverrides): SessionAuthContext {
-  const systemId = (overrides?.systemId ?? DEFAULT_SYSTEM_ID) as SystemId;
+  const systemId = brandId<SystemId>(overrides?.systemId ?? DEFAULT_SYSTEM_ID);
   return {
     authMethod: "session" as const,
-    accountId: (overrides?.accountId ?? "acct_test") as AccountId,
+    accountId: brandId<AccountId>(overrides?.accountId ?? "acct_test"),
     systemId,
-    sessionId: (overrides?.sessionId ?? "sess_test") as SessionId,
+    sessionId: brandId<SessionId>(overrides?.sessionId ?? "sess_test"),
     accountType: overrides?.accountType ?? "system",
     ownedSystemIds: overrides?.ownedSystemIds ?? new Set([systemId]),
     auditLogIpTracking: overrides?.auditLogIpTracking ?? false,

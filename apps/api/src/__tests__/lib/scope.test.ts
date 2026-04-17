@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { hasScope } from "../../lib/scope.js";
@@ -5,17 +6,17 @@ import { hasScope } from "../../lib/scope.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, ApiKeyId, ApiKeyScope, RequiredScope, SystemId } from "@pluralscape/types";
 
-const SYS = "sys_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as SystemId;
+const SYS = brandId<SystemId>("sys_a1b2c3d4-e5f6-7890-abcd-ef1234567890");
 
 function apiKeyAuth(scopes: readonly ApiKeyScope[]): AuthContext {
   return {
     authMethod: "apiKey",
-    accountId: "acct_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as AccountId,
+    accountId: brandId<AccountId>("acct_a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
     systemId: SYS,
     accountType: "system",
     ownedSystemIds: new Set([SYS]),
     auditLogIpTracking: false,
-    keyId: "apk_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as ApiKeyId,
+    keyId: brandId<ApiKeyId>("apk_a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
     apiKeyScopes: scopes,
   };
 }

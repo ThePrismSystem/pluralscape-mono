@@ -1,4 +1,5 @@
 import * as db from "@pluralscape/db";
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // vi.mock is hoisted by Vitest. The factory runs before module-level variable
@@ -44,8 +45,8 @@ function createMockDb(): { db: ReturnType<typeof asDb>; tx: MockTx } {
 
 function makeContext(): { systemId: SystemId; accountId: AccountId } {
   return {
-    systemId: crypto.randomUUID() as SystemId,
-    accountId: crypto.randomUUID() as AccountId,
+    systemId: brandId<SystemId>(crypto.randomUUID()),
+    accountId: brandId<AccountId>(crypto.randomUUID()),
   };
 }
 
@@ -86,7 +87,7 @@ const cases: RlsTestCase[] = [
     setupFn: "setAccountId",
     readOnly: false,
     callArgs: (db, callback) => {
-      const accountId = crypto.randomUUID() as AccountId;
+      const accountId = brandId<AccountId>(crypto.randomUUID());
       return [db, accountId, callback];
     },
   },
@@ -96,7 +97,7 @@ const cases: RlsTestCase[] = [
     setupFn: "setAccountId",
     readOnly: true,
     callArgs: (db, callback) => {
-      const accountId = crypto.randomUUID() as AccountId;
+      const accountId = brandId<AccountId>(crypto.randomUUID());
       return [db, accountId, callback];
     },
   },

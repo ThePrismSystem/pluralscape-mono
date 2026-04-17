@@ -1,3 +1,5 @@
+import { brandId } from "@pluralscape/types";
+
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AccountId, SystemId } from "@pluralscape/types";
 
@@ -15,5 +17,5 @@ export function makeTestMasterKey(): KdfMasterKey {
 }
 
 export const TEST_MASTER_KEY = makeTestMasterKey();
-export const TEST_SYSTEM_ID = "test-system-00000000" as SystemId;
-export const TEST_ACCOUNT_ID = "test-account-0000000" as AccountId;
+export const TEST_SYSTEM_ID = brandId<SystemId>("test-system-00000000");
+export const TEST_ACCOUNT_ID = brandId<AccountId>("test-account-0000000");

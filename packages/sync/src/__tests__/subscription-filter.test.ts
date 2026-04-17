@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { filterManifest } from "../subscription-filter.js";
@@ -13,9 +14,9 @@ import type {
 import type { BucketId, ChannelId, SyncDocumentId } from "@pluralscape/types";
 
 /** Cast a string to BucketId for test fixtures. */
-const bid = (id: string): BucketId => id as BucketId;
+const bid = (id: string): BucketId => brandId<BucketId>(id);
 /** Cast a string to ChannelId for test fixtures. */
-const cid = (id: string): ChannelId => id as ChannelId;
+const cid = (id: string): ChannelId => brandId<ChannelId>(id);
 
 function entry(
   overrides: Partial<SyncManifestEntry> & {

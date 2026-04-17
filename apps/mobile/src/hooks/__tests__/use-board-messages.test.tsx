@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptBoardMessageInput } from "@pluralscape/data/transforms/board-message";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -153,11 +154,11 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 function makeRawBoardMessage(id: string): BoardMessageRaw {
   const encrypted = encryptBoardMessageInput(
-    { content: "Board post", senderId: "m-1" as MemberId },
+    { content: "Board post", senderId: brandId<MemberId>("m-1") },
     TEST_MASTER_KEY,
   );
   return {
-    id: id as BoardMessageId,
+    id: brandId<BoardMessageId>(id),
     systemId: TEST_SYSTEM_ID,
     pinned: false,
     sortOrder: 0,
@@ -179,7 +180,9 @@ beforeEach(() => {
 describe("useBoardMessage", () => {
   it("returns decrypted board message data", async () => {
     fixtures.set("boardMessage.get", makeRawBoardMessage("bm-1"));
-    const { result } = renderHookWithProviders(() => useBoardMessage("bm-1" as BoardMessageId));
+    const { result } = renderHookWithProviders(() =>
+      useBoardMessage(brandId<BoardMessageId>("bm-1")),
+    );
 
     let data: Awaited<ReturnType<typeof useBoardMessage>>["data"] | undefined;
     await waitFor(() => {
@@ -192,9 +195,12 @@ describe("useBoardMessage", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useBoardMessage("bm-1" as BoardMessageId), {
-      masterKey: null,
-    });
+    const { result } = renderHookWithProviders(
+      () => useBoardMessage(brandId<BoardMessageId>("bm-1")),
+      {
+        masterKey: null,
+      },
+    );
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -202,7 +208,7 @@ describe("useBoardMessage", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("boardMessage.get", makeRawBoardMessage("bm-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useBoardMessage("bm-1" as BoardMessageId),
+      useBoardMessage(brandId<BoardMessageId>("bm-1")),
     );
 
     await waitFor(() => {
@@ -426,7 +432,7 @@ describe("useBoardMessage (local source)", () => {
   it("returns transformed local row data", async () => {
     const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW]);
     const { result } = renderHookWithProviders(
-      () => useBoardMessage("bm-local-1" as BoardMessageId),
+      () => useBoardMessage(brandId<BoardMessageId>("bm-local-1")),
       { querySource: "local", localDb },
     );
 
@@ -448,7 +454,7 @@ describe("useBoardMessage (local source)", () => {
   it("does not call tRPC in local mode", async () => {
     const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW]);
     const { result } = renderHookWithProviders(
-      () => useBoardMessage("bm-local-1" as BoardMessageId),
+      () => useBoardMessage(brandId<BoardMessageId>("bm-local-1")),
       { querySource: "local", localDb },
     );
 

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -40,8 +41,8 @@ const { frontingCommentRouter } = await import("../../../trpc/routers/fronting-c
 
 const createCaller = makeCallerFactory({ frontingComment: frontingCommentRouter });
 
-const SESSION_ID = "fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingSessionId;
-const COMMENT_ID = "fcom_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingCommentId;
+const SESSION_ID = brandId<FrontingSessionId>("fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+const COMMENT_ID = brandId<FrontingCommentId>("fcom_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 const VALID_MEMBER_ID = "mem_11111111-2222-3333-4444-555555555555";
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
@@ -101,7 +102,7 @@ describe("frontingComment router", () => {
     });
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
-      const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
+      const foreignSystemId = brandId<SystemId>("sys_ffffffff-ffff-ffff-ffff-ffffffffffff");
       const caller = createCaller();
       await expect(
         caller.frontingComment.create({
@@ -120,7 +121,7 @@ describe("frontingComment router", () => {
       await expect(
         caller.frontingComment.create({
           systemId: MOCK_SYSTEM_ID,
-          sessionId: "not-a-session-id" as FrontingSessionId,
+          sessionId: brandId<FrontingSessionId>("not-a-session-id"),
           encryptedData: VALID_ENCRYPTED_DATA,
           memberId: VALID_MEMBER_ID,
           customFrontId: undefined,
@@ -168,7 +169,7 @@ describe("frontingComment router", () => {
         caller.frontingComment.get({
           systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
-          commentId: "not-a-comment-id" as FrontingCommentId,
+          commentId: brandId<FrontingCommentId>("not-a-comment-id"),
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

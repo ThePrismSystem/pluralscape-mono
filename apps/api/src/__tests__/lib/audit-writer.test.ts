@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthContext, SessionAuthContext } from "../../lib/auth-context.js";
@@ -60,7 +61,7 @@ function createAuth(overrides?: Partial<SessionAuthContext>): AuthContext {
     authMethod: "session" as const,
     accountId: "acc_test-account" as AuthContext["accountId"],
     systemId: "sys_test-system" as AuthContext["systemId"],
-    sessionId: "ses_test-session" as SessionId,
+    sessionId: brandId<SessionId>("ses_test-session"),
     accountType: "system" as AuthContext["accountType"],
     ownedSystemIds: new Set(["sys_test-system" as AuthContext["systemId"] & string]),
     auditLogIpTracking: false,
@@ -125,8 +126,8 @@ describe("createAuditWriter", () => {
     await audit(db, {
       eventType: "auth.login",
       actor: { kind: "account", id: "acc_override" },
-      accountId: "acc_explicit" as AccountId,
-      systemId: "sys_explicit" as SystemId,
+      accountId: brandId<AccountId>("acc_explicit"),
+      systemId: brandId<SystemId>("sys_explicit"),
     });
 
     expect(mockParams(0).accountId).toBe("acc_explicit");

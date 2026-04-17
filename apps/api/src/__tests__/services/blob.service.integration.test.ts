@@ -6,6 +6,7 @@ import {
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { QuotaExceededError } from "@pluralscape/storage";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -47,8 +48,8 @@ describe("blob.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgBlobMetadataTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -173,7 +174,7 @@ describe("blob.service (PGlite integration)", () => {
         confirmUpload(
           asDb(db),
           systemId,
-          `blob_${crypto.randomUUID()}` as BlobId,
+          brandId<BlobId>(`blob_${crypto.randomUUID()}`),
           { checksum: VALID_CHECKSUM },
           auth,
           noopAudit,
@@ -223,7 +224,7 @@ describe("blob.service (PGlite integration)", () => {
           upload.blobId,
           {
             checksum: VALID_CHECKSUM,
-            thumbnailOfBlobId: `blob_${crypto.randomUUID()}` as BlobId,
+            thumbnailOfBlobId: brandId<BlobId>(`blob_${crypto.randomUUID()}`),
           },
           auth,
           noopAudit,

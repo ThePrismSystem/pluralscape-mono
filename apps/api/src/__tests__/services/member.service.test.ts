@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor } from "../../lib/pagination.js";
@@ -56,8 +56,8 @@ const { dispatchWebhookEvent: mockDispatchWebhookEvent } =
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const MEMBER_ID = "mem_test-member" as MemberId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const MEMBER_ID = brandId<MemberId>("mem_test-member");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -272,9 +272,9 @@ describe("getMember", () => {
   it("throws 404 when member not found", async () => {
     const { db } = mockDb();
 
-    await expect(getMember(db, SYSTEM_ID, "mem_nonexistent" as MemberId, AUTH)).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-    );
+    await expect(
+      getMember(db, SYSTEM_ID, brandId<MemberId>("mem_nonexistent"), AUTH),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
 
@@ -334,7 +334,7 @@ describe("updateMember", () => {
       updateMember(
         db,
         SYSTEM_ID,
-        "mem_nonexistent" as MemberId,
+        brandId<MemberId>("mem_nonexistent"),
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
         mockAudit,
@@ -406,7 +406,7 @@ describe("duplicateMember", () => {
       duplicateMember(
         db,
         SYSTEM_ID,
-        "mem_nonexistent" as MemberId,
+        brandId<MemberId>("mem_nonexistent"),
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
         mockAudit,
@@ -606,7 +606,7 @@ describe("archiveMember", () => {
     const { db } = mockDb();
 
     await expect(
-      archiveMember(db, SYSTEM_ID, "mem_nonexistent" as MemberId, AUTH, mockAudit),
+      archiveMember(db, SYSTEM_ID, brandId<MemberId>("mem_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -640,7 +640,7 @@ describe("restoreMember", () => {
     const { db } = mockDb();
 
     await expect(
-      restoreMember(db, SYSTEM_ID, "mem_nonexistent" as MemberId, AUTH, mockAudit),
+      restoreMember(db, SYSTEM_ID, brandId<MemberId>("mem_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -685,7 +685,7 @@ describe("deleteMember", () => {
     const { db } = mockDb();
 
     await expect(
-      deleteMember(db, SYSTEM_ID, "mem_nonexistent" as MemberId, AUTH, mockAudit),
+      deleteMember(db, SYSTEM_ID, brandId<MemberId>("mem_nonexistent"), AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 

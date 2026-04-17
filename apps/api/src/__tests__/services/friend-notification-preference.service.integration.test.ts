@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -33,7 +34,7 @@ async function insertFriendConnection(
   accountId: AccountId,
   friendAccountId: AccountId,
 ): Promise<FriendConnectionId> {
-  const id = `fc_${crypto.randomUUID()}` as FriendConnectionId;
+  const id = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
   const now = Date.now();
   await db.insert(friendConnections).values({
     id,
@@ -66,12 +67,12 @@ describe("friend-notification-preference.service (PGlite integration)", () => {
 
     await createPgNotificationTables(client);
 
-    accountIdA = (await pgInsertAccount(db)) as AccountId;
-    systemIdA = (await pgInsertSystem(db, accountIdA)) as SystemId;
+    accountIdA = brandId<AccountId>(await pgInsertAccount(db));
+    systemIdA = brandId<SystemId>(await pgInsertSystem(db, accountIdA));
     authA = makeAuth(accountIdA, systemIdA);
 
-    accountIdB = (await pgInsertAccount(db)) as AccountId;
-    systemIdB = (await pgInsertSystem(db, accountIdB)) as SystemId;
+    accountIdB = brandId<AccountId>(await pgInsertAccount(db));
+    systemIdB = brandId<SystemId>(await pgInsertSystem(db, accountIdB));
   });
 
   afterAll(async () => {
@@ -191,7 +192,7 @@ describe("friend-notification-preference.service (PGlite integration)", () => {
       updateFriendNotificationPreference(
         asDb(db),
         accountIdA,
-        "fc_nonexistent" as FriendConnectionId,
+        brandId<FriendConnectionId>("fc_nonexistent"),
         { enabledEventTypes: [] },
         authA,
         noopAudit,
@@ -205,7 +206,7 @@ describe("friend-notification-preference.service (PGlite integration)", () => {
 
   it("lists preferences scoped to account", async () => {
     // Need separate friend accounts to avoid unique constraint on (account_id, friend_account_id)
-    const accountIdC = (await pgInsertAccount(db)) as AccountId;
+    const accountIdC = brandId<AccountId>(await pgInsertAccount(db));
     const conn1 = await insertFriendConnection(db, accountIdA, accountIdB);
     const conn2 = await insertFriendConnection(db, accountIdA, accountIdC);
 

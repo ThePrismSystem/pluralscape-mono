@@ -2,6 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { assertAuthKey, fromHex, hashAuthKey, initSodium, sign, toHex } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -78,7 +79,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("returns account info for a registered account", async () => {
       const reg = await registerTestAccount(asDb(db));
 
-      const info = await getAccountInfo(asDb(db), reg.accountId as AccountId);
+      const info = await getAccountInfo(asDb(db), brandId<AccountId>(reg.accountId));
 
       expect(info).not.toBeNull();
       expect(info?.accountId).toBe(reg.accountId);
@@ -93,7 +94,10 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     });
 
     it("returns null for a nonexistent account", async () => {
-      const info = await getAccountInfo(asDb(db), `acct_${crypto.randomUUID()}` as AccountId);
+      const info = await getAccountInfo(
+        asDb(db),
+        brandId<AccountId>(`acct_${crypto.randomUUID()}`),
+      );
       expect(info).toBeNull();
     });
   });
@@ -110,7 +114,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       const result = await changePassword(
         asDb(db),
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         {
           oldAuthKey: reg.authKeyHex,
           newAuthKey,
@@ -136,7 +140,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       await expect(
         changePassword(
           asDb(db),
-          reg.accountId as AccountId,
+          brandId<AccountId>(reg.accountId),
           {
             oldAuthKey: "ff".repeat(32),
             newAuthKey,
@@ -161,7 +165,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       const result = await changeEmail(
         asDb(db),
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         { email: newEmail, authKey: reg.authKeyHex },
         audit,
       );
@@ -177,7 +181,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       await expect(
         changeEmail(
           asDb(db),
-          reg.accountId as AccountId,
+          brandId<AccountId>(reg.accountId),
           { email: `new-${crypto.randomUUID()}@example.com`, authKey: "ff".repeat(32) },
           noopAudit,
         ),
@@ -194,7 +198,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       const audit = spyAudit();
       const result = await updateAccountSettings(
         asDb(db),
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         { auditLogIpTracking: true, version: 1 },
         audit,
       );
@@ -212,7 +216,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       await expect(
         updateAccountSettings(
           asDb(db),
-          reg.accountId as AccountId,
+          brandId<AccountId>(reg.accountId),
           { auditLogIpTracking: true, version: 99 },
           noopAudit,
         ),
@@ -224,7 +228,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       const r1 = await updateAccountSettings(
         asDb(db),
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         { auditLogIpTracking: true, version: 1 },
         noopAudit,
       );
@@ -233,14 +237,14 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       const r2 = await updateAccountSettings(
         asDb(db),
-        reg.accountId as AccountId,
+        brandId<AccountId>(reg.accountId),
         { auditLogIpTracking: false, version: 2 },
         noopAudit,
       );
       expect(r2.auditLogIpTracking).toBe(false);
       expect(r2.version).toBe(3);
 
-      const info = await getAccountInfo(asDb(db), reg.accountId as AccountId);
+      const info = await getAccountInfo(asDb(db), brandId<AccountId>(reg.accountId));
       expect(info?.auditLogIpTracking).toBe(false);
       expect(info?.version).toBe(3);
     });

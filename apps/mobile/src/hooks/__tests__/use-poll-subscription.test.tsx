@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
@@ -49,7 +50,7 @@ describe("usePollSubscription", () => {
 
   it("respects enabled: false", () => {
     renderHookWithProviders(() => {
-      usePollSubscription("poll-1" as PollId, { enabled: false });
+      usePollSubscription(brandId<PollId>("poll-1"), { enabled: false });
     });
     expect(lastSubscriptionOpts["enabled"]).toBe(false);
   });

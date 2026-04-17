@@ -69,7 +69,7 @@ describe("GroupTree", () => {
 });
 
 describe("GroupMoveOperation", () => {
-  it("has sourceGroupId as GroupId", () => {
+  it("has sourceGroupId typed with the GroupId branded type", () => {
     expectTypeOf<GroupMoveOperation["sourceGroupId"]>().toEqualTypeOf<GroupId>();
   });
 

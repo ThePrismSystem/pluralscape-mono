@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createBucketKeyCache } from "../bucket-key-cache.js";
@@ -10,10 +11,10 @@ import type { BucketKeyCache } from "../bucket-key-cache.js";
 import type { AeadKey } from "../types.js";
 import type { BucketId } from "@pluralscape/types";
 
-const bucket1 = "bucket-001" as BucketId;
-const bucket2 = "bucket-002" as BucketId;
-const bucket3 = "bucket-003" as BucketId;
-const bucket4 = "bucket-004" as BucketId;
+const bucket1 = brandId<BucketId>("bucket-001");
+const bucket2 = brandId<BucketId>("bucket-002");
+const bucket3 = brandId<BucketId>("bucket-003");
+const bucket4 = brandId<BucketId>("bucket-004");
 
 let cache: BucketKeyCache;
 
@@ -367,7 +368,7 @@ describe("LRU eviction (maxSize)", () => {
   it("without maxSize, cache is unbounded", () => {
     const unbounded = createBucketKeyCache();
     for (let i = 0; i < 100; i++) {
-      unbounded.set(`bucket-${String(i).padStart(3, "0")}` as BucketId, generateBucketKey());
+      unbounded.set(brandId<BucketId>(`bucket-${String(i).padStart(3, "0")}`), generateBucketKey());
     }
     expect(unbounded.size).toBe(100);
     unbounded.clearAll();

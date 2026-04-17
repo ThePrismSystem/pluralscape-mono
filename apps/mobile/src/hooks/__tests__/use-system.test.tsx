@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -112,7 +113,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 function makeSystem(id: string) {
   return {
-    id: id as SystemId,
+    id: brandId<SystemId>(id),
     encryptedData: "base64_encrypted_system_data",
     version: 1,
     createdAt: NOW,

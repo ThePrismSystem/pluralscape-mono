@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -34,10 +35,10 @@ beforeAll(async () => {
 });
 
 const BASE_COMMENT_RESULT = {
-  id: "fcom_test001" as FrontingCommentId,
-  frontingSessionId: "fs_test001" as FrontingSessionId,
-  systemId: "sys_test001" as SystemId,
-  memberId: "mem_test001" as MemberId,
+  id: brandId<FrontingCommentId>("fcom_test001"),
+  frontingSessionId: brandId<FrontingSessionId>("fs_test001"),
+  systemId: brandId<SystemId>("sys_test001"),
+  memberId: brandId<MemberId>("mem_test001"),
   customFrontId: null as CustomFrontId | null,
   structureEntityId: null as SystemStructureEntityId | null,
   version: 1,
@@ -76,7 +77,7 @@ describe("decryptFrontingComment", () => {
     const raw = {
       ...BASE_COMMENT_RESULT,
       memberId: null,
-      customFrontId: "cf_001" as CustomFrontId,
+      customFrontId: brandId<CustomFrontId>("cf_001"),
       encryptedData: makeBase64Blob(encrypted, masterKey),
     };
 
@@ -163,12 +164,12 @@ describe("decryptFrontingCommentPage", () => {
       data: [
         {
           ...BASE_COMMENT_RESULT,
-          id: "fcom_001" as FrontingCommentId,
+          id: brandId<FrontingCommentId>("fcom_001"),
           encryptedData: makeBase64Blob(enc1, masterKey),
         },
         {
           ...BASE_COMMENT_RESULT,
-          id: "fcom_002" as FrontingCommentId,
+          id: brandId<FrontingCommentId>("fcom_002"),
           encryptedData: makeBase64Blob(enc2, masterKey),
         },
       ],

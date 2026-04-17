@@ -10,6 +10,7 @@ import {
   toHex,
 } from "@pluralscape/crypto";
 import { testBlob } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { expect } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -79,7 +80,7 @@ export function makeAuth(accountId: AccountId, systemId: SystemId): AuthContext 
     authMethod: "session" as const,
     accountId,
     systemId,
-    sessionId: `sess_${crypto.randomUUID()}` as SessionId,
+    sessionId: brandId<SessionId>(`sess_${crypto.randomUUID()}`),
     accountType: "system",
     ownedSystemIds: new Set([systemId]),
     auditLogIpTracking: false,
@@ -187,97 +188,97 @@ export async function assertApiError(
 // ── ID generators (return branded types to avoid per-callsite casts) ─
 
 export function genMemberId(): MemberId {
-  return `mem_${crypto.randomUUID()}` as MemberId;
+  return brandId<MemberId>(`mem_${crypto.randomUUID()}`);
 }
 
 export function genCustomFrontId(): CustomFrontId {
-  return `cf_${crypto.randomUUID()}` as CustomFrontId;
+  return brandId<CustomFrontId>(`cf_${crypto.randomUUID()}`);
 }
 
 export function genFrontingSessionId(): FrontingSessionId {
-  return `fs_${crypto.randomUUID()}` as FrontingSessionId;
+  return brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 }
 
 export function genFrontingCommentId(): FrontingCommentId {
-  return `fcom_${crypto.randomUUID()}` as FrontingCommentId;
+  return brandId<FrontingCommentId>(`fcom_${crypto.randomUUID()}`);
 }
 
 export function genTimerId(): TimerId {
-  return `tmr_${crypto.randomUUID()}` as TimerId;
+  return brandId<TimerId>(`tmr_${crypto.randomUUID()}`);
 }
 
 export function genWebhookId(): WebhookId {
-  return `wh_${crypto.randomUUID()}` as WebhookId;
+  return brandId<WebhookId>(`wh_${crypto.randomUUID()}`);
 }
 
 export function genWebhookDeliveryId(): WebhookDeliveryId {
-  return `wd_${crypto.randomUUID()}` as WebhookDeliveryId;
+  return brandId<WebhookDeliveryId>(`wd_${crypto.randomUUID()}`);
 }
 
 export function genCheckInRecordId(): CheckInRecordId {
-  return `cir_${crypto.randomUUID()}` as CheckInRecordId;
+  return brandId<CheckInRecordId>(`cir_${crypto.randomUUID()}`);
 }
 
 export function genStructureEntityId(): SystemStructureEntityId {
-  return `ste_${crypto.randomUUID()}` as SystemStructureEntityId;
+  return brandId<SystemStructureEntityId>(`ste_${crypto.randomUUID()}`);
 }
 
 export function genGroupId(): GroupId {
-  return `grp_${crypto.randomUUID()}` as GroupId;
+  return brandId<GroupId>(`grp_${crypto.randomUUID()}`);
 }
 
 export function genBlobId(): BlobId {
-  return `blob_${crypto.randomUUID()}` as BlobId;
+  return brandId<BlobId>(`blob_${crypto.randomUUID()}`);
 }
 
 export function genBucketId(): BucketId {
-  return `bkt_${crypto.randomUUID()}` as BucketId;
+  return brandId<BucketId>(`bkt_${crypto.randomUUID()}`);
 }
 
 export function genRotationId(): BucketKeyRotationId {
-  return `rot_${crypto.randomUUID()}` as BucketKeyRotationId;
+  return brandId<BucketKeyRotationId>(`rot_${crypto.randomUUID()}`);
 }
 
 export function genAccountId(): AccountId {
-  return `acc_${crypto.randomUUID()}` as AccountId;
+  return brandId<AccountId>(`acc_${crypto.randomUUID()}`);
 }
 
 export function genChannelId(): ChannelId {
-  return `ch_${crypto.randomUUID()}` as ChannelId;
+  return brandId<ChannelId>(`ch_${crypto.randomUUID()}`);
 }
 
 export function genMessageId(): MessageId {
-  return `msg_${crypto.randomUUID()}` as MessageId;
+  return brandId<MessageId>(`msg_${crypto.randomUUID()}`);
 }
 
 export function genBoardMessageId(): BoardMessageId {
-  return `bm_${crypto.randomUUID()}` as BoardMessageId;
+  return brandId<BoardMessageId>(`bm_${crypto.randomUUID()}`);
 }
 
 export function genNoteId(): NoteId {
-  return `note_${crypto.randomUUID()}` as NoteId;
+  return brandId<NoteId>(`note_${crypto.randomUUID()}`);
 }
 
 export function genPollId(): PollId {
-  return `poll_${crypto.randomUUID()}` as PollId;
+  return brandId<PollId>(`poll_${crypto.randomUUID()}`);
 }
 
 export function genPollVoteId(): PollVoteId {
-  return `pv_${crypto.randomUUID()}` as PollVoteId;
+  return brandId<PollVoteId>(`pv_${crypto.randomUUID()}`);
 }
 
 export function genAcknowledgementId(): AcknowledgementId {
-  return `ack_${crypto.randomUUID()}` as AcknowledgementId;
+  return brandId<AcknowledgementId>(`ack_${crypto.randomUUID()}`);
 }
 
 export function genRelationshipId(): RelationshipId {
-  return `rel_${crypto.randomUUID()}` as RelationshipId;
+  return brandId<RelationshipId>(`rel_${crypto.randomUUID()}`);
 }
 
 export function genSystemSnapshotId(): SystemSnapshotId {
-  return `snap_${crypto.randomUUID()}` as SystemSnapshotId;
+  return brandId<SystemSnapshotId>(`snap_${crypto.randomUUID()}`);
 }
 
 export function genStructureEntityTypeId(): SystemStructureEntityTypeId {
-  return `stet_${crypto.randomUUID()}` as SystemStructureEntityTypeId;
+  return brandId<SystemStructureEntityTypeId>(`stet_${crypto.randomUUID()}`);
 }

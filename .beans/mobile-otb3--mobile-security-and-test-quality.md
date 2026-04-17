@@ -1,11 +1,11 @@
 ---
 # mobile-otb3
 title: Mobile security and test quality
-status: todo
+status: in-progress
 type: task
 priority: low
 created_at: 2026-04-16T06:58:07Z
-updated_at: 2026-04-16T06:58:07Z
+updated_at: 2026-04-17T06:30:26Z
 parent: ps-0enb
 ---
 

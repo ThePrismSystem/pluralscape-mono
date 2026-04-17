@@ -7,6 +7,7 @@ import {
   initSodium,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { BucketKeyNotFoundError, DocumentKeyResolver } from "../document-key-resolver.js";
@@ -87,7 +88,7 @@ describe("DocumentKeyResolver", () => {
 
   describe("bucket documents", () => {
     it("resolves bucket document to bucket key from cache", () => {
-      const bucketId = "bkt_test" as BucketId;
+      const bucketId = brandId<BucketId>("bkt_test");
       const bucketKey = generateBucketKey();
       bucketKeyCache.set(bucketId, bucketKey);
 
@@ -116,7 +117,7 @@ describe("DocumentKeyResolver", () => {
 
   describe("cross-key-type isolation", () => {
     it("derived-key encryption key differs from bucket key", () => {
-      const bucketId = "bkt_iso" as BucketId;
+      const bucketId = brandId<BucketId>("bkt_iso");
       const bucketKey = generateBucketKey();
       bucketKeyCache.set(bucketId, bucketKey);
 

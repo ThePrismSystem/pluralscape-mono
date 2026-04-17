@@ -6,6 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -65,8 +66,8 @@ describe("fronting-session.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgFrontingTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     memberId = genMemberId();
     await pgInsertMember(db, systemId, memberId);
 
@@ -136,7 +137,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       const result = await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ memberId: undefined, customFrontId: cfId as CustomFrontId }),
+        createParams({ memberId: undefined, customFrontId: brandId<CustomFrontId>(cfId) }),
         auth,
         noopAudit,
       );
@@ -270,13 +271,13 @@ describe("fronting-session.service (PGlite integration)", () => {
       const filtered = await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ memberId: undefined, customFrontId: cfId as CustomFrontId }),
+        createParams({ memberId: undefined, customFrontId: brandId<CustomFrontId>(cfId) }),
         auth,
         noopAudit,
       );
 
       const result = await listFrontingSessions(asDb(db), systemId, auth, {
-        customFrontId: cfId as CustomFrontId,
+        customFrontId: brandId<CustomFrontId>(cfId),
       });
 
       expect(result.data.length).toBe(1);
@@ -444,7 +445,7 @@ describe("fronting-session.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       await assertApiError(
@@ -890,7 +891,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ memberId: undefined, customFrontId: cfId as CustomFrontId }),
+        createParams({ memberId: undefined, customFrontId: brandId<CustomFrontId>(cfId) }),
         auth,
         noopAudit,
       );

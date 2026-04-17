@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionManager } from "../../ws/connection-manager.js";
@@ -11,13 +12,13 @@ function mockWs(): { close: ReturnType<typeof vi.fn> } {
 
 type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
 
-function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContextWithSystem {
-  const systemId = crypto.randomUUID() as SystemId;
+function mockAuth(accountId = brandId<AccountId>(crypto.randomUUID())): AuthContextWithSystem {
+  const systemId = brandId<SystemId>(crypto.randomUUID());
   return {
     authMethod: "session" as const,
     accountId,
     systemId,
-    sessionId: crypto.randomUUID() as SessionId,
+    sessionId: brandId<SessionId>(crypto.randomUUID()),
     accountType: "system",
     ownedSystemIds: new Set([systemId]),
     auditLogIpTracking: false,

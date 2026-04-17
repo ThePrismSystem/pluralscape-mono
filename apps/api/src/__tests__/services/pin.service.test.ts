@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -52,7 +53,7 @@ const { setPin, removePin, verifyPinCode } = await import("../../services/pin.se
 
 const AUTH = makeTestAuth();
 
-const SYSTEM_ID = "sys_test" as SystemId;
+const SYSTEM_ID = brandId<SystemId>("sys_test");
 
 // ── Tests ─────────────────────────────────────────────────────────────
 

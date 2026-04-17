@@ -7,6 +7,7 @@ import {
   serializeEncryptedBlob,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -24,7 +25,7 @@ import type { BucketId } from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 let bucketKey: AeadKey;
-const bucketId = "bkt_test" as BucketId;
+const bucketId = brandId<BucketId>("bkt_test");
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());

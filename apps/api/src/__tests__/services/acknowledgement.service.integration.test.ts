@@ -8,6 +8,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -57,8 +58,8 @@ describe("acknowledgement.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgCommunicationTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     const memId = `mem_${crypto.randomUUID()}`;
     memberId = await pgInsertMember(db, systemId, memId);
     auth = makeAuth(accountId, systemId);
@@ -440,7 +441,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       await assertApiError(
@@ -453,7 +454,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
     it("list does not return another system's acknowledgements", async () => {
       await createAcknowledgement(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
 
-      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       const result = await listAcknowledgements(asDb(db), otherSystemId, otherAuth);

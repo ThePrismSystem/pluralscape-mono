@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -41,7 +42,7 @@ describe("PG search_index full-text search", () => {
   beforeEach(async () => {
     await pgExec(client, "DELETE FROM search_index");
     const accountId = await pgInsertAccount(db);
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
   });
 
   it("inserts and searches by keyword", async () => {
@@ -84,7 +85,7 @@ describe("PG search_index full-text search", () => {
 
   it("enforces multi-tenant isolation via system_id", async () => {
     const otherAccountId = await pgInsertAccount(db);
-    const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+    const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
 
     await insertSearchEntry(
       db,
@@ -434,7 +435,7 @@ describe("PG search_index hosted-mode guard", () => {
       insertSearchEntry(
         db,
         {
-          systemId: "sys-1" as SystemId,
+          systemId: brandId<SystemId>("sys-1"),
           entityType: "member",
           entityId: "m-1",
           title: "test",
@@ -459,19 +460,19 @@ describe("PG search_index hosted-mode guard", () => {
 
   it("rejects deleteSearchEntry in hosted mode", async () => {
     await expect(
-      deleteSearchEntry(db, "sys-1" as SystemId, "member", "ent-1", "hosted"),
+      deleteSearchEntry(db, brandId<SystemId>("sys-1"), "member", "ent-1", "hosted"),
     ).rejects.toThrow("Plaintext search_index is not available in hosted mode");
   });
 
   it("rejects searchEntries in hosted mode", async () => {
     await expect(
-      searchEntries(db, "sys-1" as SystemId, "test query", undefined, "hosted"),
+      searchEntries(db, brandId<SystemId>("sys-1"), "test query", undefined, "hosted"),
     ).rejects.toThrow("Plaintext search_index is not available in hosted mode");
   });
 
   it("allows operations in self-hosted mode (explicit param)", async () => {
     const accountId = await pgInsertAccount(db);
-    const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
+    const sysId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     await expect(
       insertSearchEntry(
         db,
@@ -489,7 +490,7 @@ describe("PG search_index hosted-mode guard", () => {
 
   it("allows deleteSearchEntry in self-hosted mode (explicit param)", async () => {
     const accountId = await pgInsertAccount(db);
-    const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
+    const sysId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     await insertSearchEntry(
       db,
       {
@@ -508,7 +509,7 @@ describe("PG search_index hosted-mode guard", () => {
 
   it("allows searchEntries in self-hosted mode (explicit param)", async () => {
     const accountId = await pgInsertAccount(db);
-    const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
+    const sysId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     await insertSearchEntry(
       db,
       {

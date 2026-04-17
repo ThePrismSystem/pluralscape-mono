@@ -1,11 +1,11 @@
 ---
 # ps-chwx
 title: Add error-path E2E tests for SP import engine
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-11T03:07:31Z
-updated_at: 2026-04-16T06:49:51Z
+updated_at: 2026-04-17T06:30:25Z
 parent: ps-0enb
 ---
 

@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -39,7 +39,7 @@ const createApp = () => createRouteApp("/:systemId/nomenclature", nomenclatureRo
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_RESULT = {
-  systemId: SYS_ID as SystemId,
+  systemId: brandId<SystemId>(SYS_ID),
   encryptedData: "base64data",
   version: 1,
   createdAt: toUnixMillis(1700000000000),

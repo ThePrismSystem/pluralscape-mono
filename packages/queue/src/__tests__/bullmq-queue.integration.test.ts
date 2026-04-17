@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { BullMQJobQueue } from "../adapters/bullmq/bullmq-job-queue.js";
@@ -371,7 +371,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
     activeQueues.push(q);
     if (redis === null) throw new Error("Valkey not available");
     // Manually inject a completed job into the cancelled store
-    const fakeId = `job_fake_${crypto.randomUUID()}` as JobId;
+    const fakeId = brandId<JobId>(`job_fake_${crypto.randomUUID()}`);
     const fakeData = {
       systemId: null,
       type: "sync-push",
@@ -603,7 +603,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
     activeQueues.push(q);
     if (redis === null) throw new Error("Valkey not available");
     // Inject a dead-letter job directly into the cancelled store
-    const fakeId = `job_fake_dl_${crypto.randomUUID()}` as JobId;
+    const fakeId = brandId<JobId>(`job_fake_dl_${crypto.randomUUID()}`);
     const deadLetterData = {
       systemId: null,
       type: "sync-push",

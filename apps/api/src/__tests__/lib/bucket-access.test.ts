@@ -1,10 +1,11 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { checkBucketAccess, filterVisibleEntities } from "../../lib/bucket-access.js";
 
 import type { BucketAccessCheck, BucketId } from "@pluralscape/types";
 
-const bkt = (id: string): BucketId => id as BucketId;
+const bkt = (id: string): BucketId => brandId<BucketId>(id);
 
 describe("checkBucketAccess", () => {
   it("returns false when friendBucketIds is empty", () => {

@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JobHandlerContext } from "@pluralscape/queue";
@@ -21,12 +21,12 @@ function stubJob(
   overrides?: Partial<JobDefinition<"webhook-deliver">>,
 ): JobDefinition<"webhook-deliver"> {
   return {
-    id: "job_test" as JobId,
+    id: brandId<JobId>("job_test"),
     systemId: null,
     type: "webhook-deliver" as const,
     status: "running",
     payload: {
-      deliveryId: "whdel_test123" as WebhookDeliveryId,
+      deliveryId: brandId<WebhookDeliveryId>("whdel_test123"),
     },
     attempts: 1,
     maxAttempts: 3,

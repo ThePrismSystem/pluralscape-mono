@@ -1,5 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -17,8 +18,8 @@ import type { FrontingReportId, SystemId, UnixMillis } from "@pluralscape/types"
 
 let masterKey: KdfMasterKey;
 
-const REPORT_ID = "fr_test001" as FrontingReportId;
-const SYSTEM_ID = "sys_test" as SystemId;
+const REPORT_ID = brandId<FrontingReportId>("fr_test001");
+const SYSTEM_ID = brandId<SystemId>("sys_test");
 const NOW = 1700000000000 as UnixMillis;
 const START = 1699000000000 as UnixMillis;
 

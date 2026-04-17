@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -47,9 +48,9 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const MEMBER_ID = "mem_test-member" as MemberId;
-const PHOTO_ID = "mp_test-photo" as MemberPhotoId;
+const SYSTEM_ID = brandId<SystemId>("sys_test-system");
+const MEMBER_ID = brandId<MemberId>("mem_test-member");
+const PHOTO_ID = brandId<MemberPhotoId>("mp_test-photo");
 
 const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -407,7 +408,7 @@ describe("reorderMemberPhotos", () => {
         db,
         SYSTEM_ID,
         MEMBER_ID,
-        { order: [{ id: "mp_unknown" as MemberPhotoId, sortOrder: 0 }] },
+        { order: [{ id: brandId<MemberPhotoId>("mp_unknown"), sortOrder: 0 }] },
         AUTH,
         mockAudit,
       ),
@@ -432,7 +433,7 @@ describe("reorderMemberPhotos", () => {
         {
           order: [
             { id: PHOTO_ID, sortOrder: 1 },
-            { id: "mp_second" as MemberPhotoId, sortOrder: 0 },
+            { id: brandId<MemberPhotoId>("mp_second"), sortOrder: 0 },
           ],
         },
         AUTH,
@@ -484,7 +485,7 @@ describe("archiveMemberPhoto", () => {
         db,
         SYSTEM_ID,
         MEMBER_ID,
-        "mp_nonexistent" as MemberPhotoId,
+        brandId<MemberPhotoId>("mp_nonexistent"),
         AUTH,
         mockAudit,
       ),
@@ -527,7 +528,7 @@ describe("restoreMemberPhoto", () => {
         db,
         SYSTEM_ID,
         MEMBER_ID,
-        "mp_nonexistent" as MemberPhotoId,
+        brandId<MemberPhotoId>("mp_nonexistent"),
         AUTH,
         mockAudit,
       ),
@@ -567,7 +568,7 @@ describe("deleteMemberPhoto", () => {
         db,
         SYSTEM_ID,
         MEMBER_ID,
-        "mp_nonexistent" as MemberPhotoId,
+        brandId<MemberPhotoId>("mp_nonexistent"),
         AUTH,
         mockAudit,
       ),

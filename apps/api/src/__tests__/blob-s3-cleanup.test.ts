@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "./helpers/mock-db.js";
@@ -49,7 +49,7 @@ function makeStorageAdapter(): {
 
 function stubJob(): JobDefinition<"blob-cleanup"> {
   return {
-    id: "job_test" as JobId,
+    id: brandId<JobId>("job_test"),
     systemId: null,
     type: "blob-cleanup" as const,
     status: "running",

@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptFrontingReportInput } from "@pluralscape/data/transforms/fronting-report";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -101,7 +102,7 @@ function makeRawReport(id: string): FrontingReportRaw {
     TEST_MASTER_KEY,
   );
   return {
-    id: id as FrontingReportId,
+    id: brandId<FrontingReportId>(id),
     systemId: TEST_SYSTEM_ID,
     format: "html",
     generatedAt: NOW,
@@ -121,7 +122,9 @@ beforeEach(() => {
 describe("useFrontingReport", () => {
   it("returns decrypted fronting report data", async () => {
     fixtures.set("frontingReport.get", makeRawReport("fr-1"));
-    const { result } = renderHookWithProviders(() => useFrontingReport("fr-1" as FrontingReportId));
+    const { result } = renderHookWithProviders(() =>
+      useFrontingReport(brandId<FrontingReportId>("fr-1")),
+    );
 
     let data: Awaited<ReturnType<typeof useFrontingReport>>["data"] | undefined;
     await waitFor(() => {
@@ -138,7 +141,7 @@ describe("useFrontingReport", () => {
 
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
-      () => useFrontingReport("fr-1" as FrontingReportId),
+      () => useFrontingReport(brandId<FrontingReportId>("fr-1")),
       { masterKey: null },
     );
     expect(result.current.fetchStatus).toBe("idle");
@@ -148,7 +151,7 @@ describe("useFrontingReport", () => {
   it("select is stable across rerenders (useCallback memoization)", async () => {
     fixtures.set("frontingReport.get", makeRawReport("fr-1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useFrontingReport("fr-1" as FrontingReportId),
+      useFrontingReport(brandId<FrontingReportId>("fr-1")),
     );
 
     await waitFor(() => {

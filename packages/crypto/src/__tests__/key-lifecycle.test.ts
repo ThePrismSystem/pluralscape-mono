@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { deriveAuthAndPasswordKeys } from "../auth-key.js";
@@ -100,7 +101,7 @@ describe("initial state", () => {
 
   it("getBucketKey throws KeysLockedError", () => {
     expect(() =>
-      manager.getBucketKey("bucket-1" as BucketId, new Uint8Array(64), KEY_VERSION_1),
+      manager.getBucketKey(brandId<BucketId>("bucket-1"), new Uint8Array(64), KEY_VERSION_1),
     ).toThrow(KeysLockedError);
   });
 });
@@ -620,7 +621,11 @@ describe("grace period", () => {
 
     manager.onBackground();
     expect(manager.state).toBe("grace");
-    const result = manager.getBucketKey("bucket-grace" as BucketId, encryptedKey, KEY_VERSION_1);
+    const result = manager.getBucketKey(
+      brandId<BucketId>("bucket-grace"),
+      encryptedKey,
+      KEY_VERSION_1,
+    );
     expect(result).toEqual(bucketKey);
   });
 
@@ -773,7 +778,7 @@ describe("inactivity timer", () => {
 // ── 8. getBucketKey ─────────────────────────────────────────────────
 
 describe("getBucketKey", () => {
-  const bucketId = "bucket-test-001" as BucketId;
+  const bucketId = brandId<BucketId>("bucket-test-001");
 
   it("decrypts and returns a bucket key", async () => {
     await manager.unlockWithPassword(
@@ -878,7 +883,7 @@ describe("getBucketKey", () => {
     encryptedKey.fill(0, wrapped.nonce.length);
 
     expect(() =>
-      manager.getBucketKey("bucket-corrupt" as BucketId, encryptedKey, KEY_VERSION_1),
+      manager.getBucketKey(brandId<BucketId>("bucket-corrupt"), encryptedKey, KEY_VERSION_1),
     ).toThrow(DecryptionFailedError);
   });
 });

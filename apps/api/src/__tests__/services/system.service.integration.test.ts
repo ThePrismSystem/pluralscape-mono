@@ -6,6 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -42,8 +43,8 @@ describe("system.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgMemberTables(client);
 
-    accountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    accountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     auth = makeAuth(accountId, systemId);
   });
 
@@ -131,7 +132,7 @@ describe("system.service (PGlite integration)", () => {
   describe("archiveSystem (delete)", () => {
     it("throws HAS_DEPENDENTS when system has members", async () => {
       // Need a second system so "last system" check doesn't trigger first
-      const secondSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const secondSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const secondAuth = makeAuth(accountId, secondSystemId);
       await pgInsertMember(db, secondSystemId);
 
@@ -144,7 +145,7 @@ describe("system.service (PGlite integration)", () => {
 
     it("succeeds when system has no members and is not the last system", async () => {
       // Create a fresh system with no members (shared system still exists)
-      const freshSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const freshSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
       const freshAuth = makeAuth(accountId, freshSystemId);
 
       await archiveSystem(asDb(db), freshSystemId, freshAuth, noopAudit);

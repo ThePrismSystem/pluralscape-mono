@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterAll, beforeAll, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
@@ -126,7 +127,7 @@ describe("encryptTier1/decryptTier1", () => {
 });
 
 describe("encryptTier2/decryptTier2", () => {
-  const bucketId = "test-bucket-123" as BucketId;
+  const bucketId = brandId<BucketId>("test-bucket-123");
   let bucketKey: AeadKey;
 
   beforeAll(() => {
@@ -343,7 +344,7 @@ describe("encryptTier1Batch/decryptTier1Batch", () => {
 });
 
 describe("encryptTier2Batch/decryptTier2Batch", () => {
-  const bucketId = "batch-bucket" as BucketId;
+  const bucketId = brandId<BucketId>("batch-bucket");
   let bucketKey: AeadKey;
 
   beforeAll(() => {

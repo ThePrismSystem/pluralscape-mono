@@ -2,6 +2,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptRelationshipInput } from "@pluralscape/data/transforms/relationship";
+import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -128,10 +129,10 @@ function makeRawRelationship(
       : encryptRelationshipInput({ label: `Label ${id}` }, TEST_MASTER_KEY).encryptedData;
 
   return {
-    id: id as RelationshipId,
+    id: brandId<RelationshipId>(id),
     systemId: TEST_SYSTEM_ID,
-    sourceMemberId: "m-1" as MemberId,
-    targetMemberId: "m-2" as MemberId,
+    sourceMemberId: brandId<MemberId>("m-1"),
+    targetMemberId: brandId<MemberId>("m-2"),
     type: "sibling" as RelationshipType,
     bidirectional: true,
     createdAt: NOW,
@@ -151,7 +152,9 @@ beforeEach(() => {
 describe("useRelationship", () => {
   it("returns decrypted relationship data", async () => {
     fixtures.set("relationship.get", makeRawRelationship("rel_1"));
-    const { result } = renderHookWithProviders(() => useRelationship("rel_1" as RelationshipId));
+    const { result } = renderHookWithProviders(() =>
+      useRelationship(brandId<RelationshipId>("rel_1")),
+    );
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -163,7 +166,9 @@ describe("useRelationship", () => {
 
   it("returns label: null when encryptedData is null", async () => {
     fixtures.set("relationship.get", makeRawRelationship("rel_2", { encryptedData: null }));
-    const { result } = renderHookWithProviders(() => useRelationship("rel_2" as RelationshipId));
+    const { result } = renderHookWithProviders(() =>
+      useRelationship(brandId<RelationshipId>("rel_2")),
+    );
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -172,9 +177,12 @@ describe("useRelationship", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useRelationship("rel_1" as RelationshipId), {
-      masterKey: null,
-    });
+    const { result } = renderHookWithProviders(
+      () => useRelationship(brandId<RelationshipId>("rel_1")),
+      {
+        masterKey: null,
+      },
+    );
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -182,7 +190,7 @@ describe("useRelationship", () => {
   it("select is stable across rerenders", async () => {
     fixtures.set("relationship.get", makeRawRelationship("rel_1"));
     const { result, rerender } = renderHookWithProviders(() =>
-      useRelationship("rel_1" as RelationshipId),
+      useRelationship(brandId<RelationshipId>("rel_1")),
     );
 
     await waitFor(() => {

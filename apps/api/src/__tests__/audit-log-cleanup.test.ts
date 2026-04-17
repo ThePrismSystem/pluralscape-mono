@@ -1,5 +1,5 @@
 import { AUDIT_LOG_RETENTION_DAYS } from "@pluralscape/db";
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAuditLogCleanupHandler } from "../jobs/audit-log-cleanup.js";
@@ -21,7 +21,7 @@ const { pgCleanupAuditLog } = await import("@pluralscape/db");
 /** Minimal job definition for testing. */
 function stubJob(): JobDefinition<"audit-log-cleanup"> {
   return {
-    id: "job_test" as JobId,
+    id: brandId<JobId>("job_test"),
     systemId: null,
     type: "audit-log-cleanup" as const,
     status: "running",

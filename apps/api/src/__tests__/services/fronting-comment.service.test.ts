@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
@@ -49,12 +50,12 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as SystemId;
-const SESSION_ID = "fs_b2c3d4e5-f6a7-8901-bcde-f12345678901" as FrontingSessionId;
-const COMMENT_ID = "fc_c3d4e5f6-a7b8-9012-cdef-123456789012" as FrontingCommentId;
-const MEMBER_ID = "mem_d4e5f6a7-b8c9-0123-defa-234567890123" as MemberId;
-const CF_ID = "cf_e5f6a7b8-c9d0-1234-efab-345678901234" as CustomFrontId;
-const SE_ID = "ste_f6a7b8c9-d0e1-2345-fabc-456789012345" as SystemStructureEntityId;
+const SYSTEM_ID = brandId<SystemId>("sys_a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+const SESSION_ID = brandId<FrontingSessionId>("fs_b2c3d4e5-f6a7-8901-bcde-f12345678901");
+const COMMENT_ID = brandId<FrontingCommentId>("fc_c3d4e5f6-a7b8-9012-cdef-123456789012");
+const MEMBER_ID = brandId<MemberId>("mem_d4e5f6a7-b8c9-0123-defa-234567890123");
+const CF_ID = brandId<CustomFrontId>("cf_e5f6a7b8-c9d0-1234-efab-345678901234");
+const SE_ID = brandId<SystemStructureEntityId>("ste_f6a7b8c9-d0e1-2345-fabc-456789012345");
 
 const AUTH = makeTestAuth({
   accountId: "acct_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -432,7 +433,7 @@ describe("getFrontingComment", () => {
         db,
         SYSTEM_ID,
         SESSION_ID,
-        "fc_00000000-0000-0000-0000-000000000000" as FrontingCommentId,
+        brandId<FrontingCommentId>("fc_00000000-0000-0000-0000-000000000000"),
         AUTH,
       ),
     ).rejects.toThrow(
@@ -662,7 +663,7 @@ describe("archiveFrontingComment", () => {
         db,
         SYSTEM_ID,
         SESSION_ID,
-        "fc_00000000-0000-0000-0000-000000000000" as FrontingCommentId,
+        brandId<FrontingCommentId>("fc_00000000-0000-0000-0000-000000000000"),
         AUTH,
         mockAudit,
       ),
@@ -750,7 +751,7 @@ describe("restoreFrontingComment", () => {
         db,
         SYSTEM_ID,
         SESSION_ID,
-        "fc_00000000-0000-0000-0000-000000000000" as FrontingCommentId,
+        brandId<FrontingCommentId>("fc_00000000-0000-0000-0000-000000000000"),
         AUTH,
         mockAudit,
       ),

@@ -4,6 +4,7 @@
  */
 
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
+import { brandId } from "@pluralscape/types";
 
 import { accounts } from "../../schema/sqlite/auth.js";
 import { channels, polls } from "../../schema/sqlite/communication.js";
@@ -31,7 +32,7 @@ export function testBlob(ciphertext: Uint8Array = new Uint8Array([1, 2, 3])): En
 /** Creates a T2 EncryptedBlob with bucketId for test fixtures. */
 export function testBlobT2(
   ciphertext: Uint8Array = new Uint8Array([4, 5, 6]),
-  bucketId = "test-bucket" as BucketId,
+  bucketId = brandId<BucketId>("test-bucket"),
 ): EncryptedBlob {
   const nonce = new Uint8Array(AEAD_NONCE_BYTES);
   nonce.fill(0xbb);

@@ -8,7 +8,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { createId, ID_PREFIXES, now } from "@pluralscape/types";
+import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -70,9 +70,9 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     await pgExec(client, PG_DDL.frontingSessions);
     await pgExec(client, PG_DDL.frontingSessionsIndexes);
 
-    ownerAccountId = (await pgInsertAccount(db)) as AccountId;
-    friendAccountId = (await pgInsertAccount(db)) as AccountId;
-    systemId = (await pgInsertSystem(db, ownerAccountId)) as SystemId;
+    ownerAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    friendAccountId = brandId<AccountId>(await pgInsertAccount(db));
+    systemId = brandId<SystemId>(await pgInsertSystem(db, ownerAccountId));
     friendAuth = makeAuth(friendAccountId, systemId);
   });
 
@@ -98,8 +98,8 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     ownerConnectionId: FriendConnectionId;
     friendConnectionId: FriendConnectionId;
   }> {
-    const ownerConnectionId = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
-    const friendConnectionId = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
+    const ownerConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
+    const friendConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
     const ts = now();
 
     await db.insert(friendConnections).values([
@@ -134,7 +134,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as BucketId;
+    return brandId<BucketId>(id);
   }
 
   async function insertBucketAssignment(
@@ -159,7 +159,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       keyVersion: 1,
       createdAt: now(),
     });
-    return id as KeyGrantId;
+    return brandId<KeyGrantId>(id);
   }
 
   async function insertMember(): Promise<MemberId> {
@@ -172,7 +172,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as MemberId;
+    return brandId<MemberId>(id);
   }
 
   async function insertCustomFront(): Promise<CustomFrontId> {
@@ -185,7 +185,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as CustomFrontId;
+    return brandId<CustomFrontId>(id);
   }
 
   async function insertBucketTag(
@@ -219,7 +219,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return id as FrontingSessionId;
+    return brandId<FrontingSessionId>(id);
   }
 
   // ── Tests ───────────────────────────────────────────────────────────
@@ -334,7 +334,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   });
 
   it("returns 404 for non-existent connection", async () => {
-    const fakeConnectionId = createId(ID_PREFIXES.friendConnection) as FriendConnectionId;
+    const fakeConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
 
     await assertApiError(
       getFriendDashboard(asDb(db), fakeConnectionId, friendAuth),

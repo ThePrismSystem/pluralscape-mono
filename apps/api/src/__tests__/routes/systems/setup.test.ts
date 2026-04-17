@@ -1,4 +1,4 @@
-import { toUnixMillis } from "@pluralscape/types";
+import { toUnixMillis, brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -51,8 +51,8 @@ const MOCK_STATUS = {
 const MOCK_STEP_RESULT = { success: true as const };
 
 const MOCK_COMPLETE_RESULT = {
-  id: "sset_abc" as SystemSettingsId,
-  systemId: SYS_ID as SystemId,
+  id: brandId<SystemSettingsId>("sset_abc"),
+  systemId: brandId<SystemId>(SYS_ID),
   locale: null,
   biometricEnabled: false,
   encryptedData: "base64data",

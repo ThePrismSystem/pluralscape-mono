@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -44,8 +45,8 @@ const MANIFEST_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/export/manifest`;
 const EXPORT_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/export`;
 
 const MOCK_MANIFEST: BucketExportManifestResponse = {
-  systemId: SYS_ID as SystemId,
-  bucketId: BUCKET_ID as BucketId,
+  systemId: brandId<SystemId>(SYS_ID),
+  bucketId: brandId<BucketId>(BUCKET_ID),
   entries: [
     { entityType: "member", count: 3, lastUpdatedAt: 1000 as UnixMillis },
     { entityType: "group", count: 0, lastUpdatedAt: null },
@@ -56,7 +57,7 @@ const MOCK_MANIFEST: BucketExportManifestResponse = {
 const MOCK_PAGE: BucketExportPageResponse = {
   data: [
     {
-      id: "mem_550e8400-e29b-41d4-a716-446655440000" as ExportEntityId,
+      id: brandId<ExportEntityId>("mem_550e8400-e29b-41d4-a716-446655440000"),
       entityType: "member",
       encryptedData: "dGVzdA==",
       updatedAt: 1000 as UnixMillis,
