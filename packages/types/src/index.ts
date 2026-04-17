@@ -654,6 +654,15 @@ export type {
   NumberFormatPreference,
   LocaleConfig,
 } from "./i18n.js";
+export {
+  I18N_CACHE_TTL_MS,
+  I18N_OTA_TIMEOUT_MS,
+  I18N_ETAG_LENGTH,
+  type I18nManifest,
+  type I18nLocaleManifest,
+  type I18nNamespaceManifest,
+  type I18nNamespace,
+} from "./i18n/index.js";
 
 // ── Settings ──────────────────────────────────────────────────────
 export type {
