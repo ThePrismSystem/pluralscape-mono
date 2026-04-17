@@ -4,7 +4,20 @@ import type { Locale } from "@pluralscape/types";
 export const DEFAULT_LOCALE = "en" as Locale;
 
 /** All locales the application supports. */
-export const SUPPORTED_LOCALES: readonly Locale[] = ["en" as Locale];
+export const SUPPORTED_LOCALES: readonly Locale[] = [
+  "en",
+  "es",
+  "es-419",
+  "fr",
+  "de",
+  "it",
+  "pt-BR",
+  "ru",
+  "nl",
+  "zh-Hans",
+  "ja",
+  "ko",
+] as Locale[];
 
 /** Translation namespace names — one per feature area. */
 export const NAMESPACES = [
