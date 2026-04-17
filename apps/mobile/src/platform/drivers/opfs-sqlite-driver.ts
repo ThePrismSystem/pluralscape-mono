@@ -46,6 +46,9 @@ export async function createOpfsSqliteDriver(
   const pending = new Map<number, PendingSlot>();
   let nextId = 1;
   let terminated = false;
+  // Tri-state timeout convention used throughout: undefined → fall back to
+  // perCallTimeoutMs, null → disabled, number → explicit ms. Applies to the
+  // option here and to send()/call()'s per-request override.
   const perCallTimeoutMs: number | null =
     options.callTimeoutMs === undefined ? CALL_TIMEOUT_MS : options.callTimeoutMs;
   // Promise-based mutex: transaction() acquires this chain before sending
@@ -108,8 +111,8 @@ export async function createOpfsSqliteDriver(
         // postMessage can throw on non-cloneable payloads or if the worker
         // was terminated between our `terminated` check and here. Clean up
         // the slot to avoid leaking a pending entry that will never settle.
+        // No timer to clear — it's armed only after postMessage succeeds.
         pending.delete(id);
-        if (slot.timer !== undefined) clearTimeout(slot.timer);
         reject(err instanceof Error ? err : new Error(String(err)));
         return;
       }

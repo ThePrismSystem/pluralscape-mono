@@ -20,7 +20,7 @@ import {
 } from "../opfs-worker-protocol.js";
 
 import type { OpfsSqliteDriverOptions } from "../opfs-sqlite-driver.js";
-import type { Req, Res, Row, StmtHandle } from "../opfs-worker-protocol.js";
+import type { OkResult, Req, Res, StmtHandle } from "../opfs-worker-protocol.js";
 import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
 type MessageListener = (ev: MessageEvent<Res>) => void;
@@ -30,8 +30,7 @@ type ErrorListener = (ev: ErrorEvent) => void;
  * `ok: true` response. Matches the union of `OkResult` payloads that the
  * real worker can return for any request kind.
  */
-type RouteResult = undefined | Row[] | Row | StmtHandle;
-type RouteHandler = (req: Req) => RouteResult | Promise<RouteResult>;
+type RouteHandler = (req: Req) => OkResult | Promise<OkResult>;
 
 interface FakeWorker {
   listeners: { message: MessageListener[]; error: ErrorListener[] };
@@ -42,18 +41,14 @@ interface FakeWorker {
   postMessage(msg: Req): void;
   terminate(): void;
   /** Dispatch a worker→main response to all message listeners. */
-  respond(res: Res): void;
-  /** Alias for respond — matches Task 13/14 test terminology. */
   fireMessage(res: Res): void;
   /** Dispatch a worker error event (also flips `terminated` in the driver). */
-  triggerError(message: string): void;
-  /** Alias for triggerError — matches Task 13 test terminology. */
   fireWorkerError(message: string): void;
   /**
    * Register a route handler keyed on request kind. When the driver posts a
    * request of that kind, the handler is invoked and the result (resolved or
-   * rejected) is converted into a worker response and dispatched. Used by
-   * Task 14 tests to target rollback/finalize failure paths.
+   * rejected) is converted into a worker response and dispatched. Target
+   * rollback/finalize failure paths by throwing from the handler.
    */
   routeKind(kind: Req["kind"], handler: RouteHandler): void;
 }
@@ -93,15 +88,11 @@ function makeFakeWorker(): FakeWorker {
         void Promise.resolve()
           .then(() => handler(msg))
           .then((result) => {
-            fw.respond({
-              id: msg.id,
-              ok: true,
-              result: result as Res extends { ok: true; result: infer R } ? R : never,
-            });
+            fw.fireMessage({ id: msg.id, ok: true, result });
           })
           .catch((err: unknown) => {
             const e = err instanceof Error ? err : new Error(String(err));
-            fw.respond({
+            fw.fireMessage({
               id: msg.id,
               ok: false,
               error: { message: e.message, name: e.name },
@@ -112,21 +103,15 @@ function makeFakeWorker(): FakeWorker {
     terminate(): void {
       this.terminated = true;
     },
-    respond(res: Res): void {
+    fireMessage(res: Res): void {
       // Plain object cast: jsdom's MessageEvent constructor isn't available
       // in the Node test env, but the driver only reads `.data`.
       const ev = { data: res } as MessageEvent<Res>;
       for (const l of this.listeners.message) l(ev);
     },
-    fireMessage(res: Res): void {
-      this.respond(res);
-    },
-    triggerError(message: string): void {
+    fireWorkerError(message: string): void {
       const ev = { message } as ErrorEvent;
       for (const l of this.listeners.error) l(ev);
-    },
-    fireWorkerError(message: string): void {
-      this.triggerError(message);
     },
     routeKind(kind: Req["kind"], handler: RouteHandler): void {
       routes.set(kind, handler);
@@ -236,7 +221,7 @@ async function initDriver(): Promise<SqliteDriver> {
   if (first?.kind !== "init") {
     throw new Error(`expected init as first request, got ${String(first?.kind)}`);
   }
-  fakeWorker.respond({ id: first.id, ok: true, result: undefined });
+  fakeWorker.fireMessage({ id: first.id, ok: true, result: undefined });
   return pending;
 }
 
@@ -258,7 +243,7 @@ async function spawnDriverWithFakeWorker(opts: OpfsSqliteDriverOptions = {}): Pr
   if (first?.kind !== "init") {
     throw new Error(`expected init as first request, got ${String(first?.kind)}`);
   }
-  fakeWorker.respond({ id: first.id, ok: true, result: undefined });
+  fakeWorker.fireMessage({ id: first.id, ok: true, result: undefined });
   const driver = await pending;
   return {
     driver,
@@ -276,7 +261,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     const initReq = fakeWorker.posted[0];
     expect(initReq?.kind).toBe("init");
     if (initReq === undefined) throw new Error("init request missing");
-    fakeWorker.respond({ id: initReq.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: initReq.id, ok: true, result: undefined });
     await expect(pending).resolves.toBeDefined();
   });
 
@@ -292,7 +277,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
       throw new Error(`expected prepare, got ${String(prepReq?.kind)}`);
     }
     expect(prepReq.sql).toBe("INSERT INTO t VALUES (?)");
-    fakeWorker.respond({ id: prepReq.id, ok: true, result: 101 });
+    fakeWorker.fireMessage({ id: prepReq.id, ok: true, result: 101 });
 
     // After prepare resolves, run() awaits the handle and posts the run req.
     await Promise.resolve();
@@ -303,7 +288,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     }
     expect(runReq.stmt).toBe(101);
     expect(runReq.params).toEqual(["value"]);
-    fakeWorker.respond({ id: runReq.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: runReq.id, ok: true, result: undefined });
 
     await expect(runPromise).resolves.toBeUndefined();
   });
@@ -322,7 +307,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     if (prepReq?.kind !== "prepare") {
       throw new Error(`expected prepare, got ${String(prepReq?.kind)}`);
     }
-    fakeWorker.respond({ id: prepReq.id, ok: true, result: 102 });
+    fakeWorker.fireMessage({ id: prepReq.id, ok: true, result: 102 });
 
     await Promise.resolve();
     await Promise.resolve();
@@ -332,7 +317,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     }
     expect(allReq.stmt).toBe(102);
     expect(allReq.params).toEqual([7]);
-    fakeWorker.respond({
+    fakeWorker.fireMessage({
       id: allReq.id,
       ok: true,
       result: [{ id: 7, name: "found" }],
@@ -349,7 +334,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     if (execReq?.kind !== "exec") {
       throw new Error(`expected exec, got ${String(execReq?.kind)}`);
     }
-    fakeWorker.respond({
+    fakeWorker.fireMessage({
       id: execReq.id,
       ok: false,
       error: { message: "syntax error", code: 1, name: "OpfsDriverError" },
@@ -377,14 +362,14 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     expect(beginReqs1).toHaveLength(1);
     const begin1 = beginReqs1[0];
     if (begin1 === undefined) throw new Error("expected first txn-begin");
-    fakeWorker.respond({ id: begin1.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: begin1.id, ok: true, result: undefined });
 
     // The user fn now runs; flush microtasks so its exec() lands.
     await Promise.resolve();
     await Promise.resolve();
     const exec1 = fakeWorker.posted.find((r) => r.kind === "exec" && r.sql === "step1");
     if (exec1 === undefined) throw new Error("expected step1 exec");
-    fakeWorker.respond({ id: exec1.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: exec1.id, ok: true, result: undefined });
 
     // Flush enough microtasks for the user fn to await exec1 and the
     // transaction body to schedule the txn-commit send.
@@ -400,7 +385,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     const beginReqsBeforeCommit = fakeWorker.posted.filter((r) => r.kind === "txn-begin");
     expect(beginReqsBeforeCommit).toHaveLength(1);
 
-    fakeWorker.respond({ id: commit1.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: commit1.id, ok: true, result: undefined });
     await expect(t1).resolves.toBe("t1-done");
 
     // Now the lock is released — t2's BEGIN should follow.
@@ -410,17 +395,17 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     expect(beginReqs2).toHaveLength(2);
     const begin2 = beginReqs2[1];
     if (begin2 === undefined) throw new Error("expected second txn-begin");
-    fakeWorker.respond({ id: begin2.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: begin2.id, ok: true, result: undefined });
 
     await flushMicrotasks();
     const exec2 = fakeWorker.posted.find((r) => r.kind === "exec" && r.sql === "step2");
     if (exec2 === undefined) throw new Error("expected step2 exec");
-    fakeWorker.respond({ id: exec2.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: exec2.id, ok: true, result: undefined });
 
     await flushMicrotasks();
     const commit2 = fakeWorker.posted.filter((r) => r.kind === "txn-commit")[1];
     if (commit2 === undefined) throw new Error("expected txn-commit for t2");
-    fakeWorker.respond({ id: commit2.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: commit2.id, ok: true, result: undefined });
     await expect(t2).resolves.toBe("t2-done");
   });
 
@@ -436,7 +421,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     await Promise.resolve();
     const closeReq = fakeWorker.posted.find((r) => r.kind === "close");
     if (closeReq === undefined) throw new Error("expected close request");
-    fakeWorker.respond({ id: closeReq.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: closeReq.id, ok: true, result: undefined });
 
     await expect(closePromise).resolves.toBeUndefined();
     await expect(pendingExec).rejects.toBeInstanceOf(WorkerTerminatedError);
@@ -446,8 +431,8 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
   it("worker error event marks the driver terminated; subsequent exec() rejects synchronously", async () => {
     const driver = await initDriver();
 
-    // Trip the error handler. Per Task 13: terminated flag is set + terminate called.
-    fakeWorker.triggerError("worker crashed");
+    // Trip the error handler: terminated flag is set + terminate called.
+    fakeWorker.fireWorkerError("worker crashed");
 
     // The next exec() must reject with WorkerTerminatedError without
     // posting a new message. We assert no new request was posted (only
@@ -487,7 +472,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     await Promise.resolve();
     const initReq = fakeWorker.posted[0];
     if (initReq?.kind !== "init") throw new Error("expected init");
-    fakeWorker.respond({
+    fakeWorker.fireMessage({
       id: initReq.id,
       ok: false,
       error: { message: "wasm load failed" },
@@ -511,7 +496,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     if (prepReq?.kind !== "prepare") {
       throw new Error(`expected prepare, got ${String(prepReq?.kind)}`);
     }
-    fakeWorker.respond({ id: prepReq.id, ok: true, result: 200 });
+    fakeWorker.fireMessage({ id: prepReq.id, ok: true, result: 200 });
 
     await Promise.resolve();
     await Promise.resolve();
@@ -521,7 +506,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     }
     expect(getReq.stmt).toBe(200);
     expect(getReq.params).toEqual([42]);
-    fakeWorker.respond({
+    fakeWorker.fireMessage({
       id: getReq.id,
       ok: true,
       result: { id: 42, name: "Alex" },
@@ -542,7 +527,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     await Promise.resolve();
     const beginReq = fakeWorker.posted.find((r) => r.kind === "txn-begin");
     if (beginReq === undefined) throw new Error("expected txn-begin");
-    fakeWorker.respond({ id: beginReq.id, ok: true, result: undefined });
+    fakeWorker.fireMessage({ id: beginReq.id, ok: true, result: undefined });
 
     // After BEGIN resolves, the user fn runs synchronously and throws,
     // so the driver posts txn-rollback.
@@ -553,7 +538,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     // Even if the rollback "fails", the user error must propagate. Reply with
     // ok:false to verify the rollback error is swallowed and the original
     // user error wins.
-    fakeWorker.respond({
+    fakeWorker.fireMessage({
       id: rollbackReq.id,
       ok: false,
       error: { message: "rollback also failed" },
