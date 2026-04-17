@@ -108,7 +108,7 @@ export {
 } from "./queries/index.js";
 
 // ── Views / Query Helpers ─────────────────────────────────────
-export { pgViews, sqliteViews, mapStructureEntityAssociationRow } from "./views/index.js";
+export { pgViews, sqliteViews } from "./views/index.js";
 export type {
   ActiveApiKey,
   ActiveDeviceToken,
