@@ -59,6 +59,14 @@ const mockDetectPlatform = vi.fn<() => Promise<PlatformContext>>();
 const mockCreateTokenStore = vi.fn<() => Promise<TokenStore>>();
 const mockDetectLocale = vi.fn<(locales: string[]) => string>().mockReturnValue("en");
 const mockApplyLayoutDirection = vi.fn<(locale: string) => void>();
+const mockCreateChainedBackend = vi.fn(() => ({ type: "backend" as const, read: vi.fn() }));
+const mockLoadBundledNamespace = vi.fn(
+  (locale: string, namespace: string): Promise<Readonly<Record<string, string>>> => {
+    void locale;
+    void namespace;
+    return Promise.resolve({});
+  },
+);
 
 vi.mock("../../src/platform/index.js", () => ({
   detectPlatform: (...args: unknown[]) => mockDetectPlatform(...(args as [])),
@@ -146,15 +154,44 @@ vi.mock("../../src/i18n/index.js", () => ({
   applyLayoutDirection: (locale: string): void => {
     mockApplyLayoutDirection(locale);
   },
+  AsyncStorageI18nCache: class MockCache {
+    read(): Promise<null> {
+      return Promise.resolve(null);
+    }
+    write(): Promise<void> {
+      return Promise.resolve();
+    }
+    isFresh(): boolean {
+      return false;
+    }
+  },
+  createChainedBackend: (...args: unknown[]): { type: "backend"; read: () => void } =>
+    mockCreateChainedBackend(...(args as [])),
 }));
 
 vi.mock("../../locales", () => ({
-  resources: {},
+  BUNDLED_NAMESPACES: ["common", "auth", "fronting", "members", "settings"],
+  loadBundledNamespace: (
+    locale: string,
+    namespace: string,
+  ): Promise<Readonly<Record<string, string>>> => mockLoadBundledNamespace(locale, namespace),
+}));
+
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: {
+    getItem: vi.fn((): Promise<string | null> => Promise.resolve(null)),
+    setItem: vi.fn((): Promise<void> => Promise.resolve()),
+    removeItem: vi.fn((): Promise<void> => Promise.resolve()),
+  },
 }));
 
 vi.mock("@pluralscape/i18n", () => ({
   DEFAULT_LOCALE: "en",
   SUPPORTED_LOCALES: ["en"],
+}));
+
+vi.mock("@pluralscape/types", () => ({
+  MS_PER_HOUR: 3_600_000,
 }));
 
 vi.mock("@pluralscape/i18n/react", () => ({

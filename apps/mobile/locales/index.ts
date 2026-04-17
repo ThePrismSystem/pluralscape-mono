@@ -8,30 +8,6 @@
  * fresh. This loader is the offline-first baseline.
  */
 
-import auth from "./en/auth.json";
-import common from "./en/common.json";
-import fronting from "./en/fronting.json";
-import members from "./en/members.json";
-import settings from "./en/settings.json";
-
-import type { TranslationResources } from "@pluralscape/i18n";
-
-/**
- * Legacy static resource bundle for `en`.
- *
- * Kept temporarily so `_layout.tsx` continues to compile during the
- * chained-backend migration; removed once the backend wiring lands.
- */
-export const resources: Record<string, TranslationResources> = {
-  en: {
-    common,
-    auth,
-    members,
-    fronting,
-    settings,
-  },
-};
-
 export const BUNDLED_LOCALES = [
   "en",
   "es",

@@ -2,17 +2,24 @@ import { getSodium } from "@pluralscape/crypto";
 import { createAppQueryClient } from "@pluralscape/data";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
+import { MS_PER_HOUR } from "@pluralscape/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Redirect, Slot } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { resources } from "../locales";
+import { loadBundledNamespace } from "../locales";
 import { AuthProvider, AuthStateMachine, createTokenStore, useAuth } from "../src/auth/index.js";
 import { getApiBaseUrl } from "../src/config.js";
 import { ConnectionManager, ConnectionProvider } from "../src/connection/index.js";
 import { DataLayerProvider } from "../src/data/index.js";
-import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
+import {
+  applyLayoutDirection,
+  AsyncStorageI18nCache,
+  createChainedBackend,
+  detectLocale,
+} from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
 import { BucketKeyProvider } from "../src/providers/bucket-key-provider.js";
 import { CryptoProvider } from "../src/providers/crypto-provider.js";
@@ -23,7 +30,11 @@ import { BootstrapGate, SyncProvider } from "../src/sync/index.js";
 
 import type { TokenStore } from "../src/auth/index.js";
 import type { PlatformContext } from "../src/platform/index.js";
+import type { I18nConfig } from "@pluralscape/i18n";
 import type { ReactNode } from "react";
+
+const HOURS_PER_WEEK = 24 * 7;
+const I18N_CACHE_TTL_MS = MS_PER_HOUR * HOURS_PER_WEEK;
 
 const styles = StyleSheet.create({
   centered: {
@@ -185,6 +196,21 @@ export default function RootLayout(): React.JSX.Element {
   const connectionManagerRef = useRef<ConnectionManager | null>(null);
   connectionManagerRef.current ??= new ConnectionManager(connectionConfig);
 
+  const i18nConfig = useMemo<I18nConfig>(() => {
+    const cache = new AsyncStorageI18nCache(AsyncStorage, I18N_CACHE_TTL_MS);
+    const backend = createChainedBackend({
+      apiBaseUrl: getApiBaseUrl(),
+      loadBundled: loadBundledNamespace,
+      cache,
+    });
+    return {
+      locale,
+      fallbackLocale: DEFAULT_LOCALE,
+      resources: {},
+      backend,
+    };
+  }, [locale]);
+
   const initPlatform = useCallback(() => {
     setInitError(null);
     setPlatform(null);
@@ -233,13 +259,7 @@ export default function RootLayout(): React.JSX.Element {
 
   return (
     <PlatformProvider context={platform}>
-      <I18nProvider
-        config={{
-          locale,
-          fallbackLocale: DEFAULT_LOCALE,
-          resources,
-        }}
-      >
+      <I18nProvider config={i18nConfig}>
         <QueryClientProvider client={queryClientRef.current}>
           <TRPCProvider
             queryClient={queryClientRef.current}
