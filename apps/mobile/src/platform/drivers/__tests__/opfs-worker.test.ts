@@ -30,8 +30,6 @@ interface FakeSelf {
   lastPosted: unknown[];
   addEventListener: (type: WorkerEventType, listener: (ev: unknown) => void) => void;
   postMessage: (msg: unknown) => void;
-  /** Backwards-friendly accessor: the message-channel listeners specifically. */
-  readonly listeners: Array<(ev: MessageEvent<unknown>) => void>;
 }
 
 function installFakeSelf(): FakeSelf {
@@ -46,11 +44,6 @@ function installFakeSelf(): FakeSelf {
     },
     postMessage(msg) {
       this.lastPosted.push(msg);
-    },
-    get listeners(): Array<(ev: MessageEvent<unknown>) => void> {
-      // `message` is the only event whose payload is MessageEvent<unknown>.
-      const raw = listenersByType.get("message") ?? [];
-      return raw as Array<(ev: MessageEvent<unknown>) => void>;
     },
   };
   // Object.assign is type-safe: merges `{ self: FakeSelf }` onto globalThis.
@@ -257,8 +250,14 @@ afterEach(() => {
 
 async function dispatch(req: unknown): Promise<Envelope<unknown>> {
   const before = fakeSelf.lastPosted.length;
-  for (const l of fakeSelf.listeners) {
-    l({ data: req } as MessageEvent<unknown>);
+  const listeners = fakeSelf.listenersByType.get("message") ?? [];
+  for (const l of listeners) {
+    // The worker registers its message handler typed as MessageEvent<Req>, but
+    // our FakeSelf stores listeners as `(ev: unknown) => void` so every event
+    // type shares one map. The runtime payload we hand it is structurally a
+    // MessageEvent<unknown>: the listener only reads `ev.data`, so a single
+    // structural step satisfies both sides without a double-cast.
+    l({ data: req } satisfies Pick<MessageEvent<unknown>, "data">);
   }
   // Allow the dispatch promise chain to settle before reading posted result.
   // The worker awaits several sqlite mocks — give macrotasks room to drain.
@@ -613,8 +612,9 @@ describe("OPFS worker dispatch", () => {
       // helper because the first postMessage throws (lastPosted length won't
       // advance on call #1), so we poll for lastPosted > initial.
       const before = fakeSelf.lastPosted.length;
-      for (const l of fakeSelf.listeners) {
-        l({ data: { id: 99, kind: "init" } } as MessageEvent<unknown>);
+      const listeners = fakeSelf.listenersByType.get("message") ?? [];
+      for (const l of listeners) {
+        l({ data: { id: 99, kind: "init" } } satisfies Pick<MessageEvent<unknown>, "data">);
       }
       for (let i = 0; i < MAX_SETTLE_TICKS; i++) {
         if (fakeSelf.lastPosted.length > before) break;
@@ -783,11 +783,30 @@ describe("opfs-worker — global panic listeners", () => {
     fn({ data: "non-cloneable" });
     expect(fakeSelf.lastPosted).toHaveLength(before + 1);
     const posted = fakeSelf.lastPosted[before];
+    // Lock down BOTH fields — the listener routes through reasonToMessage so
+    // the panic envelope's message should equal the original ev.data string.
     expect(posted).toMatchObject({
       id: -1,
       ok: false,
       panic: true,
-      error: { name: "messageerror" },
+      error: { name: "messageerror", message: "non-cloneable" },
+    });
+  });
+
+  it("posts a panic envelope with '(empty reason)' when messageerror data is empty", () => {
+    const listeners = fakeSelf.listenersByType.get("messageerror") ?? [];
+    const fn = listeners[0];
+    if (fn === undefined) throw new Error("messageerror listener not registered");
+    const before = fakeSelf.lastPosted.length;
+    // reasonToMessage coerces empty strings to "(empty reason)" so consumers
+    // always receive a non-empty diagnostic.
+    fn({ data: "" });
+    const posted = fakeSelf.lastPosted[before];
+    expect(posted).toMatchObject({
+      id: -1,
+      ok: false,
+      panic: true,
+      error: { name: "messageerror", message: "(empty reason)" },
     });
   });
 

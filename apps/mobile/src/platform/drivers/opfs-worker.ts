@@ -239,9 +239,8 @@ async function handleClose(): Promise<void> {
     s.stmts.clear();
     s.sqlIndex.clear();
     await s.sqlite3.close(s.db).catch((err: unknown) => {
-      // Surface close failures via the panic channel instead of swallowing —
-      // eslint bans direct console usage in production workers and the
-      // dispatch envelope has already been determined by the caller's path.
+      // Surface close failures via the panic channel — swallowing would
+      // strand the main-thread proxy.
       const msg = err instanceof Error ? err.message : String(err);
       postPanic("sqlite3_close", msg);
     });
@@ -292,8 +291,8 @@ async function dispatch(req: Req): Promise<Res> {
   } catch (err: unknown) {
     const e = err instanceof Error ? err : new Error(String(err));
     // wa-sqlite errors carry a numeric `code` matching SQLite's rescode.h.
-    // Propagate it so main-thread callers (e.g. ps-gexi) can branch on
-    // SQLITE_FULL without string-matching message text.
+    // Propagate numeric code so callers can branch on SQLite result codes
+    // without string-matching message text.
     const code =
       typeof err === "object" &&
       err !== null &&
@@ -330,6 +329,14 @@ self.addEventListener("message", (ev: MessageEvent<Req>) => {
 });
 
 function reasonToMessage(reason: unknown): string {
+  const resolved = resolveReason(reason);
+  // Empty strings (raw "", Error("") , etc.) would yield an empty `message`
+  // field on the panic envelope — swap in a non-empty default so main-thread
+  // consumers can always rely on a diagnostic string.
+  return resolved === "" ? "(empty reason)" : resolved;
+}
+
+function resolveReason(reason: unknown): string {
   if (reason instanceof Error) {
     return reason.message;
   }
@@ -375,7 +382,7 @@ self.addEventListener("error", (ev: ErrorEvent) => {
 });
 
 self.addEventListener("messageerror", (ev: MessageEvent) => {
-  postPanic("messageerror", String(ev.data ?? "non-cloneable message"));
+  postPanic("messageerror", reasonToMessage(ev.data));
 });
 
 self.addEventListener("unhandledrejection", (ev: PromiseRejectionEvent) => {
