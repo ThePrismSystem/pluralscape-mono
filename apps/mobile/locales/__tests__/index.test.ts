@@ -3,9 +3,9 @@ import { describe, it, expect } from "vitest";
 import { loadBundledNamespace, BUNDLED_LOCALES, BUNDLED_NAMESPACES } from "../index.js";
 
 describe("bundled locale loader", () => {
-  it("lists all 12 SUPPORTED_LOCALES as bundled", () => {
+  it("lists all 13 SUPPORTED_LOCALES as bundled", () => {
     expect([...BUNDLED_LOCALES].sort()).toEqual(
-      ["de", "en", "es", "es-419", "fr", "it", "ja", "ko", "nl", "pt-BR", "ru", "zh-Hans"].sort(),
+      ["ar", "de", "en", "es", "es-419", "fr", "it", "ja", "ko", "nl", "pt-BR", "ru", "zh-Hans"].sort(),
     );
   });
 

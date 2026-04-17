@@ -17,6 +17,7 @@ export const SUPPORTED_LOCALES: readonly Locale[] = [
   "zh-Hans",
   "ja",
   "ko",
+  "ar",
 ] as Locale[];
 
 /** Translation namespace names — one per feature area. */

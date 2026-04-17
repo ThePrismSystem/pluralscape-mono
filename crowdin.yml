@@ -24,6 +24,7 @@ languages_mapping:
     nl: nl
     ja: ja
     ko: ko
+    ar: ar
   locale:
     es-MX: es-419
     pt-BR: pt-BR

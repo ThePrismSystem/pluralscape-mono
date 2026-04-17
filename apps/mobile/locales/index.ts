@@ -21,6 +21,7 @@ export const BUNDLED_LOCALES = [
   "zh-Hans",
   "ja",
   "ko",
+  "ar",
 ] as const;
 
 export const BUNDLED_NAMESPACES = ["common", "auth", "fronting", "members", "settings"] as const;
