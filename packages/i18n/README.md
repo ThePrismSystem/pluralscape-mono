@@ -176,3 +176,22 @@ Unit tests only (no I/O):
 ```sh
 pnpm vitest run --project i18n
 ```
+
+## Runtime loading (mobile)
+
+Mobile uses `i18next-chained-backend`:
+
+- **Bundled baseline** (offline-first, always available): `apps/mobile/locales/<locale>/<namespace>.json`, dynamic-imported so Metro code-splits per locale.
+- **OTA overlay**: fetched from the Pluralscape API at `GET /v1/i18n/:locale/:namespace`. ETag-gated 304s; cached in AsyncStorage for 7 days.
+
+Resolution order per namespace read: fresh OTA cache → OTA network (revalidate or fetch) → stale OTA cache → bundled baseline.
+
+OTA failure never breaks the app — the bundled baseline is always present.
+
+## Adding a new locale
+
+1. Add the locale tag to `SUPPORTED_LOCALES` in `i18n.constants.ts`.
+2. Add the locale to `BUNDLED_LOCALES` in `apps/mobile/locales/index.ts`.
+3. Generate baseline translations via the local subagent (invoke `/translate-locale <locale>`).
+4. Update `crowdin.yml` language mapping if Crowdin's locale tag differs.
+5. Verify with `pnpm vitest run --project i18n` and `pnpm vitest run --project mobile`.
