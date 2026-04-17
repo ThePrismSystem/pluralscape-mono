@@ -1,14 +1,13 @@
+import { CALL_TIMEOUT_MS, INIT_TIMEOUT_MS } from "./opfs-sqlite-driver.constants.js";
 import {
   OpfsDriverError,
+  OpfsDriverTimeoutError,
   OpfsDriverUnavailableError,
   WorkerTerminatedError,
 } from "./opfs-worker-protocol.js";
 
 import type { BindParam, Req, Res, Row, StmtHandle } from "./opfs-worker-protocol.js";
 import type { SqliteDriver, SqliteStatement } from "@pluralscape/sync/adapters";
-
-/** Worker init must complete within this window or the driver is considered unavailable. */
-const INIT_TIMEOUT_MS = 5_000;
 
 /**
  * Distributive Omit: applied to a discriminated union, produces a union of
@@ -20,16 +19,21 @@ const INIT_TIMEOUT_MS = 5_000;
  */
 type ReqWithoutId<T extends Req = Req> = T extends Req ? Omit<T, "id"> : never;
 
+export interface OpfsSqliteDriverOptions {
+  /** Per-call timeout in ms; null disables. Default: CALL_TIMEOUT_MS. */
+  callTimeoutMs?: number | null;
+}
+
 /**
  * wa-sqlite over OPFS, hosted in a dedicated Web Worker.
  *
  * Main thread is a thin proxy: each driver call serializes a typed request,
  * posts it to the worker, and resolves with the response. No SharedArrayBuffer,
  * no Atomics, no cross-origin isolation required.
- *
- * Tree-shaken from native bundles via the dynamic import in detect.ts.
  */
-export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
+export async function createOpfsSqliteDriver(
+  options: OpfsSqliteDriverOptions = {},
+): Promise<SqliteDriver> {
   const worker = new Worker(new URL("./opfs-worker.ts", import.meta.url), {
     type: "module",
   });
@@ -42,58 +46,89 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
   const pending = new Map<number, PendingSlot>();
   let nextId = 1;
   let terminated = false;
+  const perCallTimeoutMs: number | null =
+    options.callTimeoutMs === undefined ? CALL_TIMEOUT_MS : options.callTimeoutMs;
   // Promise-based mutex: transaction() acquires this chain before sending
   // BEGIN; releases after COMMIT/ROLLBACK resolves. The chain is built from
   // resolve-only promises (release() is the resolver), so `await prev` never
-  // throws — load-bearing assumption for the unwrapped await on line ~157.
+  // throws — load-bearing assumption for `await prev` in transaction().
   let transactionLock: Promise<void> = Promise.resolve();
 
-  function settleSlot(slot: PendingSlot): void {
-    if (slot.timer !== undefined) clearTimeout(slot.timer);
-  }
-
   worker.addEventListener("message", (ev: MessageEvent<Res>) => {
-    const slot = pending.get(ev.data.id);
+    const data = ev.data;
+    // Panic envelope: worker detected a non-cloneable message or uncaught
+    // error. The `panic` property is unique to that variant; its presence
+    // narrows TS to `{id: -1, ok: false, panic: true, error}`.
+    if (!data.ok && "panic" in data) {
+      worker.terminate();
+      terminated = true;
+      const err = new WorkerTerminatedError(
+        `OPFS worker panic: ${data.error.name ?? "Error"}: ${data.error.message}`,
+      );
+      for (const slot of pending.values()) {
+        if (slot.timer !== undefined) clearTimeout(slot.timer);
+        slot.reject(err);
+      }
+      pending.clear();
+      return;
+    }
+    const slot = pending.get(data.id);
     if (slot === undefined) return;
-    pending.delete(ev.data.id);
-    settleSlot(slot);
-    slot.resolve(ev.data);
+    pending.delete(data.id);
+    if (slot.timer !== undefined) clearTimeout(slot.timer);
+    slot.resolve(data);
   });
 
   worker.addEventListener("error", (ev: ErrorEvent) => {
-    // Mark the driver dead so subsequent send() calls reject synchronously
-    // instead of allocating an id and hanging on a worker that won't reply.
+    // Defensively terminate — the worker may still be live but misbehaving,
+    // and we don't want further messages or resource retention.
+    worker.terminate();
     terminated = true;
-    const err = new Error(`OPFS worker error: ${ev.message}`);
+    const err = new WorkerTerminatedError(`OPFS worker error: ${ev.message}`);
     for (const slot of pending.values()) {
-      settleSlot(slot);
+      if (slot.timer !== undefined) clearTimeout(slot.timer);
       slot.reject(err);
     }
     pending.clear();
   });
 
-  function send(req: ReqWithoutId, timeoutMs?: number): Promise<Res> {
+  function send(req: ReqWithoutId, timeoutMs?: number | null): Promise<Res> {
     if (terminated) {
       return Promise.reject(new WorkerTerminatedError());
     }
     const id = nextId++;
+    const effective = timeoutMs === undefined ? perCallTimeoutMs : timeoutMs;
     return new Promise<Res>((resolve, reject) => {
       const slot: PendingSlot = { resolve, reject };
       pending.set(id, slot);
       const full = { ...req, id } as Req;
-      worker.postMessage(full);
-      if (timeoutMs !== undefined) {
+      try {
+        worker.postMessage(full);
+      } catch (err) {
+        // postMessage can throw on non-cloneable payloads or if the worker
+        // was terminated between our `terminated` check and here. Clean up
+        // the slot to avoid leaking a pending entry that will never settle.
+        pending.delete(id);
+        if (slot.timer !== undefined) clearTimeout(slot.timer);
+        reject(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      if (effective !== null) {
         slot.timer = setTimeout(() => {
           if (pending.has(id)) {
             pending.delete(id);
-            reject(new OpfsDriverUnavailableError(`OPFS worker: ${req.kind} timed out`));
+            reject(
+              new OpfsDriverTimeoutError(
+                `OPFS worker: ${req.kind} timed out after ${String(effective)}ms`,
+              ),
+            );
           }
-        }, timeoutMs);
+        }, effective);
       }
     });
   }
 
-  async function call<T>(req: ReqWithoutId, timeoutMs?: number): Promise<T> {
+  async function call<T>(req: ReqWithoutId, timeoutMs?: number | null): Promise<T> {
     const res = await send(req, timeoutMs);
     if (!res.ok) {
       throw new OpfsDriverError(res.error.message, {
@@ -113,9 +148,10 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
     throw new OpfsDriverUnavailableError("OPFS worker failed to initialize", err);
   }
 
-  // FinalizationRegistry: when a statement wrapper is GC'd, send finalize.
   const finalizer = new FinalizationRegistry<StmtHandle>((handle) => {
-    void call<undefined>({ kind: "finalize", stmt: handle }).catch(() => undefined);
+    void call<undefined>({ kind: "finalize", stmt: handle }).catch((err: unknown) => {
+      globalThis.console.warn("opfs finalize failed", err);
+    });
   });
 
   return {
@@ -175,7 +211,9 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
           await call<undefined>({ kind: "txn-commit" });
           return result;
         } catch (err) {
-          await call<undefined>({ kind: "txn-rollback" }).catch(() => undefined);
+          await call<undefined>({ kind: "txn-rollback" }).catch((rollbackErr: unknown) => {
+            globalThis.console.warn("opfs txn rollback failed", rollbackErr);
+          });
           throw err;
         }
       } finally {
@@ -185,13 +223,17 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
 
     async close(): Promise<void> {
       try {
-        await call<undefined>({ kind: "close" });
+        await call<undefined>({ kind: "close" }).catch((err: unknown) => {
+          // If the worker already crashed, close's own message won't round-trip.
+          // Swallow the terminated signal so close() remains idempotent.
+          if (!(err instanceof WorkerTerminatedError)) throw err;
+        });
       } finally {
         terminated = true;
         worker.terminate();
         for (const slot of pending.values()) {
-          settleSlot(slot);
-          slot.reject(new WorkerTerminatedError());
+          if (slot.timer !== undefined) clearTimeout(slot.timer);
+          slot.reject(new WorkerTerminatedError("driver closed"));
         }
         pending.clear();
       }

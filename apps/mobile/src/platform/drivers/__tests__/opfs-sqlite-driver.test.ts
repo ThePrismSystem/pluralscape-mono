@@ -14,15 +14,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createOpfsSqliteDriver } from "../opfs-sqlite-driver.js";
 import {
   OpfsDriverError,
+  OpfsDriverTimeoutError,
   OpfsDriverUnavailableError,
   WorkerTerminatedError,
 } from "../opfs-worker-protocol.js";
 
-import type { Req, Res } from "../opfs-worker-protocol.js";
+import type { OpfsSqliteDriverOptions } from "../opfs-sqlite-driver.js";
+import type { Req, Res, Row, StmtHandle } from "../opfs-worker-protocol.js";
 import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
 type MessageListener = (ev: MessageEvent<Res>) => void;
 type ErrorListener = (ev: ErrorEvent) => void;
+/**
+ * Return value of a routed handler, which the FakeWorker wraps into an
+ * `ok: true` response. Matches the union of `OkResult` payloads that the
+ * real worker can return for any request kind.
+ */
+type RouteResult = undefined | Row[] | Row | StmtHandle;
+type RouteHandler = (req: Req) => RouteResult | Promise<RouteResult>;
 
 interface FakeWorker {
   listeners: { message: MessageListener[]; error: ErrorListener[] };
@@ -34,11 +43,36 @@ interface FakeWorker {
   terminate(): void;
   /** Dispatch a worker→main response to all message listeners. */
   respond(res: Res): void;
+  /** Alias for respond — matches Task 13/14 test terminology. */
+  fireMessage(res: Res): void;
   /** Dispatch a worker error event (also flips `terminated` in the driver). */
   triggerError(message: string): void;
+  /** Alias for triggerError — matches Task 13 test terminology. */
+  fireWorkerError(message: string): void;
+  /**
+   * Register a route handler keyed on request kind. When the driver posts a
+   * request of that kind, the handler is invoked and the result (resolved or
+   * rejected) is converted into a worker response and dispatched. Used by
+   * Task 14 tests to target rollback/finalize failure paths.
+   */
+  routeKind(kind: Req["kind"], handler: RouteHandler): void;
+}
+
+interface FakeFinalizationRegistry {
+  /** Invoke the registered callback with the last-registered handle. */
+  fireForLastWrapper(): void;
+}
+
+interface SpawnResult {
+  driver: SqliteDriver;
+  controller: FakeWorker;
+  terminateSpy: () => number;
+  registry: FakeFinalizationRegistry;
 }
 
 function makeFakeWorker(): FakeWorker {
+  const routes = new Map<Req["kind"], RouteHandler>();
+
   const fw: FakeWorker = {
     listeners: { message: [], error: [] },
     posted: [],
@@ -52,6 +86,28 @@ function makeFakeWorker(): FakeWorker {
     },
     postMessage(msg: Req): void {
       this.posted.push(msg);
+      const handler = routes.get(msg.kind);
+      if (handler !== undefined) {
+        // Resolve handler asynchronously so postMessage returns before the
+        // response is dispatched — mirrors the real worker's async step().
+        void Promise.resolve()
+          .then(() => handler(msg))
+          .then((result) => {
+            fw.respond({
+              id: msg.id,
+              ok: true,
+              result: result as Res extends { ok: true; result: infer R } ? R : never,
+            });
+          })
+          .catch((err: unknown) => {
+            const e = err instanceof Error ? err : new Error(String(err));
+            fw.respond({
+              id: msg.id,
+              ok: false,
+              error: { message: e.message, name: e.name },
+            });
+          });
+      }
     },
     terminate(): void {
       this.terminated = true;
@@ -62,9 +118,18 @@ function makeFakeWorker(): FakeWorker {
       const ev = { data: res } as MessageEvent<Res>;
       for (const l of this.listeners.message) l(ev);
     },
+    fireMessage(res: Res): void {
+      this.respond(res);
+    },
     triggerError(message: string): void {
       const ev = { message } as ErrorEvent;
       for (const l of this.listeners.error) l(ev);
+    },
+    fireWorkerError(message: string): void {
+      this.triggerError(message);
+    },
+    routeKind(kind: Req["kind"], handler: RouteHandler): void {
+      routes.set(kind, handler);
     },
   };
   return fw;
@@ -72,6 +137,8 @@ function makeFakeWorker(): FakeWorker {
 
 let fakeWorker: FakeWorker;
 let originalWorker: typeof globalThis.Worker | undefined;
+let originalFinalizationRegistry: typeof globalThis.FinalizationRegistry;
+let fakeRegistry: FakeFinalizationRegistry;
 
 beforeEach(() => {
   fakeWorker = makeFakeWorker();
@@ -87,6 +154,41 @@ beforeEach(() => {
     configurable: true,
     writable: true,
   });
+
+  // Install a fake FinalizationRegistry so tests can synchronously trigger
+  // the finalize path that real GC would exercise.
+  originalFinalizationRegistry = globalThis.FinalizationRegistry;
+  const state: {
+    callback?: (handle: StmtHandle) => void;
+    registered: StmtHandle[];
+  } = { registered: [] };
+  fakeRegistry = {
+    fireForLastWrapper(): void {
+      const last = state.registered[state.registered.length - 1];
+      if (last === undefined || state.callback === undefined) {
+        throw new Error("no registered finalizer or no callback");
+      }
+      state.callback(last);
+    },
+  };
+  class FakeFinalizationRegistryCtor {
+    // The driver only instantiates FinalizationRegistry<StmtHandle>, so the
+    // fake fixes T = StmtHandle — no generic, no force-casts.
+    constructor(cb: (value: StmtHandle) => void) {
+      state.callback = cb;
+    }
+    register(_target: object, value: StmtHandle): void {
+      state.registered.push(value);
+    }
+    unregister(): boolean {
+      return false;
+    }
+  }
+  Object.defineProperty(globalThis, "FinalizationRegistry", {
+    value: FakeFinalizationRegistryCtor,
+    configurable: true,
+    writable: true,
+  });
 });
 
 afterEach(() => {
@@ -99,6 +201,11 @@ afterEach(() => {
       writable: true,
     });
   }
+  Object.defineProperty(globalThis, "FinalizationRegistry", {
+    value: originalFinalizationRegistry,
+    configurable: true,
+    writable: true,
+  });
 });
 
 /**
@@ -131,6 +238,34 @@ async function initDriver(): Promise<SqliteDriver> {
   }
   fakeWorker.respond({ id: first.id, ok: true, result: undefined });
   return pending;
+}
+
+/**
+ * Init the driver and wrap the fake worker's `terminate` in a spy so tests
+ * can assert on termination. Returns a bundle matching the plan's helper
+ * shape (driver/controller/terminateSpy/registry).
+ */
+async function spawnDriverWithFakeWorker(opts: OpfsSqliteDriverOptions = {}): Promise<SpawnResult> {
+  let terminateCount = 0;
+  const origTerminate = fakeWorker.terminate.bind(fakeWorker);
+  fakeWorker.terminate = function (): void {
+    terminateCount++;
+    origTerminate();
+  };
+  const pending = createOpfsSqliteDriver(opts);
+  await Promise.resolve();
+  const first = fakeWorker.posted[0];
+  if (first?.kind !== "init") {
+    throw new Error(`expected init as first request, got ${String(first?.kind)}`);
+  }
+  fakeWorker.respond({ id: first.id, ok: true, result: undefined });
+  const driver = await pending;
+  return {
+    driver,
+    controller: fakeWorker,
+    terminateSpy: () => terminateCount,
+    registry: fakeRegistry,
+  };
 }
 
 describe("createOpfsSqliteDriver — proxy protocol", () => {
@@ -311,7 +446,7 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
   it("worker error event marks the driver terminated; subsequent exec() rejects synchronously", async () => {
     const driver = await initDriver();
 
-    // Trip the error handler. Per Task 14: terminated flag is set.
+    // Trip the error handler. Per Task 13: terminated flag is set + terminate called.
     fakeWorker.triggerError("worker crashed");
 
     // The next exec() must reject with WorkerTerminatedError without
@@ -427,5 +562,161 @@ describe("createOpfsSqliteDriver — proxy protocol", () => {
     await expect(txnPromise).rejects.toBe(userError);
     // Commit must NOT have been posted on the throw path.
     expect(fakeWorker.posted.find((r) => r.kind === "txn-commit")).toBeUndefined();
+  });
+});
+
+// ── New tests for Commit 2: driver robustness ─────────────────────────
+
+describe("opfs error tagged kinds", () => {
+  it("each error class has a stable `kind` discriminant", () => {
+    expect(new OpfsDriverError("x").kind).toBe("driver");
+    expect(new OpfsDriverUnavailableError("x").kind).toBe("unavailable");
+    expect(new OpfsDriverTimeoutError("x").kind).toBe("timeout");
+    expect(new WorkerTerminatedError().kind).toBe("terminated");
+  });
+});
+
+describe("opfs driver — per-call timeout", () => {
+  it("rejects with OpfsDriverTimeoutError when no response arrives within CALL_TIMEOUT_MS", async () => {
+    vi.useFakeTimers();
+    try {
+      const { driver, controller } = await spawnDriverWithFakeWorker();
+      const p = driver.exec("SELECT 1");
+      // Attach rejection handler immediately to avoid spurious unhandled-rejection.
+      const settled = expect(p).rejects.toBeInstanceOf(OpfsDriverTimeoutError);
+      // No response. Advance past the 30s default.
+      await vi.advanceTimersByTimeAsync(30_000 + 1);
+      await settled;
+      // Slot was cleared from the driver's internal pending map: a late
+      // worker response with the same id must be a no-op (no throw, no
+      // double-rejection). This proves the `pending.delete(id)` on timeout.
+      const execReq = controller.posted.find((r) => r.kind === "exec");
+      if (execReq === undefined) throw new Error("expected exec posted");
+      expect(() => {
+        controller.fireMessage({ id: execReq.id, ok: true, result: undefined });
+      }).not.toThrow();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("callTimeoutMs: null disables per-call timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const { driver } = await spawnDriverWithFakeWorker({ callTimeoutMs: null });
+      const p = driver.exec("SELECT 1");
+      let settled = false;
+      void p.then(
+        () => (settled = true),
+        () => (settled = true),
+      );
+      await vi.advanceTimersByTimeAsync(60_000);
+      // Promise still pending — no timer was armed.
+      await Promise.resolve();
+      expect(settled).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("custom callTimeoutMs is respected", async () => {
+    vi.useFakeTimers();
+    try {
+      const { driver } = await spawnDriverWithFakeWorker({ callTimeoutMs: 1_000 });
+      const p = driver.exec("SELECT 1");
+      const settled = expect(p).rejects.toBeInstanceOf(OpfsDriverTimeoutError);
+      await vi.advanceTimersByTimeAsync(1_000 + 1);
+      await settled;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("opfs driver — worker error handling", () => {
+  it("close() is idempotent after worker error", async () => {
+    const { driver, controller } = await spawnDriverWithFakeWorker();
+    controller.fireWorkerError("boom");
+    await expect(driver.close()).resolves.toBeUndefined();
+    await expect(driver.close()).resolves.toBeUndefined();
+  });
+
+  it("worker.onerror calls worker.terminate", async () => {
+    const { controller, terminateSpy } = await spawnDriverWithFakeWorker();
+    controller.fireWorkerError("crash");
+    expect(terminateSpy()).toBe(1);
+  });
+
+  it("worker.onerror rejects pending with WorkerTerminatedError", async () => {
+    const { driver, controller } = await spawnDriverWithFakeWorker();
+    const p = driver.exec("SELECT 1");
+    // Swallow rejection synchronously to avoid unhandled-rejection noise.
+    const assertion = expect(p).rejects.toBeInstanceOf(WorkerTerminatedError);
+    controller.fireWorkerError("crash");
+    await assertion;
+  });
+
+  it("panic envelope from worker terminates and rejects pending", async () => {
+    const { driver, controller, terminateSpy } = await spawnDriverWithFakeWorker();
+    const p = driver.exec("SELECT 1");
+    const assertion = expect(p).rejects.toBeInstanceOf(WorkerTerminatedError);
+    controller.fireMessage({
+      id: -1,
+      ok: false,
+      panic: true,
+      error: { name: "messageerror", message: "non-cloneable" },
+    });
+    await assertion;
+    expect(terminateSpy()).toBe(1);
+  });
+});
+
+describe("opfs driver — observability logs", () => {
+  it("logs rollback failure but original txn error propagates", async () => {
+    const warn = vi.spyOn(globalThis.console, "warn").mockImplementation(() => undefined);
+    try {
+      const { driver, controller } = await spawnDriverWithFakeWorker();
+
+      controller.routeKind("txn-begin", () => undefined);
+      controller.routeKind("txn-rollback", () => {
+        throw new OpfsDriverError("rollback exploded");
+      });
+
+      await expect(
+        driver.transaction(() => {
+          throw new Error("user code boom");
+        }),
+      ).rejects.toThrow("user code boom");
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("opfs txn rollback failed"),
+        expect.any(Error),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("logs finalize-on-GC failure via console.warn", async () => {
+    const warn = vi.spyOn(globalThis.console, "warn").mockImplementation(() => undefined);
+    try {
+      const { driver, controller, registry } = await spawnDriverWithFakeWorker();
+      // Route prepare so the statement wrapper's handlePromise resolves and
+      // the finalizer is registered. Then route finalize to fail.
+      controller.routeKind("prepare", () => 42);
+      driver.prepare("SELECT 1");
+      await flushMicrotasks();
+      controller.routeKind("finalize", () => {
+        throw new OpfsDriverError("finalize boom");
+      });
+      registry.fireForLastWrapper();
+      await flushMicrotasks();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("opfs finalize failed"),
+        expect.any(Error),
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

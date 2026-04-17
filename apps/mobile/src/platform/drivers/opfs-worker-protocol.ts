@@ -42,7 +42,10 @@ export type Res =
 
 // ── Error classes ─────────────────────────────────────────────────────
 
+export type OpfsErrorKind = "driver" | "unavailable" | "timeout" | "terminated";
+
 export class OpfsDriverError extends Error {
+  readonly kind: OpfsErrorKind = "driver";
   readonly code?: number;
   constructor(message: string, opts: { code?: number; name?: string; cause?: unknown } = {}) {
     super(message, opts.cause !== undefined ? { cause: opts.cause } : undefined);
@@ -51,16 +54,26 @@ export class OpfsDriverError extends Error {
   }
 }
 
-export class OpfsDriverUnavailableError extends Error {
+export class OpfsDriverUnavailableError extends OpfsDriverError {
+  readonly kind = "unavailable" as const;
   constructor(message: string, cause?: unknown) {
-    super(message, cause !== undefined ? { cause } : undefined);
+    super(message, cause !== undefined ? { cause } : {});
     this.name = "OpfsDriverUnavailableError";
   }
 }
 
-export class WorkerTerminatedError extends Error {
-  constructor() {
-    super("OPFS worker terminated while request was in flight");
+export class OpfsDriverTimeoutError extends OpfsDriverError {
+  readonly kind = "timeout" as const;
+  constructor(message: string) {
+    super(message);
+    this.name = "OpfsDriverTimeoutError";
+  }
+}
+
+export class WorkerTerminatedError extends OpfsDriverError {
+  readonly kind = "terminated" as const;
+  constructor(message = "OPFS worker terminated while request was in flight") {
+    super(message);
     this.name = "WorkerTerminatedError";
   }
 }
