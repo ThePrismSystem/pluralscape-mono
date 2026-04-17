@@ -32,9 +32,16 @@ interface CrowdinManifestResponse {
   readonly content: Readonly<Record<string, readonly string[]>>;
 }
 
+/**
+ * Narrow fetch signature — we only ever call it as
+ * `fetch(url, { signal })`. Using `typeof fetch` here forced every
+ * test fixture to also carry `preconnect`, which added no value.
+ */
+export type CrowdinOtaFetch = (url: string, init?: { signal?: AbortSignal }) => Promise<Response>;
+
 interface CrowdinOtaServiceOptions {
   readonly distributionHash: string;
-  readonly fetch?: typeof fetch;
+  readonly fetch?: CrowdinOtaFetch;
   readonly timeoutMs?: number;
   readonly baseUrl?: string;
 }
@@ -55,7 +62,7 @@ const DEFAULT_BASE_URL = "https://distributions.crowdin.net";
  */
 export class CrowdinOtaService {
   private readonly distributionHash: string;
-  private readonly fetchImpl: typeof fetch;
+  private readonly fetchImpl: CrowdinOtaFetch;
   private readonly timeoutMs: number;
   private readonly baseUrl: string;
 
@@ -91,7 +98,7 @@ export class CrowdinOtaService {
       if (!res.ok) {
         throw new CrowdinOtaUpstreamError(`Crowdin OTA ${String(res.status)}: ${url}`, res.status);
       }
-      return (await res.json());
+      return await res.json();
     } catch (error: unknown) {
       if (controller.signal.aborted) {
         throw new CrowdinOtaTimeoutError(this.timeoutMs);

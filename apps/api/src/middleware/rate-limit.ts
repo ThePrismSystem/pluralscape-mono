@@ -8,6 +8,7 @@ import { logger } from "../lib/logger.js";
 import { MemoryRateLimitStore } from "./stores/memory-store.js";
 
 import type { RateLimitStore } from "./rate-limit-store.js";
+import type { ValkeyClient } from "./stores/valkey-store.js";
 import type { ApiErrorResponse, RateLimitCategory } from "@pluralscape/types";
 import type { Context, MiddlewareHandler } from "hono";
 
@@ -145,6 +146,31 @@ export function setRateLimitStore(store: RateLimitStore): void {
 /** Reset the shared store (for testing). */
 export function _resetRateLimitStoreForTesting(): void {
   sharedStore = undefined;
+}
+
+/**
+ * Shared Valkey client slot.
+ *
+ * Populated at startup alongside the rate-limit store so that generic
+ * caches (e.g., i18n manifest/namespace caches) can reuse the same
+ * connection instead of opening a second ioredis client. Remains
+ * undefined when VALKEY_URL is unset or the connection handshake failed.
+ */
+let sharedValkeyClient: ValkeyClient | undefined;
+
+/** Register the shared Valkey client (call at startup). */
+export function setSharedValkeyClient(client: ValkeyClient): void {
+  sharedValkeyClient = client;
+}
+
+/** Retrieve the shared Valkey client, or undefined if none was registered. */
+export function getSharedValkeyClient(): ValkeyClient | undefined {
+  return sharedValkeyClient;
+}
+
+/** Reset the shared client slot (for testing). */
+export function _resetSharedValkeyClientForTesting(): void {
+  sharedValkeyClient = undefined;
 }
 
 /** Reset the XFF warning flag (for testing). */

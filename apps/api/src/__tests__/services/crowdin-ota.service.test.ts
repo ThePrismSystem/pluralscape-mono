@@ -40,7 +40,7 @@ describe("CrowdinOtaService.fetchManifest", () => {
 
   it("throws CrowdinOtaTimeoutError when fetch exceeds timeout", async () => {
     const mockFetch = vi.fn(
-      (_url: string | URL | Request, init?: RequestInit) =>
+      (_url: string, init?: { signal?: AbortSignal }) =>
         new Promise<Response>((_, reject) => {
           init?.signal?.addEventListener("abort", () => {
             reject(new Error("aborted"));

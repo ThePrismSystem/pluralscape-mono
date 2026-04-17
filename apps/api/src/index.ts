@@ -20,7 +20,11 @@ import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { getIdempotencyStore, setIdempotencyStore } from "./middleware/idempotency.js";
 import { BODY_SIZE_LIMIT_BYTES } from "./middleware/middleware.constants.js";
-import { createCategoryRateLimiter, setRateLimitStore } from "./middleware/rate-limit.js";
+import {
+  createCategoryRateLimiter,
+  setRateLimitStore,
+  setSharedValkeyClient,
+} from "./middleware/rate-limit.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createSecureHeaders } from "./middleware/secure-headers.js";
 import { ValkeyIdempotencyStore } from "./middleware/stores/valkey-idempotency-store.js";
@@ -192,9 +196,12 @@ async function start(): Promise<void> {
   // Resolve rate limit store: prefer Valkey if configured, fall back to in-memory
   const valkeyUrl = env.VALKEY_URL;
   if (valkeyUrl) {
-    const store = await createValkeyStore(valkeyUrl);
-    if (store) {
-      setRateLimitStore(store);
+    const bundle = await createValkeyStore(valkeyUrl);
+    if (bundle) {
+      setRateLimitStore(bundle.rateLimitStore);
+      // Expose the shared client so generic caches (e.g. i18n) can reuse
+      // the connection instead of opening a duplicate ioredis instance.
+      setSharedValkeyClient(bundle.client);
     }
 
     try {

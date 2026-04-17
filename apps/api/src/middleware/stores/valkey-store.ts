@@ -12,11 +12,21 @@ return {count, redis.call('PTTL', KEYS[1])}
 
 const KEY_PREFIX = "ps:rl:";
 
-/** Minimal interface for the Redis/Valkey client we need. */
+/**
+ * Minimal interface for the Redis/Valkey client we need.
+ *
+ * Covers both the rate-limiter's atomic-INCR Lua path and the generic
+ * K/V surface used by ValkeyCache. Declared here — not in a standalone
+ * module — because the same ioredis instance backs both, and consumers
+ * already import from this file.
+ */
 export interface ValkeyClient {
   eval(script: string, numkeys: number, ...args: string[]): Promise<unknown>;
   ping(): Promise<string>;
   disconnect(): Promise<void>;
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, mode: "PX", ttlMs: number): Promise<"OK" | null>;
+  del(key: string): Promise<number>;
 }
 
 /** Valkey/Redis-backed rate limit store using atomic Lua script. */
@@ -42,8 +52,22 @@ export class ValkeyRateLimitStore implements RateLimitStore {
   }
 }
 
-/** Create a ValkeyRateLimitStore from a VALKEY_URL, or return null on failure. */
-export async function createValkeyStore(url: string): Promise<ValkeyRateLimitStore | null> {
+/**
+ * Bundle returned by {@link createValkeyStore} so callers can wire up both
+ * the rate-limit store and the shared client slot (used by generic caches)
+ * from a single connect+ping attempt.
+ */
+export interface ValkeyBundle {
+  readonly rateLimitStore: ValkeyRateLimitStore;
+  readonly client: ValkeyClient;
+}
+
+/**
+ * Create a Valkey-backed rate-limit store + expose the underlying client,
+ * or return null on connection failure so the caller can fall back to
+ * in-memory stores without bringing down the server.
+ */
+export async function createValkeyStore(url: string): Promise<ValkeyBundle | null> {
   try {
     // Dynamic import to avoid hard dependency when Valkey is not used.
     // Variable indirection prevents TypeScript from resolving the module at compile time.
@@ -56,7 +80,7 @@ export async function createValkeyStore(url: string): Promise<ValkeyRateLimitSto
     // Verify connectivity before returning — ioredis connects lazily, so without
     // this ping a misconfigured URL would only surface on the first rate-limit check.
     await client.ping();
-    return new ValkeyRateLimitStore(client);
+    return { rateLimitStore: new ValkeyRateLimitStore(client), client };
   } catch (error: unknown) {
     logger.warn(
       "Failed to connect to Valkey for rate limiting, falling back to in-memory store",
