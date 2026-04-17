@@ -1,11 +1,11 @@
 ---
 # ps-jdl9
 title: "Import packages: security, dedup, and testing"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-16T06:58:17Z
-updated_at: 2026-04-16T06:58:17Z
+updated_at: 2026-04-17T05:46:29Z
 parent: ps-0enb
 ---
 
@@ -22,3 +22,13 @@ Low-severity import-sp, import-pk, and import-core findings from comprehensive a
 - [ ] [IMPORTSP-TC-L1] No test for corrupted prescan state
 - [ ] [IMPORTPK-TC-L1] No adversarial test for **proto**/constructor key injection
 - [ ] [IMPORTCORE-TC-L1] No test for empty dependencyOrder
+
+## Summary of Changes
+
+Completed via PR #456 (`fix(import): security bounds, type safety, dedup, and test coverage`).
+
+- Bounded API source response size to 50 MiB before JSON parsing (`SP_API_MAX_RESPONSE_BYTES` enforced in `api-source.ts:261`)
+- Removed widening privacy cast in PK file source
+- Throw on empty `dependencyOrder` instead of "unknown" fallback
+- Extracted shared mapper result processing helper to reduce duplication
+- Added tests for corrupted prescan, proto injection, empty dependencies

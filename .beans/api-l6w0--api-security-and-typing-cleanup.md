@@ -1,11 +1,11 @@
 ---
 # api-l6w0
 title: API security and typing cleanup
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-16T06:58:22Z
-updated_at: 2026-04-16T06:58:22Z
+updated_at: 2026-04-17T05:46:31Z
 parent: ps-0enb
 ---
 
@@ -19,3 +19,10 @@ Low-severity API security and typing findings from comprehensive audit.
 - [ ] [API-P-L1] webhook-dispatcher.ts:95 deliveryIds: string[] should be WebhookDeliveryId[]
 - [ ] [API-P-L2] hierarchy-service-types.ts — idPrefix, entityName, parentFieldName lack JSDoc
 - [ ] [API-P-L3] ws/handlers.ts:370-382 module-level mutable boolean for one-shot warning
+
+## Summary of Changes
+
+Completed via PR #457 (`fix(api): security, validation, and trust boundary hardening`).
+
+- Removed `systemId`/`webhookId` from webhook test delivery payload (info disclosure)
+- Cached `VERIFY_ENVELOPE_SIGNATURES` at startup; eliminated mutable one-shot flag in `ws/handlers.ts`

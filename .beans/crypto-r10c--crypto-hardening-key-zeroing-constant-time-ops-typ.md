@@ -1,11 +1,11 @@
 ---
 # crypto-r10c
 title: "Crypto hardening: key zeroing, constant-time ops, typing"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-16T06:58:01Z
-updated_at: 2026-04-16T06:58:01Z
+updated_at: 2026-04-17T05:46:24Z
 parent: ps-0enb
 ---
 
@@ -26,3 +26,14 @@ Low-severity crypto and rotation-worker findings from comprehensive audit.
 - [ ] [ROTWORKER-TC-L1] No test for partial success in processChunk
 - [ ] [ROTWORKER-TC-L2] No test for signal.aborted mid-loop path
 - [ ] [ROTWORKER-D-L1] All 3 retries exhaust before "failed" with no logging
+
+## Summary of Changes
+
+Completed via PR #454 (`fix(crypto): crypto hardening — constant-time ops, type guards, error base class`).
+
+- Constant-time comparison (`sodium.memcmp`) for bucket ID in grant parsing (`packages/crypto/src/key-grants.ts`)
+- `withMasterKeyFromReset` wrapper for automatic key zeroing after password reset
+- `asserts` return types on `assertBoxSecretKey`/`assertSignSecretKey`
+- Branded `keyVersion` parameter as `KeyVersion`; added `PWHASH_MEMLIMIT_SENSITIVE`
+- Added `CryptoError` base class; re-parented all 10 error classes (30 references across errors.ts/index.ts/tests)
+- Added rotation-worker tests for partial success and abort; log retry exhaustion
