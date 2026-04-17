@@ -50,6 +50,8 @@ interface HarnessApi {
   loadSnapshot(documentId: string): Promise<SnapshotOutput | null>;
   listDocuments(): Promise<readonly string[]>;
   deleteDocument(documentId: string): Promise<void>;
+  /** Diagnostic: last OPFS init error captured during fallback, if any. */
+  getLastOpfsInitError(): string | undefined;
 }
 
 /**
@@ -69,9 +71,14 @@ interface SqliteHarnessState {
 interface IndexedDbHarnessState {
   readonly kind: "indexeddb";
   readonly storageAdapter: SyncStorageAdapter;
+  /** Diagnostic: reason OPFS init failed and we fell back. */
+  lastOpfsInitError?: string;
 }
 
 type HarnessState = SqliteHarnessState | IndexedDbHarnessState;
+
+/** Must match `createIndexedDbStorageAdapter`'s default dbName. */
+const INDEXEDDB_STORAGE_DB_NAME = "pluralscape-sync-storage";
 
 let state: HarnessState | null = null;
 
@@ -101,13 +108,34 @@ async function init(): Promise<void> {
     const driver = await createOpfsSqliteDriver();
     const adapter = await SqliteStorageAdapter.create(driver);
     state = { kind: "sqlite", driver, adapter };
-  } catch {
+  } catch (err: unknown) {
     // OPFS unavailable (e.g. blocked Worker constructor in Playwright fallback
     // test) — switch to the IndexedDB-backed web fallback. SQL exec/run/all
     // are not available in this mode; snapshot/change storage is.
+    const lastOpfsInitError = err instanceof Error ? err.message : String(err);
+    globalThis.console.warn("[harness] OPFS init failed, falling back to IndexedDB:", err);
     const storageAdapter = createIndexedDbStorageAdapter();
-    state = { kind: "indexeddb", storageAdapter };
+    state = { kind: "indexeddb", storageAdapter, lastOpfsInitError };
   }
+}
+
+/** Delete the web-fallback IndexedDB so reset() actually drops data. */
+async function deleteIndexedDbStorage(): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(INDEXEDDB_STORAGE_DB_NAME);
+    req.onsuccess = () => {
+      resolve();
+    };
+    req.onerror = () => {
+      reject(req.error instanceof Error ? req.error : new Error("deleteDatabase failed"));
+    };
+    // "blocked" fires when another connection is still open. Resolving here is
+    // safe in the harness: we've already called close() on our own adapter and
+    // no other tab is using this DB in a test context.
+    req.onblocked = () => {
+      resolve();
+    };
+  });
 }
 
 function requireState(): HarnessState {
@@ -136,6 +164,11 @@ async function reset(): Promise<void> {
     await state.driver.exec("DROP TABLE IF EXISTS sync_local_changes");
     await state.driver.exec("DROP TABLE IF EXISTS sync_local_snapshots");
     await state.driver.close();
+  } else {
+    // IndexedDB branch must actually wipe storage so tests start clean — the
+    // previous no-op version leaked rows across tests sharing the harness.
+    await state.storageAdapter.close?.();
+    await deleteIndexedDbStorage();
   }
   state = null;
   await init();
@@ -183,6 +216,9 @@ const api: HarnessApi = {
   },
   async deleteDocument(documentId) {
     await storageAdapterOf(requireState()).deleteDocument(toDocumentId(documentId));
+  },
+  getLastOpfsInitError() {
+    return state !== null && state.kind === "indexeddb" ? state.lastOpfsInitError : undefined;
   },
 };
 

@@ -3,6 +3,30 @@ import { expect, test } from "@playwright/test";
 import "./harness-types.js";
 
 /**
+ * Shared page-context installer that replaces `window.Worker` with a
+ * constructor that throws. Extracted to avoid duplicating the same class
+ * across two tests that inject it via different mechanisms (`evaluate` runs
+ * AFTER page load, `addInitScript` runs BEFORE).
+ *
+ * Implemented as a real class with a property so TypeScript accepts the
+ * `Reflect.set(window, "Worker", X)` assignment against the Worker
+ * constructor signature — an object literal or bare arrow won't satisfy the
+ * constructor shape, and `as unknown as` is banned. The property also keeps
+ * the class non-empty, so no ESLint `no-extraneous-class` exception is
+ * needed.
+ */
+function installBadWorker(): void {
+  class BadWorker {
+    readonly spawnedAt: number;
+    constructor() {
+      this.spawnedAt = Date.now();
+      throw new Error("simulated worker spawn failure");
+    }
+  }
+  Reflect.set(window, "Worker", BadWorker);
+}
+
+/**
  * Worker-spawn failure path: when `new Worker(...)` throws (e.g. CSP blocks
  * worker creation, or the bundle URL is missing), the harness must fall back
  * to the IndexedDB storage adapter instead of hanging on a worker that will
@@ -17,22 +41,15 @@ test("init falls back to IndexedDB when worker construction fails", async ({ bro
   const page = await context.newPage();
 
   try {
+    // Install the bad Worker before any page script runs — the harness only
+    // touches Worker when `init()` is called, so injection timing (before
+    // vs after load) doesn't matter for correctness, but addInitScript
+    // keeps both tests on one codepath.
+    await page.addInitScript(installBadWorker);
     await page.goto("/");
     await page.waitForFunction(() => window.__harness !== undefined);
 
     const outcome = await page.evaluate(async () => {
-      // Replace Worker with a constructor that throws at instantiation.
-      // Reflect.set avoids `as any` while still mutating the read-only Window
-      // typing for `Worker`.
-      class BadWorker {
-        readonly spawnedAt: number;
-        constructor() {
-          this.spawnedAt = Date.now();
-          throw new Error("simulated worker spawn failure");
-        }
-      }
-      Reflect.set(window, "Worker", BadWorker);
-
       const h = window.__harness;
       if (h === undefined) return { initResolved: false as const };
 
@@ -66,18 +83,8 @@ test("IndexedDB fallback adapter actually serves saveSnapshot/loadSnapshot", asy
   const page = await context.newPage();
 
   try {
-    // Force OPFS off via injected script BEFORE harness loads. A class with a
-    // property sidesteps `no-extraneous-class` (see first test for rationale).
-    await page.addInitScript(() => {
-      class BadWorker {
-        readonly spawnedAt: number;
-        constructor() {
-          this.spawnedAt = Date.now();
-          throw new Error("no worker");
-        }
-      }
-      Reflect.set(window, "Worker", BadWorker);
-    });
+    // Force OPFS off via injected script BEFORE harness loads.
+    await page.addInitScript(installBadWorker);
     await page.goto("/");
     await page.waitForFunction(() => window.__harness !== undefined);
 

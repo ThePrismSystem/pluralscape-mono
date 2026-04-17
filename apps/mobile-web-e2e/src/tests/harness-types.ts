@@ -33,6 +33,8 @@ export interface HarnessApi {
   loadSnapshot(documentId: string): Promise<HarnessSnapshotOutput | null>;
   listDocuments(): Promise<readonly string[]>;
   deleteDocument(documentId: string): Promise<void>;
+  /** Diagnostic: last OPFS init error captured during fallback, if any. */
+  getLastOpfsInitError(): string | undefined;
 }
 
 export interface HarnessByteSizes {
