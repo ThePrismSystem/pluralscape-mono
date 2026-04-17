@@ -83,13 +83,6 @@ describe("pgTableToIndexDDL", () => {
     expect(expiresIdx).toContain("IS NOT NULL");
   });
 
-  it("renders expression indexes", () => {
-    const indexes = pgTableToIndexDDL(sessions);
-    const ttlIdx = indexes.find((s) => s.includes("sessions_ttl_duration_ms_idx"));
-    expect(ttlIdx).toContain("EXTRACT");
-    expect(ttlIdx).toContain("EPOCH");
-  });
-
   it("renders partial unique indexes", () => {
     const indexes = pgTableToIndexDDL(friendConnections);
     const uniqIdx = indexes.find((s) => s.includes("friend_connections_account_friend_uniq"));

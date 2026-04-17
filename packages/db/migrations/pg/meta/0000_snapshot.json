@@ -1,5 +1,5 @@
 {
-  "id": "dbb0f205-90ca-4d22-bb1f-c578c28e08ce",
+  "id": "be9f0212-cfee-416f-bef3-e4dc487cdc3e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -568,6 +568,7 @@
             }
           ],
           "isUnique": false,
+          "where": "\"api_keys\".\"revoked_at\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -6779,14 +6780,14 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": true
+          "default": false
         },
         "push_enabled": {
           "name": "push_enabled",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": true
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -7874,21 +7875,6 @@
           ],
           "isUnique": false,
           "where": "\"sessions\".\"expires_at\" IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "sessions_ttl_duration_ms_idx": {
-          "name": "sessions_ttl_duration_ms_idx",
-          "columns": [
-            {
-              "expression": "(CAST(EXTRACT(EPOCH FROM (\"expires_at\" - \"created_at\")) * 1000 AS bigint))",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}

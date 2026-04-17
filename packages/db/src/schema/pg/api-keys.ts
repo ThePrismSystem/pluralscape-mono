@@ -44,7 +44,9 @@ export const apiKeys = pgTable(
     index("api_keys_account_id_idx").on(t.accountId),
     index("api_keys_system_id_idx").on(t.systemId),
     uniqueIndex("api_keys_token_hash_idx").on(t.tokenHash),
-    index("api_keys_revoked_at_idx").on(t.revokedAt),
+    index("api_keys_revoked_at_idx")
+      .on(t.revokedAt)
+      .where(sql`${t.revokedAt} IS NOT NULL`),
     index("api_keys_key_type_idx").on(t.keyType),
     check("api_keys_key_type_check", enumCheck(t.keyType, API_KEY_KEY_TYPES)),
     check(

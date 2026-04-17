@@ -71,8 +71,8 @@ export const notificationConfigs = pgTable(
     eventType: varchar("event_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<NotificationEventType>(),
-    enabled: boolean("enabled").notNull().default(true),
-    pushEnabled: boolean("push_enabled").notNull().default(true),
+    enabled: boolean("enabled").notNull().default(false),
+    pushEnabled: boolean("push_enabled").notNull().default(false),
     ...timestamps(),
     ...versioned(),
     ...archivable(),

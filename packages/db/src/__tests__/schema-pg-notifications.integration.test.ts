@@ -209,7 +209,7 @@ describe("PG notifications schema", () => {
   });
 
   describe("notification_configs", () => {
-    it("round-trips with defaults", async () => {
+    it("round-trips with fail-closed defaults (enabled=false, push_enabled=false)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -228,8 +228,8 @@ describe("PG notifications schema", () => {
         .from(notificationConfigs)
         .where(eq(notificationConfigs.id, id));
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.enabled).toBe(true);
-      expect(rows[0]?.pushEnabled).toBe(true);
+      expect(rows[0]?.enabled).toBe(false);
+      expect(rows[0]?.pushEnabled).toBe(false);
     });
 
     it("enforces unique (system_id, event_type)", async () => {
