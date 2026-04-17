@@ -13,12 +13,13 @@ import {
   assertSignPublicKey,
   assertSignature,
 } from "@pluralscape/crypto";
+import { createIndexedDbStorageAdapter } from "@pluralscape/mobile/src/platform/drivers/indexeddb-storage-adapter.js";
 import { createOpfsSqliteDriver } from "@pluralscape/mobile/src/platform/drivers/opfs-sqlite-driver.js";
 import { SqliteStorageAdapter } from "@pluralscape/sync/adapters";
 import { brandId } from "@pluralscape/types";
 
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
-import type { SqliteDriver } from "@pluralscape/sync/adapters";
+import type { SqliteDriver, SyncStorageAdapter } from "@pluralscape/sync/adapters";
 import type { SyncDocumentId } from "@pluralscape/types";
 
 /** Plain transferable shape used to ship envelopes across `evaluate()`. */
@@ -51,10 +52,26 @@ interface HarnessApi {
   deleteDocument(documentId: string): Promise<void>;
 }
 
-interface HarnessState {
-  driver: SqliteDriver;
-  adapter: SqliteStorageAdapter;
+/**
+ * Harness can run in one of two modes:
+ *
+ * - `sqlite`: OPFS worker driver + full SqliteStorageAdapter (primary path).
+ * - `indexeddb`: IndexedDB-backed SyncStorageAdapter only. Used when OPFS init
+ *   fails — e.g. Playwright blocks worker construction to exercise the web
+ *   fallback. In this mode the `exec`/`run`/`all` SQL surface is not available.
+ */
+interface SqliteHarnessState {
+  readonly kind: "sqlite";
+  readonly driver: SqliteDriver;
+  readonly adapter: SqliteStorageAdapter;
 }
+
+interface IndexedDbHarnessState {
+  readonly kind: "indexeddb";
+  readonly storageAdapter: SyncStorageAdapter;
+}
+
+type HarnessState = SqliteHarnessState | IndexedDbHarnessState;
 
 let state: HarnessState | null = null;
 
@@ -80,9 +97,17 @@ function brandSnapshot(snapshot: SnapshotInput): {
 
 async function init(): Promise<void> {
   if (state !== null) return;
-  const driver = await createOpfsSqliteDriver();
-  const adapter = await SqliteStorageAdapter.create(driver);
-  state = { driver, adapter };
+  try {
+    const driver = await createOpfsSqliteDriver();
+    const adapter = await SqliteStorageAdapter.create(driver);
+    state = { kind: "sqlite", driver, adapter };
+  } catch {
+    // OPFS unavailable (e.g. blocked Worker constructor in Playwright fallback
+    // test) — switch to the IndexedDB-backed web fallback. SQL exec/run/all
+    // are not available in this mode; snapshot/change storage is.
+    const storageAdapter = createIndexedDbStorageAdapter();
+    state = { kind: "indexeddb", storageAdapter };
+  }
 }
 
 function requireState(): HarnessState {
@@ -92,12 +117,26 @@ function requireState(): HarnessState {
   return state;
 }
 
+function requireSqlite(): SqliteHarnessState {
+  const s = requireState();
+  if (s.kind !== "sqlite") {
+    throw new Error("harness: not supported in indexeddb mode");
+  }
+  return s;
+}
+
+function storageAdapterOf(s: HarnessState): SyncStorageAdapter {
+  return s.kind === "sqlite" ? s.adapter : s.storageAdapter;
+}
+
 async function reset(): Promise<void> {
   if (state === null) return;
-  // Drop all sync tables and reinitialize. Cheaper than wiping OPFS storage.
-  await state.driver.exec("DROP TABLE IF EXISTS sync_local_changes");
-  await state.driver.exec("DROP TABLE IF EXISTS sync_local_snapshots");
-  await state.driver.close();
+  if (state.kind === "sqlite") {
+    // Drop all sync tables and reinitialize. Cheaper than wiping OPFS storage.
+    await state.driver.exec("DROP TABLE IF EXISTS sync_local_changes");
+    await state.driver.exec("DROP TABLE IF EXISTS sync_local_snapshots");
+    await state.driver.close();
+  }
   state = null;
   await init();
 }
@@ -106,20 +145,20 @@ const api: HarnessApi = {
   init,
   reset,
   async exec(sql) {
-    await requireState().driver.exec(sql);
+    await requireSqlite().driver.exec(sql);
   },
   async run(sql, params) {
-    const stmt = requireState().driver.prepare(sql);
+    const stmt = requireSqlite().driver.prepare(sql);
     await stmt.run(...params);
   },
   async all(sql, params) {
-    const stmt = requireState().driver.prepare(sql);
+    const stmt = requireSqlite().driver.prepare(sql);
     return stmt.all(...params);
   },
   async saveSnapshot(documentId, snapshot) {
     const branded = brandSnapshot(snapshot);
     const docId = toDocumentId(documentId);
-    await requireState().adapter.saveSnapshot(docId, {
+    await storageAdapterOf(requireState()).saveSnapshot(docId, {
       documentId: docId,
       snapshotVersion: snapshot.snapshotVersion,
       ciphertext: new Uint8Array(snapshot.ciphertext),
@@ -127,7 +166,7 @@ const api: HarnessApi = {
     });
   },
   async loadSnapshot(documentId) {
-    const result = await requireState().adapter.loadSnapshot(toDocumentId(documentId));
+    const result = await storageAdapterOf(requireState()).loadSnapshot(toDocumentId(documentId));
     if (result === null) return null;
     return {
       documentId: result.documentId,
@@ -139,11 +178,11 @@ const api: HarnessApi = {
     };
   },
   async listDocuments() {
-    const docs = await requireState().adapter.listDocuments();
+    const docs = await storageAdapterOf(requireState()).listDocuments();
     return docs.map((d) => String(d));
   },
   async deleteDocument(documentId) {
-    await requireState().adapter.deleteDocument(toDocumentId(documentId));
+    await storageAdapterOf(requireState()).deleteDocument(toDocumentId(documentId));
   },
 };
 

@@ -4,13 +4,15 @@ import "./harness-types.js";
 
 /**
  * Worker-spawn failure path: when `new Worker(...)` throws (e.g. CSP blocks
- * worker creation, or the bundle URL is missing), the OPFS driver must surface
- * an error rather than hanging on a worker that will never reply.
+ * worker creation, or the bundle URL is missing), the harness must fall back
+ * to the IndexedDB storage adapter instead of hanging on a worker that will
+ * never reply. `init()` resolves; SQL-only surfaces throw a typed "not
+ * supported in indexeddb mode" error.
  *
  * Uses an isolated page so overriding `window.Worker` does not leak into other
  * tests sharing the worker scope.
  */
-test("init rejects when worker construction fails", async ({ browser }) => {
+test("init falls back to IndexedDB when worker construction fails", async ({ browser }) => {
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -18,11 +20,10 @@ test("init rejects when worker construction fails", async ({ browser }) => {
     await page.goto("/");
     await page.waitForFunction(() => window.__harness !== undefined);
 
-    const failure = await page.evaluate(async () => {
+    const outcome = await page.evaluate(async () => {
       // Replace Worker with a constructor that throws at instantiation.
       // Reflect.set avoids `as any` while still mutating the read-only Window
-      // typing for `Worker`. A class with a method plus a constructor sidesteps
-      // both `no-extraneous-class` and `no-unnecessary-condition`.
+      // typing for `Worker`.
       class BadWorker {
         readonly spawnedAt: number;
         constructor() {
@@ -33,22 +34,86 @@ test("init rejects when worker construction fails", async ({ browser }) => {
       Reflect.set(window, "Worker", BadWorker);
 
       const h = window.__harness;
-      if (h === undefined) return { caught: false as const };
+      if (h === undefined) return { initResolved: false as const };
 
+      await h.init();
+
+      // After fallback, SQL APIs should throw rather than silently no-op.
+      let sqlThrew = false;
+      let sqlMessage = "";
       try {
-        await h.init();
-        return { caught: false as const };
+        await h.exec("SELECT 1");
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        return { caught: true as const, message };
+        sqlThrew = true;
+        sqlMessage = err instanceof Error ? err.message : String(err);
       }
+      return { initResolved: true as const, sqlThrew, sqlMessage };
     });
 
-    expect(failure.caught).toBe(true);
-    if (!failure.caught) throw new Error("init did not reject");
-    expect(failure.message).toMatch(
-      /simulated worker spawn failure|OPFS worker failed to initialize/,
-    );
+    expect(outcome.initResolved).toBe(true);
+    if (!outcome.initResolved) throw new Error("init never resolved");
+    expect(outcome.sqlThrew).toBe(true);
+    expect(outcome.sqlMessage).toMatch(/not supported in indexeddb mode/);
+  } finally {
+    await context.close();
+  }
+});
+
+test("IndexedDB fallback adapter actually serves saveSnapshot/loadSnapshot", async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    // Force OPFS off via injected script BEFORE harness loads. A class with a
+    // property sidesteps `no-extraneous-class` (see first test for rationale).
+    await page.addInitScript(() => {
+      class BadWorker {
+        readonly spawnedAt: number;
+        constructor() {
+          this.spawnedAt = Date.now();
+          throw new Error("no worker");
+        }
+      }
+      Reflect.set(window, "Worker", BadWorker);
+    });
+    await page.goto("/");
+    await page.waitForFunction(() => window.__harness !== undefined);
+
+    const sizes = await page.evaluate(() => window.__harnessByteSizes);
+    if (sizes === undefined) throw new Error("byte sizes missing");
+
+    const roundTrip = await page.evaluate(async (s: typeof sizes) => {
+      const h = window.__harness;
+      if (h === undefined) throw new Error("harness missing");
+      await h.init();
+      const ciphertext = new Uint8Array(64).fill(7);
+      const nonce = new Uint8Array(s.aeadNonce).fill(1);
+      const signature = new Uint8Array(s.signature).fill(2);
+      const authorPublicKey = new Uint8Array(s.signPublicKey).fill(3);
+      await h.saveSnapshot("doc-fallback", {
+        snapshotVersion: 1,
+        ciphertext,
+        nonce,
+        signature,
+        authorPublicKey,
+      });
+      const loaded = await h.loadSnapshot("doc-fallback");
+      if (loaded === null) return { ok: false as const, reason: "loaded-null" };
+      return {
+        ok: true as const,
+        version: loaded.snapshotVersion,
+        ctLen: loaded.ciphertext.byteLength,
+        ctFirst: loaded.ciphertext[0],
+      };
+    }, sizes);
+
+    expect(roundTrip.ok).toBe(true);
+    if (!roundTrip.ok) throw new Error(`round-trip failed: ${roundTrip.reason}`);
+    expect(roundTrip.version).toBe(1);
+    expect(roundTrip.ctLen).toBe(64);
+    expect(roundTrip.ctFirst).toBe(7);
   } finally {
     await context.close();
   }
