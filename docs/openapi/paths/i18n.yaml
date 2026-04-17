@@ -1,0 +1,83 @@
+/i18n/manifest:
+  get:
+    operationId: getI18nManifest
+    tags: [I18n]
+    summary: Get translation manifest
+    description: |
+      Returns the list of available locales and namespaces. Public; rate-limited
+      (i18nFetch: 30 requests per minute per IP). Response is cached in Valkey
+      for 24 hours.
+    security: []
+    responses:
+      "200":
+        description: Manifest retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/i18n.yaml#/I18nManifest"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+      "502":
+        description: Translation source unavailable
+      "503":
+        description: Translation proxy not configured
+
+/i18n/{locale}/{namespace}:
+  get:
+    operationId: getI18nNamespace
+    tags: [I18n]
+    summary: Get a translation namespace
+    description: |
+      Returns a single locale's namespace as a flat key/value map. Supports
+      If-None-Match against the response ETag; returns 304 on match. Public;
+      rate-limited (i18nFetch: 30 requests per minute per IP). Response cached
+      in Valkey for 24 hours.
+    security: []
+    parameters:
+      - in: path
+        name: locale
+        required: true
+        schema:
+          type: string
+          example: es
+      - in: path
+        name: namespace
+        required: true
+        schema:
+          type: string
+          example: common
+      - in: header
+        name: If-None-Match
+        required: false
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Translations retrieved
+        headers:
+          ETag:
+            schema:
+              type: string
+          Cache-Control:
+            schema:
+              type: string
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/i18n.yaml#/I18nNamespace"
+      "304":
+        description: Not modified
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+      "502":
+        description: Translation source unavailable
+      "503":
+        description: Translation proxy not configured
