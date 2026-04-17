@@ -1,0 +1,116 @@
+import { Hono } from "hono";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
+import { createNamespaceRoute } from "../../../routes/i18n/namespace.js";
+import {
+  CrowdinOtaService,
+  CrowdinOtaUpstreamError,
+  type CrowdinOtaFetch,
+} from "../../../services/crowdin-ota.service.js";
+
+function createInMemoryCache(): ValkeyCache {
+  const store = new Map<string, string>();
+  const client: ValkeyCacheClient = {
+    get(key) {
+      return Promise.resolve(store.get(key) ?? null);
+    },
+    set(key, value) {
+      store.set(key, value);
+      return Promise.resolve("OK" as const);
+    },
+    del(key) {
+      return Promise.resolve(store.delete(key) ? 1 : 0);
+    },
+  };
+  return new ValkeyCache(client, "test");
+}
+
+function createOtaService(fetchImpl: CrowdinOtaFetch): CrowdinOtaService {
+  return new CrowdinOtaService({
+    distributionHash: "test-hash",
+    fetch: fetchImpl,
+  });
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+interface NamespaceEnvelope {
+  readonly data: {
+    readonly translations: Readonly<Record<string, string>>;
+  };
+}
+
+describe("GET /:locale/:namespace", () => {
+  let ota: CrowdinOtaService;
+  let cache: ValkeyCache;
+  let app: Hono;
+  let fetchMock: ReturnType<typeof vi.fn<CrowdinOtaFetch>>;
+
+  beforeEach(() => {
+    fetchMock = vi
+      .fn<CrowdinOtaFetch>()
+      .mockImplementation(() => Promise.resolve(jsonResponse({ greeting: "Hola" })));
+    ota = createOtaService(fetchMock);
+    cache = createInMemoryCache();
+    app = new Hono();
+    app.route("/", createNamespaceRoute({ ota, cache }));
+  });
+
+  it("returns translations with ETag on first call", async () => {
+    const res = await app.request("/es/common");
+    expect(res.status).toBe(200);
+    const etag = res.headers.get("etag");
+    expect(etag).toMatch(/^"[0-9a-f]{16}"$/);
+    const body = (await res.json()) as NamespaceEnvelope;
+    expect(body.data.translations).toEqual({ greeting: "Hola" });
+  });
+
+  it("returns Cache-Control header for revalidation", async () => {
+    const res = await app.request("/es/common");
+    expect(res.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+  });
+
+  it("caches upstream result so second call does not re-fetch", async () => {
+    await app.request("/es/common");
+    await app.request("/es/common");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 304 when If-None-Match matches", async () => {
+    const first = await app.request("/es/common");
+    const etag = first.headers.get("etag");
+    expect(etag).not.toBeNull();
+    const second = await app.request("/es/common", {
+      headers: { "if-none-match": etag ?? "" },
+    });
+    expect(second.status).toBe(304);
+    const text = await second.text();
+    expect(text).toBe("");
+  });
+
+  it("returns 200 with fresh body when If-None-Match mismatches", async () => {
+    await app.request("/es/common");
+    const res = await app.request("/es/common", {
+      headers: { "if-none-match": '"stale1234567890ab"' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as NamespaceEnvelope;
+    expect(body.data.translations).toEqual({ greeting: "Hola" });
+  });
+
+  it("returns 502 on upstream failure", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.reject(new CrowdinOtaUpstreamError("boom", 500)),
+    );
+    const res = await app.request("/es/common");
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
+  });
+});
