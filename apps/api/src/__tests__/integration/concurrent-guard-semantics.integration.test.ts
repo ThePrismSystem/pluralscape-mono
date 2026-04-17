@@ -1,31 +1,20 @@
 /**
- * Integration tests for the `SELECT ... FOR UPDATE` guard semantics that
- * protect critical service state-machine and quota decisions from races.
+ * Integration tests for the guard-logic invariants that prevent double-action
+ * outcomes under concurrent invocation:
  *
- * ── What these tests verify ─────────────────────────────────────────
+ *   • `castVote`           — one-vote-per-voter poll
+ *   • `generateFriendCode` — per-account friend-code quota
+ *   • `redeemFriendCode`   — one-redemption-per-code
+ *   • `updateImportJob`    — state-machine transitions (illegal transitions
+ *                            rejected, same-state updates permitted)
  *
- * For each service that takes a row-level lock, we launch two concurrent
- * invocations (via `Promise.allSettled`) that target the same row / same
- * guard and assert exactly-one-winner semantics:
- *
- *   • `castVote`           — same voter, one-vote-per-voter poll.
- *   • `generateFriendCode` — account at `quota - 1`, two concurrent create
- *                            attempts must not exceed the quota.
- *   • `redeemFriendCode`   — redeemable code, two concurrent redeem attempts.
- *   • `updateImportJob`    — `pending → importing` transition from two
- *                            concurrent callers on the same job row.
- *
- * ── PGlite limitation ──────────────────────────────────────────────
- *
- * PGlite is a single-process WASM PostgreSQL, so concurrent transactions
- * are serialized by the underlying event loop rather than by real lock
- * contention. That means these tests do NOT exercise the row-level lock
- * timing behavior you'd see against a multi-process Postgres. They DO
- * exercise the guard logic (quota, state-machine, already-redeemed,
- * one-vote-per-voter) end-to-end against the full schema — and those
- * are the invariants the FOR UPDATE lock is protecting. The lock itself
- * is a defense-in-depth layer that can only be validated meaningfully
- * against real Postgres (see E2E suite).
+ * These tests run against PGlite, which serializes transactions at the event
+ * loop. They do NOT prove `SELECT … FOR UPDATE` lock behavior — that is a
+ * PostgreSQL contract, and its actual contention semantics are exercised by
+ * the companion E2E suite at
+ * `apps/api-e2e/src/tests/concurrency/lock-contention.spec.ts`. This file
+ * regresses the *guard logic* end-to-end against the full schema under the
+ * same concurrent-call shape the E2E uses.
  */
 
 import { PGlite } from "@electric-sql/pglite";
@@ -92,7 +81,7 @@ function partitionResults<T>(results: readonly PromiseSettledResult<T>[]): {
   return { fulfilled, apiErrors, otherRejections };
 }
 
-describe("FOR UPDATE lock semantics", () => {
+describe("concurrent guard semantics", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
 

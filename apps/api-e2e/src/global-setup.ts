@@ -226,6 +226,11 @@ async function globalSetup(): Promise<void> {
   process.env["E2E_STARTED_CONTAINER"] = startedContainer ? "1" : "";
   process.env["E2E_STARTED_MINIO"] = startedMinio ? "1" : "";
 
+  // Expose the resolved database URL to tests so specs that need to probe
+  // Postgres directly (e.g. concurrency/lock-contention.spec.ts) can connect
+  // to the same DB the API under test uses.
+  process.env["E2E_DATABASE_URL"] = databaseUrl;
+
   const emailPepper = process.env["EMAIL_HASH_PEPPER"] ?? DEFAULT_TEST_PEPPER;
 
   // Push schema to the E2E database

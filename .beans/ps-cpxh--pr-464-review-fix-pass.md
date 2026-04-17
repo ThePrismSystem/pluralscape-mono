@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-04-17T15:44:15Z
-updated_at: 2026-04-17T17:01:30Z
+updated_at: 2026-04-17T17:25:42Z
 ---
 
 Follow-up to PR #464 multi-agent review. Close 8 important findings + 7 suggestions across 7 domains in 8 commits on chore/audit-cleanup-batch-1.
@@ -16,7 +16,7 @@ Follow-up to PR #464 multi-agent review. Close 8 important findings + 7 suggesti
 - [x] Domain 2: DB fail-closed flip
 - [x] Domain 3: Delete mapStructureEntityAssociationRow
 - [x] Domain 4: Change-email refactor + version-based idempotency
-- [ ] Domain 5: Rename integration test + add real-Postgres E2E
+- [x] Domain 5: Rename integration test + add real-Postgres E2E
 - [ ] Domain 6: Mobile diagnostic breadcrumbs
 - [ ] Domain 7: Test guard tightening + S3 negative tests
 - [ ] Final verify (/verify)
