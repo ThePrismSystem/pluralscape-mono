@@ -37,9 +37,11 @@ import {
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { brandId } from "@pluralscape/types";
+import { CastVoteBodySchema } from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 vi.mock("../../services/webhook-dispatcher.js", () => ({
   dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
@@ -194,8 +196,11 @@ describe("FOR UPDATE lock semantics", () => {
         noopAudit,
       );
 
-      const voter = { entityType: "member", entityId: memberId };
-      const voteParams = (): Record<string, unknown> => ({
+      const voter: z.input<typeof CastVoteBodySchema>["voter"] = {
+        entityType: "member",
+        entityId: memberId,
+      };
+      const voteParams = (): z.input<typeof CastVoteBodySchema> => ({
         encryptedData: testEncryptedDataBase64(),
         voter,
         // Distinct optionIds — irrelevant to the per-voter cap, but proves
