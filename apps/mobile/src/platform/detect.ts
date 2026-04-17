@@ -1,6 +1,7 @@
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { Platform } from "react-native";
 
+import { OPFS_INIT_FAILED_PREFIX, OPFS_UNAVAILABLE_REASON } from "./detect.constants.js";
 import { createIndexedDbOfflineQueueAdapter } from "./drivers/indexeddb-offline-queue-adapter.js";
 import { createIndexedDbStorageAdapter } from "./drivers/indexeddb-storage-adapter.js";
 
@@ -18,6 +19,26 @@ function canUseOpfsSqlite(): boolean {
     // navigator.storage may throw in restrictive contexts
     return false;
   }
+}
+
+function buildIndexedDbContext(
+  crypto: PlatformContext["crypto"],
+  fallbackReason: string,
+): PlatformContext {
+  const storageAdapter = createIndexedDbStorageAdapter();
+  const offlineQueueAdapter = createIndexedDbOfflineQueueAdapter();
+  return {
+    capabilities: {
+      hasSecureStorage: false,
+      hasBiometric: false,
+      hasBackgroundSync: false,
+      hasNativeMemzero: false,
+      storageBackend: "indexeddb",
+      storageFallbackReason: fallbackReason,
+    },
+    storage: { backend: "indexeddb", storageAdapter, offlineQueueAdapter },
+    crypto,
+  };
 }
 
 async function detectWeb(): Promise<PlatformContext> {
@@ -45,28 +66,11 @@ async function detectWeb(): Promise<PlatformContext> {
         "[pluralscape] OPFS storage unavailable, falling back to IndexedDB",
         { reason },
       );
-      return buildIndexedDbContext(crypto, `OPFS init failed: ${reason}`);
+      return buildIndexedDbContext(crypto, `${OPFS_INIT_FAILED_PREFIX}${reason}`);
     }
   }
 
-  return buildIndexedDbContext(crypto, "opfs-unavailable");
-}
-
-function buildIndexedDbContext(crypto: WasmSodiumAdapter, fallbackReason: string): PlatformContext {
-  const storageAdapter = createIndexedDbStorageAdapter();
-  const offlineQueueAdapter = createIndexedDbOfflineQueueAdapter();
-  return {
-    capabilities: {
-      hasSecureStorage: false,
-      hasBiometric: false,
-      hasBackgroundSync: false,
-      hasNativeMemzero: false,
-      storageBackend: "indexeddb",
-      storageFallbackReason: fallbackReason,
-    },
-    storage: { backend: "indexeddb", storageAdapter, offlineQueueAdapter },
-    crypto,
-  };
+  return buildIndexedDbContext(crypto, OPFS_UNAVAILABLE_REASON);
 }
 
 async function detectNative(): Promise<PlatformContext> {

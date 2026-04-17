@@ -195,11 +195,15 @@ describe("detectPlatform — observable fallback", () => {
       createIndexedDbOfflineQueueAdapter: () => ({ __type: "offline-queue-adapter" }),
     }));
     const { detectPlatform: detectFresh } = await import("../detect.js");
-    await detectFresh();
+    const ctx = await detectFresh();
+    expect(errSpy).toHaveBeenCalledTimes(1);
     expect(errSpy).toHaveBeenCalledWith(
       expect.stringContaining("OPFS storage unavailable"),
-      expect.objectContaining({ reason: expect.stringContaining("worker boot failed") as unknown }),
+      expect.objectContaining({
+        reason: expect.stringContaining("worker boot failed"),
+      }),
     );
+    expect(ctx.capabilities.storageFallbackReason).toMatch(/^OPFS init failed: worker boot failed/);
     errSpy.mockRestore();
   });
 });
