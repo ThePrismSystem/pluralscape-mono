@@ -58,7 +58,7 @@ pnpm crowdin:pretranslate --languages ar
 pnpm crowdin:setup
 ```
 
-Requires the five env vars (3 Crowdin + DeepL + one of 2 Google credential variants) in `.env.example` set; load via `source .env` if needed.
+Requires the four env vars (2 Crowdin + DeepL + one of 2 Google credential variants) in `.env.example` set; load via `source .env` if needed.
 
 **Dry-run the setup (shows intended changes without mutating):**
 
@@ -85,26 +85,31 @@ pnpm crowdin:setup --dry-run
 - The `crowdin-config` workflow auto-opens a GitHub issue on failure; check the `automation-failure` label.
 - Or run `pnpm crowdin:setup --dry-run` locally to see what Crowdin would change.
 
-## Volunteer translator onboarding (future)
-
-When volunteers are available:
-
-1. Add them as Crowdin project translators via the UI.
-2. Consider re-evaluating the "export all translations" policy — if approvers are available per language, switch to approved-only export.
-3. Document their preferred term translations in per-language DeepL glossaries (not yet implemented).
-
 ## Reverting a bad auto-merged translation
 
 If auto-merge lands a translation that's embarrassingly wrong, offensive, or
 breaks the app:
 
-1. Create a revert PR from the merge commit (`gh pr create --title "revert: bad translation in <locale>" --body "..."`).
-2. Add the `do-not-automerge` label to the _next_ Crowdin PR — a maintainer will review the replacement translation manually before merging.
-3. (Optional) Temporarily flip `CROWDIN_AUTOMERGE_DRY_RUN` to `true` in repo variables while investigating systemic issues.
+1. Find the merge commit on `main` with `git log --oneline --merges --author="github-actions" --grep="Crowdin"` — the most recent is usually the culprit.
+2. Revert it on a new branch and open a PR:
+
+   ```bash
+   git fetch origin main
+   git checkout -b revert/crowdin-<locale>-<date> origin/main
+   git revert -m 1 <merge-sha>
+   git push -u origin HEAD
+   gh pr create --title "revert: bad translation in <locale>" \
+     --body "Reverts $(git rev-parse <merge-sha>) — see runbook for context."
+   ```
+
+3. Add the `do-not-automerge` label to the _next_ Crowdin PR so a maintainer
+   reviews the replacement translation manually before merging.
+4. (Optional) Temporarily flip `CROWDIN_AUTOMERGE_DRY_RUN` to `true` in repo
+   variables while investigating systemic issues.
 
 The wrong translation remains visible in Crowdin until a translator corrects
-the source. Pre-empt by saving a better translation directly in the Crowdin UI
-— the next sync pulls it.
+the source. Pre-empt by saving a better translation directly in the Crowdin
+UI — the next sync pulls it.
 
 ## DeepL quota
 
@@ -119,7 +124,7 @@ check during the dry-run rollout window.
 
 ## Token and secret ownership
 
-- `CROWDIN_PERSONAL_TOKEN` — Pluralscape-owned Crowdin personal access token with full project rights. Rotate quarterly; see the `SECRETS.md` playbook.
+- `CROWDIN_PERSONAL_TOKEN` — Pluralscape-owned Crowdin personal access token with full project rights. Rotate quarterly via the Crowdin account settings UI and update the GitHub Actions secret.
 - `DEEPL_API_KEY` — Pluralscape-owned DeepL account. Rotate on compromise only.
 - `GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON` — service account JSON for `pluralscape-i18n@...` in the Pluralscape GCP project. Rotate via `gcloud iam service-accounts keys create` + updating the repo secret; deactivate the old key within 24 hours.
 
@@ -130,8 +135,9 @@ All three live in GitHub Actions repo secrets; local dev values are in
 
 Any translation entered in the Crowdin editor supersedes the MT in the next
 daily sync. Volunteers don't need to wait for approval from a Pluralscape
-maintainer — Crowdin's own approval system is bypassed during the MT-only
-phase. Steps:
+maintainer — all translations saved in the Crowdin editor are auto-approved
+immediately during the MT-only phase, matching how MT output is auto-approved.
+Steps:
 
 1. Log into Crowdin, open the Pluralscape project, pick a target language.
 2. Edit any string — the editor shows the current MT text, the source English, glossary terms, and any source-string context.

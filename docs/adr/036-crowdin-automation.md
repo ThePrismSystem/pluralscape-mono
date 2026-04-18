@@ -43,9 +43,9 @@ Pluralscape ships MT output as its shipping translation. All pre-translations
 (TM + DeepL + Google) are auto-approved in Crowdin (`autoApproveOption: "all"`).
 When a volunteer translator saves an edit in the Crowdin UI, their translation
 supersedes the MT in the next daily sync — no approval gate, no review buffer.
-This is a deliberate tradeoff: imperfect MT-quality text in 11 locales is better
-than missing translations, and the Crowdin UI makes human override a one-click
-improvement whenever volunteers arrive.
+This is a deliberate tradeoff: imperfect MT-quality text in 12 target locales is
+better than missing translations, and the Crowdin UI makes human override a
+one-click improvement whenever volunteers arrive.
 
 This posture will be revisited when we reach either: (1) at least one active
 volunteer translator per target language, (2) funded professional translation
@@ -76,7 +76,7 @@ downloads, and a separate ADR will document the gated workflow.
 
 - MT quality for plurality-specific terminology is imperfect even with glossary enforcement. Users may see jarring translations until corrected.
 - DeepL Free has a 500,000 character/month limit. Well within current scale but could become a bottleneck.
-- Google Translate requires a service account key, which needs careful secret management.
+- Google Translate requires a service account key, managed via the GitHub Actions secret `GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON`.
 
 ## Rollout plan
 
