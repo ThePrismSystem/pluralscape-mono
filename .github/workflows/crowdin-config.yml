@@ -1,0 +1,63 @@
+name: crowdin-config
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/crowdin-glossary.json
+      - scripts/crowdin-glossary.schema.json
+      - scripts/crowdin-setup-project.ts
+      - scripts/crowdin/**
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run in dry-run mode (no mutations)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  apply-config:
+    name: Apply Crowdin project config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply project configuration
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            pnpm crowdin:setup --dry-run --json
+          else
+            pnpm crowdin:setup --json | tee crowdin-setup-output.json
+          fi
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const title = `Crowdin config apply failed on ${context.sha.slice(0, 7)}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `The \`crowdin-config\` workflow failed. Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: ["i18n", "automation-failure"],
+            });
