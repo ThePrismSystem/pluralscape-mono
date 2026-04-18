@@ -9,19 +9,44 @@ export const TERM_STATUS_PREFERRED = "preferred" as const;
 export const TERM_STATUS_NOT_RECOMMENDED = "not recommended" as const;
 export type TermStatus = typeof TERM_STATUS_PREFERRED | typeof TERM_STATUS_NOT_RECOMMENDED;
 
+/**
+ * Maps our glossary's freeform part-of-speech strings (including community
+ * compounds like "noun/verb") to Crowdin's PartOfSpeech enum. Compound
+ * forms are mapped to their first listed component — Crowdin's glossary
+ * only accepts a single POS tag per term.
+ */
+const POS_MAPPING: Record<string, GlossariesModel.PartOfSpeech> = {
+  adj: "adjective",
+  noun: "noun",
+  verb: "verb",
+  "noun/verb": "noun",
+  "verb/noun": "verb",
+};
+
+function mapPos(pos: string | undefined): GlossariesModel.PartOfSpeech | undefined {
+  if (!pos) return undefined;
+  const mapped = POS_MAPPING[pos];
+  if (!mapped) {
+    throw new Error(
+      `Unknown glossary pos value "${pos}". Valid values: ${Object.keys(POS_MAPPING).join(", ")}.`,
+    );
+  }
+  return mapped;
+}
+
 interface RemoteTerm {
   id: number;
   text: string;
   description?: string;
   status?: string;
-  partOfSpeech?: string;
+  partOfSpeech?: GlossariesModel.PartOfSpeech;
 }
 
 export interface CrowdinTermPayload {
   text: string;
   description: string;
   isDoNotTranslate: boolean;
-  partOfSpeech?: string;
+  partOfSpeech?: GlossariesModel.PartOfSpeech;
 }
 
 export function termToCrowdinPayload(term: GlossaryTerm): CrowdinTermPayload {
@@ -34,7 +59,7 @@ export function termToCrowdinPayload(term: GlossaryTerm): CrowdinTermPayload {
     text: term.term,
     description,
     isDoNotTranslate: term.type !== "translatable",
-    partOfSpeech: term.pos,
+    partOfSpeech: mapPos(term.pos),
   };
 }
 
@@ -113,17 +138,12 @@ export async function applyGlossary(
   for (const term of diff.toAdd) {
     try {
       const payload = termToCrowdinPayload(term);
-      // The SDK types `partOfSpeech` as a narrow string-literal union
-      // (`GlossariesModel.PartOfSpeech`), but our glossary schema allows
-      // freeform community shorthand (e.g. "adj", "noun/verb"). The Crowdin
-      // API accepts these at runtime; we narrow only for the type-system.
-      const partOfSpeech = payload.partOfSpeech as GlossariesModel.PartOfSpeech | undefined;
       await glossariesApi.addTerm(glossaryId, {
         languageId: "en",
         text: payload.text,
         description: payload.description,
         status: payload.isDoNotTranslate ? TERM_STATUS_NOT_RECOMMENDED : TERM_STATUS_PREFERRED,
-        partOfSpeech,
+        partOfSpeech: payload.partOfSpeech,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

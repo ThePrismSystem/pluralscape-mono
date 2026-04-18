@@ -1,3 +1,4 @@
+import type { GlossariesModel } from "@crowdin/crowdin-api-client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CrowdinClient } from "../../crowdin/client.js";
@@ -70,7 +71,7 @@ describe("diffGlossaryTerms — full-payload comparison", () => {
     text: string;
     description?: string;
     status?: string;
-    partOfSpeech?: string;
+    partOfSpeech?: GlossariesModel.PartOfSpeech;
   }> {
     return [
       {
@@ -187,6 +188,37 @@ describe("termToCrowdinPayload", () => {
       loanword_ok: true,
     });
     expect(payload.description).toMatch(/\[LOANWORD OK\]/);
+  });
+});
+
+describe("termToCrowdinPayload — pos mapping", () => {
+  it("maps 'adj' to the SDK's adjective enum value", () => {
+    const payload = termToCrowdinPayload({
+      term: "x",
+      type: "translatable",
+      pos: "adj",
+      notes: "n",
+    });
+    expect(payload.partOfSpeech).toBe("adjective");
+  });
+
+  it("maps compound 'noun/verb' to 'noun' (first component)", () => {
+    const payload = termToCrowdinPayload({
+      term: "x",
+      type: "translatable",
+      pos: "noun/verb",
+      notes: "n",
+    });
+    expect(payload.partOfSpeech).toBe("noun");
+  });
+
+  it("returns undefined partOfSpeech when pos is absent", () => {
+    const payload = termToCrowdinPayload({
+      term: "x",
+      type: "translatable",
+      notes: "n",
+    });
+    expect(payload.partOfSpeech).toBeUndefined();
   });
 });
 
