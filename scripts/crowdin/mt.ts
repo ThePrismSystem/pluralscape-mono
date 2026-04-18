@@ -68,12 +68,10 @@ export async function applyMtEngines(
       enabledProjectIds: [projectId],
     }));
 
-  const googleCreds = env.googleCredentialsJson
-    ? (JSON.parse(env.googleCredentialsJson) as Record<string, unknown>)
-    : undefined;
-  if (!googleCreds) {
-    throw new Error("Google credentials JSON required (set GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON)");
-  }
+  // env.googleCredentialsJson is a shape-validated service-account JSON string
+  // (see ServiceAccountSchema in env.ts); we pass it along to Crowdin verbatim
+  // via the credentials field.
+  const googleCreds = JSON.parse(env.googleCredentialsJson) as Record<string, unknown>;
   const google =
     existingGoogle ??
     (await mtsApi.createMt({
