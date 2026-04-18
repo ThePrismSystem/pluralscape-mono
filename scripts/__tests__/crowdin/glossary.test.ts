@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { diffGlossaryTerms, termToCrowdinPayload } from "../../crowdin/glossary.js";
 import type { GlossaryTerm } from "../../crowdin/glossary-schema.js";
+import { applyGlossary, diffGlossaryTerms, termToCrowdinPayload } from "../../crowdin/glossary.js";
 
 const local: GlossaryTerm[] = [
   { term: "system", type: "translatable", notes: "A collective." },
@@ -17,7 +17,9 @@ describe("diffGlossaryTerms", () => {
   });
 
   it("updates terms whose description changed", () => {
-    const remote = [{ id: 1, text: "system", description: "Old description." }];
+    const remote = [
+      { id: 1, text: "system", description: "Old description.", status: "preferred" },
+    ];
     const diff = diffGlossaryTerms(local, remote);
     expect(diff.toUpdate).toHaveLength(1);
     expect(diff.toUpdate[0]?.id).toBe(1);
@@ -26,18 +28,28 @@ describe("diffGlossaryTerms", () => {
 
   it("removes terms no longer present locally", () => {
     const remote = [
-      { id: 1, text: "system", description: "A collective." },
-      { id: 2, text: "fronting", description: "Executive control." },
-      { id: 99, text: "obsolete", description: "Old term." },
+      { id: 1, text: "system", description: "A collective.", status: "preferred" },
+      {
+        id: 2,
+        text: "fronting",
+        description: "[HAZARD: critical] Executive control.",
+        status: "preferred",
+      },
+      { id: 99, text: "obsolete", description: "Old term.", status: "preferred" },
     ];
     const diff = diffGlossaryTerms(local, remote);
     expect(diff.toRemove).toEqual([99]);
   });
 
-  it("treats description match as unchanged", () => {
+  it("treats description + status match as unchanged", () => {
     const remote = [
-      { id: 1, text: "system", description: "A collective." },
-      { id: 2, text: "fronting", description: "[HAZARD: critical] Executive control." },
+      { id: 1, text: "system", description: "A collective.", status: "preferred" },
+      {
+        id: 2,
+        text: "fronting",
+        description: "[HAZARD: critical] Executive control.",
+        status: "preferred",
+      },
     ];
     const diff = diffGlossaryTerms(local, remote);
     expect(diff.toAdd).toEqual([]);
@@ -45,9 +57,81 @@ describe("diffGlossaryTerms", () => {
   });
 
   it("case-insensitive term matching", () => {
-    const remote = [{ id: 1, text: "SYSTEM", description: "A collective." }];
+    const remote = [{ id: 1, text: "SYSTEM", description: "A collective.", status: "preferred" }];
     const diff = diffGlossaryTerms(local, remote);
     expect(diff.toAdd.map((t) => t.term)).toEqual(["fronting"]);
+  });
+});
+
+describe("diffGlossaryTerms — full-payload comparison", () => {
+  function makeRemoteMatching(): Array<{
+    id: number;
+    text: string;
+    description?: string;
+    status?: string;
+    partOfSpeech?: string;
+  }> {
+    return [
+      {
+        id: 1,
+        text: "system",
+        description: "A COLLECTIVE OF HEADMATES...",
+        status: "preferred",
+        partOfSpeech: "noun",
+      },
+    ];
+  }
+
+  it("updates when only status differs (type flip from translatable to do-not-translate)", () => {
+    const localTerms: GlossaryTerm[] = [
+      {
+        term: "system",
+        type: "do-not-translate",
+        pos: "noun",
+        notes: "A COLLECTIVE OF HEADMATES...",
+      },
+    ];
+    const diff = diffGlossaryTerms(localTerms, makeRemoteMatching());
+    expect(diff.toUpdate).toHaveLength(1);
+  });
+
+  it("updates when only partOfSpeech differs", () => {
+    const localTerms: GlossaryTerm[] = [
+      {
+        term: "system",
+        type: "translatable",
+        pos: "adj",
+        notes: "A COLLECTIVE OF HEADMATES...",
+      },
+    ];
+    const diff = diffGlossaryTerms(localTerms, makeRemoteMatching());
+    expect(diff.toUpdate).toHaveLength(1);
+  });
+
+  it("does not update when description + status + partOfSpeech all match", () => {
+    const localTerms: GlossaryTerm[] = [
+      {
+        term: "system",
+        type: "translatable",
+        pos: "noun",
+        notes: "A COLLECTIVE OF HEADMATES...",
+      },
+    ];
+    const diff = diffGlossaryTerms(localTerms, makeRemoteMatching());
+    expect(diff.toUpdate).toHaveLength(0);
+  });
+
+  it("still updates when description differs (existing behavior preserved)", () => {
+    const localTerms: GlossaryTerm[] = [
+      {
+        term: "system",
+        type: "translatable",
+        pos: "noun",
+        notes: "Different description.",
+      },
+    ];
+    const diff = diffGlossaryTerms(localTerms, makeRemoteMatching());
+    expect(diff.toUpdate).toHaveLength(1);
   });
 });
 
@@ -102,5 +186,90 @@ describe("termToCrowdinPayload", () => {
       loanword_ok: true,
     });
     expect(payload.description).toMatch(/\[LOANWORD OK\]/);
+  });
+});
+
+describe("applyGlossary — error aggregation", () => {
+  it("continues past individual add failures and aggregates errors into AggregateError", async () => {
+    const addTerm = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("first fail"))
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("third fail"));
+    const client: Parameters<typeof applyGlossary>[0] = {
+      glossariesApi: {
+        listGlossaries: vi.fn().mockResolvedValue({
+          data: [{ data: { id: 1, name: "Pluralscape Terminology" } }],
+        }),
+        listTerms: vi.fn().mockResolvedValue({ data: [] }),
+        addGlossary: vi.fn(),
+        addTerm,
+        editTerm: vi.fn(),
+        deleteTerm: vi.fn(),
+      },
+      projectsGroupsApi: {
+        editProject: vi.fn().mockResolvedValue({}),
+      },
+    };
+
+    const localTerms: GlossaryTerm[] = [
+      { term: "a", type: "translatable", notes: "n" },
+      { term: "b", type: "translatable", notes: "n" },
+      { term: "c", type: "translatable", notes: "n" },
+    ];
+
+    await expect(applyGlossary(client, 100, localTerms)).rejects.toThrow(AggregateError);
+    expect(addTerm).toHaveBeenCalledTimes(3);
+  });
+
+  it("continues past individual update failures", async () => {
+    const editTerm = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("edit fail"))
+      .mockResolvedValueOnce({});
+    const client: Parameters<typeof applyGlossary>[0] = {
+      glossariesApi: {
+        listGlossaries: vi.fn().mockResolvedValue({
+          data: [{ data: { id: 1, name: "Pluralscape Terminology" } }],
+        }),
+        listTerms: vi.fn().mockResolvedValue({
+          data: [
+            {
+              data: {
+                id: 10,
+                text: "a",
+                description: "old",
+                status: "preferred",
+                partOfSpeech: "noun",
+              },
+            },
+            {
+              data: {
+                id: 11,
+                text: "b",
+                description: "old",
+                status: "preferred",
+                partOfSpeech: "noun",
+              },
+            },
+          ],
+        }),
+        addGlossary: vi.fn(),
+        addTerm: vi.fn(),
+        editTerm,
+        deleteTerm: vi.fn(),
+      },
+      projectsGroupsApi: {
+        editProject: vi.fn().mockResolvedValue({}),
+      },
+    };
+
+    const localTerms: GlossaryTerm[] = [
+      { term: "a", type: "translatable", pos: "noun", notes: "new description" },
+      { term: "b", type: "translatable", pos: "noun", notes: "new description" },
+    ];
+
+    await expect(applyGlossary(client, 100, localTerms)).rejects.toThrow(AggregateError);
+    expect(editTerm).toHaveBeenCalledTimes(2);
   });
 });

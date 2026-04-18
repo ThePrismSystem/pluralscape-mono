@@ -14,7 +14,7 @@ interface SetupSummary {
   languages: { added: string[]; removed: string[]; total: number };
   glossary: { added: number; updated: number; removed: number; total: number };
   mt: { deeplId: number; googleId: number };
-  qa: { categoriesEnabled: string[] };
+  qa: { categoriesEnabled: readonly string[] };
 }
 
 async function main(): Promise<void> {
