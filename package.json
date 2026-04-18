@@ -39,6 +39,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@crowdin/crowdin-api-client": "^1.55.1",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/prettier-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",

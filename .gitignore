@@ -89,6 +89,8 @@ scripts/.sp-test-*.json
 # PK import test artifacts (seeded account manifests, export fixtures, env)
 scripts/.pk-seed-*.json
 scripts/.pk-test-*.json
+# Google Cloud service account keys (belt-and-suspenders; keys should live outside repo)
+pluralscape-*.json
 .env.pk-test
 
 # OS
