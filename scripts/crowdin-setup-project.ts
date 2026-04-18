@@ -10,12 +10,44 @@ import { TARGET_LANGUAGE_IDS, applyTargetLanguages } from "./crowdin/languages.j
 import { applyMtEngines } from "./crowdin/mt.js";
 import { applyQaChecks } from "./crowdin/qa.js";
 
+const VALID_SCOPES = ["languages", "glossary", "mt", "qa"] as const;
+type Scope = (typeof VALID_SCOPES)[number];
+
 interface SetupSummary {
   languages: { added: string[]; removed: string[]; total: number };
   glossary: { added: number; updated: number; removed: number; total: number };
   mt: { deeplId: number; googleId: number };
   qa: { categoriesEnabled: readonly string[] };
 }
+
+function parseScopes(raw: string | undefined): readonly Scope[] {
+  if (!raw) return VALID_SCOPES;
+  const requested = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const invalid = requested.filter((s) => !(VALID_SCOPES as readonly string[]).includes(s));
+  if (invalid.length > 0) {
+    throw new Error(
+      `Unknown --only scope(s): ${invalid.join(", ")}. Valid: ${VALID_SCOPES.join(", ")}`,
+    );
+  }
+  return requested as readonly Scope[];
+}
+
+const SUMMARY_FORMATTERS: Record<Scope, (s: Partial<SetupSummary>) => string | null> = {
+  languages: (s) =>
+    s.languages
+      ? `  Languages: +${String(s.languages.added.length)} -${String(s.languages.removed.length)} total=${String(s.languages.total)}`
+      : null,
+  glossary: (s) =>
+    s.glossary
+      ? `  Glossary: +${String(s.glossary.added)} ~${String(s.glossary.updated)} -${String(s.glossary.removed)} total=${String(s.glossary.total)}`
+      : null,
+  mt: (s) =>
+    s.mt ? `  MT engines: DeepL=#${String(s.mt.deeplId)} Google=#${String(s.mt.googleId)}` : null,
+  qa: (s) => (s.qa ? `  QA categories: ${s.qa.categoriesEnabled.join(", ")}` : null),
+};
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
@@ -26,8 +58,8 @@ async function main(): Promise<void> {
     },
   });
 
+  const scopes = parseScopes(values.only);
   const env = loadCrowdinEnv(process.env);
-  const scopes = values.only ? values.only.split(",") : ["languages", "glossary", "mt", "qa"];
 
   if (values["dry-run"]) {
     console.log(
@@ -73,17 +105,10 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(summary, null, 2));
   } else {
     console.log("Crowdin project setup complete:");
-    if (summary.languages)
-      console.log(
-        `  Languages: +${summary.languages.added.length} -${summary.languages.removed.length} total=${summary.languages.total}`,
-      );
-    if (summary.glossary)
-      console.log(
-        `  Glossary: +${summary.glossary.added} ~${summary.glossary.updated} -${summary.glossary.removed} total=${summary.glossary.total}`,
-      );
-    if (summary.mt)
-      console.log(`  MT engines: DeepL=#${summary.mt.deeplId} Google=#${summary.mt.googleId}`);
-    if (summary.qa) console.log(`  QA categories: ${summary.qa.categoriesEnabled.join(", ")}`);
+    for (const scope of VALID_SCOPES) {
+      const line = SUMMARY_FORMATTERS[scope](summary);
+      if (line) console.log(line);
+    }
   }
 }
 

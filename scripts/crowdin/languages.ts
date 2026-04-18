@@ -20,7 +20,6 @@ export type TargetLanguageId = (typeof TARGET_LANGUAGE_IDS)[number];
 export interface LanguageDiff {
   toAdd: string[];
   toRemove: string[];
-  unchanged: string[];
 }
 
 export function diffLanguages(
@@ -31,8 +30,7 @@ export function diffLanguages(
   const currentSet = new Set(current);
   const toAdd = desired.filter((id) => !currentSet.has(id));
   const toRemove = current.filter((id) => !desiredSet.has(id));
-  const unchanged = desired.filter((id) => currentSet.has(id));
-  return { toAdd, toRemove, unchanged };
+  return { toAdd, toRemove };
 }
 
 /**

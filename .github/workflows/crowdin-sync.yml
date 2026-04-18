@@ -81,8 +81,8 @@ jobs:
           response=$(curl -sS \
             -H "Authorization: Bearer ${CROWDIN_PERSONAL_TOKEN}" \
             "https://api.crowdin.com/api/v2/projects/${CROWDIN_PROJECT_ID}/languages/progress?limit=500")
-          translated=$(echo "${response}" | jq '[.data[].data.translationProgress] | add // 0')
-          echo "Total translation progress across languages: ${translated}"
+          translated=$(echo "${response}" | jq '[.data[].data.translationProgress] | (add / length) | floor')
+          echo "Average translation progress across languages: ${translated}"
           if [[ "${translated}" -gt 0 ]]; then
             echo "has_translations=true" >> "${GITHUB_OUTPUT}"
           else

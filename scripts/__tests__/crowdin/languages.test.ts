@@ -26,7 +26,6 @@ describe("diffLanguages", () => {
     const diff = diffLanguages(["ar", "de"], ["ar", "de"]);
     expect(diff.toAdd).toEqual([]);
     expect(diff.toRemove).toEqual([]);
-    expect(diff.unchanged).toHaveLength(2);
   });
 
   it("reports additions", () => {
