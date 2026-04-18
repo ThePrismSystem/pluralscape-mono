@@ -4,9 +4,9 @@ import { formatDate, formatDateTime, formatTime } from "../format-date.js";
 
 import type { Locale } from "@pluralscape/types";
 
-const EN = "en" as Locale;
-const DE = "de" as Locale;
-const AR = "ar" as Locale;
+const EN: Locale = "en";
+const DE: Locale = "de";
+const AR: Locale = "ar";
 
 // Fixed date: 2026-03-15 14:30:00 UTC
 const DATE = new Date("2026-03-15T14:30:00Z");

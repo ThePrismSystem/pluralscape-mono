@@ -1,5 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import { SUPPORTED_LOCALES } from "../i18n.js";
+
 import type {
   DateFormatPreference,
   Locale,
@@ -11,18 +13,23 @@ import type {
 } from "../i18n.js";
 
 describe("Locale", () => {
-  it("is not assignable from plain string", () => {
-    // @ts-expect-error plain string not assignable to Locale
+  it("rejects unsupported tag literals", () => {
+    // @ts-expect-error "en-US" is not in SUPPORTED_LOCALES
     assertType<Locale>("en-US");
+  });
+
+  it("accepts every member of SUPPORTED_LOCALES", () => {
+    for (const tag of SUPPORTED_LOCALES) {
+      assertType<Locale>(tag);
+    }
   });
 
   it("extends string", () => {
     expectTypeOf<Locale>().toExtend<string>();
   });
 
-  it("is not assignable to TranslationKey", () => {
-    // @ts-expect-error different brand
-    assertType<TranslationKey>({} as Locale);
+  it("equals the SUPPORTED_LOCALES union", () => {
+    expectTypeOf<Locale>().toEqualTypeOf<(typeof SUPPORTED_LOCALES)[number]>();
   });
 });
 
@@ -34,11 +41,6 @@ describe("TranslationKey", () => {
 
   it("extends string", () => {
     expectTypeOf<TranslationKey>().toExtend<string>();
-  });
-
-  it("is not assignable to Locale", () => {
-    // @ts-expect-error different brand
-    assertType<Locale>({} as TranslationKey);
   });
 });
 

@@ -8,7 +8,7 @@ import { I18nProvider } from "../react/I18nProvider.js";
 import type { I18nConfig } from "../types.js";
 import type { Locale } from "@pluralscape/types";
 
-const EN = "en" as Locale;
+const EN: Locale = "en";
 
 function makeConfig(overrides?: Partial<I18nConfig>): I18nConfig {
   return {
@@ -52,7 +52,7 @@ describe("I18nProvider", () => {
 
   it("uses fallback locale for missing locale resources", () => {
     const config = makeConfig({
-      locale: "fr" as Locale,
+      locale: "fr",
       fallbackLocale: EN,
       resources: {
         en: { common: { greeting: "Hello fallback" } },

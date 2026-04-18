@@ -1,0 +1,65 @@
+import { describe, it, expect, expectTypeOf } from "vitest";
+
+import { I18N_CACHE_TTL_MS, I18N_OTA_TIMEOUT_MS, I18N_ETAG_LENGTH } from "../constants.js";
+import { asEtag } from "../index.js";
+
+import type {
+  Etag,
+  I18nManifest,
+  I18nLocaleManifest,
+  I18nNamespaceManifest,
+  I18nNamespace,
+  I18nNamespaceWithEtag,
+} from "../index.js";
+
+describe("i18n types", () => {
+  it("I18nManifest has distributionTimestamp and a non-empty locales tuple", () => {
+    expectTypeOf<I18nManifest>().toEqualTypeOf<{
+      readonly distributionTimestamp: number;
+      readonly locales: readonly [I18nLocaleManifest, ...I18nLocaleManifest[]];
+    }>();
+  });
+
+  it("I18nLocaleManifest groups namespaces by locale tag", () => {
+    expectTypeOf<I18nLocaleManifest>().toEqualTypeOf<{
+      readonly locale: string;
+      readonly namespaces: readonly I18nNamespaceManifest[];
+    }>();
+  });
+
+  it("I18nNamespaceManifest carries name and branded etag", () => {
+    expectTypeOf<I18nNamespaceManifest>().toEqualTypeOf<{
+      readonly name: string;
+      readonly etag: Etag;
+    }>();
+  });
+
+  it("I18nNamespace wraps translations record", () => {
+    expectTypeOf<I18nNamespace>().toEqualTypeOf<{
+      readonly translations: Readonly<Record<string, string>>;
+    }>();
+  });
+
+  it("I18nNamespaceWithEtag extends I18nNamespace with a branded etag", () => {
+    expectTypeOf<I18nNamespaceWithEtag>().toExtend<I18nNamespace>();
+    expectTypeOf<I18nNamespaceWithEtag["etag"]>().toEqualTypeOf<Etag>();
+  });
+
+  it("asEtag produces an Etag that still extends string", () => {
+    const tag = asEtag("abc123");
+    expectTypeOf(tag).toExtend<string>();
+    expect(typeof tag).toBe("string");
+  });
+
+  it("cache TTL is 24h", () => {
+    expect(I18N_CACHE_TTL_MS).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it("OTA fetch timeout is 5s", () => {
+    expect(I18N_OTA_TIMEOUT_MS).toBe(5_000);
+  });
+
+  it("ETag length is 16 hex chars", () => {
+    expect(I18N_ETAG_LENGTH).toBe(16);
+  });
+});

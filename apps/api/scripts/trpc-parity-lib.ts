@@ -628,6 +628,10 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "POST /v1/account/friend-codes/redeem": "friendCode.redeem",
   "POST /v1/account/friend-codes/:codeId/archive": "friendCode.archive",
 
+  // i18n (Crowdin OTA mirror)
+  "GET /v1/i18n/manifest": "i18n.getManifest",
+  "GET /v1/i18n/:locale/:namespace": "i18n.getNamespace",
+
   // System top-level
   "POST /v1/systems": "system.create",
   "GET /v1/systems": "system.list",

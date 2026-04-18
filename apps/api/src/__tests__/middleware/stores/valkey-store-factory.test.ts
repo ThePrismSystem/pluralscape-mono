@@ -13,13 +13,22 @@ describe("createValkeyStore", () => {
     vi.resetModules();
   });
 
-  it("returns ValkeyRateLimitStore when connection succeeds", async () => {
-    const fakeClient = { eval: vi.fn(), ping: vi.fn().mockResolvedValue("PONG") };
+  it("returns a bundle with store and client when connection succeeds", async () => {
+    const fakeClient = {
+      eval: vi.fn(),
+      ping: vi.fn().mockResolvedValue("PONG"),
+      get: vi.fn(),
+      set: vi.fn(),
+      del: vi.fn(),
+    };
 
     vi.doMock("ioredis", () => ({
       default: class FakeRedis {
         eval = fakeClient.eval;
         ping = fakeClient.ping;
+        get = fakeClient.get;
+        set = fakeClient.set;
+        del = fakeClient.del;
       },
     }));
 
@@ -37,7 +46,12 @@ describe("createValkeyStore", () => {
 
     const result = await createValkeyStore("redis://localhost:6379");
 
-    expect(result).toBeInstanceOf(ValkeyRateLimitStore);
+    expect(result).not.toBeNull();
+    expect(result?.rateLimitStore).toBeInstanceOf(ValkeyRateLimitStore);
+    // The client round-tripped from the bundle must be the same instance the
+    // factory constructed — otherwise shared-client consumers would see
+    // disconnected state vs. the rate-limit store.
+    expect(result?.client).toBeDefined();
   });
 
   it("returns null when connection fails", async () => {

@@ -4,9 +4,9 @@ import { formatCompactNumber, formatNumber, formatPercentage } from "../format-n
 
 import type { Locale } from "@pluralscape/types";
 
-const EN = "en" as Locale;
-const DE = "de" as Locale;
-const AR = "ar" as Locale;
+const EN: Locale = "en";
+const DE: Locale = "de";
+const AR: Locale = "ar";
 
 describe("formatNumber", () => {
   describe("locale preference", () => {

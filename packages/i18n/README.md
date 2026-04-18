@@ -18,9 +18,8 @@ system's `NomenclatureSettings` at display time. Consumers call `resolveTerm` an
 user-preferred word in the right grammatical form.
 
 RTL layout is supported via `getTextDirection` / `isRtl`, which map a locale tag to `"ltr"` or
-`"rtl"`. The four RTL locales currently defined are Arabic (`ar`), Hebrew (`he`), Farsi (`fa`),
-and Urdu (`ur`). Supported locales are declared in `SUPPORTED_LOCALES`; additional locales are
-added there alongside translation resource bundles.
+`"rtl"`. RTL locales are declared in `RTL_LOCALES`. Supported locales are declared in
+`SUPPORTED_LOCALES`; additional locales are added there alongside translation resource bundles.
 
 ## Key Exports
 
@@ -56,7 +55,7 @@ When settings are absent or the category is unset, the term's `defaultValue` is 
 | `resolveTermLower(canonical, settings)`  | Lowercase form                                                                            |
 | `resolveTermTitle(canonical, settings)`  | Title-case form                                                                           |
 | `resolveTermUpper(canonical, settings)`  | Uppercase form                                                                            |
-| `UseNomenclatureResult`                  | Interface type for the M8 React hook return value                                         |
+| `UseNomenclatureResult`                  | Return shape for the nomenclature React hook                                              |
 
 ### Text direction
 
@@ -176,3 +175,19 @@ Unit tests only (no I/O):
 ```sh
 pnpm vitest run --project i18n
 ```
+
+## Runtime loading (mobile)
+
+See [ADR 035](../../docs/adr/035-i18n-ota-delivery.md) for the OTA delivery
+architecture. The chained-backend resolution order — fresh OTA cache →
+OTA network → stale OTA cache → bundled baseline — is documented both
+there and in-code at `apps/mobile/src/i18n/chained-backend.ts`
+(`resolveNamespace`).
+
+## Adding a new locale
+
+1. Add the locale tag to `SUPPORTED_LOCALES` in `i18n.constants.ts`.
+2. Add the locale to `BUNDLED_LOCALES` in `apps/mobile/locales/index.ts`.
+3. Generate baseline translations via the local subagent (invoke `/translate-locale <locale>`).
+4. Update `crowdin.yml` language mapping if Crowdin's locale tag differs.
+5. Verify with `pnpm vitest run --project i18n` and `pnpm vitest run --project mobile`.

@@ -42,5 +42,8 @@ export const HTTP_TOO_MANY_REQUESTS = 429;
 /** HTTP 500 Internal Server Error — unexpected server failure. */
 export const HTTP_INTERNAL_SERVER_ERROR = 500;
 
+/** HTTP 502 Bad Gateway — upstream service returned an invalid response. */
+export const HTTP_BAD_GATEWAY = 502;
+
 /** HTTP 503 Service Unavailable — a downstream service is temporarily unavailable. */
 export const HTTP_SERVICE_UNAVAILABLE = 503;

@@ -7,6 +7,7 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
   const originalEmailEncryptionKey = process.env["EMAIL_ENCRYPTION_KEY"];
   const originalWebhookPayloadEncryptionKey = process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"];
   const originalApiKeyHmacKey = process.env["API_KEY_HMAC_KEY"];
+  const originalCrowdinDistributionHash = process.env["CROWDIN_DISTRIBUTION_HASH"];
 
   beforeEach(() => {
     vi.resetModules();
@@ -46,6 +47,11 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     } else {
       process.env["API_KEY_HMAC_KEY"] = originalApiKeyHmacKey;
     }
+    if (originalCrowdinDistributionHash === undefined) {
+      delete process.env["CROWDIN_DISTRIBUTION_HASH"];
+    } else {
+      process.env["CROWDIN_DISTRIBUTION_HASH"] = originalCrowdinDistributionHash;
+    }
   });
 
   it("forces DISABLE_RATE_LIMIT to false in production and logs a critical warning", async () => {
@@ -56,6 +62,7 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     process.env["EMAIL_ENCRYPTION_KEY"] = "b".repeat(64);
     process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] = "c".repeat(64);
     process.env["API_KEY_HMAC_KEY"] = "d".repeat(64);
+    process.env["CROWDIN_DISTRIBUTION_HASH"] = "test-hash";
 
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
@@ -92,6 +99,7 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     process.env["EMAIL_ENCRYPTION_KEY"] = "b".repeat(64);
     process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] = "c".repeat(64);
     process.env["API_KEY_HMAC_KEY"] = "d".repeat(64);
+    process.env["CROWDIN_DISTRIBUTION_HASH"] = "test-hash";
 
     const { env } = await import("../env.js");
 

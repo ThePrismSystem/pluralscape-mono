@@ -21,6 +21,26 @@ describe("i18n constants", () => {
     expect(SUPPORTED_LOCALES.length).toBeGreaterThan(0);
   });
 
+  it("contains all 13 target locales (en + 11 non-English + es-419 regional)", () => {
+    expect([...SUPPORTED_LOCALES].sort()).toEqual(
+      [
+        "ar",
+        "de",
+        "en",
+        "es",
+        "es-419",
+        "fr",
+        "it",
+        "ja",
+        "ko",
+        "nl",
+        "pt-BR",
+        "ru",
+        "zh-Hans",
+      ].sort(),
+    );
+  });
+
   it("has a non-empty namespaces list", () => {
     expect(NAMESPACES.length).toBeGreaterThan(0);
   });

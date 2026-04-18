@@ -82,6 +82,20 @@ export const env = createEnv({
       .enum(["0", "1"])
       .default("0")
       .transform((v) => v === "1"),
+    CROWDIN_DISTRIBUTION_HASH: z
+      .string()
+      .min(1)
+      .optional()
+      .refine((v) => !isProduction || v !== undefined, {
+        message: "CROWDIN_DISTRIBUTION_HASH is required in production",
+      }),
+    // Overridable base URL for the Crowdin OTA CDN. Defaults to the public
+    // distribution host; E2E tests point this at a local stub server so the
+    // suite doesn't depend on the live CDN being reachable.
+    CROWDIN_OTA_BASE_URL: z
+      .string()
+      .refine((v) => URL.canParse(v), { message: "Invalid URL" })
+      .default("https://distributions.crowdin.net"),
   },
   runtimeEnv: process.env,
 });

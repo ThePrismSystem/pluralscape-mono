@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { accountRoutes } from "./account/index.js";
 import { authRoutes } from "./auth/index.js";
+import { i18nRoutes } from "./i18n/index.js";
 import { notificationsRoutes } from "./notifications/index.js";
 import { systemRoutes } from "./systems/index.js";
 import { trpcRoute } from "./trpc.js";
@@ -10,6 +11,7 @@ export const v1Routes = new Hono();
 
 v1Routes.route("/account", accountRoutes);
 v1Routes.route("/auth", authRoutes);
+v1Routes.route("/i18n", i18nRoutes);
 v1Routes.route("/notifications", notificationsRoutes);
 v1Routes.route("/systems", systemRoutes);
 v1Routes.route("/trpc", trpcRoute);

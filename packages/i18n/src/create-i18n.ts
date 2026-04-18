@@ -4,7 +4,7 @@ import { createMissingKeyHandler } from "./missing-key-handler.js";
 
 import type { I18nConfig } from "./types.js";
 
-export type CreateI18nOptions = Pick<I18nConfig, "missingKeyMode" | "logger">;
+export type CreateI18nOptions = Pick<I18nConfig, "missingKeyMode" | "logger" | "backend">;
 
 /**
  * Creates a new i18next instance with Pluralscape defaults.
@@ -19,6 +19,10 @@ export function createI18nInstance(options?: CreateI18nOptions): i18n {
   const logger = options?.logger;
   if (mode === "warn" && !logger) {
     throw new Error("Logger is required when missingKeyMode is 'warn'");
+  }
+
+  if (options?.backend) {
+    instance.use(options.backend);
   }
 
   instance.use({

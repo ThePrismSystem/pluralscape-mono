@@ -11,10 +11,6 @@ import { detectLocale } from "../detect-locale.js";
 import type { Locale } from "@pluralscape/types";
 import type { Locale as ExpoLocale } from "expo-localization";
 
-function asLocales(...tags: string[]): Locale[] {
-  return tags as Locale[];
-}
-
 const mockGetLocales = vi.mocked(getLocales);
 
 function makeLocale(overrides: Partial<ExpoLocale> & { languageTag: string }): ExpoLocale {
@@ -40,21 +36,19 @@ function makeLocale(overrides: Partial<ExpoLocale> & { languageTag: string }): E
 }
 
 describe("detectLocale", () => {
-  it("returns the first supported locale that matches a full language tag", () => {
+  it("returns the full language tag when it exactly matches a supported locale", () => {
     mockGetLocales.mockReturnValue([
       makeLocale({
-        languageTag: "en-US",
-        languageCode: "en",
-        regionCode: "US",
-        measurementSystem: "us",
-        textDirection: "ltr",
-        temperatureUnit: "fahrenheit",
+        languageTag: "es-419",
+        languageCode: "es",
+        regionCode: "419",
       }),
     ]);
-    expect(detectLocale(asLocales("en-US", "fr"))).toBe("en-US");
+    const supported: readonly Locale[] = ["es-419", "fr"];
+    expect(detectLocale(supported)).toBe<Locale>("es-419");
   });
 
-  it("returns a match on languageCode when full tag is not supported", () => {
+  it("returns a match on languageCode when the full tag is not supported", () => {
     mockGetLocales.mockReturnValue([
       makeLocale({
         languageTag: "en-AU",
@@ -62,7 +56,8 @@ describe("detectLocale", () => {
         regionCode: "AU",
       }),
     ]);
-    expect(detectLocale(asLocales("en", "fr"))).toBe("en");
+    const supported: readonly Locale[] = ["en", "fr"];
+    expect(detectLocale(supported)).toBe<Locale>("en");
   });
 
   it("falls back to DEFAULT_LOCALE when no device locale is supported", () => {
@@ -73,18 +68,18 @@ describe("detectLocale", () => {
         regionCode: "JP",
       }),
     ]);
-    expect(detectLocale(asLocales("en", "fr"))).toBe(DEFAULT_LOCALE);
+    const supported: readonly Locale[] = ["en", "fr"];
+    expect(detectLocale(supported)).toBe(DEFAULT_LOCALE);
   });
 
-  it("falls back to DEFAULT_LOCALE when no device locales match any supported locale", () => {
-    // Uses a locale whose tag and languageCode are both absent from the supported list
+  it("falls back to DEFAULT_LOCALE when the device tag is not in SUPPORTED_LOCALES", () => {
     mockGetLocales.mockReturnValue([
-      makeLocale({ languageTag: "zh-CN", languageCode: "zh", regionCode: "CN" }),
+      makeLocale({ languageTag: "vi-VN", languageCode: "vi", regionCode: "VN" }),
     ]);
     expect(detectLocale(SUPPORTED_LOCALES)).toBe(DEFAULT_LOCALE);
   });
 
-  it("returns first matching locale when multiple device locales are listed", () => {
+  it("returns the first matching locale when multiple device locales are listed", () => {
     mockGetLocales.mockReturnValue([
       makeLocale({
         languageTag: "de-DE",
@@ -97,6 +92,7 @@ describe("detectLocale", () => {
         regionCode: "FR",
       }),
     ]);
-    expect(detectLocale(asLocales("fr", "de"))).toBe("de");
+    const supported: readonly Locale[] = ["fr", "de"];
+    expect(detectLocale(supported)).toBe<Locale>("de");
   });
 });

@@ -12,6 +12,12 @@ import path from "node:path";
 
 import { MS_PER_SECOND } from "@pluralscape/types";
 
+import {
+  E2E_CROWDIN_HASH,
+  startE2ECrowdinStub,
+  stopE2ECrowdinStub,
+} from "./crowdin-stub-lifecycle.js";
+
 const E2E_PORT = 10_099;
 const HEALTH_POLL_MS = 100;
 const HEALTH_TIMEOUT_MS = 15_000;
@@ -250,44 +256,66 @@ async function globalSetup(): Promise<void> {
     throw new Error(`Migration failed:\nstdout: ${stdout}\nstderr: ${stderr}`);
   }
 
-  // Spawn the API server
-  console.info("[e2e] Starting API server on port", E2E_PORT);
-  serverProcess = spawn("bun", ["run", "src/index.ts"], {
-    cwd: API_DIR,
-    env: {
-      ...process.env,
-      API_PORT: String(E2E_PORT),
-      DB_DIALECT: "pg",
-      DATABASE_URL: databaseUrl,
-      EMAIL_HASH_PEPPER: emailPepper,
-      WEBHOOK_PAYLOAD_ENCRYPTION_KEY:
-        process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] ?? DEFAULT_TEST_WEBHOOK_KEY,
-      NODE_ENV: "test",
-      DISABLE_RATE_LIMIT: "1",
-      BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
-      BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
-      BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
-      AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
-      AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
-    },
-    stdio: "pipe",
-  });
+  // Start the local Crowdin OTA stub BEFORE spawning the API so the API's
+  // memoized deps pick up the stub's baseUrl at first-request time. The stub
+  // binds to 127.0.0.1:0 and exposes its URL via `.baseUrl`.
+  console.info("[e2e] Starting local Crowdin OTA stub...");
+  const crowdinStub = await startE2ECrowdinStub();
+  console.info("[e2e] Crowdin stub listening on", crowdinStub.baseUrl);
 
-  serverProcess.stderr?.on("data", (data: Buffer) => {
-    const msg = data.toString();
-    // Surface errors and fatals, not routine pino JSON logs
-    if (msg.includes('"level":50') || msg.includes('"level":60')) {
-      process.stderr.write(`[api-e2e] ${msg}`);
+  // Playwright does NOT invoke globalTeardown when globalSetup throws, so any
+  // failure after this point would leak the stub's listening socket. Wrap the
+  // remaining setup (API spawn + health poll) and tear the stub down on error
+  // before re-throwing so the socket is released even on aborted setups.
+  try {
+    // Spawn the API server
+    console.info("[e2e] Starting API server on port", E2E_PORT);
+    serverProcess = spawn("bun", ["run", "src/index.ts"], {
+      cwd: API_DIR,
+      env: {
+        ...process.env,
+        API_PORT: String(E2E_PORT),
+        DB_DIALECT: "pg",
+        DATABASE_URL: databaseUrl,
+        EMAIL_HASH_PEPPER: emailPepper,
+        WEBHOOK_PAYLOAD_ENCRYPTION_KEY:
+          process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] ?? DEFAULT_TEST_WEBHOOK_KEY,
+        NODE_ENV: "test",
+        DISABLE_RATE_LIMIT: "1",
+        BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
+        BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
+        BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
+        AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
+        AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
+        // Wire the i18n proxy to the local stub so the suite exercises the
+        // full Crowdin contract against a controllable fixture.
+        CROWDIN_DISTRIBUTION_HASH: E2E_CROWDIN_HASH,
+        CROWDIN_OTA_BASE_URL: crowdinStub.baseUrl,
+      },
+      stdio: "pipe",
+    });
+
+    serverProcess.stderr?.on("data", (data: Buffer) => {
+      const msg = data.toString();
+      // Surface errors and fatals, not routine pino JSON logs
+      if (msg.includes('"level":50') || msg.includes('"level":60')) {
+        process.stderr.write(`[api-e2e] ${msg}`);
+      }
+    });
+
+    if (!serverProcess.pid) {
+      throw new Error("Failed to spawn API server — pid is undefined");
     }
-  });
+    process.env["E2E_SERVER_PID"] = String(serverProcess.pid);
 
-  if (!serverProcess.pid) {
-    throw new Error("Failed to spawn API server — pid is undefined");
+    await pollHealth(`http://localhost:${String(E2E_PORT)}`, HEALTH_TIMEOUT_MS);
+    console.info("[e2e] API server is healthy. Running tests...");
+  } catch (err: unknown) {
+    // Setup aborted — close the stub we already started so it doesn't leak.
+    // globalTeardown is not invoked by Playwright when globalSetup throws.
+    await stopE2ECrowdinStub();
+    throw err;
   }
-  process.env["E2E_SERVER_PID"] = String(serverProcess.pid);
-
-  await pollHealth(`http://localhost:${String(E2E_PORT)}`, HEALTH_TIMEOUT_MS);
-  console.info("[e2e] API server is healthy. Running tests...");
 }
 
 export default globalSetup;

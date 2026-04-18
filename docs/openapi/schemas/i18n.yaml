@@ -1,0 +1,42 @@
+I18nNamespaceManifest:
+  type: object
+  required: [name, etag]
+  properties:
+    name:
+      type: string
+      example: common
+    etag:
+      type: string
+
+I18nLocaleManifest:
+  type: object
+  required: [locale, namespaces]
+  properties:
+    locale:
+      type: string
+      example: es
+    namespaces:
+      type: array
+      items:
+        $ref: "./i18n.yaml#/I18nNamespaceManifest"
+
+I18nManifest:
+  type: object
+  required: [distributionTimestamp, locales]
+  properties:
+    distributionTimestamp:
+      type: integer
+      format: int64
+    locales:
+      type: array
+      items:
+        $ref: "./i18n.yaml#/I18nLocaleManifest"
+
+I18nNamespace:
+  type: object
+  required: [translations]
+  properties:
+    translations:
+      type: object
+      additionalProperties:
+        type: string

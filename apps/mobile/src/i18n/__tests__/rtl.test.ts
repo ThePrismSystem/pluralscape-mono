@@ -17,29 +17,34 @@ const mockForceRTL = vi.mocked(I18nManager.forceRTL);
 
 describe("applyLayoutDirection", () => {
   it("calls forceRTL(true) for Arabic", () => {
-    applyLayoutDirection("ar" as Locale);
+    const ar: Locale = "ar";
+    applyLayoutDirection(ar);
     expect(mockAllowRTL).toHaveBeenCalledWith(true);
     expect(mockForceRTL).toHaveBeenCalledWith(true);
   });
 
   it("calls forceRTL(false) for English", () => {
-    applyLayoutDirection("en" as Locale);
+    const en: Locale = "en";
+    applyLayoutDirection(en);
     expect(mockAllowRTL).toHaveBeenCalledWith(true);
     expect(mockForceRTL).toHaveBeenCalledWith(false);
   });
 
-  it("calls forceRTL(true) for Hebrew", () => {
-    applyLayoutDirection("he" as Locale);
-    expect(mockForceRTL).toHaveBeenCalledWith(true);
-  });
-
-  it("calls forceRTL(true) for Arabic with region tag", () => {
-    applyLayoutDirection("ar-SA" as Locale);
-    expect(mockForceRTL).toHaveBeenCalledWith(true);
-  });
-
   it("calls forceRTL(false) for French", () => {
-    applyLayoutDirection("fr" as Locale);
+    const fr: Locale = "fr";
+    applyLayoutDirection(fr);
+    expect(mockForceRTL).toHaveBeenCalledWith(false);
+  });
+
+  it("calls forceRTL(false) for Japanese", () => {
+    const ja: Locale = "ja";
+    applyLayoutDirection(ja);
+    expect(mockForceRTL).toHaveBeenCalledWith(false);
+  });
+
+  it("calls forceRTL(false) for simplified Chinese", () => {
+    const zh: Locale = "zh-Hans";
+    applyLayoutDirection(zh);
     expect(mockForceRTL).toHaveBeenCalledWith(false);
   });
 });

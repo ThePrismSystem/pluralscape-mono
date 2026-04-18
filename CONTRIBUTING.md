@@ -179,6 +179,29 @@ Coverage is checked in CI on every PR. PRs that drop coverage below thresholds w
 - Touch targets must meet minimum size (44x44pt)
 - Test with screen readers (VoiceOver on iOS, TalkBack on Android)
 
+## Translations
+
+Pluralscape uses [Crowdin](https://crowdin.com) for translation management. The project qualifies for the free open-source tier.
+
+### How translations flow
+
+1. English sources (`apps/mobile/locales/en/**/*.json`) are the source of truth.
+2. On merge to `main`, a GitHub Action uploads changed source strings to Crowdin.
+3. Translators work in Crowdin's web UI. Strings carry community-terminology notes (plural-community affirming language — never clinical).
+4. Every Monday at 06:00 UTC, a scheduled Action pulls approved translations and opens a PR titled `chore(i18n): weekly Crowdin translation sync`. Maintainers review the diff and merge.
+
+### Proposing a new locale
+
+1. Open a bean tracking the locale request.
+2. Add the locale tag to `SUPPORTED_LOCALES` in `packages/i18n/src/i18n.constants.ts` and `BUNDLED_LOCALES` in `apps/mobile/locales/index.ts`.
+3. Update `crowdin.yml` `languages_mapping` if the Crowdin locale tag differs from the Pluralscape tag.
+4. Add an empty baseline directory `apps/mobile/locales/<locale>/` with empty namespace JSON stubs; Crowdin will populate them.
+5. Verify with `pnpm vitest run --project i18n`.
+
+### Runtime delivery
+
+Apps ship with bundled baseline translations for offline-first behavior. Translation fixes reach users via an API-proxied OTA overlay (`GET /v1/i18n/:locale/:namespace`) without requiring an app release. See `docs/adr/035-i18n-ota-delivery.md` for details.
+
 ## Feature Requests and Voting
 
 Feature prioritization is community-driven. If you have a feature idea:
