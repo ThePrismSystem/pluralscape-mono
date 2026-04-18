@@ -1,6 +1,6 @@
 # Pluralscape Crowdin project config.
 # Sources are the English JSON in apps/mobile/locales/en/.
-# Translations land in apps/mobile/locales/%locale%/ via the weekly CI sync.
+# Translations land in apps/mobile/locales/%locale%/ via the daily CI sync.
 
 project_id_env: CROWDIN_PROJECT_ID
 api_token_env: CROWDIN_PERSONAL_TOKEN
@@ -15,17 +15,9 @@ files:
     translate_attributes: false
 
 languages_mapping:
-  two_letters_code:
-    es: es
-    fr: fr
-    de: de
-    it: it
-    ru: ru
-    nl: nl
-    ja: ja
-    ko: ko
-    ar: ar
+  # Only codes where the Crowdin target ID differs from our repo dir need an
+  # entry. Everything else (ar, de, es-419, fr, it, ja, ko, nl, pt-BR, ru)
+  # uses Crowdin's code as-is.
   locale:
-    es-MX: es-419
-    pt-BR: pt-BR
+    es-ES: es
     zh-CN: zh-Hans
