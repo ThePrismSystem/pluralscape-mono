@@ -1,0 +1,9 @@
+{
+  "appName": "Brand name. Do not translate — keep as 'Pluralscape' in all locales.",
+  "ok": "Generic affirmation button label. Use the target language's conventional short affirmation ('OK', 'Aceptar', etc.). Title case where locale convention applies.",
+  "cancel": "Button label for aborting the current action (modal, form, operation). Not 'delete' — the user is stepping back, not destroying anything.",
+  "save": "Button label for persisting changes. Used on forms and editors. Should feel like a commit action, not a back-up action.",
+  "back": "Navigation label for returning to the previous screen. Very short; ideally 1–2 words.",
+  "loading": "Indeterminate progress label shown while data is fetched. Can include an ellipsis or animated dots in the translation if the language convention allows.",
+  "error": "Generic error label shown when a specific message isn't available. Neutral tone, not alarming."
+}

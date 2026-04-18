@@ -42,6 +42,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Upload source string context
+        run: pnpm crowdin:upload-context
+        env:
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON }}
+
       - name: Pre-translate new strings (TM + MT)
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
