@@ -2,8 +2,39 @@ import { parseArgs } from "node:util";
 
 import { createCrowdinClient } from "./crowdin/client.js";
 import { loadCrowdinEnv } from "./crowdin/env.js";
+import { TARGET_LANGUAGE_IDS, type TargetLanguageId } from "./crowdin/languages.js";
 import { findMtEngineIds } from "./crowdin/mt.js";
-import { runPretranslate } from "./crowdin/pretranslate.js";
+import { planPretranslatePasses, runPretranslate } from "./crowdin/pretranslate.js";
+
+function parseLanguageList(raw: string): TargetLanguageId[] {
+  const requested = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const invalid = requested.filter((s) => !(TARGET_LANGUAGE_IDS as readonly string[]).includes(s));
+  if (invalid.length > 0) {
+    throw new Error(
+      `Unknown --languages value(s): ${invalid.join(", ")}. Valid: ${TARGET_LANGUAGE_IDS.join(", ")}`,
+    );
+  }
+  return requested as TargetLanguageId[];
+}
+
+function parseFileList(raw: string): number[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((s) => {
+      const n = Number(s);
+      if (!Number.isInteger(n) || n <= 0) {
+        throw new Error(
+          `Invalid --files value: "${s}". Expected comma-separated positive integers.`,
+        );
+      }
+      return n;
+    });
+}
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
@@ -15,12 +46,31 @@ async function main(): Promise<void> {
   });
 
   const env = loadCrowdinEnv(process.env);
-  const languageIds = values.languages
-    ? values.languages.split(",").map((s) => s.trim())
-    : undefined;
+  const languageIds = values.languages ? parseLanguageList(values.languages) : undefined;
+  const fileIds = values.files ? parseFileList(values.files) : undefined;
 
   if (values["dry-run"]) {
-    console.log(JSON.stringify({ dryRun: true, languageIds, files: values.files }, null, 2));
+    const plan = planPretranslatePasses({
+      deeplMtId: 0,
+      googleMtId: 0,
+      fileIds,
+      languageIds,
+    });
+    console.log(
+      JSON.stringify(
+        {
+          dryRun: true,
+          fileIds: fileIds ?? "all",
+          passes: plan.map((p) => ({
+            label: p.label,
+            method: p.method,
+            languageIds: p.languageIds,
+          })),
+        },
+        null,
+        2,
+      ),
+    );
     return;
   }
 
@@ -36,11 +86,13 @@ async function main(): Promise<void> {
   const result = await runPretranslate(client, env.projectId, {
     deeplMtId: ids.deeplId,
     googleMtId: ids.googleId,
+    fileIds,
     languageIds,
   });
 
   console.log(JSON.stringify(result, null, 2));
-  if (result.status === "failed") process.exit(1);
+  const anyFailed = result.passes.some((p) => p.status === "failed");
+  if (anyFailed) process.exit(1);
 }
 
 main().catch((err: unknown) => {

@@ -1,91 +1,157 @@
-import type { CrowdinClient } from "./client.js";
+import { TARGET_LANGUAGE_IDS, type TargetLanguageId } from "./languages.js";
+import { ENGINE_ROUTING, type Engine } from "./mt.js";
+import {
+  POLL_INTERVAL_MS,
+  POLL_TIMEOUT_MS,
+  type PretranslateMethod,
+} from "./pretranslate.constants.js";
 
 export interface PretranslateOptions {
   deeplMtId: number;
   googleMtId: number;
   fileIds?: number[];
-  languageIds?: string[];
+  languageIds?: readonly TargetLanguageId[];
+}
+
+export interface PretranslatePass {
+  method: PretranslateMethod;
+  engineId?: number;
+  languageIds: readonly string[];
+  label: string;
 }
 
 /**
- * Internal request shape returned by `buildPretranslateRequest`.
+ * Minimal structural surface of the Crowdin SDK required by this module.
  *
- * `applyUntranslatedStringsOnly` maps to the SDK's `translateUntranslatedOnly`
- * field when the request is submitted; we use a more explicit name here for
- * clarity in tests and callsite documentation.
+ * Declared locally (instead of importing `CrowdinClient`) so unit tests can
+ * substitute a mock without an unsafe `as unknown as CrowdinClient` cast. The
+ * real `CrowdinClient` instance is structurally assignable to this type.
  */
-export interface PretranslateRequest {
-  method: "tm";
-  autoApproveOption: "none";
-  duplicateTranslations: boolean;
-  applyUntranslatedStringsOnly: boolean;
-  translateWithPerfectMatchOnly: boolean;
-  fileIds: number[];
-  languageIds: string[];
-  labelIds: number[];
-}
-
-/**
- * Builds the pre-translate request payload as a pure function so it can be
- * unit-tested without a live Crowdin client.
- *
- * Strategy: TM first (reuses existing memory), then MT for anything left
- * untranslated. `autoApproveOption: "none"` keeps all pre-translations as
- * suggestions — human translators review before approval.
- */
-export function buildPretranslateRequest(opts: PretranslateOptions): PretranslateRequest {
-  return {
-    method: "tm",
-    autoApproveOption: "none",
-    duplicateTranslations: false,
-    applyUntranslatedStringsOnly: true,
-    translateWithPerfectMatchOnly: false,
-    fileIds: opts.fileIds ?? [],
-    languageIds: opts.languageIds ?? [],
-    labelIds: [],
+export interface PretranslateClient {
+  readonly translationsApi: {
+    applyPreTranslation: (
+      projectId: number,
+      request: {
+        method: PretranslateMethod;
+        engineId?: number;
+        autoApproveOption: "all";
+        duplicateTranslations: boolean;
+        translateUntranslatedOnly: boolean;
+        translateWithPerfectMatchOnly: boolean;
+        fileIds: number[];
+        languageIds: string[];
+        labelIds: number[];
+      },
+    ) => Promise<{ data: { identifier: string } }>;
+    preTranslationStatus: (
+      projectId: number,
+      identifier: string,
+    ) => Promise<{ data: { status: string } }>;
   };
 }
 
-const POLL_INTERVAL_MS = 5_000;
-const POLL_TIMEOUT_MS = 10 * 60 * 1_000;
-
-export async function runPretranslate(
-  client: CrowdinClient,
-  projectId: number,
-  opts: PretranslateOptions,
-): Promise<{ identifier: string; status: string; progress: number }> {
-  const request = buildPretranslateRequest(opts);
-
-  // Map our internal field name to the SDK's field name.
-  const job = await client.translationsApi.applyPreTranslation(projectId, {
-    method: request.method,
-    autoApproveOption: request.autoApproveOption,
-    duplicateTranslations: request.duplicateTranslations,
-    translateUntranslatedOnly: request.applyUntranslatedStringsOnly,
-    translateWithPerfectMatchOnly: request.translateWithPerfectMatchOnly,
-    fileIds: request.fileIds,
-    languageIds: request.languageIds,
-    labelIds: request.labelIds,
-  });
-
-  const identifier = job.data.identifier;
-  const start = Date.now();
-
-  while (Date.now() - start < POLL_TIMEOUT_MS) {
-    const statusResponse = await client.translationsApi.preTranslationStatus(projectId, identifier);
-    const jobStatus = statusResponse.data.status;
-    if (jobStatus === "finished" || jobStatus === "failed") {
-      return {
-        identifier,
-        status: jobStatus,
-        // `progress` is not on PreTranslationStatusAttributes; fall back to 100
-        // when complete. The SDK's BuildStatus wrapper exposes it for builds but
-        // not for pre-translation status responses.
-        progress: 100,
-      };
-    }
-    await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+export function planPretranslatePasses(opts: PretranslateOptions): PretranslatePass[] {
+  const targets = opts.languageIds ?? TARGET_LANGUAGE_IDS;
+  const byEngine: Record<Engine, string[]> = { deepl: [], google: [] };
+  for (const id of targets) {
+    byEngine[ENGINE_ROUTING[id as TargetLanguageId]].push(id);
   }
 
-  throw new Error(`pretranslate job ${identifier} timed out after ${POLL_TIMEOUT_MS}ms`);
+  const passes: PretranslatePass[] = [{ method: "tm", languageIds: targets, label: "TM" }];
+  if (byEngine.deepl.length > 0) {
+    passes.push({
+      method: "mt",
+      engineId: opts.deeplMtId,
+      languageIds: byEngine.deepl,
+      label: "MT (DeepL)",
+    });
+  }
+  if (byEngine.google.length > 0) {
+    passes.push({
+      method: "mt",
+      engineId: opts.googleMtId,
+      languageIds: byEngine.google,
+      label: "MT (Google)",
+    });
+  }
+  return passes;
+}
+
+export interface PretranslateResult {
+  passes: Array<{ label: string; identifier: string; status: "finished" | "failed" }>;
+}
+
+async function runSinglePass(
+  client: PretranslateClient,
+  projectId: number,
+  pass: PretranslatePass,
+  opts: PretranslateOptions,
+  signal: AbortSignal,
+): Promise<{ identifier: string; status: "finished" | "failed" }> {
+  const job = await client.translationsApi.applyPreTranslation(projectId, {
+    method: pass.method,
+    engineId: pass.engineId,
+    autoApproveOption: "all",
+    duplicateTranslations: false,
+    translateUntranslatedOnly: true,
+    translateWithPerfectMatchOnly: false,
+    fileIds: opts.fileIds ?? [],
+    languageIds: [...pass.languageIds],
+    labelIds: [],
+  });
+  return pollJob(client, projectId, job.data.identifier, pass.label, signal);
+}
+
+async function pollJob(
+  client: PretranslateClient,
+  projectId: number,
+  id: string,
+  label: string,
+  signal: AbortSignal,
+): Promise<{ identifier: string; status: "finished" | "failed" }> {
+  const start = Date.now();
+  while (Date.now() - start < POLL_TIMEOUT_MS) {
+    if (signal.aborted) throw new Error(`${label} pretranslate ${id} aborted`);
+    const r = await client.translationsApi.preTranslationStatus(projectId, id);
+    if (r.data.status === "finished" || r.data.status === "failed") {
+      return { identifier: id, status: r.data.status };
+    }
+    await delay(POLL_INTERVAL_MS, signal);
+  }
+  throw new Error(`${label} pretranslate ${id} timed out after ${POLL_TIMEOUT_MS}ms`);
+}
+
+function delay(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new Error("aborted"));
+      return;
+    }
+    const t = setTimeout(resolve, ms);
+    t.unref();
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(t);
+        reject(new Error("aborted"));
+      },
+      { once: true },
+    );
+  });
+}
+
+export async function runPretranslate(
+  client: PretranslateClient,
+  projectId: number,
+  opts: PretranslateOptions,
+  signal: AbortSignal = new AbortController().signal,
+): Promise<PretranslateResult> {
+  const passes = planPretranslatePasses(opts);
+  const results: PretranslateResult["passes"] = [];
+  for (const pass of passes) {
+    const r = await runSinglePass(client, projectId, pass, opts, signal);
+    results.push({ label: pass.label, ...r });
+    if (r.status === "failed") break;
+  }
+  return { passes: results };
 }

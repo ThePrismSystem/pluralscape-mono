@@ -1,18 +1,22 @@
 import type { CrowdinClient } from "./client.js";
 import type { CrowdinEnv } from "./env.js";
+import { type TargetLanguageId } from "./languages.js";
 
 export type Engine = "deepl" | "google";
 
 /**
- * Maps repo-side locale directories to MT engines.
+ * Maps Crowdin target-language IDs to MT engines.
  * DeepL Free supports most European languages + Japanese/Korean/Chinese but not Arabic.
  * Google Translate covers the remaining locales including Arabic and dialectal Spanish.
+ *
+ * Typed as `Record<TargetLanguageId, Engine>` so the compiler enforces
+ * exhaustive coverage whenever `TARGET_LANGUAGE_IDS` changes.
  */
-export const ENGINE_ROUTING: Record<string, Engine> = {
+export const ENGINE_ROUTING: Record<TargetLanguageId, Engine> = {
   ar: "google",
   "es-419": "google",
   de: "deepl",
-  es: "deepl",
+  "es-ES": "deepl",
   fr: "deepl",
   it: "deepl",
   ja: "deepl",
@@ -20,23 +24,8 @@ export const ENGINE_ROUTING: Record<string, Engine> = {
   nl: "deepl",
   "pt-BR": "deepl",
   ru: "deepl",
-  "zh-Hans": "deepl",
+  "zh-CN": "deepl",
 };
-
-export function validateRoutingCoverage(locales: readonly string[]): string[] {
-  return locales.filter((loc) => !(loc in ENGINE_ROUTING));
-}
-
-export function buildLanguageRoutingMap(): Record<Engine, string[]> {
-  const map: Record<Engine, string[]> = { deepl: [], google: [] };
-  for (const [locale, engine] of Object.entries(ENGINE_ROUTING)) {
-    map[engine].push(locale);
-  }
-  for (const key of Object.keys(map) as Engine[]) {
-    map[key].sort();
-  }
-  return map;
-}
 
 /** Display names for Crowdin MT engine entries created by this script. */
 const DEEPL_MT_NAME = "Pluralscape DeepL";

@@ -1,29 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  ENGINE_ROUTING,
-  buildLanguageRoutingMap,
-  validateRoutingCoverage,
-} from "../../crowdin/mt.js";
+import { TARGET_LANGUAGE_IDS, type TargetLanguageId } from "../../crowdin/languages.js";
+import { ENGINE_ROUTING } from "../../crowdin/mt.js";
 
 describe("ENGINE_ROUTING", () => {
-  it("routes ar and es-419 to Google", () => {
-    expect(ENGINE_ROUTING.ar).toBe("google");
-    expect(ENGINE_ROUTING["es-419"]).toBe("google");
+  it("covers every TargetLanguageId exactly once", () => {
+    const routedKeys = Object.keys(ENGINE_ROUTING).sort();
+    const targetKeys = [...TARGET_LANGUAGE_IDS].sort();
+    expect(routedKeys).toEqual(targetKeys);
   });
 
-  it("routes all DeepL-supported targets to deepl", () => {
-    expect(ENGINE_ROUTING.de).toBe("deepl");
-    expect(ENGINE_ROUTING["pt-BR"]).toBe("deepl");
-    expect(ENGINE_ROUTING["zh-Hans"]).toBe("deepl");
-  });
-
-  it("covers all 12 repo-side locales", () => {
-    expect(Object.keys(ENGINE_ROUTING).sort()).toEqual([
-      "ar",
+  it("routes es-419 and ar to Google, everything else to DeepL", () => {
+    const byEngine: Record<"deepl" | "google", TargetLanguageId[]> = { deepl: [], google: [] };
+    for (const [id, engine] of Object.entries(ENGINE_ROUTING) as Array<
+      [TargetLanguageId, "deepl" | "google"]
+    >) {
+      byEngine[engine].push(id);
+    }
+    expect(byEngine.google.sort()).toEqual(["ar", "es-419"]);
+    expect(byEngine.deepl.sort()).toEqual([
       "de",
-      "es",
-      "es-419",
+      "es-ES",
       "fr",
       "it",
       "ja",
@@ -31,28 +28,7 @@ describe("ENGINE_ROUTING", () => {
       "nl",
       "pt-BR",
       "ru",
-      "zh-Hans",
+      "zh-CN",
     ]);
-  });
-});
-
-describe("validateRoutingCoverage", () => {
-  it("returns no missing when all are covered", () => {
-    const missing = validateRoutingCoverage(Object.keys(ENGINE_ROUTING));
-    expect(missing).toEqual([]);
-  });
-
-  it("reports target language not in routing", () => {
-    const missing = validateRoutingCoverage(["en", "ar", "unknown"]);
-    expect(missing).toEqual(["en", "unknown"]);
-  });
-});
-
-describe("buildLanguageRoutingMap", () => {
-  it("groups languages by engine", () => {
-    const map = buildLanguageRoutingMap();
-    expect(map.deepl).toContain("de");
-    expect(map.google).toEqual(["ar", "es-419"]);
-    expect(map.deepl).not.toContain("ar");
   });
 });
