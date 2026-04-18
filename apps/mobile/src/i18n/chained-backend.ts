@@ -9,10 +9,7 @@ export interface ChainedBackendPlugin {
   ): void;
 }
 
-export type ChainedBackendFetch = (
-  url: string,
-  init?: { readonly headers?: Readonly<Record<string, string>> },
-) => Promise<Response>;
+export type ChainedBackendFetch = typeof fetch;
 
 export type ChainedBackendCache = Pick<AsyncStorageI18nCache, "read" | "write" | "isFresh">;
 
@@ -47,10 +44,7 @@ function stripQuotes(value: string): string {
 }
 
 export function createChainedBackend(options: ChainedBackendOptions): ChainedBackendPlugin {
-  const resolvedFetch: ChainedBackendFetch =
-    options.fetchImpl ??
-    ((url, init) =>
-      globalThis.fetch(url, init === undefined ? undefined : { headers: { ...init.headers } }));
+  const resolvedFetch: ChainedBackendFetch = options.fetchImpl ?? globalThis.fetch;
 
   async function fetchNamespace(
     locale: string,
@@ -65,6 +59,8 @@ export function createChainedBackend(options: ChainedBackendOptions): ChainedBac
       headers,
     });
     if (res.status === HTTP_NOT_MODIFIED && cached !== null) {
+      const refreshed: CacheEntry = { ...cached, fetchedAt: Date.now() };
+      await options.cache.write(locale, namespace, refreshed);
       return cached.translations;
     }
     if (res.status === HTTP_OK) {
@@ -95,7 +91,8 @@ export function createChainedBackend(options: ChainedBackendOptions): ChainedBac
 
     try {
       return await fetchNamespace(locale, namespace, cached);
-    } catch {
+    } catch (err: unknown) {
+      globalThis.console.warn(`i18n OTA fetch failed, falling back: ${locale}/${namespace}`, err);
       if (cached !== null) {
         return cached.translations;
       }

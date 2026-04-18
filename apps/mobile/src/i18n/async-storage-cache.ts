@@ -37,7 +37,9 @@ export class AsyncStorageI18nCache {
     try {
       const parsed: unknown = JSON.parse(raw);
       return isCacheEntry(parsed) ? parsed : null;
-    } catch {
+    } catch (err: unknown) {
+      globalThis.console.warn(`i18n cache parse failed, evicting: ${locale}/${namespace}`, err);
+      await this.storage.removeItem(storageKey(locale, namespace));
       return null;
     }
   }

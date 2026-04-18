@@ -84,9 +84,16 @@ describe("AsyncStorageI18nCache", () => {
     ).toBe(true);
   });
 
-  it("read handles malformed payload gracefully", async () => {
+  it("read warns and evicts corrupt entries on malformed payload", async () => {
+    const warnSpy = vi.spyOn(globalThis.console, "warn").mockImplementation(() => undefined);
     await storage.setItem("@pluralscape:i18n:en:common", "not-json");
     expect(await cache.read("en", "common")).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "i18n cache parse failed, evicting: en/common",
+      expect.anything(),
+    );
+    expect(storage.store.has("@pluralscape:i18n:en:common")).toBe(false);
+    warnSpy.mockRestore();
   });
 
   it("prefixes storage keys with @pluralscape:i18n namespace", async () => {

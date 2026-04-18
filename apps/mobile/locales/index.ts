@@ -49,7 +49,8 @@ export async function loadBundledNamespace(
       default: Readonly<Record<string, string>>;
     };
     return mod.default;
-  } catch {
+  } catch (err: unknown) {
+    globalThis.console.warn(`bundled namespace load failed: ${locale}/${namespace}`, err);
     return {};
   }
 }

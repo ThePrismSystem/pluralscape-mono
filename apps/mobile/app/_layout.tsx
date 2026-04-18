@@ -2,7 +2,7 @@ import { getSodium } from "@pluralscape/crypto";
 import { createAppQueryClient } from "@pluralscape/data";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
-import { MS_PER_HOUR } from "@pluralscape/types";
+import { I18N_CACHE_TTL_MS } from "@pluralscape/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Redirect, Slot } from "expo-router";
@@ -32,9 +32,6 @@ import type { TokenStore } from "../src/auth/index.js";
 import type { PlatformContext } from "../src/platform/index.js";
 import type { I18nConfig } from "@pluralscape/i18n";
 import type { ReactNode } from "react";
-
-const HOURS_PER_WEEK = 24 * 7;
-const I18N_CACHE_TTL_MS = MS_PER_HOUR * HOURS_PER_WEEK;
 
 const styles = StyleSheet.create({
   centered: {

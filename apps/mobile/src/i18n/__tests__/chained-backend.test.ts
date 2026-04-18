@@ -222,4 +222,68 @@ describe("createChainedBackend", () => {
     const result = await resolveOnce(backend, "en", "common");
     expect(result).toEqual({ hello: "bundled" });
   });
+
+  it("warns when OTA fetch fails but cached data exists", async () => {
+    const warnSpy = vi.spyOn(globalThis.console, "warn").mockImplementation(() => undefined);
+    const cache = mockCache({
+      read: vi.fn(
+        (): Promise<CacheEntry | null> =>
+          Promise.resolve({
+            etag: "e",
+            translations: { hello: "stale" },
+            fetchedAt: Date.now() - STALE_AGE_MS,
+          }),
+      ),
+      isFresh: (): boolean => false,
+    });
+    const backend = createChainedBackend({
+      apiBaseUrl: "https://api.test",
+      loadBundled: () => Promise.resolve({ hello: "bundled" }),
+      cache,
+      fetchImpl: vi.fn<ChainedBackendFetch>().mockRejectedValue(new Error("offline")),
+    });
+    const result = await resolveOnce(backend, "es", "common");
+    expect(result).toEqual({ hello: "stale" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      "i18n OTA fetch failed, falling back: es/common",
+      expect.anything(),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("refreshes fetchedAt on 304 by writing a bumped entry", async () => {
+    const originalFetchedAt = Date.now() - STALE_AGE_MS;
+    const writeSpy = vi.fn<ChainedBackendCache["write"]>((): Promise<void> => Promise.resolve());
+    const cache = mockCache({
+      read: vi.fn(
+        (): Promise<CacheEntry | null> =>
+          Promise.resolve({
+            etag: "e",
+            translations: { hello: "stale" },
+            fetchedAt: originalFetchedAt,
+          }),
+      ),
+      isFresh: (): boolean => false,
+      write: writeSpy,
+    });
+    const fetchImpl = vi.fn<ChainedBackendFetch>().mockResolvedValue(notModifiedResponse());
+    const backend = createChainedBackend({
+      apiBaseUrl: "https://api.test",
+      loadBundled: () => Promise.resolve({ hello: "bundled" }),
+      cache,
+      fetchImpl,
+    });
+    await resolveOnce(backend, "es", "common");
+    expect(writeSpy).toHaveBeenCalledWith(
+      "es",
+      "common",
+      expect.objectContaining({
+        etag: "e",
+        translations: { hello: "stale" },
+        fetchedAt: expect.any(Number),
+      }),
+    );
+    const writtenEntry = writeSpy.mock.calls[0]?.[2];
+    expect(writtenEntry?.fetchedAt).toBeGreaterThan(originalFetchedAt);
+  });
 });

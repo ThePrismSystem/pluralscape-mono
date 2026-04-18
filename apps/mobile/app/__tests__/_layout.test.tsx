@@ -191,7 +191,7 @@ vi.mock("@pluralscape/i18n", () => ({
 }));
 
 vi.mock("@pluralscape/types", () => ({
-  MS_PER_HOUR: 3_600_000,
+  I18N_CACHE_TTL_MS: 24 * 60 * 60 * 1000,
 }));
 
 vi.mock("@pluralscape/i18n/react", () => ({
