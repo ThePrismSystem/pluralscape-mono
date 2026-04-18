@@ -8,9 +8,8 @@ on:
     branches: [main]
 
 permissions:
-  pull-requests: write
-  contents: write
-  checks: read
+  contents: read
+  pull-requests: read
 
 concurrency:
   group: crowdin-automerge-${{ github.event.pull_request.number || github.event.check_suite.id }}
@@ -20,6 +19,16 @@ jobs:
   evaluate-and-merge:
     name: Evaluate and merge eligible Crowdin PR
     runs-on: ubuntu-latest
+    # Short-circuit unrelated PRs before any install / tool setup.
+    # check_suite events don't expose the PR author, so we accept them and
+    # defer to the guard's author check; pull_request_target is gated here.
+    if: >-
+      github.event_name == 'check_suite'
+      || github.event.pull_request.user.login == 'github-actions[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
     steps:
       - name: Resolve PR number
         id: pr
@@ -41,6 +50,8 @@ jobs:
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         if: steps.pr.outputs.skip != 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.check_suite.head_sha }}
 
       - uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6
         if: steps.pr.outputs.skip != 'true'
@@ -58,14 +69,9 @@ jobs:
         if: steps.pr.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CROWDIN_AUTOMERGE_DRY_RUN: "true"
-        run: |
-          FLAG=""
-          if [[ "$CROWDIN_AUTOMERGE_DRY_RUN" == "true" ]]; then
-            FLAG="--dry-run"
-          fi
-          pnpm crowdin:automerge-guard \
-            --pr "${{ steps.pr.outputs.number }}" \
-            --owner "${{ github.repository_owner }}" \
-            --repo "${{ github.event.repository.name }}" \
-            $FLAG
+          # Flip to "false" by setting the CROWDIN_AUTOMERGE_DRY_RUN repo
+          # variable; no code change required to take live.
+          CROWDIN_AUTOMERGE_DRY_RUN: ${{ vars.CROWDIN_AUTOMERGE_DRY_RUN || 'true' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: pnpm crowdin:automerge-guard --pr "${{ steps.pr.outputs.number }}"

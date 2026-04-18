@@ -1,89 +1,107 @@
 import { appendFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import type { SkipReason } from "./crowdin/automerge/evaluate.js";
-import { evaluatePr } from "./crowdin/automerge/evaluate.js";
+import {
+  ACTIONABLE_SKIP_REASONS,
+  evaluatePr,
+  type EvaluationResult,
+  type PrContext,
+} from "./crowdin/automerge/evaluate.js";
 import { commentPr, fetchPrContext, mergePr } from "./crowdin/automerge/gh.js";
 
-/**
- * Skip reasons that represent actionable problems on a Crowdin sync PR —
- * things a maintainer might want to investigate or resolve. Structural
- * mismatches (author/branch) indicate the workflow simply doesn't apply to
- * that PR and should stay silent to avoid comment spam on unrelated PRs.
- */
-const ACTIONABLE_SKIP_REASONS: ReadonlySet<SkipReason> = new Set([
-  "kill_switch_active",
-  "path_outside_allowlist",
-  "has_deletions",
-  "changes_requested",
-  "ci_not_green",
-]);
-
-function writeOutput(key: string, value: string): void {
-  const outputPath = process.env.GITHUB_OUTPUT;
-  if (outputPath) appendFileSync(outputPath, `${key}=${value}\n`);
-  console.log(`${key}=${value}`);
+export interface GuardDeps {
+  fetchPrContext: typeof fetchPrContext;
+  mergePr: typeof mergePr;
+  commentPr: typeof commentPr;
+  log: (msg: string) => void;
+  env: Record<string, string | undefined>;
+  appendTo?: (path: string, content: string) => void;
 }
 
-function writeSummary(content: string): void {
-  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
-  if (summaryPath) appendFileSync(summaryPath, `${content}\n`);
-  console.log(content);
+function appendAndLog(
+  path: string,
+  content: string,
+  log: (msg: string) => void,
+  appendTo: GuardDeps["appendTo"],
+): void {
+  const append =
+    appendTo ??
+    ((p: string, c: string): void => {
+      appendFileSync(p, c);
+    });
+  append(path, `${content}\n`);
+  log(content);
 }
 
-async function main(): Promise<void> {
-  const { values } = parseArgs({
-    options: {
-      pr: { type: "string" },
-      owner: { type: "string" },
-      repo: { type: "string" },
-      "dry-run": { type: "boolean", default: false },
-    },
-  });
+function buildCommentBody(
+  pr: PrContext,
+  result: Extract<EvaluationResult, { eligible: false }>,
+): string {
+  return `Crowdin auto-merge skipped: \`${result.skipReason}\`. See the ops runbook for interpretation. (PR #${String(pr.number)})`;
+}
 
-  const prNumber = Number(values.pr);
-  const owner = values.owner;
-  const repo = values.repo;
-  if (!prNumber || !owner || !repo) {
-    console.error(
-      "Usage: crowdin-automerge-guard --pr <num> --owner <owner> --repo <repo> [--dry-run]",
-    );
-    process.exit(2);
-  }
+export async function runGuard(
+  prNumber: number,
+  owner: string,
+  repo: string,
+  deps: GuardDeps,
+): Promise<void> {
+  const pr = await deps.fetchPrContext(owner, repo, prNumber);
+  const result = evaluatePr(pr);
+  const dryRun = (deps.env.CROWDIN_AUTOMERGE_DRY_RUN ?? "true") !== "false";
+  const summaryPath = deps.env.GITHUB_STEP_SUMMARY ?? "/dev/null";
+  const outputPath = deps.env.GITHUB_OUTPUT ?? "/dev/null";
 
-  const context = await fetchPrContext(prNumber, owner, repo);
-  const result = evaluatePr(context);
-
-  writeOutput("eligible", String(result.eligible));
-  if (result.skipReason) writeOutput("skip_reason", result.skipReason);
-  if (result.summary) writeOutput("summary", result.summary);
-
-  if (!result.eligible) {
-    writeSummary(
-      `## crowdin-automerge: skipped PR #${prNumber}\n\nReason: \`${result.skipReason}\``,
-    );
-    const shouldComment =
-      !values["dry-run"] &&
-      result.skipReason !== undefined &&
-      ACTIONABLE_SKIP_REASONS.has(result.skipReason);
-    if (shouldComment && result.skipReason) {
-      await commentPr(
-        prNumber,
-        `Auto-merge skipped: \`${result.skipReason}\`. See workflow logs for details.`,
-        owner,
-        repo,
-      );
+  if (result.eligible) {
+    appendAndLog(summaryPath, `auto-merge: eligible (${result.summary})`, deps.log, deps.appendTo);
+    appendAndLog(outputPath, `eligible=true`, deps.log, deps.appendTo);
+    if (!dryRun) {
+      await deps.mergePr(prNumber, result.head.sha);
     }
     return;
   }
 
-  const subject = "chore(i18n): sync translations from Crowdin";
-  const body = result.summary ?? "";
-  writeSummary(`## crowdin-automerge: merging PR #${prNumber}\n\n${body}`);
-  if (!values["dry-run"]) await mergePr(prNumber, subject, body);
+  const isActionable = ACTIONABLE_SKIP_REASONS.has(result.skipReason);
+  appendAndLog(summaryPath, `auto-merge: skipped (${result.skipReason})`, deps.log, deps.appendTo);
+  appendAndLog(outputPath, `eligible=false`, deps.log, deps.appendTo);
+
+  if (isActionable && !dryRun) {
+    try {
+      await deps.commentPr(prNumber, buildCommentBody(pr, result));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      deps.log(`comment failed (non-fatal): ${message}`);
+    }
+  }
 }
 
-main().catch((err: unknown) => {
-  console.error("crowdin:automerge-guard failed:", err);
-  process.exit(1);
-});
+async function main(): Promise<void> {
+  const { values } = parseArgs({
+    options: { pr: { type: "string" } },
+  });
+  const prNumber = Number(values.pr);
+  if (!Number.isInteger(prNumber) || prNumber <= 0) {
+    console.error("crowdin-automerge-guard: --pr must be a positive integer");
+    process.exit(1);
+  }
+  const owner = process.env.GITHUB_REPOSITORY_OWNER ?? "pluralscape";
+  const repoFull = process.env.GITHUB_REPOSITORY ?? "pluralscape/pluralscape-mono";
+  const repo = repoFull.split("/")[1] ?? "pluralscape-mono";
+
+  await runGuard(prNumber, owner, repo, {
+    fetchPrContext,
+    mergePr,
+    commentPr,
+    log: (msg: string): void => {
+      console.log(msg);
+    },
+    env: process.env,
+  });
+}
+
+if (import.meta.url === `file://${process.argv[1] ?? ""}`) {
+  main().catch((err: unknown) => {
+    console.error("crowdin-automerge-guard failed:", err);
+    process.exit(1);
+  });
+}

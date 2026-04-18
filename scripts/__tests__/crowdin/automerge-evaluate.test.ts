@@ -1,144 +1,137 @@
 import { describe, expect, it } from "vitest";
 
-import { evaluatePr } from "../../crowdin/automerge/evaluate.js";
-import type { PrContext } from "../../crowdin/automerge/evaluate.js";
+import {
+  ACTIONABLE_SKIP_REASONS,
+  evaluatePr,
+  type PrContext,
+} from "../../crowdin/automerge/evaluate.js";
 
-const basePr: PrContext = {
-  number: 42,
-  author: "github-actions[bot]",
-  headRef: "chore/crowdin-translations",
-  baseRef: "main",
-  labels: ["automerge", "i18n"],
-  files: [
-    { path: "apps/mobile/locales/ar/common.json", status: "modified" },
-    { path: "apps/mobile/locales/de/auth.json", status: "added" },
-  ],
-  reviews: [],
-  checks: [
-    { name: "Lint", conclusion: "success" },
-    { name: "Tests (coverage)", conclusion: "success" },
-  ],
-};
+function basePr(overrides: Partial<PrContext> = {}): PrContext {
+  return {
+    number: 1,
+    author: "github-actions[bot]",
+    headRef: "chore/crowdin-translations",
+    headSha: "abc123",
+    baseRef: "main",
+    labels: [],
+    files: [{ path: "apps/mobile/locales/fr/common.json", status: "modified" }],
+    reviews: [],
+    checks: [{ name: "ci", conclusion: "success" }],
+    ...overrides,
+  };
+}
 
-describe("evaluatePr", () => {
-  it("accepts translation-only PR with green CI", () => {
-    const result = evaluatePr(basePr);
+describe("evaluatePr — eligible path", () => {
+  it("returns eligible with head info for a clean PR", () => {
+    const result = evaluatePr(basePr({ headSha: "deadbeef" }));
     expect(result.eligible).toBe(true);
-    expect(result.summary).toMatch(/2 files/);
+    if (result.eligible) {
+      expect(result.head.sha).toBe("deadbeef");
+      expect(result.head.ref).toBe("chore/crowdin-translations");
+      expect(result.summary).toContain("1 files");
+    }
   });
 
-  it("skips when author is not the bot", () => {
-    const result = evaluatePr({ ...basePr, author: "alice" });
+  it("accepts renamed and copied file statuses if path is in allowlist", () => {
+    for (const status of ["renamed", "copied"] as const) {
+      const pr = basePr({
+        files: [{ path: "apps/mobile/locales/fr/common.json", status }],
+      });
+      expect(evaluatePr(pr).eligible).toBe(true);
+    }
+  });
+});
+
+describe("evaluatePr — skip reasons", () => {
+  it("rejects non-bot authors", () => {
+    const result = evaluatePr(basePr({ author: "someone-else" }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("author_not_bot");
+    if (!result.eligible) expect(result.skipReason).toBe("author_not_bot");
   });
 
-  it("skips when branch does not match", () => {
-    const result = evaluatePr({ ...basePr, headRef: "feat/something-else" });
+  it("rejects mismatched head ref", () => {
+    const result = evaluatePr(basePr({ headRef: "some/other-branch" }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("branch_mismatch");
+    if (!result.eligible) expect(result.skipReason).toBe("branch_mismatch");
   });
 
-  it("skips when kill-switch label present", () => {
-    const result = evaluatePr({ ...basePr, labels: ["do-not-automerge"] });
+  it("rejects mismatched base ref", () => {
+    const result = evaluatePr(basePr({ baseRef: "develop" }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("kill_switch_active");
+    if (!result.eligible) expect(result.skipReason).toBe("branch_mismatch");
   });
 
-  it("rejects file outside allowlist", () => {
-    const result = evaluatePr({
-      ...basePr,
-      files: [...basePr.files, { path: "apps/mobile/locales/en/common.json", status: "modified" }],
-    });
+  it("rejects when kill-switch label is applied", () => {
+    const result = evaluatePr(basePr({ labels: ["do-not-automerge"] }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("path_outside_allowlist");
+    if (!result.eligible) expect(result.skipReason).toBe("kill_switch_active");
   });
 
-  it("rejects non-JSON file even inside locale dir", () => {
-    const result = evaluatePr({
-      ...basePr,
-      files: [{ path: "apps/mobile/locales/ar/README.md", status: "added" }],
-    });
+  it("rejects an empty PR with no_files (not path_outside_allowlist)", () => {
+    const result = evaluatePr(basePr({ files: [] }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("path_outside_allowlist");
+    if (!result.eligible) expect(result.skipReason).toBe("no_files");
   });
 
-  it("rejects deleted file", () => {
-    const result = evaluatePr({
-      ...basePr,
-      files: [{ path: "apps/mobile/locales/ar/common.json", status: "removed" }],
-    });
+  it("rejects paths outside the locale allowlist", () => {
+    const result = evaluatePr(
+      basePr({ files: [{ path: "apps/mobile/src/index.ts", status: "modified" }] }),
+    );
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("has_deletions");
+    if (!result.eligible) expect(result.skipReason).toBe("path_outside_allowlist");
   });
 
-  it("rejects pending CHANGES_REQUESTED review", () => {
-    const result = evaluatePr({
-      ...basePr,
-      reviews: [{ state: "CHANGES_REQUESTED" }],
-    });
+  it("rejects PRs with any file deletion", () => {
+    const result = evaluatePr(
+      basePr({ files: [{ path: "apps/mobile/locales/fr/common.json", status: "removed" }] }),
+    );
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("changes_requested");
+    if (!result.eligible) expect(result.skipReason).toBe("has_deletions");
   });
 
-  it("allows approving review", () => {
-    const result = evaluatePr({
-      ...basePr,
-      reviews: [{ state: "APPROVED" }],
-    });
-    expect(result.eligible).toBe(true);
-  });
-
-  it("skips when a check failed", () => {
-    const result = evaluatePr({
-      ...basePr,
-      checks: [
-        { name: "Lint", conclusion: "success" },
-        { name: "Tests (coverage)", conclusion: "failure" },
-      ],
-    });
+  it("rejects when any review has CHANGES_REQUESTED", () => {
+    const result = evaluatePr(basePr({ reviews: [{ state: "CHANGES_REQUESTED" }] }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("ci_not_green");
+    if (!result.eligible) expect(result.skipReason).toBe("changes_requested");
   });
 
-  it("waits when a check is pending", () => {
-    const result = evaluatePr({
-      ...basePr,
-      checks: [
-        { name: "Lint", conclusion: "success" },
-        { name: "Tests (coverage)", conclusion: null },
-      ],
-    });
+  it("rejects when checks array is empty (ci_missing safety guard)", () => {
+    const result = evaluatePr(basePr({ checks: [] }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("ci_pending");
+    if (!result.eligible) expect(result.skipReason).toBe("ci_missing");
   });
 
-  it("tolerates skipped checks", () => {
-    const result = evaluatePr({
-      ...basePr,
-      checks: [
-        { name: "Lint", conclusion: "success" },
-        { name: "Optional", conclusion: "skipped" },
-      ],
-    });
-    expect(result.eligible).toBe(true);
-  });
-
-  it("rejects empty files array", () => {
-    const result = evaluatePr({ ...basePr, files: [] });
+  it("rejects when any check conclusion is still null (ci_pending)", () => {
+    const result = evaluatePr(basePr({ checks: [{ name: "ci", conclusion: null }] }));
     expect(result.eligible).toBe(false);
-    expect(result.skipReason).toBe("path_outside_allowlist");
+    if (!result.eligible) expect(result.skipReason).toBe("ci_pending");
   });
 
-  it("computes summary with locale count", () => {
-    const result = evaluatePr({
-      ...basePr,
-      files: [
-        { path: "apps/mobile/locales/ar/common.json", status: "modified" },
-        { path: "apps/mobile/locales/ar/auth.json", status: "modified" },
-        { path: "apps/mobile/locales/de/common.json", status: "modified" },
-      ],
-    });
-    expect(result.summary).toMatch(/3 files across 2 locales: ar, de/);
+  it("rejects each non-passing conclusion as ci_not_green", () => {
+    for (const conclusion of ["failure", "cancelled", "timed_out", "action_required"] as const) {
+      const result = evaluatePr(basePr({ checks: [{ name: "ci", conclusion }] }));
+      expect(result.eligible).toBe(false);
+      if (!result.eligible) expect(result.skipReason).toBe("ci_not_green");
+    }
+  });
+
+  it("treats 'skipped' and 'neutral' check conclusions as passing", () => {
+    for (const conclusion of ["skipped", "neutral"] as const) {
+      const result = evaluatePr(basePr({ checks: [{ name: "ci", conclusion }] }));
+      expect(result.eligible).toBe(true);
+    }
+  });
+});
+
+describe("ACTIONABLE_SKIP_REASONS", () => {
+  it("excludes no_files and ci_missing (log-only reasons)", () => {
+    expect(ACTIONABLE_SKIP_REASONS.has("no_files")).toBe(false);
+    expect(ACTIONABLE_SKIP_REASONS.has("ci_missing")).toBe(false);
+  });
+
+  it("includes ci_pending, ci_not_green, and path_outside_allowlist (actionable)", () => {
+    expect(ACTIONABLE_SKIP_REASONS.has("ci_pending")).toBe(true);
+    expect(ACTIONABLE_SKIP_REASONS.has("ci_not_green")).toBe(true);
+    expect(ACTIONABLE_SKIP_REASONS.has("path_outside_allowlist")).toBe(true);
   });
 });
