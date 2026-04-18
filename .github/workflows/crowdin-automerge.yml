@@ -1,0 +1,71 @@
+name: crowdin-automerge
+
+on:
+  check_suite:
+    types: [completed]
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: write
+  checks: read
+
+concurrency:
+  group: crowdin-automerge-${{ github.event.pull_request.number || github.event.check_suite.id }}
+  cancel-in-progress: false
+
+jobs:
+  evaluate-and-merge:
+    name: Evaluate and merge eligible Crowdin PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR number
+        id: pr
+        env:
+          GITHUB_EVENT: ${{ toJson(github.event) }}
+        run: |
+          PR_NUMBER=""
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+          else
+            PR_NUMBER=$(jq -r '.check_suite.pull_requests[0].number // empty' <<< "$GITHUB_EVENT")
+          fi
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "No PR associated with event; exiting."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        if: steps.pr.outputs.skip != 'true'
+
+      - uses: pnpm/action-setup@08c4be7e2e672a47d11bd04269e27e5f3e8529cb # v6
+        if: steps.pr.outputs.skip != 'true'
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - if: steps.pr.outputs.skip != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Evaluate and merge
+        if: steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CROWDIN_AUTOMERGE_DRY_RUN: "true"
+        run: |
+          FLAG=""
+          if [[ "$CROWDIN_AUTOMERGE_DRY_RUN" == "true" ]]; then
+            FLAG="--dry-run"
+          fi
+          pnpm crowdin:automerge-guard \
+            --pr "${{ steps.pr.outputs.number }}" \
+            --owner "${{ github.repository_owner }}" \
+            --repo "${{ github.event.repository.name }}" \
+            $FLAG

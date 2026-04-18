@@ -36,6 +36,7 @@
     "trpc:parity": "pnpm --filter @pluralscape/api trpc:parity",
     "crowdin:setup": "tsx scripts/crowdin-setup-project.ts",
     "crowdin:pretranslate": "tsx scripts/crowdin-pretranslate.ts",
+    "crowdin:automerge-guard": "tsx scripts/crowdin-automerge-guard.ts",
     "prepare": "husky"
   },
   "devDependencies": {
