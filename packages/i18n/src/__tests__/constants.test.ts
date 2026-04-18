@@ -23,7 +23,21 @@ describe("i18n constants", () => {
 
   it("contains all 13 target locales (en + 11 non-English + es-419 regional)", () => {
     expect([...SUPPORTED_LOCALES].sort()).toEqual(
-      ["ar", "de", "en", "es", "es-419", "fr", "it", "ja", "ko", "nl", "pt-BR", "ru", "zh-Hans"].sort(),
+      [
+        "ar",
+        "de",
+        "en",
+        "es",
+        "es-419",
+        "fr",
+        "it",
+        "ja",
+        "ko",
+        "nl",
+        "pt-BR",
+        "ru",
+        "zh-Hans",
+      ].sort(),
     );
   });
 
