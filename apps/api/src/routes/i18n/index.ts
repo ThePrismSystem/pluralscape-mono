@@ -6,48 +6,38 @@ import { ValkeyCache } from "../../lib/valkey-cache.js";
 import { createCategoryRateLimiter, getSharedValkeyClient } from "../../middleware/rate-limit.js";
 import { CrowdinOtaService } from "../../services/crowdin-ota.service.js";
 
-import { createManifestRoute } from "./manifest.js";
-import { createNamespaceRoute } from "./namespace.js";
+import { handleManifest, type I18nDeps } from "./manifest.js";
+import { handleNamespace } from "./namespace.js";
 
 /** Namespace under which i18n entries live inside the shared ValkeyCache. */
 const I18N_CACHE_NAMESPACE = "i18n";
 
-interface MountedRoutes {
-  readonly manifest: Hono;
-  readonly namespace: Hono;
-}
+/**
+ * Module-level memo for the wired deps. We cannot build them at module load
+ * time because `setSharedValkeyClient` is called asynchronously during server
+ * startup, after `v1Routes` has already been imported. So we resolve deps on
+ * the first request (lazily) and cache them for every subsequent request.
+ */
+let memoizedDeps: I18nDeps | null = null;
 
 /**
- * Module-level memo for the wired sub-apps. We cannot build them at module
- * load time because `setSharedValkeyClient` is called asynchronously during
- * server startup, after `v1Routes` has already been imported. So we resolve
- * deps on the first request (lazily) and cache the constructed handlers
- * for every subsequent request.
+ * Resolve the i18n deps if both the shared Valkey client and the Crowdin
+ * distribution hash are available; otherwise return null so the caller can
+ * emit a 503. Constructing the deps once and caching keeps per-request
+ * allocation flat.
  */
-let memoizedRoutes: MountedRoutes | null = null;
-
-/**
- * Resolve the i18n sub-apps if both the shared Valkey client and the
- * Crowdin distribution hash are available; otherwise return null so the
- * caller can emit a 503. Constructing the apps once and caching them keeps
- * per-request allocation flat.
- */
-function getMountedRoutes(): MountedRoutes | null {
-  if (memoizedRoutes) return memoizedRoutes;
+function getMountedDeps(): I18nDeps | null {
+  if (memoizedDeps) return memoizedDeps;
 
   const client = getSharedValkeyClient();
   const hash = env.CROWDIN_DISTRIBUTION_HASH;
   if (!client || !hash) return null;
 
-  const deps = {
+  memoizedDeps = {
     ota: new CrowdinOtaService({ distributionHash: hash }),
     cache: new ValkeyCache(client, I18N_CACHE_NAMESPACE),
   };
-  memoizedRoutes = {
-    manifest: createManifestRoute(deps),
-    namespace: createNamespaceRoute(deps),
-  };
-  return memoizedRoutes;
+  return memoizedDeps;
 }
 
 /**
@@ -55,7 +45,7 @@ function getMountedRoutes(): MountedRoutes | null {
  * cross-test leakage when one test mutates env / Valkey slots.
  */
 export function _resetI18nDepsForTesting(): void {
-  memoizedRoutes = null;
+  memoizedDeps = null;
 }
 
 /** Standard 503 envelope for when i18n deps aren't configured yet. */
@@ -76,15 +66,18 @@ export const i18nRoutes = new Hono();
 // Rate-limit every i18n fetch. The category config lives in packages/types.
 i18nRoutes.use("*", createCategoryRateLimiter("i18nFetch"));
 
-// Lazy dispatch — deps are resolved on each request but memoized on first hit.
+// Handlers are registered directly on this Hono instance (no nested sub-app
+// .fetch()) so the outer path parameters are available via `c.req.param(...)`
+// without a secondary route-match pass — the earlier nested-dispatch design
+// 404'd in production because the inner app saw the full `/v1/i18n/...` path.
 i18nRoutes.get("/manifest", (c) => {
-  const routes = getMountedRoutes();
-  if (!routes) return notConfiguredResponse(c);
-  return routes.manifest.fetch(c.req.raw);
+  const deps = getMountedDeps();
+  if (!deps) return notConfiguredResponse(c);
+  return handleManifest(c, deps);
 });
 
 i18nRoutes.get("/:locale/:namespace", (c) => {
-  const routes = getMountedRoutes();
-  if (!routes) return notConfiguredResponse(c);
-  return routes.namespace.fetch(c.req.raw);
+  const deps = getMountedDeps();
+  if (!deps) return notConfiguredResponse(c);
+  return handleNamespace(c, deps);
 });

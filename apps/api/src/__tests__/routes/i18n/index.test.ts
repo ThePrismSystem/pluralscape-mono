@@ -48,3 +48,18 @@ describe("v1 i18n route mounting", () => {
     expect(res.headers.get("x-ratelimit-limit")).toBe("30");
   });
 });
+
+describe("v1 i18n route mounting — production path", () => {
+  beforeEach(() => {
+    _resetI18nDepsForTesting();
+  });
+
+  it("dispatches /v1/i18n/:locale/:namespace to the namespace handler (not 404)", async () => {
+    // Once handlers are migrated, this path should return 503 because deps
+    // aren't wired in this test — but crucially NOT 404, which is what the
+    // broken sub-app dispatch produces in production. This regression test
+    // guards the dispatch path from reverting to nested `app.route()` mounts.
+    const res = await app.request("/v1/i18n/en/common");
+    expect(res.status).not.toBe(404);
+  });
+});

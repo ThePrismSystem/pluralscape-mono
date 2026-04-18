@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { logger } from "../../../lib/logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
-import { createManifestRoute } from "../../../routes/i18n/manifest.js";
+import { handleManifest } from "../../../routes/i18n/manifest.js";
 import {
   CrowdinOtaService,
   CrowdinOtaUpstreamError,
@@ -72,7 +73,7 @@ describe("GET /manifest", () => {
     ota = createOtaService(fetchMock);
     cache = createInMemoryCache();
     app = new Hono();
-    app.route("/manifest", createManifestRoute({ ota, cache }));
+    app.get("/manifest", (c) => handleManifest(c, { ota, cache }));
   });
 
   it("returns manifest on cache miss and populates cache", async () => {
@@ -107,5 +108,32 @@ describe("GET /manifest", () => {
     expect(res.status).toBe(502);
     const body = (await res.json()) as { error: { code: string } };
     expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
+  });
+
+  // A post-fetch Valkey disconnect must not convert a successful upstream
+  // fetch into a 5xx — the upstream result is already in hand and the cache
+  // is an optimization. Regression guard for the inline-try/catch oversight
+  // that the `trySetJSON` helper replaced.
+  it("returns 200 with manifest body even when cache write fails (best-effort)", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const failingCache = new ValkeyCache(
+      {
+        get: () => Promise.resolve(null),
+        set: () => Promise.reject(new Error("connection lost")),
+        del: () => Promise.resolve(0),
+      },
+      "test",
+    );
+    const failingApp = new Hono();
+    failingApp.get("/manifest", (c) => handleManifest(c, { ota, cache: failingCache }));
+    const res = await failingApp.request("/manifest");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as ManifestEnvelope;
+    expect(body.data.distributionTimestamp).toBe(1000);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "valkey-cache: setJSON failed, continuing",
+      expect.objectContaining({ error: "connection lost" }),
+    );
+    warnSpy.mockRestore();
   });
 });

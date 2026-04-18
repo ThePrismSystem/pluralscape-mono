@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { logger } from "../../../lib/logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
-import { createNamespaceRoute } from "../../../routes/i18n/namespace.js";
+import { handleNamespace } from "../../../routes/i18n/namespace.js";
 import {
   CrowdinOtaService,
   CrowdinOtaUpstreamError,
@@ -59,7 +60,7 @@ describe("GET /:locale/:namespace", () => {
     ota = createOtaService(fetchMock);
     cache = createInMemoryCache();
     app = new Hono();
-    app.route("/", createNamespaceRoute({ ota, cache }));
+    app.get("/:locale/:namespace", (c) => handleNamespace(c, { ota, cache }));
   });
 
   it("returns translations with ETag on first call", async () => {
@@ -112,5 +113,41 @@ describe("GET /:locale/:namespace", () => {
     expect(res.status).toBe(502);
     const body = (await res.json()) as { error: { code: string } };
     expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
+  });
+
+  it("returns 404 when Crowdin returns 404", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.reject(new CrowdinOtaUpstreamError("not found", 404)),
+    );
+    const res = await app.request("/xx/missing");
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("NAMESPACE_NOT_FOUND");
+  });
+
+  // Regression guard: once upstream returns translations, a subsequent
+  // Valkey write failure must not be converted into a 5xx — the fresh
+  // payload is already in hand.
+  it("returns 200 with translations body even when cache write fails (best-effort)", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const failingCache = new ValkeyCache(
+      {
+        get: () => Promise.resolve(null),
+        set: () => Promise.reject(new Error("connection lost")),
+        del: () => Promise.resolve(0),
+      },
+      "test",
+    );
+    const failingApp = new Hono();
+    failingApp.get("/:locale/:namespace", (c) => handleNamespace(c, { ota, cache: failingCache }));
+    const res = await failingApp.request("/es/common");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as NamespaceEnvelope;
+    expect(body.data.translations).toEqual({ greeting: "Hola" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      "valkey-cache: setJSON failed, continuing",
+      expect.objectContaining({ error: "connection lost" }),
+    );
+    warnSpy.mockRestore();
   });
 });

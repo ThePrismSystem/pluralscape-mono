@@ -84,3 +84,51 @@ describe("CrowdinOtaService.fetchNamespace", () => {
     );
   });
 });
+
+describe("CrowdinOtaService payload validation", () => {
+  it("throws CrowdinOtaUpstreamError(502) on malformed manifest payload", async () => {
+    const mockFetch = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ not_a_timestamp: "bad" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: mockFetch });
+    await expect(svc.fetchManifest()).rejects.toMatchObject({
+      name: "CrowdinOtaUpstreamError",
+      status: 502,
+    });
+  });
+
+  it("throws CrowdinOtaUpstreamError(502) on malformed namespace payload", async () => {
+    const mockFetch = vi.fn(() =>
+      Promise.resolve(
+        // value must be string, 42 is invalid
+        new Response(JSON.stringify({ some_key: 42 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: mockFetch });
+    await expect(svc.fetchNamespace("es", "common")).rejects.toMatchObject({
+      name: "CrowdinOtaUpstreamError",
+      status: 502,
+    });
+  });
+
+  it("does NOT classify a non-timeout network error as CrowdinOtaTimeoutError", async () => {
+    const mockFetch = vi.fn(() => Promise.reject(new TypeError("Failed to fetch")));
+    const svc = new CrowdinOtaService({
+      distributionHash: "HASH",
+      fetch: mockFetch,
+      timeoutMs: 100,
+    });
+    await expect(svc.fetchManifest()).rejects.toMatchObject({
+      name: "TypeError",
+      message: "Failed to fetch",
+    });
+  });
+});

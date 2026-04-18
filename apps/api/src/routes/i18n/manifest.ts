@@ -1,5 +1,4 @@
 import { I18N_CACHE_TTL_MS, type I18nManifest } from "@pluralscape/types";
-import { Hono } from "hono";
 
 import { HTTP_BAD_GATEWAY } from "../../http.constants.js";
 import { logger } from "../../lib/logger.js";
@@ -11,6 +10,7 @@ import {
 } from "../../services/crowdin-ota.service.js";
 
 import type { ValkeyCache } from "../../lib/valkey-cache.js";
+import type { Context } from "hono";
 
 /** Cache key (scoped by ValkeyCache's namespace prefix). */
 const MANIFEST_CACHE_KEY = "manifest";
@@ -18,7 +18,14 @@ const MANIFEST_CACHE_KEY = "manifest";
 /** Suffix Crowdin appends to every namespace filename. */
 const NAMESPACE_FILE_SUFFIX = ".json";
 
-interface ManifestRouteDeps {
+/**
+ * Shared deps injected into the i18n handlers.
+ *
+ * The outer route aggregator resolves real Valkey + Crowdin instances once
+ * per process and passes them through on every request; tests swap in
+ * in-memory fakes so the handlers stay hermetic.
+ */
+export interface I18nDeps {
   readonly ota: CrowdinOtaService;
   readonly cache: ValkeyCache;
 }
@@ -27,7 +34,7 @@ interface ManifestRouteDeps {
  * Shape of the Crowdin OTA `manifest.json` payload the service returns.
  * Declared here (not re-exported from the service) because this is the only
  * place the raw-to-envelope mapping happens — keeps the service honest and
- * the route self-contained.
+ * the handler self-contained.
  */
 interface CrowdinManifestRaw {
   readonly timestamp: number;
@@ -56,37 +63,32 @@ function manifestFromCrowdin(raw: CrowdinManifestRaw): I18nManifest {
 }
 
 /**
- * Factory for the `GET /` handler under `/v1/i18n/manifest`.
+ * Handle `GET /v1/i18n/manifest`.
  *
- * Deps are injected so unit tests can swap the OTA service and cache for
- * in-memory fakes without touching module-level state. The aggregator at
- * `routes/i18n/index.ts` is responsible for wiring the real deps.
+ * The surrounding route registers this handler directly against `i18nRoutes`
+ * (no intermediate Hono sub-app), so `c.req.raw` carries the full path and
+ * inner route matching is avoided entirely. A cache-write failure is logged
+ * but does NOT turn a successful upstream fetch into a 5xx response.
  */
-export function createManifestRoute(deps: ManifestRouteDeps): Hono {
-  const app = new Hono();
+export async function handleManifest(c: Context, deps: I18nDeps): Promise<Response> {
+  const cached = await deps.cache.getJSON<I18nManifest>(MANIFEST_CACHE_KEY);
+  if (cached) return c.json(envelope(cached));
 
-  app.get("/", async (c) => {
-    const cached = await deps.cache.getJSON<I18nManifest>(MANIFEST_CACHE_KEY);
-    if (cached) return c.json(envelope(cached));
-
-    try {
-      const raw = (await deps.ota.fetchManifest()) satisfies CrowdinManifestRaw;
-      const manifest = manifestFromCrowdin(raw);
-      await deps.cache.setJSON(MANIFEST_CACHE_KEY, manifest, I18N_CACHE_TTL_MS);
-      return c.json(envelope(manifest));
-    } catch (error: unknown) {
-      logger.warn("crowdin manifest fetch failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      if (error instanceof CrowdinOtaUpstreamError || error instanceof CrowdinOtaTimeoutError) {
-        return c.json(
-          { error: { code: "UPSTREAM_UNAVAILABLE", message: "Translation source unavailable" } },
-          HTTP_BAD_GATEWAY,
-        );
-      }
-      throw error;
+  try {
+    const raw = (await deps.ota.fetchManifest()) satisfies CrowdinManifestRaw;
+    const manifest = manifestFromCrowdin(raw);
+    await deps.cache.trySetJSON(MANIFEST_CACHE_KEY, manifest, I18N_CACHE_TTL_MS);
+    return c.json(envelope(manifest));
+  } catch (error: unknown) {
+    logger.warn("crowdin manifest fetch failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (error instanceof CrowdinOtaUpstreamError || error instanceof CrowdinOtaTimeoutError) {
+      return c.json(
+        { error: { code: "UPSTREAM_UNAVAILABLE", message: "Translation source unavailable" } },
+        HTTP_BAD_GATEWAY,
+      );
     }
-  });
-
-  return app;
+    throw error;
+  }
 }

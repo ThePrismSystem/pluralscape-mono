@@ -1,4 +1,5 @@
 import { I18N_OTA_TIMEOUT_MS } from "@pluralscape/types";
+import { z } from "zod/v4";
 
 /**
  * Thrown when the Crowdin OTA CDN returns a non-2xx status.
@@ -27,10 +28,30 @@ export class CrowdinOtaTimeoutError extends Error {
   }
 }
 
-interface CrowdinManifestResponse {
-  readonly timestamp: number;
-  readonly content: Readonly<Record<string, readonly string[]>>;
-}
+/**
+ * Zod schema for the Crowdin OTA `manifest.json` payload. Validated at the
+ * trust boundary so malformed payloads are caught before they can leak
+ * into downstream consumers.
+ */
+const CrowdinManifestSchema = z.object({
+  timestamp: z.number(),
+  content: z.record(z.string(), z.array(z.string())),
+});
+
+/**
+ * Zod schema for `content/{locale}/{namespace}.json`. A flat
+ * string-to-string map — any deviation surfaces as a 502 upstream error.
+ */
+const CrowdinNamespaceSchema = z.record(z.string(), z.string());
+
+/**
+ * HTTP status we emit when the CDN responds with JSON that fails schema
+ * validation. 502 Bad Gateway communicates "upstream is broken" rather
+ * than masking the failure as a 500 (our own server fault).
+ */
+const MALFORMED_UPSTREAM_STATUS = 502;
+
+type CrowdinManifestResponse = z.infer<typeof CrowdinManifestSchema>;
 
 /**
  * Narrow fetch signature — we only ever call it as
@@ -55,10 +76,9 @@ const DEFAULT_BASE_URL = "https://distributions.crowdin.net";
  *  - `manifest.json` — enumerates locales and their namespaces plus a timestamp
  *  - `content/{locale}/{namespace}.json` — flat key/value translation map
  *
- * Responses are treated as trust-boundary data. The cast-to-shape in
- * fetchManifest/fetchNamespace is intentional: runtime validation of the CDN
- * payload is deferred to a follow-up ADR, and the consuming route will still
- * produce a safe error envelope on any downstream parse/access failure.
+ * Responses are validated at the trust boundary with Zod. Malformed payloads
+ * surface as `CrowdinOtaUpstreamError(status: 502)` so the consuming route
+ * produces the same UPSTREAM_UNAVAILABLE envelope as a genuine Crowdin 5xx.
  */
 export class CrowdinOtaService {
   private readonly distributionHash: string;
@@ -76,7 +96,14 @@ export class CrowdinOtaService {
   async fetchManifest(): Promise<CrowdinManifestResponse> {
     const url = `${this.baseUrl}/${this.distributionHash}/manifest.json`;
     const json = await this.fetchJson(url);
-    return json as CrowdinManifestResponse;
+    const parsed = CrowdinManifestSchema.safeParse(json);
+    if (!parsed.success) {
+      throw new CrowdinOtaUpstreamError(
+        `malformed Crowdin manifest: ${parsed.error.message}`,
+        MALFORMED_UPSTREAM_STATUS,
+      );
+    }
+    return parsed.data;
   }
 
   async fetchNamespace(
@@ -85,12 +112,32 @@ export class CrowdinOtaService {
   ): Promise<Readonly<Record<string, string>>> {
     const url = `${this.baseUrl}/${this.distributionHash}/content/${locale}/${namespace}.json`;
     const json = await this.fetchJson(url);
-    return json as Readonly<Record<string, string>>;
+    const parsed = CrowdinNamespaceSchema.safeParse(json);
+    if (!parsed.success) {
+      throw new CrowdinOtaUpstreamError(
+        `malformed Crowdin namespace ${locale}/${namespace}: ${parsed.error.message}`,
+        MALFORMED_UPSTREAM_STATUS,
+      );
+    }
+    return parsed.data;
   }
 
   private async fetchJson(url: string): Promise<unknown> {
     const controller = new AbortController();
+    // Use a local flag rather than inspecting `controller.signal.aborted` so
+    // that an external abort (e.g., the caller's own AbortSignal being fed
+    // into a composed controller in a future refactor) isn't misclassified
+    // as a timeout. Only our own setTimeout sets this flag. The flag lives
+    // on an object with a getter so ESLint's control-flow analysis doesn't
+    // pre-narrow the bare `let` to `never` (no-unnecessary-condition).
+    const timeout = {
+      fired: false,
+      didFire(): boolean {
+        return this.fired;
+      },
+    };
     const timer = setTimeout(() => {
+      timeout.fired = true;
       controller.abort();
     }, this.timeoutMs);
     try {
@@ -100,7 +147,7 @@ export class CrowdinOtaService {
       }
       return await res.json();
     } catch (error: unknown) {
-      if (controller.signal.aborted) {
+      if (timeout.didFire()) {
         throw new CrowdinOtaTimeoutError(this.timeoutMs);
       }
       throw error;

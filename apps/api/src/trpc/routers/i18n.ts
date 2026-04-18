@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { computeTranslationsEtag } from "../../lib/i18n-etag.js";
+import { logger } from "../../lib/logger.js";
 import {
   CrowdinOtaTimeoutError,
   CrowdinOtaUpstreamError,
@@ -98,12 +99,14 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
       const cached = await deps.cache.getJSON<I18nManifest>(MANIFEST_CACHE_KEY);
       if (cached) return cached;
 
+      let manifest: I18nManifest;
       try {
         const raw = (await deps.ota.fetchManifest()) satisfies CrowdinManifestRaw;
-        const manifest = manifestFromCrowdin(raw);
-        await deps.cache.setJSON(MANIFEST_CACHE_KEY, manifest, I18N_CACHE_TTL_MS);
-        return manifest;
+        manifest = manifestFromCrowdin(raw);
       } catch (error: unknown) {
+        logger.warn("crowdin manifest fetch failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         if (error instanceof CrowdinOtaUpstreamError || error instanceof CrowdinOtaTimeoutError) {
           throw new TRPCError({
             code: "SERVICE_UNAVAILABLE",
@@ -113,6 +116,11 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
         }
         throw error;
       }
+
+      // Best-effort cache write — a post-fetch Valkey disconnect must not
+      // convert a fresh, successful upstream fetch into a 500.
+      await deps.cache.trySetJSON(MANIFEST_CACHE_KEY, manifest, I18N_CACHE_TTL_MS);
+      return manifest;
     }),
 
     /**
@@ -140,8 +148,12 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
             const translations = await deps.ota.fetchNamespace(input.locale, input.namespace);
             const etag = computeTranslationsEtag(translations);
             cached = { etag, translations };
-            await deps.cache.setJSON(key, cached, I18N_CACHE_TTL_MS);
           } catch (error: unknown) {
+            logger.warn("crowdin namespace fetch failed", {
+              error: error instanceof Error ? error.message : String(error),
+              locale: input.locale,
+              namespace: input.namespace,
+            });
             if (
               error instanceof CrowdinOtaUpstreamError &&
               error.status === UPSTREAM_STATUS_NOT_FOUND
@@ -164,6 +176,10 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
             }
             throw error;
           }
+
+          // Best-effort cache write — a post-fetch Valkey disconnect must not
+          // convert a fresh, successful upstream fetch into a 500.
+          await deps.cache.trySetJSON(key, cached, I18N_CACHE_TTL_MS);
         }
 
         return {

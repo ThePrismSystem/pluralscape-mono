@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
+import { logger } from "../logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../valkey-cache.js";
 
 interface MockClient extends ValkeyCacheClient {
@@ -51,10 +52,51 @@ describe("ValkeyCache", () => {
     expect(await cache.getJSON("bad")).toBeNull();
   });
 
+  it("deletes the corrupt entry on JSON parse failure", async () => {
+    const client = mockClient();
+    client.store.set("ns:bad", { v: "{not valid json", ex: 1000 });
+    const cache = new ValkeyCache(client, "ns");
+    const result = await cache.getJSON("bad");
+    expect(result).toBeNull();
+    // The prefixed key must be evicted so later reads don't re-hit the
+    // corrupt payload and re-parse it.
+    expect(client.store.has("ns:bad")).toBe(false);
+  });
+
   it("prefixes all keys with namespace", async () => {
     const client = mockClient();
     const cache = new ValkeyCache(client, "i18n");
     await cache.setJSON("manifest", { a: 1 }, 1000);
     expect([...client.store.keys()]).toEqual(["i18n:manifest"]);
+  });
+
+  describe("trySetJSON", () => {
+    it("writes JSON when the underlying client succeeds", async () => {
+      const client = mockClient();
+      const cache = new ValkeyCache(client, "ns");
+      await cache.trySetJSON("k", { a: 1 }, 1000);
+      expect(await cache.getJSON("k")).toEqual({ a: 1 });
+    });
+
+    it("logs and swallows Error failures so callers never see the throw", async () => {
+      const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+      const failing: ValkeyCacheClient = {
+        get: () => Promise.resolve(null),
+        set: () => Promise.reject(new Error("connection lost")),
+        del: () => Promise.resolve(0),
+      };
+      const cache = new ValkeyCache(failing, "i18n");
+      await expect(cache.trySetJSON("k", { a: 1 }, 1000)).resolves.toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "valkey-cache: setJSON failed, continuing",
+        expect.objectContaining({
+          // Key MUST be namespace-prefixed — that's strictly more informative
+          // than the route-level key alone.
+          key: "i18n:k",
+          error: "connection lost",
+        }),
+      );
+      warnSpy.mockRestore();
+    });
   });
 });

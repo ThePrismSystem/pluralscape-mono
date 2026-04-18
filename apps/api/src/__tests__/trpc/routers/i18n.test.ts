@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { logger } from "../../../lib/logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
 import {
   CrowdinOtaService,
@@ -34,6 +35,20 @@ function buildInMemoryCache(): ValkeyCache {
       return Promise.resolve("OK");
     },
     del: (k) => Promise.resolve(store.delete(k) ? 1 : 0),
+  };
+  return new ValkeyCache(client, "test");
+}
+
+/**
+ * Cache whose writes always fail. Exercises the `trySetJSON` best-effort
+ * path: a Valkey disconnect after a successful upstream fetch must NOT
+ * propagate as a 500 / INTERNAL_SERVER_ERROR.
+ */
+function buildCacheWithFailingSet(): ValkeyCache {
+  const client: ValkeyCacheClient = {
+    get: () => Promise.resolve(null),
+    set: () => Promise.reject(new Error("connection lost")),
+    del: () => Promise.resolve(0),
   };
   return new ValkeyCache(client, "test");
 }
@@ -175,5 +190,73 @@ describe("i18n tRPC router", () => {
     await expect(c.getNamespace({ locale: "en", namespace: "common" })).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
     });
+  });
+
+  it("logs a warn line when the upstream manifest fetch fails", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const otaDown = buildOta({
+      fetchManifest: () => Promise.reject(new CrowdinOtaUpstreamError("server err", 500)),
+    });
+    const c = makeCaller(
+      createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),
+    );
+    await expect(c.getManifest()).rejects.toThrow();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "crowdin manifest fetch failed",
+      expect.objectContaining({ error: expect.any(String) }),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("logs a warn line when the upstream namespace fetch fails", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const otaDown = buildOta({
+      fetchNamespace: () => Promise.reject(new CrowdinOtaUpstreamError("server err", 500)),
+    });
+    const c = makeCaller(
+      createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),
+    );
+    await expect(c.getNamespace({ locale: "es", namespace: "common" })).rejects.toThrow();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "crowdin namespace fetch failed",
+      expect.objectContaining({
+        error: expect.any(String),
+        locale: "es",
+        namespace: "common",
+      }),
+    );
+    warnSpy.mockRestore();
+  });
+
+  // Regression guard: cache-write failure after a successful upstream fetch
+  // must NOT re-enter the upstream error branch (and therefore must NOT
+  // surface as SERVICE_UNAVAILABLE / INTERNAL_SERVER_ERROR). Asserts the
+  // fresh manifest is returned and the best-effort log line is emitted.
+  it("getManifest returns manifest even when cache write fails (best-effort)", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const failingCache = buildCacheWithFailingSet();
+    const c = makeCaller(createI18nRouter(() => ({ ota: ota.svc, cache: failingCache })));
+    const out = await c.getManifest();
+    expect(out.distributionTimestamp).toBe(1);
+    expect(out.locales[0]?.locale).toBe("en");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "valkey-cache: setJSON failed, continuing",
+      expect.objectContaining({ error: "connection lost" }),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("getNamespace returns translations even when cache write fails (best-effort)", async () => {
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    const failingCache = buildCacheWithFailingSet();
+    const c = makeCaller(createI18nRouter(() => ({ ota: ota.svc, cache: failingCache })));
+    const out = await c.getNamespace({ locale: "en", namespace: "common" });
+    expect(out.translations).toEqual({ greeting: "Hi" });
+    expect(out.etag).toMatch(/^[0-9a-f]{16}$/);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "valkey-cache: setJSON failed, continuing",
+      expect.objectContaining({ error: "connection lost" }),
+    );
+    warnSpy.mockRestore();
   });
 });

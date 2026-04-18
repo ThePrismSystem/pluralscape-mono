@@ -29,21 +29,45 @@ export class ValkeyCache {
   }
 
   async getJSON<T>(k: string): Promise<T | null> {
-    const raw = await this.client.get(this.key(k));
+    const prefixed = this.key(k);
+    const raw = await this.client.get(prefixed);
     if (raw === null) return null;
     try {
       return JSON.parse(raw) as T;
     } catch (error: unknown) {
-      logger.warn("valkey-cache: failed to parse JSON; treating as miss", {
-        key: this.key(k),
+      // Evict the corrupt entry so subsequent reads don't re-hit the same
+      // unparseable payload indefinitely — a poisoned cache value must not
+      // outlive a single failed parse.
+      logger.warn("valkey-cache: failed to parse JSON; evicting corrupt entry", {
+        key: prefixed,
         error: error instanceof Error ? error.message : String(error),
       });
+      await this.client.del(prefixed);
       return null;
     }
   }
 
   async setJSON(k: string, value: unknown, ttlMs: number): Promise<void> {
     await this.client.set(this.key(k), JSON.stringify(value), "PX", ttlMs);
+  }
+
+  /**
+   * Write JSON best-effort. Logs and swallows failures so a transient Valkey
+   * disconnect after a fresh upstream fetch doesn't fail the live request.
+   *
+   * Use this when the cache is an optimization (read-through proxy with a
+   * fresh upstream result already in hand), not when the cache is the source
+   * of truth — a silent failure there would mask real bugs.
+   */
+  async trySetJSON(k: string, value: unknown, ttlMs: number): Promise<void> {
+    try {
+      await this.setJSON(k, value, ttlMs);
+    } catch (error: unknown) {
+      logger.warn("valkey-cache: setJSON failed, continuing", {
+        key: this.key(k),
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   async delete(k: string): Promise<void> {
