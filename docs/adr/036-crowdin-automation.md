@@ -24,11 +24,34 @@ We adopt a machine-translation pipeline with four components:
 
 2. **Dual MT engines**: DeepL Free for the 10 languages it supports (de, es, fr, it, ja, ko, nl, pt-BR, ru, zh-Hans); Google Cloud Translation for the two it does not (ar, es-419). Both engines run with glossary enforcement.
 
-3. **Automatic pre-translation**: After the sync workflow uploads English sources to Crowdin, it runs `scripts/crowdin-pretranslate.ts` to kick off a TM + MT pre-translation job. New strings arrive translated (unapproved) within ~1 minute.
+3. **Automatic pre-translation**: After the sync workflow uploads English sources to Crowdin, it runs `scripts/crowdin-pretranslate.ts` to kick off a TM + MT pre-translation job. New strings typically arrive pre-translated within a few minutes of the daily sync; the workflow allows up to 10 minutes per pre-translate pass before failing.
 
 4. **Auto-merge for translation-only PRs**: A `crowdin-automerge` workflow evaluates a 7-step guard chain (author, branch, label, path allowlist, no deletions, reviews, CI status) and squash-merges eligible PRs. `apps/mobile/locales/en/**` is explicitly excluded from the allowlist so a mixed-content PR is always rejected.
 
 Export policy: all translations (not just approved) are exported from Crowdin, since there are no human approvers. Manual edits in the Crowdin UI automatically supersede MT in Crowdin's translation priority ranking.
+
+Crowdin pre-translates new strings in two passes: (1) translation memory for all
+12 target languages, reusing prior translations across the project; (2) machine
+translation for anything TM did not fill — DeepL for 10 languages it supports,
+Google Translate for Arabic and Latin American Spanish. All results are
+auto-approved as the shipping translation during the transitional phase.
+
+## Transitional posture
+
+Until volunteer translators, contributors, or dedicated funding arrive,
+Pluralscape ships MT output as its shipping translation. All pre-translations
+(TM + DeepL + Google) are auto-approved in Crowdin (`autoApproveOption: "all"`).
+When a volunteer translator saves an edit in the Crowdin UI, their translation
+supersedes the MT in the next daily sync — no approval gate, no review buffer.
+This is a deliberate tradeoff: imperfect MT-quality text in 11 locales is better
+than missing translations, and the Crowdin UI makes human override a one-click
+improvement whenever volunteers arrive.
+
+This posture will be revisited when we reach either: (1) at least one active
+volunteer translator per target language, (2) funded professional translation
+review, or (3) a formal translation governance model. At that point,
+pretranslate will flip to `autoApproveOption: "none"` and approved-only
+downloads, and a separate ADR will document the gated workflow.
 
 ## Alternatives considered
 
@@ -55,14 +78,15 @@ Export policy: all translations (not just approved) are exported from Crowdin, s
 - DeepL Free has a 500,000 character/month limit. Well within current scale but could become a bottleneck.
 - Google Translate requires a service account key, which needs careful secret management.
 
-**Transitional posture:**
+## Rollout plan
 
-MT is a bootstrap strategy, not the end state. Pluralscape commits to superseding MT output with community-contributed translations as soon as volunteer translators or donation-funded professional localization become available. At that point we will:
-
-1. Re-evaluate the "export all translations" policy — likely switch to approved-only export per language as translators opt in.
-2. Add per-language DeepL/Google glossaries with volunteer-validated target translations.
-3. Potentially tighten the auto-merge gate (e.g., require approved-translation status, or add a human review checkpoint).
-4. Update this ADR with the new approach.
+Auto-merge ships gated behind repo variable `CROWDIN_AUTOMERGE_DRY_RUN`,
+defaulting to `true`. In dry-run mode the workflow logs its merge decision and
+posts the comment it _would_ have posted, but does not call `gh pr merge`.
+After at least one week of dry-run decisions on real Crowdin PRs with no
+false-positive "would-merge" outcomes, a maintainer flips the repo variable to
+`false` via the GitHub Actions variables UI. Flipping back is a single UI
+change with no code revert required.
 
 ## References
 
