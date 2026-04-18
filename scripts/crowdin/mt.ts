@@ -42,6 +42,24 @@ export function buildLanguageRoutingMap(): Record<Engine, string[]> {
 const DEEPL_MT_NAME = "Pluralscape DeepL";
 const GOOGLE_MT_NAME = "Pluralscape Google Translate";
 
+/**
+ * Read-only lookup for engine IDs. Returns null if either engine is missing.
+ *
+ * Separated from {@link applyMtEngines} so runtime workflows (e.g.,
+ * crowdin-sync pre-translate step) never attempt engine creation — that
+ * belongs exclusively to crowdin-setup-project.ts, avoiding a race where
+ * two workflows both try to create the same named engine.
+ */
+export async function findMtEngineIds(
+  client: CrowdinClient,
+): Promise<{ deeplId: number; googleId: number } | null> {
+  const list = await client.machineTranslationApi.listMts();
+  const deepl = list.data.find((m) => m.data.name === DEEPL_MT_NAME);
+  const google = list.data.find((m) => m.data.name === GOOGLE_MT_NAME);
+  if (!deepl || !google) return null;
+  return { deeplId: deepl.data.id, googleId: google.data.id };
+}
+
 export async function applyMtEngines(
   client: CrowdinClient,
   projectId: number,

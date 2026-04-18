@@ -124,6 +124,12 @@ describe("evaluatePr", () => {
     expect(result.eligible).toBe(true);
   });
 
+  it("rejects empty files array", () => {
+    const result = evaluatePr({ ...basePr, files: [] });
+    expect(result.eligible).toBe(false);
+    expect(result.skipReason).toBe("path_outside_allowlist");
+  });
+
   it("computes summary with locale count", () => {
     const result = evaluatePr({
       ...basePr,

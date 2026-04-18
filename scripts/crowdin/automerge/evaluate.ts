@@ -86,6 +86,9 @@ export function evaluatePr(pr: PrContext): EvaluationResult {
   if (pr.labels.includes(KILL_SWITCH_LABEL)) {
     return { eligible: false, skipReason: "kill_switch_active" };
   }
+  if (pr.files.length === 0) {
+    return { eligible: false, skipReason: "path_outside_allowlist" };
+  }
   for (const file of pr.files) {
     if (file.status === "removed") {
       return { eligible: false, skipReason: "has_deletions" };

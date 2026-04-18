@@ -1,8 +1,23 @@
 import { appendFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
+import type { SkipReason } from "./crowdin/automerge/evaluate.js";
 import { evaluatePr } from "./crowdin/automerge/evaluate.js";
 import { commentPr, fetchPrContext, mergePr } from "./crowdin/automerge/gh.js";
+
+/**
+ * Skip reasons that represent actionable problems on a Crowdin sync PR —
+ * things a maintainer might want to investigate or resolve. Structural
+ * mismatches (author/branch) indicate the workflow simply doesn't apply to
+ * that PR and should stay silent to avoid comment spam on unrelated PRs.
+ */
+const ACTIONABLE_SKIP_REASONS: ReadonlySet<SkipReason> = new Set([
+  "kill_switch_active",
+  "path_outside_allowlist",
+  "has_deletions",
+  "changes_requested",
+  "ci_not_green",
+]);
 
 function writeOutput(key: string, value: string): void {
   const outputPath = process.env.GITHUB_OUTPUT;
@@ -47,7 +62,11 @@ async function main(): Promise<void> {
     writeSummary(
       `## crowdin-automerge: skipped PR #${prNumber}\n\nReason: \`${result.skipReason}\``,
     );
-    if (!values["dry-run"] && result.skipReason) {
+    const shouldComment =
+      !values["dry-run"] &&
+      result.skipReason !== undefined &&
+      ACTIONABLE_SKIP_REASONS.has(result.skipReason);
+    if (shouldComment && result.skipReason) {
       await commentPr(
         prNumber,
         `Auto-merge skipped: \`${result.skipReason}\`. See workflow logs for details.`,

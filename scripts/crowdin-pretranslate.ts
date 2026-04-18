@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 
 import { createCrowdinClient } from "./crowdin/client.js";
 import { loadCrowdinEnv } from "./crowdin/env.js";
-import { applyMtEngines } from "./crowdin/mt.js";
+import { findMtEngineIds } from "./crowdin/mt.js";
 import { runPretranslate } from "./crowdin/pretranslate.js";
 
 async function main(): Promise<void> {
@@ -25,12 +25,17 @@ async function main(): Promise<void> {
   }
 
   const client = createCrowdinClient(env);
-  // MT engine IDs are fetched/created as needed; idempotent with setup.
-  const { deeplId, googleId } = await applyMtEngines(client, env.projectId, env);
+  const ids = await findMtEngineIds(client);
+  if (!ids) {
+    console.error(
+      "crowdin:pretranslate: MT engines are not configured. Run `pnpm crowdin:setup` first.",
+    );
+    process.exit(1);
+  }
 
   const result = await runPretranslate(client, env.projectId, {
-    deeplMtId: deeplId,
-    googleMtId: googleId,
+    deeplMtId: ids.deeplId,
+    googleMtId: ids.googleId,
     languageIds,
   });
 

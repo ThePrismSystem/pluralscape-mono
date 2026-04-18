@@ -93,5 +93,8 @@ scripts/.pk-test-*.json
 pluralscape-*.json
 .env.pk-test
 
+# Crowdin setup script JSON output (local artifact when running crowdin:setup --json > file)
+crowdin-setup-output.json
+
 # OS
 .tmp
