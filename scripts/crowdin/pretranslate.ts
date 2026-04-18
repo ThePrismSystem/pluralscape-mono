@@ -127,16 +127,16 @@ function delay(ms: number, signal: AbortSignal): Promise<void> {
       reject(new Error("aborted"));
       return;
     }
-    const t = setTimeout(resolve, ms);
-    t.unref();
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(t);
-        reject(new Error("aborted"));
-      },
-      { once: true },
-    );
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(new Error("aborted"));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    timer.unref();
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 

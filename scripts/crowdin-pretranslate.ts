@@ -45,7 +45,6 @@ async function main(): Promise<void> {
     },
   });
 
-  const env = loadCrowdinEnv(process.env);
   const languageIds = values.languages ? parseLanguageList(values.languages) : undefined;
   const fileIds = values.files ? parseFileList(values.files) : undefined;
 
@@ -74,6 +73,7 @@ async function main(): Promise<void> {
     return;
   }
 
+  const env = loadCrowdinEnv(process.env);
   const client = createCrowdinClient(env);
   const ids = await findMtEngineIds(client);
   if (!ids) {

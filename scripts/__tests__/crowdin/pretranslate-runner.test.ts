@@ -89,14 +89,39 @@ describe("runPretranslate", () => {
     expect(applyFn).toHaveBeenCalledTimes(2);
   });
 
-  it("throws when the AbortSignal fires mid-poll", async () => {
+  it("throws immediately if signal is already aborted before first poll", async () => {
     const client = mockClient({
       applyResults: [{ identifier: "tm1" }],
-      statusSequences: { tm1: [{ status: "inProgress" }, { status: "inProgress" }] },
+      statusSequences: { tm1: [{ status: "inProgress" }] },
     });
     const controller = new AbortController();
-    const p = runPretranslate(client, 100, { deeplMtId: 1, googleMtId: 2 }, controller.signal);
-    queueMicrotask(() => controller.abort());
-    await expect(p).rejects.toThrow(/aborted/);
+    controller.abort();
+    await expect(
+      runPretranslate(client, 100, { deeplMtId: 1, googleMtId: 2 }, controller.signal),
+    ).rejects.toThrow(/aborted/);
+  });
+
+  it("throws when the AbortSignal fires during the poll setTimeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const client = mockClient({
+        applyResults: [{ identifier: "tm1" }],
+        statusSequences: { tm1: [{ status: "inProgress" }, { status: "inProgress" }] },
+      });
+      const controller = new AbortController();
+      const promise = runPretranslate(
+        client,
+        100,
+        { deeplMtId: 1, googleMtId: 2 },
+        controller.signal,
+      );
+      // Let applyPreTranslation + first status poll resolve synchronously.
+      await vi.advanceTimersByTimeAsync(0);
+      // At this point delay() has attached its listener. Fire abort.
+      controller.abort();
+      await expect(promise).rejects.toThrow(/aborted/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
