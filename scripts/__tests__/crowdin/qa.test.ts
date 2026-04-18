@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { CrowdinClient } from "../../crowdin/client.js";
 import { applyQaChecks, QA_CHECK_CATEGORIES } from "../../crowdin/qa.js";
 
 describe("applyQaChecks", () => {
@@ -8,7 +9,7 @@ describe("applyQaChecks", () => {
       string,
       boolean
     >;
-    const client: Parameters<typeof applyQaChecks>[0] = {
+    const client = {
       projectsGroupsApi: {
         editProject: vi.fn().mockResolvedValue({}),
         getProject: vi.fn().mockResolvedValue({
@@ -16,13 +17,17 @@ describe("applyQaChecks", () => {
         }),
       },
     };
-    const result = await applyQaChecks(client, 100);
+    // CrowdinClient's full SDK types pull in ~50 transitive types that are
+    // awkward to mock. The structural shape we actually use (editProject,
+    // getProject) is fully exercised by the stub above; the cast is
+    // test-only and safe.
+    const result = await applyQaChecks(client as unknown as CrowdinClient, 100);
     expect([...result]).toEqual([...QA_CHECK_CATEGORIES]);
   });
 
   it("throws when readback shows some categories are NOT enabled", async () => {
     const partialEnabled: Record<string, boolean> = { empty_string: true };
-    const client: Parameters<typeof applyQaChecks>[0] = {
+    const client = {
       projectsGroupsApi: {
         editProject: vi.fn().mockResolvedValue({}),
         getProject: vi.fn().mockResolvedValue({
@@ -30,6 +35,12 @@ describe("applyQaChecks", () => {
         }),
       },
     };
-    await expect(applyQaChecks(client, 100)).rejects.toThrow(/QA check enablement/);
+    // CrowdinClient's full SDK types pull in ~50 transitive types that are
+    // awkward to mock. The structural shape we actually use (editProject,
+    // getProject) is fully exercised by the stub above; the cast is
+    // test-only and safe.
+    await expect(applyQaChecks(client as unknown as CrowdinClient, 100)).rejects.toThrow(
+      /QA check enablement/,
+    );
   });
 });

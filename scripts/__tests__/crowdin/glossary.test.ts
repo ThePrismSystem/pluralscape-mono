@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { CrowdinClient } from "../../crowdin/client.js";
 import type { GlossaryTerm } from "../../crowdin/glossary-schema.js";
 import { applyGlossary, diffGlossaryTerms, termToCrowdinPayload } from "../../crowdin/glossary.js";
 
@@ -196,7 +197,7 @@ describe("applyGlossary — error aggregation", () => {
       .mockRejectedValueOnce(new Error("first fail"))
       .mockResolvedValueOnce({})
       .mockRejectedValueOnce(new Error("third fail"));
-    const client: Parameters<typeof applyGlossary>[0] = {
+    const client = {
       glossariesApi: {
         listGlossaries: vi.fn().mockResolvedValue({
           data: [{ data: { id: 1, name: "Pluralscape Terminology" } }],
@@ -218,7 +219,13 @@ describe("applyGlossary — error aggregation", () => {
       { term: "c", type: "translatable", notes: "n" },
     ];
 
-    await expect(applyGlossary(client, 100, localTerms)).rejects.toThrow(AggregateError);
+    // CrowdinClient's full SDK types pull in ~50 transitive types that are
+    // awkward to mock. The structural shape we actually use (listGlossaries,
+    // listTerms, addTerm, editTerm, deleteTerm, projectsGroupsApi.editProject)
+    // is fully exercised by the stub above; the cast is test-only and safe.
+    await expect(
+      applyGlossary(client as unknown as CrowdinClient, 100, localTerms),
+    ).rejects.toThrow(AggregateError);
     expect(addTerm).toHaveBeenCalledTimes(3);
   });
 
@@ -227,7 +234,7 @@ describe("applyGlossary — error aggregation", () => {
       .fn()
       .mockRejectedValueOnce(new Error("edit fail"))
       .mockResolvedValueOnce({});
-    const client: Parameters<typeof applyGlossary>[0] = {
+    const client = {
       glossariesApi: {
         listGlossaries: vi.fn().mockResolvedValue({
           data: [{ data: { id: 1, name: "Pluralscape Terminology" } }],
@@ -269,7 +276,13 @@ describe("applyGlossary — error aggregation", () => {
       { term: "b", type: "translatable", pos: "noun", notes: "new description" },
     ];
 
-    await expect(applyGlossary(client, 100, localTerms)).rejects.toThrow(AggregateError);
+    // CrowdinClient's full SDK types pull in ~50 transitive types that are
+    // awkward to mock. The structural shape we actually use (listGlossaries,
+    // listTerms, addTerm, editTerm, deleteTerm, projectsGroupsApi.editProject)
+    // is fully exercised by the stub above; the cast is test-only and safe.
+    await expect(
+      applyGlossary(client as unknown as CrowdinClient, 100, localTerms),
+    ).rejects.toThrow(AggregateError);
     expect(editTerm).toHaveBeenCalledTimes(2);
   });
 });

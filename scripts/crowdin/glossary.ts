@@ -1,3 +1,6 @@
+import type { GlossariesModel } from "@crowdin/crowdin-api-client";
+
+import type { CrowdinClient } from "./client.js";
 import type { GlossaryTerm } from "./glossary-schema.js";
 
 export const GLOSSARY_NAME = "Pluralscape Terminology";
@@ -72,64 +75,6 @@ export function diffGlossaryTerms(
   return { toAdd, toUpdate, toRemove };
 }
 
-interface GlossaryPatchOp {
-  op: "replace";
-  path: string;
-  value: unknown;
-}
-
-interface GlossarySummary {
-  id: number;
-  name: string;
-}
-
-interface RemoteTermResponseData {
-  id: number;
-  text: string;
-  description?: string | null;
-  status?: string | null;
-  partOfSpeech?: string | null;
-}
-
-interface GlossaryListResponse {
-  data: Array<{ data: GlossarySummary }>;
-}
-
-interface TermListResponse {
-  data: Array<{ data: RemoteTermResponseData }>;
-}
-
-interface CreateTermRequest {
-  languageId: string;
-  text: string;
-  description?: string;
-  status?: TermStatus;
-  partOfSpeech?: string;
-}
-
-/**
- * Minimal structural slice of `CrowdinClient` exercised by {@link applyGlossary}.
- * Tests can supply a stub without mocking the SDK's full surface; the real SDK
- * client satisfies this interface because its list/edit methods are assignable
- * to these parameter lists (the SDK's `PatchRequest` widens on `op`/`value`,
- * and method-parameter bivariance covers the rest).
- */
-export interface GlossaryApiClient {
-  glossariesApi: {
-    listGlossaries(): Promise<GlossaryListResponse>;
-    addGlossary(request: { name: string; languageId: string }): Promise<{
-      data: GlossarySummary;
-    }>;
-    listTerms(glossaryId: number): Promise<TermListResponse>;
-    addTerm(glossaryId: number, request: CreateTermRequest): Promise<unknown>;
-    editTerm(glossaryId: number, termId: number, patch: GlossaryPatchOp[]): Promise<unknown>;
-    deleteTerm(glossaryId: number, termId: number): Promise<void>;
-  };
-  projectsGroupsApi: {
-    editProject(projectId: number, patch: GlossaryPatchOp[]): Promise<unknown>;
-  };
-}
-
 export interface GlossaryApplyResult extends GlossaryDiff {
   errors: Array<{
     operation: "add" | "update" | "remove";
@@ -140,7 +85,7 @@ export interface GlossaryApplyResult extends GlossaryDiff {
 }
 
 export async function applyGlossary(
-  client: GlossaryApiClient,
+  client: CrowdinClient,
   projectId: number,
   local: readonly GlossaryTerm[],
 ): Promise<GlossaryApplyResult> {
@@ -168,12 +113,17 @@ export async function applyGlossary(
   for (const term of diff.toAdd) {
     try {
       const payload = termToCrowdinPayload(term);
+      // The SDK types `partOfSpeech` as a narrow string-literal union
+      // (`GlossariesModel.PartOfSpeech`), but our glossary schema allows
+      // freeform community shorthand (e.g. "adj", "noun/verb"). The Crowdin
+      // API accepts these at runtime; we narrow only for the type-system.
+      const partOfSpeech = payload.partOfSpeech as GlossariesModel.PartOfSpeech | undefined;
       await glossariesApi.addTerm(glossaryId, {
         languageId: "en",
         text: payload.text,
         description: payload.description,
         status: payload.isDoNotTranslate ? TERM_STATUS_NOT_RECOMMENDED : TERM_STATUS_PREFERRED,
-        partOfSpeech: payload.partOfSpeech,
+        partOfSpeech,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
