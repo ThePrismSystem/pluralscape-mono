@@ -1,8 +1,46 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import type { CrowdinClient } from "./client.js";
 import { CONTEXT_NAMESPACES, ContextFileSchema } from "./context-schema.js";
+
+/**
+ * Shape of a remote source-string page item consumed by {@link applyContexts}.
+ * Matches the relevant subset of the Crowdin SDK `String` response.
+ */
+interface SourceStringPageItem {
+  data: { id: number; identifier: string; context?: string | null };
+}
+
+interface SourceStringListResponse {
+  data: SourceStringPageItem[];
+}
+
+/**
+ * Patch operation shape accepted by the edit endpoint. Matches the Crowdin
+ * SDK's `PatchRequest` subset actually emitted by {@link applyContexts}.
+ */
+interface ContextPatchOp {
+  op: "replace";
+  path: string;
+  value: string;
+}
+
+/**
+ * Minimal structural slice of `CrowdinClient` exercised by {@link applyContexts}.
+ * The real SDK client satisfies this interface because its list/edit methods are
+ * assignable to these parameter lists (the SDK's `PatchRequest` widens on
+ * `op`/`value`, and method-parameter bivariance covers the rest). Tests can
+ * supply a stub without mocking the SDK's full surface.
+ */
+export interface ContextApiClient {
+  sourceStringsApi: {
+    listProjectStrings(
+      projectId: number,
+      options: { limit: number; offset: number },
+    ): Promise<SourceStringListResponse>;
+    editString(projectId: number, stringId: number, patch: ContextPatchOp[]): Promise<unknown>;
+  };
+}
 
 const LOCALES_ROOT = "apps/mobile/locales/en";
 
@@ -19,6 +57,10 @@ export interface ContextDiff {
 
 export interface ContextApplyResult extends ContextDiff {
   errors: Array<{ id: number; error: string }>;
+  /** Count of remote source strings inspected across all pages. */
+  remoteIdentifiersChecked: number;
+  /** Desired sidecar entries that did not match any remote identifier. */
+  unmatchedDesiredKeys: string[];
 }
 
 export function loadAllContexts(repoRoot: string): Map<string, string> {
@@ -51,18 +93,31 @@ export function diffContexts(
   return { toUpdate, unchanged };
 }
 
+const LIST_PAGE_SIZE = 500;
+
 export async function applyContexts(
-  client: CrowdinClient,
+  client: ContextApiClient,
   projectId: number,
   desired: ReadonlyMap<string, string>,
 ): Promise<ContextApplyResult> {
-  const response = await client.sourceStringsApi.listProjectStrings(projectId, { limit: 500 });
-  const strings: SourceString[] = response.data.map((s) => ({
-    id: s.data.id,
-    identifier: s.data.identifier,
-    context: s.data.context ?? null,
-  }));
+  const strings: SourceString[] = [];
+  for (let offset = 0; ; offset += LIST_PAGE_SIZE) {
+    const response = await client.sourceStringsApi.listProjectStrings(projectId, {
+      limit: LIST_PAGE_SIZE,
+      offset,
+    });
+    const page: SourceString[] = response.data.map((s) => ({
+      id: s.data.id,
+      identifier: s.data.identifier,
+      context: s.data.context ?? null,
+    }));
+    strings.push(...page);
+    if (page.length < LIST_PAGE_SIZE) break;
+  }
+
   const diff = diffContexts(strings, desired);
+  const remoteIdentifierSet = new Set(strings.map((s) => s.identifier));
+  const unmatchedDesiredKeys = [...desired.keys()].filter((k) => !remoteIdentifierSet.has(k));
   const errors: ContextApplyResult["errors"] = [];
 
   for (const { id, newContext } of diff.toUpdate) {
@@ -71,7 +126,8 @@ export async function applyContexts(
         { op: "replace", path: "/context", value: newContext },
       ]);
     } catch (err) {
-      errors.push({ id, error: String(err) });
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push({ id, error: message });
     }
   }
   if (errors.length > 0) {
@@ -80,5 +136,10 @@ export async function applyContexts(
       `applyContexts: ${errors.length} update(s) failed`,
     );
   }
-  return { ...diff, errors: [] };
+  return {
+    ...diff,
+    errors: [],
+    remoteIdentifiersChecked: strings.length,
+    unmatchedDesiredKeys,
+  };
 }

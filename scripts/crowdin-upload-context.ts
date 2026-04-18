@@ -8,7 +8,6 @@ async function main(): Promise<void> {
   const { values } = parseArgs({
     options: { "dry-run": { type: "boolean", default: false } },
   });
-  const env = loadCrowdinEnv(process.env);
   const desired = loadAllContexts(process.cwd());
 
   if (values["dry-run"]) {
@@ -21,11 +20,28 @@ async function main(): Promise<void> {
     return;
   }
 
+  const env = loadCrowdinEnv(process.env);
   const client = createCrowdinClient(env);
   const result = await applyContexts(client, env.projectId, desired);
   console.log(
-    JSON.stringify({ updated: result.toUpdate.length, unchanged: result.unchanged }, null, 2),
+    JSON.stringify(
+      {
+        updated: result.toUpdate.length,
+        unchanged: result.unchanged,
+        remoteStringsSeen: result.remoteIdentifiersChecked,
+      },
+      null,
+      2,
+    ),
   );
+  if (desired.size > 0 && result.unmatchedDesiredKeys.length === desired.size) {
+    console.warn(
+      `warning: ${String(desired.size)} sidecar entries were loaded but none matched a Crowdin source-string identifier. ` +
+        `This usually means Crowdin uses a different identifier format than "<namespace>.<key>". ` +
+        `Crowdin returned ${String(result.remoteIdentifiersChecked)} source strings. ` +
+        `First 5 unmatched sidecar keys: ${result.unmatchedDesiredKeys.slice(0, 5).join(", ")}`,
+    );
+  }
 }
 
 main().catch((err: unknown) => {

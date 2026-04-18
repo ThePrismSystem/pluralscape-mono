@@ -1,9 +1,14 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { diffContexts, loadAllContexts } from "../../crowdin/context.js";
+import {
+  applyContexts,
+  type ContextApiClient,
+  diffContexts,
+  loadAllContexts,
+} from "../../crowdin/context.js";
 
 interface StringFixture {
   id: number;
@@ -71,5 +76,54 @@ describe("loadAllContexts", () => {
     const result = loadAllContexts(tmpRoot);
     expect(result.get("common.ok")).toBe("Affirmation.");
     expect(result.size).toBe(1);
+  });
+});
+
+describe("applyContexts", () => {
+  type ListFn = ContextApiClient["sourceStringsApi"]["listProjectStrings"];
+  type EditFn = ContextApiClient["sourceStringsApi"]["editString"];
+
+  it("aggregates per-item failures into AggregateError and continues past them", async () => {
+    const listProjectStrings = vi.fn<ListFn>().mockResolvedValueOnce({
+      data: [
+        { data: { id: 1, identifier: "common.ok", context: "old" } },
+        { data: { id: 2, identifier: "common.cancel", context: "old" } },
+        { data: { id: 3, identifier: "common.save", context: "old" } },
+      ],
+    });
+    const editString = vi
+      .fn<EditFn>()
+      .mockRejectedValueOnce(new Error("500 first"))
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("500 third"));
+    const client: ContextApiClient = {
+      sourceStringsApi: { listProjectStrings, editString },
+    };
+
+    const desired = new Map([
+      ["common.ok", "new"],
+      ["common.cancel", "new"],
+      ["common.save", "new"],
+    ]);
+
+    await expect(applyContexts(client, 100, desired)).rejects.toThrow(AggregateError);
+    expect(editString).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports unmatchedDesiredKeys when sidecar keys don't match any remote identifier", async () => {
+    const listProjectStrings = vi.fn<ListFn>().mockResolvedValueOnce({
+      data: [{ data: { id: 1, identifier: "ok", context: null } }],
+    });
+    const editString = vi.fn<EditFn>();
+    const client: ContextApiClient = {
+      sourceStringsApi: { listProjectStrings, editString },
+    };
+    const desired = new Map([["common.ok", "some context"]]);
+
+    const result = await applyContexts(client, 100, desired);
+    expect(result.toUpdate).toHaveLength(0);
+    expect(result.unmatchedDesiredKeys).toEqual(["common.ok"]);
+    expect(result.remoteIdentifiersChecked).toBe(1);
+    expect(editString).not.toHaveBeenCalled();
   });
 });
