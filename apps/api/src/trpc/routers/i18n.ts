@@ -4,75 +4,30 @@ import { z } from "zod/v4";
 
 import { computeTranslationsEtag } from "../../lib/i18n-etag.js";
 import { logger } from "../../lib/logger.js";
+import { CrowdinOtaFailure } from "../../services/crowdin-ota.service.js";
 import {
-  CrowdinOtaTimeoutError,
-  CrowdinOtaUpstreamError,
-  type CrowdinOtaService,
-} from "../../services/crowdin-ota.service.js";
+  MANIFEST_CACHE_KEY,
+  manifestFromCrowdin,
+  namespaceCacheKey,
+  type CachedNamespace,
+  type CrowdinManifestRaw,
+} from "../../services/i18n-shared.js";
 import { errorMapProcedure } from "../error-mapper.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { router } from "../trpc.js";
 
-import type { ValkeyCache } from "../../lib/valkey-cache.js";
+import type { I18nDeps } from "../../services/i18n-deps.js";
 
-/** Cache key for the manifest within the i18n namespace. */
-const MANIFEST_CACHE_KEY = "manifest";
+/**
+ * Alias kept for call-site clarity — the underlying interface is the shared
+ * `I18nDeps` that both the REST route and the tRPC router consume. A type
+ * alias rather than a `re-export` because consumers of this module import
+ * `I18nRouterDeps` as a positional name.
+ */
+export type I18nRouterDeps = I18nDeps;
 
-/** Suffix Crowdin appends to every namespace filename. */
-const NAMESPACE_FILE_SUFFIX = ".json";
-
-/** Minimum accepted locale code length (e.g. "en", "pt-BR"). */
-const MIN_LOCALE_LENGTH = 2;
-
-/** HTTP 404 status — matches upstream CDN's "translation missing" response. */
+/** Upstream 404 from Crowdin — maps to tRPC NOT_FOUND at the boundary. */
 const UPSTREAM_STATUS_NOT_FOUND = 404;
-
-function namespaceCacheKey(locale: string, namespace: string): string {
-  return `ns:${locale}:${namespace}`;
-}
-
-export interface I18nRouterDeps {
-  readonly ota: CrowdinOtaService;
-  readonly cache: ValkeyCache;
-}
-
-/**
- * Cached namespace envelope. The etag is computed once at cache-write time
- * so every cache hit avoids the canonical-JSON re-hash.
- */
-interface CachedNamespace {
-  readonly etag: string;
-  readonly translations: Readonly<Record<string, string>>;
-}
-
-/**
- * Shape of the Crowdin OTA `manifest.json` payload. Declared here because
- * the tRPC router owns the raw-to-envelope mapping — mirrors the REST route.
- */
-interface CrowdinManifestRaw {
-  readonly timestamp: number;
-  readonly content: Readonly<Record<string, readonly string[]>>;
-}
-
-/**
- * Map the raw Crowdin manifest into the flat `I18nManifest` shape consumed
- * by the mobile client. Per-namespace etags remain empty at the manifest
- * level — clients receive them via the `getNamespace` response.
- */
-function manifestFromCrowdin(raw: CrowdinManifestRaw): I18nManifest {
-  return {
-    distributionTimestamp: raw.timestamp,
-    locales: Object.entries(raw.content).map(([locale, files]) => ({
-      locale,
-      namespaces: files.map((filename) => ({
-        name: filename.endsWith(NAMESPACE_FILE_SUFFIX)
-          ? filename.slice(0, -NAMESPACE_FILE_SUFFIX.length)
-          : filename,
-        etag: "",
-      })),
-    })),
-  };
-}
 
 function resolveDepsOrThrow(getDeps: () => I18nRouterDeps | null): I18nRouterDeps {
   const deps = getDeps();
@@ -83,6 +38,40 @@ function resolveDepsOrThrow(getDeps: () => I18nRouterDeps | null): I18nRouterDep
     });
   }
   return deps;
+}
+
+/**
+ * Map a `CrowdinOtaFailure` to the appropriate `TRPCError`. The input is
+ * forwarded verbatim on non-failure errors so the caller can decide whether
+ * to rethrow. Upstream 404 is distinguished so `getNamespace` can surface
+ * NOT_FOUND; every other failure mode (timeout, generic upstream, malformed
+ * payload) maps to SERVICE_UNAVAILABLE, matching the REST route's 502.
+ */
+function trpcErrorFromFailure(failure: CrowdinOtaFailure, notFoundMessage?: string): TRPCError {
+  switch (failure.detail.kind) {
+    case "upstream":
+      if (failure.detail.status === UPSTREAM_STATUS_NOT_FOUND && notFoundMessage !== undefined) {
+        return new TRPCError({
+          code: "NOT_FOUND",
+          message: notFoundMessage,
+          cause: failure,
+        });
+      }
+      return new TRPCError({
+        code: "SERVICE_UNAVAILABLE",
+        message: "Translation source unavailable",
+        cause: failure,
+      });
+    case "timeout":
+    case "malformed":
+      return new TRPCError({
+        code: "SERVICE_UNAVAILABLE",
+        message: "Translation source unavailable",
+        cause: failure,
+      });
+    default:
+      return failure.detail satisfies never;
+  }
 }
 
 function buildRouter(getDeps: () => I18nRouterDeps | null) {
@@ -107,12 +96,8 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
         logger.warn("crowdin manifest fetch failed", {
           error: error instanceof Error ? error.message : String(error),
         });
-        if (error instanceof CrowdinOtaUpstreamError || error instanceof CrowdinOtaTimeoutError) {
-          throw new TRPCError({
-            code: "SERVICE_UNAVAILABLE",
-            message: "Translation source unavailable",
-            cause: error,
-          });
+        if (error instanceof CrowdinOtaFailure) {
+          throw trpcErrorFromFailure(error);
         }
         throw error;
       }
@@ -133,7 +118,7 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
       .use(i18nFetchLimiter)
       .input(
         z.object({
-          locale: z.string().min(MIN_LOCALE_LENGTH),
+          locale: z.string().min(2),
           namespace: z.string().min(1),
         }),
       )
@@ -154,25 +139,11 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
               locale: input.locale,
               namespace: input.namespace,
             });
-            if (
-              error instanceof CrowdinOtaUpstreamError &&
-              error.status === UPSTREAM_STATUS_NOT_FOUND
-            ) {
-              throw new TRPCError({
-                code: "NOT_FOUND",
-                message: `Translation not found for ${input.locale}/${input.namespace}`,
-                cause: error,
-              });
-            }
-            if (
-              error instanceof CrowdinOtaUpstreamError ||
-              error instanceof CrowdinOtaTimeoutError
-            ) {
-              throw new TRPCError({
-                code: "SERVICE_UNAVAILABLE",
-                message: "Translation source unavailable",
-                cause: error,
-              });
+            if (error instanceof CrowdinOtaFailure) {
+              throw trpcErrorFromFailure(
+                error,
+                `Translation not found for ${input.locale}/${input.namespace}`,
+              );
             }
             throw error;
           }

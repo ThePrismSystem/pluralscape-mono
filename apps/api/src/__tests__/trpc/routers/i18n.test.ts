@@ -2,11 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logger } from "../../../lib/logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
-import {
-  CrowdinOtaService,
-  CrowdinOtaTimeoutError,
-  CrowdinOtaUpstreamError,
-} from "../../../services/crowdin-ota.service.js";
+import { CrowdinOtaFailure, CrowdinOtaService } from "../../../services/crowdin-ota.service.js";
 import { createI18nRouter } from "../../../trpc/routers/i18n.js";
 import { createCallerFactory } from "../../../trpc/trpc.js";
 import { makeContext } from "../test-helpers.js";
@@ -61,7 +57,7 @@ interface FakeOta {
 
 /**
  * Build a CrowdinOtaService instance using the real class so `instanceof`
- * checks inside the router still discriminate `CrowdinOtaUpstreamError` from
+ * checks inside the router still discriminate `CrowdinOtaFailure` variants from
  * other failures. We override `fetchManifest` / `fetchNamespace` directly —
  * private fields are declaration-only under TS `private`, so the instance is
  * structurally complete for the router's usage. The mocks are returned
@@ -134,7 +130,8 @@ describe("i18n tRPC router", () => {
 
   it("getNamespace throws NOT_FOUND on upstream 404", async () => {
     const ota404 = buildOta({
-      fetchNamespace: () => Promise.reject(new CrowdinOtaUpstreamError("gone", 404)),
+      fetchNamespace: () =>
+        Promise.reject(new CrowdinOtaFailure({ kind: "upstream", status: 404, message: "gone" })),
     });
     const c = makeCaller(
       createI18nRouter(() => ({ ota: ota404.svc, cache: buildInMemoryCache() })),
@@ -146,7 +143,10 @@ describe("i18n tRPC router", () => {
 
   it("getNamespace throws SERVICE_UNAVAILABLE on generic upstream failure", async () => {
     const ota500 = buildOta({
-      fetchNamespace: () => Promise.reject(new CrowdinOtaUpstreamError("server err", 500)),
+      fetchNamespace: () =>
+        Promise.reject(
+          new CrowdinOtaFailure({ kind: "upstream", status: 500, message: "server err" }),
+        ),
     });
     const c = makeCaller(
       createI18nRouter(() => ({ ota: ota500.svc, cache: buildInMemoryCache() })),
@@ -158,7 +158,8 @@ describe("i18n tRPC router", () => {
 
   it("getNamespace throws SERVICE_UNAVAILABLE on upstream timeout", async () => {
     const otaTimeout = buildOta({
-      fetchNamespace: () => Promise.reject(new CrowdinOtaTimeoutError(5_000)),
+      fetchNamespace: () =>
+        Promise.reject(new CrowdinOtaFailure({ kind: "timeout", timeoutMs: 5_000 })),
     });
     const c = makeCaller(
       createI18nRouter(() => ({ ota: otaTimeout.svc, cache: buildInMemoryCache() })),
@@ -168,12 +169,64 @@ describe("i18n tRPC router", () => {
     });
   });
 
+  // Boundary coverage for the `malformed` variant on getNamespace: Crowdin
+  // responded 200 but the parsed body failed service-level validation. The
+  // router must surface SERVICE_UNAVAILABLE, not NOT_FOUND — the namespace
+  // may well exist, just with a broken shape.
+  it("getNamespace throws SERVICE_UNAVAILABLE on malformed Crowdin payload", async () => {
+    const otaMalformed = buildOta({
+      fetchNamespace: () =>
+        Promise.reject(new CrowdinOtaFailure({ kind: "malformed", reason: "bad shape" })),
+    });
+    const c = makeCaller(
+      createI18nRouter(() => ({ ota: otaMalformed.svc, cache: buildInMemoryCache() })),
+    );
+    await expect(c.getNamespace({ locale: "en", namespace: "x" })).rejects.toMatchObject({
+      code: "SERVICE_UNAVAILABLE",
+    });
+  });
+
   it("getManifest throws SERVICE_UNAVAILABLE on upstream failure", async () => {
     const otaDown = buildOta({
-      fetchManifest: () => Promise.reject(new CrowdinOtaUpstreamError("server err", 500)),
+      fetchManifest: () =>
+        Promise.reject(
+          new CrowdinOtaFailure({ kind: "upstream", status: 500, message: "server err" }),
+        ),
     });
     const c = makeCaller(
       createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),
+    );
+    await expect(c.getManifest()).rejects.toMatchObject({
+      code: "SERVICE_UNAVAILABLE",
+    });
+  });
+
+  // Boundary coverage for the `timeout` variant on getManifest: AbortError
+  // from the underlying fetch must map to SERVICE_UNAVAILABLE at the tRPC
+  // boundary (same end-user effect as REST's 502 UPSTREAM_UNAVAILABLE).
+  it("getManifest throws SERVICE_UNAVAILABLE on upstream timeout", async () => {
+    const otaTimeout = buildOta({
+      fetchManifest: () =>
+        Promise.reject(new CrowdinOtaFailure({ kind: "timeout", timeoutMs: 5_000 })),
+    });
+    const c = makeCaller(
+      createI18nRouter(() => ({ ota: otaTimeout.svc, cache: buildInMemoryCache() })),
+    );
+    await expect(c.getManifest()).rejects.toMatchObject({
+      code: "SERVICE_UNAVAILABLE",
+    });
+  });
+
+  // Boundary coverage for the `malformed` variant on getManifest: Crowdin
+  // returned a 200 but the body shape failed schema validation. The router
+  // must still surface SERVICE_UNAVAILABLE — the client cannot proceed.
+  it("getManifest throws SERVICE_UNAVAILABLE on malformed Crowdin payload", async () => {
+    const otaMalformed = buildOta({
+      fetchManifest: () =>
+        Promise.reject(new CrowdinOtaFailure({ kind: "malformed", reason: "bad shape" })),
+    });
+    const c = makeCaller(
+      createI18nRouter(() => ({ ota: otaMalformed.svc, cache: buildInMemoryCache() })),
     );
     await expect(c.getManifest()).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -195,7 +248,10 @@ describe("i18n tRPC router", () => {
   it("logs a warn line when the upstream manifest fetch fails", async () => {
     const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
     const otaDown = buildOta({
-      fetchManifest: () => Promise.reject(new CrowdinOtaUpstreamError("server err", 500)),
+      fetchManifest: () =>
+        Promise.reject(
+          new CrowdinOtaFailure({ kind: "upstream", status: 500, message: "server err" }),
+        ),
     });
     const c = makeCaller(
       createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),
@@ -211,7 +267,10 @@ describe("i18n tRPC router", () => {
   it("logs a warn line when the upstream namespace fetch fails", async () => {
     const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
     const otaDown = buildOta({
-      fetchNamespace: () => Promise.reject(new CrowdinOtaUpstreamError("server err", 500)),
+      fetchNamespace: () =>
+        Promise.reject(
+          new CrowdinOtaFailure({ kind: "upstream", status: 500, message: "server err" }),
+        ),
     });
     const c = makeCaller(
       createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),

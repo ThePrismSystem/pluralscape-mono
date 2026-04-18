@@ -5,8 +5,8 @@ import { logger } from "../../../lib/logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
 import { handleManifest } from "../../../routes/i18n/manifest.js";
 import {
+  CrowdinOtaFailure,
   CrowdinOtaService,
-  CrowdinOtaUpstreamError,
   type CrowdinOtaFetch,
 } from "../../../services/crowdin-ota.service.js";
 
@@ -102,7 +102,34 @@ describe("GET /manifest", () => {
 
   it("returns 502 on upstream failure", async () => {
     fetchMock.mockImplementationOnce(() =>
-      Promise.reject(new CrowdinOtaUpstreamError("boom", 500)),
+      Promise.reject(new CrowdinOtaFailure({ kind: "upstream", status: 500, message: "boom" })),
+    );
+    const res = await app.request("/manifest");
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
+  });
+
+  // Handler-boundary coverage for the `timeout` variant of the exhaustive
+  // switch in `handleManifest`. AbortError → `timeout` → 502
+  // UPSTREAM_UNAVAILABLE, matching the behaviour documented in the route's
+  // JSDoc and mirroring the tRPC router's SERVICE_UNAVAILABLE mapping.
+  it("returns 502 UPSTREAM_UNAVAILABLE on Crowdin timeout failure", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.reject(new CrowdinOtaFailure({ kind: "timeout", timeoutMs: 5_000 })),
+    );
+    const res = await app.request("/manifest");
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
+  });
+
+  // Handler-boundary coverage for the `malformed` variant — Crowdin returned
+  // a 200 but the body failed schema validation (or JSON parse). Still a
+  // 502 on our side because the upstream contract is broken.
+  it("returns 502 UPSTREAM_UNAVAILABLE on malformed Crowdin payload", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.reject(new CrowdinOtaFailure({ kind: "malformed", reason: "bad shape" })),
     );
     const res = await app.request("/manifest");
     expect(res.status).toBe(502);

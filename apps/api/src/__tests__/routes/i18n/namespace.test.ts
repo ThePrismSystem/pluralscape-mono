@@ -5,8 +5,8 @@ import { logger } from "../../../lib/logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
 import { handleNamespace } from "../../../routes/i18n/namespace.js";
 import {
+  CrowdinOtaFailure,
   CrowdinOtaService,
-  CrowdinOtaUpstreamError,
   type CrowdinOtaFetch,
 } from "../../../services/crowdin-ota.service.js";
 
@@ -107,7 +107,7 @@ describe("GET /:locale/:namespace", () => {
 
   it("returns 502 on upstream failure", async () => {
     fetchMock.mockImplementationOnce(() =>
-      Promise.reject(new CrowdinOtaUpstreamError("boom", 500)),
+      Promise.reject(new CrowdinOtaFailure({ kind: "upstream", status: 500, message: "boom" })),
     );
     const res = await app.request("/es/common");
     expect(res.status).toBe(502);
@@ -117,12 +117,41 @@ describe("GET /:locale/:namespace", () => {
 
   it("returns 404 when Crowdin returns 404", async () => {
     fetchMock.mockImplementationOnce(() =>
-      Promise.reject(new CrowdinOtaUpstreamError("not found", 404)),
+      Promise.reject(
+        new CrowdinOtaFailure({ kind: "upstream", status: 404, message: "not found" }),
+      ),
     );
     const res = await app.request("/xx/missing");
     expect(res.status).toBe(404);
     const body = (await res.json()) as { error: { code: string } };
     expect(body.error.code).toBe("NAMESPACE_NOT_FOUND");
+  });
+
+  // Handler-boundary coverage for the `timeout` variant of the exhaustive
+  // switch in `handleNamespace`. Unlike the 404 branch, timeouts cannot be
+  // disambiguated as "missing vs. broken" — we default to the pessimistic
+  // 502 UPSTREAM_UNAVAILABLE so the client can retry/backoff.
+  it("returns 502 UPSTREAM_UNAVAILABLE on Crowdin timeout failure", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.reject(new CrowdinOtaFailure({ kind: "timeout", timeoutMs: 5_000 })),
+    );
+    const res = await app.request("/es/common");
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
+  });
+
+  // Handler-boundary coverage for the `malformed` variant — Crowdin returned
+  // a 200 but the body failed schema validation. Never a 404 because the
+  // distribution exists; surfacing the upstream-contract break explicitly.
+  it("returns 502 UPSTREAM_UNAVAILABLE on malformed Crowdin payload", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.reject(new CrowdinOtaFailure({ kind: "malformed", reason: "bad shape" })),
+    );
+    const res = await app.request("/es/common");
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
   });
 
   // Regression guard: once upstream returns translations, a subsequent

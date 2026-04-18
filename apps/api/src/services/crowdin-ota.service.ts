@@ -2,29 +2,56 @@ import { I18N_OTA_TIMEOUT_MS } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 /**
- * Thrown when the Crowdin OTA CDN returns a non-2xx status.
- * Preserves the upstream HTTP status so the caller can map it to an
- * appropriate downstream response (e.g., 502 for 5xx, 404 for 404).
+ * Tagged-union description of every Crowdin OTA failure mode.
+ *
+ * Split by cause rather than by HTTP status so callers can pattern-match on
+ * semantics (is this a timeout? a non-2xx upstream response? a malformed
+ * payload?) without string-sniffing `Error.message`. The exhaustive switch
+ * idiom (`default: return detail satisfies never`) surfaces any new variant
+ * at compile time the first time a caller forgets to handle it.
+ *
+ *  - `timeout`   — our AbortController fired because the upstream fetch
+ *                  exceeded `timeoutMs`.
+ *  - `upstream`  — Crowdin returned a non-2xx HTTP status. `status` is the
+ *                  raw upstream HTTP status; callers map 404 to their own
+ *                  "not found" envelope and anything else to 502.
+ *  - `malformed` — Crowdin returned 2xx but the JSON body failed Zod
+ *                  validation. Distinct from `upstream` so observability
+ *                  can count "CDN lied to us" separately from "CDN is
+ *                  genuinely down"; callers treat both as 502 at the
+ *                  response boundary.
  */
-export class CrowdinOtaUpstreamError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = "CrowdinOtaUpstreamError";
+export type CrowdinOtaErrorDetail =
+  | { readonly kind: "timeout"; readonly timeoutMs: number }
+  | { readonly kind: "upstream"; readonly status: number; readonly message: string }
+  | { readonly kind: "malformed"; readonly reason: string };
+
+/**
+ * Unified error type for every Crowdin OTA failure. Callers switch on
+ * `detail.kind` rather than `instanceof` against multiple classes.
+ *
+ * The `name` field is stable across variants so structured test matchers
+ * (`rejects.toMatchObject({ name: "CrowdinOtaFailure", detail: {...} })`)
+ * keep working when new variants are added.
+ */
+export class CrowdinOtaFailure extends Error {
+  readonly detail: CrowdinOtaErrorDetail;
+
+  constructor(detail: CrowdinOtaErrorDetail) {
+    super(messageFor(detail));
+    this.name = "CrowdinOtaFailure";
+    this.detail = detail;
   }
 }
 
-/**
- * Thrown when a Crowdin OTA fetch exceeds the configured timeout.
- * Distinguishes between network-slow (which we can degrade gracefully
- * with cached content) and actual CDN errors.
- */
-export class CrowdinOtaTimeoutError extends Error {
-  constructor(public readonly timeoutMs: number) {
-    super(`Crowdin OTA fetch timed out after ${String(timeoutMs)}ms`);
-    this.name = "CrowdinOtaTimeoutError";
+function messageFor(detail: CrowdinOtaErrorDetail): string {
+  switch (detail.kind) {
+    case "timeout":
+      return `Crowdin OTA fetch timed out after ${String(detail.timeoutMs)}ms`;
+    case "upstream":
+      return detail.message;
+    case "malformed":
+      return detail.reason;
   }
 }
 
@@ -43,13 +70,6 @@ const CrowdinManifestSchema = z.object({
  * string-to-string map — any deviation surfaces as a 502 upstream error.
  */
 const CrowdinNamespaceSchema = z.record(z.string(), z.string());
-
-/**
- * HTTP status we emit when the CDN responds with JSON that fails schema
- * validation. 502 Bad Gateway communicates "upstream is broken" rather
- * than masking the failure as a 500 (our own server fault).
- */
-const MALFORMED_UPSTREAM_STATUS = 502;
 
 type CrowdinManifestResponse = z.infer<typeof CrowdinManifestSchema>;
 
@@ -76,9 +96,9 @@ const DEFAULT_BASE_URL = "https://distributions.crowdin.net";
  *  - `manifest.json` — enumerates locales and their namespaces plus a timestamp
  *  - `content/{locale}/{namespace}.json` — flat key/value translation map
  *
- * Responses are validated at the trust boundary with Zod. Malformed payloads
- * surface as `CrowdinOtaUpstreamError(status: 502)` so the consuming route
- * produces the same UPSTREAM_UNAVAILABLE envelope as a genuine Crowdin 5xx.
+ * Responses are validated at the trust boundary with Zod. Every failure
+ * surfaces as `CrowdinOtaFailure` with a tagged `detail` describing the
+ * specific cause (timeout, upstream non-2xx, malformed payload).
  */
 export class CrowdinOtaService {
   private readonly distributionHash: string;
@@ -98,10 +118,10 @@ export class CrowdinOtaService {
     const json = await this.fetchJson(url);
     const parsed = CrowdinManifestSchema.safeParse(json);
     if (!parsed.success) {
-      throw new CrowdinOtaUpstreamError(
-        `malformed Crowdin manifest: ${parsed.error.message}`,
-        MALFORMED_UPSTREAM_STATUS,
-      );
+      throw new CrowdinOtaFailure({
+        kind: "malformed",
+        reason: `malformed Crowdin manifest: ${parsed.error.message}`,
+      });
     }
     return parsed.data;
   }
@@ -114,10 +134,10 @@ export class CrowdinOtaService {
     const json = await this.fetchJson(url);
     const parsed = CrowdinNamespaceSchema.safeParse(json);
     if (!parsed.success) {
-      throw new CrowdinOtaUpstreamError(
-        `malformed Crowdin namespace ${locale}/${namespace}: ${parsed.error.message}`,
-        MALFORMED_UPSTREAM_STATUS,
-      );
+      throw new CrowdinOtaFailure({
+        kind: "malformed",
+        reason: `malformed Crowdin namespace ${locale}/${namespace}: ${parsed.error.message}`,
+      });
     }
     return parsed.data;
   }
@@ -143,12 +163,16 @@ export class CrowdinOtaService {
     try {
       const res = await this.fetchImpl(url, { signal: controller.signal });
       if (!res.ok) {
-        throw new CrowdinOtaUpstreamError(`Crowdin OTA ${String(res.status)}: ${url}`, res.status);
+        throw new CrowdinOtaFailure({
+          kind: "upstream",
+          status: res.status,
+          message: `Crowdin OTA ${String(res.status)}: ${url}`,
+        });
       }
       return await res.json();
     } catch (error: unknown) {
       if (timeout.didFire()) {
-        throw new CrowdinOtaTimeoutError(this.timeoutMs);
+        throw new CrowdinOtaFailure({ kind: "timeout", timeoutMs: this.timeoutMs });
       }
       throw error;
     } finally {

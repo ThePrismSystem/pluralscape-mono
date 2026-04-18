@@ -5,30 +5,14 @@ import { computeTranslationsEtag } from "../../lib/i18n-etag.js";
 import { requireParam } from "../../lib/id-param.js";
 import { logger } from "../../lib/logger.js";
 import { envelope } from "../../lib/response.js";
-import {
-  CrowdinOtaTimeoutError,
-  CrowdinOtaUpstreamError,
-} from "../../services/crowdin-ota.service.js";
+import { CrowdinOtaFailure } from "../../services/crowdin-ota.service.js";
+import { namespaceCacheKey, type CachedNamespace } from "../../services/i18n-shared.js";
 
-import type { I18nDeps } from "./manifest.js";
+import type { I18nDeps } from "../../services/i18n-deps.js";
 import type { Context } from "hono";
 
 /** HTTP 404 from upstream — maps to our own 404 response for missing locale/namespace. */
 const UPSTREAM_STATUS_NOT_FOUND = 404;
-
-/**
- * Cached namespace envelope. The etag is computed once at cache-write time
- * so every 304 hit avoids the canonical-JSON re-hash — and so the etag the
- * client compared against on the previous 200 matches what we compare here.
- */
-interface CachedNamespace {
-  readonly etag: string;
-  readonly translations: Readonly<Record<string, string>>;
-}
-
-function cacheKey(locale: string, namespace: string): string {
-  return `ns:${locale}:${namespace}`;
-}
 
 /**
  * Handle `GET /v1/i18n/:locale/:namespace`.
@@ -53,7 +37,7 @@ export async function handleNamespace(c: Context, deps: I18nDeps): Promise<Respo
   const namespace = requireParam(c.req.param("namespace"), "namespace");
   const ifNoneMatch = c.req.header("if-none-match");
 
-  const key = cacheKey(locale, namespace);
+  const key = namespaceCacheKey(locale, namespace);
   let cached = await deps.cache.getJSON<CachedNamespace>(key);
 
   if (!cached) {
@@ -68,17 +52,32 @@ export async function handleNamespace(c: Context, deps: I18nDeps): Promise<Respo
         locale,
         namespace,
       });
-      if (error instanceof CrowdinOtaUpstreamError && error.status === UPSTREAM_STATUS_NOT_FOUND) {
-        return c.json(
-          { error: { code: "NAMESPACE_NOT_FOUND", message: "Translation not found" } },
-          HTTP_NOT_FOUND,
-        );
-      }
-      if (error instanceof CrowdinOtaUpstreamError || error instanceof CrowdinOtaTimeoutError) {
-        return c.json(
-          { error: { code: "UPSTREAM_UNAVAILABLE", message: "Translation source unavailable" } },
-          HTTP_BAD_GATEWAY,
-        );
+      if (error instanceof CrowdinOtaFailure) {
+        switch (error.detail.kind) {
+          case "upstream":
+            if (error.detail.status === UPSTREAM_STATUS_NOT_FOUND) {
+              return c.json(
+                { error: { code: "NAMESPACE_NOT_FOUND", message: "Translation not found" } },
+                HTTP_NOT_FOUND,
+              );
+            }
+            return c.json(
+              {
+                error: { code: "UPSTREAM_UNAVAILABLE", message: "Translation source unavailable" },
+              },
+              HTTP_BAD_GATEWAY,
+            );
+          case "timeout":
+          case "malformed":
+            return c.json(
+              {
+                error: { code: "UPSTREAM_UNAVAILABLE", message: "Translation source unavailable" },
+              },
+              HTTP_BAD_GATEWAY,
+            );
+          default:
+            return error.detail satisfies never;
+        }
       }
       throw error;
     }

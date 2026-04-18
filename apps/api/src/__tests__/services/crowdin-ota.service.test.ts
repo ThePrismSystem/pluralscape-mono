@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import {
-  CrowdinOtaService,
-  CrowdinOtaUpstreamError,
-  CrowdinOtaTimeoutError,
-} from "../../services/crowdin-ota.service.js";
+import { CrowdinOtaFailure, CrowdinOtaService } from "../../services/crowdin-ota.service.js";
 
 describe("CrowdinOtaService.fetchManifest", () => {
   beforeEach(() => {
@@ -32,13 +28,17 @@ describe("CrowdinOtaService.fetchManifest", () => {
     );
   });
 
-  it("throws CrowdinOtaUpstreamError on non-2xx", async () => {
+  it("throws CrowdinOtaFailure with kind=upstream on non-2xx", async () => {
     const mockFetch = vi.fn(() => Promise.resolve(new Response("nope", { status: 503 })));
     const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: mockFetch });
-    await expect(svc.fetchManifest()).rejects.toBeInstanceOf(CrowdinOtaUpstreamError);
+    await expect(svc.fetchManifest()).rejects.toMatchObject({
+      name: "CrowdinOtaFailure",
+      detail: { kind: "upstream", status: 503 },
+    });
+    await expect(svc.fetchManifest()).rejects.toBeInstanceOf(CrowdinOtaFailure);
   });
 
-  it("throws CrowdinOtaTimeoutError when fetch exceeds timeout", async () => {
+  it("throws CrowdinOtaFailure with kind=timeout when fetch exceeds timeout", async () => {
     const mockFetch = vi.fn(
       (_url: string, init?: { signal?: AbortSignal }) =>
         new Promise<Response>((_, reject) => {
@@ -56,7 +56,10 @@ describe("CrowdinOtaService.fetchManifest", () => {
     // Attach catch synchronously so the rejection isn't flagged as unhandled
     // while we advance the fake clock. Vitest's fake timers never run the real
     // microtask scheduler, so we'd otherwise see an unhandled-rejection warning.
-    const assertion = expect(p).rejects.toBeInstanceOf(CrowdinOtaTimeoutError);
+    const assertion = expect(p).rejects.toMatchObject({
+      name: "CrowdinOtaFailure",
+      detail: { kind: "timeout", timeoutMs: 100 },
+    });
     await vi.advanceTimersByTimeAsync(200);
     await assertion;
   });
@@ -76,17 +79,18 @@ describe("CrowdinOtaService.fetchNamespace", () => {
     );
   });
 
-  it("throws upstream error on 404", async () => {
+  it("throws CrowdinOtaFailure with kind=upstream and status=404 on 404", async () => {
     const mockFetch = vi.fn(() => Promise.resolve(new Response("", { status: 404 })));
     const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: mockFetch });
-    await expect(svc.fetchNamespace("es", "common")).rejects.toBeInstanceOf(
-      CrowdinOtaUpstreamError,
-    );
+    await expect(svc.fetchNamespace("es", "common")).rejects.toMatchObject({
+      name: "CrowdinOtaFailure",
+      detail: { kind: "upstream", status: 404 },
+    });
   });
 });
 
 describe("CrowdinOtaService payload validation", () => {
-  it("throws CrowdinOtaUpstreamError(502) on malformed manifest payload", async () => {
+  it("throws CrowdinOtaFailure(kind=malformed) on malformed manifest payload", async () => {
     const mockFetch = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify({ not_a_timestamp: "bad" }), {
@@ -97,12 +101,12 @@ describe("CrowdinOtaService payload validation", () => {
     );
     const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: mockFetch });
     await expect(svc.fetchManifest()).rejects.toMatchObject({
-      name: "CrowdinOtaUpstreamError",
-      status: 502,
+      name: "CrowdinOtaFailure",
+      detail: { kind: "malformed" },
     });
   });
 
-  it("throws CrowdinOtaUpstreamError(502) on malformed namespace payload", async () => {
+  it("throws CrowdinOtaFailure(kind=malformed) on malformed namespace payload", async () => {
     const mockFetch = vi.fn(() =>
       Promise.resolve(
         // value must be string, 42 is invalid
@@ -114,12 +118,12 @@ describe("CrowdinOtaService payload validation", () => {
     );
     const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: mockFetch });
     await expect(svc.fetchNamespace("es", "common")).rejects.toMatchObject({
-      name: "CrowdinOtaUpstreamError",
-      status: 502,
+      name: "CrowdinOtaFailure",
+      detail: { kind: "malformed" },
     });
   });
 
-  it("does NOT classify a non-timeout network error as CrowdinOtaTimeoutError", async () => {
+  it("does NOT classify a non-timeout network error as a CrowdinOtaFailure", async () => {
     const mockFetch = vi.fn(() => Promise.reject(new TypeError("Failed to fetch")));
     const svc = new CrowdinOtaService({
       distributionHash: "HASH",
