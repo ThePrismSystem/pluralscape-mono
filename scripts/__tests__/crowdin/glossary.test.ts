@@ -20,7 +20,7 @@ describe("diffGlossaryTerms", () => {
     const remote = [{ id: 1, text: "system", description: "Old description." }];
     const diff = diffGlossaryTerms(local, remote);
     expect(diff.toUpdate).toHaveLength(1);
-    expect(diff.toUpdate[0].id).toBe(1);
+    expect(diff.toUpdate[0]?.id).toBe(1);
     expect(diff.toAdd.map((t) => t.term)).toEqual(["fronting"]);
   });
 

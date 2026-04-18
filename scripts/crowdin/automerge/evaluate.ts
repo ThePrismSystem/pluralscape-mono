@@ -73,7 +73,7 @@ export interface EvaluationResult {
 
 function extractLocale(filePath: string): string | null {
   const match = filePath.match(/^apps\/mobile\/locales\/([^/]+)\//);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 export function evaluatePr(pr: PrContext): EvaluationResult {
