@@ -1,4 +1,8 @@
-import { I18N_CACHE_TTL_MS, type I18nManifest, type I18nNamespace } from "@pluralscape/types";
+import {
+  I18N_CACHE_TTL_MS,
+  type I18nManifest,
+  type I18nNamespaceWithEtag,
+} from "@pluralscape/types";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
@@ -122,7 +126,7 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
           namespace: z.string().min(1),
         }),
       )
-      .query(async ({ input }): Promise<I18nNamespace & { readonly etag: string }> => {
+      .query(async ({ input }): Promise<I18nNamespaceWithEtag> => {
         const deps = resolveDepsOrThrow(getDeps);
         const key = namespaceCacheKey(input.locale, input.namespace);
 

@@ -1,3 +1,4 @@
+import { asEtag } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -99,7 +100,7 @@ describe("createChainedBackend", () => {
       read: vi.fn(
         (): Promise<CacheEntry | null> =>
           Promise.resolve({
-            etag: "e",
+            etag: asEtag("e"),
             translations: { hello: "cached" },
             fetchedAt: Date.now() - ONE_SECOND_MS,
           }),
@@ -141,7 +142,7 @@ describe("createChainedBackend", () => {
       read: vi.fn(
         (): Promise<CacheEntry | null> =>
           Promise.resolve({
-            etag: "e",
+            etag: asEtag("e"),
             translations: { hello: "stale" },
             fetchedAt: Date.now() - STALE_AGE_MS,
           }),
@@ -164,7 +165,7 @@ describe("createChainedBackend", () => {
       read: vi.fn(
         (): Promise<CacheEntry | null> =>
           Promise.resolve({
-            etag: "abc123",
+            etag: asEtag("abc123"),
             translations: { hello: "stale" },
             fetchedAt: Date.now() - STALE_AGE_MS,
           }),
@@ -192,7 +193,7 @@ describe("createChainedBackend", () => {
       read: vi.fn(
         (): Promise<CacheEntry | null> =>
           Promise.resolve({
-            etag: "e",
+            etag: asEtag("e"),
             translations: { hello: "stale-offline" },
             fetchedAt: Date.now() - STALE_AGE_MS,
           }),
@@ -229,7 +230,7 @@ describe("createChainedBackend", () => {
       read: vi.fn(
         (): Promise<CacheEntry | null> =>
           Promise.resolve({
-            etag: "e",
+            etag: asEtag("e"),
             translations: { hello: "stale" },
             fetchedAt: Date.now() - STALE_AGE_MS,
           }),
@@ -258,7 +259,7 @@ describe("createChainedBackend", () => {
       read: vi.fn(
         (): Promise<CacheEntry | null> =>
           Promise.resolve({
-            etag: "e",
+            etag: asEtag("e"),
             translations: { hello: "stale" },
             fetchedAt: originalFetchedAt,
           }),
@@ -278,7 +279,7 @@ describe("createChainedBackend", () => {
       "es",
       "common",
       expect.objectContaining({
-        etag: "e",
+        etag: asEtag("e"),
         translations: { hello: "stale" },
         fetchedAt: expect.any(Number),
       }),

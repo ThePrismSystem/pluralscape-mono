@@ -4,9 +4,9 @@ import { formatRelativeTime } from "../format-relative-time.js";
 
 import type { Locale } from "@pluralscape/types";
 
-const EN = "en" as Locale;
-const DE = "de" as Locale;
-const AR = "ar" as Locale;
+const EN: Locale = "en";
+const DE: Locale = "de";
+const AR: Locale = "ar";
 
 // Fixed reference: 2026-03-15 12:00:00 UTC
 const NOW = new Date("2026-03-15T12:00:00Z");

@@ -106,8 +106,8 @@ describe("i18n tRPC router", () => {
   it("getManifest returns manifest shape", async () => {
     const out = await caller.getManifest();
     expect(out.distributionTimestamp).toBe(1);
-    expect(out.locales[0]?.locale).toBe("en");
-    expect(out.locales[0]?.namespaces[0]?.name).toBe("common");
+    expect(out.locales[0].locale).toBe("en");
+    expect(out.locales[0].namespaces[0]?.name).toBe("common");
   });
 
   it("getManifest caches repeat calls", async () => {
@@ -297,7 +297,7 @@ describe("i18n tRPC router", () => {
     const c = makeCaller(createI18nRouter(() => ({ ota: ota.svc, cache: failingCache })));
     const out = await c.getManifest();
     expect(out.distributionTimestamp).toBe(1);
-    expect(out.locales[0]?.locale).toBe("en");
+    expect(out.locales[0].locale).toBe("en");
     expect(warnSpy).toHaveBeenCalledWith(
       "valkey-cache: setJSON failed, continuing",
       expect.objectContaining({ error: "connection lost" }),

@@ -1,19 +1,22 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 
 import { I18N_CACHE_TTL_MS, I18N_OTA_TIMEOUT_MS, I18N_ETAG_LENGTH } from "../constants.js";
+import { asEtag } from "../index.js";
 
 import type {
+  Etag,
   I18nManifest,
   I18nLocaleManifest,
   I18nNamespaceManifest,
   I18nNamespace,
+  I18nNamespaceWithEtag,
 } from "../index.js";
 
 describe("i18n types", () => {
-  it("I18nManifest has distributionTimestamp and locales", () => {
+  it("I18nManifest has distributionTimestamp and a non-empty locales tuple", () => {
     expectTypeOf<I18nManifest>().toEqualTypeOf<{
       readonly distributionTimestamp: number;
-      readonly locales: readonly I18nLocaleManifest[];
+      readonly locales: readonly [I18nLocaleManifest, ...I18nLocaleManifest[]];
     }>();
   });
 
@@ -24,10 +27,10 @@ describe("i18n types", () => {
     }>();
   });
 
-  it("I18nNamespaceManifest carries name and etag", () => {
+  it("I18nNamespaceManifest carries name and branded etag", () => {
     expectTypeOf<I18nNamespaceManifest>().toEqualTypeOf<{
       readonly name: string;
-      readonly etag: string;
+      readonly etag: Etag;
     }>();
   });
 
@@ -35,6 +38,17 @@ describe("i18n types", () => {
     expectTypeOf<I18nNamespace>().toEqualTypeOf<{
       readonly translations: Readonly<Record<string, string>>;
     }>();
+  });
+
+  it("I18nNamespaceWithEtag extends I18nNamespace with a branded etag", () => {
+    expectTypeOf<I18nNamespaceWithEtag>().toExtend<I18nNamespace>();
+    expectTypeOf<I18nNamespaceWithEtag["etag"]>().toEqualTypeOf<Etag>();
+  });
+
+  it("asEtag produces an Etag that still extends string", () => {
+    const tag = asEtag("abc123");
+    expectTypeOf(tag).toExtend<string>();
+    expect(typeof tag).toBe("string");
   });
 
   it("cache TTL is 24h", () => {

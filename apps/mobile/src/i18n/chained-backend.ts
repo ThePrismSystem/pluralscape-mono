@@ -1,3 +1,5 @@
+import { asEtag } from "@pluralscape/types";
+
 import type { AsyncStorageI18nCache, CacheEntry } from "./async-storage-cache.js";
 
 export interface ChainedBackendPlugin {
@@ -70,7 +72,7 @@ export function createChainedBackend(options: ChainedBackendOptions): ChainedBac
       }
       const etagHeader = res.headers.get("etag") ?? "";
       const entry: CacheEntry = {
-        etag: stripQuotes(etagHeader),
+        etag: asEtag(stripQuotes(etagHeader)),
         translations: body.data.translations,
         fetchedAt: Date.now(),
       };

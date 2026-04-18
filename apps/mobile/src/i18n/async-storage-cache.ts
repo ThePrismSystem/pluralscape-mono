@@ -1,5 +1,7 @@
+import type { Etag } from "@pluralscape/types";
+
 export interface CacheEntry {
-  readonly etag: string;
+  readonly etag: Etag;
   readonly translations: Readonly<Record<string, string>>;
   readonly fetchedAt: number;
 }

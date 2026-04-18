@@ -1,7 +1,31 @@
 import type { Brand } from "./ids.js";
 
-/** A BCP 47 locale identifier (e.g. "en-US", "ja-JP"). */
-export type Locale = Brand<string, "Locale">;
+/**
+ * All locales the application supports.
+ *
+ * A new locale is added in two places: this tuple (the type-level source of
+ * truth) and `apps/mobile/locales/index.ts`'s `BUNDLED_LOCALES` (the bundled
+ * translation fallback for offline launches). Keep the two in sync — the
+ * bundled-locales test asserts equality at build time.
+ */
+export const SUPPORTED_LOCALES = [
+  "en",
+  "es",
+  "es-419",
+  "fr",
+  "de",
+  "it",
+  "pt-BR",
+  "ru",
+  "nl",
+  "zh-Hans",
+  "ja",
+  "ko",
+  "ar",
+] as const;
+
+/** The locale identifier type — one of the supported codes. */
+export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 /** A namespaced translation key (e.g. "settings.theme.dark"). */
 export type TranslationKey = Brand<string, "TranslationKey">;

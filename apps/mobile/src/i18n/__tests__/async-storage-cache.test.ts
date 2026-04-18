@@ -1,3 +1,4 @@
+import { asEtag } from "@pluralscape/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -54,7 +55,7 @@ describe("AsyncStorageI18nCache", () => {
 
   it("write/read round-trips entry", async () => {
     const entry: CacheEntry = {
-      etag: "abc123",
+      etag: asEtag("abc123"),
       translations: { hello: "hola" },
       fetchedAt: Date.now(),
     };
@@ -64,7 +65,7 @@ describe("AsyncStorageI18nCache", () => {
 
   it("read returns stale entry past TTL (caller decides freshness)", async () => {
     const entry: CacheEntry = {
-      etag: "abc123",
+      etag: asEtag("abc123"),
       translations: { hello: "hola" },
       fetchedAt: Date.now() - STALE_AGE_MS,
     };
@@ -77,7 +78,7 @@ describe("AsyncStorageI18nCache", () => {
   it("isFresh true within TTL", () => {
     expect(
       cache.isFresh({
-        etag: "e",
+        etag: asEtag("e"),
         translations: {},
         fetchedAt: Date.now() - ONE_SECOND_MS,
       }),
@@ -98,7 +99,7 @@ describe("AsyncStorageI18nCache", () => {
 
   it("prefixes storage keys with @pluralscape:i18n namespace", async () => {
     const entry: CacheEntry = {
-      etag: "e",
+      etag: asEtag("e"),
       translations: { a: "b" },
       fetchedAt: Date.now(),
     };

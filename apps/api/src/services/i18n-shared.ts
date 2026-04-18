@@ -1,4 +1,6 @@
-import type { I18nManifest } from "@pluralscape/types";
+import { asEtag, type Etag, type I18nLocaleManifest, type I18nManifest } from "@pluralscape/types";
+
+import { CrowdinOtaFailure } from "./crowdin-ota.service.js";
 
 /**
  * Shared i18n constants and helpers used by both the REST route and the tRPC
@@ -41,7 +43,7 @@ export function namespaceCacheKey(locale: string, namespace: string): string {
  * Shared between the REST and tRPC handlers for identical cache semantics.
  */
 export interface CachedNamespace {
-  readonly etag: string;
+  readonly etag: Etag;
   readonly translations: Readonly<Record<string, string>>;
 }
 
@@ -51,18 +53,38 @@ export interface CachedNamespace {
  * etags are intentionally empty at the manifest level: clients receive them
  * via the `GET /:locale/:namespace` route's ETag header and the tRPC
  * `getNamespace` response field.
+ *
+ * A manifest with zero locales is a contract violation from upstream — we
+ * surface it as `CrowdinOtaFailure({ kind: "malformed" })` so the REST
+ * handler and tRPC router map it to their usual 502 / SERVICE_UNAVAILABLE.
+ * This is also what lets `I18nManifest.locales` be typed as a non-empty
+ * tuple: the check happens inside this boundary helper.
  */
 export function manifestFromCrowdin(raw: CrowdinManifestRaw): I18nManifest {
+  const entries = Object.entries(raw.content);
+  const [firstEntry, ...restEntries] = entries;
+  if (firstEntry === undefined) {
+    throw new CrowdinOtaFailure({
+      kind: "malformed",
+      reason: "Crowdin manifest contains no locales",
+    });
+  }
+
+  const toLocaleManifest = ([locale, files]: readonly [
+    string,
+    readonly string[],
+  ]): I18nLocaleManifest => ({
+    locale,
+    namespaces: files.map((filename) => ({
+      name: filename.endsWith(NAMESPACE_FILE_SUFFIX)
+        ? filename.slice(0, -NAMESPACE_FILE_SUFFIX.length)
+        : filename,
+      etag: asEtag(""),
+    })),
+  });
+
   return {
     distributionTimestamp: raw.timestamp,
-    locales: Object.entries(raw.content).map(([locale, files]) => ({
-      locale,
-      namespaces: files.map((filename) => ({
-        name: filename.endsWith(NAMESPACE_FILE_SUFFIX)
-          ? filename.slice(0, -NAMESPACE_FILE_SUFFIX.length)
-          : filename,
-        etag: "",
-      })),
-    })),
+    locales: [toLocaleManifest(firstEntry), ...restEntries.map(toLocaleManifest)],
   };
 }

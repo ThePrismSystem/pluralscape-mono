@@ -6,23 +6,23 @@ import type { Locale } from "@pluralscape/types";
 
 describe("isRtl", () => {
   it.each([
-    ["ar" as Locale, true],
-    ["he" as Locale, true],
-    ["fa" as Locale, true],
-    ["ur" as Locale, true],
-    ["ar-SA" as Locale, true],
-    ["he-IL" as Locale, true],
+    ["ar", true],
+    ["he", true],
+    ["fa", true],
+    ["ur", true],
+    ["ar-SA", true],
+    ["he-IL", true],
   ])("returns true for RTL locale %s", (locale, expected) => {
     expect(isRtl(locale)).toBe(expected);
   });
 
   it.each([
-    ["en" as Locale, false],
-    ["en-US" as Locale, false],
-    ["de" as Locale, false],
-    ["ja" as Locale, false],
-    ["zh-CN" as Locale, false],
-    ["fr" as Locale, false],
+    ["en", false],
+    ["en-US", false],
+    ["de", false],
+    ["ja", false],
+    ["zh-CN", false],
+    ["fr", false],
   ])("returns false for LTR locale %s", (locale, expected) => {
     expect(isRtl(locale)).toBe(expected);
   });
@@ -30,18 +30,22 @@ describe("isRtl", () => {
 
 describe("getTextDirection", () => {
   it("returns rtl for Arabic", () => {
-    expect(getTextDirection("ar" as Locale)).toBe("rtl");
+    const ar: Locale = "ar";
+    expect(getTextDirection(ar)).toBe("rtl");
   });
 
   it("returns ltr for English", () => {
-    expect(getTextDirection("en" as Locale)).toBe("ltr");
-  });
-
-  it("returns rtl for Hebrew with region", () => {
-    expect(getTextDirection("he-IL" as Locale)).toBe("rtl");
+    const en: Locale = "en";
+    expect(getTextDirection(en)).toBe("ltr");
   });
 
   it("returns ltr for Japanese", () => {
-    expect(getTextDirection("ja" as Locale)).toBe("ltr");
+    const ja: Locale = "ja";
+    expect(getTextDirection(ja)).toBe("ltr");
+  });
+
+  it("returns ltr for simplified Chinese", () => {
+    const zh: Locale = "zh-Hans";
+    expect(getTextDirection(zh)).toBe("ltr");
   });
 });

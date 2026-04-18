@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { I18N_ETAG_LENGTH } from "@pluralscape/types";
+import { asEtag, I18N_ETAG_LENGTH, type Etag } from "@pluralscape/types";
 
 /**
  * Deterministic ETag derived from canonical JSON of the translations map.
@@ -8,7 +8,7 @@ import { I18N_ETAG_LENGTH } from "@pluralscape/types";
  * across re-serializations, which matters because ETag equality is the
  * only signal the mobile client uses to short-circuit re-downloads.
  */
-export function computeTranslationsEtag(translations: Readonly<Record<string, string>>): string {
+export function computeTranslationsEtag(translations: Readonly<Record<string, string>>): Etag {
   const sortedKeys = Object.keys(translations).sort();
   const canonical = JSON.stringify(
     sortedKeys.reduce<Record<string, string>>((acc, k) => {
@@ -17,5 +17,6 @@ export function computeTranslationsEtag(translations: Readonly<Record<string, st
       return acc;
     }, {}),
   );
-  return createHash("sha256").update(canonical).digest("hex").slice(0, I18N_ETAG_LENGTH);
+  const hex = createHash("sha256").update(canonical).digest("hex").slice(0, I18N_ETAG_LENGTH);
+  return asEtag(hex);
 }
