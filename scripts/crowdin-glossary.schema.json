@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pluralscape Crowdin Glossary",
+  "description": "Source of truth for glossary terms synced to Crowdin project.",
+  "type": "object",
+  "required": ["terms"],
+  "additionalProperties": false,
+  "properties": {
+    "terms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["term", "type", "notes"],
+        "additionalProperties": false,
+        "properties": {
+          "term": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["translatable", "do-not-translate", "negative"] },
+          "pos": { "type": "string", "minLength": 1 },
+          "hazard": { "enum": ["critical", "medium", "low"] },
+          "loanword_ok": { "type": "boolean" },
+          "notes": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

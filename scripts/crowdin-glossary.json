@@ -1,0 +1,560 @@
+{
+  "$schema": "./crowdin-glossary.schema.json",
+  "terms": [
+    {
+      "term": "plural",
+      "type": "translatable",
+      "pos": "adj",
+      "hazard": "medium",
+      "notes": "IDENTITY LABEL for systems. NOT grammatical/numerical plurality. Translate as identity marker akin to 'queer' or 'neurodivergent'."
+    },
+    {
+      "term": "plurality",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "medium",
+      "notes": "Umbrella term for the experience of multiple consciousnesses in one body. NOT a grammatical or mathematical concept. Community-preferred synonym: 'multiplicity'."
+    },
+    {
+      "term": "multiplicity",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Community synonym for plurality; used interchangeably."
+    },
+    {
+      "term": "singlet",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "medium",
+      "loanword_ok": true,
+      "notes": "A person who is not plural. Neologism; many languages lack a direct equivalent — retain as English loanword or use a descriptive phrase."
+    },
+    {
+      "term": "system",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "critical",
+      "notes": "A COLLECTIVE OF HEADMATES sharing one body. Also the primary user account in Pluralscape. Translate using words denoting a group of people, household, team, or collective. NOT computational ('operating system'), biological, or mechanical."
+    },
+    {
+      "term": "member",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate within a system; an individual consciousness. Preferred over 'alter' or 'personality'."
+    },
+    {
+      "term": "headmate",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Community-preferred synonym for 'member' — conveys companionship. Often retained as a loanword or translated laterally (e.g., German 'Systemmitglied')."
+    },
+    {
+      "term": "systemmate",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Synonym for headmate; community-generated portmanteau."
+    },
+    {
+      "term": "facet",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A less-distinct headmate; a fragment with low psychological elaboration. Metaphor: 'a facet of a gem'."
+    },
+    {
+      "term": "polyplural",
+      "type": "translatable",
+      "pos": "adj",
+      "loanword_ok": true,
+      "notes": "A system with many hundreds or thousands of headmates. Usually retains 'poly-' prefix across target languages."
+    },
+    {
+      "term": "polyfrag",
+      "type": "translatable",
+      "pos": "adj",
+      "loanword_ok": true,
+      "notes": "Polyfragmented system — an exceptionally large, fragmented system. Retain 'poly-' prefix."
+    },
+
+    {
+      "term": "fronting",
+      "type": "translatable",
+      "pos": "verb/noun",
+      "hazard": "critical",
+      "notes": "Taking EXECUTIVE CONTROL of the body, handling sensation and daily activities. Translate as 'being in control' or 'emerging'. NOT a physical front/facade (avoid Spanish 'frente' for this sense)."
+    },
+    {
+      "term": "front",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "critical",
+      "notes": "The metaphorical driver's seat — where the fronting headmate is. NOT a military line, building facade, or weather front. Community-equivalent: 'in command', 'at the wheel'."
+    },
+    {
+      "term": "switch",
+      "type": "translatable",
+      "pos": "noun/verb",
+      "hazard": "critical",
+      "notes": "The event of consciousness transfer between headmates. NOT an electrical switch or a swap of physical objects. Translate as psychological transition of control."
+    },
+    {
+      "term": "switching",
+      "type": "translatable",
+      "pos": "verb",
+      "hazard": "critical",
+      "notes": "The process of switching (see 'switch'). Psychological transition, not mechanical."
+    },
+    {
+      "term": "co-fronting",
+      "type": "translatable",
+      "pos": "verb/noun",
+      "notes": "Multiple headmates fronting simultaneously, sharing control — tracked in Pluralscape as overlapping time ranges."
+    },
+    {
+      "term": "co-consciousness",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Two or more headmates simultaneously aware of the external world (distinct from co-fronting, which adds control)."
+    },
+    {
+      "term": "blending",
+      "type": "translatable",
+      "pos": "noun/verb",
+      "notes": "Thoughts, feelings, or identities of multiple headmates mixing — confused identity. Translate as cognitive/emotional merging."
+    },
+    {
+      "term": "blurry",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "Fronter identity is indistinct — used as a Pluralscape custom-front option when the fronter is unclear."
+    },
+    {
+      "term": "frontstuck",
+      "type": "translatable",
+      "pos": "adj",
+      "loanword_ok": true,
+      "notes": "A headmate cannot stop fronting or switch away. Involuntary state."
+    },
+    {
+      "term": "front sticky",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "A headmate continuously drawn to front despite switching attempts."
+    },
+
+    {
+      "term": "innerworld",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "The system's internal mental landscape. Synonyms: headspace, wonderland. Translate as 'inner world' / 'mental space' — low ambiguity risk."
+    },
+    {
+      "term": "headspace",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Synonym for innerworld."
+    },
+    {
+      "term": "wonderland",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Synonym for innerworld, common in older and tulpamancy communities."
+    },
+    {
+      "term": "subsystem",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A distinct system nested within a single headmate of a larger system. Prefix 'sub-' usually transfers universally."
+    },
+    {
+      "term": "sidesystem",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A semi-independent system sharing the same body — more autonomous than a subsystem."
+    },
+    {
+      "term": "gateway system",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Systems whose headmates live autonomous lives in an alternate plane when not fronting."
+    },
+
+    {
+      "term": "custom front",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "PLURALSCAPE-SPECIFIC: an abstract cognitive state logged like a member (e.g., 'Dissociated', 'Blurry'). Not a headmate."
+    },
+    {
+      "term": "privacy bucket",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "PLURALSCAPE-SPECIFIC: tag-based access control. Members with matching buckets are visible to a given friend via intersection logic."
+    },
+
+    {
+      "term": "role",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A position a headmate takes in the system — a job, attribute, compulsion, or affinity."
+    },
+    {
+      "term": "host",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "critical",
+      "notes": "The headmate who fronts most often and manages daily external life. NOT a computer server, biological parasite carrier, or party host. Community sense: 'primary occupant' / 'executive manager'."
+    },
+    {
+      "term": "co-host",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Shared host role across multiple headmates."
+    },
+    {
+      "term": "protector",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate who shields the system. Subtypes: physical, emotional, sexual. Translate with a protective-guardian sense."
+    },
+    {
+      "term": "persecutor",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "low",
+      "notes": "A traumatized headmate who harms the system as a flawed protective mechanism. PSYCHOLOGICAL term, NOT legal 'prosecutor'."
+    },
+    {
+      "term": "persecutor-protector",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A persecutor who lashes out externally to protect the system (hyper-vigilant)."
+    },
+    {
+      "term": "gatekeeper",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "medium",
+      "notes": "A headmate controlling access to fronting, memory barriers, and switching. Sense: guardian of consciousness access, NOT physical gate attendant. (Also used pejoratively in discourse — see 'sysmed'.)"
+    },
+    {
+      "term": "caretaker",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A nurturing headmate, often tending littles or body exhaustion."
+    },
+    {
+      "term": "soother",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "medium",
+      "notes": "A headmate who eases panic and de-escalates triggers. NOT a baby pacifier or topical ointment. Translate as active noun ('Calmer', 'Regulator')."
+    },
+    {
+      "term": "trauma holder",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate who holds traumatic memories or PTSD responses for the system."
+    },
+    {
+      "term": "symptom holder",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate who embodies severe comorbid symptoms (chronic pain, phobias), sparing others."
+    },
+    {
+      "term": "archiver",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate managing internal information and memories."
+    },
+    {
+      "term": "internal self-helper",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate with deep structural knowledge of the system. Clinical acronym: ISH."
+    },
+    {
+      "term": "overseer",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate managing internal logistics and the innerworld."
+    },
+    {
+      "term": "groundskeeper",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Synonym for overseer; tends the innerworld."
+    },
+    {
+      "term": "routine keeper",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate ensuring survival habits — medication, sleep, diet."
+    },
+    {
+      "term": "financial handler",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate managing money, bills, and impulse control."
+    },
+
+    {
+      "term": "little",
+      "type": "translatable",
+      "pos": "noun",
+      "hazard": "critical",
+      "notes": "A child-aged headmate (NOUN). DO NOT translate as adjective 'small'. Use 'child' / 'youngster' / 'junior' noun form. Drives 'Littles Safe Mode' simplified UI. Synonym: 'syskid'."
+    },
+    {
+      "term": "middle",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A teen-aged headmate (noun form)."
+    },
+    {
+      "term": "big",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "An adult headmate, especially in a young body."
+    },
+    {
+      "term": "age slider",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A headmate whose internal age shifts based on stress or environment."
+    },
+
+    {
+      "term": "origin",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "How the system/headmate came to be. Types: traumagenic, endogenic, adaptive, created, from-birth, spiritual, mixed-origin."
+    },
+    {
+      "term": "traumagenic",
+      "type": "translatable",
+      "pos": "adj",
+      "loanword_ok": true,
+      "notes": "Plurality formed as a defense against severe childhood trauma. Clinically-aligned origin."
+    },
+    {
+      "term": "adaptive",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "Broader umbrella covering traumagenic plus systems formed to adapt to neurodivergence or chronic stress."
+    },
+    {
+      "term": "endogenic",
+      "type": "translatable",
+      "pos": "adj",
+      "loanword_ok": true,
+      "notes": "Plurality formed without trauma. Umbrella for non-clinical origins."
+    },
+    {
+      "term": "created",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "Systems formed through intentional creation (e.g., tulpamancy)."
+    },
+    {
+      "term": "from-birth",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "Systems that have always been plural."
+    },
+    {
+      "term": "spiritual",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "Plurality from metaphysical origin — multiple souls, possession."
+    },
+    {
+      "term": "mixed-origin",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "System formed from multiple causes combined."
+    },
+
+    {
+      "term": "tulpa",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "An autonomous, sentient headmate deliberately created via meditative practice. Retain as loanword."
+    },
+    {
+      "term": "tulpamancer",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "The host who created a tulpa. Retain as loanword."
+    },
+    {
+      "term": "tulpamancy",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "The practice of creating tulpas. Retain as loanword."
+    },
+    {
+      "term": "forcing",
+      "type": "translatable",
+      "pos": "verb/noun",
+      "notes": "The meditative cognitive process of creating or strengthening a tulpa."
+    },
+    {
+      "term": "servitor",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "A non-sentient thoughtform; mental tool or background headspace character."
+    },
+
+    {
+      "term": "introject",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "A headmate based on an external source. Subtypes: fictive (fictional), factive (real)."
+    },
+    {
+      "term": "fictive",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "Introject based on a fictional character. Community portmanteau (Fiction + Active). Retain as loanword — no direct equivalents."
+    },
+    {
+      "term": "factive",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "Introject based on a real person. Community portmanteau (Fact + Active) — retain as loanword."
+    },
+    {
+      "term": "fictionkin",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "A fictive who identifies deeply with pseudomemories from their source fiction."
+    },
+
+    {
+      "term": "alterhuman",
+      "type": "translatable",
+      "pos": "adj",
+      "notes": "Umbrella term for identities partially or wholly non-human."
+    },
+    {
+      "term": "therian",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "Headmates identifying as earthly animals."
+    },
+    {
+      "term": "otherkin",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "Headmates identifying as mythical or non-earthly entities."
+    },
+
+    {
+      "term": "functional multiplicity",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Community-preferred goal: living harmoniously as a system without merging. Contrast with clinical 'integration'."
+    },
+    {
+      "term": "empowered plurality",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Synonym for functional multiplicity."
+    },
+    {
+      "term": "fusion",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Consensual merging of two or more headmates. NOT synonymous with singletification (which implies coercion)."
+    },
+    {
+      "term": "integration",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "Clinical term for fusion. Use carefully — many systems view forced integration as harmful. Prefer 'functional multiplicity' unless describing consensual merging."
+    },
+
+    {
+      "term": "syscourse",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "Portmanteau of 'system + discourse' — intra-community ideological conflict. Retain as loanword."
+    },
+    {
+      "term": "fakeclaiming",
+      "type": "translatable",
+      "pos": "verb/noun",
+      "hazard": "medium",
+      "notes": "Accusing a system of fabricating their experience — a form of harassment. Translate as 'false-accusation' / 'invalidation harassment'."
+    },
+    {
+      "term": "sysmed",
+      "type": "translatable",
+      "pos": "noun",
+      "loanword_ok": true,
+      "notes": "System medicalist — gatekeeps validity to clinically-diagnosed systems only. Exclusionist; retain as loanword with context note."
+    },
+    {
+      "term": "exclusionist",
+      "type": "translatable",
+      "pos": "noun",
+      "notes": "One who gatekeeps community membership; synonym for sysmed in this context."
+    },
+
+    { "term": "Pluralscape", "type": "do-not-translate", "notes": "App/brand name." },
+    {
+      "term": "DID",
+      "type": "do-not-translate",
+      "notes": "Dissociative Identity Disorder — keep English medical acronym."
+    },
+    {
+      "term": "OSDD",
+      "type": "do-not-translate",
+      "notes": "Other Specified Dissociative Disorder — keep English medical acronym."
+    },
+    { "term": "Simply Plural", "type": "do-not-translate", "notes": "Third-party app name." },
+    { "term": "PluralKit", "type": "do-not-translate", "notes": "Third-party Discord bot name." },
+
+    {
+      "term": "personalities",
+      "type": "negative",
+      "notes": "HARMFUL when used to describe headmates. Denies personhood. Prefer 'headmates' / 'system members'. Block MT from generating this in member contexts."
+    },
+    {
+      "term": "multiple personalities",
+      "type": "negative",
+      "notes": "HARMFUL — outdated MPD-era framing. Use 'plurality' / 'multiplicity'."
+    },
+    {
+      "term": "multiple personality disorder",
+      "type": "negative",
+      "notes": "OBSOLETE — replaced by DID in DSM-IV (1994). Do not use as current terminology; translate as 'DID (formerly MPD)' only in historical context."
+    },
+    {
+      "term": "alter",
+      "type": "negative",
+      "notes": "CONTESTED clinical-origin term. Accept as synonym but NEVER default primary translation for 'member' / 'headmate'. Many find it dehumanizing."
+    },
+    {
+      "term": "sybil",
+      "type": "negative",
+      "notes": "DEROGATORY pop-culture reference. Do not use; flag if MT generates."
+    },
+    {
+      "term": "singletification",
+      "type": "negative",
+      "notes": "HARMFUL — coerced integration. Reference only when documenting abuse; prefer 'functional multiplicity' as goal language."
+    }
+  ]
+}
