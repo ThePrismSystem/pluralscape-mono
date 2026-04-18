@@ -82,6 +82,17 @@ export function createChainedBackend(options: ChainedBackendOptions): ChainedBac
     throw new Error(`Unexpected status ${String(res.status)} for ${locale}/${namespace}`);
   }
 
+  /**
+   * Resolve translations for a (locale, namespace).
+   *
+   * Resolution order (fail-open to bundled baseline):
+   *  1. Fresh OTA cache — AsyncStorage entry within TTL.
+   *  2. OTA network — if fresh cache missing/stale, request our API proxy
+   *     with If-None-Match; 304 refreshes fetchedAt, 200 rewrites the entry.
+   *  3. Stale OTA cache — on network failure, serve the previous entry
+   *     regardless of TTL.
+   *  4. Bundled baseline — loadBundled() from the app package.
+   */
   async function resolveNamespace(
     locale: string,
     namespace: string,

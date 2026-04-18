@@ -29,8 +29,7 @@ export const BUNDLED_NAMESPACES = ["common", "auth", "fronting", "members", "set
 /**
  * Dynamic import so Metro code-splits each locale's JSON into a separate chunk.
  * The template literal path `./${locale}/${namespace}.json` is Metro-compatible
- * when the static prefix (`./`) and suffix (`.json`) are literal. If Metro
- * rejects this pattern at bundle time, fall back to a static per-locale switch.
+ * when the static prefix (`./`) and suffix (`.json`) are literal.
  *
  * Graceful failure: returns an empty object if the locale or namespace file
  * does not exist. The chained backend tolerates empty bundled data and falls

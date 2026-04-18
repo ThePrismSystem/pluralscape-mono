@@ -19,7 +19,7 @@ Mobile uses `i18next-chained-backend` composed of two layers:
 1. A bundled-resources layer reading repo JSON via dynamic `import()`. Metro code-splits per locale, so only the active locale is parsed at runtime.
 2. An HTTP layer targeting `/v1/i18n/:locale/:namespace` on the Pluralscape API.
 
-The API proxies Crowdin Distribution (CDN), caching responses in Valkey with a 24h TTL and serving ETag-gated 304s. Mobile caches OTA responses in AsyncStorage with a 7-day freshness window; stale or failed fetches fall back to the bundled baseline.
+The API proxies Crowdin Distribution (CDN), caching responses in Valkey with a 24h TTL and serving ETag-gated 304s on namespace responses. Mobile caches OTA responses in AsyncStorage with the same 24h TTL; stale or failed fetches fall back to the bundled baseline, and 304 responses refresh the cache entry's `fetchedAt` so a daily-active user revalidates at most once per 24h.
 
 A new rate-limit category `i18nFetch` (30/min/IP) caps unauthenticated hits on the public proxy endpoints.
 
@@ -27,7 +27,7 @@ A new rate-limit category `i18nFetch` (30/min/IP) caps unauthenticated hits on t
 
 - Crowdin never sees end-user IPs — only the Pluralscape API's server IPs.
 - The bundled baseline guarantees the app works on cold start and when offline, preserving offline-first.
-- The 7-day mobile cache plus 24h server cache keeps both CDN egress and device data usage low.
+- A unified 24h TTL across server Valkey and mobile AsyncStorage keeps CDN egress and device data usage low; 304s refresh the mobile cache's `fetchedAt` so re-revalidation is amortized.
 - ETag-gated 304s make OTA refresh cheap on warm caches.
 
 ## Alternatives
@@ -35,13 +35,13 @@ A new rate-limit category `i18nFetch` (30/min/IP) caps unauthenticated hits on t
 1. **Direct Crowdin CDN from device.** Rejected: every app launch would leak user IP, locale, and launch-time metadata to a third party, conflicting with Pluralscape's privacy posture.
 2. **Bundled-only, no OTA.** Rejected: the explicit product goal is to fix translations without an app release.
 3. **OTA-only (no bundled baseline).** Rejected: violates offline-first. A cold cache plus no network means a blank UI.
-4. **Crowdin webhook → instant cache invalidation.** Deferred. The 24h TTL is acceptable; an admin-only invalidation endpoint covers urgent cases.
+4. **Crowdin webhook → instant cache invalidation.** Deferred. The 24h TTL is acceptable for steady-state delivery; a future admin-only invalidation endpoint is a possible addition but is not in scope.
 
 ## Consequences
 
 - Crowdin never sees end-user IPs. The proxy pays nominal bandwidth cost.
 - API bundle grows by approximately 300 lines (route, service, cache adapter, tRPC mirror).
-- Mobile bundle grows by approximately 220KB of translation JSON across 12 locales; only the active locale is parsed at runtime thanks to code-splitting.
+- Baseline bundles ship a small set of keys per locale; total size grows with translation coverage. Only the active locale is parsed at runtime thanks to Metro code-splitting.
 - Failure modes are contained: OTA failure → stale cache → bundled baseline. Offline → bundled baseline.
 - Rate-limit category `i18nFetch` provides anti-scrape without blocking legitimate cold-start bursts.
 - Translator fixes roll out on a best-case same-day cadence (bounded by the 24h server TTL) without app releases.

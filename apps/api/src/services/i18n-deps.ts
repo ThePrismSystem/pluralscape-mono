@@ -4,7 +4,6 @@ import { getSharedValkeyClient } from "../middleware/rate-limit.js";
 
 import { CrowdinOtaService } from "./crowdin-ota.service.js";
 
-/** Namespace under which i18n entries live inside the shared ValkeyCache. */
 const I18N_CACHE_NAMESPACE = "i18n";
 
 /**

@@ -75,6 +75,27 @@
                   $ref: "../schemas/i18n.yaml#/I18nNamespace"
       "304":
         description: Not modified
+      "404":
+        description: Translation not found for the given locale/namespace
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [error]
+              properties:
+                error:
+                  type: object
+                  required: [code, message]
+                  properties:
+                    code:
+                      type: string
+                      enum: [NAMESPACE_NOT_FOUND]
+                    message:
+                      type: string
+            example:
+              error:
+                code: NAMESPACE_NOT_FOUND
+                message: Translation not found
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
       "502":

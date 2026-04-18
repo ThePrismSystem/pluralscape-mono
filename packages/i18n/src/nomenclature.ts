@@ -5,7 +5,7 @@ import {
   type TermCategory,
 } from "@pluralscape/types";
 
-/** Type-only contract for the M8 React hook. */
+/** Return shape for the nomenclature React hook. */
 export interface UseNomenclatureResult {
   readonly resolveTerm: (canonical: CanonicalTerm) => string;
   readonly resolveTermPlural: (canonical: CanonicalTerm) => string;

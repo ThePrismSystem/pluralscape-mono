@@ -18,9 +18,8 @@ system's `NomenclatureSettings` at display time. Consumers call `resolveTerm` an
 user-preferred word in the right grammatical form.
 
 RTL layout is supported via `getTextDirection` / `isRtl`, which map a locale tag to `"ltr"` or
-`"rtl"`. The four RTL locales currently defined are Arabic (`ar`), Hebrew (`he`), Farsi (`fa`),
-and Urdu (`ur`). Supported locales are declared in `SUPPORTED_LOCALES`; additional locales are
-added there alongside translation resource bundles.
+`"rtl"`. RTL locales are declared in `RTL_LOCALES`. Supported locales are declared in
+`SUPPORTED_LOCALES`; additional locales are added there alongside translation resource bundles.
 
 ## Key Exports
 
@@ -56,7 +55,7 @@ When settings are absent or the category is unset, the term's `defaultValue` is 
 | `resolveTermLower(canonical, settings)`  | Lowercase form                                                                            |
 | `resolveTermTitle(canonical, settings)`  | Title-case form                                                                           |
 | `resolveTermUpper(canonical, settings)`  | Uppercase form                                                                            |
-| `UseNomenclatureResult`                  | Interface type for the M8 React hook return value                                         |
+| `UseNomenclatureResult`                  | Return shape for the nomenclature React hook                                              |
 
 ### Text direction
 
@@ -179,14 +178,11 @@ pnpm vitest run --project i18n
 
 ## Runtime loading (mobile)
 
-Mobile uses `i18next-chained-backend`:
-
-- **Bundled baseline** (offline-first, always available): `apps/mobile/locales/<locale>/<namespace>.json`, dynamic-imported so Metro code-splits per locale.
-- **OTA overlay**: fetched from the Pluralscape API at `GET /v1/i18n/:locale/:namespace`. ETag-gated 304s; cached in AsyncStorage for 7 days.
-
-Resolution order per namespace read: fresh OTA cache → OTA network (revalidate or fetch) → stale OTA cache → bundled baseline.
-
-OTA failure never breaks the app — the bundled baseline is always present.
+See [ADR 035](../../docs/adr/035-i18n-ota-delivery.md) for the OTA delivery
+architecture. The chained-backend resolution order — fresh OTA cache →
+OTA network → stale OTA cache → bundled baseline — is documented both
+there and in-code at `apps/mobile/src/i18n/chained-backend.ts`
+(`resolveNamespace`).
 
 ## Adding a new locale
 
