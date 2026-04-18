@@ -35,6 +35,7 @@
     "test:e2e:pk-import": "vitest run --config vitest.pk-e2e.config.ts",
     "trpc:parity": "pnpm --filter @pluralscape/api trpc:parity",
     "crowdin:setup": "tsx scripts/crowdin-setup-project.ts",
+    "crowdin:pretranslate": "tsx scripts/crowdin-pretranslate.ts",
     "prepare": "husky"
   },
   "devDependencies": {
