@@ -33,10 +33,34 @@ export interface CrowdinEnv {
 
 export function loadCrowdinEnv(env: Record<string, string | undefined>): CrowdinEnv {
   const parsed = RawEnvSchema.parse(env);
-  const rawJson =
-    parsed.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON ??
-    readFileSync(parsed.GOOGLE_APPLICATION_CREDENTIALS!, "utf8");
-  ServiceAccountSchema.parse(JSON.parse(rawJson));
+
+  let rawJson: string;
+  if (parsed.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON) {
+    rawJson = parsed.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON;
+  } else {
+    const credsPath = parsed.GOOGLE_APPLICATION_CREDENTIALS!;
+    try {
+      rawJson = readFileSync(credsPath, "utf8");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `Failed to read GOOGLE_APPLICATION_CREDENTIALS file at "${credsPath}": ${message}`,
+      );
+    }
+  }
+
+  let parsedBlob: unknown;
+  try {
+    parsedBlob = JSON.parse(rawJson);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const source = parsed.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON
+      ? "GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON"
+      : `GOOGLE_APPLICATION_CREDENTIALS file at "${parsed.GOOGLE_APPLICATION_CREDENTIALS!}"`;
+    throw new Error(`Failed to parse service-account JSON from ${source}: ${message}`);
+  }
+  ServiceAccountSchema.parse(parsedBlob);
+
   return {
     projectId: Number(parsed.CROWDIN_PROJECT_ID),
     token: parsed.CROWDIN_PERSONAL_TOKEN,

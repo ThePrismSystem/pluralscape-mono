@@ -125,4 +125,19 @@ describe("loadCrowdinEnv — Google credentials", () => {
   it("rejects env with neither Google var set", () => {
     expect(() => loadCrowdinEnv(baseEnv)).toThrow();
   });
+
+  it("wraps readFileSync ENOENT with a descriptive error referencing the path", () => {
+    const badPath = join(tmpDir, "nonexistent.json");
+    expect(() => loadCrowdinEnv({ ...baseEnv, GOOGLE_APPLICATION_CREDENTIALS: badPath })).toThrow(
+      /GOOGLE_APPLICATION_CREDENTIALS file at ".*nonexistent\.json"/,
+    );
+  });
+
+  it("wraps a file with invalid JSON with a descriptive error referencing the source", () => {
+    const path = join(tmpDir, "bad.json");
+    writeFileSync(path, "{not json");
+    expect(() => loadCrowdinEnv({ ...baseEnv, GOOGLE_APPLICATION_CREDENTIALS: path })).toThrow(
+      /service-account JSON from GOOGLE_APPLICATION_CREDENTIALS file/,
+    );
+  });
 });
