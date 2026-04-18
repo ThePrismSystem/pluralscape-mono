@@ -2,34 +2,14 @@ import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logger } from "../../../lib/logger.js";
-import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
+import { ValkeyCache } from "../../../lib/valkey-cache.js";
 import { handleManifest } from "../../../routes/i18n/manifest.js";
 import {
   CrowdinOtaFailure,
   CrowdinOtaService,
   type CrowdinOtaFetch,
 } from "../../../services/crowdin-ota.service.js";
-
-/**
- * In-memory fake backing a real ValkeyCache. Prefer constructing the real
- * class over casting a partial mock — zero `as unknown as ValkeyCache`.
- */
-function createInMemoryCache(): ValkeyCache {
-  const store = new Map<string, string>();
-  const client: ValkeyCacheClient = {
-    get(key) {
-      return Promise.resolve(store.get(key) ?? null);
-    },
-    set(key, value) {
-      store.set(key, value);
-      return Promise.resolve("OK" as const);
-    },
-    del(key) {
-      return Promise.resolve(store.delete(key) ? 1 : 0);
-    },
-  };
-  return new ValkeyCache(client, "test");
-}
+import { createInMemoryValkeyCache } from "../../test-helpers/valkey-cache.js";
 
 function createOtaService(fetchImpl: CrowdinOtaFetch): CrowdinOtaService {
   return new CrowdinOtaService({
@@ -71,7 +51,7 @@ describe("GET /manifest", () => {
       ),
     );
     ota = createOtaService(fetchMock);
-    cache = createInMemoryCache();
+    cache = createInMemoryValkeyCache().cache;
     app = new Hono();
     app.get("/manifest", (c) => handleManifest(c, { ota, cache }));
   });

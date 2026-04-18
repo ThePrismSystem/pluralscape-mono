@@ -25,4 +25,17 @@ describe("computeTranslationsEtag", () => {
     const b = computeTranslationsEtag({ a: "2" });
     expect(a).not.toBe(b);
   });
+
+  // The implementation defensively drops `undefined` entries before hashing,
+  // so a map with an `undefined` value must produce the same etag as the same
+  // map with that key omitted entirely. This guards against a future refactor
+  // that accidentally keeps `undefined` values in the canonical JSON — which
+  // would silently break ETag equality on the mobile client.
+  it("ignores undefined values deterministically regardless of insertion order", () => {
+    const a = computeTranslationsEtag({ a: "x", b: undefined });
+    const b = computeTranslationsEtag({ b: undefined, a: "x" });
+    const c = computeTranslationsEtag({ a: "x" });
+    expect(a).toBe(c);
+    expect(b).toBe(c);
+  });
 });

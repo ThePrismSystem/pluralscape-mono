@@ -74,3 +74,38 @@ export class ValkeyCache {
     await this.client.del(this.key(k));
   }
 }
+
+/**
+ * In-memory `ValkeyCacheClient` with TTL support.
+ *
+ * Used as a fallback when Valkey isn't configured — keeps the API usable in
+ * single-instance deployments (and E2E) without forcing an external Valkey
+ * dependency. TTL is tracked per-entry and enforced lazily on `get`.
+ *
+ * Not intended for multi-instance production: two API replicas running this
+ * would serve divergent cached values. Production deployments should wire a
+ * real Valkey via `VALKEY_URL` so rate limiting, idempotency, and i18n cache
+ * all share coherent state.
+ */
+export class InMemoryValkeyCacheClient implements ValkeyCacheClient {
+  private readonly store = new Map<string, { value: string; expiresAt: number }>();
+
+  get(key: string): Promise<string | null> {
+    const entry = this.store.get(key);
+    if (!entry) return Promise.resolve(null);
+    if (entry.expiresAt <= Date.now()) {
+      this.store.delete(key);
+      return Promise.resolve(null);
+    }
+    return Promise.resolve(entry.value);
+  }
+
+  set(key: string, value: string, _mode: "PX", ttlMs: number): Promise<"OK" | null> {
+    this.store.set(key, { value, expiresAt: Date.now() + ttlMs });
+    return Promise.resolve("OK");
+  }
+
+  del(key: string): Promise<number> {
+    return Promise.resolve(this.store.delete(key) ? 1 : 0);
+  }
+}

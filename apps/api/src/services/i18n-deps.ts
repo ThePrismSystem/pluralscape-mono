@@ -1,5 +1,5 @@
 import { env } from "../env.js";
-import { ValkeyCache } from "../lib/valkey-cache.js";
+import { InMemoryValkeyCacheClient, ValkeyCache } from "../lib/valkey-cache.js";
 import { getSharedValkeyClient } from "../middleware/rate-limit.js";
 
 import { CrowdinOtaService } from "./crowdin-ota.service.js";
@@ -34,19 +34,28 @@ export interface I18nDeps {
 let memoizedDeps: I18nDeps | null = null;
 
 /**
- * Resolve the i18n deps if both the shared Valkey client and the Crowdin
- * distribution hash are available; otherwise return null so the caller can
- * emit the appropriate "not configured" envelope (HTTP 503 /
- * SERVICE_UNAVAILABLE).
+ * Resolve the i18n deps if a Crowdin distribution hash is configured;
+ * otherwise return null so the caller can emit the appropriate "not
+ * configured" envelope (HTTP 503 / SERVICE_UNAVAILABLE).
+ *
+ * When a shared Valkey client is available, the cache is backed by it so
+ * multi-instance deployments see coherent cached entries. When Valkey isn't
+ * configured (single-instance / E2E), we fall back to an in-memory TTL map
+ * — the contract is still "best-effort cache in front of a CDN", so losing
+ * entries on restart is acceptable.
  */
 export function getI18nDeps(): I18nDeps | null {
   if (memoizedDeps) return memoizedDeps;
-  const client = getSharedValkeyClient();
   const hash = env.CROWDIN_DISTRIBUTION_HASH;
-  if (!client || !hash) return null;
+  if (!hash) return null;
+  const sharedClient = getSharedValkeyClient();
+  const cacheClient = sharedClient ?? new InMemoryValkeyCacheClient();
   memoizedDeps = {
-    ota: new CrowdinOtaService({ distributionHash: hash }),
-    cache: new ValkeyCache(client, I18N_CACHE_NAMESPACE),
+    ota: new CrowdinOtaService({
+      distributionHash: hash,
+      baseUrl: env.CROWDIN_OTA_BASE_URL,
+    }),
+    cache: new ValkeyCache(cacheClient, I18N_CACHE_NAMESPACE),
   };
   return memoizedDeps;
 }

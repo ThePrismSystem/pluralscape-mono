@@ -252,6 +252,41 @@ describe("createChainedBackend", () => {
     warnSpy.mockRestore();
   });
 
+  // Guards the `isApiNamespaceResponse` negative branch: a 200 with a body
+  // that fails runtime shape validation must NOT crash the caller — the
+  // chained backend logs a warn and falls through to `loadBundled` just like
+  // any other upstream failure. Regression guard against a future refactor
+  // that accidentally wraps the shape check in a `try { ... } catch` that
+  // swallows the error and returns an empty object, masking the problem.
+  it("logs and falls back to bundled when the 200 response body is malformed", async () => {
+    const warnSpy = vi.spyOn(globalThis.console, "warn").mockImplementation(() => undefined);
+    const cache = mockCache();
+    const malformedResponse = new Response(
+      JSON.stringify({ data: { translations: "not-an-object" } }),
+      { status: 200, headers: { "Content-Type": "application/json", etag: '"abc"' } },
+    );
+    const fetchImpl: ChainedBackendFetch = () => Promise.resolve(malformedResponse);
+    const loadBundled = vi.fn(
+      (): Promise<Readonly<Record<string, string>>> => Promise.resolve({ fallback: "yes" }),
+    );
+    const backend = createChainedBackend({
+      apiBaseUrl: "http://example",
+      loadBundled,
+      cache,
+      fetchImpl,
+    });
+
+    const translations = await resolveOnce(backend, "es", "common");
+
+    expect(translations).toEqual({ fallback: "yes" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      "i18n OTA fetch failed, falling back: es/common",
+      expect.anything(),
+    );
+    expect(loadBundled).toHaveBeenCalledWith("es", "common");
+    warnSpy.mockRestore();
+  });
+
   it("refreshes fetchedAt on 304 by writing a bumped entry", async () => {
     const originalFetchedAt = Date.now() - STALE_AGE_MS;
     const writeSpy = vi.fn<ChainedBackendCache["write"]>((): Promise<void> => Promise.resolve());

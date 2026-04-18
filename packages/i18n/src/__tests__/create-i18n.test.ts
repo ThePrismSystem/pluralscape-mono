@@ -132,7 +132,7 @@ describe("createI18nInstance", () => {
     expect(instance.t("hello", { ns: DEFAULT_NAMESPACE })).toBe("Hello");
   });
 
-  it("works without a backend (backward compatible)", () => {
+  it("works without a backend", () => {
     const instance = createI18nInstance({ missingKeyMode: "warn", logger: mockWarnLogger });
     expect(instance).toBeDefined();
   });

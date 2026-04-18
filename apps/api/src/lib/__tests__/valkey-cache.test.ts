@@ -70,6 +70,19 @@ describe("ValkeyCache", () => {
     expect([...client.store.keys()]).toEqual(["i18n:manifest"]);
   });
 
+  // `setJSON` is the raw write path — callers (typically handlers that CANNOT
+  // tolerate a silent cache loss) must see the propagated error. The
+  // swallowing `trySetJSON` variant is tested separately below.
+  it("propagates client.set errors from setJSON", async () => {
+    const client: ValkeyCacheClient = {
+      get: () => Promise.resolve(null),
+      set: () => Promise.reject(new Error("connection lost")),
+      del: () => Promise.resolve(0),
+    };
+    const cache = new ValkeyCache(client, "test");
+    await expect(cache.setJSON("key", { hello: "world" }, 1000)).rejects.toThrow("connection lost");
+  });
+
   describe("trySetJSON", () => {
     it("writes JSON when the underlying client succeeds", async () => {
       const client = mockClient();

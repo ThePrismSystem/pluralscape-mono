@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { logger } from "../../../lib/logger.js";
 import { ValkeyCache, type ValkeyCacheClient } from "../../../lib/valkey-cache.js";
+import { checkRateLimit } from "../../../middleware/rate-limit.js";
 import { CrowdinOtaFailure, CrowdinOtaService } from "../../../services/crowdin-ota.service.js";
 import { createI18nRouter } from "../../../trpc/routers/i18n.js";
 import { createCallerFactory } from "../../../trpc/trpc.js";
+import { createInMemoryValkeyCache } from "../../test-helpers/valkey-cache.js";
 import { makeContext } from "../test-helpers.js";
 
 vi.mock("../../../middleware/rate-limit.js", async () => {
@@ -16,24 +18,6 @@ vi.mock("../../../middleware/rate-limit.js", async () => {
     checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
   };
 });
-
-/**
- * Minimal in-memory ValkeyCacheClient. Matches the `(key, value, "PX", ttlMs)`
- * overload — TTL is intentionally ignored because unit tests here never span
- * the expiry window.
- */
-function buildInMemoryCache(): ValkeyCache {
-  const store = new Map<string, string>();
-  const client: ValkeyCacheClient = {
-    get: (k) => Promise.resolve(store.get(k) ?? null),
-    set: (k, v) => {
-      store.set(k, v);
-      return Promise.resolve("OK");
-    },
-    del: (k) => Promise.resolve(store.delete(k) ? 1 : 0),
-  };
-  return new ValkeyCache(client, "test");
-}
 
 /**
  * Cache whose writes always fail. Exercises the `trySetJSON` best-effort
@@ -99,7 +83,7 @@ describe("i18n tRPC router", () => {
 
   beforeEach(() => {
     ota = buildOta();
-    cache = buildInMemoryCache();
+    cache = createInMemoryValkeyCache().cache;
     caller = makeCaller(createI18nRouter(() => ({ ota: ota.svc, cache })));
   });
 
@@ -134,7 +118,7 @@ describe("i18n tRPC router", () => {
         Promise.reject(new CrowdinOtaFailure({ kind: "upstream", status: 404, message: "gone" })),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: ota404.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: ota404.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getNamespace({ locale: "en", namespace: "x" })).rejects.toMatchObject({
       code: "NOT_FOUND",
@@ -149,7 +133,7 @@ describe("i18n tRPC router", () => {
         ),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: ota500.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: ota500.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getNamespace({ locale: "en", namespace: "x" })).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -162,7 +146,7 @@ describe("i18n tRPC router", () => {
         Promise.reject(new CrowdinOtaFailure({ kind: "timeout", timeoutMs: 5_000 })),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: otaTimeout.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: otaTimeout.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getNamespace({ locale: "en", namespace: "x" })).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -179,7 +163,7 @@ describe("i18n tRPC router", () => {
         Promise.reject(new CrowdinOtaFailure({ kind: "malformed", reason: "bad shape" })),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: otaMalformed.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: otaMalformed.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getNamespace({ locale: "en", namespace: "x" })).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -194,7 +178,7 @@ describe("i18n tRPC router", () => {
         ),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: otaDown.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getManifest()).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -210,7 +194,7 @@ describe("i18n tRPC router", () => {
         Promise.reject(new CrowdinOtaFailure({ kind: "timeout", timeoutMs: 5_000 })),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: otaTimeout.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: otaTimeout.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getManifest()).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -226,7 +210,7 @@ describe("i18n tRPC router", () => {
         Promise.reject(new CrowdinOtaFailure({ kind: "malformed", reason: "bad shape" })),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: otaMalformed.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: otaMalformed.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getManifest()).rejects.toMatchObject({
       code: "SERVICE_UNAVAILABLE",
@@ -254,7 +238,7 @@ describe("i18n tRPC router", () => {
         ),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: otaDown.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getManifest()).rejects.toThrow();
     expect(warnSpy).toHaveBeenCalledWith(
@@ -273,7 +257,7 @@ describe("i18n tRPC router", () => {
         ),
     });
     const c = makeCaller(
-      createI18nRouter(() => ({ ota: otaDown.svc, cache: buildInMemoryCache() })),
+      createI18nRouter(() => ({ ota: otaDown.svc, cache: createInMemoryValkeyCache().cache })),
     );
     await expect(c.getNamespace({ locale: "es", namespace: "common" })).rejects.toThrow();
     expect(warnSpy).toHaveBeenCalledWith(
@@ -317,5 +301,81 @@ describe("i18n tRPC router", () => {
       expect.objectContaining({ error: "connection lost" }),
     );
     warnSpy.mockRestore();
+  });
+});
+
+/**
+ * Surface-level Zod validation coverage. The schema is declared inside the
+ * router, so these tests double as the regression guard against an accidental
+ * schema loosening (e.g. removing `.min(2)` on `locale`). The assertion is
+ * `BAD_REQUEST` because `errorMapProcedure` forwards Zod failures verbatim —
+ * tRPC's built-in input-validation path always emits BAD_REQUEST.
+ */
+describe("i18n router — input validation", () => {
+  let ota: FakeOta;
+  let cache: ValkeyCache;
+  let caller: ReturnType<typeof makeCaller>;
+
+  beforeEach(() => {
+    ota = buildOta();
+    cache = createInMemoryValkeyCache().cache;
+    caller = makeCaller(createI18nRouter(() => ({ ota: ota.svc, cache })));
+  });
+
+  it("rejects empty locale", async () => {
+    await expect(caller.getNamespace({ locale: "", namespace: "common" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects single-character locale", async () => {
+    await expect(caller.getNamespace({ locale: "e", namespace: "common" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+
+  it("rejects empty namespace", async () => {
+    await expect(caller.getNamespace({ locale: "es", namespace: "" })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+  });
+});
+
+/**
+ * Rate-limit engagement guard. The module-level `vi.mock` at the top of this
+ * file replaces `checkRateLimit` with an always-allow fn; per-test we can
+ * flip it to deny and assert the tRPC middleware surfaces
+ * `TOO_MANY_REQUESTS`. Guards against a future refactor that accidentally
+ * strips the `.use(i18nFetchLimiter)` from either i18n procedure.
+ */
+describe("i18n router — rate-limit engagement", () => {
+  beforeEach(() => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
+  });
+
+  it("getManifest returns TOO_MANY_REQUESTS when rate-limit middleware denies", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
+      allowed: false,
+      retryAfterMs: 30_000,
+    });
+    const ota = buildOta();
+    const cache = createInMemoryValkeyCache().cache;
+    const caller = makeCaller(createI18nRouter(() => ({ ota: ota.svc, cache })));
+    await expect(caller.getManifest()).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
+  });
+
+  it("getNamespace returns TOO_MANY_REQUESTS when rate-limit middleware denies", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
+      allowed: false,
+      retryAfterMs: 30_000,
+    });
+    const ota = buildOta();
+    const cache = createInMemoryValkeyCache().cache;
+    const caller = makeCaller(createI18nRouter(() => ({ ota: ota.svc, cache })));
+    await expect(caller.getNamespace({ locale: "en", namespace: "common" })).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+    });
   });
 });

@@ -57,4 +57,21 @@ describe("bundled locale loader", () => {
       expect.anything(),
     );
   });
+
+  // Exhaustive matrix of every shipped locale × namespace pair. Guards against
+  // a malformed JSON file (e.g. an accidentally-nested object, or a key with a
+  // non-string value from a bad Crowdin export) sneaking into the bundle.
+  // One failing cell pinpoints exactly which locale/namespace file is broken.
+  it.each(
+    BUNDLED_LOCALES.flatMap((locale) =>
+      BUNDLED_NAMESPACES.map((namespace) => [locale, namespace] as const),
+    ),
+  )("loads %s/%s as an object of string values", async (locale, namespace) => {
+    const bundle = await loadBundledNamespace(locale, namespace);
+    expect(typeof bundle).toBe("object");
+    expect(bundle).not.toBeNull();
+    for (const value of Object.values(bundle)) {
+      expect(typeof value).toBe("string");
+    }
+  });
 });

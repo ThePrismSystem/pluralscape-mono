@@ -136,3 +136,51 @@ describe("CrowdinOtaService payload validation", () => {
     });
   });
 });
+
+/**
+ * Additional path coverage for `fetchJson`: parse failure on the response body
+ * and timer cleanup on the success path. These run with real timers because
+ * `vi.spyOn(globalThis, "clearTimeout")` on fake timers spies on the wrong
+ * slot (vi installs its own bindings) — real-timer execution is the only
+ * reliable way to assert the cleanup `clearTimeout` call was made.
+ */
+describe("CrowdinOtaService.fetchJson internals", () => {
+  it("propagates res.json() rejection as a raw SyntaxError (no timeout tag)", async () => {
+    // Build a Response whose `.json()` rejects. The rejection happens inside
+    // `fetchJson`'s try/catch; because our timer hasn't fired, the catch
+    // re-throws the raw error rather than tagging it `kind: "timeout"`.
+    const badResponse = new Response("not-json", {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+    Object.defineProperty(badResponse, "json", {
+      value: () => Promise.reject(new SyntaxError("Unexpected token")),
+    });
+    const fetchMock = vi.fn(() => Promise.resolve(badResponse));
+    const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: fetchMock });
+    await expect(svc.fetchManifest()).rejects.toMatchObject({
+      name: "SyntaxError",
+      message: "Unexpected token",
+    });
+  });
+
+  it("calls clearTimeout on a successful fetch", async () => {
+    const clearSpy = vi.spyOn(globalThis, "clearTimeout");
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ timestamp: 1, content: { en: ["common"] } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    const svc = new CrowdinOtaService({ distributionHash: "HASH", fetch: fetchMock });
+    await svc.fetchManifest();
+    // The cleanup `clearTimeout` runs in `fetchJson`'s finally block — one
+    // call per fetch. Assert at-least-once so this stays robust against
+    // unrelated `clearTimeout` calls that may happen elsewhere (e.g.
+    // node:http internals during a real fetch shim).
+    expect(clearSpy).toHaveBeenCalled();
+    clearSpy.mockRestore();
+  });
+});
