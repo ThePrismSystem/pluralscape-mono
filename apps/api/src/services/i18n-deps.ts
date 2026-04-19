@@ -48,6 +48,17 @@ export function getI18nDeps(): I18nDeps | null {
   const hash = env.CROWDIN_DISTRIBUTION_HASH;
   if (!hash) return null;
   const sharedClient = getSharedValkeyClient();
+  if (
+    sharedClient === undefined &&
+    env.NODE_ENV === "production" &&
+    env.ALLOW_IN_MEMORY_CACHE !== "1"
+  ) {
+    throw new Error(
+      "valkey-cache: VALKEY_URL is unset in NODE_ENV=production. " +
+        "Configure a shared Valkey/Redis endpoint, or set ALLOW_IN_MEMORY_CACHE=1 to explicitly opt in to " +
+        "per-process caching (only safe for single-instance deployments).",
+    );
+  }
   const cacheClient = sharedClient ?? new InMemoryValkeyCacheClient();
   memoizedDeps = {
     ota: new CrowdinOtaService({

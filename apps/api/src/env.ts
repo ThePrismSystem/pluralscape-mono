@@ -71,6 +71,11 @@ export const env = createEnv({
       .string()
       .refine((v) => URL.canParse(v), { message: "Invalid URL" })
       .optional(),
+    // Explicit opt-in to the per-process in-memory cache fallback in
+    // NODE_ENV=production. Without this flag, `getI18nDeps()` refuses to
+    // construct the fallback so operators can't silently degrade a
+    // multi-replica deployment. Only safe for single-instance production.
+    ALLOW_IN_MEMORY_CACHE: z.enum(["0", "1"]).optional(),
     EMAIL_PROVIDER: z.enum(["resend", "smtp", "stub"]).default("stub"),
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().optional(),

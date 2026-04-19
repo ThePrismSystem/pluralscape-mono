@@ -90,6 +90,14 @@ export class ValkeyCache {
 export class InMemoryValkeyCacheClient implements ValkeyCacheClient {
   private readonly store = new Map<string, { value: string; expiresAt: number }>();
 
+  constructor() {
+    logger.warn(
+      "valkey-cache: falling back to per-process in-memory cache — " +
+        "safe for single-instance deployments and E2E, NOT safe for multi-replica production. " +
+        "Set VALKEY_URL to a real Valkey/Redis endpoint to share cache state across instances.",
+    );
+  }
+
   get(key: string): Promise<string | null> {
     const entry = this.store.get(key);
     if (!entry) return Promise.resolve(null);
