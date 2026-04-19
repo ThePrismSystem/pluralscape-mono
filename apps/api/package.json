@@ -33,7 +33,7 @@
     "hono": "^4.12.12",
     "pino": "^10.0.0",
     "postgres": "^3.4.9",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.0",
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
@@ -45,7 +45,7 @@
     "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@types/bun": "^1.2.4",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "eslint": "^10.2.1",
+    "typescript": "^6.0.3"
   }
 }
