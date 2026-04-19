@@ -7,10 +7,19 @@ import {
   applyMtEngines,
   findMtEngineIds,
   type MtClient,
+  MtCreationForbiddenError,
 } from "../../crowdin/mt.js";
 
-const DEEPL_MT_NAME = "Pluralscape DeepL";
-const GOOGLE_MT_NAME = "Pluralscape Google Translate";
+const DEEPL_MT_NAME = "deepl";
+const GOOGLE_MT_NAME = "google";
+
+class MethodNotAllowedError extends Error {
+  code = 405;
+  constructor(message = "Method Not Allowed") {
+    super(message);
+    this.name = "CrowdinError";
+  }
+}
 
 function makeEnv(): CrowdinEnv {
   return {
@@ -156,5 +165,42 @@ describe("applyMtEngines", () => {
       { id: 3, name: GOOGLE_MT_NAME },
     ]);
     await expect(applyMtEngines(client, 100, makeEnv())).rejects.toThrow(/Multiple MT engines/);
+  });
+
+  it("throws MtCreationForbiddenError when createMt returns HTTP 405 (account tier blocks POST /mts)", async () => {
+    const { client, api } = makeMtClient([]);
+    const create = api.createMt as ReturnType<typeof vi.fn>;
+    create.mockRejectedValueOnce(new MethodNotAllowedError());
+    await expect(applyMtEngines(client, 100, makeEnv())).rejects.toBeInstanceOf(
+      MtCreationForbiddenError,
+    );
+  });
+
+  it("tolerates HTTP 405 on updateMt (PATCH /mts/{id}) and reuses the existing engine", async () => {
+    const { client, api } = makeMtClient([
+      { id: 42, name: DEEPL_MT_NAME },
+      { id: 43, name: GOOGLE_MT_NAME },
+    ]);
+    (api.updateMt as ReturnType<typeof vi.fn>).mockRejectedValue(new MethodNotAllowedError());
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await applyMtEngines(client, 100, makeEnv());
+      expect(result).toEqual({ deeplId: 42, googleId: 43 });
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+      const messages = warnSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes(DEEPL_MT_NAME) && m.includes("405"))).toBe(true);
+      expect(messages.some((m) => m.includes(GOOGLE_MT_NAME) && m.includes("405"))).toBe(true);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("rethrows non-405 errors from updateMt (no silent fallthrough on real failures)", async () => {
+    const { client, api } = makeMtClient([
+      { id: 42, name: DEEPL_MT_NAME },
+      { id: 43, name: GOOGLE_MT_NAME },
+    ]);
+    (api.updateMt as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("500 server error"));
+    await expect(applyMtEngines(client, 100, makeEnv())).rejects.toThrow(/500 server error/);
   });
 });

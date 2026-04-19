@@ -50,9 +50,15 @@ export const ENGINE_ROUTING: Record<TargetLanguageId, Engine> = {
   "zh-CN": "deepl",
 };
 
-/** Display names for Crowdin MT engine entries created by this script. */
-const DEEPL_MT_NAME = "Pluralscape DeepL";
-const GOOGLE_MT_NAME = "Pluralscape Google Translate";
+/**
+ * Display names of the Crowdin MT engine entries. These must match the
+ * names given to the engines in the Crowdin UI — the lookup is by name
+ * (not id) so a rename here without a UI rename (or vice versa) will cause
+ * `findMtEngineIds` to miss them and pretranslate to fail. Current values
+ * match the engines created manually in the Pluralscape Crowdin account.
+ */
+const DEEPL_MT_NAME = "deepl";
+const GOOGLE_MT_NAME = "google";
 
 /**
  * Thrown when the Crowdin API refuses programmatic MT engine creation
@@ -142,11 +148,23 @@ export async function applyMtEngines(
   if (existingDeepl) {
     // PATCH credentials + enabledProjectIds on reuse so a rotated DeepL key or
     // a newly-cloned project gets picked up automatically, instead of
-    // silently running against a stale engine.
-    await mtsApi.updateMt(existingDeepl.data.id, [
-      { op: "replace", path: "/credentials", value: { apiKey: env.deeplApiKey } },
-      { op: "replace", path: "/enabledProjectIds", value: [projectId] },
-    ]);
+    // silently running against a stale engine. On account tiers that reject
+    // programmatic MT mutation (HTTP 405), skip the PATCH and reuse the
+    // existing engine as-is — the operator is expected to keep credentials
+    // and enabled projects in sync via the Crowdin UI.
+    try {
+      await mtsApi.updateMt(existingDeepl.data.id, [
+        { op: "replace", path: "/credentials", value: { apiKey: env.deeplApiKey } },
+        { op: "replace", path: "/enabledProjectIds", value: [projectId] },
+      ]);
+    } catch (err) {
+      if (!isMethodNotAllowed(err)) throw err;
+      console.warn(
+        `::warning::Crowdin rejected MT engine PATCH for "${DEEPL_MT_NAME}" (HTTP 405). ` +
+          `Reusing engine id=${String(existingDeepl.data.id)} as-is. ` +
+          `Keep credentials and enabledProjects in sync via the Crowdin UI.`,
+      );
+    }
     deeplId = existingDeepl.data.id;
   } else {
     try {
@@ -165,10 +183,19 @@ export async function applyMtEngines(
 
   let googleId: number;
   if (existingGoogle) {
-    await mtsApi.updateMt(existingGoogle.data.id, [
-      { op: "replace", path: "/credentials", value: { credentials: googleCredsJson } },
-      { op: "replace", path: "/enabledProjectIds", value: [projectId] },
-    ]);
+    try {
+      await mtsApi.updateMt(existingGoogle.data.id, [
+        { op: "replace", path: "/credentials", value: { credentials: googleCredsJson } },
+        { op: "replace", path: "/enabledProjectIds", value: [projectId] },
+      ]);
+    } catch (err) {
+      if (!isMethodNotAllowed(err)) throw err;
+      console.warn(
+        `::warning::Crowdin rejected MT engine PATCH for "${GOOGLE_MT_NAME}" (HTTP 405). ` +
+          `Reusing engine id=${String(existingGoogle.data.id)} as-is. ` +
+          `Keep credentials and enabledProjects in sync via the Crowdin UI.`,
+      );
+    }
     googleId = existingGoogle.data.id;
   } else {
     try {
