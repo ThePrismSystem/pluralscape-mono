@@ -10,11 +10,15 @@ import { LIST_PAGE_SIZE, MAX_PAGES } from "./pagination.constants.js";
  * Matches the relevant subset of the Crowdin SDK `String` response.
  */
 interface SourceStringPageItem {
-  data: { id: number; identifier: string; context?: string | null };
+  data: { id: number; fileId: number; identifier: string; context?: string | null };
 }
 
 interface SourceStringListResponse {
   data: SourceStringPageItem[];
+}
+
+interface FileListResponse {
+  data: Array<{ data: { id: number; name: string } }>;
 }
 
 /**
@@ -35,6 +39,12 @@ interface ContextPatchOp {
  * supply a stub without mocking the SDK's full surface.
  */
 export interface ContextApiClient {
+  sourceFilesApi: {
+    listProjectFiles(
+      projectId: number,
+      options: { limit: number; offset: number },
+    ): Promise<FileListResponse>;
+  };
   sourceStringsApi: {
     listProjectStrings(
       projectId: number,
@@ -48,9 +58,19 @@ const LOCALES_ROOT = "apps/mobile/locales/en";
 
 interface SourceString {
   id: number;
+  fileId: number;
   identifier: string;
   context: string | null;
 }
+
+/**
+ * Sidecar contexts keyed by namespace → bare-key → context description.
+ * Crowdin stores each JSON-sourced string with its bare key as the identifier
+ * (e.g., `common.json` → identifier `ok`), so we match using `(fileId, key)`
+ * not `<namespace>.<key>` — early versions of this script used the dotted
+ * form and matched zero strings once Crowdin JSON files were wired up.
+ */
+export type NamespacedContexts = ReadonlyMap<string, ReadonlyMap<string, string>>;
 
 export interface ContextDiff {
   toUpdate: Array<{ id: number; newContext: string }>;
@@ -61,30 +81,42 @@ export interface ContextApplyResult extends ContextDiff {
   errors: Array<{ id: number; error: string }>;
   /** Count of remote source strings inspected across all pages. */
   remoteIdentifiersChecked: number;
-  /** Desired sidecar entries that did not match any remote identifier. */
+  /** Desired sidecar entries (reported as `<namespace>.<key>`) that did not match a remote string. */
   unmatchedDesiredKeys: string[];
+  /** Namespaces that had sidecar entries but no corresponding Crowdin file. */
+  unmatchedNamespaces: string[];
 }
 
-export function loadAllContexts(repoRoot: string): Map<string, string> {
-  const map = new Map<string, string>();
+export function loadAllContexts(repoRoot: string): NamespacedContexts {
+  const map = new Map<string, Map<string, string>>();
   for (const ns of CONTEXT_NAMESPACES) {
     const file = path.join(repoRoot, LOCALES_ROOT, `${ns}.context.json`);
     const parsed = ContextFileSchema.parse(JSON.parse(readFileSync(file, "utf8")));
+    const nsMap = new Map<string, string>();
     for (const [key, ctx] of Object.entries(parsed)) {
-      map.set(`${ns}.${key}`, ctx);
+      nsMap.set(key, ctx);
     }
+    map.set(ns, nsMap);
   }
   return map;
 }
 
+/**
+ * Pure diff helper over a flat list of source strings. Each sidecar entry
+ * becomes a `desired` lookup keyed by `(fileId, identifier)`; a mismatch on
+ * either dimension skips the entry rather than cross-file-matching keys that
+ * happen to share a name.
+ */
 export function diffContexts(
   strings: readonly SourceString[],
-  desired: ReadonlyMap<string, string>,
+  desired: ReadonlyMap<number, ReadonlyMap<string, string>>,
 ): ContextDiff {
   const toUpdate: ContextDiff["toUpdate"] = [];
   let unchanged = 0;
   for (const s of strings) {
-    const want = desired.get(s.identifier);
+    const fileDesired = desired.get(s.fileId);
+    if (!fileDesired) continue;
+    const want = fileDesired.get(s.identifier);
     if (!want) continue;
     if ((s.context ?? "") === want) {
       unchanged++;
@@ -95,11 +127,35 @@ export function diffContexts(
   return { toUpdate, unchanged };
 }
 
-export async function applyContexts(
+async function listAllFiles(
   client: ContextApiClient,
   projectId: number,
-  desired: ReadonlyMap<string, string>,
-): Promise<ContextApplyResult> {
+): Promise<Map<string, number>> {
+  const byName = new Map<string, number>();
+  let pages = 0;
+  for (let offset = 0; ; offset += LIST_PAGE_SIZE) {
+    if (pages >= MAX_PAGES) {
+      throw new Error(
+        `applyContexts: exceeded MAX_PAGES=${String(MAX_PAGES)} while listing project files (offset=${String(offset)}).`,
+      );
+    }
+    const response = await client.sourceFilesApi.listProjectFiles(projectId, {
+      limit: LIST_PAGE_SIZE,
+      offset,
+    });
+    for (const entry of response.data) {
+      byName.set(entry.data.name, entry.data.id);
+    }
+    pages += 1;
+    if (response.data.length < LIST_PAGE_SIZE) break;
+  }
+  return byName;
+}
+
+async function listAllStrings(
+  client: ContextApiClient,
+  projectId: number,
+): Promise<SourceString[]> {
   const strings: SourceString[] = [];
   let pages = 0;
   for (let offset = 0; ; offset += LIST_PAGE_SIZE) {
@@ -112,21 +168,64 @@ export async function applyContexts(
       limit: LIST_PAGE_SIZE,
       offset,
     });
-    const page: SourceString[] = response.data.map((s) => ({
-      id: s.data.id,
-      identifier: s.data.identifier,
-      context: s.data.context ?? null,
-    }));
-    strings.push(...page);
+    for (const s of response.data) {
+      strings.push({
+        id: s.data.id,
+        fileId: s.data.fileId,
+        identifier: s.data.identifier,
+        context: s.data.context ?? null,
+      });
+    }
     pages += 1;
-    if (page.length < LIST_PAGE_SIZE) break;
+    if (response.data.length < LIST_PAGE_SIZE) break;
+  }
+  return strings;
+}
+
+export async function applyContexts(
+  client: ContextApiClient,
+  projectId: number,
+  desiredByNamespace: NamespacedContexts,
+): Promise<ContextApplyResult> {
+  const filesByName = await listAllFiles(client, projectId);
+  const desiredByFileId = new Map<number, Map<string, string>>();
+  const unmatchedNamespaces: string[] = [];
+  for (const [ns, keys] of desiredByNamespace) {
+    const fileId = filesByName.get(`${ns}.json`);
+    if (fileId === undefined) {
+      unmatchedNamespaces.push(ns);
+      continue;
+    }
+    desiredByFileId.set(fileId, new Map(keys));
   }
 
-  const diff = diffContexts(strings, desired);
-  const remoteIdentifierSet = new Set(strings.map((s) => s.identifier));
-  const unmatchedDesiredKeys = [...desired.keys()].filter((k) => !remoteIdentifierSet.has(k));
-  const errors: ContextApplyResult["errors"] = [];
+  const strings = await listAllStrings(client, projectId);
+  const diff = diffContexts(strings, desiredByFileId);
 
+  // Compute unmatched keys in `<namespace>.<key>` form for diagnostics so the
+  // error surface reads the same as prior versions of this script.
+  const matchedPerFile = new Map<number, Set<string>>();
+  for (const s of strings) {
+    const fileDesired = desiredByFileId.get(s.fileId);
+    if (!fileDesired?.has(s.identifier)) continue;
+    let seen = matchedPerFile.get(s.fileId);
+    if (!seen) {
+      seen = new Set<string>();
+      matchedPerFile.set(s.fileId, seen);
+    }
+    seen.add(s.identifier);
+  }
+  const unmatchedDesiredKeys: string[] = [];
+  for (const [ns, keys] of desiredByNamespace) {
+    const fileId = filesByName.get(`${ns}.json`);
+    if (fileId === undefined) continue;
+    const matched = matchedPerFile.get(fileId) ?? new Set<string>();
+    for (const key of keys.keys()) {
+      if (!matched.has(key)) unmatchedDesiredKeys.push(`${ns}.${key}`);
+    }
+  }
+
+  const errors: ContextApplyResult["errors"] = [];
   for (const { id, newContext } of diff.toUpdate) {
     try {
       await client.sourceStringsApi.editString(projectId, id, [
@@ -147,5 +246,6 @@ export async function applyContexts(
     errors: [],
     remoteIdentifiersChecked: strings.length,
     unmatchedDesiredKeys,
+    unmatchedNamespaces,
   };
 }
