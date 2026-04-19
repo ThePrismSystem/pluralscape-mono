@@ -65,14 +65,19 @@ describe("ENGINE_ROUTING", () => {
     expect(routedKeys).toEqual(targetKeys);
   });
 
-  it("routes es-419 and ar to Google, everything else to DeepL", () => {
-    const byEngine: Record<"deepl" | "google", TargetLanguageId[]> = { deepl: [], google: [] };
+  it("routes ar to Google, es-419 to no MT engine, everything else to DeepL", () => {
+    const byEngine: Record<"deepl" | "google" | "null", TargetLanguageId[]> = {
+      deepl: [],
+      google: [],
+      null: [],
+    };
     for (const [id, engine] of Object.entries(ENGINE_ROUTING) as Array<
-      [TargetLanguageId, "deepl" | "google"]
+      [TargetLanguageId, "deepl" | "google" | null]
     >) {
-      byEngine[engine].push(id);
+      byEngine[engine ?? "null"].push(id);
     }
-    expect(byEngine.google.sort()).toEqual(["ar", "es-419"]);
+    expect(byEngine.google.sort()).toEqual(["ar"]);
+    expect(byEngine.null.sort()).toEqual(["es-419"]);
     expect(byEngine.deepl.sort()).toEqual([
       "de",
       "es-ES",
