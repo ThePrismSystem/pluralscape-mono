@@ -54,10 +54,18 @@ describe("evaluatePr — eligible path", () => {
 });
 
 describe("evaluatePr — skip reasons", () => {
-  it("rejects non-bot authors", () => {
+  it("rejects human authors with author_not_crowdin_bot", () => {
     const result = evaluatePr(basePr({ author: "someone-else" }));
     expect(result.eligible).toBe(false);
-    if (!result.eligible) expect(result.skipReason).toBe("author_not_bot");
+    if (!result.eligible) expect(result.skipReason).toBe("author_not_crowdin_bot");
+  });
+
+  it("rejects other bots (renovate, dependabot) with author_not_crowdin_bot", () => {
+    for (const bot of ["renovate[bot]", "dependabot[bot]"]) {
+      const result = evaluatePr(basePr({ author: bot }));
+      expect(result.eligible).toBe(false);
+      if (!result.eligible) expect(result.skipReason).toBe("author_not_crowdin_bot");
+    }
   });
 
   it("rejects mismatched head ref", () => {

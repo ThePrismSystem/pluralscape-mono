@@ -36,12 +36,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Apply project configuration
+        shell: bash
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
           DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
           GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON }}
         run: |
+          # pipefail is critical: without it, `crowdin:setup | tee` masks a
+          # non-zero exit from the setup script because tee always exits 0,
+          # making the whole job report success on a real failure.
+          set -eo pipefail
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             pnpm crowdin:setup --dry-run --json
           else
