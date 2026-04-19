@@ -18,6 +18,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Check formatting
@@ -30,6 +32,8 @@ jobs:
     name: Typecheck
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Typecheck
@@ -62,6 +66,8 @@ jobs:
           --health-timeout=5s
           --health-retries=5
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Run all tests with coverage
@@ -102,6 +108,8 @@ jobs:
     name: Migration Freshness
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Generate migrations
@@ -135,6 +143,8 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Audit dependencies
@@ -144,6 +154,8 @@ jobs:
     name: OpenAPI Spec Reconciliation
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Check spec matches code routes
@@ -153,6 +165,8 @@ jobs:
     name: tRPC Parity Check
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Check tRPC parity with REST
@@ -162,6 +176,8 @@ jobs:
     name: Scope Coverage Check
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - name: Check scope coverage
@@ -186,6 +202,8 @@ jobs:
           --health-timeout=5s
           --health-retries=5
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - uses: ./.github/actions/setup-pnpm
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
