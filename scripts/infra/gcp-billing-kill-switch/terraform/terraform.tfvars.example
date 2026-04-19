@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored.
+
+project_id         = "your-gcp-project-id"
+billing_account_id = "01ABCD-23EFGH-456IJK"
+notify_email       = "you@example.com"
+
+# Optional overrides
+# threshold_usd = 1
+# dry_run       = true
+# region        = "us-central1"
+# name_prefix   = "billing-kill"
