@@ -5,7 +5,8 @@ status: todo
 type: task
 priority: low
 created_at: 2026-04-17T17:42:50Z
-updated_at: 2026-04-17T17:42:50Z
+updated_at: 2026-04-19T08:29:24Z
+parent: ps-0enb
 ---
 
 PR #464 review item #15 called for expanding the mobile-only assertion-quality guard to repo-wide scope. The expansion surfaced ~317 pre-existing \`.toBeDefined()\` usages across ~105 test files in \`apps/api/**\`, \`packages/**\`, and non-mobile \`apps/\*\*\` paths.

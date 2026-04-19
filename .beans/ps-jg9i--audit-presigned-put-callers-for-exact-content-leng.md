@@ -5,7 +5,8 @@ status: todo
 type: task
 priority: low
 created_at: 2026-04-17T17:49:15Z
-updated_at: 2026-04-17T17:49:15Z
+updated_at: 2026-04-19T08:29:23Z
+parent: ps-0enb
 ---
 
 Follow-up from PR #464 ps-cpxh Domain 7. The S3 signing fix added \`content-length\` to signableHeaders, which makes the byte count an exact-match constraint enforced by SigV4.

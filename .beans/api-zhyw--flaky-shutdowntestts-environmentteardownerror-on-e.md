@@ -5,7 +5,8 @@ status: todo
 type: bug
 priority: normal
 created_at: 2026-04-17T04:01:04Z
-updated_at: 2026-04-17T04:01:04Z
+updated_at: 2026-04-19T08:29:22Z
+parent: ps-0enb
 ---
 
 vitest unit run `pnpm test:unit` intermittently fails with exit 1 due to an unhandled rejection during environment teardown:

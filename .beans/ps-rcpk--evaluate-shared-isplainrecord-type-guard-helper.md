@@ -5,7 +5,8 @@ status: todo
 type: task
 priority: low
 created_at: 2026-04-19T03:23:47Z
-updated_at: 2026-04-19T03:23:47Z
+updated_at: 2026-04-19T08:29:24Z
+parent: ps-0enb
 ---
 
 Multiple sites in the codebase use the 'typeof x === "object" && x !== null && !Array.isArray(x)' pattern to narrow unknown to Record<string, unknown>. Evaluate whether extracting a shared type guard (isPlainRecord / isRecord) would be a net win:
