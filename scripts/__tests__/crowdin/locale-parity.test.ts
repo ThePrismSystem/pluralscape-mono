@@ -14,8 +14,11 @@ import { TARGET_LANGUAGE_IDS } from "../../crowdin/languages.js";
  *
  * If one changes and the others don't, the pipeline silently drops a locale.
  */
-interface CrowdinYmlMapping {
+interface CrowdinYmlFile {
   languages_mapping?: { locale?: Record<string, string> };
+}
+interface CrowdinYml {
+  files?: CrowdinYmlFile[];
 }
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
@@ -23,9 +26,12 @@ const MOBILE_LOCALES_DIR = path.join(REPO_ROOT, "apps", "mobile", "locales");
 const SOURCE_LOCALE = "en";
 
 function loadCrowdinMapping(): Record<string, string> {
+  // Crowdin's CLI reads `languages_mapping` only when nested inside a file
+  // entry — top-level placement is silently ignored. Read it from the first
+  // (only) file entry so this test stays aligned with the production config.
   const file = path.join(REPO_ROOT, "crowdin.yml");
-  const parsed = parse(readFileSync(file, "utf8")) as CrowdinYmlMapping;
-  return parsed.languages_mapping?.locale ?? {};
+  const parsed = parse(readFileSync(file, "utf8")) as CrowdinYml;
+  return parsed.files?.[0]?.languages_mapping?.locale ?? {};
 }
 
 function listDiskTranslationLocales(): string[] {
