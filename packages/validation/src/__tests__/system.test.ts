@@ -75,7 +75,6 @@ describe("UpdateSystemBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["encryptedData"]);
     }
   });

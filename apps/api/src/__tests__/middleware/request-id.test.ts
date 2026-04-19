@@ -33,7 +33,6 @@ describe("requestIdMiddleware", () => {
 
     expect(res.status).toBe(200);
     const requestId = res.headers.get("X-Request-Id");
-    expect(requestId).toBeDefined();
     expect(typeof requestId).toBe("string");
   });
 
@@ -42,7 +41,6 @@ describe("requestIdMiddleware", () => {
     const res = await app.request("/test");
 
     const requestId = res.headers.get("X-Request-Id");
-    expect(requestId).toBeDefined();
     expect(requestId).toMatch(UUIDV7_PATTERN);
   });
 
@@ -91,7 +89,6 @@ describe("requestIdMiddleware", () => {
       return c.json({ ok: true });
     });
     await app.request("/test");
-    expect(contextLog).toBeDefined();
     expect(typeof (contextLog as Record<string, unknown>).info).toBe("function");
     expect(typeof (contextLog as Record<string, unknown>).warn).toBe("function");
     expect(typeof (contextLog as Record<string, unknown>).error).toBe("function");

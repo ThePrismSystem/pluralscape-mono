@@ -151,7 +151,6 @@ describe("createPkFileImportSource", () => {
 
     expect(events).toHaveLength(1);
     const event = events[0];
-    expect(event).toBeDefined();
     if (event === undefined) throw new Error("unreachable");
     expect(event.kind).toBe("doc");
     expect(event.sourceId).toBe("synthetic:privacy-scan");

@@ -134,7 +134,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      expect(child.id).toBeDefined();
+      expect(typeof child.id).toBe("string");
 
       // Verify the link was created
       const links = await db

@@ -54,7 +54,8 @@ describe("formatDate", () => {
     it("formats in German", () => {
       const result = formatDate(DATE, DE, "relative", DATE);
       // "relative" with 0 delta should give "now" / "jetzt"
-      expect(result).toBeDefined();
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
 
     it("formats in Arabic", () => {
@@ -78,7 +79,6 @@ describe("formatTime", () => {
 
   it("formats time in Arabic locale", () => {
     const result = formatTime(DATE, AR);
-    expect(result).toBeDefined();
     expect(result.length).toBeGreaterThan(0);
   });
 });

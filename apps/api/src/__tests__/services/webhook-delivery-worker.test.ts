@@ -255,7 +255,7 @@ describe("processWebhookDelivery (unit)", () => {
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
     expect(setArg.httpStatus).toBe(500);
-    expect(setArg.nextRetryAt).toBeDefined();
+    expect(typeof setArg.nextRetryAt).toBe("number");
     expect(setArg.status).toBeUndefined();
   });
 

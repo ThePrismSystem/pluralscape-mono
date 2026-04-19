@@ -146,7 +146,6 @@ describe("createApiKey", () => {
 
     expect(result.id).toBe(API_KEY_ID);
     expect(result.keyType).toBe("metadata");
-    expect(result.token).toBeDefined();
     expect(typeof result.token).toBe("string");
     expect(mockAudit).toHaveBeenCalledWith(
       mockTx,

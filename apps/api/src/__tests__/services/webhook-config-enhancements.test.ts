@@ -130,7 +130,7 @@ describe("rotateWebhookSecret", () => {
     );
 
     expect(result.id).toBe(WH_ID);
-    expect(result.secret).toBeDefined();
+    expect(typeof result.secret).toBe("string");
     expect(result.version).toBe(2);
   });
 
@@ -214,7 +214,7 @@ describe("testWebhookConfig", () => {
 
     expect(result.success).toBe(false);
     expect(result.httpStatus).toBeNull();
-    expect(result.error).toBeDefined();
+    expect(typeof result.error).toBe("string");
   });
 
   it("throws NOT_FOUND when config does not exist", async () => {

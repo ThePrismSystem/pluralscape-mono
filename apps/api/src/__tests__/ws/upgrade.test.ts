@@ -23,7 +23,6 @@ describe("WebSocket upgrade endpoint", () => {
   });
 
   it("exports the Hono sub-app with a route at /ws", () => {
-    expect(syncWsApp).toBeDefined();
     expect(typeof syncWsApp.fetch).toBe("function");
   });
 

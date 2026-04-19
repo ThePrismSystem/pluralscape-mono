@@ -329,7 +329,7 @@ describe("auth service", () => {
 
     it("has a stack trace", () => {
       const err = new ValidationError("trace test");
-      expect(err.stack).toBeDefined();
+      expect(typeof err.stack).toBe("string");
     });
   });
 
@@ -735,8 +735,8 @@ describe("auth service", () => {
       expect(result?.systemId).toBe("sys_456");
       expect(result?.accountType).toBe("system");
       expect(result?.sessionToken).toMatch(/^[0-9a-f]{64}$/);
-      expect(result?.encryptedMasterKey).toBeDefined();
-      expect(result?.kdfSalt).toBeDefined();
+      expect(typeof result?.encryptedMasterKey).toBe("string");
+      expect(typeof result?.kdfSalt).toBe("string");
     });
 
     it("returns null systemId for non-system accounts", async () => {

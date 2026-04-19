@@ -443,7 +443,6 @@ describe("listBlobs", () => {
 
     expect(result.data).toHaveLength(2);
     const first = result.data[0];
-    expect(first).toBeDefined();
     expect(first?.id).toBe(BLOB_ID);
     expect(result.hasMore).toBe(false);
   });

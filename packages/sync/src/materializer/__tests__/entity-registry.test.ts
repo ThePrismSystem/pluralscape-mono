@@ -97,14 +97,14 @@ describe("ENTITY_TABLE_REGISTRY", () => {
   it("fronting_sessions.member_id is nullable (custom fronts have no member)", () => {
     const def = ENTITY_TABLE_REGISTRY["fronting-session"];
     const memberIdCol = def.columns.find((c) => c.name === "member_id");
-    expect(memberIdCol).toBeDefined();
+    expect(memberIdCol?.name).toBe("member_id");
     expect(memberIdCol?.notNull).toBeFalsy();
   });
 
   it("id column is a primary key TEXT column", () => {
     for (const [entityType, def] of Object.entries(ENTITY_TABLE_REGISTRY)) {
       const idCol = def.columns.find((c) => c.name === "id");
-      expect(idCol, `No id column for ${entityType}`).toBeDefined();
+      expect(idCol?.name, `No id column for ${entityType}`).toBe("id");
       expect(idCol?.sqlType, `id not TEXT for ${entityType}`).toBe("TEXT");
       expect(idCol?.primaryKey, `id not primaryKey for ${entityType}`).toBe(true);
     }
@@ -170,7 +170,7 @@ describe("getEntityTypesForDocument", () => {
 
 describe("materializer registration", () => {
   it.each(ALL_DOC_TYPES)("registers a materializer for %s", (docType) => {
-    expect(getMaterializer(docType)).toBeDefined();
+    expect(getMaterializer(docType)?.documentType).toBe(docType);
   });
 });
 

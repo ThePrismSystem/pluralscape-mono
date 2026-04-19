@@ -108,6 +108,19 @@ export default defineConfig({
       integrationProjectConfig("api", "apps/api"),
       {
         test: {
+          name: "test-utils",
+          root: "tooling/test-utils",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.ts"],
+          exclude: ["**/*.integration.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 10000,
+          hookTimeout: 10000,
+        },
+      },
+      {
+        test: {
           name: "scripts",
           root: "scripts",
           environment: "node",

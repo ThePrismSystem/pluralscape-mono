@@ -156,7 +156,7 @@ describe("import engine — resume from mid-collection checkpoint", () => {
     }
     for (let i = RESUME_CUTOFF_INDEX + 1; i <= TOTAL_MEMBERS_IN_FIXTURE; i += 1) {
       const sourceId = `m_${String(i).padStart(ID_PAD_WIDTH, "0")}`;
-      expect(state.find("member", sourceId)).toBeDefined();
+      expect(state.find("member", sourceId)?.sourceEntityId).toBe(sourceId);
     }
 
     // Member totals in the checkpoint reflect only the resumed entities.

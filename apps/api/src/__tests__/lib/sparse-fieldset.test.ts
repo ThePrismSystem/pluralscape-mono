@@ -19,7 +19,6 @@ describe("parseSparseFields", () => {
 
   it("parses comma-separated field names", () => {
     const result = parseSparseFields("name,email", ALLOWED);
-    expect(result).toBeDefined();
     expect(result).toContain("name");
     expect(result).toContain("email");
     expect(result).toContain("id"); // always included

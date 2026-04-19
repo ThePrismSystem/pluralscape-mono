@@ -261,7 +261,6 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
     });
 
     expect(abortResult.outcome).toBe("aborted");
-    expect(abortedCheckpoint).toBeDefined();
     if (!abortedCheckpoint) {
       throw new Error("abort checkpoint was not captured");
     }
@@ -411,7 +410,6 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — File Source Error Paths
 
     expect(result.outcome).toBe("aborted");
     const fatal = result.errors.find((e) => e.fatal);
-    expect(fatal).toBeDefined();
     expect(fatal?.message).toContain("ECONNRESET");
     // Collections before `members` in DEPENDENCY_ORDER should still have
     // been imported — the failure is localized to members and the engine

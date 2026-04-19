@@ -246,9 +246,9 @@ describe("runImportEngine", () => {
 
       const snap = snapshot();
       expect(snap.countByType("member")).toBe(3);
-      expect(snap.find("member", "m1")).toBeDefined();
-      expect(snap.find("member", "m2")).toBeDefined();
-      expect(snap.find("member", "m3")).toBeDefined();
+      expect(snap.find("member", "m1")?.sourceEntityId).toBe("m1");
+      expect(snap.find("member", "m2")?.sourceEntityId).toBe("m2");
+      expect(snap.find("member", "m3")?.sourceEntityId).toBe("m3");
     });
 
     it("handles batch mapper returning skipped and failed results", async () => {
@@ -371,8 +371,8 @@ describe("runImportEngine", () => {
       const snap = snapshot2();
       // Only docs after the cutoff should be persisted (m3, m4)
       expect(snap.countByType("member")).toBe(2);
-      expect(snap.find("member", "m3")).toBeDefined();
-      expect(snap.find("member", "m4")).toBeDefined();
+      expect(snap.find("member", "m3")?.sourceEntityId).toBe("m3");
+      expect(snap.find("member", "m4")?.sourceEntityId).toBe("m4");
       // m1 and m2 were processed in the first run, not here
       expect(snap.find("member", "m1")).toBeUndefined();
       expect(snap.find("member", "m2")).toBeUndefined();
@@ -475,8 +475,8 @@ describe("runImportEngine", () => {
       const snap = snapshot();
       // m1 and m3 persisted, m2 failed
       expect(snap.countByType("member")).toBe(2);
-      expect(snap.find("member", "m1")).toBeDefined();
-      expect(snap.find("member", "m3")).toBeDefined();
+      expect(snap.find("member", "m1")?.sourceEntityId).toBe("m1");
+      expect(snap.find("member", "m3")?.sourceEntityId).toBe("m3");
       expect(snap.find("member", "m2")).toBeUndefined();
     });
 
@@ -523,8 +523,8 @@ describe("runImportEngine", () => {
       expect(result.errors.some((e) => e.message === "persist failed")).toBe(true);
 
       const snap = snapshot();
-      expect(snap.find("member", "m1")).toBeDefined();
-      expect(snap.find("member", "m3")).toBeDefined();
+      expect(snap.find("member", "m1")?.sourceEntityId).toBe("m1");
+      expect(snap.find("member", "m3")?.sourceEntityId).toBe("m3");
       // m2 failed to persist
       expect(snap.find("member", "m2")).toBeUndefined();
     });
@@ -556,7 +556,6 @@ describe("runImportEngine", () => {
 
       expect(result.outcome).toBe("completed");
       const droppedWarning = result.warnings.find((w) => w.kind === "dropped-collection");
-      expect(droppedWarning).toBeDefined();
       expect(droppedWarning?.message).toContain("stickers");
     });
   });
@@ -626,8 +625,8 @@ describe("runImportEngine", () => {
       expect(result.outcome).toBe("completed");
       // Both groups should be persisted since their member refs exist
       const snap = snapshot();
-      expect(snap.find("group", "g1")).toBeDefined();
-      expect(snap.find("group", "g2")).toBeDefined();
+      expect(snap.find("group", "g1")?.sourceEntityId).toBe("g1");
+      expect(snap.find("group", "g2")?.sourceEntityId).toBe("g2");
     });
 
     it("fails group doc when referenced member was not imported", async () => {
@@ -1689,7 +1688,7 @@ describe("runImportEngine", () => {
       expect(result.errors[0]?.message).toBe("corrupt payload");
       // m1 succeeded, m2 was fatal, m3 never reached
       expect(snapshot().countByType("member")).toBe(1);
-      expect(snapshot().find("member", "m1")).toBeDefined();
+      expect(snapshot().find("member", "m1")?.sourceEntityId).toBe("m1");
     });
   });
 
@@ -1792,7 +1791,6 @@ describe("runImportEngine", () => {
 
       expect(result.outcome).toBe("aborted");
       const closeWarning = result.warnings.find((w) => w.key === "source-close-error");
-      expect(closeWarning).toBeDefined();
       expect(closeWarning?.message).toContain("close leaked handle");
     });
   });
@@ -1863,7 +1861,6 @@ describe("runImportEngine", () => {
       const missingWarning = result.warnings.find(
         (w) => w.key === "source-missing-collection:groups",
       );
-      expect(missingWarning).toBeDefined();
       expect(missingWarning?.message).toContain("groups");
       expect(missingWarning?.message).toContain("not reported by the source");
     });
@@ -1961,8 +1958,8 @@ describe("runImportEngine", () => {
       expect(snap.find("member", "b1")).toBeUndefined();
       expect(snap.find("member", "b2")).toBeUndefined();
       // b3 and b4 should be persisted (after the cutoff)
-      expect(snap.find("member", "b3")).toBeDefined();
-      expect(snap.find("member", "b4")).toBeDefined();
+      expect(snap.find("member", "b3")?.sourceEntityId).toBe("b3");
+      expect(snap.find("member", "b4")?.sourceEntityId).toBe("b4");
     });
   });
 

@@ -48,7 +48,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["newKeyVersion"]);
     }
   });
@@ -61,7 +60,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["newKeyVersion"]);
     }
   });
@@ -74,7 +72,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["wrappedNewKey"]);
     }
   });
@@ -87,7 +84,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["wrappedNewKey"]);
     }
   });
@@ -100,7 +96,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["newKeyVersion"]);
     }
   });
@@ -113,7 +108,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["friendKeyGrants"]);
     }
   });
@@ -126,7 +120,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["friendKeyGrants", 0, "friendAccountId"]);
     }
   });
@@ -139,7 +132,6 @@ describe("InitiateRotationBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["friendKeyGrants", 0, "encryptedKey"]);
     }
   });
@@ -190,7 +182,6 @@ describe("ClaimChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["chunkSize"]);
     }
   });
@@ -202,7 +193,6 @@ describe("ClaimChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["chunkSize"]);
     }
   });
@@ -212,7 +202,6 @@ describe("ClaimChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["chunkSize"]);
     }
   });
@@ -250,7 +239,6 @@ describe("CompleteChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["items"]);
     }
   });
@@ -260,7 +248,6 @@ describe("CompleteChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["items"]);
     }
   });
@@ -272,7 +259,6 @@ describe("CompleteChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["items", 0, "status"]);
     }
   });
@@ -284,7 +270,6 @@ describe("CompleteChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["items", 0, "itemId"]);
     }
   });
@@ -296,7 +281,6 @@ describe("CompleteChunkBodySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["items", 0, "itemId"]);
     }
   });

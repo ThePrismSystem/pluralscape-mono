@@ -955,7 +955,6 @@ describe("computeFrontingBreakdown — all-time preset", () => {
 
     expect(result.subjectBreakdowns).toHaveLength(1);
     const breakdown = result.subjectBreakdowns[0];
-    expect(breakdown).toBeDefined();
     expect(breakdown?.totalDuration).toBeGreaterThan(300 * 24 * 3_600_000);
   });
 });
@@ -978,7 +977,6 @@ describe("computeCoFrontingBreakdown — all-time preset", () => {
 
     expect(result.pairs).toHaveLength(1);
     const pair = result.pairs[0];
-    expect(pair).toBeDefined();
     expect(pair?.totalDuration).toBeGreaterThan(300 * 24 * 3_600_000);
     expect(result.coFrontingPercentage).toBe(100);
   });

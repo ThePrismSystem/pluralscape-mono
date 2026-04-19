@@ -784,8 +784,8 @@ describe("runImport — id translation carry-forward", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
-    expect(persister.upserted.find((e) => e.entityType === "fronting-session")).toBeDefined();
-    expect(persister.upserted.find((e) => e.entityType === "member")).toBeDefined();
+    expect(persister.upserted.some((e) => e.entityType === "fronting-session")).toBe(true);
+    expect(persister.upserted.some((e) => e.entityType === "member")).toBe(true);
   });
 });
 
@@ -881,7 +881,6 @@ describe("runImport — surprise policy end-to-end", () => {
     const unkWarning = result.warnings.find(
       (w) => w.kind === "unknown-field" && w.message.includes("_unknownFutureField"),
     );
-    expect(unkWarning).toBeDefined();
     expect(unkWarning?.entityType).toBe("member");
   });
 });
@@ -1061,7 +1060,6 @@ describe("runImport — source.close() error suppression", () => {
     });
     expect(result.outcome).toBe("completed");
     const closeWarning = result.warnings.find((w) => w.key === "source-close-error");
-    expect(closeWarning).toBeDefined();
     expect(closeWarning?.message).toContain("close failed");
   });
 });

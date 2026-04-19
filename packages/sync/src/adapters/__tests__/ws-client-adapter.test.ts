@@ -184,7 +184,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "ManifestRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       // Advance past the 30s request timeout
@@ -410,7 +410,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "ManifestRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const manifestReq = mock.sentMessages.find(
@@ -549,7 +549,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "SubmitChangeRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const submitReq = mock.sentMessages.find(
@@ -587,7 +587,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "SubmitChangeRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const submitReq = mock.sentMessages.find(
@@ -618,7 +618,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "FetchChangesRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const fetchReq = mock.sentMessages.find(
@@ -656,7 +656,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "FetchChangesRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const fetchReq = mock.sentMessages.find(
@@ -695,7 +695,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "SubmitSnapshotRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const submitReq = mock.sentMessages.find(
@@ -722,7 +722,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "SubmitSnapshotRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const submitReq = mock.sentMessages.find(
@@ -751,7 +751,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "SubmitSnapshotRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const submitReq = mock.sentMessages.find(
@@ -780,7 +780,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "SubmitSnapshotRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const submitReq = mock.sentMessages.find(
@@ -809,7 +809,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "FetchSnapshotRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const fetchReq = mock.sentMessages.find(
@@ -846,7 +846,7 @@ describe("createWsClientAdapter", () => {
         const req = mock.sentMessages.find(
           (m) => (m as { type: string }).type === "FetchSnapshotRequest",
         );
-        expect(req).toBeDefined();
+        expect(req).not.toBeUndefined();
       });
 
       const fetchReq = mock.sentMessages.find(
@@ -987,7 +987,7 @@ describe("createWsClientAdapter", () => {
       // Just verify the adapter isn't in a broken state
       harness.adapter.disconnect();
 
-      await expect(manifestPromise).rejects.toBeDefined();
+      await expect(manifestPromise).rejects.toBeInstanceOf(Error);
     });
 
     it("correlated response with no matching pending request is ignored", () => {

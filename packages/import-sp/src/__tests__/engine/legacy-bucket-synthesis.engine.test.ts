@@ -76,9 +76,9 @@ describe("import engine — legacy bucket synthesis", () => {
     const publicBucket = state.find("privacy-bucket", "synthetic:public");
     const trustedBucket = state.find("privacy-bucket", "synthetic:trusted");
     const privateBucket = state.find("privacy-bucket", "synthetic:private");
-    expect(publicBucket).toBeDefined();
-    expect(trustedBucket).toBeDefined();
-    expect(privateBucket).toBeDefined();
+    expect(publicBucket?.sourceEntityId).toBe("synthetic:public");
+    expect(trustedBucket?.sourceEntityId).toBe("synthetic:trusted");
+    expect(privateBucket?.sourceEntityId).toBe("synthetic:private");
     expect(state.countByType("privacy-bucket")).toBe(3);
 
     // All four members from the fixture were persisted.
@@ -97,9 +97,9 @@ describe("import engine — legacy bucket synthesis", () => {
     const publicPsId = publicBucket?.pluralscapeEntityId;
     const trustedPsId = trustedBucket?.pluralscapeEntityId;
     const privatePsId = privateBucket?.pluralscapeEntityId;
-    expect(publicPsId).toBeDefined();
-    expect(trustedPsId).toBeDefined();
-    expect(privatePsId).toBeDefined();
+    expect(typeof publicPsId).toBe("string");
+    expect(typeof trustedPsId).toBe("string");
+    expect(typeof privatePsId).toBe("string");
 
     expect(memberPrivate.bucketIds).toEqual([privatePsId]);
     expect(memberPrevented.bucketIds).toEqual([publicPsId]);
@@ -131,7 +131,6 @@ describe("synthesized bucket count and flush", () => {
       onProgress: () => Promise.resolve(),
     });
 
-    expect(result.finalState.totals.perCollection["privacy-bucket"]).toBeDefined();
     expect(result.finalState.totals.perCollection["privacy-bucket"]?.imported).toBe(3);
   });
 

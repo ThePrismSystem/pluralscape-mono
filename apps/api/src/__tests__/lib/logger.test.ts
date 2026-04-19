@@ -59,7 +59,6 @@ describe("logger", () => {
   it("exports a logger with info, warn, error, debug methods", async () => {
     const { logger } = await import("../../lib/logger.js");
 
-    expect(logger).toBeDefined();
     expect(typeof logger.info).toBe("function");
     expect(typeof logger.warn).toBe("function");
     expect(typeof logger.error).toBe("function");
@@ -137,7 +136,6 @@ describe("logger", () => {
     const childLogger = createRequestLogger(requestId);
 
     expect(mockChild).toHaveBeenCalledWith({ requestId });
-    expect(childLogger).toBeDefined();
     expect(typeof childLogger.info).toBe("function");
   });
 

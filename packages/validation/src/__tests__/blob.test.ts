@@ -27,7 +27,6 @@ describe("ALLOWED_MIME_TYPES", () => {
       "littles-safe-mode",
     ] as const;
     for (const purpose of purposes) {
-      expect(ALLOWED_MIME_TYPES[purpose]).toBeDefined();
       expect(ALLOWED_MIME_TYPES[purpose].length).toBeGreaterThan(0);
     }
   });
@@ -77,7 +76,6 @@ describe("CreateUploadUrlBodySchema MIME validation", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.message).toContain("text/html");
       expect(issue?.message).toContain("not allowed");
     }
@@ -90,7 +88,6 @@ describe("CreateUploadUrlBodySchema MIME validation", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.message).toContain("application/javascript");
       expect(issue?.message).toContain("not allowed");
     }
@@ -103,7 +100,6 @@ describe("CreateUploadUrlBodySchema MIME validation", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.message).toContain("application/pdf");
       expect(issue?.message).toContain("avatar");
     }

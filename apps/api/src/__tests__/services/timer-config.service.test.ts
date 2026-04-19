@@ -896,7 +896,7 @@ describe("parseTimerConfigQuery", () => {
   it("parses empty query params", () => {
     const result = parseTimerConfigQuery({});
 
-    expect(result).toBeDefined();
+    expect(typeof result).toBe("object");
   });
 
   it("throws 400 for invalid query parameters", () => {

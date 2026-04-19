@@ -1074,7 +1074,6 @@ describe("SQLite auth schema", () => {
         )
         .all() as Array<{ name: string; sql: string | null }>;
       const idx = indexes.find((i) => i.name === "sessions_expires_at_idx");
-      expect(idx).toBeDefined();
       expect(idx?.sql).toMatch(/WHERE.*expires_at IS NOT NULL/i);
     });
 
@@ -1085,7 +1084,6 @@ describe("SQLite auth schema", () => {
         )
         .all() as Array<{ name: string; sql: string | null }>;
       const idx = indexes.find((i) => i.name === "recovery_keys_revoked_at_idx");
-      expect(idx).toBeDefined();
       expect(idx?.sql).toMatch(/WHERE.*revoked_at IS NULL/i);
     });
   });

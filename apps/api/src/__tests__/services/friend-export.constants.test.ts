@@ -6,7 +6,7 @@ import { EXPORT_TABLE_REGISTRY } from "../../services/friend-export.constants.js
 describe("EXPORT_TABLE_REGISTRY", () => {
   it("has an entry for every FriendExportEntityType", () => {
     for (const entityType of FRIEND_EXPORT_ENTITY_TYPES) {
-      expect(EXPORT_TABLE_REGISTRY[entityType]).toBeDefined();
+      expect(typeof EXPORT_TABLE_REGISTRY[entityType].queryManifestCount).toBe("function");
     }
   });
 

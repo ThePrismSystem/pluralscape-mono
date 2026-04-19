@@ -71,6 +71,6 @@ describe("PersistableEntity discriminated union", () => {
       source: "simply-plural",
       payload: groupPayload,
     };
-    expect(bad).toBeDefined();
+    expect(bad.entityType).toBe("member");
   });
 });

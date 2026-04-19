@@ -78,12 +78,12 @@ describe("EncryptedRelay", () => {
     await relay.submit(envelope);
 
     const state = relay.inspectStorage(DOCUMENT_ID);
-    expect(state).toBeDefined();
+    expect(state?.envelopes).toHaveLength(1);
 
     // Automerge documents start with a magic number (0x85, 0x6f, 0x4a, 0x83)
     // Encrypted ciphertext should not resemble valid Automerge data
     const storedCiphertext = state?.envelopes[0]?.ciphertext;
-    expect(storedCiphertext).toBeDefined();
+    expect(storedCiphertext).toBeInstanceOf(Uint8Array);
 
     // Verify the relay only stores ciphertext, not the plaintext change
     expect(storedCiphertext).not.toEqual(change);
@@ -98,8 +98,8 @@ describe("EncryptedRelay", () => {
 
     for (let i = 1; i < seqs.length; i++) {
       const prev = seqs[i - 1];
-      expect(prev).toBeDefined();
-      expect(seqs[i]).toBeGreaterThan(prev ?? 0);
+      if (prev === undefined) throw new Error(`unexpected missing seq at ${String(i - 1)}`);
+      expect(seqs[i]).toBeGreaterThan(prev);
     }
   });
 

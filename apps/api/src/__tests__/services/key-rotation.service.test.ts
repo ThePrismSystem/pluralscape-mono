@@ -182,7 +182,7 @@ describe("key-rotation service", () => {
         mockAudit,
       );
 
-      expect(result).toBeDefined();
+      expect(typeof result).toBe("object");
       expect(chain.update).toHaveBeenCalled();
     });
 
@@ -218,7 +218,7 @@ describe("key-rotation service", () => {
         mockAudit,
       );
 
-      expect(result).toBeDefined();
+      expect(typeof result).toBe("object");
       // insert called for rotation and key grants
       expect(chain.insert).toHaveBeenCalled();
     });

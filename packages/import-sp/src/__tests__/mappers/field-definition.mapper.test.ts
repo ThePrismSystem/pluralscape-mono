@@ -100,6 +100,6 @@ describe("mapFieldDefinition", () => {
       expect(result.payload.sortOrder).toBe(0);
     }
     const orderWarning = ctx.warnings.find((w) => /order/i.test(w.message) && w.entityId === "f4");
-    expect(orderWarning).toBeDefined();
+    expect(orderWarning?.entityId).toBe("f4");
   });
 });

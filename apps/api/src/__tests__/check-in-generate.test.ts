@@ -190,7 +190,7 @@ describe("createCheckInGenerateHandler", () => {
     expect(chain.values).toHaveBeenCalledOnce();
 
     const firstCall = chain.values.mock.calls[0];
-    expect(firstCall).toBeDefined();
+    if (!firstCall) throw new Error("expected chain.values to be called at least once");
     const valuesArg = (firstCall as [Record<string, unknown>])[0];
     expect(valuesArg).toHaveProperty("idempotencyKey");
     expect(typeof valuesArg.idempotencyKey).toBe("string");

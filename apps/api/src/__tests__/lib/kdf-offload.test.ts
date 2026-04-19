@@ -270,10 +270,6 @@ describe("pwhash-offload", () => {
         (d) => d.msg["op"] === "verify" && d.msg["pin"] === "bbbb",
       );
       const hashCccc = dispatches.find((d) => d.msg["op"] === "hash" && d.msg["pin"] === "cccc");
-      expect(hashAaaa).toBeDefined();
-      expect(verifyBbbb).toBeDefined();
-      expect(hashCccc).toBeDefined();
-
       // Resolve in reverse order to prove independence.
       if (!hashCccc || !verifyBbbb || !hashAaaa) {
         throw new Error("Expected all dispatches to be found");

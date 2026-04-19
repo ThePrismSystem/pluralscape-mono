@@ -227,7 +227,6 @@ describe("friend-export.service (PGlite integration)", () => {
     const manifest = await getFriendExportManifest(asDb(db), friendConnectionId, friendAuth);
 
     const memberEntry = manifest.entries.find((e) => e.entityType === "member");
-    expect(memberEntry).toBeDefined();
     expect(memberEntry?.count).toBe(2);
   });
 

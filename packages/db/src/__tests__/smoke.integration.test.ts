@@ -21,6 +21,6 @@ describe("PGlite smoke test", () => {
   });
 
   it("exposes a drizzle client", () => {
-    expect(testDb.db).toBeDefined();
+    expect(testDb.db).not.toBeNull();
   });
 });

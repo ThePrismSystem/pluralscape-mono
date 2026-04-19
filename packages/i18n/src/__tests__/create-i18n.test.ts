@@ -9,7 +9,6 @@ const mockWarnLogger = { warn: vi.fn() };
 describe("createI18nInstance", () => {
   it("creates a new i18next instance", () => {
     const instance = createI18nInstance({ missingKeyMode: "warn", logger: mockWarnLogger });
-    expect(instance).toBeDefined();
     expect(instance.isInitialized).toBeFalsy();
   });
 
@@ -62,7 +61,7 @@ describe("createI18nInstance", () => {
 
   it("can be initialized with throw mode", () => {
     const instance = createI18nInstance({ missingKeyMode: "throw" });
-    expect(instance).toBeDefined();
+    expect(instance.isInitialized).toBeFalsy();
   });
 
   it("defaults to throw mode when called with no arguments", async () => {
@@ -134,6 +133,6 @@ describe("createI18nInstance", () => {
 
   it("works without a backend", () => {
     const instance = createI18nInstance({ missingKeyMode: "warn", logger: mockWarnLogger });
-    expect(instance).toBeDefined();
+    expect(instance.isInitialized).toBeFalsy();
   });
 });

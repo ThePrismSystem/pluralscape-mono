@@ -15,7 +15,7 @@ describe("wrapNativeMemzero", () => {
   it("satisfies the NativeMemzero interface", () => {
     const fn = vi.fn();
     const result: NativeMemzero = wrapNativeMemzero(fn);
-    expect(result).toBeDefined();
+    expect(typeof result.memzero).toBe("function");
   });
 
   it("delegates to the provided function", () => {

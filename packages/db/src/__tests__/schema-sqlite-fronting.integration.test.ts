@@ -1154,7 +1154,6 @@ describe("SQLite fronting schema", () => {
         )
         .all() as Array<{ name: string; sql: string | null }>;
       const activeIdx = indexes.find((i) => i.name === "fronting_sessions_active_idx");
-      expect(activeIdx).toBeDefined();
       expect(activeIdx?.sql).toMatch(/WHERE.*end_time IS NULL/i);
     });
   });

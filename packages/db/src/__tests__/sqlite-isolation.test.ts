@@ -15,7 +15,7 @@ describe("systemScope", () => {
 
     // The result is a Drizzle SQL object wrapping an `eq()` condition.
     // Verify it references the correct column by checking the internal structure.
-    expect(result).toBeDefined();
+    expect(result).toBeInstanceOf(Object);
 
     // Verify the column is the right one
     const columns = getTableColumns(testTable);
@@ -26,7 +26,7 @@ describe("systemScope", () => {
     // Verify the eq() helper can accept our column without error
     // (it would throw if the column type was incompatible)
     const result = systemScope(testTable.systemId, "sys-456");
-    expect(result).toBeDefined();
+    expect(result).toBeInstanceOf(Object);
   });
 });
 
@@ -34,7 +34,7 @@ describe("accountScope", () => {
   it("returns an eq condition for the account_id column", () => {
     const result = accountScope(testTable.accountId, "acc-789");
 
-    expect(result).toBeDefined();
+    expect(result).toBeInstanceOf(Object);
 
     const columns = getTableColumns(testTable);
     expect(columns.accountId.name).toBe("account_id");
@@ -42,6 +42,6 @@ describe("accountScope", () => {
 
   it("uses the correct column object", () => {
     const result = accountScope(testTable.accountId, "acc-012");
-    expect(result).toBeDefined();
+    expect(result).toBeInstanceOf(Object);
   });
 });

@@ -49,7 +49,6 @@ describe("formatRelativeTime", () => {
 
     it("formats now for zero delta", () => {
       const result = formatRelativeTime(NOW, EN, NOW);
-      expect(result).toBeDefined();
       // Should be "now" or "0 seconds ago"
       expect(result.length).toBeGreaterThan(0);
     });
@@ -58,7 +57,6 @@ describe("formatRelativeTime", () => {
   describe("German locale", () => {
     it("formats in German", () => {
       const result = formatRelativeTime(pastDate(5 * MINUTE), DE, NOW);
-      expect(result).toBeDefined();
       // German: "vor 5 Minuten"
       expect(result).toContain("5");
     });
@@ -67,7 +65,6 @@ describe("formatRelativeTime", () => {
   describe("Arabic locale", () => {
     it("formats in Arabic", () => {
       const result = formatRelativeTime(pastDate(2 * HOUR), AR, NOW);
-      expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
     });
   });

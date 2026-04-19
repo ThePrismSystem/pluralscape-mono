@@ -51,7 +51,6 @@ describe("getSodium", () => {
   it("returns the adapter after initialization", async () => {
     await initSodium();
     const sodium = getSodium();
-    expect(sodium).toBeDefined();
     expect(sodium.isReady()).toBe(true);
   });
 });

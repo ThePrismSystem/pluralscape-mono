@@ -49,7 +49,6 @@ describe("body limit middleware", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("BLOB_TOO_LARGE");
     expect(body.error.message).toBe("Request body exceeds size limit");
-    expect(body.requestId).toBeDefined();
     expect(typeof body.requestId).toBe("string");
   });
 

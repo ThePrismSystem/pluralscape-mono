@@ -74,7 +74,6 @@ describe("SqliteOfflineQueueAdapter (better-sqlite3)", () => {
 
     expect(entries).toHaveLength(1);
     const entry = entries[0];
-    expect(entry).toBeDefined();
     expect(entry?.envelope.ciphertext.constructor).toBe(Uint8Array);
     expect(entry?.envelope.nonce.constructor).toBe(Uint8Array);
     expect(entry?.envelope.signature.constructor).toBe(Uint8Array);

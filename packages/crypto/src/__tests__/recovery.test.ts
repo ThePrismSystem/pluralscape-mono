@@ -27,8 +27,7 @@ afterAll(teardownSodium);
 describe("generateRecoveryKey", () => {
   it("returns a displayKey and encryptedMasterKey", () => {
     const result = generateRecoveryKey(masterKey);
-    expect(result.displayKey).toBeDefined();
-    expect(result.encryptedMasterKey).toBeDefined();
+    expect(typeof result.displayKey).toBe("string");
     expect(result.encryptedMasterKey.ciphertext).toBeInstanceOf(Uint8Array);
     expect(result.encryptedMasterKey.nonce).toBeInstanceOf(Uint8Array);
   });

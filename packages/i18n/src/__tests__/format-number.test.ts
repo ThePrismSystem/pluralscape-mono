@@ -20,7 +20,6 @@ describe("formatNumber", () => {
 
     it("formats with Arabic locale", () => {
       const result = formatNumber(1234, AR, "locale");
-      expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
     });
 
@@ -41,7 +40,7 @@ describe("formatNumber", () => {
   describe("system preference", () => {
     it("uses system locale formatting", () => {
       const result = formatNumber(1234, EN, "system");
-      expect(result).toBeDefined();
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 });
@@ -63,7 +62,6 @@ describe("formatCompactNumber", () => {
 
   it("formats in German", () => {
     const result = formatCompactNumber(1200, DE);
-    expect(result).toBeDefined();
     expect(result.length).toBeGreaterThan(0);
   });
 });

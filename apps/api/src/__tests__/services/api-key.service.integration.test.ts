@@ -194,7 +194,6 @@ describe("api-key.service (PGlite integration)", () => {
     );
     const listed = await listApiKeys(asDb(db), systemId, auth);
     const match = listed.data.find((k) => k.id === created.id);
-    expect(match).toBeDefined();
     expect(match?.scopes).toEqual(scopes);
   });
 
@@ -342,7 +341,6 @@ describe("api-key.service (PGlite integration)", () => {
 
     const listed = await listApiKeys(asDb(db), systemId, auth, { includeRevoked: true });
     const match = listed.data.find((k) => k.id === created.id);
-    expect(match).toBeDefined();
     expect(match?.revokedAt).not.toBeNull();
   });
 

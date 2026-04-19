@@ -566,11 +566,11 @@ describe("Column existence", () => {
   // Fix 8 — frontingReports new table exists in both schemas
   describe("frontingReports (Fix 8)", () => {
     it("PG frontingReports table is defined", () => {
-      expect(pg.frontingReports).toBeDefined();
+      expect(getTableColumns(pg.frontingReports)).toHaveProperty("id");
     });
 
     it("SQLite frontingReports table is defined", () => {
-      expect(sqlite.frontingReports).toBeDefined();
+      expect(getTableColumns(sqlite.frontingReports)).toHaveProperty("id");
     });
 
     it("has expected columns: id, systemId, encryptedData, format, generatedAt", () => {

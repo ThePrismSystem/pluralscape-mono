@@ -453,7 +453,7 @@ describe("webhook-config.service (PGlite integration)", () => {
       );
 
       expect(rotated.version).toBe(2);
-      expect(rotated.secret).toBeDefined();
+      expect(typeof rotated.secret).toBe("string");
       expect(rotated.secret).not.toBe(created.secret);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("webhook-config.secret-rotated");

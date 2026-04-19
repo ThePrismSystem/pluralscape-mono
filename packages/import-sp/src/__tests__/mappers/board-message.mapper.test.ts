@@ -77,7 +77,6 @@ describe("mapBoardMessage", () => {
     const result = mapBoardMessage(sp, ctx);
     expect(result.status).toBe("mapped");
     const writtenForWarning = ctx.warnings.find((w) => w.message.includes("writtenFor"));
-    expect(writtenForWarning).toBeDefined();
     expect(writtenForWarning?.entityType).toBe("board-message");
   });
 
@@ -95,7 +94,7 @@ describe("mapBoardMessage", () => {
     const result = mapBoardMessage(sp, ctx);
     expect(result.status).toBe("mapped");
     const readWarning = ctx.warnings.find((w) => w.message.includes("read"));
-    expect(readWarning).toBeDefined();
+    expect(readWarning?.entityType).toBe("board-message");
   });
 
   it("emits the writtenFor-dropped warning at most once per import", () => {

@@ -94,7 +94,6 @@ describe("device-token.service (PGlite integration)", () => {
       .select({ tokenHash: deviceTokens.tokenHash })
       .from(deviceTokens)
       .where(eq(deviceTokens.tokenHash, hashDeviceToken(plaintext)));
-    expect(row).toBeDefined();
     expect(row?.tokenHash).toBe(hashDeviceToken(plaintext));
     expect(row?.tokenHash).not.toBe(plaintext);
   });

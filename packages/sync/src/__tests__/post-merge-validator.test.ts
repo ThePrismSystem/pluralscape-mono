@@ -822,7 +822,6 @@ describe("PostMergeValidator: normalizeFrontingSessions", () => {
     const endTimeNotification = notifications.find(
       (n) => n.resolution === "post-merge-endtime-normalize",
     );
-    expect(endTimeNotification).toBeDefined();
     expect(endTimeNotification?.entityId).toBe(sessionId);
     expect(endTimeNotification?.fieldName).toBe("endTime");
   });
@@ -870,7 +869,6 @@ describe("PostMergeValidator: normalizeFrontingSessions", () => {
 
     // But a notification-only warning for missing subject
     const subjectNotification = notifications.find((n) => n.resolution === "notification-only");
-    expect(subjectNotification).toBeDefined();
     expect(subjectNotification?.entityId).toBe(sessionId);
     expect(subjectNotification?.fieldName).toBe("subject");
   });
