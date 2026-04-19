@@ -56,10 +56,10 @@ function extractByStorageType(
 
 /** lww-map and append-lww: Record<entityId, entityObject> */
 function extractMapEntities(raw: unknown, columnNames: readonly string[]): EntityRow[] {
-  if (typeof raw !== "object" || raw === null) return [];
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return [];
   const rows: EntityRow[] = [];
   for (const [entityId, entity] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof entity !== "object" || entity === null) continue;
+    if (typeof entity !== "object" || entity === null || Array.isArray(entity)) continue;
     rows.push(entityToRow(entityId, entity as Record<string, unknown>, columnNames));
   }
   return rows;
@@ -71,7 +71,7 @@ function extractSingletonEntity(
   raw: unknown,
   columnNames: readonly string[],
 ): EntityRow[] {
-  if (typeof raw !== "object" || raw === null) return [];
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return [];
   const entity = raw as Record<string, unknown>;
   const id = typeof entity["id"] === "string" ? entity["id"] : entityType;
   return [entityToRow(id, entity, columnNames)];
@@ -79,7 +79,7 @@ function extractSingletonEntity(
 
 /** junction-map: Record<compoundKey, true> — key IS the entity */
 function extractJunctionEntities(raw: unknown, columnNames: readonly string[]): EntityRow[] {
-  if (typeof raw !== "object" || raw === null) return [];
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return [];
   const rows: EntityRow[] = [];
   for (const compoundKey of Object.keys(raw as Record<string, unknown>)) {
     const parts = compoundKey.split("_");

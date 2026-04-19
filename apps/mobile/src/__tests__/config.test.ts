@@ -76,4 +76,24 @@ describe("getWsUrl", () => {
   it("uses dev fallback ws URL when no config present", () => {
     expect(getWsUrl()).toBe("ws://localhost:3000/sync");
   });
+
+  it("permits plaintext ws:// for 127.0.0.1", () => {
+    constants.__setConfig({ extra: { apiBaseUrl: "http://127.0.0.1:4000" } });
+    expect(getWsUrl()).toBe("ws://127.0.0.1:4000/sync");
+  });
+
+  it("permits plaintext ws:// for IPv6 loopback", () => {
+    constants.__setConfig({ extra: { apiBaseUrl: "http://[::1]:3000" } });
+    expect(getWsUrl()).toBe("ws://[::1]:3000/sync");
+  });
+
+  it("throws when apiBaseUrl is http:// pointing at a non-loopback host", () => {
+    constants.__setConfig({ extra: { apiBaseUrl: "http://api.pluralscape.app" } });
+    expect(() => getWsUrl()).toThrow(/plaintext WebSocket to a non-loopback host/);
+  });
+
+  it("throws when apiBaseUrl is a malformed http URL", () => {
+    constants.__setConfig({ extra: { apiBaseUrl: "http://" } });
+    expect(() => getWsUrl()).toThrow(/plaintext WebSocket to a non-loopback host/);
+  });
 });

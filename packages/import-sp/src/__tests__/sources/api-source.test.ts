@@ -63,6 +63,38 @@ const DEFAULT_INPUT = {
   systemId: "sys_abc",
 };
 
+describe("createApiImportSource — baseUrl safety", () => {
+  it("throws on plaintext http:// to a non-loopback host", () => {
+    expect(() =>
+      createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "http://api.apparyllis.com" }),
+    ).toThrow(/refusing to send API token to a non-HTTPS baseUrl/);
+  });
+
+  it("accepts plaintext http:// for localhost", () => {
+    expect(() =>
+      createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "http://localhost:4000" }),
+    ).not.toThrow();
+  });
+
+  it("accepts plaintext http:// for 127.0.0.1", () => {
+    expect(() =>
+      createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "http://127.0.0.1:4000" }),
+    ).not.toThrow();
+  });
+
+  it("throws on malformed baseUrl", () => {
+    expect(() => createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "not-a-url" })).toThrow(
+      /baseUrl is not a valid URL/,
+    );
+  });
+
+  it("throws on non-http(s) schemes", () => {
+    expect(() =>
+      createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "ftp://api.apparyllis.com" }),
+    ).toThrow(/refusing to send API token to a non-HTTPS baseUrl/);
+  });
+});
+
 describe("createApiImportSource", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 

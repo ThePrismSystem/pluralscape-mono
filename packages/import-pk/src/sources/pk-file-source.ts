@@ -11,7 +11,7 @@
  * PK exports are typically small (tens of KB to a few MB for large systems),
  * so this is acceptable.
  */
-import { readFileSync, statSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readFileSync } from "node:fs";
 
 import { MAX_IMPORT_FILE_BYTES } from "@pluralscape/import-core";
 
@@ -34,16 +34,24 @@ export function createPkFileImportSource(args: PkFileImportSourceArgs): ImportDa
 
   function parse(): PKPayload {
     if (parsed !== null) return parsed;
-    const { size } = statSync(args.filePath);
-    if (size > maxBytes) {
-      throw new Error(
-        `Import file exceeds maximum size of ${String(maxBytes)} bytes (file is ${String(size)} bytes)`,
-      );
+    // Use a single file descriptor for stat + read so the size check and the
+    // read operate on the same file object. Resolving args.filePath twice
+    // would be vulnerable to path-based TOCTOU (symlink swap, etc.).
+    const fd = openSync(args.filePath, "r");
+    try {
+      const { size } = fstatSync(fd);
+      if (size > maxBytes) {
+        throw new Error(
+          `Import file exceeds maximum size of ${String(maxBytes)} bytes (file is ${String(size)} bytes)`,
+        );
+      }
+      const raw = readFileSync(fd, "utf-8");
+      const json: unknown = JSON.parse(raw);
+      parsed = PKPayloadSchema.parse(json);
+      return parsed;
+    } finally {
+      closeSync(fd);
     }
-    const raw = readFileSync(args.filePath, "utf-8");
-    const json: unknown = JSON.parse(raw);
-    parsed = PKPayloadSchema.parse(json);
-    return parsed;
   }
 
   return {

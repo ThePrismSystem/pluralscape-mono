@@ -163,6 +163,31 @@ function substituteSystem(path: string, systemId: string): string {
   return path.replaceAll(":system", encodeURIComponent(systemId));
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+/**
+ * Refuse to send the SP API token to a plaintext-HTTP baseUrl. The only
+ * exception is loopback, for local dev against a mock or self-hosted SP
+ * instance on the same machine. UX-layer hardening (host allowlisting,
+ * explicit opt-in for non-apparyllis.com hosts) is tracked separately in
+ * bean ps-aj1j; this check is the last-line safety net that prevents a
+ * token from ever leaving the device over cleartext.
+ */
+function assertBaseUrlIsSafe(baseUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new Error(`SP import: baseUrl is not a valid URL: ${baseUrl}`);
+  }
+  if (parsed.protocol === "https:") return;
+  if (parsed.protocol === "http:" && LOOPBACK_HOSTS.has(parsed.hostname)) return;
+  throw new Error(
+    `SP import: refusing to send API token to a non-HTTPS baseUrl (${baseUrl}). ` +
+      `Use https:// for remote hosts; http:// is only permitted for loopback (localhost, 127.0.0.1, ::1).`,
+  );
+}
+
 /**
  * SP collection names the api source can fetch (list, single, or dependent).
  * Only `unsupported` collections are excluded — dependent collections are
@@ -197,6 +222,7 @@ const FETCHABLE_COLLECTIONS: readonly SpCollectionName[] = (
  * use the file source for a complete import.
  */
 export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
+  assertBaseUrlIsSafe(input.baseUrl);
   const parentIdsByCollection = new Map<SpCollectionName, readonly string[]>();
 
   async function fetchJson(url: string): Promise<unknown> {

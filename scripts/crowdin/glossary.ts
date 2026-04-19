@@ -5,8 +5,6 @@ import { getErrorMessage } from "./errors.js";
 import type { GlossaryPos, GlossaryTerm } from "./glossary-schema.js";
 import { LIST_PAGE_SIZE, MAX_PAGES } from "./pagination.constants.js";
 
-export const GLOSSARY_NAME = "Pluralscape Terminology";
-
 export const TERM_STATUS_PREFERRED = "preferred" as const;
 export const TERM_STATUS_NOT_RECOMMENDED = "not recommended" as const;
 export type TermStatus = typeof TERM_STATUS_PREFERRED | typeof TERM_STATUS_NOT_RECOMMENDED;
@@ -114,7 +112,7 @@ export interface GlossaryApplyResult extends GlossaryDiff {
 }
 
 interface GlossaryListEntry {
-  data: { id: number; name: string };
+  data: { id: number; name: string; projectIds?: number[] };
 }
 
 interface GlossaryTermEntry {
@@ -207,10 +205,17 @@ export async function applyGlossary(
 ): Promise<GlossaryApplyResult> {
   const glossariesApi = client.glossariesApi;
   const glossaries = await listAllGlossaries((opts) => glossariesApi.listGlossaries(opts));
-  let glossary = glossaries.find((g) => g.data.name === GLOSSARY_NAME)?.data;
+  // Match by project association rather than name: Crowdin auto-creates a
+  // default glossary per project (e.g. "<ProjectName>'s Glossary"), and its
+  // addGlossary name-uniqueness check is broader than listGlossaries visibility
+  // — a mismatched-name lookup followed by addGlossary reliably errors even
+  // when the existing glossary is the one we want.
+  const glossary = glossaries.find((g) => g.data.projectIds?.includes(projectId))?.data;
   if (!glossary) {
-    const created = await glossariesApi.addGlossary({ name: GLOSSARY_NAME, languageId: "en" });
-    glossary = created.data;
+    throw new Error(
+      `applyGlossary: no Crowdin glossary is associated with project ${String(projectId)}. ` +
+        `Create one in the Crowdin UI (Translation Memories & Glossaries → New glossary → assign to this project) and re-run.`,
+    );
   }
   const glossaryId = glossary.id;
 
