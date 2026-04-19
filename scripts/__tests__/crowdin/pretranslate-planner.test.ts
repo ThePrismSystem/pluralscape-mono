@@ -22,9 +22,23 @@ describe("planPretranslatePasses", () => {
   });
 
   it("returns TM + Google only when only Google-routed languages are requested", () => {
-    const passes = planPretranslatePasses({ ...defaultOpts, languageIds: ["ar", "es-419"] });
+    const passes = planPretranslatePasses({ ...defaultOpts, languageIds: ["ar"] });
     expect(passes.map((p) => p.label)).toEqual(["TM", "MT (Google)"]);
-    expect(passes[1]?.languageIds).toEqual(["ar", "es-419"]);
+    expect(passes[1]?.languageIds).toEqual(["ar"]);
+  });
+
+  it("keeps null-routed languages (e.g., es-419) in the TM pass but excludes them from MT passes", () => {
+    const passes = planPretranslatePasses({ ...defaultOpts, languageIds: ["es-419", "ar", "de"] });
+    expect(passes.map((p) => p.label)).toEqual(["TM", "MT (DeepL)", "MT (Google)"]);
+    expect(passes[0]?.languageIds).toEqual(["es-419", "ar", "de"]);
+    expect(passes[1]?.languageIds).toEqual(["de"]);
+    expect(passes[2]?.languageIds).toEqual(["ar"]);
+  });
+
+  it("returns TM only when every requested language is null-routed", () => {
+    const passes = planPretranslatePasses({ ...defaultOpts, languageIds: ["es-419"] });
+    expect(passes.map((p) => p.label)).toEqual(["TM"]);
+    expect(passes[0]?.languageIds).toEqual(["es-419"]);
   });
 
   it("defaults to all 12 target languages when languageIds is omitted", () => {

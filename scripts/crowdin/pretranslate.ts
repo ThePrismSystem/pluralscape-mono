@@ -75,7 +75,11 @@ export function planPretranslatePasses(opts: PretranslateOptions): PretranslateP
   const targets = opts.languageIds ?? TARGET_LANGUAGE_IDS;
   const byEngine: Record<Engine, string[]> = { deepl: [], google: [] };
   for (const id of targets) {
-    byEngine[ENGINE_ROUTING[id as TargetLanguageId]].push(id);
+    const engine = ENGINE_ROUTING[id as TargetLanguageId];
+    // `null`-routed languages (e.g., es-419) participate in the TM pass but are
+    // excluded from every MT pass — no configured engine accepts them.
+    if (engine === null) continue;
+    byEngine[engine].push(id);
   }
 
   const passes: PretranslatePass[] = [{ method: "tm", languageIds: targets, label: "TM" }];

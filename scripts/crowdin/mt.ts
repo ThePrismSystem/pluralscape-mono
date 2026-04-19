@@ -28,16 +28,23 @@ export interface MtClient {
 export type Engine = "deepl" | "google";
 
 /**
- * Maps Crowdin target-language IDs to MT engines.
- * DeepL Free supports most European languages + Japanese/Korean/Chinese but not Arabic.
- * Google Translate covers the remaining locales including Arabic and dialectal Spanish.
+ * Maps Crowdin target-language IDs to MT engines, or `null` when no MT engine
+ * we configure supports that target and the language must be left for human
+ * translation. `null` routes are still included in the TM pretranslate pass
+ * but excluded from every MT pass.
  *
- * Typed as `Record<TargetLanguageId, Engine>` so the compiler enforces
+ * - DeepL Free supports most European languages + Japanese/Korean/Chinese but
+ *   not Arabic, and only a single "Spanish" locale (no es-419).
+ * - Google's Crowdin integration accepts Arabic but rejects `es-419`
+ *   ("Languages [es-419] are not supported by Mt Engine" — HTTP 400 on
+ *   applyPreTranslation). LatAm Spanish therefore stays human-translated.
+ *
+ * Typed as `Record<TargetLanguageId, Engine | null>` so the compiler enforces
  * exhaustive coverage whenever `TARGET_LANGUAGE_IDS` changes.
  */
-export const ENGINE_ROUTING: Record<TargetLanguageId, Engine> = {
+export const ENGINE_ROUTING: Record<TargetLanguageId, Engine | null> = {
   ar: "google",
-  "es-419": "google",
+  "es-419": null,
   de: "deepl",
   "es-ES": "deepl",
   fr: "deepl",
