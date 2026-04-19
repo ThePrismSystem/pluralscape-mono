@@ -100,7 +100,6 @@ jobs:
 
   migrations:
     name: Migration Freshness
-    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: ./.github/actions/setup-pnpm
@@ -134,7 +133,6 @@ jobs:
 
   security:
     name: Security Audit
-    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: ./.github/actions/setup-pnpm
@@ -144,7 +142,6 @@ jobs:
 
   openapi:
     name: OpenAPI Spec Reconciliation
-    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: ./.github/actions/setup-pnpm
@@ -154,7 +151,6 @@ jobs:
 
   trpc-parity:
     name: tRPC Parity Check
-    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: ./.github/actions/setup-pnpm
@@ -164,7 +160,6 @@ jobs:
 
   scope-check:
     name: Scope Coverage Check
-    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: ./.github/actions/setup-pnpm
