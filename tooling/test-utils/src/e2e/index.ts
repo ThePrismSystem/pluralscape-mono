@@ -18,6 +18,9 @@ export {
 export { E2E_PORT, API_BASE_URL, pollHealth, spawnApiServer, killServer } from "./api-server.js";
 export type { SpawnedServer } from "./api-server.js";
 
+// Port-probe helper
+export { assertPortFree } from "./assert-port-free.js";
+
 // Account registration
 export { registerTestAccount, getSystemId } from "./account.js";
 export type { RegisteredAccount } from "./account.js";
