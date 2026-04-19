@@ -418,7 +418,7 @@ importers:
         version: link:../types
       libsodium-wrappers-sumo:
         specifier: ^0.8.3
-        version: 0.8.3
+        version: 0.8.4
       react-native-libsodium:
         specifier: '>=0.7.0'
         version: 1.7.0(react-native@0.85.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
@@ -3700,6 +3700,7 @@ packages:
   '@xmldom/xmldom@0.8.12':
     resolution: {integrity: sha512-9k/gHF6n/pAi/9tqr3m3aqkuiNosYTurLLUtc7xQ9sxB/wm7WPygCv8GYa6mS0fLJEHhqMC1ATYhz++U/lRHqg==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -5389,14 +5390,14 @@ packages:
   libsodium-sumo@0.8.2:
     resolution: {integrity: sha512-uMgnjphJ717jLN+jFG1HUgNrK/gOVVfaO1DGZ1Ig/fKLKLVhvaH/sM1I1v784JFvmkJDaczDpi7xSYC4Jvdo1Q==}
 
-  libsodium-sumo@0.8.3:
-    resolution: {integrity: sha512-z5CLkGJqilCXpfYxrXWh8fHVv2C8lpnIVxsZAHkxbEFyS+zZtL8VyM8FjtAmuDYP/rHgw8ftdwxSV8Efhzb8GQ==}
+  libsodium-sumo@0.8.4:
+    resolution: {integrity: sha512-TMtHShQfVVsaxDygyapvUC3o7YsPgXa/hRWeIgzyFz6w5k/1hirGptCxp1U7XwW3rCskaTTYKgV10v86UiGgNw==}
 
   libsodium-wrappers-sumo@0.8.2:
     resolution: {integrity: sha512-wd1xAY++Kr6VMikSaa4EPRAHJmFvNlGWiiwU3Jh3GR1zRYF3/I3vy/wYsr4k3LVsNzwb9sqfEQ4LdVQ6zEebyQ==}
 
-  libsodium-wrappers-sumo@0.8.3:
-    resolution: {integrity: sha512-EfLSlxKJ7RUGVospOlvbvse0suAAVPR+CkZfFcFjPzPtTEgVfvIaZUPsWndVjxYp/om2HDc0iLeR5wLF8YbHZg==}
+  libsodium-wrappers-sumo@0.8.4:
+    resolution: {integrity: sha512-ql7hcgulKZ3ekfa2DGAogcCKsWU0diA/0nArz1CFzh93WQdb46/Kj18ka/Hifq6uA3Ush34Pc6vU/6HXeRwUkg==}
 
   libsodium-wrappers@0.8.2:
     resolution: {integrity: sha512-VFLmfxkxo+U9q60tjcnSomQBRx2UzlRjKWJqvB4K1pUqsMQg4cu3QXA2nrcsj9A1qRsnJBbi2Ozx1hsiDoCkhw==}
@@ -12479,15 +12480,15 @@ snapshots:
 
   libsodium-sumo@0.8.2: {}
 
-  libsodium-sumo@0.8.3: {}
+  libsodium-sumo@0.8.4: {}
 
   libsodium-wrappers-sumo@0.8.2:
     dependencies:
       libsodium-sumo: 0.8.2
 
-  libsodium-wrappers-sumo@0.8.3:
+  libsodium-wrappers-sumo@0.8.4:
     dependencies:
-      libsodium-sumo: 0.8.3
+      libsodium-sumo: 0.8.4
 
   libsodium-wrappers@0.8.2:
     dependencies:
