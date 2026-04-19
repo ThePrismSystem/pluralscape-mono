@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from "node:timers/promises";
+
 import { TARGET_LANGUAGE_IDS, type TargetLanguageId } from "./languages.js";
 import { ENGINE_ROUTING, type Engine } from "./mt.js";
 import {
@@ -18,6 +20,16 @@ export interface PretranslatePass {
   engineId?: number;
   languageIds: readonly string[];
   label: string;
+}
+
+export type PretranslatePassStatus = "finished" | "failed" | "skipped_due_to_prior_failure";
+
+export interface PretranslateFailureContext {
+  /** Last-observed status string returned by Crowdin's preTranslationStatus. */
+  status: string;
+  progress?: number;
+  labelIds?: readonly number[];
+  languageIds?: readonly string[];
 }
 
 /**
@@ -46,7 +58,16 @@ export interface PretranslateClient {
     preTranslationStatus: (
       projectId: number,
       identifier: string,
-    ) => Promise<{ data: { status: string } }>;
+    ) => Promise<{ data: PreTranslationStatusResponse }>;
+  };
+}
+
+interface PreTranslationStatusResponse {
+  status: string;
+  progress?: number;
+  attributes?: {
+    labelIds?: number[];
+    languageIds?: string[];
   };
 }
 
@@ -78,7 +99,12 @@ export function planPretranslatePasses(opts: PretranslateOptions): PretranslateP
 }
 
 export interface PretranslateResult {
-  passes: Array<{ label: string; identifier: string; status: "finished" | "failed" }>;
+  passes: Array<{
+    label: string;
+    identifier: string;
+    status: PretranslatePassStatus;
+    failureContext?: PretranslateFailureContext;
+  }>;
 }
 
 async function runSinglePass(
@@ -87,7 +113,11 @@ async function runSinglePass(
   pass: PretranslatePass,
   opts: PretranslateOptions,
   signal: AbortSignal,
-): Promise<{ identifier: string; status: "finished" | "failed" }> {
+): Promise<{
+  identifier: string;
+  status: "finished" | "failed";
+  failureContext?: PretranslateFailureContext;
+}> {
   const job = await client.translationsApi.applyPreTranslation(projectId, {
     method: pass.method,
     engineId: pass.engineId,
@@ -108,36 +138,38 @@ async function pollJob(
   id: string,
   label: string,
   signal: AbortSignal,
-): Promise<{ identifier: string; status: "finished" | "failed" }> {
+): Promise<{
+  identifier: string;
+  status: "finished" | "failed";
+  failureContext?: PretranslateFailureContext;
+}> {
   const start = Date.now();
   while (Date.now() - start < POLL_TIMEOUT_MS) {
     if (signal.aborted) throw new Error(`${label} pretranslate ${id} aborted`);
     const r = await client.translationsApi.preTranslationStatus(projectId, id);
-    if (r.data.status === "finished" || r.data.status === "failed") {
-      return { identifier: id, status: r.data.status };
+    if (r.data.status === "finished") {
+      return { identifier: id, status: "finished" };
     }
-    await delay(POLL_INTERVAL_MS, signal);
+    if (r.data.status === "failed") {
+      return {
+        identifier: id,
+        status: "failed",
+        failureContext: {
+          status: r.data.status,
+          progress: r.data.progress,
+          labelIds: r.data.attributes?.labelIds,
+          languageIds: r.data.attributes?.languageIds,
+        },
+      };
+    }
+    try {
+      await sleep(POLL_INTERVAL_MS, undefined, { signal });
+    } catch (err) {
+      if (signal.aborted) throw new Error(`${label} pretranslate ${id} aborted`);
+      throw err;
+    }
   }
   throw new Error(`${label} pretranslate ${id} timed out after ${POLL_TIMEOUT_MS}ms`);
-}
-
-function delay(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new Error("aborted"));
-      return;
-    }
-    const onAbort = (): void => {
-      clearTimeout(timer);
-      reject(new Error("aborted"));
-    };
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    timer.unref();
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
 }
 
 export async function runPretranslate(
@@ -148,10 +180,24 @@ export async function runPretranslate(
 ): Promise<PretranslateResult> {
   const passes = planPretranslatePasses(opts);
   const results: PretranslateResult["passes"] = [];
+  let priorFailure = false;
   for (const pass of passes) {
+    if (priorFailure) {
+      results.push({
+        label: pass.label,
+        identifier: "",
+        status: "skipped_due_to_prior_failure",
+      });
+      continue;
+    }
     const r = await runSinglePass(client, projectId, pass, opts, signal);
-    results.push({ label: pass.label, ...r });
-    if (r.status === "failed") break;
+    results.push({
+      label: pass.label,
+      identifier: r.identifier,
+      status: r.status,
+      failureContext: r.failureContext,
+    });
+    if (r.status === "failed") priorFailure = true;
   }
   return { passes: results };
 }

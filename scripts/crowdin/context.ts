@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { CONTEXT_NAMESPACES, ContextFileSchema } from "./context-schema.js";
+import { getErrorMessage } from "./errors.js";
+import { LIST_PAGE_SIZE, MAX_PAGES } from "./pagination.constants.js";
 
 /**
  * Shape of a remote source-string page item consumed by {@link applyContexts}.
@@ -93,15 +95,19 @@ export function diffContexts(
   return { toUpdate, unchanged };
 }
 
-const LIST_PAGE_SIZE = 500;
-
 export async function applyContexts(
   client: ContextApiClient,
   projectId: number,
   desired: ReadonlyMap<string, string>,
 ): Promise<ContextApplyResult> {
   const strings: SourceString[] = [];
+  let pages = 0;
   for (let offset = 0; ; offset += LIST_PAGE_SIZE) {
+    if (pages >= MAX_PAGES) {
+      throw new Error(
+        `applyContexts: exceeded MAX_PAGES=${String(MAX_PAGES)} while listing project strings (offset=${String(offset)}).`,
+      );
+    }
     const response = await client.sourceStringsApi.listProjectStrings(projectId, {
       limit: LIST_PAGE_SIZE,
       offset,
@@ -112,6 +118,7 @@ export async function applyContexts(
       context: s.data.context ?? null,
     }));
     strings.push(...page);
+    pages += 1;
     if (page.length < LIST_PAGE_SIZE) break;
   }
 
@@ -126,8 +133,7 @@ export async function applyContexts(
         { op: "replace", path: "/context", value: newContext },
       ]);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      errors.push({ id, error: message });
+      errors.push({ id, error: getErrorMessage(err) });
     }
   }
   if (errors.length > 0) {

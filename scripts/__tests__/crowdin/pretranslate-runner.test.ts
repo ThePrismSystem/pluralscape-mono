@@ -63,19 +63,23 @@ describe("runPretranslate", () => {
     }
   });
 
-  it("short-circuits on TM failure without firing DeepL or Google jobs", async () => {
+  it("on TM failure skips DeepL and Google passes (no additional API calls)", async () => {
     const client = mockClient({
       applyResults: [{ identifier: "tm1" }],
       statusSequences: { tm1: [{ status: "failed" }] },
     });
     const result = await runPretranslate(client, 100, { deeplMtId: 1, googleMtId: 2 });
-    expect(result.passes).toHaveLength(1);
+    expect(result.passes).toHaveLength(3);
     expect(result.passes[0]?.status).toBe("failed");
+    expect(result.passes.slice(1).map((p) => p.status)).toEqual([
+      "skipped_due_to_prior_failure",
+      "skipped_due_to_prior_failure",
+    ]);
     const applyFn = client.translationsApi.applyPreTranslation;
     expect(applyFn).toHaveBeenCalledTimes(1);
   });
 
-  it("short-circuits on DeepL failure before firing Google", async () => {
+  it("on DeepL failure skips Google pass but still reports its slot", async () => {
     const client = mockClient({
       applyResults: [{ identifier: "tm1" }, { identifier: "d1" }],
       statusSequences: {
@@ -84,7 +88,12 @@ describe("runPretranslate", () => {
       },
     });
     const result = await runPretranslate(client, 100, { deeplMtId: 1, googleMtId: 2 });
-    expect(result.passes.map((p) => p.label)).toEqual(["TM", "MT (DeepL)"]);
+    expect(result.passes.map((p) => p.label)).toEqual(["TM", "MT (DeepL)", "MT (Google)"]);
+    expect(result.passes.map((p) => p.status)).toEqual([
+      "finished",
+      "failed",
+      "skipped_due_to_prior_failure",
+    ]);
     const applyFn = client.translationsApi.applyPreTranslation;
     expect(applyFn).toHaveBeenCalledTimes(2);
   });
@@ -123,5 +132,67 @@ describe("runPretranslate", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("times out after POLL_TIMEOUT_MS when status never reaches a terminal state", async () => {
+    vi.useFakeTimers();
+    try {
+      const client = mockClient({
+        applyResults: [{ identifier: "tm1" }],
+        // Every poll returns inProgress — should eventually exceed POLL_TIMEOUT_MS.
+        statusSequences: { tm1: [{ status: "inProgress" }] },
+      });
+      const promise = runPretranslate(client, 100, { deeplMtId: 1, googleMtId: 2 });
+      // Prevent unhandled-rejection noise while timers are still being advanced.
+      promise.catch(() => {
+        /* asserted below */
+      });
+      // Advance past POLL_TIMEOUT_MS (10 min). The poll loop checks Date.now
+      // against the saved start time, then awaits setTimeout(5s). Single
+      // large jump advances both the clock and queued timers.
+      await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+      await expect(promise).rejects.toThrow(/timed out/);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 15_000);
+
+  it("marks subsequent passes as skipped_due_to_prior_failure on first failure", async () => {
+    const client = mockClient({
+      applyResults: [{ identifier: "tm1" }],
+      statusSequences: { tm1: [{ status: "failed" }] },
+    });
+    const result = await runPretranslate(client, 100, { deeplMtId: 1, googleMtId: 2 });
+    const statuses = result.passes.map((p) => p.status);
+    expect(statuses[0]).toBe("failed");
+    // TM pass failed; DeepL + Google should be recorded as skipped.
+    expect(statuses.slice(1)).toEqual([
+      "skipped_due_to_prior_failure",
+      "skipped_due_to_prior_failure",
+    ]);
+  });
+
+  it("surfaces failureContext (status + languageIds) on failed pass", async () => {
+    const apply = vi.fn().mockResolvedValue({ data: { identifier: "tm1" } });
+    const status = vi.fn().mockResolvedValue({
+      data: {
+        status: "failed",
+        progress: 42,
+        attributes: { languageIds: ["fr", "de"], labelIds: [7] },
+      },
+    });
+    const client: MockedClient = {
+      translationsApi: {
+        applyPreTranslation: apply as MockedClient["translationsApi"]["applyPreTranslation"],
+        preTranslationStatus: status as MockedClient["translationsApi"]["preTranslationStatus"],
+      },
+    };
+    const result = await runPretranslate(client, 100, { deeplMtId: 1, googleMtId: 2 });
+    expect(result.passes[0]?.failureContext).toEqual({
+      status: "failed",
+      progress: 42,
+      labelIds: [7],
+      languageIds: ["fr", "de"],
+    });
   });
 });

@@ -1,6 +1,29 @@
-import type { CrowdinClient } from "./client.js";
 import type { CrowdinEnv } from "./env.js";
 import { type TargetLanguageId } from "./languages.js";
+
+/**
+ * Credential shapes we use with Crowdin MT. DeepL uses `{ apiKey }`; Google
+ * service-account creds use `{ credentials }` (stringified JSON).
+ */
+export type MtCredentials = { apiKey: string } | { credentials: string };
+
+/**
+ * Minimal structural slice of `CrowdinClient` exercised by MT operations. The
+ * real SDK client satisfies this interface; tests stub it without mocking the
+ * SDK's full surface.
+ */
+export interface MtClient {
+  machineTranslationApi: {
+    listMts(): Promise<{ data: Array<{ data: { id: number; name: string } }> }>;
+    createMt(request: {
+      name: string;
+      type: string;
+      credentials: MtCredentials;
+      enabledProjectIds: number[];
+    }): Promise<{ data: { id: number; name: string } }>;
+    updateMt(mtId: number, patch: unknown): Promise<unknown>;
+  };
+}
 
 export type Engine = "deepl" | "google";
 
@@ -31,6 +54,14 @@ export const ENGINE_ROUTING: Record<TargetLanguageId, Engine> = {
 const DEEPL_MT_NAME = "Pluralscape DeepL";
 const GOOGLE_MT_NAME = "Pluralscape Google Translate";
 
+function assertUnique(name: string, ids: readonly number[]): void {
+  if (ids.length > 1) {
+    throw new Error(
+      `Multiple MT engines named "${name}" exist (ids=${ids.join(", ")}). Remove duplicates in the Crowdin UI before re-running setup.`,
+    );
+  }
+}
+
 /**
  * Read-only lookup for engine IDs. Returns null if either engine is missing.
  *
@@ -40,46 +71,85 @@ const GOOGLE_MT_NAME = "Pluralscape Google Translate";
  * two workflows both try to create the same named engine.
  */
 export async function findMtEngineIds(
-  client: CrowdinClient,
+  client: MtClient,
 ): Promise<{ deeplId: number; googleId: number } | null> {
   const list = await client.machineTranslationApi.listMts();
-  const deepl = list.data.find((m) => m.data.name === DEEPL_MT_NAME);
-  const google = list.data.find((m) => m.data.name === GOOGLE_MT_NAME);
+  const deeplMatches = list.data.filter((m) => m.data.name === DEEPL_MT_NAME);
+  const googleMatches = list.data.filter((m) => m.data.name === GOOGLE_MT_NAME);
+  assertUnique(
+    DEEPL_MT_NAME,
+    deeplMatches.map((m) => m.data.id),
+  );
+  assertUnique(
+    GOOGLE_MT_NAME,
+    googleMatches.map((m) => m.data.id),
+  );
+  const deepl = deeplMatches[0];
+  const google = googleMatches[0];
   if (!deepl || !google) return null;
   return { deeplId: deepl.data.id, googleId: google.data.id };
 }
 
 export async function applyMtEngines(
-  client: CrowdinClient,
+  client: MtClient,
   projectId: number,
   env: CrowdinEnv,
 ): Promise<{ deeplId: number; googleId: number }> {
   const mtsApi = client.machineTranslationApi;
   const list = await mtsApi.listMts();
-  const existingDeepl = list.data.find((m) => m.data.name === DEEPL_MT_NAME);
-  const existingGoogle = list.data.find((m) => m.data.name === GOOGLE_MT_NAME);
+  const deeplMatches = list.data.filter((m) => m.data.name === DEEPL_MT_NAME);
+  const googleMatches = list.data.filter((m) => m.data.name === GOOGLE_MT_NAME);
+  assertUnique(
+    DEEPL_MT_NAME,
+    deeplMatches.map((m) => m.data.id),
+  );
+  assertUnique(
+    GOOGLE_MT_NAME,
+    googleMatches.map((m) => m.data.id),
+  );
+  const existingDeepl = deeplMatches[0];
+  const existingGoogle = googleMatches[0];
 
-  const deepl =
-    existingDeepl ??
-    (await mtsApi.createMt({
+  // googleCredentials is the shape-validated service-account object from env.ts;
+  // we serialize it once here and hand the JSON string to Crowdin.
+  const googleCredsJson = JSON.stringify(env.googleCredentials);
+
+  let deeplId: number;
+  if (existingDeepl) {
+    // PATCH credentials + enabledProjectIds on reuse so a rotated DeepL key or
+    // a newly-cloned project gets picked up automatically, instead of
+    // silently running against a stale engine.
+    await mtsApi.updateMt(existingDeepl.data.id, [
+      { op: "replace", path: "/credentials", value: { apiKey: env.deeplApiKey } },
+      { op: "replace", path: "/enabledProjectIds", value: [projectId] },
+    ]);
+    deeplId = existingDeepl.data.id;
+  } else {
+    const created = await mtsApi.createMt({
       name: DEEPL_MT_NAME,
       type: "deepl",
       credentials: { apiKey: env.deeplApiKey },
       enabledProjectIds: [projectId],
-    }));
+    });
+    deeplId = created.data.id;
+  }
 
-  // env.googleCredentialsJson is a shape-validated service-account JSON string
-  // (see ServiceAccountSchema in env.ts); we pass it along to Crowdin verbatim
-  // via the credentials field.
-  const googleCreds = JSON.parse(env.googleCredentialsJson) as Record<string, unknown>;
-  const google =
-    existingGoogle ??
-    (await mtsApi.createMt({
+  let googleId: number;
+  if (existingGoogle) {
+    await mtsApi.updateMt(existingGoogle.data.id, [
+      { op: "replace", path: "/credentials", value: { credentials: googleCredsJson } },
+      { op: "replace", path: "/enabledProjectIds", value: [projectId] },
+    ]);
+    googleId = existingGoogle.data.id;
+  } else {
+    const created = await mtsApi.createMt({
       name: GOOGLE_MT_NAME,
       type: "google-automl-v1",
-      credentials: { credentials: JSON.stringify(googleCreds) },
+      credentials: { credentials: googleCredsJson },
       enabledProjectIds: [projectId],
-    }));
+    });
+    googleId = created.data.id;
+  }
 
-  return { deeplId: deepl.data.id, googleId: google.data.id };
+  return { deeplId, googleId };
 }

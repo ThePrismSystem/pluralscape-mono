@@ -1,5 +1,3 @@
-import type { CrowdinClient } from "./client.js";
-
 export const TARGET_LANGUAGE_IDS = [
   "ar",
   "de",
@@ -34,11 +32,22 @@ export function diffLanguages(
 }
 
 /**
+ * Minimal structural slice of `CrowdinClient` exercised by
+ * {@link applyTargetLanguages}. The real SDK client satisfies this interface.
+ */
+export interface LanguagesClient {
+  projectsGroupsApi: {
+    getProject(projectId: number): Promise<{ data: { targetLanguageIds?: string[] } }>;
+    editProject(projectId: number, patch: unknown): Promise<unknown>;
+  };
+}
+
+/**
  * Replace the project's target language list with the canonical set.
  * PATCH op "replace" on /targetLanguageIds is idempotent.
  */
 export async function applyTargetLanguages(
-  client: CrowdinClient,
+  client: LanguagesClient,
   projectId: number,
 ): Promise<LanguageDiff> {
   const project = await client.projectsGroupsApi.getProject(projectId);

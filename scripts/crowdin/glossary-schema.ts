@@ -3,10 +3,18 @@ import { z } from "zod";
 export const TermTypeSchema = z.enum(["translatable", "do-not-translate", "negative"]);
 export const HazardSchema = z.enum(["critical", "medium", "low"]);
 
+/**
+ * Glossary part-of-speech values. Compound forms like "noun/verb" are
+ * community-authored shorthand that we map to Crowdin's single-valued
+ * PartOfSpeech enum via POS_MAPPING in glossary.ts.
+ */
+export const GlossaryPosSchema = z.enum(["adj", "noun", "verb", "noun/verb", "verb/noun"]);
+export type GlossaryPos = z.infer<typeof GlossaryPosSchema>;
+
 export const GlossaryTermSchema = z.object({
   term: z.string().min(1),
   type: TermTypeSchema,
-  pos: z.string().min(1).optional(),
+  pos: GlossaryPosSchema.optional(),
   hazard: HazardSchema.optional(),
   loanword_ok: z.boolean().optional(),
   notes: z.string().min(1),

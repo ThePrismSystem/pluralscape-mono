@@ -59,13 +59,10 @@ describe("loadAllContexts", () => {
   beforeEach(() => {
     tmpRoot = path.join(tmpdir(), `crowdin-context-test-${Date.now()}-${Math.random()}`);
     mkdirSync(path.join(tmpRoot, "apps/mobile/locales/en"), { recursive: true });
-    for (const ns of ["common", "auth", "fronting", "members", "settings"]) {
-      const body = ns === "common" ? { ok: "Affirmation." } : {};
-      writeFileSync(
-        path.join(tmpRoot, "apps/mobile/locales/en", `${ns}.context.json`),
-        JSON.stringify(body),
-      );
-    }
+    writeFileSync(
+      path.join(tmpRoot, "apps/mobile/locales/en", "common.context.json"),
+      JSON.stringify({ ok: "Affirmation." }),
+    );
   });
 
   afterEach(() => {
@@ -82,6 +79,54 @@ describe("loadAllContexts", () => {
 describe("applyContexts", () => {
   type ListFn = ContextApiClient["sourceStringsApi"]["listProjectStrings"];
   type EditFn = ContextApiClient["sourceStringsApi"]["editString"];
+
+  it("paginates across multiple full pages and stops on a short page", async () => {
+    const LIST_PAGE_SIZE = 500;
+    const firstPage = Array.from({ length: LIST_PAGE_SIZE }, (_, i) => ({
+      data: { id: i + 1, identifier: `ns.key${String(i + 1)}`, context: null },
+    }));
+    const secondPage = [
+      { data: { id: LIST_PAGE_SIZE + 1, identifier: "ns.keyLast", context: null } },
+    ];
+    const listProjectStrings = vi
+      .fn<ListFn>()
+      .mockResolvedValueOnce({ data: firstPage })
+      .mockResolvedValueOnce({ data: secondPage });
+    const editString = vi.fn<EditFn>();
+    const client: ContextApiClient = {
+      sourceStringsApi: { listProjectStrings, editString },
+    };
+    const result = await applyContexts(client, 100, new Map());
+    expect(listProjectStrings).toHaveBeenCalledTimes(2);
+    expect(result.remoteIdentifiersChecked).toBe(LIST_PAGE_SIZE + 1);
+  });
+
+  it("fetches exactly one page and stops when that page is already short", async () => {
+    const listProjectStrings = vi.fn<ListFn>().mockResolvedValueOnce({
+      data: [{ data: { id: 1, identifier: "ns.only", context: null } }],
+    });
+    const editString = vi.fn<EditFn>();
+    const client: ContextApiClient = {
+      sourceStringsApi: { listProjectStrings, editString },
+    };
+    const result = await applyContexts(client, 100, new Map());
+    expect(listProjectStrings).toHaveBeenCalledTimes(1);
+    expect(result.remoteIdentifiersChecked).toBe(1);
+  });
+
+  it("throws when MAX_PAGES is exceeded (guard against infinite pagination)", async () => {
+    const LIST_PAGE_SIZE = 500;
+    // Every response is a full page, forcing the loop to hit MAX_PAGES.
+    const fullPage = Array.from({ length: LIST_PAGE_SIZE }, (_, i) => ({
+      data: { id: i + 1, identifier: `ns.key${String(i + 1)}`, context: null },
+    }));
+    const listProjectStrings = vi.fn<ListFn>().mockResolvedValue({ data: fullPage });
+    const editString = vi.fn<EditFn>();
+    const client: ContextApiClient = {
+      sourceStringsApi: { listProjectStrings, editString },
+    };
+    await expect(applyContexts(client, 100, new Map())).rejects.toThrow(/MAX_PAGES/);
+  });
 
   it("aggregates per-item failures into AggregateError and continues past them", async () => {
     const listProjectStrings = vi.fn<ListFn>().mockResolvedValueOnce({
