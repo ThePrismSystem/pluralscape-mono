@@ -23,7 +23,7 @@ export const EXPECTED_BASE_REF = "main";
 export const KILL_SWITCH_LABEL = "do-not-automerge";
 
 export type SkipReason =
-  | "author_not_bot"
+  | "author_not_crowdin_bot"
   | "branch_mismatch"
   | "kill_switch_active"
   | "no_files"
@@ -131,7 +131,7 @@ function extractLocale(p: string): string | undefined {
  */
 export function evaluatePr(pr: PrContext): EvaluationResult {
   if (pr.author !== BOT_AUTHOR) {
-    return { eligible: false, skipReason: "author_not_bot" };
+    return { eligible: false, skipReason: "author_not_crowdin_bot" };
   }
   if (pr.headRef !== EXPECTED_HEAD_REF || pr.baseRef !== EXPECTED_BASE_REF) {
     return { eligible: false, skipReason: "branch_mismatch" };
