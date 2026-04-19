@@ -8,6 +8,7 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
+import { assertPortFree } from "./assert-port-free.js";
 import {
   DOCKER_CONTAINER_NAME,
   MINIO_BUCKET,
@@ -113,6 +114,7 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
     throw new Error(`Migration failed:\nstdout: ${stdout}\nstderr: ${stderr}`);
   }
 
+  await assertPortFree(E2E_PORT);
   log(`Starting API server on port ${String(E2E_PORT)}`);
   // Strip VITEST from the inherited env — apps/api/src/index.ts gates its
   // start() call on `!process.env["VITEST"]` to avoid an async teardown race
@@ -140,18 +142,32 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
     stdio: "pipe",
   });
 
+  const stderrTail: string[] = [];
+  const STDERR_TAIL_MAX = 20;
   serverProcess.stderr.on("data", (data: Buffer) => {
     const msg = data.toString();
-    if (msg.includes('"level":50') || msg.includes('"level":60')) {
+    // Suppress only well-formed pino INFO/DEBUG/WARN JSON. Forward anything
+    // else (raw Bun errors, malformed JSON, ERROR/FATAL pino) so startup
+    // failures are visible instead of silently eaten.
+    const isPinoJson = /^\s*\{.*"level":\d+/.test(msg);
+    const isLowLevelPino = isPinoJson && !msg.includes('"level":50') && !msg.includes('"level":60');
+    if (!isLowLevelPino) {
       process.stderr.write(msg);
     }
+    stderrTail.push(msg);
+    if (stderrTail.length > STDERR_TAIL_MAX) stderrTail.shift();
   });
 
   if (!serverProcess.pid) {
     throw new Error("Failed to spawn API server — pid is undefined");
   }
 
-  await pollHealth({ baseUrl: API_BASE_URL, timeoutMs: HEALTH_TIMEOUT_MS });
+  await pollHealth({
+    baseUrl: API_BASE_URL,
+    timeoutMs: HEALTH_TIMEOUT_MS,
+    child: serverProcess,
+    stderrTail,
+  });
   log("API server is healthy. Running tests...");
 
   return { process: serverProcess, pid: serverProcess.pid };
