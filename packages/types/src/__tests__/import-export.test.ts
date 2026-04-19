@@ -383,13 +383,13 @@ describe("ImportCheckpointState", () => {
           member: true,
           group: true,
           note: false,
-        } as Record<ImportCollectionType, boolean | undefined>,
+        } satisfies Partial<Record<ImportCollectionType, boolean>>,
         avatarMode: "api",
       },
       totals: {
         perCollection: {
           member: { total: 20, imported: 20, updated: 0, skipped: 0, failed: 0 },
-        } as Record<ImportCollectionType, ImportCollectionTotals | undefined>,
+        } satisfies Partial<Record<ImportCollectionType, ImportCollectionTotals>>,
       },
     };
     expectTypeOf(state.schemaVersion).toEqualTypeOf<2>();

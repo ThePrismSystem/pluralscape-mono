@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   CreateImportJobBodySchema,
-  UpdateImportJobBodySchema,
+  ImportCheckpointStateSchema,
   ImportJobQuerySchema,
+  UpdateImportJobBodySchema,
 } from "../import-job.js";
 
 describe("CreateImportJobBodySchema", () => {
@@ -325,6 +326,37 @@ describe("ImportJobQuerySchema", () => {
 
   it("rejects invalid source filter", () => {
     const result = ImportJobQuerySchema.safeParse({ source: "notion" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("import-job schemas reject unknown collection keys", () => {
+  it("CreateImportJobBodySchema rejects unknown key in selectedCategories", () => {
+    const result = CreateImportJobBodySchema.safeParse({
+      source: "simply-plural",
+      selectedCategories: { member: true, bogus: true },
+      avatarMode: "skip",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("ImportCheckpointStateSchema rejects unknown key in selectedCategories", () => {
+    const result = ImportCheckpointStateSchema.safeParse({
+      schemaVersion: 2,
+      checkpoint: {
+        completedCollections: [],
+        currentCollection: "member",
+        currentCollectionLastSourceId: null,
+        realPrivacyBucketsMapped: false,
+      },
+      options: {
+        selectedCategories: { member: true, bogus: true },
+        avatarMode: "skip",
+      },
+      totals: { perCollection: {} },
+    });
+
     expect(result.success).toBe(false);
   });
 });
