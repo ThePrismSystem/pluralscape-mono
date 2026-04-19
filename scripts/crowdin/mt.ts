@@ -54,6 +54,30 @@ export const ENGINE_ROUTING: Record<TargetLanguageId, Engine> = {
 const DEEPL_MT_NAME = "Pluralscape DeepL";
 const GOOGLE_MT_NAME = "Pluralscape Google Translate";
 
+/**
+ * Thrown when the Crowdin API refuses programmatic MT engine creation
+ * (seen as HTTP 405 on `POST /mts` for personal accounts). Callers treat
+ * this as a non-fatal signal: the workflow continues, but MT engines must
+ * be created manually in the Crowdin UI before pretranslate will work.
+ */
+export class MtCreationForbiddenError extends Error {
+  constructor(engineName: string) {
+    super(
+      `Crowdin rejected MT engine creation for "${engineName}" (HTTP 405). ` +
+        `This account tier likely does not allow programmatic MT engine creation. ` +
+        `Create the engine once in the Crowdin UI (Account settings → Machine translation engines), ` +
+        `name it exactly "${engineName}", then re-run crowdin:setup — subsequent runs will PATCH the existing engine.`,
+    );
+    this.name = "MtCreationForbiddenError";
+  }
+}
+
+function isMethodNotAllowed(err: unknown): boolean {
+  if (err === null || typeof err !== "object") return false;
+  const code = (err as { code?: unknown }).code;
+  return code === 405;
+}
+
 function assertUnique(name: string, ids: readonly number[]): void {
   if (ids.length > 1) {
     throw new Error(
@@ -125,13 +149,18 @@ export async function applyMtEngines(
     ]);
     deeplId = existingDeepl.data.id;
   } else {
-    const created = await mtsApi.createMt({
-      name: DEEPL_MT_NAME,
-      type: "deepl",
-      credentials: { apiKey: env.deeplApiKey },
-      enabledProjectIds: [projectId],
-    });
-    deeplId = created.data.id;
+    try {
+      const created = await mtsApi.createMt({
+        name: DEEPL_MT_NAME,
+        type: "deepl",
+        credentials: { apiKey: env.deeplApiKey },
+        enabledProjectIds: [projectId],
+      });
+      deeplId = created.data.id;
+    } catch (err) {
+      if (isMethodNotAllowed(err)) throw new MtCreationForbiddenError(DEEPL_MT_NAME);
+      throw err;
+    }
   }
 
   let googleId: number;
@@ -142,13 +171,18 @@ export async function applyMtEngines(
     ]);
     googleId = existingGoogle.data.id;
   } else {
-    const created = await mtsApi.createMt({
-      name: GOOGLE_MT_NAME,
-      type: "google-automl-v1",
-      credentials: { credentials: googleCredsJson },
-      enabledProjectIds: [projectId],
-    });
-    googleId = created.data.id;
+    try {
+      const created = await mtsApi.createMt({
+        name: GOOGLE_MT_NAME,
+        type: "google-automl-v1",
+        credentials: { credentials: googleCredsJson },
+        enabledProjectIds: [projectId],
+      });
+      googleId = created.data.id;
+    } catch (err) {
+      if (isMethodNotAllowed(err)) throw new MtCreationForbiddenError(GOOGLE_MT_NAME);
+      throw err;
+    }
   }
 
   return { deeplId, googleId };
