@@ -24,18 +24,55 @@ const DEFAULT_TEST_PEPPER = crypto.createHash("sha256").update("e2e-test-pepper"
 export const E2E_PORT = 10_099;
 export const API_BASE_URL = `http://localhost:${String(E2E_PORT)}`;
 
-export async function pollHealth(baseUrl: string, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`${baseUrl}/health`);
-      if (res.ok) return;
-    } catch {
-      // Server not ready yet
+export interface PollHealthOptions {
+  readonly baseUrl: string;
+  readonly timeoutMs: number;
+  /**
+   * Optional spawned child to monitor. If the child exits before /health
+   * becomes healthy, the promise rejects immediately with the exit code
+   * and the most recent stderr chunks.
+   */
+  readonly child?: ChildProcess;
+  /**
+   * Bounded ring of recent stderr chunks captured by the caller. Used
+   * verbatim in the early-exit error message.
+   */
+  readonly stderrTail?: readonly string[];
+}
+
+export async function pollHealth(options: PollHealthOptions): Promise<void> {
+  const { baseUrl, timeoutMs, child, stderrTail } = options;
+  // Seed earlyExit from exitCode/signalCode so a child that exited before
+  // pollHealth was called is still detected — the 'exit' event never fires
+  // retroactively, so the listener alone is insufficient.
+  let earlyExit: { code: number | null; signal: NodeJS.Signals | null } | null =
+    child && child.exitCode !== null ? { code: child.exitCode, signal: child.signalCode } : null;
+  const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+    earlyExit = { code, signal };
+  };
+  child?.on("exit", onExit);
+  try {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (earlyExit !== null) {
+        const tail = (stderrTail ?? []).join("");
+        throw new Error(
+          `API server exited before becoming healthy (code=${String(earlyExit.code)}, signal=${String(earlyExit.signal)}).\n` +
+            `Recent stderr:\n${tail}`,
+        );
+      }
+      try {
+        const res = await fetch(`${baseUrl}/health`);
+        if (res.ok) return;
+      } catch {
+        // Server not ready yet
+      }
+      await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
     }
-    await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
+    throw new Error(`API server did not become healthy within ${String(timeoutMs)}ms`);
+  } finally {
+    child?.off("exit", onExit);
   }
-  throw new Error(`API server did not become healthy within ${String(timeoutMs)}ms`);
 }
 
 export interface SpawnedServer {
@@ -114,7 +151,7 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
     throw new Error("Failed to spawn API server — pid is undefined");
   }
 
-  await pollHealth(API_BASE_URL, HEALTH_TIMEOUT_MS);
+  await pollHealth({ baseUrl: API_BASE_URL, timeoutMs: HEALTH_TIMEOUT_MS });
   log("API server is healthy. Running tests...");
 
   return { process: serverProcess, pid: serverProcess.pid };
