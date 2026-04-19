@@ -8,18 +8,18 @@
     "./trpc": "./src/trpc.ts"
   },
   "dependencies": {
-    "@trpc/client": "11.16.0",
-    "@trpc/react-query": "11.16.0",
+    "@trpc/client": "catalog:",
+    "@trpc/react-query": "catalog:",
     "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
     "@pluralscape/api": "workspace:^",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@trpc/server": "11.16.0",
-    "eslint": "^10.2.0",
+    "@trpc/server": "catalog:",
+    "eslint": "catalog:",
     "openapi-typescript": "^7.13.0",
-    "typescript": "^6.0.0"
+    "typescript": "catalog:"
   },
   "scripts": {
     "generate": "bun scripts/generate-types.ts",

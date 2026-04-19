@@ -19,10 +19,10 @@
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3-multiple-ciphers": "^12.6.2",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "@types/better-sqlite3": "catalog:",
+    "better-sqlite3-multiple-ciphers": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",

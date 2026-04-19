@@ -2,3 +2,26 @@ packages:
   - "apps/*"
   - "packages/*"
   - "tooling/*"
+
+# Shared external dependency versions. Any package can reference these with
+# `"dep": "catalog:"` — single source of truth, bump in one place.
+# Renovate updates entries here like any other dependency.
+catalog:
+  "@electric-sql/pglite": ^0.4.4
+  "@playwright/test": ^1.59.1
+  "@tanstack/react-query": ^5.97.0
+  "@testing-library/react": ^16.3.2
+  "@trpc/client": 11.16.0
+  "@trpc/react-query": 11.16.0
+  "@trpc/server": 11.16.0
+  "@types/better-sqlite3": ^7.6.13
+  "@types/bun": ^1.2.4
+  "@types/react": ^19.2.14
+  better-sqlite3-multiple-ciphers: ^12.9.0
+  drizzle-orm: ^0.45.1
+  eslint: ^10.2.1
+  jszip: ^3.10.1
+  postgres: ^3.4.9
+  react-dom: ^19.2.5
+  typescript: ^6.0.3
+  zod: ^4.3.6

@@ -12,15 +12,15 @@
   },
   "dependencies": {
     "nodemailer": "^8.0.5",
-    "resend": "^6.0.0"
+    "resend": "^6.12.0"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@types/bun": "^1.2.4",
+    "@types/bun": "catalog:",
     "@types/nodemailer": "^8.0.0",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",

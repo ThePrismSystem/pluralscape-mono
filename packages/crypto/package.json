@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
-    "libsodium-wrappers-sumo": "^0.8.3"
+    "libsodium-wrappers-sumo": "^0.8.4"
   },
   "peerDependencies": {
     "react-native-libsodium": ">=0.7.0"
@@ -25,8 +25,8 @@
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",

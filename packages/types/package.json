@@ -11,9 +11,9 @@
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@types/bun": "^1.2.4",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "@types/bun": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",
