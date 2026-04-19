@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-19T19:45:34Z
-updated_at: 2026-04-19T20:24:08Z
+updated_at: 2026-04-19T20:24:55Z
 ---
 
 Address critical/important/suggestion findings from multi-agent review of PR #497. See docs/superpowers/plans/2026-04-19-pr-497-review-fixes.md
@@ -29,3 +29,5 @@ Address critical/important/suggestion findings from multi-agent review of PR #49
 - [x] Tighten selectedCategories Zod schema + drop test casts
 
 - [x] Write-path test for markRealPrivacyBucketsMapped
+
+- [x] Follow-up beans created (M10 UI design + M12 data interpolation)
