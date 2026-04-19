@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -57,7 +57,10 @@ describe("loadAllContexts", () => {
   let tmpRoot: string;
 
   beforeEach(() => {
-    tmpRoot = path.join(tmpdir(), `crowdin-context-test-${Date.now()}-${Math.random()}`);
+    // mkdtempSync atomically creates a unique directory (uses O_EXCL), avoiding
+    // the CodeQL insecure-temporary-file pattern a Date.now()+Math.random() path
+    // trips on (same-tick collisions let another process pre-create the path).
+    tmpRoot = mkdtempSync(path.join(tmpdir(), "crowdin-context-test-"));
     mkdirSync(path.join(tmpRoot, "apps/mobile/locales/en"), { recursive: true });
     writeFileSync(
       path.join(tmpRoot, "apps/mobile/locales/en", "common.context.json"),
