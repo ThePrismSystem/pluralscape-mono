@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-19T01:43:35Z
-updated_at: 2026-04-19T03:56:12Z
+updated_at: 2026-04-19T22:56:37Z
+parent: ps-0enb
 ---
 
 Replace custom crowdin-automerge workflow with native gh pr merge --auto + branch ruleset scoped to github-actions[bot]. Extract composite setup action, drop needs:[lint,typecheck] gates on fast jobs, refine concurrency cancel-in-progress. Keep separate crowdin workflows (responsibility boundary). Larger runners skipped (paid tier on public repos).

@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-04-19T00:50:48Z
-updated_at: 2026-04-19T08:25:52Z
+updated_at: 2026-04-19T22:56:37Z
+parent: ps-0enb
 ---
 
 Two CodeQL alerts (js/polynomial-redos, security_severity=high) open on main at packages/email/src/email.constants.ts:38,42. The EMAIL_REGEX /^[^\s@]+@[^\s@]+\.[^\s@]+$/ has polynomial backtracking because `.` is inside [^\s@], creating ambiguous partitions around the final `\.`.

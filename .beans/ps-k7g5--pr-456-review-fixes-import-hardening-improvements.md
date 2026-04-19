@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-16T12:15:19Z
-updated_at: 2026-04-16T12:21:42Z
+updated_at: 2026-04-19T22:56:38Z
+parent: ps-0enb
 ---
 
 Implement fixes from multi-agent review of PR #456 (fix/m9-import-hardening). 3 important issues + 7 suggestions covering response size guards, error handling, type safety, and tests.

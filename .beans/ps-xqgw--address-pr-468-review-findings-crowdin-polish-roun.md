@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-04-18T21:35:19Z
-updated_at: 2026-04-18T23:04:38Z
+updated_at: 2026-04-19T22:56:37Z
+parent: ps-0enb
 ---
 
 Implements docs/superpowers/specs/2026-04-18-crowdin-review-response-design.md. Addresses critical + important findings from 5-agent review of feat/crowdin-polish. 7 commits (TDD integrated): docs, context sidecars, 2-pass MT, automerge safety, Google creds, glossary/qa, refactors.

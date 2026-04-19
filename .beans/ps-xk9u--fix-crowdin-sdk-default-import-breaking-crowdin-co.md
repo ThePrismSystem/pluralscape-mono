@@ -5,7 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-04-19T01:19:00Z
-updated_at: 2026-04-19T01:19:00Z
+updated_at: 2026-04-19T22:56:37Z
+parent: ps-0enb
 ---
 
 Node 22+ changed ESM-CJS default-import interop: `import X from 'cjs'` resolves to the full module.exports namespace object instead of exports.default, even when \_\_esModule is set. The Crowdin SDK exports Client via both `exports.default` and `exports.Client`, so the default import gives us an object of API classes and `new CrowdinClientCtor(...)` throws 'is not a constructor'.

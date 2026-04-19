@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-18T23:41:15Z
-updated_at: 2026-04-19T00:03:36Z
+updated_at: 2026-04-19T22:56:38Z
+parent: ps-0enb
 ---
 
 Round 3 of review findings on PR #468 feat/crowdin-polish. Covers 1 critical (workflow supply-chain), 14 important, and 20 suggestion items.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-16T12:31:42Z
-updated_at: 2026-04-16T12:36:26Z
+updated_at: 2026-04-19T22:56:38Z
+parent: ps-0enb
 ---
 
 Address 6 review findings from PR #454: propagate failureReason, discriminated union, test fixes, as const, branded keyVersion, stronger zeroing test

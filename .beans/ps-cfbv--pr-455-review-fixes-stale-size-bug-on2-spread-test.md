@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-16T12:15:25Z
-updated_at: 2026-04-16T12:19:43Z
+updated_at: 2026-04-19T22:56:38Z
+parent: ps-0enb
 ---
 
 Implement all review feedback from PR 455 (fix/m9-sync-cleanup): fix EvictionCache stale-size bug, fix O(n^2) spread in persistConflicts, extract FailedConflictBatch type, add onParseWarning callback, guard OnDemandLoader seq with Math.max, replace brittle sort spy test, add edge case tests.

@@ -5,7 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-19T21:55:47Z
-updated_at: 2026-04-19T22:35:19Z
+updated_at: 2026-04-19T22:56:37Z
+parent: ps-0enb
 ---
 
 Bundle PRs #489-501 (excluding #497 already merged) into one PR. Includes 2 majors: uuid v14 (#501), actions/github-script v9 (#500). Keep individual Renovate PRs OPEN until user confirms bundle merged.

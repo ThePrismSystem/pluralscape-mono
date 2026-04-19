@@ -5,7 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-04-18T04:21:46Z
-updated_at: 2026-04-18T20:27:13Z
+updated_at: 2026-04-19T22:56:37Z
+parent: ps-0enb
 ---
 
 Polish the Crowdin integration: auto-merge CI workflow for translation-only PRs, glossary setup with plurality/DID terminology, pre-fill translations, AI initial translations (superseded by manual), and other best-practice polish.
