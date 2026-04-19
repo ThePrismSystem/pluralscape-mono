@@ -10,17 +10,17 @@
     "./filesystem": "./src/adapters/filesystem/index.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1028.0",
-    "@aws-sdk/s3-presigned-post": "^3.1030.0",
-    "@aws-sdk/s3-request-presigner": "^3.1028.0",
+    "@aws-sdk/client-s3": "^3.1032.0",
+    "@aws-sdk/s3-presigned-post": "^3.1032.0",
+    "@aws-sdk/s3-request-presigner": "^3.1032.0",
     "@pluralscape/types": "workspace:*"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@types/bun": "^1.2.4",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "@types/bun": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",

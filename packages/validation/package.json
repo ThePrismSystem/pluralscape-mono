@@ -8,13 +8,13 @@
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",

@@ -19,20 +19,20 @@
     "@pluralscape/types": "workspace:*",
     "@pluralscape/validation": "workspace:*",
     "clarinet": "^0.12.6",
-    "jszip": "^3.10.1",
-    "zod": "^4.3.6"
+    "jszip": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@pluralscape/api": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/data": "workspace:*",
-    "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@trpc/client": "11.16.0",
+    "@trpc/client": "catalog:",
     "@types/node": "^25.6.0",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",

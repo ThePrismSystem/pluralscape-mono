@@ -7,12 +7,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@pluralscape/data": "workspace:*",
     "@pluralscape/import-core": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "@pluralscape/data": "workspace:*",
     "@pluralscape/validation": "workspace:*",
     "pkapi.js": "^7.0.0",
-    "zod": "^4.0.0"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@pluralscape/api": "workspace:*",
@@ -20,10 +20,10 @@
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@trpc/client": "11.16.0",
+    "@trpc/client": "catalog:",
     "@types/node": "^25.6.0",
-    "eslint": "^10.2.0",
-    "typescript": "^6.0.0"
+    "eslint": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",

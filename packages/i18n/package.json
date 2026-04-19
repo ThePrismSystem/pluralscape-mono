@@ -9,19 +9,19 @@
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
-    "i18next": "^26.0.4",
-    "react-i18next": "^17.0.0"
+    "i18next": "^26.0.6",
+    "react-i18next": "^17.0.4"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@testing-library/react": "^16.3.0",
-    "@types/react": "^19.2.14",
-    "eslint": "^10.2.0",
+    "@testing-library/react": "catalog:",
+    "@types/react": "catalog:",
+    "eslint": "catalog:",
     "happy-dom": "^20.8.9",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "typescript": "^6.0.0"
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
   },
   "scripts": {
     "test": "vitest run",
