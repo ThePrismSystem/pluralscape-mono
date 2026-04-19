@@ -21,6 +21,7 @@ overrides:
   follow-redirects: '>=1.16.0'
   dompurify: '>=3.4.0'
   protobufjs: '>=7.5.5'
+  axios: '>=1.15.0'
 
 importers:
 
@@ -3796,9 +3797,6 @@ packages:
 
   await-lock@2.2.2:
     resolution: {integrity: sha512-aDczADvlvTGajTDjcjpJMqRkOF6Qdz3YbPZm/PyW6tKPkx2hlYBzxMhEywM/tU72HrVZjgl5VCdRuMlA7pZ8Gw==}
-
-  axios@1.14.0:
-    resolution: {integrity: sha512-3Y8yrqLSwjuzpXuZ0oIYZ/XGgLwUIBU3uLvbcpb0pidD9ctpShJd43KSlEEkVQg6DS0G9NKyzOvBfUtDKEyHvQ==}
 
   axios@1.15.0:
     resolution: {integrity: sha512-wWyJDlAatxk30ZJer+GeCWS209sA42X+N5jU2jy6oHTp7ufw8uzUTVFBX9+wTfAlhiJXGS0Bq7X6efruWjuK9Q==}
@@ -8511,7 +8509,7 @@ snapshots:
 
   '@crowdin/crowdin-api-client@1.55.1':
     dependencies:
-      axios: 1.14.0
+      axios: 1.15.0
     transitivePeerDependencies:
       - debug
 
@@ -10861,14 +10859,6 @@ snapshots:
   atomic-sleep@1.0.0: {}
 
   await-lock@2.2.2: {}
-
-  axios@1.14.0:
-    dependencies:
-      follow-redirects: 1.16.0
-      form-data: 4.0.5
-      proxy-from-env: 2.1.0
-    transitivePeerDependencies:
-      - debug
 
   axios@1.15.0:
     dependencies:
