@@ -155,6 +155,17 @@ jobs:
             exit 1
           fi
 
+      - name: Regenerate Crowdin glossary JSON schema
+        run: pnpm crowdin:schema
+
+      - name: Check for uncommitted glossary-schema changes
+        run: |
+          if [ -n "$(git diff --name-only scripts/crowdin-glossary.schema.json)" ]; then
+            echo "::error::scripts/crowdin-glossary.schema.json is out of date. Run 'pnpm crowdin:schema' and commit the result."
+            git diff scripts/crowdin-glossary.schema.json
+            exit 1
+          fi
+
   security:
     name: Security Audit
     needs: [lint, typecheck]

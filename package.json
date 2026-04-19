@@ -38,6 +38,7 @@
     "crowdin:pretranslate": "tsx scripts/crowdin-pretranslate.ts",
     "crowdin:upload-context": "tsx scripts/crowdin-upload-context.ts",
     "crowdin:automerge-guard": "tsx scripts/crowdin-automerge-guard.ts",
+    "crowdin:schema": "tsx scripts/generate-crowdin-glossary-schema.ts",
     "prepare": "husky"
   },
   "devDependencies": {

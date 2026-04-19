@@ -1,40 +1,11 @@
 import { parseArgs } from "node:util";
 
+import { parseCsvEnum, parseCsvPositiveInts } from "./crowdin/args.js";
 import { createCrowdinClient } from "./crowdin/client.js";
 import { loadCrowdinEnv } from "./crowdin/env.js";
 import { TARGET_LANGUAGE_IDS, type TargetLanguageId } from "./crowdin/languages.js";
 import { findMtEngineIds } from "./crowdin/mt.js";
 import { planPretranslatePasses, runPretranslate } from "./crowdin/pretranslate.js";
-
-function parseLanguageList(raw: string): TargetLanguageId[] {
-  const requested = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  const invalid = requested.filter((s) => !(TARGET_LANGUAGE_IDS as readonly string[]).includes(s));
-  if (invalid.length > 0) {
-    throw new Error(
-      `Unknown --languages value(s): ${invalid.join(", ")}. Valid: ${TARGET_LANGUAGE_IDS.join(", ")}`,
-    );
-  }
-  return requested as TargetLanguageId[];
-}
-
-function parseFileList(raw: string): number[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-    .map((s) => {
-      const n = Number(s);
-      if (!Number.isInteger(n) || n <= 0) {
-        throw new Error(
-          `Invalid --files value: "${s}". Expected comma-separated positive integers.`,
-        );
-      }
-      return n;
-    });
-}
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
@@ -45,8 +16,10 @@ async function main(): Promise<void> {
     },
   });
 
-  const languageIds = values.languages ? parseLanguageList(values.languages) : undefined;
-  const fileIds = values.files ? parseFileList(values.files) : undefined;
+  const languageIds: TargetLanguageId[] | undefined = values.languages
+    ? parseCsvEnum<TargetLanguageId>(values.languages, TARGET_LANGUAGE_IDS, "--languages")
+    : undefined;
+  const fileIds = values.files ? parseCsvPositiveInts(values.files, "--files") : undefined;
 
   if (values["dry-run"]) {
     const plan = planPretranslatePasses({

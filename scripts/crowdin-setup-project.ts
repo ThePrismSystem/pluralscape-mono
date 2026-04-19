@@ -2,15 +2,17 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
+import { parseCsvEnum } from "./crowdin/args.js";
 import { createCrowdinClient } from "./crowdin/client.js";
 import { loadCrowdinEnv } from "./crowdin/env.js";
 import { GlossarySchema } from "./crowdin/glossary-schema.js";
 import { applyGlossary } from "./crowdin/glossary.js";
 import { TARGET_LANGUAGE_IDS, applyTargetLanguages } from "./crowdin/languages.js";
 import { applyMtEngines } from "./crowdin/mt.js";
+import { applyApprovalSettings, type ApprovalSummary } from "./crowdin/project-approval.js";
 import { applyQaChecks } from "./crowdin/qa.js";
 
-const VALID_SCOPES = ["languages", "glossary", "mt", "qa"] as const;
+const VALID_SCOPES = ["languages", "glossary", "mt", "qa", "approval"] as const;
 type Scope = (typeof VALID_SCOPES)[number];
 
 interface SetupSummary {
@@ -18,21 +20,7 @@ interface SetupSummary {
   glossary: { added: number; updated: number; removed: number; total: number };
   mt: { deeplId: number; googleId: number };
   qa: { categoriesEnabled: readonly string[] };
-}
-
-function parseScopes(raw: string | undefined): readonly Scope[] {
-  if (!raw) return VALID_SCOPES;
-  const requested = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  const invalid = requested.filter((s) => !(VALID_SCOPES as readonly string[]).includes(s));
-  if (invalid.length > 0) {
-    throw new Error(
-      `Unknown --only scope(s): ${invalid.join(", ")}. Valid: ${VALID_SCOPES.join(", ")}`,
-    );
-  }
-  return requested as readonly Scope[];
+  approval: ApprovalSummary;
 }
 
 const SUMMARY_FORMATTERS: Record<Scope, (s: Partial<SetupSummary>) => string | null> = {
@@ -47,6 +35,8 @@ const SUMMARY_FORMATTERS: Record<Scope, (s: Partial<SetupSummary>) => string | n
   mt: (s) =>
     s.mt ? `  MT engines: DeepL=#${String(s.mt.deeplId)} Google=#${String(s.mt.googleId)}` : null,
   qa: (s) => (s.qa ? `  QA categories: ${s.qa.categoriesEnabled.join(", ")}` : null),
+  approval: (s) =>
+    s.approval ? `  Approval: exportApprovedOnly=${String(s.approval.exportApprovedOnly)}` : null,
 };
 
 async function main(): Promise<void> {
@@ -58,7 +48,9 @@ async function main(): Promise<void> {
     },
   });
 
-  const scopes = parseScopes(values.only);
+  const scopes: readonly Scope[] = values.only
+    ? parseCsvEnum(values.only, VALID_SCOPES, "--only")
+    : VALID_SCOPES;
   const env = loadCrowdinEnv(process.env);
 
   if (values["dry-run"]) {
@@ -99,6 +91,10 @@ async function main(): Promise<void> {
 
   if (scopes.includes("qa")) {
     summary.qa = { categoriesEnabled: await applyQaChecks(client, env.projectId) };
+  }
+
+  if (scopes.includes("approval")) {
+    summary.approval = await applyApprovalSettings(client, env.projectId);
   }
 
   if (values.json) {

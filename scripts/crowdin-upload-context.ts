@@ -34,13 +34,25 @@ async function main(): Promise<void> {
       2,
     ),
   );
-  if (desired.size > 0 && result.unmatchedDesiredKeys.length === desired.size) {
-    console.warn(
-      `warning: ${String(desired.size)} sidecar entries were loaded but none matched a Crowdin source-string identifier. ` +
-        `This usually means Crowdin uses a different identifier format than "<namespace>.<key>". ` +
-        `Crowdin returned ${String(result.remoteIdentifiersChecked)} source strings. ` +
-        `First 5 unmatched sidecar keys: ${result.unmatchedDesiredKeys.slice(0, 5).join(", ")}`,
-    );
+  if (desired.size > 0) {
+    const unmatched = result.unmatchedDesiredKeys.length;
+    const unmatchedFraction = unmatched / desired.size;
+    if (unmatched === desired.size) {
+      console.error(
+        `error: ${String(desired.size)} sidecar entries were loaded but NONE matched a Crowdin source-string identifier. ` +
+          `This usually means Crowdin uses a different identifier format than "<namespace>.<key>". ` +
+          `Crowdin returned ${String(result.remoteIdentifiersChecked)} source strings. ` +
+          `First 5 unmatched sidecar keys: ${result.unmatchedDesiredKeys.slice(0, 5).join(", ")}`,
+      );
+      process.exit(2);
+    }
+    if (unmatchedFraction > 0.5) {
+      console.error(
+        `error: ${String(unmatched)}/${String(desired.size)} sidecar entries (${String(Math.round(unmatchedFraction * 100))}%) did not match any Crowdin source string. ` +
+          `First 5 unmatched: ${result.unmatchedDesiredKeys.slice(0, 5).join(", ")}`,
+      );
+      process.exit(2);
+    }
   }
 }
 
