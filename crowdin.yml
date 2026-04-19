@@ -21,9 +21,18 @@ files:
     translate_attributes: false
 
 languages_mapping:
-  # Only codes where the Crowdin target ID differs from our repo dir need an
-  # entry. Everything else (ar, de, es-419, fr, it, ja, ko, nl, pt-BR, ru)
-  # uses Crowdin's code as-is.
+  # Crowdin emits full IETF codes (ar-SA, de-DE, fr-FR, ...) but our app's
+  # locale directories in apps/mobile/locales/ use short codes. Map every
+  # Crowdin target ID whose repo directory differs. es-419 and pt-BR match
+  # Crowdin's code as-is and need no entry.
   locale:
+    ar-SA: ar
+    de-DE: de
     es-ES: es
+    fr-FR: fr
+    it-IT: it
+    ja-JP: ja
+    ko-KR: ko
+    nl-NL: nl
+    ru-RU: ru
     zh-CN: zh-Hans
