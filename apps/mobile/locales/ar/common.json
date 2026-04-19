@@ -1,9 +1,9 @@
 {
-  "appName": "Pluralscape",
-  "ok": "موافق",
-  "cancel": "إلغاء",
-  "save": "حفظ",
-  "back": "رجوع",
-  "loading": "جارٍ التحميل...",
+  "appName": "بلورال سكيب",
+  "ok": "نعم",
+  "cancel": "يلغي",
+  "save": "يحفظ",
+  "back": "خلف",
+  "loading": "تحميل...",
   "error": "خطأ"
 }
