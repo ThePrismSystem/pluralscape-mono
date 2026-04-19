@@ -122,4 +122,35 @@ describe("validateSendParams", () => {
       validateSendParams({ to: "a@example.com", subject: "Hello" });
     }).not.toThrow();
   });
+
+  it.each([
+    "no-at-sign",
+    "@leading-at.com",
+    "trailing-at@",
+    "two@at@signs.com",
+    "spaces @example.com",
+    "with space@example.com",
+    "tab\t@example.com",
+    "no-dot@example",
+    "leading-dot@.example.com",
+    "trailing-dot@example.",
+  ])("rejects malformed from address %p", (bad) => {
+    expect(() => {
+      validateSendParams({ to: "a@example.com", subject: "Hello", from: bad });
+    }).toThrow(InvalidRecipientError);
+  });
+
+  it("runs in linear time on ReDoS-style inputs (js/polynomial-redos regression)", () => {
+    // The previous regex /^[^\s@]+@[^\s@]+\.[^\s@]+$/ was flagged by CodeQL as
+    // polynomial ReDoS on strings like "!@" + "!.".repeat(n) because `.` was
+    // part of the negated class, creating ambiguous partitions. The replacement
+    // must validate such an input in linear time.
+    const adversarial = "!@" + "!.".repeat(50_000);
+    const start = performance.now();
+    expect(() => {
+      validateSendParams({ to: "a@example.com", subject: "Hello", from: adversarial });
+    }).toThrow(InvalidRecipientError);
+    const elapsedMs = performance.now() - start;
+    expect(elapsedMs).toBeLessThan(100);
+  });
 });

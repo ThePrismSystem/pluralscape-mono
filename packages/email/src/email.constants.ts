@@ -9,8 +9,35 @@ export const MAX_RECIPIENTS = 50;
 /** Maximum subject line length in characters. */
 export const MAX_SUBJECT_LENGTH = 998;
 
-/** Basic email format check (not exhaustive, just prevents obvious mistakes). */
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/**
+ * Basic email format check (not exhaustive, just prevents obvious mistakes).
+ *
+ * Implemented as a linear split rather than a regex to avoid polynomial-time
+ * backtracking on adversarial inputs (CodeQL js/polynomial-redos).
+ */
+function isValidEmailShape(value: string): boolean {
+  const atIndex = value.indexOf("@");
+  if (atIndex <= 0 || atIndex !== value.lastIndexOf("@")) return false;
+
+  const local = value.slice(0, atIndex);
+  const domain = value.slice(atIndex + 1);
+  if (domain.length === 0) return false;
+
+  for (const ch of local) {
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") return false;
+  }
+
+  let sawDot = false;
+  for (let i = 0; i < domain.length; i++) {
+    const ch = domain[i];
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r" || ch === "@") return false;
+    if (ch === ".") {
+      if (i === 0 || i === domain.length - 1) return false;
+      sawDot = true;
+    }
+  }
+  return sawDot;
+}
 
 /**
  * Validates send parameters against package constraints.
@@ -35,11 +62,11 @@ export function validateSendParams(params: {
     throw new EmailValidationError("Subject length", params.subject.length, MAX_SUBJECT_LENGTH);
   }
 
-  if (params.from !== undefined && !EMAIL_REGEX.test(params.from)) {
+  if (params.from !== undefined && !isValidEmailShape(params.from)) {
     throw new InvalidRecipientError(params.from);
   }
 
-  if (params.replyTo !== undefined && !EMAIL_REGEX.test(params.replyTo)) {
+  if (params.replyTo !== undefined && !isValidEmailShape(params.replyTo)) {
     throw new InvalidRecipientError(params.replyTo);
   }
 }
