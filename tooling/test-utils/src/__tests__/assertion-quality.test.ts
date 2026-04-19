@@ -1,4 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -48,5 +51,26 @@ describe("assertion quality guard", () => {
   it("has no bare toBeDefined() assertions in test files", () => {
     const output = runGitGrep(FORBIDDEN_PATTERN, PATHSPEC);
     expect(output.trim()).toBe("");
+  });
+});
+
+describe("assertion quality guard — negative test", () => {
+  it("reports a match when a test file contains bare toBeDefined()", () => {
+    // Create a tmp directory OUTSIDE the git tree so `git grep` scoped to
+    // an absolute path still exercises the rg pattern match but without
+    // polluting the repo. Use `grep` directly (not git grep) against the
+    // same pattern to prove the detection pattern itself works.
+    const dir = mkdtempSync(join(tmpdir(), "assertion-quality-"));
+    const file = join(dir, "sample.test.ts");
+    writeFileSync(file, "expect(value).toBeDefined();\n");
+    try {
+      const result = spawnSync("grep", ["-nE", FORBIDDEN_PATTERN, file], {
+        encoding: "utf8",
+      });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain(".toBeDefined()");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
