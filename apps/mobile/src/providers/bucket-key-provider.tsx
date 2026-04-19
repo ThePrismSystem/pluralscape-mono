@@ -12,6 +12,8 @@ import {
 } from "@pluralscape/data/transforms/decode-blob";
 import React, { createContext, useContext, useEffect, useMemo, useRef } from "react";
 
+import { logger } from "../lib/logger.js";
+
 import type { AeadKey, BoxKeypair, BoxPublicKey, EncryptedKeyGrant } from "@pluralscape/crypto";
 import type { BucketId } from "@pluralscape/types";
 import type { PropsWithChildren } from "react";
@@ -76,10 +78,10 @@ export function BucketKeyProvider({
           continue;
         }
         // Unexpected error — log for diagnostics but don't crash the provider
-        globalThis.console.warn(
-          `BucketKeyProvider: failed to decrypt grant ${grant.id}: ${err instanceof Error ? err.message : "unknown error"}`,
-          err,
-        );
+        logger.warn("BucketKeyProvider: failed to decrypt grant", {
+          grantId: grant.id,
+          error: err instanceof Error ? err.message : "unknown error",
+        });
       }
     }
 

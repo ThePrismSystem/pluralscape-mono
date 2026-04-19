@@ -1,3 +1,5 @@
+import { logger } from "../../lib/logger.js";
+
 import { CALL_TIMEOUT_MS, INIT_TIMEOUT_MS } from "./opfs-sqlite-driver.constants.js";
 import {
   OpfsDriverError,
@@ -150,7 +152,9 @@ export async function createOpfsSqliteDriver(
 
   const finalizer = new FinalizationRegistry<StmtHandle>((handle) => {
     void send({ kind: "finalize", stmt: handle }).catch((err: unknown) => {
-      globalThis.console.warn("opfs finalize failed", err);
+      logger.warn("opfs finalize failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
   });
 
@@ -212,7 +216,9 @@ export async function createOpfsSqliteDriver(
           return result;
         } catch (err) {
           await send({ kind: "txn-rollback" }).catch((rollbackErr: unknown) => {
-            globalThis.console.warn("opfs txn rollback failed", rollbackErr);
+            logger.warn("opfs txn rollback failed", {
+              error: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr),
+            });
           });
           throw err;
         }

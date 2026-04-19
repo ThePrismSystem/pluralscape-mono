@@ -676,10 +676,7 @@ describe("opfs driver — observability logs", () => {
         }),
       ).rejects.toThrow("user code boom");
 
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("opfs txn rollback failed"),
-        expect.any(Error),
-      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("opfs txn rollback failed"));
     } finally {
       warn.mockRestore();
     }
@@ -699,10 +696,7 @@ describe("opfs driver — observability logs", () => {
       });
       registry.fireForLastWrapper();
       await flushMicrotasks();
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("opfs finalize failed"),
-        expect.any(Error),
-      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("opfs finalize failed"));
     } finally {
       warn.mockRestore();
     }

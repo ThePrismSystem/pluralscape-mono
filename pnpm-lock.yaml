@@ -231,6 +231,9 @@ importers:
       '@pluralscape/import-sp':
         specifier: workspace:*
         version: link:../../packages/import-sp
+      '@pluralscape/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@pluralscape/sync':
         specifier: workspace:*
         version: link:../../packages/sync
@@ -691,6 +694,25 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
+      eslint:
+        specifier: ^10.2.0
+        version: 10.2.0(jiti@2.6.1)
+      typescript:
+        specifier: ^6.0.0
+        version: 6.0.2
+
+  packages/logger:
+    dependencies:
+      '@pluralscape/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@pluralscape/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint-config
+      '@pluralscape/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
       eslint:
         specifier: ^10.2.0
         version: 10.2.0(jiti@2.6.1)

@@ -14,6 +14,7 @@ const PACKAGES = [
   "rotation-worker",
   "email",
   "import-core",
+  "logger",
 ];
 
 function projectConfig(name: string, root: string) {

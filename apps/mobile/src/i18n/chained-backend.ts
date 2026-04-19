@@ -1,5 +1,7 @@
 import { asEtag } from "@pluralscape/types";
 
+import { logger } from "../lib/logger.js";
+
 import type { AsyncStorageI18nCache, CacheEntry } from "./async-storage-cache.js";
 
 export interface ChainedBackendPlugin {
@@ -105,7 +107,9 @@ export function createChainedBackend(options: ChainedBackendOptions): ChainedBac
     try {
       return await fetchNamespace(locale, namespace, cached);
     } catch (err: unknown) {
-      globalThis.console.warn(`i18n OTA fetch failed, falling back: ${locale}/${namespace}`, err);
+      logger.warn(`i18n OTA fetch failed, falling back: ${locale}/${namespace}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
       if (cached !== null) {
         return cached.translations;
       }

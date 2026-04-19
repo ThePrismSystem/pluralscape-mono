@@ -1,3 +1,5 @@
+import { logger } from "../lib/logger.js";
+
 import type { Etag } from "@pluralscape/types";
 
 export interface CacheEntry {
@@ -40,7 +42,9 @@ export class AsyncStorageI18nCache {
       const parsed: unknown = JSON.parse(raw);
       return isCacheEntry(parsed) ? parsed : null;
     } catch (err: unknown) {
-      globalThis.console.warn(`i18n cache parse failed, evicting: ${locale}/${namespace}`, err);
+      logger.warn(`i18n cache parse failed, evicting: ${locale}/${namespace}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
       await this.storage.removeItem(storageKey(locale, namespace));
       return null;
     }

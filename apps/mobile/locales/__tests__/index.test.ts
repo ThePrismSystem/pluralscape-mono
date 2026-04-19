@@ -48,13 +48,12 @@ describe("bundled locale loader", () => {
     expect(data).toEqual({});
   });
 
-  it("console.warns on import failure before returning empty object", async () => {
+  it("warns on import failure before returning empty object", async () => {
     const warnSpy = vi.spyOn(globalThis.console, "warn").mockImplementation(() => undefined);
     const data = await loadBundledNamespace("xx-UNKNOWN", "common");
     expect(data).toEqual({});
     expect(warnSpy).toHaveBeenCalledWith(
-      "bundled namespace load failed: xx-UNKNOWN/common",
-      expect.anything(),
+      expect.stringContaining("bundled namespace load failed: xx-UNKNOWN/common"),
     );
   });
 

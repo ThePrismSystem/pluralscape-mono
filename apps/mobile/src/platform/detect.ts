@@ -1,6 +1,8 @@
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { Platform } from "react-native";
 
+import { logger } from "../lib/logger.js";
+
 import { OPFS_INIT_FAILED_PREFIX, OPFS_UNAVAILABLE_REASON } from "./detect.constants.js";
 import { createIndexedDbOfflineQueueAdapter } from "./drivers/indexeddb-offline-queue-adapter.js";
 import { createIndexedDbStorageAdapter } from "./drivers/indexeddb-storage-adapter.js";
@@ -62,10 +64,9 @@ async function detectWeb(): Promise<PlatformContext> {
       };
     } catch (err: unknown) {
       const reason = err instanceof Error ? err.message : String(err);
-      globalThis.console.error(
-        "[pluralscape] OPFS storage unavailable, falling back to IndexedDB",
-        { reason },
-      );
+      logger.error("[pluralscape] OPFS storage unavailable, falling back to IndexedDB", {
+        reason,
+      });
       return buildIndexedDbContext(crypto, `${OPFS_INIT_FAILED_PREFIX}${reason}`);
     }
   }

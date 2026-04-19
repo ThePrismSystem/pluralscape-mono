@@ -1,5 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 
+import { logger } from "../lib/logger.js";
+
 import type { TokenStore } from "../platform/drivers/indexeddb-token-store.js";
 
 const SESSION_KEY = "pluralscape_session_token";
@@ -33,7 +35,7 @@ export function createExpoSecureTokenStore(): TokenStore {
         // Log for support — permanent keychain corruption would otherwise be
         // invisible. DEV-only to avoid any accidental PII in production logs.
         if (__DEV__) {
-          console.warn("[token-store] keychain read failed, treating as logged-out", {
+          logger.warn("[token-store] keychain read failed, treating as logged-out", {
             error: err instanceof Error ? err.message : String(err),
           });
         }
