@@ -281,4 +281,10 @@ async function start(): Promise<void> {
   process.on("SIGINT", handleShutdown);
 }
 
-void start();
+// Skip start() under vitest — tests that `import` this module only need the
+// exported `shutdown` helper. Running start() unawaited lets its dynamic
+// imports (e.g. `@pluralscape/email`) race the vitest environment teardown,
+// producing spurious EnvironmentTeardownError unhandled rejections.
+if (!process.env["VITEST"]) {
+  void start();
+}

@@ -1,11 +1,11 @@
 ---
 # api-zhyw
 title: Flaky shutdown.test.ts EnvironmentTeardownError on email module imports
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-04-17T04:01:04Z
-updated_at: 2026-04-19T08:29:22Z
+updated_at: 2026-04-19T11:34:54Z
 parent: ps-0enb
 ---
 
@@ -37,3 +37,8 @@ Re-running passes cleanly. Flaky teardown — likely a race between the test's s
 ## Discovered during
 
 PR #461 (mobile-shr0 phase 2). Pre-existing on main, unrelated to that PR's scope.
+
+## Summary of Changes
+
+- Eliminated the teardown race on `apps/api/src/__tests__/lib/shutdown.test.ts` by gating the top-level `void start()` in `apps/api/src/index.ts` behind `!process.env.VITEST`, so the test's `await import("../../index.js")` no longer kicks off unawaited dynamic imports (including `@pluralscape/email`) that race vitest's ESM loader teardown.
+- Stress-tested 20 consecutive runs of the shutdown test; 100% pass. Full `pnpm test` green (1026 files, 15331 tests). Five consecutive `pnpm test:unit` runs also green (previous flake rate ~1/3).
