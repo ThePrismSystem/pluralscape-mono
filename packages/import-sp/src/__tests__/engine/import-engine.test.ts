@@ -1,6 +1,6 @@
+import { emptyCheckpointState } from "@pluralscape/import-core";
 import { describe, expect, it } from "vitest";
 
-import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { buildPersistableEntity, runImport } from "../../engine/import-engine.js";
 import { CHECKPOINT_CHUNK_SIZE } from "../../import-sp.constants.js";

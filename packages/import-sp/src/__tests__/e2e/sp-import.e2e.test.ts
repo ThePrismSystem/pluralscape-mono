@@ -12,9 +12,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { emptyCheckpointState } from "@pluralscape/import-core";
 import { describe, it, expect, beforeAll } from "vitest";
 
-import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
 import { createFileImportSource, FileSourceParseError } from "../../sources/file-source.js";

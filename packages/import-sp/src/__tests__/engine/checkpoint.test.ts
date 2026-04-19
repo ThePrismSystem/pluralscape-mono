@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import {
   advanceWithinCollection,
   bumpCollectionTotals,
@@ -7,7 +5,8 @@ import {
   emptyCheckpointState,
   resumeStartCollection,
   type AdvanceDelta,
-} from "../../engine/checkpoint.js";
+} from "@pluralscape/import-core";
+import { describe, expect, it } from "vitest";
 
 describe("checkpoint helpers", () => {
   it("emptyCheckpointState starts at the first entity type with no completed collections", () => {

@@ -24,14 +24,6 @@
  *    {@link classifyError}: fatal errors abort the run; non-fatal errors are
  *    recorded against the failing document and iteration continues.
  */
-import { CHECKPOINT_CHUNK_SIZE } from "../import-sp.constants.js";
-import { synthesizeLegacyBuckets, type MappedPrivacyBucket } from "../mappers/bucket.mapper.js";
-import {
-  createMappingContext,
-  type MappingContext,
-  type MappingWarning,
-} from "../mappers/context.js";
-
 import {
   advanceWithinCollection,
   bumpCollectionTotals,
@@ -40,7 +32,16 @@ import {
   markRealPrivacyBucketsMapped,
   resumeStartCollection,
   type AdvanceDelta,
-} from "./checkpoint.js";
+} from "@pluralscape/import-core";
+
+import { CHECKPOINT_CHUNK_SIZE } from "../import-sp.constants.js";
+import { synthesizeLegacyBuckets, type MappedPrivacyBucket } from "../mappers/bucket.mapper.js";
+import {
+  createMappingContext,
+  type MappingContext,
+  type MappingWarning,
+} from "../mappers/context.js";
+
 import { DEPENDENCY_ORDER } from "./dependency-order.js";
 import { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine-errors.js";
 import { collectionToEntityType, entityTypeToCollection } from "./entity-type-map.js";
@@ -573,4 +574,4 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
 }
 
 export { collectionToEntityType, entityTypeToCollection };
-export { emptyCheckpointState } from "./checkpoint.js";
+export { emptyCheckpointState } from "@pluralscape/import-core";
