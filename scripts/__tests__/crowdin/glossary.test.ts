@@ -232,7 +232,7 @@ describe("applyGlossary — error aggregation", () => {
     const client = {
       glossariesApi: {
         listGlossaries: vi.fn().mockResolvedValue({
-          data: [{ data: { id: 1, name: "Pluralscape Terminology" } }],
+          data: [{ data: { id: 1, name: "PluralScape's Glossary", projectIds: [100] } }],
         }),
         listTerms: vi.fn().mockResolvedValue({ data: [] }),
         addGlossary: vi.fn(),
@@ -269,7 +269,7 @@ describe("applyGlossary — error aggregation", () => {
     const client = {
       glossariesApi: {
         listGlossaries: vi.fn().mockResolvedValue({
-          data: [{ data: { id: 1, name: "Pluralscape Terminology" } }],
+          data: [{ data: { id: 1, name: "PluralScape's Glossary", projectIds: [100] } }],
         }),
         listTerms: vi.fn().mockResolvedValue({
           data: [
