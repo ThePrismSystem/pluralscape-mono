@@ -77,22 +77,29 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
   }
 
   log(`Starting API server on port ${String(E2E_PORT)}`);
+  // Strip VITEST from the inherited env — apps/api/src/index.ts gates its
+  // start() call on `!process.env["VITEST"]` to avoid an async teardown race
+  // when the module is `import`ed by unit tests. The spawned server is a
+  // separate process that SHOULD run start(); leaking the parent's VITEST
+  // flag silences start() and the health check times out.
+  const spawnEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    API_PORT: String(E2E_PORT),
+    DB_DIALECT: "pg",
+    DATABASE_URL: databaseUrl,
+    EMAIL_HASH_PEPPER: emailPepper,
+    NODE_ENV: "test",
+    DISABLE_RATE_LIMIT: "1",
+    BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
+    BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(minioPort)}`,
+    BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
+    AWS_ACCESS_KEY_ID: "minioadmin",
+    AWS_SECRET_ACCESS_KEY: "minioadmin",
+  };
+  delete spawnEnv["VITEST"];
   const serverProcess = spawn("bun", ["run", "src/index.ts"], {
     cwd: apiDir,
-    env: {
-      ...process.env,
-      API_PORT: String(E2E_PORT),
-      DB_DIALECT: "pg",
-      DATABASE_URL: databaseUrl,
-      EMAIL_HASH_PEPPER: emailPepper,
-      NODE_ENV: "test",
-      DISABLE_RATE_LIMIT: "1",
-      BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
-      BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(minioPort)}`,
-      BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
-      AWS_ACCESS_KEY_ID: "minioadmin",
-      AWS_SECRET_ACCESS_KEY: "minioadmin",
-    },
+    env: spawnEnv,
     stdio: "pipe",
   });
 
