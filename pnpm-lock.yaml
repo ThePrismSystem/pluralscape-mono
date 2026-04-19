@@ -287,7 +287,7 @@ importers:
         version: 5.0.3
       i18next-http-backend:
         specifier: ^3.0.4
-        version: 3.0.4
+        version: 3.0.5
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
@@ -3700,6 +3700,7 @@ packages:
   '@xmldom/xmldom@0.8.12':
     resolution: {integrity: sha512-9k/gHF6n/pAi/9tqr3m3aqkuiNosYTurLLUtc7xQ9sxB/wm7WPygCv8GYa6mS0fLJEHhqMC1ATYhz++U/lRHqg==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -5119,8 +5120,8 @@ packages:
   i18next-chained-backend@5.0.3:
     resolution: {integrity: sha512-VUwc+yFpZzmIvtPfSdTv1+CjgZGZwGug6qHyIuSES/n7RDhVARFxthjML0anUMJVjlvLfRW/x6+U4UrxXBflmw==}
 
-  i18next-http-backend@3.0.4:
-    resolution: {integrity: sha512-udwrBIE6cNpqn1gRAqRULq3+7MzIIuaiKRWrz++dVz5SqWW2VwXmPJtAgkI0JtMLFaADC9qNmnZAxWAhsxXx2g==}
+  i18next-http-backend@3.0.5:
+    resolution: {integrity: sha512-QaWHnsxieEDcqKe+vo/RFqpiIFRi/KBqlOSPcUlvinBaISCeiTRCbtrazHAjtHtsLC66oDsROAH8frWkQzfMMQ==}
 
   i18next@26.0.4:
     resolution: {integrity: sha512-gXF7U9bfioXPLv7mw8Qt2nfO7vij5MyINvPgVv99pX3fL1Y01pw2mKBFrlYpRxRCl2wz3ISenj6VsMJT2isfuA==}
@@ -12219,7 +12220,7 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.29.2
 
-  i18next-http-backend@3.0.4:
+  i18next-http-backend@3.0.5:
     dependencies:
       cross-fetch: 4.1.0
     transitivePeerDependencies:
