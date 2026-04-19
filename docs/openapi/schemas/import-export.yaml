@@ -100,10 +100,16 @@ ImportCheckpointState:
   properties:
     schemaVersion:
       type: integer
-      enum: [1]
+      enum: [2]
     checkpoint:
       type: object
-      required: [completedCollections, currentCollection, currentCollectionLastSourceId]
+      required:
+        [
+          completedCollections,
+          currentCollection,
+          currentCollectionLastSourceId,
+          realPrivacyBucketsMapped,
+        ]
       properties:
         completedCollections:
           type: array
@@ -114,6 +120,8 @@ ImportCheckpointState:
         currentCollectionLastSourceId:
           type: string
           nullable: true
+        realPrivacyBucketsMapped:
+          type: boolean
     options:
       type: object
       required: [selectedCategories, avatarMode]

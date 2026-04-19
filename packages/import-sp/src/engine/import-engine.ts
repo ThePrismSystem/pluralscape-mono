@@ -37,6 +37,7 @@ import {
   bumpCollectionTotals,
   completeCollection,
   emptyCheckpointState,
+  markRealPrivacyBucketsMapped,
   resumeStartCollection,
   type AdvanceDelta,
 } from "./checkpoint.js";
@@ -279,11 +280,11 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     // validation yet the count stays > 0, silently leaving members with
     // unresolved synthetic bucket references.
     //
-    // When resuming past members, assume legacy synthesis (if any) already ran.
-    // When resuming into members directly we cannot know whether the previous
-    // run already synthesized the legacy buckets. The persister's idempotency
-    // guarantees re-synthesis is safe, so we conservatively re-run.
-    let privacyBucketsMapped = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
+    // Read the checkpointed flag rather than inferring from `completedCollections`.
+    // The flag is set as soon as at least one real privacy bucket is persisted
+    // within the current import job — pre-release context removes the need for
+    // a v1 migration path (see `ImportCheckpointStateV2`).
+    let privacyBucketsMapped = state.checkpoint.realPrivacyBucketsMapped ? 1 : 0;
 
     for (
       let collectionIndex = safeStartIndex;
@@ -447,7 +448,12 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
               );
               ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
               persistedSourceIds.push(doc.sourceId);
-              if (collection === "privacyBuckets") privacyBucketsMapped += 1;
+              if (collection === "privacyBuckets") {
+                privacyBucketsMapped += 1;
+                // Persist the fact in the checkpoint so resumed runs do not
+                // re-synthesize legacy buckets when the source had real ones.
+                state = markRealPrivacyBucketsMapped(state);
+              }
               let upsertDelta: AdvanceDelta;
               switch (upsert.action) {
                 case "created":

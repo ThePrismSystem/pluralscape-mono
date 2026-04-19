@@ -33,11 +33,12 @@ const { importJobs } = schema;
 
 function makeCheckpointState(): ImportCheckpointState {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     checkpoint: {
       completedCollections: ["member"],
       currentCollection: "group",
       currentCollectionLastSourceId: "src_abc",
+      realPrivacyBucketsMapped: true,
     },
     options: {
       selectedCategories: { member: true, group: true },
@@ -635,7 +636,7 @@ describe("import-job.service (PGlite integration)", () => {
         noopAudit,
       );
       expect(job.checkpointState).not.toBeNull();
-      expect(job.checkpointState?.schemaVersion).toBe(1);
+      expect(job.checkpointState?.schemaVersion).toBe(2);
       expect(job.checkpointState?.options.selectedCategories).toEqual({
         member: true,
         group: true,

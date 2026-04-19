@@ -196,7 +196,7 @@ describe("runSpImport", () => {
     const firstCall = onProgress.mock.calls[0];
     const snapshot = firstCall?.[0] as { checkpointState: ImportCheckpointState };
     // A real checkpointState carries schemaVersion and a checkpoint record.
-    expect(snapshot.checkpointState.schemaVersion).toBe(1);
+    expect(snapshot.checkpointState.schemaVersion).toBe(2);
     expect(typeof snapshot.checkpointState.checkpoint).toBe("object");
   });
 
@@ -246,7 +246,7 @@ describe("runSpImport", () => {
       checkpointState?: ImportCheckpointState | null;
     };
     // checkpointState must be preserved (not wiped) when marking the job failed.
-    expect(patch.checkpointState?.schemaVersion).toBe(1);
+    expect(patch.checkpointState?.schemaVersion).toBe(2);
   });
 
   it("threads initialCheckpoint into the engine's runImport", async () => {
@@ -261,11 +261,15 @@ describe("runSpImport", () => {
     });
 
     const initialCheckpoint: ImportCheckpointState = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       checkpoint: {
         completedCollections: ["privacy-bucket"],
         currentCollection: "field-definition",
         currentCollectionLastSourceId: null,
+        // Fixture simulates privacy-bucket collection already complete — a prior
+        // run would have either mapped real buckets or synthesized them; default
+        // to true so resume does not re-synthesize.
+        realPrivacyBucketsMapped: true,
       },
       options: {
         selectedCategories: ALL_CATEGORIES_SELECTED,

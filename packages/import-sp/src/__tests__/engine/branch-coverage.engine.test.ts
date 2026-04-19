@@ -118,11 +118,13 @@ describe("import engine — resume past members suppresses legacy synthesis", ()
     ).map((c) => collectionToEntityType(c));
 
     const checkpoint: ImportCheckpointState = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       checkpoint: {
         completedCollections,
         currentCollection: "group",
         currentCollectionLastSourceId: null,
+        // The prior run mapped real privacy buckets — suppress synthesis.
+        realPrivacyBucketsMapped: true,
       },
       options: { selectedCategories: {}, avatarMode: "skip" },
       totals: { perCollection: {} },
@@ -401,11 +403,13 @@ describe("import engine — resume mid-member with bucket synthesis", () => {
     const completedWithoutBuckets = preMemberCollections.filter((c) => c !== "privacy-bucket");
 
     const checkpoint: ImportCheckpointState = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       checkpoint: {
         completedCollections: completedWithoutBuckets,
         currentCollection: "member",
         currentCollectionLastSourceId: "m_2",
+        // No prior real buckets mapped — synthesis must fire.
+        realPrivacyBucketsMapped: false,
       },
       options: { selectedCategories: {}, avatarMode: "skip" },
       totals: { perCollection: {} },

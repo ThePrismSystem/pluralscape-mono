@@ -16,7 +16,7 @@ describe("checkpoint helpers", () => {
       selectedCategories: { member: true },
       avatarMode: "api",
     });
-    expect(state.schemaVersion).toBe(1);
+    expect(state.schemaVersion).toBe(2);
     expect(state.checkpoint.currentCollection).toBe("member");
     expect(state.checkpoint.completedCollections).toEqual([]);
     expect(state.checkpoint.currentCollectionLastSourceId).toBeNull();

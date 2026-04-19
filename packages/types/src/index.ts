@@ -380,7 +380,7 @@ export type {
   ImportAvatarMode,
   ImportCollectionTotals,
   ImportCheckpointState,
-  ImportCheckpointStateV1,
+  ImportCheckpointStateV2,
   ImportEntityRef,
   ImportEntityTargetIdMap,
   ExportFormat,

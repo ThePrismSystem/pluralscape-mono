@@ -16,7 +16,7 @@ describe("emptyCheckpointState()", () => {
       avatarMode: "skip",
     });
 
-    expect(state.schemaVersion).toBe(1);
+    expect(state.schemaVersion).toBe(2);
     expect(state.checkpoint.currentCollection).toBe("member");
     expect(state.checkpoint.currentCollectionLastSourceId).toBeNull();
     expect(state.checkpoint.completedCollections).toEqual([]);

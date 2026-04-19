@@ -778,11 +778,12 @@ describe("PG import-export schema", () => {
       const now = Date.now();
 
       const state: ImportCheckpointState = {
-        schemaVersion: 1,
+        schemaVersion: 2,
         checkpoint: {
           completedCollections: ["member"],
           currentCollection: "fronting-session",
           currentCollectionLastSourceId: "507f1f77bcf86cd799439011",
+          realPrivacyBucketsMapped: true,
         },
         options: {
           selectedCategories: {

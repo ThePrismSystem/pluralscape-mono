@@ -8603,11 +8603,12 @@ export interface components {
     };
     ImportCheckpointState: {
       /** @enum {integer} */
-      schemaVersion: 1;
+      schemaVersion: 2;
       checkpoint: {
         completedCollections: components["schemas"]["ImportEntityType"][];
         currentCollection: components["schemas"]["ImportEntityType"];
         currentCollectionLastSourceId: string | null;
+        realPrivacyBucketsMapped: boolean;
       };
       options: {
         selectedCategories: {

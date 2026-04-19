@@ -174,7 +174,7 @@ export interface ImportJob {
 }
 
 /** Schema version for `ImportCheckpointState`. Bumped when the shape changes. */
-export type ImportCheckpointSchemaVersion = 1;
+export type ImportCheckpointSchemaVersion = 2;
 
 /** Avatar handling mode during an import. */
 export type ImportAvatarMode = "api" | "zip" | "skip";
@@ -192,14 +192,29 @@ export interface ImportCollectionTotals {
  * Resumption state stored in `import_jobs.checkpoint_state`.
  *
  * The `schemaVersion` discriminator allows forward-compatible migration:
- * add `ImportCheckpointStateV2` as a union member when the shape changes.
+ * add `ImportCheckpointStateV3` as a union member when the shape changes.
+ *
+ * **v2 (2026-04-19):** adds `realPrivacyBucketsMapped` so the engine can
+ * tell, on resume, whether the prior (pre-abort) run already mapped real
+ * privacy buckets from the source. Previously the engine inferred this
+ * from `completedCollections`, which produced false negatives and led to
+ * unwanted legacy-bucket synthesis on resume (ps-beng). Pre-release, so
+ * no v1 state exists in persistence — no migration path required.
  */
-export interface ImportCheckpointStateV1 {
-  readonly schemaVersion: 1;
+export interface ImportCheckpointStateV2 {
+  readonly schemaVersion: 2;
   readonly checkpoint: {
     readonly completedCollections: readonly ImportCollectionType[];
     readonly currentCollection: ImportCollectionType;
     readonly currentCollectionLastSourceId: string | null;
+    /**
+     * True once at least one real privacy bucket has been persisted in
+     * this import job (across any run — the flag is checkpointed). On
+     * resume the engine reads this flag instead of inferring from
+     * `completedCollections`, so mid-member-collection resumes do not
+     * re-synthesize legacy buckets when the source had real ones.
+     */
+    readonly realPrivacyBucketsMapped: boolean;
   };
   readonly options: {
     readonly selectedCategories: Partial<Record<ImportCollectionType, boolean>>;
@@ -210,7 +225,7 @@ export interface ImportCheckpointStateV1 {
   };
 }
 
-export type ImportCheckpointState = ImportCheckpointStateV1;
+export type ImportCheckpointState = ImportCheckpointStateV2;
 
 interface ImportEntityRefBase {
   readonly id: ImportEntityRefId;
@@ -425,4 +440,4 @@ export const IMPORT_AVATAR_MODES = [
   "skip",
 ] as const satisfies readonly ImportAvatarMode[];
 
-export const IMPORT_CHECKPOINT_SCHEMA_VERSION = 1 as const;
+export const IMPORT_CHECKPOINT_SCHEMA_VERSION = 2 as const;

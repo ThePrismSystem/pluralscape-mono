@@ -52,6 +52,7 @@ export const ImportCheckpointStateSchema = z
         completedCollections: z.array(z.enum(IMPORT_COLLECTION_TYPES)).readonly(),
         currentCollection: z.enum(IMPORT_COLLECTION_TYPES),
         currentCollectionLastSourceId: z.string().nullable(),
+        realPrivacyBucketsMapped: z.boolean(),
       })
       .readonly(),
     options: z

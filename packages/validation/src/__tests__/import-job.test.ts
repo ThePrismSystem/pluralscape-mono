@@ -234,11 +234,12 @@ describe("UpdateImportJobBodySchema", () => {
   it("accepts a valid checkpointState", () => {
     const result = UpdateImportJobBodySchema.safeParse({
       checkpointState: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         checkpoint: {
           completedCollections: ["member"],
           currentCollection: "group",
           currentCollectionLastSourceId: "abc",
+          realPrivacyBucketsMapped: true,
         },
         options: {
           selectedCategories: { member: true },
@@ -267,6 +268,7 @@ describe("UpdateImportJobBodySchema", () => {
           completedCollections: [],
           currentCollection: "member",
           currentCollectionLastSourceId: null,
+          realPrivacyBucketsMapped: false,
         },
         options: { selectedCategories: {}, avatarMode: "api" },
         totals: { perCollection: {} },
@@ -278,11 +280,12 @@ describe("UpdateImportJobBodySchema", () => {
   it("rejects checkpointState with invalid avatarMode", () => {
     const result = UpdateImportJobBodySchema.safeParse({
       checkpointState: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         checkpoint: {
           completedCollections: [],
           currentCollection: "member",
           currentCollectionLastSourceId: null,
+          realPrivacyBucketsMapped: false,
         },
         options: { selectedCategories: {}, avatarMode: "cloud" },
         totals: { perCollection: {} },

@@ -12,7 +12,7 @@ import type {
  */
 
 /** Schema version emitted by `emptyCheckpointState`. Bumped when the shape changes. */
-const CHECKPOINT_SCHEMA_VERSION = 1;
+const CHECKPOINT_SCHEMA_VERSION = 2;
 
 /** Zero-valued totals used when initializing a per-collection counter. */
 const ZERO_TOTALS: ImportCollectionTotals = {
@@ -54,6 +54,7 @@ export function emptyCheckpointState(opts: {
       completedCollections: [],
       currentCollection: opts.firstEntityType,
       currentCollectionLastSourceId: null,
+      realPrivacyBucketsMapped: false,
     },
     options: {
       selectedCategories: opts.selectedCategories,
@@ -152,4 +153,19 @@ export function bumpCollectionTotals(
 
 export function resumeStartCollection(state: ImportCheckpointState): ImportCollectionType {
   return state.checkpoint.currentCollection;
+}
+
+/**
+ * Persist that a real privacy bucket has been mapped in this import job.
+ * Idempotent — safe to call whenever the engine persists a bucket.
+ */
+export function markRealPrivacyBucketsMapped(state: ImportCheckpointState): ImportCheckpointState {
+  if (state.checkpoint.realPrivacyBucketsMapped) return state;
+  return {
+    ...state,
+    checkpoint: {
+      ...state.checkpoint,
+      realPrivacyBucketsMapped: true,
+    },
+  };
 }
