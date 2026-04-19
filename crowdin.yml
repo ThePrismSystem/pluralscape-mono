@@ -19,20 +19,23 @@ files:
     type: json
     update_option: update_as_unapproved
     translate_attributes: false
-    # `languages_mapping` must live UNDER the file entry — Crowdin's CLI
-    # silently ignores it at the top level. Crowdin emits full IETF codes
-    # (ar-SA, de-DE, fr-FR, ...) but apps/mobile/locales/ uses short codes;
-    # map every target whose repo directory differs. es-419 and pt-BR match
-    # Crowdin's code as-is and need no entry.
+    # languages_mapping keys are Crowdin LANGUAGE IDS (not locale values).
+    # Our Crowdin target IDs are: ar, de, es-ES, es-419, fr, it, ja, ko, nl,
+    # pt-BR, ru, zh-CN. The default %locale% expansion resolves to each
+    # language's `locale` field (e.g., ar → "ar-SA"), so without this block
+    # translations land in apps/mobile/locales/ar-SA/, de-DE/, etc. — dirs
+    # our i18n loader doesn't read. Override per-language so every target
+    # writes to the short-code directory our app expects. es-419 and pt-BR
+    # already resolve to matching dir names and need no entry.
     languages_mapping:
       locale:
-        ar-SA: ar
-        de-DE: de
+        ar: ar
+        de: de
         es-ES: es
-        fr-FR: fr
-        it-IT: it
-        ja-JP: ja
-        ko-KR: ko
-        nl-NL: nl
-        ru-RU: ru
+        fr: fr
+        it: it
+        ja: ja
+        ko: ko
+        nl: nl
+        ru: ru
         zh-CN: zh-Hans
