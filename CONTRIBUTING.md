@@ -218,3 +218,20 @@ Feature prioritization is community-driven. If you have a feature idea:
 ## Code of Conduct
 
 All contributors must follow our [Code of Conduct](CODE_OF_CONDUCT.md). We have zero tolerance for bigotry, harassment, or gatekeeping.
+
+## Adding user-facing strings
+
+English sources live in `apps/mobile/locales/en/*.json`. To add or modify a user-facing string:
+
+1. Add the key + English value to the appropriate file (`auth.json`, `common.json`, `fronting.json`, `members.json`, `settings.json`).
+2. Reference the key from the mobile UI via the i18n hook.
+3. Commit and open a PR as usual.
+
+Translations are handled automatically:
+
+- On merge to `main`, the `crowdin-sync` workflow uploads the new source to Crowdin and triggers machine-translation (TM + MT with glossary enforcement) for all 12 target languages.
+- The next daily sync (06:00 UTC) opens a translation PR that auto-merges once CI passes.
+
+If you're adding domain terminology (plurality, fronting, member roles, origins, etc.), check `scripts/crowdin-glossary.json` first — the term may already be defined. If not, consider adding it in the same PR.
+
+See `docs/i18n/crowdin-operations.md` for operational details.

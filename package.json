@@ -34,11 +34,17 @@
     "test:e2e:sp-import": "vitest run --config vitest.sp-e2e.config.ts",
     "test:e2e:pk-import": "vitest run --config vitest.pk-e2e.config.ts",
     "trpc:parity": "pnpm --filter @pluralscape/api trpc:parity",
+    "crowdin:setup": "tsx scripts/crowdin-setup-project.ts",
+    "crowdin:pretranslate": "tsx scripts/crowdin-pretranslate.ts",
+    "crowdin:upload-context": "tsx scripts/crowdin-upload-context.ts",
+    "crowdin:automerge-guard": "tsx scripts/crowdin-automerge-guard.ts",
+    "crowdin:schema": "tsx scripts/generate-crowdin-glossary-schema.ts",
     "prepare": "husky"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "@crowdin/crowdin-api-client": "^1.55.1",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/prettier-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
@@ -53,7 +59,8 @@
     "turbo": "^2.9.6",
     "typescript": "^6.0.0",
     "vitest": "^4.1.4",
-    "yaml": "^2.8.3"
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -81,7 +88,8 @@
       "@tanstack/query-core": "5.99.0",
       "follow-redirects": ">=1.16.0",
       "dompurify": ">=3.4.0",
-      "protobufjs": ">=7.5.5"
+      "protobufjs": ">=7.5.5",
+      "axios": ">=1.15.0"
     },
     "onlyBuiltDependencies": [
       "better-sqlite3-multiple-ciphers",

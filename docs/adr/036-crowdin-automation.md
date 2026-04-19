@@ -1,0 +1,94 @@
+# 036. Crowdin i18n Automation Pipeline
+
+- Status: Accepted
+- Date: 2026-04-18
+- Supersedes: —
+- Superseded by: —
+
+## Context
+
+Pluralscape ships in 12 target languages via Crowdin (see ADR 035 for OTA delivery). The initial integration (PRs #465, #467) established source upload and scheduled translation pull, but lacked:
+
+1. A glossary tailored to plurality terminology, where standard MT engines mistranslate community-specific terms like "fronting," "host," "little," and "switch."
+2. Automatic pre-translation for new source strings — new English strings sat untranslated until a human translator intervened.
+3. Any automated way to merge translation PRs — daily PRs required manual review despite translation files being a low-risk change surface.
+4. A plan for handling target languages DeepL does not support (Arabic, Latin American Spanish).
+
+Pluralscape has no paid Crowdin plan and no committed volunteer translators at present.
+
+## Decision
+
+We adopt a machine-translation pipeline with four components:
+
+1. **Config-as-code**: `scripts/crowdin-glossary.json` is the source of truth for glossary terms. A `crowdin-config` GitHub Actions workflow applies changes to Crowdin via its API on every push to `main` touching glossary or setup files. Crowdin project state is derived; the repo is canonical.
+
+2. **Dual MT engines**: DeepL Free for the 10 languages it supports (de, es, fr, it, ja, ko, nl, pt-BR, ru, zh-Hans); Google Cloud Translation for the two it does not (ar, es-419). Both engines run with glossary enforcement.
+
+3. **Automatic pre-translation**: After the sync workflow uploads English sources to Crowdin, it runs `scripts/crowdin-pretranslate.ts` to kick off a TM + MT pre-translation job. New strings typically arrive pre-translated within a few minutes of the daily sync; the workflow allows up to 10 minutes per pre-translate pass before failing.
+
+4. **Auto-merge for translation-only PRs**: A `crowdin-automerge` workflow evaluates an 8-step guard chain (author, branch, label, path allowlist, no deletions, reviews, CI status, required-check allowlist) and squash-merges eligible PRs. `apps/mobile/locales/en/**` is explicitly excluded from the allowlist so a mixed-content PR is always rejected. The required-check allowlist rejects a PR as `ci_missing` when any configured required check never posts, guarding against a "zero checks = green" misinterpretation.
+
+Export policy: all translations (not just approved) are exported from Crowdin, since there are no human approvers. Manual edits in the Crowdin UI automatically supersede MT in Crowdin's translation priority ranking.
+
+Crowdin pre-translates new strings in two passes: (1) translation memory for all
+12 target languages, reusing prior translations across the project; (2) machine
+translation for anything TM did not fill — DeepL for 10 languages it supports,
+Google Translate for Arabic and Latin American Spanish. All results are
+auto-approved as the shipping translation during the transitional phase.
+
+## Transitional posture
+
+Until volunteer translators, contributors, or dedicated funding arrive,
+Pluralscape ships MT output as its shipping translation. All pre-translations
+(TM + DeepL + Google) are auto-approved in Crowdin (`autoApproveOption: "all"`).
+When a volunteer translator saves an edit in the Crowdin UI, their translation
+supersedes the MT in the next daily sync — no approval gate, no review buffer.
+This is a deliberate tradeoff: imperfect MT-quality text in 12 target locales is
+better than missing translations, and the Crowdin UI makes human override a
+one-click improvement whenever volunteers arrive.
+
+This posture will be revisited when we reach either: (1) at least one active
+volunteer translator per target language, (2) funded professional translation
+review, or (3) a formal translation governance model. At that point,
+pretranslate will flip to `autoApproveOption: "none"` and approved-only
+downloads, and a separate ADR will document the gated workflow.
+
+## Alternatives considered
+
+**Workflow-centric config (rejected)**: Have the setup script re-run on every sync workflow invocation. Higher API cost and couples glossary changes to sync cadence.
+
+**Crowdin-UI managed config (rejected)**: Configure glossary, MT engines, and QA checks through the web UI only. No audit trail, no reproducibility, drift risk high.
+
+**Approved-only export with manual review gate (deferred)**: Safest for translation quality but blocks all non-English UI until humans approve per language. Not viable without translators.
+
+**Skip MT for Arabic and `es-419` (rejected)**: Leaves users with the English fallback. Worse UX than imperfect translation with glossary guard.
+
+## Consequences
+
+**Positive:**
+
+- New English strings reach non-English users within minutes of merge.
+- Glossary is version-controlled, reviewable, and auditable.
+- Auto-merge removes daily friction; translation changes flow as data.
+- MT failures are contained: path allowlist means an English-touching PR is never auto-merged.
+
+**Negative:**
+
+- MT quality for plurality-specific terminology is imperfect even with glossary enforcement. Users may see jarring translations until corrected.
+- DeepL Free has a 500,000 character/month limit. Well within current scale but could become a bottleneck.
+- Google Translate requires a service account key, managed via the GitHub Actions secret `GOOGLE_TRANSLATE_SERVICE_ACCOUNT_JSON`.
+
+## Rollout plan
+
+Auto-merge ships gated behind repo variable `CROWDIN_AUTOMERGE_DRY_RUN`,
+defaulting to `true`. In dry-run mode the workflow logs its merge decision and
+posts the comment it _would_ have posted, but does not call `gh pr merge`.
+After at least one week of dry-run decisions on real Crowdin PRs with no
+false-positive "would-merge" outcomes, a maintainer flips the repo variable to
+`false` via the GitHub Actions variables UI. Flipping back is a single UI
+change with no code revert required.
+
+## References
+
+- ADR 035: `i18n-ota-delivery` — Crowdin OTA delivery mechanism.
+- Spec: `docs/superpowers/specs/2026-04-18-crowdin-polish-design.md` (local only).

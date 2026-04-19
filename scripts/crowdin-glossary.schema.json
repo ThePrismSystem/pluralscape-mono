@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "terms": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": ["translatable", "do-not-translate", "negative"]
+          },
+          "pos": {
+            "type": "string",
+            "enum": ["adj", "noun", "verb", "noun/verb", "verb/noun"]
+          },
+          "hazard": {
+            "type": "string",
+            "enum": ["critical", "medium", "low"]
+          },
+          "loanword_ok": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["term", "type", "notes"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["terms"],
+  "additionalProperties": false
+}

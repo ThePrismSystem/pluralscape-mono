@@ -89,7 +89,12 @@ scripts/.sp-test-*.json
 # PK import test artifacts (seeded account manifests, export fixtures, env)
 scripts/.pk-seed-*.json
 scripts/.pk-test-*.json
+# Google Cloud service account keys (belt-and-suspenders; keys should live outside repo)
+pluralscape-*.json
 .env.pk-test
+
+# Crowdin setup script JSON output (local artifact when running crowdin:setup --json > file)
+crowdin-setup-output.json
 
 # OS
 .tmp
