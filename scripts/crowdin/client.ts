@@ -1,9 +1,11 @@
-import CrowdinClientCtor from "@crowdin/crowdin-api-client";
+import { Client as CrowdinClientCtor } from "@crowdin/crowdin-api-client";
 
 import type { CrowdinEnv } from "./env.js";
 
-// The SDK ships as a CJS module; the ESM default import resolves directly to
-// the constructor class (confirmed at runtime: `typeof import === "function"`).
+// The SDK is CJS with both `exports.default = Client` and `exports.Client = Client`.
+// Under Node 22+, the ESM-CJS interop resolves `import X from "cjs"` to the full
+// `module.exports` namespace object rather than `exports.default`, so the default
+// import is not a constructor. Use the named import, which resolves correctly.
 export type CrowdinClient = InstanceType<typeof CrowdinClientCtor>;
 
 export function createCrowdinClient(env: CrowdinEnv): CrowdinClient {
