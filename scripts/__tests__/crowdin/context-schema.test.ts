@@ -26,7 +26,7 @@ describe("ContextFileSchema", () => {
 });
 
 describe("CONTEXT_NAMESPACES", () => {
-  it("contains all 5 mobile namespaces", () => {
-    expect([...CONTEXT_NAMESPACES]).toEqual(["common", "auth", "fronting", "members", "settings"]);
+  it("lists only namespaces whose sidecar file exists on disk", () => {
+    expect([...CONTEXT_NAMESPACES]).toEqual(["common"]);
   });
 });

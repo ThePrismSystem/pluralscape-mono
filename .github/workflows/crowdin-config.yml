@@ -53,11 +53,28 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const commentBody = `Another \`crowdin-config\` run failed. Latest: ${runUrl} (sha ${context.sha.slice(0, 7)}).`;
+            // Dedup: if an open "Crowdin config apply failed" issue already exists,
+            // post a comment on it instead of opening another.
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open label:automation-failure "Crowdin config apply failed"`,
+            });
+            const existing = search.data.items.find((i) => i.title.startsWith("Crowdin config apply failed"));
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: commentBody,
+              });
+              return;
+            }
             const title = `Crowdin config apply failed on ${context.sha.slice(0, 7)}`;
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body: `The \`crowdin-config\` workflow failed. Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              body: `The \`crowdin-config\` workflow failed. Run: ${runUrl}`,
               labels: ["i18n", "automation-failure"],
             });

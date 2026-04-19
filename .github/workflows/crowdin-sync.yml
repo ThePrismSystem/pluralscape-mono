@@ -70,19 +70,34 @@ jobs:
 
       - name: Check Crowdin translation progress
         id: progress
+        shell: bash
         env:
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
           CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
         run: |
+          set -eo pipefail
           # crowdin/github-action exits non-zero when nothing is translated.
           # Skip the download step if all target languages sit at 0% so a
           # freshly-bootstrapped project doesn't red-line CI until the first
           # string is translated.
-          response=$(curl -sS \
+          response=$(curl -sS --fail-with-body \
             -H "Authorization: Bearer ${CROWDIN_PERSONAL_TOKEN}" \
             "https://api.crowdin.com/api/v2/projects/${CROWDIN_PROJECT_ID}/languages/progress?limit=500")
-          translated=$(echo "${response}" | jq '[.data[].data.translationProgress] | (add / length) | floor')
+          # Fallback to 0 when the language list is empty (freshly-created
+          # project with no target languages) so jq does not divide by zero.
+          translated=$(echo "${response}" | jq '[.data[]?.data.translationProgress] | if length == 0 then 0 else (add / length | floor) end')
           echo "Average translation progress across languages: ${translated}"
+          if ! [[ "${translated}" =~ ^-?[0-9]+$ ]]; then
+            {
+              echo "## crowdin-sync: unexpected progress response"
+              echo ""
+              echo '```json'
+              echo "${response}"
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY}"
+            echo "::error::Crowdin returned a non-numeric translation progress value; see step summary for the raw response."
+            exit 1
+          fi
           if [[ "${translated}" -gt 0 ]]; then
             echo "has_translations=true" >> "${GITHUB_OUTPUT}"
           else
