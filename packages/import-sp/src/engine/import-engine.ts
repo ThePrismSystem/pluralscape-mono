@@ -273,17 +273,11 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     const startIndex = indexOfResumeCollection(state);
     const safeStartIndex = startIndex < 0 ? 0 : startIndex;
 
-    // Track how many privacyBuckets documents were successfully mapped and
-    // registered during the privacyBuckets pass. Used at member-collection entry
-    // to decide whether to synthesize the three legacy buckets. Counting only
-    // mapped (not yielded) docs avoids the bug where every bucket fails Zod
-    // validation yet the count stays > 0, silently leaving members with
-    // unresolved synthetic bucket references.
-    //
-    // Read the checkpointed flag rather than inferring from `completedCollections`.
-    // The flag is set as soon as at least one real privacy bucket is persisted
-    // within the current import job — pre-release context removes the need for
-    // a v1 migration path (see `ImportCheckpointStateV2`).
+    // Read the checkpointed flag rather than inferring from
+    // `completedCollections` — the flag is set as soon as at least one real
+    // privacy bucket is persisted within the current import job, so mid-
+    // member-collection resumes do not re-synthesize legacy buckets when
+    // the source had real ones.
     let privacyBucketsMapped = state.checkpoint.realPrivacyBucketsMapped ? 1 : 0;
 
     for (

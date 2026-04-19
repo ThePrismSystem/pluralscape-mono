@@ -193,13 +193,6 @@ export interface ImportCollectionTotals {
  *
  * The `schemaVersion` discriminator allows forward-compatible migration:
  * add `ImportCheckpointStateV3` as a union member when the shape changes.
- *
- * **v2 (2026-04-19):** adds `realPrivacyBucketsMapped` so the engine can
- * tell, on resume, whether the prior (pre-abort) run already mapped real
- * privacy buckets from the source. Previously the engine inferred this
- * from `completedCollections`, which produced false negatives and led to
- * unwanted legacy-bucket synthesis on resume (ps-beng). Pre-release, so
- * no v1 state exists in persistence — no migration path required.
  */
 export interface ImportCheckpointStateV2 {
   readonly schemaVersion: 2;
