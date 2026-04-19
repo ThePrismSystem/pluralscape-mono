@@ -8,7 +8,7 @@ import { loadCrowdinEnv } from "./crowdin/env.js";
 import { GlossarySchema } from "./crowdin/glossary-schema.js";
 import { applyGlossary } from "./crowdin/glossary.js";
 import { TARGET_LANGUAGE_IDS, applyTargetLanguages } from "./crowdin/languages.js";
-import { applyMtEngines } from "./crowdin/mt.js";
+import { MtCreationForbiddenError, applyMtEngines } from "./crowdin/mt.js";
 import { applyApprovalSettings, type ApprovalSummary } from "./crowdin/project-approval.js";
 import { applyQaChecks } from "./crowdin/qa.js";
 
@@ -86,7 +86,19 @@ async function main(): Promise<void> {
   }
 
   if (scopes.includes("mt")) {
-    summary.mt = await applyMtEngines(client, env.projectId, env);
+    try {
+      summary.mt = await applyMtEngines(client, env.projectId, env);
+    } catch (err) {
+      if (err instanceof MtCreationForbiddenError) {
+        // Non-fatal: log and continue. Downstream pretranslate will fail with
+        // a clear error if engines are genuinely missing, which is distinct
+        // from "we could not create them" — the account owner needs to create
+        // them once in the Crowdin UI.
+        console.warn(`::warning::${err.message}`);
+      } else {
+        throw err;
+      }
+    }
   }
 
   if (scopes.includes("qa")) {

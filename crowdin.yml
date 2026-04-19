@@ -9,6 +9,12 @@ preserve_hierarchy: true
 
 files:
   - source: /apps/mobile/locales/en/**/*.json
+    # `.context.json` sidecars are metadata for the crowdin-upload-context
+    # step — they must NOT be uploaded as additional source files. Without
+    # this exclude, Crowdin ingests them as standalone source strings and
+    # the context-upload step fails to match identifiers.
+    ignore:
+      - /apps/mobile/locales/en/**/*.context.json
     translation: /apps/mobile/locales/%locale%/%original_file_name%
     type: json
     update_option: update_as_unapproved
