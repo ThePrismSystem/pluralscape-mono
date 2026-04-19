@@ -8,6 +8,7 @@ import {
   type PrContext,
 } from "./crowdin/automerge/evaluate.js";
 import { commentPr, fetchPrContext, mergePr } from "./crowdin/automerge/gh.js";
+import { getErrorMessage } from "./crowdin/errors.js";
 
 export interface GuardDeps {
   fetchPrContext: typeof fetchPrContext;
@@ -40,17 +41,56 @@ function buildCommentBody(
   return `Crowdin auto-merge skipped: \`${result.skipReason}\`. See the ops runbook for interpretation. (PR #${String(pr.number)})`;
 }
 
+/**
+ * Parses CROWDIN_AUTOMERGE_DRY_RUN. Defaults to dry-run when unset. Accepts
+ * only the exact tokens "true" and "false" (trimmed) — any other value throws
+ * so a typoed repo variable fails loud instead of silently going live.
+ */
+function parseDryRun(raw: string | undefined): boolean {
+  if (raw === undefined) return true;
+  const trimmed = raw.trim();
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  throw new Error(
+    `CROWDIN_AUTOMERGE_DRY_RUN must be exactly "true" or "false" (got ${JSON.stringify(raw)}).`,
+  );
+}
+
+function resolveSummaryAndOutputPaths(env: Record<string, string | undefined>): {
+  summary: string;
+  output: string;
+} {
+  const summary = env.GITHUB_STEP_SUMMARY;
+  const output = env.GITHUB_OUTPUT;
+  const inCi = env.CI === "true" || env.GITHUB_ACTIONS === "true";
+  if (inCi) {
+    if (!summary) throw new Error("GITHUB_STEP_SUMMARY must be set in CI");
+    if (!output) throw new Error("GITHUB_OUTPUT must be set in CI");
+    return { summary, output };
+  }
+  if (!summary || !output) {
+    // Local-run fallback: log once so the operator knows they're not
+    // capturing the summary/output channels.
+    console.warn(
+      "[crowdin-automerge-guard] GITHUB_STEP_SUMMARY/GITHUB_OUTPUT not set; falling back to /dev/null.",
+    );
+  }
+  return { summary: summary ?? "/dev/null", output: output ?? "/dev/null" };
+}
+
 export async function runGuard(
   prNumber: number,
   owner: string,
   repo: string,
   deps: GuardDeps,
 ): Promise<void> {
+  const dryRun = parseDryRun(deps.env.CROWDIN_AUTOMERGE_DRY_RUN);
+  const { summary: summaryPath, output: outputPath } = resolveSummaryAndOutputPaths(deps.env);
+  deps.log(`dryRun=${String(dryRun)}`);
+  appendAndLog(summaryPath, `dryRun=${String(dryRun)}`, deps.log, deps.appendTo);
+
   const pr = await deps.fetchPrContext(owner, repo, prNumber);
   const result = evaluatePr(pr);
-  const dryRun = (deps.env.CROWDIN_AUTOMERGE_DRY_RUN ?? "true") !== "false";
-  const summaryPath = deps.env.GITHUB_STEP_SUMMARY ?? "/dev/null";
-  const outputPath = deps.env.GITHUB_OUTPUT ?? "/dev/null";
 
   if (result.eligible) {
     appendAndLog(summaryPath, `auto-merge: eligible (${result.summary})`, deps.log, deps.appendTo);
@@ -69,10 +109,28 @@ export async function runGuard(
     try {
       await deps.commentPr(prNumber, buildCommentBody(pr, result));
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = getErrorMessage(err);
       deps.log(`comment failed (non-fatal): ${message}`);
+      appendAndLog(outputPath, `comment_failed=true`, deps.log, deps.appendTo);
+      appendAndLog(
+        summaryPath,
+        `warning: PR comment failed (non-fatal): ${message}`,
+        deps.log,
+        deps.appendTo,
+      );
     }
   }
+}
+
+function parseRepository(raw: string | undefined): { owner: string; repo: string } {
+  if (!raw || !raw.includes("/")) {
+    throw new Error(`GITHUB_REPOSITORY must be set to "owner/repo" (got ${JSON.stringify(raw)}).`);
+  }
+  const [owner, repo, ...rest] = raw.split("/");
+  if (!owner || !repo || rest.length > 0) {
+    throw new Error(`GITHUB_REPOSITORY must be exactly "owner/repo" (got ${JSON.stringify(raw)}).`);
+  }
+  return { owner, repo };
 }
 
 async function main(): Promise<void> {
@@ -84,9 +142,7 @@ async function main(): Promise<void> {
     console.error("crowdin-automerge-guard: --pr must be a positive integer");
     process.exit(1);
   }
-  const owner = process.env.GITHUB_REPOSITORY_OWNER ?? "pluralscape";
-  const repoFull = process.env.GITHUB_REPOSITORY ?? "pluralscape/pluralscape-mono";
-  const repo = repoFull.split("/")[1] ?? "pluralscape-mono";
+  const { owner, repo } = parseRepository(process.env.GITHUB_REPOSITORY);
 
   await runGuard(prNumber, owner, repo, {
     fetchPrContext,

@@ -5,6 +5,11 @@ import {
   evaluatePr,
   type PrContext,
 } from "../../crowdin/automerge/evaluate.js";
+import { REQUIRED_CHECKS } from "../../crowdin/automerge/evaluate.constants.js";
+
+function greenRequiredChecks(): PrContext["checks"] {
+  return REQUIRED_CHECKS.map((name) => ({ name, conclusion: "success" as const }));
+}
 
 function basePr(overrides: Partial<PrContext> = {}): PrContext {
   return {
@@ -16,7 +21,7 @@ function basePr(overrides: Partial<PrContext> = {}): PrContext {
     labels: [],
     files: [{ path: "apps/mobile/locales/fr/common.json", status: "modified" }],
     reviews: [],
-    checks: [{ name: "ci", conclusion: "success" }],
+    checks: greenRequiredChecks(),
     ...overrides,
   };
 }
@@ -32,10 +37,16 @@ describe("evaluatePr — eligible path", () => {
     }
   });
 
-  it("accepts renamed and copied file statuses if path is in allowlist", () => {
+  it("accepts renamed and copied statuses when both old and new paths are in allowlist", () => {
     for (const status of ["renamed", "copied"] as const) {
       const pr = basePr({
-        files: [{ path: "apps/mobile/locales/fr/common.json", status }],
+        files: [
+          {
+            path: "apps/mobile/locales/fr/common.json",
+            status,
+            previousFilename: "apps/mobile/locales/fr/old-common.json",
+          },
+        ],
       });
       expect(evaluatePr(pr).eligible).toBe(true);
     }
@@ -81,6 +92,47 @@ describe("evaluatePr — skip reasons", () => {
     if (!result.eligible) expect(result.skipReason).toBe("path_outside_allowlist");
   });
 
+  it("rejects a rename from outside the allowlist into the allowlist", () => {
+    const result = evaluatePr(
+      basePr({
+        files: [
+          {
+            path: "apps/mobile/locales/fr/common.json",
+            status: "renamed",
+            previousFilename: "package.json",
+          },
+        ],
+      }),
+    );
+    expect(result.eligible).toBe(false);
+    if (!result.eligible) expect(result.skipReason).toBe("path_outside_allowlist");
+  });
+
+  it("rejects a rename that omits previousFilename", () => {
+    const result = evaluatePr(
+      basePr({
+        files: [
+          {
+            path: "apps/mobile/locales/fr/common.json",
+            status: "renamed",
+          },
+        ],
+      }),
+    );
+    expect(result.eligible).toBe(false);
+    if (!result.eligible) expect(result.skipReason).toBe("path_outside_allowlist");
+  });
+
+  it("rejects paths containing `..` traversal", () => {
+    const result = evaluatePr(
+      basePr({
+        files: [{ path: "apps/mobile/locales/fr/../../../etc/passwd.json", status: "modified" }],
+      }),
+    );
+    expect(result.eligible).toBe(false);
+    if (!result.eligible) expect(result.skipReason).toBe("path_outside_allowlist");
+  });
+
   it("rejects PRs with any file deletion", () => {
     const result = evaluatePr(
       basePr({ files: [{ path: "apps/mobile/locales/fr/common.json", status: "removed" }] }),
@@ -101,15 +153,29 @@ describe("evaluatePr — skip reasons", () => {
     if (!result.eligible) expect(result.skipReason).toBe("ci_missing");
   });
 
+  it("rejects as ci_missing when a required check never posted", () => {
+    const missingOne = REQUIRED_CHECKS.slice(1).map((name) => ({
+      name,
+      conclusion: "success" as const,
+    }));
+    const result = evaluatePr(basePr({ checks: missingOne }));
+    expect(result.eligible).toBe(false);
+    if (!result.eligible) expect(result.skipReason).toBe("ci_missing");
+  });
+
   it("rejects when any check conclusion is still null (ci_pending)", () => {
-    const result = evaluatePr(basePr({ checks: [{ name: "ci", conclusion: null }] }));
+    const [first, ...rest] = greenRequiredChecks();
+    const checks = [{ name: first?.name ?? "Lint", conclusion: null }, ...rest];
+    const result = evaluatePr(basePr({ checks }));
     expect(result.eligible).toBe(false);
     if (!result.eligible) expect(result.skipReason).toBe("ci_pending");
   });
 
   it("rejects each non-passing conclusion as ci_not_green", () => {
     for (const conclusion of ["failure", "cancelled", "timed_out", "action_required"] as const) {
-      const result = evaluatePr(basePr({ checks: [{ name: "ci", conclusion }] }));
+      const [first, ...rest] = greenRequiredChecks();
+      const checks = [{ name: first?.name ?? "Lint", conclusion }, ...rest];
+      const result = evaluatePr(basePr({ checks }));
       expect(result.eligible).toBe(false);
       if (!result.eligible) expect(result.skipReason).toBe("ci_not_green");
     }
@@ -117,16 +183,17 @@ describe("evaluatePr — skip reasons", () => {
 
   it("treats 'skipped' and 'neutral' check conclusions as passing", () => {
     for (const conclusion of ["skipped", "neutral"] as const) {
-      const result = evaluatePr(basePr({ checks: [{ name: "ci", conclusion }] }));
+      const checks = REQUIRED_CHECKS.map((name) => ({ name, conclusion }));
+      const result = evaluatePr(basePr({ checks }));
       expect(result.eligible).toBe(true);
     }
   });
 });
 
 describe("ACTIONABLE_SKIP_REASONS", () => {
-  it("excludes no_files and ci_missing (log-only reasons)", () => {
+  it("excludes no_files (log-only) and includes ci_missing (actionable)", () => {
     expect(ACTIONABLE_SKIP_REASONS.has("no_files")).toBe(false);
-    expect(ACTIONABLE_SKIP_REASONS.has("ci_missing")).toBe(false);
+    expect(ACTIONABLE_SKIP_REASONS.has("ci_missing")).toBe(true);
   });
 
   it("includes ci_pending, ci_not_green, and path_outside_allowlist (actionable)", () => {

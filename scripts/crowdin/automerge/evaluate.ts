@@ -1,3 +1,7 @@
+import path from "node:path/posix";
+
+import { EXPECTED_PATH_DEPTH, GREEN_CONCLUSIONS, REQUIRED_CHECKS } from "./evaluate.constants.js";
+
 export const ALLOWED_LOCALES = [
   "ar",
   "de",
@@ -30,12 +34,20 @@ export type SkipReason =
   | "ci_pending"
   | "ci_not_green";
 
+/**
+ * Skip reasons that warrant a PR comment rather than silent log-only skip.
+ * `ci_missing` is actionable because a required check never posting is a real
+ * configuration drift: operators need to know auto-merge couldn't evaluate.
+ * `no_files` stays log-only because it only fires on empty PRs that aren't
+ * worth a notification round-trip.
+ */
 export const ACTIONABLE_SKIP_REASONS: ReadonlySet<SkipReason> = new Set<SkipReason>([
   "branch_mismatch",
   "kill_switch_active",
   "path_outside_allowlist",
   "has_deletions",
   "changes_requested",
+  "ci_missing",
   "ci_pending",
   "ci_not_green",
 ]);
@@ -43,6 +55,11 @@ export const ACTIONABLE_SKIP_REASONS: ReadonlySet<SkipReason> = new Set<SkipReas
 export interface PrFile {
   path: string;
   status: "added" | "modified" | "removed" | "renamed" | "copied";
+  /** Source path of a `renamed` or `copied` file before the move. Required
+   * for rename/copy safety: both the source and destination paths must lie
+   * within the locale allowlist, otherwise a rename could smuggle a non-locale
+   * file into or out of the allowed tree. */
+  previousFilename?: string;
 }
 
 export interface PrReview {
@@ -78,9 +95,18 @@ export type EvaluationResult =
   | { eligible: true; summary: string; head: { sha: string; ref: string } }
   | { eligible: false; skipReason: SkipReason };
 
-function isAllowedTranslationPath(p: string): boolean {
-  const segments = p.split("/");
-  if (segments.length !== 5) return false;
+/**
+ * Returns true iff `p` is a locale-tree JSON path of the exact shape
+ * `apps/mobile/locales/<locale>/<file>.json`. Paths are normalized via
+ * posix path.normalize first; any segment traversal (`..`) or anything
+ * that collapses to fewer than {@link EXPECTED_PATH_DEPTH} segments fails
+ * closed.
+ */
+function isAllowedTranslationPath(rawPath: string): boolean {
+  const normalized = path.normalize(rawPath);
+  if (normalized.split("/").includes("..")) return false;
+  const segments = normalized.split("/");
+  if (segments.length !== EXPECTED_PATH_DEPTH) return false;
   const [apps, mobile, locales, locale, file] = segments;
   return (
     apps === "apps" &&
@@ -89,6 +115,11 @@ function isAllowedTranslationPath(p: string): boolean {
     (ALLOWED_LOCALES as readonly string[]).includes(locale ?? "") &&
     (file ?? "").endsWith(".json")
   );
+}
+
+function extractLocale(p: string): string | undefined {
+  const segments = path.normalize(p).split("/");
+  return segments.length === EXPECTED_PATH_DEPTH ? segments[3] : undefined;
 }
 
 /**
@@ -118,6 +149,11 @@ export function evaluatePr(pr: PrContext): EvaluationResult {
     if (!isAllowedTranslationPath(file.path)) {
       return { eligible: false, skipReason: "path_outside_allowlist" };
     }
+    if (file.status === "renamed" || file.status === "copied") {
+      if (!file.previousFilename || !isAllowedTranslationPath(file.previousFilename)) {
+        return { eligible: false, skipReason: "path_outside_allowlist" };
+      }
+    }
   }
   if (pr.reviews.some((r) => r.state === "CHANGES_REQUESTED")) {
     return { eligible: false, skipReason: "changes_requested" };
@@ -125,21 +161,26 @@ export function evaluatePr(pr: PrContext): EvaluationResult {
   if (pr.checks.length === 0) {
     return { eligible: false, skipReason: "ci_missing" };
   }
+  const checksByName = new Map<string, PrCheck>();
+  for (const check of pr.checks) {
+    checksByName.set(check.name, check);
+  }
+  for (const required of REQUIRED_CHECKS) {
+    if (!checksByName.has(required)) {
+      return { eligible: false, skipReason: "ci_missing" };
+    }
+  }
   for (const check of pr.checks) {
     if (check.conclusion === null) {
       return { eligible: false, skipReason: "ci_pending" };
     }
-    if (
-      check.conclusion !== "success" &&
-      check.conclusion !== "skipped" &&
-      check.conclusion !== "neutral"
-    ) {
+    if (!GREEN_CONCLUSIONS.has(check.conclusion)) {
       return { eligible: false, skipReason: "ci_not_green" };
     }
   }
   const locales = [
     ...new Set(
-      pr.files.map((f) => f.path.split("/")[3]).filter((l): l is string => typeof l === "string"),
+      pr.files.map((f) => extractLocale(f.path)).filter((l): l is string => typeof l === "string"),
     ),
   ].sort();
   const summary = `${pr.files.length} files across ${locales.length} locales: ${locales.join(", ")}`;

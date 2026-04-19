@@ -27,6 +27,7 @@ const FilesSchema = z.array(
   z.object({
     filename: z.string(),
     status: z.enum(["added", "modified", "removed", "renamed", "copied"]),
+    previous_filename: z.string().optional(),
   }),
 );
 
@@ -54,6 +55,14 @@ const ChecksSchema = z.object({
     }),
   ),
 });
+
+interface NodeErrorLike {
+  code?: string;
+}
+
+function isEnoent(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as NodeErrorLike).code === "ENOENT";
+}
 
 export async function fetchPrContext(
   owner: string,
@@ -91,7 +100,11 @@ export async function fetchPrContext(
     headSha: pr.head.sha,
     baseRef: pr.base.ref,
     labels: pr.labels.map((l) => l.name),
-    files: files.map((f) => ({ path: f.filename, status: f.status })),
+    files: files.map((f) => ({
+      path: f.filename,
+      status: f.status,
+      previousFilename: f.previous_filename,
+    })),
     reviews: reviews.map((r) => ({ state: r.state })),
     checks,
   };
@@ -120,8 +133,10 @@ export async function commentPr(prNumber: number, body: string): Promise<void> {
   } finally {
     try {
       unlinkSync(tmp);
-    } catch {
-      // tmp file already gone — harmless
+    } catch (err) {
+      // Only swallow ENOENT — other errors (EACCES, EPERM) would hide a real
+      // filesystem problem. Re-throw everything else.
+      if (!isEnoent(err)) throw err;
     }
   }
 }

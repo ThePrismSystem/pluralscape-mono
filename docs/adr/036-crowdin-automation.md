@@ -26,7 +26,7 @@ We adopt a machine-translation pipeline with four components:
 
 3. **Automatic pre-translation**: After the sync workflow uploads English sources to Crowdin, it runs `scripts/crowdin-pretranslate.ts` to kick off a TM + MT pre-translation job. New strings typically arrive pre-translated within a few minutes of the daily sync; the workflow allows up to 10 minutes per pre-translate pass before failing.
 
-4. **Auto-merge for translation-only PRs**: A `crowdin-automerge` workflow evaluates a 7-step guard chain (author, branch, label, path allowlist, no deletions, reviews, CI status) and squash-merges eligible PRs. `apps/mobile/locales/en/**` is explicitly excluded from the allowlist so a mixed-content PR is always rejected.
+4. **Auto-merge for translation-only PRs**: A `crowdin-automerge` workflow evaluates an 8-step guard chain (author, branch, label, path allowlist, no deletions, reviews, CI status, required-check allowlist) and squash-merges eligible PRs. `apps/mobile/locales/en/**` is explicitly excluded from the allowlist so a mixed-content PR is always rejected. The required-check allowlist rejects a PR as `ci_missing` when any configured required check never posts, guarding against a "zero checks = green" misinterpretation.
 
 Export policy: all translations (not just approved) are exported from Crowdin, since there are no human approvers. Manual edits in the Crowdin UI automatically supersede MT in Crowdin's translation priority ranking.
 
