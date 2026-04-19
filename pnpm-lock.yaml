@@ -514,7 +514,7 @@ importers:
         version: 8.0.5
       resend:
         specifier: ^6.0.0
-        version: 6.11.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
+        version: 6.12.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*
@@ -3678,6 +3678,7 @@ packages:
   '@xmldom/xmldom@0.8.12':
     resolution: {integrity: sha512-9k/gHF6n/pAi/9tqr3m3aqkuiNosYTurLLUtc7xQ9sxB/wm7WPygCv8GYa6mS0fLJEHhqMC1ATYhz++U/lRHqg==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -6467,8 +6468,8 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
-  resend@6.11.0:
-    resolution: {integrity: sha512-S9gxOccfwc+E6Cr3q28Gu8NkiIjYlYPlj9rqk4zkIuzlEoh8sWu/IvJSg7U7t+o3g0Ov2IOCzcneUaCi/M/WdQ==}
+  resend@6.12.0:
+    resolution: {integrity: sha512-CaxEvX1z+/MGbgnhsM/bvmkbnZd1v1sEXELAjBNSDBQNMaB7MgqOyrBgI27CYikEgdaDnBrXghAXYWTBs/h5Bw==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -13858,7 +13859,7 @@ snapshots:
 
   require-from-string@2.0.2: {}
 
-  resend@6.11.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)):
+  resend@6.12.0(@react-email/render@1.1.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)):
     dependencies:
       postal-mime: 2.7.4
       svix: 1.90.0
