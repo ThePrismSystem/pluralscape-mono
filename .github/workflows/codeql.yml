@@ -1,0 +1,95 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        with:
+          category: /language:${{ matrix.language }}
+          output: sarif-results
+
+      - name: Gate on high/critical severity
+        env:
+          LANG_CATEGORY: ${{ matrix.language }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          read -r -d '' JQ_FILTER <<'JQ' || true
+          .runs[] as $run
+          | $run.results[]
+          | . as $r
+          | [ $run.tool.driver.rules[] | select(.id == $r.ruleId) ][0] as $rule
+          | (
+              ($r.properties["security-severity"] // $rule.properties["security-severity"] // "0")
+              | tonumber
+            ) as $sev
+          | select($sev >= 7.0)
+          | [
+              $r.ruleId,
+              ($sev | tostring),
+              ($r.locations[0].physicalLocation.artifactLocation.uri // "unknown"),
+              ($r.locations[0].physicalLocation.region.startLine // 0 | tostring),
+              ($r.message.text | gsub("[\n\t]"; " "))
+            ] | @tsv
+          JQ
+          total=0
+          for f in sarif-results/*.sarif; do
+            mapfile -t findings < <(jq -r "$JQ_FILTER" "$f")
+            if [ "${#findings[@]}" -gt 0 ]; then
+              echo "::group::$(basename "$f") — ${#findings[@]} high/critical finding(s)"
+              for line in "${findings[@]}"; do
+                IFS=$'\t' read -r rule sev uri lineno msg <<<"$line"
+                echo "  [$rule severity=$sev] $uri:$lineno — $msg"
+              done
+              echo "::endgroup::"
+              total=$((total + ${#findings[@]}))
+            fi
+          done
+          if [ "$total" -gt 0 ]; then
+            echo "::error::${total} high/critical severity CodeQL finding(s) in ${LANG_CATEGORY}. Fix them, or dismiss with justification in the Security tab if a false positive."
+            exit 1
+          fi
+          echo "No high/critical CodeQL findings in ${LANG_CATEGORY}."
