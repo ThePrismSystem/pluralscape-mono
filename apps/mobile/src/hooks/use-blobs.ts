@@ -101,6 +101,13 @@ type BlobUploadStatus =
 interface BlobUploadInput {
   readonly purpose: BlobPurpose;
   readonly mimeType: string;
+  /**
+   * **Exact on-the-wire byte count** of `file`. For encrypted uploads this
+   * is the ciphertext length (nonce + MAC + body), not the plaintext size.
+   * The server forwards this value into the presigned PUT's SigV4
+   * signature as a `Content-Length` constraint, so any mismatch fails
+   * with 403 `SignatureDoesNotMatch` at the storage layer.
+   */
   readonly sizeBytes: number;
   readonly encryptionTier: EncryptionTier;
   readonly file: Blob | ArrayBuffer;

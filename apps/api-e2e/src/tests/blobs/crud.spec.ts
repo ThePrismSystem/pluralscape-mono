@@ -27,13 +27,14 @@ async function requestUploadUrl(
   request: APIRequestContext,
   authHeaders: Record<string, string>,
   systemId: string,
+  options?: { sizeBytes?: number },
 ): Promise<UploadUrlResponse> {
   const res = await request.post(`/v1/systems/${systemId}/blobs/upload-url`, {
     headers: authHeaders,
     data: {
       purpose: "avatar",
       mimeType: "image/png",
-      sizeBytes: BLOB_SIZE_BYTES,
+      sizeBytes: options?.sizeBytes ?? BLOB_SIZE_BYTES,
       encryptionTier: 1,
     },
   });
@@ -210,6 +211,41 @@ test.describe("Blobs CRUD", () => {
     // Content-Length mismatches. Either is an acceptable rejection.
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
+  });
+
+  /**
+   * Locks in the SigV4 exact-size contract documented on
+   * `PresignedUploadParams.sizeBytes`: declare N bytes when requesting the
+   * upload URL, then PUT N+1 bytes. The Content-Length constraint baked
+   * into the signature must reject this with 403 SignatureDoesNotMatch.
+   */
+  test("presigned PUT rejects exact Content-Length mismatch with 403", async ({
+    request,
+    authHeaders,
+  }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const declaredSize = 16;
+    const upload = await requestUploadUrl(request, authHeaders, systemId, {
+      sizeBytes: declaredSize,
+    });
+
+    // Body is exactly one byte longer than declared so the SigV4
+    // Content-Length constraint rejects it at the S3 layer.
+    const mismatchedBody = Buffer.alloc(declaredSize + 1, 0x61);
+
+    const putResponse = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      body: mismatchedBody,
+      headers: {
+        "Content-Type": "image/png",
+        "Content-Length": String(mismatchedBody.length),
+        "If-None-Match": "*",
+      },
+    });
+
+    expect(putResponse.status).toBe(403);
+    const body = await putResponse.text();
+    expect(body).toContain("SignatureDoesNotMatch");
   });
 
   /**
