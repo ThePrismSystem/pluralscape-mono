@@ -246,8 +246,7 @@ describe("createChainedBackend", () => {
     const result = await resolveOnce(backend, "es", "common");
     expect(result).toEqual({ hello: "stale" });
     expect(warnSpy).toHaveBeenCalledWith(
-      "i18n OTA fetch failed, falling back: es/common",
-      expect.anything(),
+      expect.stringContaining("i18n OTA fetch failed, falling back: es/common"),
     );
     warnSpy.mockRestore();
   });
@@ -280,8 +279,7 @@ describe("createChainedBackend", () => {
 
     expect(translations).toEqual({ fallback: "yes" });
     expect(warnSpy).toHaveBeenCalledWith(
-      "i18n OTA fetch failed, falling back: es/common",
-      expect.anything(),
+      expect.stringContaining("i18n OTA fetch failed, falling back: es/common"),
     );
     expect(loadBundled).toHaveBeenCalledWith("es", "common");
     warnSpy.mockRestore();

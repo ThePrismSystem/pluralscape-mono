@@ -17252,13 +17252,14 @@ components:
         schemaVersion:
           type: integer
           enum:
-            - 1
+            - 2
         checkpoint:
           type: object
           required:
             - completedCollections
             - currentCollection
             - currentCollectionLastSourceId
+            - realPrivacyBucketsMapped
           properties:
             completedCollections:
               type: array
@@ -17269,6 +17270,8 @@ components:
             currentCollectionLastSourceId:
               type: string
               nullable: true
+            realPrivacyBucketsMapped:
+              type: boolean
         options:
           type: object
           required:

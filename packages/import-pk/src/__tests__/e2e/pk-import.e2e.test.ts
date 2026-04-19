@@ -98,8 +98,9 @@ function defineImportSuite(
 
       const nonFatal = result.errors.filter((e) => !e.fatal);
       for (const e of nonFatal) {
-        expect(e.kind, `non-fatal error missing kind: ${JSON.stringify(e)}`).toBeDefined();
-        if (e.kind === undefined) continue; // unreachable — expect above throws
+        if (e.kind === undefined) {
+          throw new Error(`non-fatal error missing kind: ${JSON.stringify(e)}`);
+        }
         expect(
           EXPECTED_KINDS.includes(e.kind),
           `unexpected non-fatal error kind: ${JSON.stringify(e)}`,
@@ -179,7 +180,6 @@ describe.skipIf(!canRunFileSource)("PK Import E2E — Checkpoint Resume", () => 
     });
 
     expect(abortResult.outcome).toBe("aborted");
-    expect(abortedCheckpoint).toBeDefined();
     if (!abortedCheckpoint) {
       throw new Error("abort checkpoint was not captured");
     }
@@ -231,7 +231,6 @@ describe.skipIf(!canRunFileSource)("PK Import E2E — Checkpoint Resume", () => 
     });
 
     expect(abortResult.outcome).toBe("aborted");
-    expect(abortedCheckpoint).toBeDefined();
     if (!abortedCheckpoint) {
       throw new Error("abort checkpoint was not captured");
     }

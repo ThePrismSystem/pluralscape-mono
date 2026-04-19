@@ -369,30 +369,32 @@ describe("SystemOverviewReport", () => {
 });
 
 describe("ImportCheckpointState", () => {
-  it("captures resumption state with schema version 1", () => {
+  it("captures resumption state with schema version 2", () => {
     const state: ImportCheckpointState = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       checkpoint: {
         completedCollections: ["member", "group"],
         currentCollection: "fronting-session",
         currentCollectionLastSourceId: "507f1f77bcf86cd799439011",
+        realPrivacyBucketsMapped: true,
       },
       options: {
         selectedCategories: {
           member: true,
           group: true,
           note: false,
-        } as Record<ImportCollectionType, boolean | undefined>,
+        } satisfies Partial<Record<ImportCollectionType, boolean>>,
         avatarMode: "api",
       },
       totals: {
         perCollection: {
           member: { total: 20, imported: 20, updated: 0, skipped: 0, failed: 0 },
-        } as Record<ImportCollectionType, ImportCollectionTotals | undefined>,
+        } satisfies Partial<Record<ImportCollectionType, ImportCollectionTotals>>,
       },
     };
-    expectTypeOf(state.schemaVersion).toEqualTypeOf<1>();
+    expectTypeOf(state.schemaVersion).toEqualTypeOf<2>();
     expectTypeOf(state.checkpoint.currentCollection).toEqualTypeOf<ImportCollectionType>();
+    expectTypeOf(state.checkpoint.realPrivacyBucketsMapped).toEqualTypeOf<boolean>();
     expectTypeOf(state.options.avatarMode).toEqualTypeOf<ImportAvatarMode>();
   });
 });

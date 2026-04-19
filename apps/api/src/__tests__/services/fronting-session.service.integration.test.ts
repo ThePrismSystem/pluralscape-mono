@@ -344,7 +344,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       expect(page1.hasMore).toBe(true);
 
       const firstId = page1.data[0]?.id;
-      expect(firstId).toBeDefined();
+      expect(typeof firstId).toBe("string");
 
       // Use the first page's item ID as cursor
       const page2 = await listFrontingSessions(asDb(db), systemId, auth, {

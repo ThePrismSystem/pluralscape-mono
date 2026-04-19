@@ -12,7 +12,7 @@ vi.mock("hono/bun", () => ({
 }));
 
 const { app } = await import("../../../index.js");
-const { _resetI18nDepsForTesting } = await import("../../../routes/i18n/index.js");
+const { _resetI18nDepsForTesting } = await import("../../../services/i18n-deps.js");
 
 describe("v1 i18n route mounting", () => {
   beforeEach(() => {

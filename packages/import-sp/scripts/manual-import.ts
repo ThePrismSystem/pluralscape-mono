@@ -19,7 +19,8 @@
 import { readFileSync } from "node:fs";
 import process from "node:process";
 
-import { emptyCheckpointState } from "../src/engine/checkpoint.js";
+import { emptyCheckpointState } from "@pluralscape/import-core";
+
 import { collectionToEntityType } from "../src/engine/entity-type-map.js";
 import { runImport } from "../src/engine/import-engine.js";
 import { createFileImportSource } from "../src/sources/file-source.js";

@@ -105,8 +105,8 @@ describe("decryptEmail", () => {
     // Flip a byte in the ciphertext portion
     const corruptIndex = AEAD_NONCE_BYTES + 1;
     const original = encrypted[corruptIndex];
-    expect(original).toBeDefined();
-    encrypted[corruptIndex] = (original as number) ^ 0xff;
+    if (original === undefined) throw new Error("expected byte at corruptIndex");
+    encrypted[corruptIndex] = original ^ 0xff;
     expect(() => decryptEmail(encrypted)).toThrow();
   });
 

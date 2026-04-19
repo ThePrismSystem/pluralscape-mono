@@ -230,7 +230,7 @@ describe("errorHandler", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.details).toBeDefined();
+    expect(body.error.details).not.toBeUndefined();
   });
 
   it("ApiHttpError 5xx is masked in production", async () => {

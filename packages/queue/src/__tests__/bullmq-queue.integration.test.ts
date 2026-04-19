@@ -223,7 +223,7 @@ describe.skipIf(!ctx.available)("createValkeyConnection", () => {
     const conn = createValkeyConnection({ host: "localhost", port: VALKEY_TEST_PORT, tls: true });
     // ioredis exposes the resolved options on the instance
     const opts = conn.options;
-    expect(opts.tls).toBeDefined();
+    expect(opts.tls).toBeTruthy();
     // Disconnect immediately — no await needed since we never connected
     conn.disconnect();
   });

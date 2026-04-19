@@ -207,7 +207,7 @@ describe("createApiImportSource", () => {
       .mockResolvedValueOnce(jsonResponse([{ _id: "n3", title: "Note C", member: "m2" }]));
 
     const source = createApiImportSource(DEFAULT_INPUT);
-    expect(Reflect.get(source, "supplyParentIds")).toBeDefined();
+    expect(typeof Reflect.get(source, "supplyParentIds")).toBe("function");
     callSupplyParentIds(source, "members", ["m1", "m2"]);
     const ids = await drain(source, "notes");
     await source.close();

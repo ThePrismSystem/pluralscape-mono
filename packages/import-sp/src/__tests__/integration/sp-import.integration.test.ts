@@ -89,9 +89,9 @@ function assertAllEntitiesPresent(
     const entityType = COLLECTION_TO_ENTITY_TYPE[key];
     for (const entry of manifest[key]) {
       expect(
-        snap.find(entityType, entry.sourceId),
+        snap.find(entityType, entry.sourceId)?.sourceEntityId,
         `missing ${entityType} with sourceId ${entry.sourceId}`,
-      ).toBeDefined();
+      ).toBe(entry.sourceId);
     }
   }
 }
@@ -124,7 +124,6 @@ function assertPayloadSpotChecks(
     if (!entity) {
       throw new Error(`first member entity should exist (sourceId=${firstMember.sourceId})`);
     }
-    expect(entity.payload).toBeDefined();
     expect(memberName(entity.payload)).toBe(firstMember.fields["name"]);
   }
 
@@ -137,7 +136,7 @@ function assertPayloadSpotChecks(
         `first custom front entity should exist (sourceId=${firstCustomFront.sourceId})`,
       );
     }
-    expect(entity.payload).toBeDefined();
+    expect(entity.payload).not.toBeNull();
   }
 
   // Check first note has a payload with a title field
@@ -148,7 +147,6 @@ function assertPayloadSpotChecks(
       if (!entity) {
         throw new Error(`first note entity should exist (sourceId=${firstNote.sourceId})`);
       }
-      expect(entity.payload).toBeDefined();
       const payload = entity.payload as { encrypted: Record<string, unknown> };
       expect(payload.encrypted["title"]).toBe(firstNote.fields["title"]);
     }
@@ -159,15 +157,14 @@ function assertPayloadSpotChecks(
   // contain this ref — a missing entry indicates seeder/test drift, not an
   // expected skip. Adversarial mode may omit it.
   const aliceEntry = findByRef(manifest, "member.alice");
-  if (mode === "minimal") {
-    expect(aliceEntry, "minimal fixture must include member.alice ref").toBeDefined();
+  if (mode === "minimal" && !aliceEntry) {
+    throw new Error("minimal fixture must include member.alice ref");
   }
   if (aliceEntry) {
     const entity = snap.find("member", aliceEntry.sourceId);
     if (!entity) {
       throw new Error(`member.alice entity should exist (sourceId=${aliceEntry.sourceId})`);
     }
-    expect(entity.payload).toBeDefined();
     expect(memberName(entity.payload)).toBe(aliceEntry.fields["name"]);
   }
 }
@@ -353,7 +350,6 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
       abortSignal: abortController.signal,
     });
     expect(abortResult.outcome).toBe("aborted");
-    expect(abortedCheckpoint).toBeDefined();
     if (!abortedCheckpoint) {
       throw new Error("abort checkpoint was not captured");
     }

@@ -1,5 +1,9 @@
 import { env } from "../env.js";
-import { InMemoryValkeyCacheClient, ValkeyCache } from "../lib/valkey-cache.js";
+import {
+  assertInMemoryCacheAllowed,
+  InMemoryValkeyCacheClient,
+  ValkeyCache,
+} from "../lib/valkey-cache.js";
 import { getSharedValkeyClient } from "../middleware/rate-limit.js";
 
 import { CrowdinOtaService } from "./crowdin-ota.service.js";
@@ -48,6 +52,9 @@ export function getI18nDeps(): I18nDeps | null {
   const hash = env.CROWDIN_DISTRIBUTION_HASH;
   if (!hash) return null;
   const sharedClient = getSharedValkeyClient();
+  if (sharedClient === undefined) {
+    assertInMemoryCacheAllowed("i18n-deps");
+  }
   const cacheClient = sharedClient ?? new InMemoryValkeyCacheClient();
   memoizedDeps = {
     ota: new CrowdinOtaService({
@@ -59,12 +66,7 @@ export function getI18nDeps(): I18nDeps | null {
   return memoizedDeps;
 }
 
-/**
- * Test-only: drop the memoized deps so each test starts fresh. Prevents
- * cross-test leakage when one test mutates env / Valkey slots. Both the
- * REST route module and the tRPC composer re-export this under their own
- * aliased names for backwards-compatible test harnesses.
- */
+/** Test-only: drop the memoized deps so each test starts fresh. */
 export function _resetI18nDepsForTesting(): void {
   memoizedDeps = null;
 }

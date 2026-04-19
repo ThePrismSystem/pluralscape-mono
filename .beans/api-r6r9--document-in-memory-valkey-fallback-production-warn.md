@@ -1,11 +1,11 @@
 ---
 # api-r6r9
 title: Document in-memory Valkey fallback + production warning
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-18T01:43:09Z
-updated_at: 2026-04-18T01:43:09Z
+updated_at: 2026-04-19T10:17:28Z
 parent: ps-0enb
 ---
 
@@ -30,3 +30,11 @@ Surface the in-memory-fallback behavior in operational docs and add a startup wa
 ## Notes
 
 Non-urgent. The fallback is safe; this bean is about operator visibility.
+
+## Summary of Changes
+
+- `InMemoryValkeyCacheClient` constructor emits `logger.warn` at first construction, giving operators a searchable startup signal.
+- `getI18nDeps()` refuses to build the fallback in `NODE_ENV=production` unless `ALLOW_IN_MEMORY_CACHE=1` is set — forces a conscious opt-in rather than silent degradation.
+- New env var `ALLOW_IN_MEMORY_CACHE` added to the API env schema.
+- Deployment docs updated adjacent to `VALKEY_URL` explaining the fallback, the gate, and the warn signal.
+- Unit test in `i18n-deps.test.ts` exercises both branches (gate fires / gate respects opt-in).

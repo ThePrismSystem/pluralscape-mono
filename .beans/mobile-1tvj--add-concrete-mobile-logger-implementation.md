@@ -1,11 +1,11 @@
 ---
 # mobile-1tvj
 title: Add concrete mobile logger implementation
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-17T23:26:13Z
-updated_at: 2026-04-17T23:26:13Z
+updated_at: 2026-04-19T11:57:31Z
 parent: ps-0enb
 ---
 
@@ -30,3 +30,14 @@ Provide a concrete `Logger` implementation suitable for React Native + web so mo
 ## Notes
 
 Non-urgent — current `globalThis.console` usage is the established pattern and not blocking any feature. This bean exists to track the eventual cleanup and to centralize a proper PII-redaction boundary before we start logging user content (innerworld, member data, etc.).
+
+## Summary of Changes
+
+- New shared workspace package `@pluralscape/logger` exposing the `Logger` type (re-exported from `@pluralscape/types`) and a `createMobileLogger()` factory wrapping `globalThis.console.{info,warn,error}` with a JSON-serialized payload and an optional `redact` hook.
+- Subpath export `@pluralscape/logger/mobile` so web can add a sibling factory without restructuring.
+- Module-level singleton at `apps/mobile/src/lib/logger.ts`.
+- Migrated 8 mobile `globalThis.console.*` call sites to the structured logger.
+- Updated tests that verified the old positional-args console signature to match the new `logger.warn(message, payload)` contract.
+- Unit tests in `packages/logger/src/__tests__/mobile.test.ts` cover info/warn/error forwarding, payload serialization, redact hook, and default-console behavior.
+
+Web factory (`createWebLogger`) intentionally deferred until the web app lands.

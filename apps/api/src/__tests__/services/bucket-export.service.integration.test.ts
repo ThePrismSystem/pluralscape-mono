@@ -215,7 +215,6 @@ describe("bucket-export.service (PGlite integration)", () => {
     const manifest = await getBucketExportManifest(asDb(db), systemId, bucketId, ownerAuth);
 
     const memberEntry = manifest.entries.find((e) => e.entityType === "member");
-    expect(memberEntry).toBeDefined();
     expect(memberEntry?.count).toBe(2);
   });
 

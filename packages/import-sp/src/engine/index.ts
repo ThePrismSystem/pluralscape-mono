@@ -3,8 +3,8 @@ export {
   completeCollection,
   emptyCheckpointState,
   resumeStartCollection,
-} from "./checkpoint.js";
-export type { AdvanceDelta } from "./checkpoint.js";
+} from "@pluralscape/import-core";
+export type { AdvanceDelta } from "@pluralscape/import-core";
 export { DEPENDENCY_ORDER, collectionsAfter, nextCollection } from "./dependency-order.js";
 export { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine-errors.js";
 export type { ClassifyContext } from "./engine-errors.js";

@@ -121,8 +121,8 @@ describe("InMemoryEmailAdapter", () => {
     const after = new Date();
 
     const last = adapter.lastSent;
-    expect(last).toBeDefined();
-    if (last === undefined) return;
+    if (last === undefined)
+      throw new Error("expected adapter.lastSent to be populated after send()");
     expect(last.sentAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
     expect(last.sentAt.getTime()).toBeLessThanOrEqual(after.getTime());
   });

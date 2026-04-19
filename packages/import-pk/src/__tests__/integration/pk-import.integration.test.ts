@@ -90,7 +90,7 @@ describe("PK Import — minimal fixture", () => {
 
   it("maps Alice with correct fields", () => {
     const alice = snap.find("member", "alice1");
-    expect(alice).toBeDefined();
+    expect(alice?.sourceEntityId).toBe("alice1");
     const payload = alice?.payload as PkMappedMember;
     expect(payload.encrypted.name).toBe("Alice");
     expect(payload.encrypted.pronouns).toEqual(["she/her"]);
@@ -103,7 +103,7 @@ describe("PK Import — minimal fixture", () => {
 
   it("maps Bob with correct fields", () => {
     const bob = snap.find("member", "bob02");
-    expect(bob).toBeDefined();
+    expect(bob?.sourceEntityId).toBe("bob02");
     const payload = bob?.payload as PkMappedMember;
     expect(payload.encrypted.name).toBe("Bob");
     expect(payload.encrypted.pronouns).toEqual(["he/him"]);
@@ -112,7 +112,7 @@ describe("PK Import — minimal fixture", () => {
 
   it("maps Charlie with correct fields", () => {
     const charlie = snap.find("member", "charl");
-    expect(charlie).toBeDefined();
+    expect(charlie?.sourceEntityId).toBe("charl");
     const payload = charlie?.payload as PkMappedMember;
     expect(payload.encrypted.name).toBe("Charlie");
     expect(payload.encrypted.pronouns).toEqual(["they/them"]);
@@ -137,14 +137,14 @@ describe("PK Import — minimal fixture", () => {
 
   it("Group A has 2 resolved member IDs", () => {
     const groupA = snap.find("group", "grp_a");
-    expect(groupA).toBeDefined();
+    expect(groupA?.sourceEntityId).toBe("grp_a");
     const payload = groupA?.payload as PkMappedGroup;
     expect(payload.memberIds).toHaveLength(2);
   });
 
   it("Group B has 1 resolved member ID", () => {
     const groupB = snap.find("group", "grp_b");
-    expect(groupB).toBeDefined();
+    expect(groupB?.sourceEntityId).toBe("grp_b");
     const payload = groupB?.payload as PkMappedGroup;
     expect(payload.memberIds).toHaveLength(1);
   });
@@ -181,12 +181,12 @@ describe("PK Import — minimal fixture", () => {
   it("creates PK Private privacy bucket for Alice", () => {
     expect(snap.countByType("privacy-bucket")).toBe(1);
     const bucket = snap.find("privacy-bucket", "synthetic:pk-private");
-    expect(bucket).toBeDefined();
+    expect(bucket?.sourceEntityId).toBe("synthetic:pk-private");
   });
 
   it("PK Private bucket payload contains correct name", () => {
     const bucket = snap.find("privacy-bucket", "synthetic:pk-private");
-    expect(bucket).toBeDefined();
+    expect(bucket?.sourceEntityId).toBe("synthetic:pk-private");
     const payload = bucket?.payload as { encrypted: { name: string } };
     expect(payload.encrypted.name).toBe("PK Private");
   });
@@ -250,21 +250,17 @@ describe("PK Import — adversarial fixture", () => {
 
   it("preserves unicode names correctly", () => {
     const elise = snap.find("member", "elise1");
-    expect(elise).toBeDefined();
     expect((elise?.payload as PkMappedMember).encrypted.name).toBe("\u00c9lise");
 
     const cjk = snap.find("member", "cjk01");
-    expect(cjk).toBeDefined();
     expect((cjk?.payload as PkMappedMember).encrypted.name).toBe("\u5149\u306e\u5b50");
 
     const sigma = snap.find("member", "sigma1");
-    expect(sigma).toBeDefined();
     expect((sigma?.payload as PkMappedMember).encrypted.name).toBe(
       "\u03a3\u03b9\u03b3\u03bc\u03b1",
     );
 
     const wave = snap.find("member", "wave01");
-    expect(wave).toBeDefined();
     expect((wave?.payload as PkMappedMember).encrypted.name).toBe("\ud83c\udf0a Wave");
   });
 
@@ -281,7 +277,7 @@ describe("PK Import — adversarial fixture", () => {
 
   it("Ghost Ref Group still created with partial membership", () => {
     const ghostGroup = snap.find("group", "grp_ghost");
-    expect(ghostGroup).toBeDefined();
+    expect(ghostGroup?.sourceEntityId).toBe("grp_ghost");
     const payload = ghostGroup?.payload as PkMappedGroup;
     // Only elise1 should be resolved; nonexistent_member_id is dropped
     expect(payload.memberIds).toHaveLength(1);
@@ -289,7 +285,7 @@ describe("PK Import — adversarial fixture", () => {
 
   it("All Members group has 4 resolved member IDs (empty-name skipped)", () => {
     const allGroup = snap.find("group", "grp_all");
-    expect(allGroup).toBeDefined();
+    expect(allGroup?.sourceEntityId).toBe("grp_all");
     const payload = allGroup?.payload as PkMappedGroup;
     // elise1, cjk01, sigma1, wave01 — all should resolve
     expect(payload.memberIds).toHaveLength(4);
@@ -297,7 +293,7 @@ describe("PK Import — adversarial fixture", () => {
 
   it("Empty Group has 0 member IDs", () => {
     const emptyGroup = snap.find("group", "grp_empty");
-    expect(emptyGroup).toBeDefined();
+    expect(emptyGroup?.sourceEntityId).toBe("grp_empty");
     const payload = emptyGroup?.payload as PkMappedGroup;
     expect(payload.memberIds).toHaveLength(0);
   });
@@ -340,7 +336,7 @@ describe("PK Import — adversarial fixture", () => {
 
   it("PK Private bucket payload contains correct name", () => {
     const bucket = snap.find("privacy-bucket", "synthetic:pk-private");
-    expect(bucket).toBeDefined();
+    expect(bucket?.sourceEntityId).toBe("synthetic:pk-private");
     const payload = bucket?.payload as { encrypted: { name: string } };
     expect(payload.encrypted.name).toBe("PK Private");
   });

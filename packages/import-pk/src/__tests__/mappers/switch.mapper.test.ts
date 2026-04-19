@@ -219,7 +219,6 @@ describe("mapSwitchBatch", () => {
 
     expect(sessions).toHaveLength(1);
     const first = sessions[0];
-    expect(first).toBeDefined();
     const p = payload(first as BatchMapperOutput);
     expect(p.customFrontId).toBeUndefined();
     expect(p.structureEntityId).toBeUndefined();
@@ -235,7 +234,6 @@ describe("mapSwitchBatch", () => {
 
     expect(results).toHaveLength(1);
     const first = results[0];
-    expect(first).toBeDefined();
     if (first !== undefined) {
       expect(first.sourceEntityId).toBe(`session:A:${String(Date.parse(t1))}`);
     }

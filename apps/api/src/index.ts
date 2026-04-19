@@ -15,6 +15,7 @@ import { setNotificationPubSub } from "./lib/notification-pubsub.js";
 import { sanitizeS3Error } from "./lib/s3-log-sanitizer.js";
 import { assertSmtpSecure } from "./lib/smtp-tls-guard.js";
 import { initStorageAdapter } from "./lib/storage.js";
+import { assertInMemoryCacheAllowed } from "./lib/valkey-cache.js";
 import { accessLogMiddleware } from "./middleware/access-log.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -208,6 +209,7 @@ async function start(): Promise<void> {
       const idempotencyStore = await ValkeyIdempotencyStore.create(valkeyUrl);
       setIdempotencyStore(idempotencyStore);
     } catch (error: unknown) {
+      assertInMemoryCacheAllowed("idempotency-store");
       logger.warn("Failed to create Valkey idempotency store, using in-memory fallback", {
         err: error instanceof Error ? error : new Error(String(error)),
       });
@@ -224,6 +226,7 @@ async function start(): Promise<void> {
       setNotificationPubSub(notifyPubSub);
       logger.info("Notification SSE pub/sub connected");
     } else {
+      assertInMemoryCacheAllowed("notify-pubsub");
       logger.warn("Notification SSE pub/sub failed — cross-instance notifications disabled");
     }
 
@@ -237,14 +240,18 @@ async function start(): Promise<void> {
       setSyncPubSub(syncPubSub);
       logger.info("Sync WebSocket pub/sub connected");
     } else {
+      assertInMemoryCacheAllowed("sync-pubsub");
       logger.warn("Sync WebSocket pub/sub failed — cross-instance broadcast disabled");
     }
-  } else if (env.NODE_ENV === "production") {
-    logger.warn(
-      "VALKEY_URL not configured — rate limiting and login throttling use in-memory stores. " +
-        "In multi-instance deployments, limits are per-process and can be bypassed " +
-        "by distributing requests across instances.",
-    );
+  } else {
+    assertInMemoryCacheAllowed("rate-limit-store");
+    if (env.NODE_ENV === "production") {
+      logger.warn(
+        "VALKEY_URL not configured — rate limiting and login throttling use in-memory stores. " +
+          "In multi-instance deployments, limits are per-process and can be bypassed " +
+          "by distributing requests across instances.",
+      );
+    }
   }
 
   let httpServer: { stop(): Promise<void> | void } | null = null;
@@ -281,4 +288,10 @@ async function start(): Promise<void> {
   process.on("SIGINT", handleShutdown);
 }
 
-void start();
+// Skip start() under vitest — tests that `import` this module only need the
+// exported `shutdown` helper. Running start() unawaited lets its dynamic
+// imports (e.g. `@pluralscape/email`) race the vitest environment teardown,
+// producing spurious EnvironmentTeardownError unhandled rejections.
+if (!process.env["VITEST"]) {
+  void start();
+}

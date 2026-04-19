@@ -281,8 +281,8 @@ describe("message router", () => {
       });
 
       const opts = vi.mocked(listMessages).mock.calls[0]?.[4];
-      expect(opts?.before).toBeDefined();
-      expect(opts?.after).toBeDefined();
+      expect(opts?.before).toBe(BEFORE_TS);
+      expect(opts?.after).toBe(AFTER_TS);
     });
 
     it("passes undefined before/after when not provided", async () => {
@@ -436,7 +436,7 @@ describe("message router", () => {
       });
 
       const opts = vi.mocked(deleteMessage).mock.calls[0]?.[5];
-      expect(opts?.timestamp).toBeDefined();
+      expect(opts?.timestamp).toBe(VALID_TIMESTAMP);
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -505,7 +505,7 @@ describe("message router", () => {
       await gen.return(undefined);
 
       expect(first.done).toBe(false);
-      expect(first.value).toBeDefined();
+      expect(first.value).not.toBeUndefined();
     });
 
     it("filters out events for a different channelId (channelId-mismatch branch)", async () => {

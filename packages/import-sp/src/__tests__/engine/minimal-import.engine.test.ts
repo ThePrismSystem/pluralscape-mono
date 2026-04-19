@@ -11,9 +11,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { emptyCheckpointState } from "@pluralscape/import-core";
 import { describe, expect, it } from "vitest";
 
-import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { DEPENDENCY_ORDER } from "../../engine/dependency-order.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
@@ -79,10 +79,10 @@ describe("import engine — minimal end-to-end import", () => {
     const fieldDef = state.find("field-definition", "cf_00000001");
     const member = state.find("member", "m_00000001");
     const session = state.find("fronting-session", "fh_00000001");
-    expect(bucket).toBeDefined();
-    expect(fieldDef).toBeDefined();
-    expect(member).toBeDefined();
-    expect(session).toBeDefined();
+    expect(bucket?.sourceEntityId).toBe("bk_00000001");
+    expect(fieldDef?.sourceEntityId).toBe("cf_00000001");
+    expect(member?.sourceEntityId).toBe("m_00000001");
+    expect(session?.sourceEntityId).toBe("fh_00000001");
 
     // Every collection in DEPENDENCY_ORDER is visited and marked as completed
     // on a clean run, even when the source has no documents for it.

@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { emptyCheckpointState } from "../../engine/checkpoint.js";
+import { emptyCheckpointState } from "@pluralscape/import-core";
+
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { createApiImportSource } from "../../sources/api-source.js";
 import { createFileImportSource } from "../../sources/file-source.js";

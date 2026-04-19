@@ -82,7 +82,6 @@ describe("system-duplicate.service (PGlite integration)", () => {
 
       // Verify the new system exists in DB
       const [newSystem] = await db.select().from(systems).where(eq(systems.id, result.id));
-      expect(newSystem).toBeDefined();
       expect(newSystem?.accountId).toBe(accountId);
 
       // Verify audit event
@@ -95,14 +94,14 @@ describe("system-duplicate.service (PGlite integration)", () => {
 
       // Source system still exists
       const [sourceSystem] = await db.select().from(systems).where(eq(systems.id, systemId));
-      expect(sourceSystem).toBeDefined();
+      expect(sourceSystem?.id).toBe(systemId);
 
       // Source snapshot still exists
       const [snapshot] = await db
         .select()
         .from(systemSnapshots)
         .where(eq(systemSnapshots.id, snapshotId));
-      expect(snapshot).toBeDefined();
+      expect(snapshot?.id).toBe(snapshotId);
     });
 
     it("rejects duplication for nonexistent source system", async () => {

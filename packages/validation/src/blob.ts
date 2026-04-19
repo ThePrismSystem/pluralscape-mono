@@ -32,6 +32,10 @@ export const CreateUploadUrlBodySchema = z
   .object({
     purpose: BlobPurposeEnum,
     mimeType: z.string().min(1).max(MAX_MIME_TYPE_LENGTH),
+    // Exact ciphertext byte count — the API passes this into the S3
+    // presigned PUT's Content-Length, signed by SigV4. Any mismatch at
+    // upload surfaces as 403 SignatureDoesNotMatch. See docs in
+    // packages/storage/src/interface.ts (PresignedUploadParams.sizeBytes).
     sizeBytes: z.int().min(1),
     encryptionTier: z.union([z.literal(1), z.literal(2)]),
   })

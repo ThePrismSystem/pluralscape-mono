@@ -86,11 +86,15 @@ function buildMidMemberCheckpoint(): ImportCheckpointState {
     memberIndex,
   ).map((c) => collectionToEntityType(c));
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     checkpoint: {
       completedCollections,
       currentCollection: "member",
       currentCollectionLastSourceId: RESUME_CUTOFF_SOURCE_ID,
+      // Resume-before-members fixture has no real privacy buckets persisted
+      // yet — synthesis must fire on resume so members resolve their
+      // `synthetic:*` references. Matches the comment above this builder.
+      realPrivacyBucketsMapped: false,
     },
     options: { selectedCategories: {}, avatarMode: "skip" },
     totals: { perCollection: {} },
@@ -156,7 +160,7 @@ describe("import engine — resume from mid-collection checkpoint", () => {
     }
     for (let i = RESUME_CUTOFF_INDEX + 1; i <= TOTAL_MEMBERS_IN_FIXTURE; i += 1) {
       const sourceId = `m_${String(i).padStart(ID_PAD_WIDTH, "0")}`;
-      expect(state.find("member", sourceId)).toBeDefined();
+      expect(state.find("member", sourceId)?.sourceEntityId).toBe(sourceId);
     }
 
     // Member totals in the checkpoint reflect only the resumed entities.

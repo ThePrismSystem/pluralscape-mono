@@ -51,7 +51,7 @@ describe("createValkeyStore", () => {
     // The client round-tripped from the bundle must be the same instance the
     // factory constructed — otherwise shared-client consumers would see
     // disconnected state vs. the rate-limit store.
-    expect(result?.client).toBeDefined();
+    expect(result?.client).not.toBeUndefined();
   });
 
   it("returns null when connection fails", async () => {

@@ -382,6 +382,6 @@ describe("LRU eviction (maxSize)", () => {
     // First versioned entry should be evicted
     expect(lruCache.getByVersion(bucket1, 1)).toBeUndefined();
     // Later entries should remain
-    expect(lruCache.getByVersion(bucket1, 7)).toBeDefined();
+    expect(lruCache.getByVersion(bucket1, 7)).not.toBeUndefined();
   });
 });

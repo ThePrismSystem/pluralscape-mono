@@ -233,8 +233,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
         .limit(1);
 
       const row = rows[0];
-      expect(row).toBeDefined();
-      if (!row) return;
+      if (!row) throw new Error("expected a recovery key row to be present");
       const stored =
         row.encryptedMasterKey instanceof Uint8Array
           ? row.encryptedMasterKey
@@ -322,8 +321,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
         .limit(1);
 
       const row = rows[0];
-      expect(row).toBeDefined();
-      if (!row) return;
+      if (!row) throw new Error("expected updated account row to exist");
       const stored =
         row.authKeyHash instanceof Uint8Array ? row.authKeyHash : new Uint8Array(row.authKeyHash);
       expect(stored).toEqual(hashAuthKey(newAuthKeyBytes));
@@ -406,8 +404,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
         .limit(1);
 
       const acct = acctRows[0];
-      expect(acct).toBeDefined();
-      if (!acct) return;
+      if (!acct) throw new Error("expected an account row for reset email");
 
       const rkRows = await db
         .select({ encryptedMasterKey: recoveryKeys.encryptedMasterKey })
@@ -421,8 +418,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
         .limit(1);
 
       const rkRow = rkRows[0];
-      expect(rkRow).toBeDefined();
-      if (!rkRow) return;
+      if (!rkRow) throw new Error("expected a recovery-key row after reset");
       const stored =
         rkRow.encryptedMasterKey instanceof Uint8Array
           ? rkRow.encryptedMasterKey

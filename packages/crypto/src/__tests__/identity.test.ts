@@ -41,12 +41,10 @@ afterAll(() => {
 describe("generateIdentityKeypair", () => {
   it("generates both X25519 and Ed25519 keypairs", () => {
     const identity = generateIdentityKeypair(masterKey);
-    expect(identity.encryption).toBeDefined();
-    expect(identity.encryption.publicKey).toBeDefined();
-    expect(identity.encryption.secretKey).toBeDefined();
-    expect(identity.signing).toBeDefined();
-    expect(identity.signing.publicKey).toBeDefined();
-    expect(identity.signing.secretKey).toBeDefined();
+    expect(identity.encryption.publicKey).toHaveLength(32);
+    expect(identity.encryption.secretKey).toHaveLength(32);
+    expect(identity.signing.publicKey).toHaveLength(32);
+    expect(identity.signing.secretKey).toHaveLength(64);
   });
 
   it("is deterministic — same master key = same keypairs", () => {

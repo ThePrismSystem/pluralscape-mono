@@ -24,6 +24,7 @@ export {
   completeCollection,
   bumpCollectionTotals,
   resumeStartCollection,
+  markRealPrivacyBucketsMapped,
 } from "./checkpoint.js";
 
 // Errors

@@ -111,7 +111,6 @@ describe("storage", () => {
 
       const service = getQuotaService(db);
 
-      expect(service).toBeDefined();
       expect(service).toHaveProperty("checkQuota");
       expect(service).toHaveProperty("getUsage");
       expect(service).toHaveProperty("assertQuota");

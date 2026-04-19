@@ -852,7 +852,7 @@ describe("parseFrontingSessionQuery", () => {
   it("returns parsed query for valid input", () => {
     const result = parseFrontingSessionQuery({});
 
-    expect(result).toBeDefined();
+    expect(typeof result).toBe("object");
   });
 
   it("parses valid activeOnly filter", () => {

@@ -139,7 +139,6 @@ describe("device-transfer.service (PGlite integration)", () => {
         .from(deviceTransferRequests)
         .where(eq(deviceTransferRequests.id, result.transferId));
 
-      expect(row).toBeDefined();
       expect(row?.accountId).toBe(accountId);
       expect(row?.sourceSessionId).toBe(sessionId);
       expect(row?.status).toBe("pending");
@@ -218,7 +217,7 @@ describe("device-transfer.service (PGlite integration)", () => {
         audit,
       );
 
-      expect(result.encryptedKeyMaterialHex).toBeDefined();
+      expect(typeof result.encryptedKeyMaterialHex).toBe("string");
       // 40 bytes = 80 hex chars (nonce + tag)
       expect(result.encryptedKeyMaterialHex.length).toBeGreaterThanOrEqual(80);
 

@@ -427,7 +427,6 @@ describe("S3BlobStorageAdapter constructor", () => {
       bucket: "b",
       region: "us-east-1",
     });
-    expect(adapter).toBeDefined();
     expect(adapter.supportsPresignedUrls).toBe(true);
   });
 
@@ -438,7 +437,7 @@ describe("S3BlobStorageAdapter constructor", () => {
       endpoint: "http://localhost:9000",
       forcePathStyle: false,
     });
-    expect(adapter).toBeDefined();
+    expect(adapter.supportsPresignedUrls).toBe(true);
   });
 
   it("uses configured presignedDownloadExpiryMs default when omitted", async () => {

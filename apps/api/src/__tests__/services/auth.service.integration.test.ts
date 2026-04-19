@@ -89,7 +89,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       } catch (err: unknown) {
         caught = err;
       }
-      expect(caught).toBeDefined();
+      expect(caught).toBeInstanceOf(Error);
       // Walk the cause chain to find the PG unique violation (code 23505)
       let current: unknown = caught;
       let foundViolation = false;
@@ -286,7 +286,6 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       expect(sessionList.length).toBeGreaterThanOrEqual(1);
       const first = sessionList[0];
-      expect(first).toBeDefined();
       if (first) {
         expect(first.id).toMatch(/^sess_/);
         expect(typeof first.createdAt).toBe("number");
@@ -313,7 +312,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       expect(page1.nextCursor).not.toBeNull();
 
       const rawCursor = page1.sessions[0]?.id;
-      expect(rawCursor).toBeDefined();
+      expect(typeof rawCursor).toBe("string");
 
       const page2 = await listSessions(asDb(db), brandId<AccountId>(reg.accountId), rawCursor, 1);
       expect(page2.sessions).toHaveLength(1);
@@ -330,7 +329,6 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const { sessions: before } = await listSessions(asDb(db), brandId<AccountId>(reg.accountId));
       expect(before.length).toBeGreaterThanOrEqual(1);
       const firstSession = before[0];
-      expect(firstSession).toBeDefined();
       if (!firstSession) return;
 
       const audit = spyAudit();
@@ -348,7 +346,6 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       expect(audit.calls).toHaveLength(1);
       const auditCall = audit.calls[0];
-      expect(auditCall).toBeDefined();
       if (auditCall) {
         expect(auditCall.eventType).toBe("auth.logout");
       }

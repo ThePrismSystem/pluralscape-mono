@@ -39,6 +39,8 @@ export const BUNDLED_NAMESPACES = ["common", "auth", "fronting", "members", "set
  * boundary: TypeScript cannot know the shape of arbitrary JSON files. Per-file
  * schema validation is heavier than the guarantee warrants.
  */
+import { logger } from "../src/lib/logger.js";
+
 export async function loadBundledNamespace(
   locale: string,
   namespace: string,
@@ -49,7 +51,9 @@ export async function loadBundledNamespace(
     };
     return mod.default;
   } catch (err: unknown) {
-    globalThis.console.warn(`bundled namespace load failed: ${locale}/${namespace}`, err);
+    logger.warn(`bundled namespace load failed: ${locale}/${namespace}`, {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return {};
   }
 }

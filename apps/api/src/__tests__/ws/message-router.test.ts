@@ -395,8 +395,8 @@ describe("message-router", () => {
       const responses = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
       const denied = responses.find((r) => r["code"] === "PERMISSION_DENIED");
       const subscribed = responses.find((r) => r["type"] === "SubscribeResponse");
-      expect(denied).toBeDefined();
-      expect(subscribed).toBeDefined();
+      expect(denied?.["code"]).toBe("PERMISSION_DENIED");
+      expect(subscribed?.["type"]).toBe("SubscribeResponse");
     });
 
     it("does not echo user input in unknown message type error", async () => {
@@ -1299,7 +1299,6 @@ describe("message-router", () => {
 
       const responses = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
       const subscribeResp = responses.find((r) => r["type"] === "SubscribeResponse");
-      expect(subscribeResp).toBeDefined();
       expect(subscribeResp?.["correlationId"]).toBe("550e8400-e29b-41d4-a716-446655440000");
       expect(subscribeResp?.["catchup"]).toEqual([]);
     });

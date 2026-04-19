@@ -192,7 +192,7 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       const adapter = new S3BlobStorageAdapter({ ...ctx.config, maxSizeBytes: 100 });
       const data = makeBytes(0xee, 50);
       const params = makeBlobData(data);
-      await expect(adapter.upload(params)).resolves.toBeDefined();
+      await adapter.upload(params);
     });
   });
 });

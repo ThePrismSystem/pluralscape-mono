@@ -24,6 +24,16 @@
  *    {@link classifyError}: fatal errors abort the run; non-fatal errors are
  *    recorded against the failing document and iteration continues.
  */
+import {
+  advanceWithinCollection,
+  bumpCollectionTotals,
+  completeCollection,
+  emptyCheckpointState,
+  markRealPrivacyBucketsMapped,
+  resumeStartCollection,
+  type AdvanceDelta,
+} from "@pluralscape/import-core";
+
 import { CHECKPOINT_CHUNK_SIZE } from "../import-sp.constants.js";
 import { synthesizeLegacyBuckets, type MappedPrivacyBucket } from "../mappers/bucket.mapper.js";
 import {
@@ -32,14 +42,6 @@ import {
   type MappingWarning,
 } from "../mappers/context.js";
 
-import {
-  advanceWithinCollection,
-  bumpCollectionTotals,
-  completeCollection,
-  emptyCheckpointState,
-  resumeStartCollection,
-  type AdvanceDelta,
-} from "./checkpoint.js";
 import { DEPENDENCY_ORDER } from "./dependency-order.js";
 import { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine-errors.js";
 import { collectionToEntityType, entityTypeToCollection } from "./entity-type-map.js";
@@ -272,18 +274,12 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     const startIndex = indexOfResumeCollection(state);
     const safeStartIndex = startIndex < 0 ? 0 : startIndex;
 
-    // Track how many privacyBuckets documents were successfully mapped and
-    // registered during the privacyBuckets pass. Used at member-collection entry
-    // to decide whether to synthesize the three legacy buckets. Counting only
-    // mapped (not yielded) docs avoids the bug where every bucket fails Zod
-    // validation yet the count stays > 0, silently leaving members with
-    // unresolved synthetic bucket references.
-    //
-    // When resuming past members, assume legacy synthesis (if any) already ran.
-    // When resuming into members directly we cannot know whether the previous
-    // run already synthesized the legacy buckets. The persister's idempotency
-    // guarantees re-synthesis is safe, so we conservatively re-run.
-    let privacyBucketsMapped = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
+    // Read the checkpointed flag rather than inferring from
+    // `completedCollections` — the flag is set as soon as at least one real
+    // privacy bucket is persisted within the current import job, so mid-
+    // member-collection resumes do not re-synthesize legacy buckets when
+    // the source had real ones.
+    let privacyBucketsMapped = state.checkpoint.realPrivacyBucketsMapped ? 1 : 0;
 
     for (
       let collectionIndex = safeStartIndex;
@@ -447,7 +443,12 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
               );
               ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
               persistedSourceIds.push(doc.sourceId);
-              if (collection === "privacyBuckets") privacyBucketsMapped += 1;
+              if (collection === "privacyBuckets") {
+                privacyBucketsMapped += 1;
+                // Persist the fact in the checkpoint so resumed runs do not
+                // re-synthesize legacy buckets when the source had real ones.
+                state = markRealPrivacyBucketsMapped(state);
+              }
               let upsertDelta: AdvanceDelta;
               switch (upsert.action) {
                 case "created":
@@ -573,4 +574,4 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
 }
 
 export { collectionToEntityType, entityTypeToCollection };
-export { emptyCheckpointState } from "./checkpoint.js";
+export { emptyCheckpointState } from "@pluralscape/import-core";

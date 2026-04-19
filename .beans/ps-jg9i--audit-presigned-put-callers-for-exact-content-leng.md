@@ -1,11 +1,12 @@
 ---
 # ps-jg9i
 title: Audit presigned PUT callers for exact Content-Length
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-17T17:49:15Z
-updated_at: 2026-04-17T17:49:15Z
+updated_at: 2026-04-19T10:09:00Z
+parent: ps-0enb
 ---
 
 Follow-up from PR #464 ps-cpxh Domain 7. The S3 signing fix added \`content-length\` to signableHeaders, which makes the byte count an exact-match constraint enforced by SigV4.
@@ -30,3 +31,9 @@ If any caller passes an estimate, upload will 403 SignatureDoesNotMatch post-fix
 ## Context
 
 E2E happy-path passes today (499/499), so callers in use are correct. This is a latent risk for any path not yet covered by E2E.
+
+## Summary of Changes
+
+- JSDoc on `PresignedUploadParams.sizeBytes` (`packages/storage/src/interface.ts`), `BlobUploadInput.sizeBytes` (`apps/mobile/src/hooks/use-blobs.ts`), and the zod upload schema (`packages/validation/src/blob.ts`).
+- New E2E test `'presigned PUT rejects exact Content-Length mismatch with 403'` in `apps/api-e2e/src/tests/blobs/crud.spec.ts` locking in the SigV4 exact-size behaviour.
+- Audit outcome: the only production server-side caller (`apps/api/src/services/blob.service.ts:140`) is a passthrough; client-side callers already pass exact byte counts. No estimator bugs found.

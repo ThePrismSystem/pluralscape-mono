@@ -59,7 +59,6 @@ describe("SQLite jobs schema", () => {
         .run();
 
       const row = db.select().from(jobs).where(eq(jobs.id, id)).get();
-      expect(row).toBeDefined();
       expect(row?.id).toBe(id);
       expect(typeof row?.id).toBe("string");
     });

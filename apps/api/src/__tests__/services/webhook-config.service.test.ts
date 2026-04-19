@@ -113,7 +113,6 @@ describe("webhook-config service", () => {
 
       expect(result.id).toEqual(expect.stringMatching(/^wh_/));
       expect(result.url).toBe("https://example.com/webhook");
-      expect(result.secret).toBeDefined();
       expect(typeof result.secret).toBe("string");
       expect(mockAudit).toHaveBeenCalledOnce();
     });
@@ -285,7 +284,7 @@ describe("webhook-config service", () => {
       await listWebhookConfigs(db, SYSTEM_ID, AUTH);
 
       const whereArg = captureWhereArg(chain);
-      expect(whereArg).toBeDefined();
+      expect(whereArg).not.toBeUndefined();
     });
 
     it("includes archived configs when includeArchived is true", async () => {
@@ -295,7 +294,7 @@ describe("webhook-config service", () => {
       await listWebhookConfigs(db, SYSTEM_ID, AUTH, { includeArchived: true });
 
       const whereArg = captureWhereArg(chain);
-      expect(whereArg).toBeDefined();
+      expect(whereArg).not.toBeUndefined();
     });
 
     it("applies cursor condition when cursor is provided", async () => {

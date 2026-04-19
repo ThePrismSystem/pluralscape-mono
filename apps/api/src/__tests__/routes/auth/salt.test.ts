@@ -155,7 +155,7 @@ describe("POST /salt", () => {
 
       expect(res.status).toBe(400);
       const body = (await res.json()) as ApiErrorResponse;
-      expect(body.error).toBeDefined();
+      expect(typeof body.error.code).toBe("string");
     });
 
     it("returns 400 for invalid email format", async () => {

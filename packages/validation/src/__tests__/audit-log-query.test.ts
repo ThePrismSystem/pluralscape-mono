@@ -58,7 +58,6 @@ describe("AuditLogQuerySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["limit"]);
     }
   });
@@ -68,7 +67,6 @@ describe("AuditLogQuerySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["limit"]);
     }
   });
@@ -78,7 +76,6 @@ describe("AuditLogQuerySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["limit"]);
     }
   });
@@ -88,7 +85,6 @@ describe("AuditLogQuerySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["from"]);
     }
   });
@@ -98,7 +94,6 @@ describe("AuditLogQuerySchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues[0];
-      expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["to"]);
     }
   });

@@ -5,6 +5,7 @@ import {
   bumpCollectionTotals,
   completeCollection,
   emptyCheckpointState,
+  markRealPrivacyBucketsMapped,
   resumeStartCollection,
 } from "../checkpoint.js";
 
@@ -16,7 +17,7 @@ describe("emptyCheckpointState()", () => {
       avatarMode: "skip",
     });
 
-    expect(state.schemaVersion).toBe(1);
+    expect(state.schemaVersion).toBe(2);
     expect(state.checkpoint.currentCollection).toBe("member");
     expect(state.checkpoint.currentCollectionLastSourceId).toBeNull();
     expect(state.checkpoint.completedCollections).toEqual([]);
@@ -178,5 +179,39 @@ describe("resumeStartCollection()", () => {
 
     state = completeCollection(state, { nextEntityType: "group" });
     expect(resumeStartCollection(state)).toBe("group");
+  });
+});
+
+describe("markRealPrivacyBucketsMapped()", () => {
+  it("flips the flag from false to true and preserves other fields", () => {
+    const initial = emptyCheckpointState({
+      firstEntityType: "member",
+      selectedCategories: { member: true },
+      avatarMode: "skip",
+    });
+    expect(initial.checkpoint.realPrivacyBucketsMapped).toBe(false);
+
+    const marked = markRealPrivacyBucketsMapped(initial);
+
+    expect(marked.checkpoint.realPrivacyBucketsMapped).toBe(true);
+    expect(marked.schemaVersion).toBe(2);
+    expect(marked.checkpoint.currentCollection).toBe("member");
+    expect(marked.checkpoint.completedCollections).toEqual([]);
+    expect(marked.options.selectedCategories).toEqual({ member: true });
+  });
+
+  it("is idempotent — repeat calls return the same state reference", () => {
+    const initial = markRealPrivacyBucketsMapped(
+      emptyCheckpointState({
+        firstEntityType: "member",
+        selectedCategories: {},
+        avatarMode: "skip",
+      }),
+    );
+
+    const second = markRealPrivacyBucketsMapped(initial);
+
+    expect(second).toBe(initial);
+    expect(second.checkpoint.realPrivacyBucketsMapped).toBe(true);
   });
 });

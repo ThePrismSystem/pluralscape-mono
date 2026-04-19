@@ -34,6 +34,17 @@ export interface StoredBlobMetadata {
 export interface PresignedUploadParams {
   readonly storageKey: StorageKey;
   readonly mimeType: string | null;
+  /**
+   * **Exact on-the-wire byte count** of the upload body. MUST equal the
+   * number of bytes the client will actually PUT to the presigned URL,
+   * not any pre-encryption / pre-encoding estimate.
+   *
+   * SigV4 signs this value as an HTTP `Content-Length` constraint
+   * (`signableHeaders: ["content-length", ...]`). A mismatch at upload
+   * time produces HTTP 403 `SignatureDoesNotMatch` at the S3 layer — the
+   * error path is correct-by-construction, but clients that pass a
+   * plaintext size while uploading ciphertext will be rejected.
+   */
   readonly sizeBytes: number;
   /** Validity window in milliseconds. Defaults to backend-specific value if omitted. */
   readonly expiresInMs?: number;

@@ -28,18 +28,19 @@ describe("Document factories", () => {
   describe("createSystemCoreDocument", () => {
     it("produces a valid Automerge doc with all required maps", () => {
       const doc = createSystemCoreDocument();
-      expect(doc.members).toBeDefined();
-      expect(doc.groups).toBeDefined();
-      expect(doc.structureEntityTypes).toBeDefined();
-      expect(doc.structureEntities).toBeDefined();
-      expect(doc.relationships).toBeDefined();
-      expect(doc.customFronts).toBeDefined();
-      expect(doc.fieldDefinitions).toBeDefined();
-      expect(doc.fieldValues).toBeDefined();
-      expect(doc.innerWorldEntities).toBeDefined();
-      expect(doc.innerWorldRegions).toBeDefined();
-      expect(doc.timers).toBeDefined();
-      expect(doc.lifecycleEvents).toBeDefined();
+      // All maps initialized as empty plain objects
+      expect(doc.members).toEqual({});
+      expect(doc.groups).toEqual({});
+      expect(doc.structureEntityTypes).toEqual({});
+      expect(doc.structureEntities).toEqual({});
+      expect(doc.relationships).toEqual({});
+      expect(doc.customFronts).toEqual({});
+      expect(doc.fieldDefinitions).toEqual({});
+      expect(doc.fieldValues).toEqual({});
+      expect(doc.innerWorldEntities).toEqual({});
+      expect(doc.innerWorldRegions).toEqual({});
+      expect(doc.timers).toEqual({});
+      expect(doc.lifecycleEvents).toEqual({});
     });
 
     it("all entity maps are initially empty", () => {
@@ -79,17 +80,17 @@ describe("Document factories", () => {
     it("survives save/load roundtrip", () => {
       const doc = createSystemCoreDocument();
       const bytes = Automerge.save(doc);
-      const loaded = Automerge.load(bytes);
-      expect(loaded).toBeDefined();
+      const loaded = Automerge.load<typeof doc>(bytes);
+      expect(Object.keys(loaded.members)).toHaveLength(0);
     });
   });
 
   describe("createFrontingDocument", () => {
     it("produces a valid Automerge doc with all required collections", () => {
       const doc = createFrontingDocument();
-      expect(doc.sessions).toBeDefined();
-      expect(doc.comments).toBeDefined();
-      expect(doc.checkInRecords).toBeDefined();
+      expect(doc.sessions).toEqual({});
+      expect(doc.comments).toEqual({});
+      expect(doc.checkInRecords).toEqual({});
     });
 
     it("all collections are initially empty", () => {
@@ -102,21 +103,22 @@ describe("Document factories", () => {
     it("survives save/load roundtrip", () => {
       const doc = createFrontingDocument();
       const bytes = Automerge.save(doc);
-      const loaded = Automerge.load(bytes);
-      expect(loaded).toBeDefined();
+      const loaded = Automerge.load<typeof doc>(bytes);
+      expect(Object.keys(loaded.sessions)).toHaveLength(0);
     });
   });
 
   describe("createChatDocument", () => {
     it("produces a valid Automerge doc with channel singleton and collections", () => {
       const doc = createChatDocument();
-      expect(doc.channel).toBeDefined();
-      expect(doc.boardMessages).toBeDefined();
-      expect(doc.polls).toBeDefined();
-      expect(doc.pollOptions).toBeDefined();
-      expect(doc.acknowledgements).toBeDefined();
-      expect(doc.messages).toBeDefined();
-      expect(doc.votes).toBeDefined();
+      // channel is a singleton object; collections start empty
+      expect(typeof doc.channel).toBe("object");
+      expect(doc.boardMessages).toEqual({});
+      expect(doc.polls).toEqual({});
+      expect(doc.pollOptions).toEqual({});
+      expect(doc.acknowledgements).toEqual({});
+      expect(doc.messages).toEqual([]);
+      expect(doc.votes).toEqual([]);
     });
 
     it("all collections are initially empty", () => {
@@ -130,16 +132,16 @@ describe("Document factories", () => {
     it("survives save/load roundtrip", () => {
       const doc = createChatDocument();
       const bytes = Automerge.save(doc);
-      const loaded = Automerge.load(bytes);
-      expect(loaded).toBeDefined();
+      const loaded = Automerge.load<typeof doc>(bytes);
+      expect(Object.keys(loaded.boardMessages)).toHaveLength(0);
     });
   });
 
   describe("createJournalDocument", () => {
     it("produces a valid Automerge doc with all required maps", () => {
       const doc = createJournalDocument();
-      expect(doc.entries).toBeDefined();
-      expect(doc.wikiPages).toBeDefined();
+      expect(doc.entries).toEqual({});
+      expect(doc.wikiPages).toEqual({});
     });
 
     it("all maps are initially empty", () => {
@@ -151,15 +153,15 @@ describe("Document factories", () => {
     it("survives save/load roundtrip", () => {
       const doc = createJournalDocument();
       const bytes = Automerge.save(doc);
-      const loaded = Automerge.load(bytes);
-      expect(loaded).toBeDefined();
+      const loaded = Automerge.load<typeof doc>(bytes);
+      expect(Object.keys(loaded.entries)).toHaveLength(0);
     });
   });
 
   describe("createNoteDocument", () => {
     it("produces a valid Automerge doc with notes map", () => {
       const doc = createNoteDocument();
-      expect(doc.notes).toBeDefined();
+      expect(doc.notes).toEqual({});
     });
 
     it("notes map is initially empty", () => {
@@ -170,19 +172,19 @@ describe("Document factories", () => {
     it("survives save/load roundtrip", () => {
       const doc = createNoteDocument();
       const bytes = Automerge.save(doc);
-      const loaded = Automerge.load(bytes);
-      expect(loaded).toBeDefined();
+      const loaded = Automerge.load<typeof doc>(bytes);
+      expect(Object.keys(loaded.notes)).toHaveLength(0);
     });
   });
 
   describe("createPrivacyConfigDocument", () => {
     it("produces a valid Automerge doc with all required maps", () => {
       const doc = createPrivacyConfigDocument();
-      expect(doc.buckets).toBeDefined();
-      expect(doc.contentTags).toBeDefined();
-      expect(doc.friendConnections).toBeDefined();
-      expect(doc.friendCodes).toBeDefined();
-      expect(doc.keyGrants).toBeDefined();
+      expect(doc.buckets).toEqual({});
+      expect(doc.contentTags).toEqual({});
+      expect(doc.friendConnections).toEqual({});
+      expect(doc.friendCodes).toEqual({});
+      expect(doc.keyGrants).toEqual({});
     });
 
     it("initializes fieldBucketVisibility as an empty object", () => {
@@ -218,25 +220,25 @@ describe("Document factories", () => {
     it("survives save/load roundtrip", () => {
       const doc = createPrivacyConfigDocument();
       const bytes = Automerge.save(doc);
-      const loaded = Automerge.load(bytes);
-      expect(loaded).toBeDefined();
+      const loaded = Automerge.load<typeof doc>(bytes);
+      expect(Object.keys(loaded.buckets)).toHaveLength(0);
     });
   });
 
   describe("createBucketDocument", () => {
     it("produces a valid Automerge doc with all projection maps", () => {
       const doc = createBucketDocument();
-      expect(doc.members).toBeDefined();
-      expect(doc.memberPhotos).toBeDefined();
-      expect(doc.groups).toBeDefined();
-      expect(doc.customFronts).toBeDefined();
-      expect(doc.fieldDefinitions).toBeDefined();
-      expect(doc.fieldValues).toBeDefined();
-      expect(doc.frontingSessions).toBeDefined();
-      expect(doc.notes).toBeDefined();
-      expect(doc.journalEntries).toBeDefined();
-      expect(doc.channels).toBeDefined();
-      expect(doc.messages).toBeDefined();
+      expect(doc.members).toEqual({});
+      expect(doc.memberPhotos).toEqual({});
+      expect(doc.groups).toEqual({});
+      expect(doc.customFronts).toEqual({});
+      expect(doc.fieldDefinitions).toEqual({});
+      expect(doc.fieldValues).toEqual({});
+      expect(doc.frontingSessions).toEqual({});
+      expect(doc.notes).toEqual({});
+      expect(doc.journalEntries).toEqual({});
+      expect(doc.channels).toEqual({});
+      expect(doc.messages).toEqual([]);
     });
 
     it("all maps and lists are initially empty", () => {
@@ -248,8 +250,8 @@ describe("Document factories", () => {
     it("survives save/load roundtrip", () => {
       const doc = createBucketDocument();
       const bytes = Automerge.save(doc);
-      const loaded = Automerge.load(bytes);
-      expect(loaded).toBeDefined();
+      const loaded = Automerge.load<typeof doc>(bytes);
+      expect(Object.keys(loaded.members)).toHaveLength(0);
     });
   });
 
@@ -257,7 +259,7 @@ describe("Document factories", () => {
     it("produces a valid doc for every SyncDocumentType", () => {
       for (const type of ALL_DOCUMENT_TYPES) {
         const doc = createDocument(type);
-        expect(doc, `createDocument("${type}") should return a doc`).toBeDefined();
+        expect(typeof doc, `createDocument("${type}") should return an object`).toBe("object");
       }
     });
 
@@ -265,8 +267,8 @@ describe("Document factories", () => {
       for (const type of ALL_DOCUMENT_TYPES) {
         const doc = createDocument(type);
         const bytes = Automerge.save(doc as Automerge.Doc<Record<string, unknown>>);
-        const loaded = Automerge.load(bytes);
-        expect(loaded, `Roundtrip failed for type: ${type}`).toBeDefined();
+        const loaded = Automerge.load<Record<string, unknown>>(bytes);
+        expect(typeof loaded, `Roundtrip failed for type: ${type}`).toBe("object");
       }
     });
   });

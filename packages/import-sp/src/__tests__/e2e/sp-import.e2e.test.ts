@@ -12,9 +12,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { emptyCheckpointState } from "@pluralscape/import-core";
 import { describe, it, expect, beforeAll } from "vitest";
 
-import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
 import { createFileImportSource, FileSourceParseError } from "../../sources/file-source.js";
@@ -261,7 +261,6 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
     });
 
     expect(abortResult.outcome).toBe("aborted");
-    expect(abortedCheckpoint).toBeDefined();
     if (!abortedCheckpoint) {
       throw new Error("abort checkpoint was not captured");
     }
@@ -411,7 +410,6 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — File Source Error Paths
 
     expect(result.outcome).toBe("aborted");
     const fatal = result.errors.find((e) => e.fatal);
-    expect(fatal).toBeDefined();
     expect(fatal?.message).toContain("ECONNRESET");
     // Collections before `members` in DEPENDENCY_ORDER should still have
     // been imported — the failure is localized to members and the engine
@@ -561,28 +559,10 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — File Source Error Paths
   it("checkpoint resume produces the same final entity set as a full run", async () => {
     // Equivalence contract: aborting mid-run and resuming from the captured
     // checkpoint must land on the same entity set as a fresh uninterrupted
-    // run, MODULO the three synthetic legacy privacy buckets the engine
-    // defensively re-synthesizes on any resume that enters the `member`
-    // collection without having completed it in the prior run.
-    //
-    // Known engine limitation (tracked in ps-beng): the per-run
-    // `privacyBucketsMapped` counter is ephemeral, so on resume the engine
-    // cannot tell whether the pre-abort run already mapped real
-    // `privacyBuckets` documents. It falls back to re-synthesizing the
-    // `synthetic:{private,public,trusted}` entries. When the source has real
-    // buckets (minimal fixture does), this produces three extra rows the
-    // baseline run does not emit. Persister upsert is idempotent on content,
-    // but the synthetic IDs are new — so the *entity set* differs.
-    //
-    // This test asserts the weaker invariant: resumed ⊇ baseline and the only
-    // extras are the three known synthetic buckets. Tighten to strict equality
-    // once ps-beng lands.
-    const SYNTHETIC_BUCKET_KEYS = [
-      "privacy-bucket:synthetic:private",
-      "privacy-bucket:synthetic:public",
-      "privacy-bucket:synthetic:trusted",
-    ] as const;
-
+    // run. The engine now persists `realPrivacyBucketsMapped` in the
+    // checkpoint (ps-beng), so resumed runs no longer re-synthesize legacy
+    // buckets when the source had real ones. Baseline and resumed entity
+    // sets must be byte-identical.
     const manifest = await loadManifest("minimal");
 
     // Baseline: fresh persister, single uninterrupted run.
@@ -642,22 +622,10 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — File Source Error Paths
       .entities.map((e) => `${e.entityType}:${e.sourceEntityId}`)
       .sort();
 
-    // Every baseline entity must appear in the resumed set — no dropped rows.
-    const resumedSet = new Set(resumedKeys);
-    for (const key of baselineKeys) {
-      expect(resumedSet.has(key), `baseline entity ${key} missing from resumed run`).toBe(true);
-    }
-
-    // The only allowed extras are the three synthetic legacy privacy buckets
-    // the engine re-synthesizes on resume (see ps-beng).
-    const baselineSet = new Set(baselineKeys);
-    const extras = resumedKeys.filter((k) => !baselineSet.has(k));
-    for (const extra of extras) {
-      expect(
-        SYNTHETIC_BUCKET_KEYS as readonly string[],
-        `unexpected extra entity on resume: ${extra}`,
-      ).toContain(extra);
-    }
+    // Engine now persists `realPrivacyBucketsMapped` in the checkpoint, so
+    // resumed runs no longer re-synthesize legacy buckets when the source had
+    // real ones. Baseline and resumed entity sets must be byte-identical.
+    expect(resumedKeys).toEqual(baselineKeys);
   });
 
   // Smoke assertion to anchor readFileSync import usage in the error-path

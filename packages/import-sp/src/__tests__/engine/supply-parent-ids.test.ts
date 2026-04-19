@@ -1,6 +1,6 @@
+import { emptyCheckpointState } from "@pluralscape/import-core";
 import { describe, expect, it, vi } from "vitest";
 
-import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
 import { createFakeImportSource } from "../../sources/fake-source.js";

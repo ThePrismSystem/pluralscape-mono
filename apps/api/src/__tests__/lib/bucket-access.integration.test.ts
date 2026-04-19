@@ -109,7 +109,6 @@ describe("loadBucketTags (PGlite integration)", () => {
 
     expect(result.size).toBe(1);
     const bucketIds = result.get(memberId);
-    expect(bucketIds).toBeDefined();
     expect(bucketIds).toHaveLength(3);
     expect(new Set(bucketIds)).toEqual(new Set([bucketA, bucketB, bucketC]));
   });

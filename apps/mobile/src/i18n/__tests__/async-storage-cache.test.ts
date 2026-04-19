@@ -90,8 +90,7 @@ describe("AsyncStorageI18nCache", () => {
     await storage.setItem("@pluralscape:i18n:en:common", "not-json");
     expect(await cache.read("en", "common")).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
-      "i18n cache parse failed, evicting: en/common",
-      expect.anything(),
+      expect.stringContaining("i18n cache parse failed, evicting: en/common"),
     );
     expect(storage.store.has("@pluralscape:i18n:en:common")).toBe(false);
     warnSpy.mockRestore();

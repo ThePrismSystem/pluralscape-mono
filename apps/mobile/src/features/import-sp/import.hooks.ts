@@ -51,6 +51,7 @@ import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types"
 import type { ImportDataSource } from "@pluralscape/import-sp/source-types";
 import type {
   ImportCheckpointState,
+  ImportCollectionType,
   ImportEntityType,
   ImportError,
   ImportJob,
@@ -258,7 +259,10 @@ export function useStartImport(): UseStartImportReturn {
         const job = await createJobAsync({
           systemId: activeSystemId,
           source: "simply-plural",
-          selectedCategories: args.options.selectedCategories,
+          selectedCategories: args.options.selectedCategories as Record<
+            ImportCollectionType,
+            boolean | undefined
+          >,
           avatarMode: args.options.avatarMode,
         });
         if (args.options.persistToken === true) {
@@ -301,7 +305,10 @@ export function useStartImport(): UseStartImportReturn {
         const job = await createJobAsync({
           systemId: activeSystemId,
           source: "simply-plural",
-          selectedCategories: args.options.selectedCategories,
+          selectedCategories: args.options.selectedCategories as Record<
+            ImportCollectionType,
+            boolean | undefined
+          >,
           avatarMode: args.options.avatarMode,
         });
         const controller = new AbortController();

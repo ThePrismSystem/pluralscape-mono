@@ -221,7 +221,7 @@ describe("withMasterKeyFromReset", () => {
     );
 
     expect(callbackResult).toBe("callback-value");
-    expect(receivedMasterKey).toBeDefined();
+    expect(receivedMasterKey).toHaveLength(masterKey.length);
 
     // masterKey and authKey should both have been zeroed
     const zeroedBuffers = memzeroSpy.mock.calls.map((call) => call[0]);

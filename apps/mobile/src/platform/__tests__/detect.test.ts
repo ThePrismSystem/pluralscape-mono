@@ -181,7 +181,7 @@ describe("detectPlatform — observable fallback", () => {
     vi.resetModules();
   });
 
-  it("logs console.error when OPFS init throws", async () => {
+  it("logs an error via the mobile logger when OPFS init throws", async () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     setNavigator({ storage: { getDirectory: () => Promise.resolve({}) } });
     setWorker(function FakeWorker(): void {});
@@ -197,12 +197,10 @@ describe("detectPlatform — observable fallback", () => {
     const { detectPlatform: detectFresh } = await import("../detect.js");
     const ctx = await detectFresh();
     expect(errSpy).toHaveBeenCalledTimes(1);
-    expect(errSpy).toHaveBeenCalledWith(
-      expect.stringContaining("OPFS storage unavailable"),
-      expect.objectContaining({
-        reason: expect.stringContaining("worker boot failed"),
-      }),
-    );
+    const message = errSpy.mock.calls[0]?.[0];
+    expect(typeof message).toBe("string");
+    expect(message as string).toContain("OPFS storage unavailable");
+    expect(message as string).toContain("worker boot failed");
     expect(ctx.capabilities.storageFallbackReason).toMatch(/^OPFS init failed: worker boot failed/);
     errSpy.mockRestore();
   });

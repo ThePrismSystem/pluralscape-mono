@@ -133,7 +133,7 @@ describe("friend-connection.service (PGlite integration)", () => {
       const page1 = await listFriendConnections(asDb(db), accountId, auth, { limit: 2 });
       expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
-      expect(page1.nextCursor).toBeDefined();
+      expect(typeof page1.nextCursor).toBe("string");
 
       const page2 = await listFriendConnections(asDb(db), accountId, auth, {
         cursor: page1.nextCursor ?? undefined,

@@ -681,7 +681,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     expect(result.errors.length).toBeGreaterThan(0);
 
     const timerError = result.errors.find((e) => e.validator === "normalizeTimerConfig");
-    expect(timerError).toBeDefined();
+    expect(timerError?.validator).toBe("normalizeTimerConfig");
     expect(errorMessages).toContain("Timer config normalization failed");
 
     // Webhook validator should still have run successfully
@@ -707,7 +707,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     expect(result.errors.length).toBeGreaterThan(0);
 
     const webhookError = result.errors.find((e) => e.validator === "normalizeWebhookConfigs");
-    expect(webhookError).toBeDefined();
+    expect(webhookError?.validator).toBe("normalizeWebhookConfigs");
     expect(errorMessages).toContain("Webhook config validation failed");
 
     // Timer validator should still have run successfully

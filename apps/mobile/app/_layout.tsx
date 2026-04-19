@@ -20,6 +20,7 @@ import {
   createChainedBackend,
   detectLocale,
 } from "../src/i18n/index.js";
+import { logger } from "../src/lib/logger.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
 import { BucketKeyProvider } from "../src/providers/bucket-key-provider.js";
 import { CryptoProvider } from "../src/providers/crypto-provider.js";
@@ -176,7 +177,9 @@ export default function RootLayout(): React.JSX.Element {
       try {
         getSodium().memzero(key);
       } catch (err) {
-        globalThis.console.error("Failed to zero master key:", err);
+        logger.error("Failed to zero master key", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     },
   });

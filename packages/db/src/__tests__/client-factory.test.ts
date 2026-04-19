@@ -19,7 +19,7 @@ describe("createDatabase", () => {
   it("returns a SQLite client when given sqlite config", async () => {
     const client = await createDatabase({ dialect: "sqlite", filename: ":memory:" });
     expect(client.dialect).toBe("sqlite");
-    expect(client.db).toBeDefined();
+    expect(client.db).not.toBeNull();
   });
 
   it("enables foreign_keys pragma on SQLite connections", async () => {
@@ -156,7 +156,7 @@ describe("SQLCipher encryption", () => {
       encryptionKey: TEST_KEY,
     });
     expect(decrypted.dialect).toBe("sqlite");
-    expect(decrypted.db).toBeDefined();
+    expect(decrypted.db).not.toBeNull();
 
     // Verify data is readable via a raw keyed connection
     const verify = new Database(dbPath);
@@ -268,7 +268,7 @@ describe("createDatabaseFromEnv", () => {
     delete process.env["SQLITE_ENCRYPTION_KEY"];
     const client = await createDatabaseFromEnv();
     expect(client.dialect).toBe("sqlite");
-    expect(client.db).toBeDefined();
+    expect(client.db).not.toBeNull();
   });
 
   it("warns and defaults when DATABASE_PATH is not set", async () => {
@@ -296,7 +296,7 @@ describe("createDatabaseFromEnv", () => {
       process.env["SQLITE_ENCRYPTION_KEY"] = "a".repeat(64);
       const client = await createDatabaseFromEnv();
       expect(client.dialect).toBe("sqlite");
-      expect(client.db).toBeDefined();
+      expect(client.db).not.toBeNull();
     } finally {
       rmSync(dir, { recursive: true });
     }

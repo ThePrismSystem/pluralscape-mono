@@ -52,11 +52,12 @@ export const ImportCheckpointStateSchema = z
         completedCollections: z.array(z.enum(IMPORT_COLLECTION_TYPES)).readonly(),
         currentCollection: z.enum(IMPORT_COLLECTION_TYPES),
         currentCollectionLastSourceId: z.string().nullable(),
+        realPrivacyBucketsMapped: z.boolean(),
       })
       .readonly(),
     options: z
       .object({
-        selectedCategories: z.record(z.string(), z.boolean().optional()),
+        selectedCategories: z.record(z.enum(IMPORT_COLLECTION_TYPES), z.boolean().optional()),
         avatarMode: z.enum(IMPORT_AVATAR_MODES),
       })
       .readonly(),
@@ -74,7 +75,7 @@ export const ImportCheckpointStateSchema = z
 export const CreateImportJobBodySchema = z
   .object({
     source: z.enum(IMPORT_SOURCES),
-    selectedCategories: z.record(z.string(), z.boolean().optional()),
+    selectedCategories: z.record(z.enum(IMPORT_COLLECTION_TYPES), z.boolean().optional()),
     avatarMode: z.enum(IMPORT_AVATAR_MODES),
   })
   .readonly()

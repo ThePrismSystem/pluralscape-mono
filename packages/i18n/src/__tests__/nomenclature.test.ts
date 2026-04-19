@@ -63,7 +63,6 @@ describe("CANONICAL_TERMS", () => {
     for (const preset of DEFAULT_TERM_PRESETS) {
       const key = preset.category.toUpperCase().replace(/-/g, "_") as keyof typeof CANONICAL_TERMS;
       const term = CANONICAL_TERMS[key];
-      expect(term).toBeDefined();
       expect(term.category).toBe(preset.category);
       expect(term.defaultValue).toBe(preset.default);
     }
@@ -235,7 +234,6 @@ describe("resolveTermPlural", () => {
   it("PRESET_PLURAL_RULES covers every preset value in DEFAULT_TERM_PRESETS", () => {
     for (const preset of DEFAULT_TERM_PRESETS) {
       for (const value of preset.presets) {
-        expect(PRESET_PLURAL_RULES[value]).toBeDefined();
         expect(PRESET_PLURAL_RULES[value]?.length).toBeGreaterThan(0);
       }
     }

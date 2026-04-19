@@ -160,7 +160,7 @@ describe("SyncEngine bootstrap", () => {
     await engine.bootstrap();
 
     expect(engine.getActiveDocIds()).toContain("system-core-sys_test");
-    expect(engine.getSession(asSyncDocId("system-core-sys_test"))).toBeDefined();
+    expect(engine.getSession(asSyncDocId("system-core-sys_test"))).not.toBeUndefined();
   });
 
   it("evicts stale local documents not in manifest", async () => {
@@ -294,8 +294,8 @@ describe("SyncEngine bootstrap", () => {
     const doc = engine.getDocumentSnapshot(
       asSyncDocId("system-core-sys_test"),
     ) as SystemCoreDocument;
-    expect(doc.members).toBeDefined();
-    expect(doc.system).toBeDefined();
+    expect(doc.members).toEqual({});
+    expect(typeof doc.system).toBe("object");
   });
 
   it("getDocumentSnapshot throws NoActiveSessionError for unknown document", () => {

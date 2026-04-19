@@ -37,7 +37,7 @@ describe("I18nProvider", () => {
       </I18nProvider>,
     );
 
-    expect(screen.getByTestId("child")).toBeDefined();
+    expect(screen.getByTestId("child").textContent).toBe("content");
   });
 
   it("provides translations to child components via useTranslation", () => {

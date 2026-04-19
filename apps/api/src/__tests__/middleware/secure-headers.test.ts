@@ -32,7 +32,6 @@ describe("createSecureHeaders", () => {
 
     expect(res.status).toBe(200);
     const csp = res.headers.get("Content-Security-Policy");
-    expect(csp).toBeDefined();
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("base-uri 'none'");
     expect(csp).toContain("form-action 'none'");
@@ -54,7 +53,6 @@ describe("createSecureHeaders", () => {
       const res = await app.request("/test");
       const hsts = res.headers.get("Strict-Transport-Security");
 
-      expect(hsts).toBeDefined();
       expect(hsts).toContain(`max-age=${String(HSTS_MAX_AGE_SECONDS)}`);
       expect(hsts).toContain("includeSubDomains");
       expect(hsts).toContain("preload");

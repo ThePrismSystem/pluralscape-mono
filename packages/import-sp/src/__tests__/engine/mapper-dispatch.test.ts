@@ -26,7 +26,7 @@ const ALL_COLLECTIONS: readonly SpCollectionName[] = [
 describe("MAPPER_DISPATCH", () => {
   it("has an entry for every SpCollectionName", () => {
     for (const collection of ALL_COLLECTIONS) {
-      expect(MAPPER_DISPATCH[collection]).toBeDefined();
+      expect(typeof MAPPER_DISPATCH[collection].entityType).toBe("string");
     }
   });
 
@@ -62,7 +62,6 @@ describe("MAPPER_DISPATCH", () => {
       ctx,
     );
     const warning = ctx.warnings.find((w) => w.kind === "unknown-field");
-    expect(warning).toBeDefined();
     expect(warning?.message).toContain("_unknownFutureField");
     expect(warning?.entityType).toBe("member");
   });

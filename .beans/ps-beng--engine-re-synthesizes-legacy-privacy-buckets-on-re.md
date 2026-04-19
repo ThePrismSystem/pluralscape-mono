@@ -1,11 +1,12 @@
 ---
 # ps-beng
 title: Engine re-synthesizes legacy privacy buckets on resume even when source has real ones
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-04-17T09:13:02Z
-updated_at: 2026-04-17T09:13:02Z
+updated_at: 2026-04-19T18:53:11Z
+parent: ps-0enb
 ---
 
 ## Problem
@@ -33,3 +34,13 @@ Engine-level change; requires checkpoint schemaVersion bump and migration of the
 - Baseline and resumed entity sets are byte-identical given the same minimal fixture.
 - Existing `legacy-bucket-synthesis.engine.test.ts` tests continue to pass.
 - Test at `e2e/sp-import.e2e.test.ts` can assert `resumedKeys === baselineKeys` without the synthetic-bucket allowance.
+
+## Summary of Changes
+
+- Bumped `ImportCheckpointState` schemaVersion from `1` to `2` (pre-release; no v1 data exists).
+- Added `realPrivacyBucketsMapped: boolean` to the checkpoint subtree.
+- New helper `markRealPrivacyBucketsMapped(state)` in `@pluralscape/import-core`, re-exported via `packages/import-sp/src/engine/checkpoint.ts`.
+- `packages/import-sp/src/engine/import-engine.ts` now reads the checkpointed flag instead of inferring from `completedCollections.includes("member")`, and persists the flag whenever a real bucket is upserted.
+- Tightened the SP import E2E assertion — resumed and baseline entity sets are now byte-identical; the "superset + 3 synthetic buckets" allowance is removed.
+- Updated all tests that hard-coded `schemaVersion: 1` or constructed checkpoint fixtures to match v2 (branch-coverage, resume-from-checkpoint, db integration, validation, api integration, mobile runner, types test).
+- Regenerated zod schema in `packages/validation/src/import-job.ts` and OpenAPI definitions (`docs/openapi.yaml`, `docs/openapi/schemas/import-export.yaml`, `packages/api-client/src/generated/api-types.ts`) to include the new required field.

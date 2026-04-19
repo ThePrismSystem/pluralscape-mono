@@ -74,9 +74,8 @@ describe("errorFormatter", () => {
   it("includes zodError tree for Zod validation failures", async () => {
     const result = await fetchTRPC(testRouter, "validated", {});
 
-    expect(result.error).toBeDefined();
+    expect(result.error?.code).not.toBeUndefined();
     expect(result.error?.data?.zodError).not.toBeNull();
-    expect(result.error?.data?.zodError).toBeDefined();
     // zodError should be a tree with properties for the missing fields
     const zodError = result.error?.data?.zodError;
     expect(zodError).toSatisfy(
@@ -88,7 +87,7 @@ describe("errorFormatter", () => {
   it("sets zodError to null for non-Zod errors", async () => {
     const result = await fetchTRPC(testRouter, "failing");
 
-    expect(result.error).toBeDefined();
+    expect(result.error?.code).not.toBeUndefined();
     expect(result.error?.data?.zodError).toBeNull();
   });
 
@@ -96,7 +95,7 @@ describe("errorFormatter", () => {
     // NODE_ENV is "test" in vitest, so isDev = false
     const result = await fetchTRPC(testRouter, "failing");
 
-    expect(result.error).toBeDefined();
+    expect(result.error?.code).not.toBeUndefined();
     expect(result.error?.data?.stack).toBeUndefined();
   });
 });

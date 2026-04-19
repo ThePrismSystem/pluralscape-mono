@@ -28,6 +28,14 @@ declare function clearTimeout(handle: number): void;
 
 // ── Test helpers ────────────────────────────────────────────────────
 
+// Argon2id password derivation is CPU-bound. Under the full `pnpm test` run,
+// multiple vitest projects fan out concurrently and contend for cores, which
+// can push individual Argon2 operations past the global 5s testTimeout. Nearly
+// every test in this file calls `createWrappedMasterKey` (which derives via
+// Argon2id), so a file-level override is the narrowest fix. Isolated runs
+// complete well under 5s; 30s is comfortably above worst-case contention.
+vi.setConfig({ testTimeout: 30_000 });
+
 beforeAll(setupSodium);
 afterAll(teardownSodium);
 
@@ -994,21 +1002,18 @@ describe("logout", () => {
 
 describe("SECURITY_PRESETS", () => {
   it("has convenience preset", () => {
-    expect(SECURITY_PRESETS.convenience).toBeDefined();
     expect(SECURITY_PRESETS.convenience.inactivityTimeoutMs).toBe(1_800_000); // 30min
     expect(SECURITY_PRESETS.convenience.graceTimeoutMs).toBe(300_000); // 5min
     expect(SECURITY_PRESETS.convenience.requireBiometric).toBe(false);
   });
 
   it("has standard preset", () => {
-    expect(SECURITY_PRESETS.standard).toBeDefined();
     expect(SECURITY_PRESETS.standard.inactivityTimeoutMs).toBe(300_000); // 5min
     expect(SECURITY_PRESETS.standard.graceTimeoutMs).toBe(60_000); // 60sec
     expect(SECURITY_PRESETS.standard.requireBiometric).toBe(true);
   });
 
   it("has paranoid preset", () => {
-    expect(SECURITY_PRESETS.paranoid).toBeDefined();
     expect(SECURITY_PRESETS.paranoid.inactivityTimeoutMs).toBe(60_000); // 1min
     expect(SECURITY_PRESETS.paranoid.graceTimeoutMs).toBe(0);
     expect(SECURITY_PRESETS.paranoid.requireBiometric).toBe(true);

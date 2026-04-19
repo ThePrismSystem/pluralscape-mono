@@ -271,7 +271,7 @@ describe("timerConfig router", () => {
       expect(vi.mocked(restoreTimerConfig)).toHaveBeenCalledOnce();
       expect(vi.mocked(restoreTimerConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreTimerConfig).mock.calls[0]?.[2]).toBe(TIMER_ID);
-      expect(result).toBeDefined();
+      expect(typeof result).toBe("object");
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

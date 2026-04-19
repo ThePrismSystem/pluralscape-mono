@@ -48,7 +48,6 @@ function collectStringChunks(chunks: readonly unknown[]): string[] {
 describe("buildIdleTimeoutFilter", () => {
   it("returns a drizzle SQL object with queryChunks", () => {
     const result = buildIdleTimeoutFilter(Date.now());
-    expect(result).toBeDefined();
     expect(typeof result).toBe("object");
     expect("queryChunks" in result).toBe(true);
   });
@@ -67,7 +66,7 @@ describe("buildIdleTimeoutFilter", () => {
     expect(hasNullIdle).toBe(true);
 
     const result = buildIdleTimeoutFilter(1_000_000);
-    expect(result).toBeDefined();
+    expect("queryChunks" in result).toBe(true);
   });
 
   it("produces idle timeout threshold values in SQL params", () => {

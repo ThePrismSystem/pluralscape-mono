@@ -36,7 +36,6 @@ describe("materializer-registry", () => {
       const m = createMaterializer(TEST_DOC_TYPE_2);
       registerMaterializer(m);
       const retrieved = getMaterializer(TEST_DOC_TYPE_2);
-      expect(retrieved).toBeDefined();
       expect(retrieved?.documentType).toBe(TEST_DOC_TYPE_2);
     });
 
@@ -47,7 +46,6 @@ describe("materializer-registry", () => {
       registerMaterializer(second);
       // Both have same documentType; the second registration should win
       const retrieved = getMaterializer(TEST_DOC_TYPE);
-      expect(retrieved).toBeDefined();
       expect(retrieved?.documentType).toBe(TEST_DOC_TYPE);
     });
   });

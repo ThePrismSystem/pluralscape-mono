@@ -354,7 +354,6 @@ describe("GET /systems/:systemId/structure/entities/:entityId/hierarchy", () => 
     const body = (await res.json()) as { data: HierarchyNode[] };
     expect(body.data).toHaveLength(1);
     const first = body.data[0];
-    expect(first).toBeDefined();
     expect(first?.entityId).toBe(ENTITY_ID);
   });
 

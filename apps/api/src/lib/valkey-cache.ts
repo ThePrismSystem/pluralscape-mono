@@ -1,6 +1,36 @@
 import { logger } from "./logger.js";
 
 /**
+ * Raised when a Valkey-backed consumer tries to fall back to an in-memory
+ * store in NODE_ENV=production without ALLOW_IN_MEMORY_CACHE=1. Exported so
+ * callers can narrow in tests.
+ */
+export class InMemoryCacheForbiddenError extends Error {
+  constructor(consumerName: string) {
+    super(
+      `valkey-cache: ${consumerName} refuses to fall back to in-memory in NODE_ENV=production. ` +
+        "Configure a shared Valkey/Redis endpoint, or set ALLOW_IN_MEMORY_CACHE=1 to explicitly " +
+        "opt in to per-process caching (only safe for single-instance deployments).",
+    );
+    this.name = "InMemoryCacheForbiddenError";
+  }
+}
+
+/**
+ * Fail-closed production gate for Valkey-backed consumers.
+ *
+ * Throws {@link InMemoryCacheForbiddenError} in NODE_ENV=production unless
+ * ALLOW_IN_MEMORY_CACHE=1 is set. Callers invoke this BEFORE falling back to
+ * an in-memory implementation so operators see an actionable error at boot,
+ * not silent drift at runtime.
+ */
+export function assertInMemoryCacheAllowed(consumerName: string): void {
+  if (process.env["NODE_ENV"] !== "production") return;
+  if (process.env["ALLOW_IN_MEMORY_CACHE"] === "1") return;
+  throw new InMemoryCacheForbiddenError(consumerName);
+}
+
+/**
  * Minimal Valkey/Redis client surface required by ValkeyCache.
  * Matches ioredis' `set(key, value, "PX", ttlMs)` overload for TTL writes.
  */
@@ -76,6 +106,21 @@ export class ValkeyCache {
 }
 
 /**
+ * Module-scope gate so the fallback warning fires at most once per process,
+ * even when callers construct several clients (test harnesses, per-consumer
+ * wiring). Operators only need to see the signal once.
+ */
+let hasWarnedInMemoryFallback = false;
+
+/**
+ * Test-only: reset the warn-once gate so each test can assert the first
+ * emission independently. Not exported from the package boundary.
+ */
+export function _resetInMemoryWarnForTesting(): void {
+  hasWarnedInMemoryFallback = false;
+}
+
+/**
  * In-memory `ValkeyCacheClient` with TTL support.
  *
  * Used as a fallback when Valkey isn't configured — keeps the API usable in
@@ -89,6 +134,17 @@ export class ValkeyCache {
  */
 export class InMemoryValkeyCacheClient implements ValkeyCacheClient {
   private readonly store = new Map<string, { value: string; expiresAt: number }>();
+
+  constructor() {
+    if (!hasWarnedInMemoryFallback) {
+      hasWarnedInMemoryFallback = true;
+      logger.warn(
+        "valkey-cache: falling back to per-process in-memory cache — " +
+          "safe for single-instance deployments and E2E, NOT safe for multi-replica production. " +
+          "Set VALKEY_URL to a real Valkey/Redis endpoint to share cache state across instances.",
+      );
+    }
+  }
 
   get(key: string): Promise<string | null> {
     const entry = this.store.get(key);

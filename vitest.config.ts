@@ -14,6 +14,7 @@ const PACKAGES = [
   "rotation-worker",
   "email",
   "import-core",
+  "logger",
 ];
 
 function projectConfig(name: string, root: string) {
@@ -106,6 +107,19 @@ export default defineConfig({
       },
       projectConfig("api", "apps/api"),
       integrationProjectConfig("api", "apps/api"),
+      {
+        test: {
+          name: "test-utils",
+          root: "tooling/test-utils",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.ts"],
+          exclude: ["**/*.integration.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 10000,
+          hookTimeout: 10000,
+        },
+      },
       {
         test: {
           name: "scripts",

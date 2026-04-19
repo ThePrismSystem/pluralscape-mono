@@ -9,7 +9,6 @@ describe("createApiClient", () => {
       getToken: () => "ps_sess_test123",
       platform: "mobile",
     });
-    expect(client).toBeDefined();
     expect(client.GET).toBeTypeOf("function");
     expect(client.POST).toBeTypeOf("function");
   });

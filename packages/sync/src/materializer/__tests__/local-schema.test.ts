@@ -6,7 +6,6 @@ describe("generateSchemaStatements", () => {
   it("generates CREATE TABLE for crdt_documents", () => {
     const stmts = generateSchemaStatements();
     const crdtTable = stmts.find((s) => s.includes("crdt_documents"));
-    expect(crdtTable).toBeDefined();
     expect(crdtTable).toContain("document_id TEXT PRIMARY KEY");
     expect(crdtTable).toContain("document_type TEXT NOT NULL");
     expect(crdtTable).toContain("binary BLOB NOT NULL");
@@ -29,7 +28,6 @@ describe("generateSchemaStatements", () => {
       true,
     );
     const friendMembersStmt = stmts.find((s) => s.includes("friend_members"));
-    expect(friendMembersStmt).toBeDefined();
     expect(friendMembersStmt).toContain("connection_id TEXT NOT NULL");
   });
 
@@ -50,7 +48,6 @@ describe("generateFtsStatements", () => {
   it("generates FTS5 virtual tables for entities with ftsColumns", () => {
     const stmts = generateFtsStatements();
     const membersFts = stmts.find((s) => s.includes("fts_members"));
-    expect(membersFts).toBeDefined();
     expect(membersFts).toContain("USING fts5");
     expect(membersFts).toContain("name");
     expect(membersFts).toContain("description");
@@ -85,7 +82,6 @@ describe("generateFtsStatements", () => {
   it("FTS update trigger deletes old values and inserts new values", () => {
     const stmts = generateFtsStatements();
     const updateTrigger = stmts.find((s) => s.includes("TRIGGER members_fts_au AFTER UPDATE"));
-    expect(updateTrigger).toBeDefined();
     expect(updateTrigger).toContain("'delete'");
     expect(updateTrigger).toContain("old.rowid");
     expect(updateTrigger).toContain("new.rowid");

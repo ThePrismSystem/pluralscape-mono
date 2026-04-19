@@ -7,13 +7,6 @@ import { getI18nDeps } from "../../services/i18n-deps.js";
 import { handleManifest } from "./manifest.js";
 import { handleNamespace } from "./namespace.js";
 
-/**
- * Re-exported so existing test harnesses (`routes/i18n/index.test.ts`) can
- * keep importing the reset helper from this module. The underlying memo
- * lives in `services/i18n-deps.ts` and is shared with the tRPC composer.
- */
-export { _resetI18nDepsForTesting } from "../../services/i18n-deps.js";
-
 /** Standard 503 envelope for when i18n deps aren't configured yet. */
 function notConfiguredResponse(c: Context): Response {
   return c.json(

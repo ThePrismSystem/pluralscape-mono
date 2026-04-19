@@ -226,6 +226,7 @@ export async function createImportJob(
         completedCollections: [],
         currentCollection: firstSelectedCollection(parsed.selectedCategories),
         currentCollectionLastSourceId: null,
+        realPrivacyBucketsMapped: false,
       },
       options: {
         selectedCategories: parsed.selectedCategories,

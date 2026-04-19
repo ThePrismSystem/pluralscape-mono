@@ -98,8 +98,8 @@ describe("SQLite sync schema", () => {
       expect(row?.archived).toBe(true);
       expect(row?.timePeriod).toBe("2024-01");
       expect(row?.keyType).toBe("bucket");
-      expect(row?.bucketId).toBeDefined();
-      expect(row?.channelId).toBeDefined();
+      expect(typeof row?.bucketId).toBe("string");
+      expect(typeof row?.channelId).toBe("string");
       expect(row?.createdAt).toBe(now);
       expect(row?.updatedAt).toBe(now + 1000);
     });

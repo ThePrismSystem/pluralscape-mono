@@ -53,7 +53,6 @@ describe("synthesizePkPrivacyBuckets", () => {
 
     expect(results).toHaveLength(1);
     const bucket = results[0];
-    expect(bucket).toBeDefined();
     if (bucket !== undefined) {
       expect(bucket.sourceEntityId).toBe("synthetic:pk-private");
       const p = payload(bucket);

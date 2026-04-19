@@ -40,10 +40,8 @@ describe("warnUnknownKeys", () => {
     warnUnknownKeys(ctx, "custom-front", known, { name: "B", sharedKey: 2 });
 
     expect(ctx.warnings.filter((w) => w.key?.endsWith(":sharedKey"))).toHaveLength(2);
-    expect(ctx.warnings.find((w) => w.key === "unknown-field:member:sharedKey")).toBeDefined();
-    expect(
-      ctx.warnings.find((w) => w.key === "unknown-field:custom-front:sharedKey"),
-    ).toBeDefined();
+    expect(ctx.warnings.some((w) => w.key === "unknown-field:member:sharedKey")).toBe(true);
+    expect(ctx.warnings.some((w) => w.key === "unknown-field:custom-front:sharedKey")).toBe(true);
   });
 });
 
