@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
-import type { UnixMillis, WebhookId } from "@pluralscape/types";
+import type { ServerSecret, UnixMillis, WebhookId } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -23,6 +23,7 @@ vi.mock("../../../services/webhook-config.service.js", () => ({
   rotateWebhookSecret: vi.fn(),
   testWebhookConfig: vi.fn(),
   updateWebhookConfig: vi.fn(),
+  toServerSecret: (bytes: Uint8Array): ServerSecret => bytes as ServerSecret,
 }));
 
 const {
@@ -34,6 +35,7 @@ const {
   restoreWebhookConfig,
   rotateWebhookSecret,
   testWebhookConfig,
+  toServerSecret,
   updateWebhookConfig,
 } = await import("../../../services/webhook-config.service.js");
 
@@ -148,6 +150,7 @@ describe("webhookConfig router", () => {
       vi.mocked(createWebhookConfig).mockResolvedValue({
         ...MOCK_WEBHOOK,
         secret: "whsec_test",
+        secretBytes: toServerSecret(Buffer.from("whsec_test")),
       });
       const caller = createCaller();
       await caller.webhookConfig.create(VALID_CREATE_INPUT);
@@ -254,6 +257,7 @@ describe("webhookConfig router", () => {
       vi.mocked(rotateWebhookSecret).mockResolvedValue({
         ...MOCK_WEBHOOK,
         secret: "whsec_rotated",
+        secretBytes: toServerSecret(Buffer.from("whsec_rotated")),
       });
       const caller = createCaller();
       await caller.webhookConfig.rotateSecret({
@@ -312,6 +316,7 @@ describe("webhookConfig router", () => {
     vi.mocked(createWebhookConfig).mockResolvedValue({
       ...MOCK_WEBHOOK,
       secret: "whsec_test",
+      secretBytes: toServerSecret(Buffer.from("whsec_test")),
     });
     const caller = createCaller();
     await assertProcedureRateLimited(

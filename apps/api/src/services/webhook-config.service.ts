@@ -52,7 +52,9 @@ import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type { FetchFn } from "../lib/webhook-fetch.js";
 import type {
+  ApiKeyId,
   PaginatedResult,
+  ServerSecret,
   SystemId,
   UnixMillis,
   WebhookEventType,
@@ -68,7 +70,12 @@ export interface WebhookConfigResult {
   readonly url: string;
   readonly eventTypes: readonly WebhookEventType[];
   readonly enabled: boolean;
-  readonly cryptoKeyId: string | null;
+  /**
+   * API key that encrypts delivery payloads at rest in the database. Null
+   * when the webhook emits plaintext payloads. Matches the canonical
+   * `WebhookConfig.cryptoKeyId` brand in @pluralscape/types.
+   */
+  readonly cryptoKeyId: ApiKeyId | null;
   readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -76,9 +83,19 @@ export interface WebhookConfigResult {
   readonly updatedAt: UnixMillis;
 }
 
-/** Returned from create only — includes the raw secret for the caller to store. */
+/**
+ * Returned from create/rotate only — includes the raw secret for the caller
+ * to store. `secret` is the base64-encoded form of a `ServerSecret`
+ * (Uint8Array). Exposing it as `string` here is deliberate: the server
+ * serializes the HMAC signing key to base64 before it hits the wire, and
+ * callers never need the raw bytes. Keep the branded Uint8Array type for
+ * the in-memory path via `WebhookConfigCreateResult.secretBytes`.
+ */
 export interface WebhookConfigCreateResult extends WebhookConfigResult {
+  /** Base64-encoded form of the newly-generated HMAC signing secret. */
   readonly secret: string;
+  /** Raw branded bytes for any caller that needs to sign inline. */
+  readonly secretBytes: ServerSecret;
 }
 
 export interface WebhookConfigListOptions {
@@ -124,13 +141,27 @@ function toWebhookConfigResult(row: {
     url: row.url,
     eventTypes: row.eventTypes,
     enabled: row.enabled,
-    cryptoKeyId: row.cryptoKeyId,
+    // DB returns `string | null`; brand it here so every caller consumes
+    // the canonical ApiKeyId shape without needing a downstream cast.
+    cryptoKeyId: row.cryptoKeyId === null ? null : brandId<ApiKeyId>(row.cryptoKeyId),
     version: row.version,
     archived: row.archived,
     archivedAt: toUnixMillisOrNull(row.archivedAt),
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };
+}
+
+/**
+ * Narrow a freshly-generated Uint8Array into a `ServerSecret` without a
+ * double-cast. The brand is a compile-time phantom; the runtime bytes are
+ * the bytes `randomBytes` produced.
+ *
+ * Exported so test helpers can produce a valid `ServerSecret` without
+ * reaching for an `as unknown as ServerSecret` double-cast.
+ */
+export function toServerSecret(bytes: Uint8Array): ServerSecret {
+  return bytes as ServerSecret;
 }
 
 /** Localhost patterns exempt from the HTTPS requirement. */
@@ -200,7 +231,7 @@ export async function createWebhookConfig(
       );
     }
 
-    const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
+    const secretBytes = toServerSecret(randomBytes(WEBHOOK_SECRET_BYTES));
 
     const [row] = await tx
       .insert(webhookConfigs)
@@ -230,7 +261,8 @@ export async function createWebhookConfig(
 
     return {
       ...toWebhookConfigResult(row),
-      secret: secretBytes.toString("base64"),
+      secret: Buffer.from(secretBytes).toString("base64"),
+      secretBytes,
     };
   });
 
@@ -532,7 +564,7 @@ export async function rotateWebhookSecret(
 
   const { version } = parseResult.data;
   const timestamp = now();
-  const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
+  const secretBytes = toServerSecret(randomBytes(WEBHOOK_SECRET_BYTES));
 
   const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
@@ -580,7 +612,8 @@ export async function rotateWebhookSecret(
 
     return {
       ...toWebhookConfigResult(row),
-      secret: secretBytes.toString("base64"),
+      secret: Buffer.from(secretBytes).toString("base64"),
+      secretBytes,
     };
   });
 
