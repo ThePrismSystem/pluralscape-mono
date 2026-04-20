@@ -1,7 +1,10 @@
 import { pgInsertAccount, pgInsertSystem } from "@pluralscape/db/test-helpers/pg-helpers";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { router as makeRouter, publicProcedure } from "../../trpc/trpc.js";
+
 import { setupRouterIntegration, truncateAll } from "./integration-helpers.js";
+import { makeIntegrationCallerFactory } from "./test-helpers.js";
 
 import type { RouterIntegrationCtx } from "./integration-helpers.js";
 
@@ -53,6 +56,23 @@ describe("truncateAll", () => {
         `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`,
       );
       expect(tables.rows.length).toBeGreaterThan(20);
+    } finally {
+      await ctx.teardown();
+    }
+  });
+});
+
+describe("makeIntegrationCallerFactory", () => {
+  it("creates a caller backed by a real TRPCContext that exposes the db", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const probeRouter = makeRouter({
+        ping: publicProcedure.query(() => "pong"),
+      });
+      const makeCaller = makeIntegrationCallerFactory({ probe: probeRouter }, ctx.db);
+      const caller = makeCaller(null);
+      const result = await caller.probe.ping();
+      expect(result).toBe("pong");
     } finally {
       await ctx.teardown();
     }
