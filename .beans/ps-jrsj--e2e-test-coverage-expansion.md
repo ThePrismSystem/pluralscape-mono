@@ -5,8 +5,8 @@ status: todo
 type: task
 priority: low
 created_at: 2026-04-16T06:58:55Z
-updated_at: 2026-04-16T06:58:55Z
-parent: ps-0enb
+updated_at: 2026-04-20T07:25:05Z
+parent: ps-9u4w
 ---
 
 Low-severity E2E test coverage findings from comprehensive audit.
