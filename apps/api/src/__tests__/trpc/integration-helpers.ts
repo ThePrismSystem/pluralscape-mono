@@ -112,17 +112,12 @@ export interface SeededTenant {
  * because tRPC input validators (`brandedIdQueryParam`) reject bare UUIDs.
  * The DB schema stores them as opaque strings, so the prefix round-trips
  * cleanly through inserts and queries.
- *
- * The `as never` cast on `db` mirrors `concurrent-guard-semantics.integration.test.ts`:
- * the pg-helpers functions take `PgliteDatabase<Record<string, unknown>>` but we
- * carry a `PostgresJsDatabase` by the time it reaches a router test. Both are
- * `PgDatabase` subclasses with identical insert APIs.
  */
 export async function seedAccountAndSystem(db: PostgresJsDatabase): Promise<SeededTenant> {
   const accountIdRaw = `acc_${crypto.randomUUID()}`;
   const systemIdRaw = `sys_${crypto.randomUUID()}`;
-  await pgInsertAccount(db as never, accountIdRaw);
-  await pgInsertSystem(db as never, accountIdRaw, systemIdRaw);
+  await pgInsertAccount(db, accountIdRaw);
+  await pgInsertSystem(db, accountIdRaw, systemIdRaw);
   const accountId = brandId<AccountId>(accountIdRaw);
   const systemId = brandId<SystemId>(systemIdRaw);
   return {

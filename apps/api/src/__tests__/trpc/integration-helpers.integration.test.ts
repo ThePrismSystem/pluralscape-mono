@@ -50,8 +50,8 @@ describe("truncateAll", () => {
   it("removes all rows from accounts and systems but preserves tables", async () => {
     const ctx = await setupRouterIntegration();
     try {
-      const accountId = await pgInsertAccount(ctx.db as never);
-      await pgInsertSystem(ctx.db as never, accountId);
+      const accountId = await pgInsertAccount(ctx.db);
+      await pgInsertSystem(ctx.db, accountId);
 
       const beforeCount = await ctx.pglite.query<{ n: number }>(
         `SELECT COUNT(*)::int AS n FROM accounts`,

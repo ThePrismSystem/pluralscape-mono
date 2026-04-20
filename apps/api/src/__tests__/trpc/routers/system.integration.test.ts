@@ -63,7 +63,7 @@ const TEST_AUTH_KEY_HEX = "a".repeat(64);
  */
 async function seedSiblingSystem(db: PostgresJsDatabase, accountIdRaw: string): Promise<void> {
   const siblingIdRaw = `sys_${crypto.randomUUID()}`;
-  await pgInsertSystem(db as never, accountIdRaw, siblingIdRaw);
+  await pgInsertSystem(db, accountIdRaw, siblingIdRaw);
 }
 
 /**
