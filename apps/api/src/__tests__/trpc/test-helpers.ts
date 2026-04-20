@@ -8,6 +8,7 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { TRPCContext } from "../../trpc/context.js";
 import type { SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export type { SystemId };
 
@@ -62,4 +63,32 @@ export async function assertProcedureRateLimited(
   await fn();
   expect(checkRateLimitMock).toHaveBeenCalled();
   expect(getRateLimitKey(checkRateLimitMock)).toContain(expectedCategory);
+}
+
+/**
+ * Build a tRPC caller factory backed by a real TRPCContext (real DB, real
+ * audit no-op). Use in router integration tests instead of
+ * `makeCallerFactory`, which uses a Proxy that throws on db access.
+ *
+ * The returned factory accepts an optional auth context (default `null` for
+ * unauthenticated tests). Pass a `seedAccountAndSystem(...).auth` to invoke
+ * authenticated procedures.
+ */
+export function makeIntegrationCallerFactory<T extends Parameters<typeof router>[0]>(
+  routerDef: T,
+  db: PostgresJsDatabase,
+): (
+  auth?: AuthContext | null,
+) => ReturnType<ReturnType<typeof createCallerFactory<ReturnType<typeof router<T>>>>> {
+  const appRouter = router(routerDef);
+  const createCaller = createCallerFactory(appRouter);
+  return (auth: AuthContext | null = null) =>
+    createCaller(
+      createTRPCContextInner({
+        db,
+        auth,
+        createAudit: () => noopAuditWriter,
+        requestMeta: { ipAddress: null, userAgent: null },
+      }),
+    );
 }
