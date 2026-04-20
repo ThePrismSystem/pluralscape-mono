@@ -34,6 +34,19 @@ import type { PlatformContext } from "../src/platform/index.js";
 import type { I18nConfig } from "@pluralscape/i18n";
 import type { ReactNode } from "react";
 
+// `AsyncStorageI18nCache` is stateless beyond the (storage, ttl) pair it is
+// constructed with, and `createChainedBackend` closes over the API base URL
+// plus a stateless cache/loader. Both are invariant across locale changes,
+// so they are hoisted to module scope. Previously they were re-allocated on
+// every locale transition via a useMemo keyed on `locale`, which broke
+// reference equality for downstream consumers and churned garbage.
+const i18nCache = new AsyncStorageI18nCache(AsyncStorage, I18N_CACHE_TTL_MS);
+const i18nBackend = createChainedBackend({
+  apiBaseUrl: getApiBaseUrl(),
+  loadBundled: loadBundledNamespace,
+  cache: i18nCache,
+});
+
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
@@ -196,20 +209,15 @@ export default function RootLayout(): React.JSX.Element {
   const connectionManagerRef = useRef<ConnectionManager | null>(null);
   connectionManagerRef.current ??= new ConnectionManager(connectionConfig);
 
-  const i18nConfig = useMemo<I18nConfig>(() => {
-    const cache = new AsyncStorageI18nCache(AsyncStorage, I18N_CACHE_TTL_MS);
-    const backend = createChainedBackend({
-      apiBaseUrl: getApiBaseUrl(),
-      loadBundled: loadBundledNamespace,
-      cache,
-    });
-    return {
+  const i18nConfig = useMemo<I18nConfig>(
+    () => ({
       locale,
       fallbackLocale: DEFAULT_LOCALE,
       resources: {},
-      backend,
-    };
-  }, [locale]);
+      backend: i18nBackend,
+    }),
+    [locale],
+  );
 
   const initPlatform = useCallback(() => {
     setInitError(null);

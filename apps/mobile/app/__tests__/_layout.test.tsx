@@ -59,7 +59,15 @@ const mockDetectPlatform = vi.fn<() => Promise<PlatformContext>>();
 const mockCreateTokenStore = vi.fn<() => Promise<TokenStore>>();
 const mockDetectLocale = vi.fn<(locales: string[]) => string>().mockReturnValue("en");
 const mockApplyLayoutDirection = vi.fn<(locale: string) => void>();
-const mockCreateChainedBackend = vi.fn(() => ({ type: "backend" as const, read: vi.fn() }));
+
+// `_layout.tsx` hoists createChainedBackend/AsyncStorageI18nCache construction
+// to module scope, so the i18n mock factory has to return a real function
+// the moment the layout module is imported. `vi.hoisted` gives us a stub
+// that exists before any `vi.mock` factory runs.
+const { mockCreateChainedBackend } = vi.hoisted(() => ({
+  mockCreateChainedBackend: vi.fn(() => ({ type: "backend" as const, read: vi.fn() })),
+}));
+
 const mockLoadBundledNamespace = vi.fn(
   (locale: string, namespace: string): Promise<Readonly<Record<string, string>>> => {
     void locale;
