@@ -21,12 +21,27 @@ import { z } from "zod/v4";
  *
  * Examples accepted: `en`, `en-US`, `zh-Hant`.
  * Examples rejected: `en_US`, `../etc`, `en-%2E%2E`, empty string.
+ *
+ * Intentionally accepts syntactically valid but non-existent locales
+ * (e.g. `zz-ZZ`). Crowdin's CDN is the authoritative allowlist: unknown
+ * locales return 404 and surface as {@link CrowdinOtaFailure} (`upstream`
+ * kind), which the route layer maps to the same not-found envelope the
+ * client would see for a known-but-unconfigured locale. Shape validation
+ * here exists solely to block path-traversal and URL injection — NOT to
+ * enumerate supported locales. Keeping the regex loose also avoids
+ * coupling this validator to the Crowdin project's configured locale
+ * list, which changes independently of the codebase.
  */
 const LOCALE_PATTERN = /^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?$/;
 
 /**
  * Namespace pattern: letters, digits, underscore, and hyphen only.
  * Dots are explicitly disallowed to block path-traversal segments.
+ *
+ * Like the locale pattern, this does NOT enumerate the project's
+ * configured namespaces — unknown names 404 at the CDN and surface as
+ * {@link CrowdinOtaFailure}. Crowdin owns the allowlist; we only
+ * sanitise the URL segment.
  */
 const NAMESPACE_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
