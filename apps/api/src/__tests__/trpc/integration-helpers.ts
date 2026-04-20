@@ -22,6 +22,11 @@ import { asDb } from "../helpers/integration-setup.js";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
+/** Row shape returned by `pg_tables` for table discovery. */
+interface PgTablesRow {
+  readonly tablename: string;
+}
+
 export interface RouterIntegrationCtx {
   readonly db: PostgresJsDatabase;
   readonly pglite: PGlite;
@@ -39,4 +44,26 @@ export async function setupRouterIntegration(): Promise<RouterIntegrationCtx> {
       await pglite.close();
     },
   };
+}
+
+/**
+ * Truncate every table in the public schema with RESTART IDENTITY CASCADE.
+ * Designed for `afterEach` between tests in a single file. Discovers tables
+ * dynamically via the underlying PGlite handle so future schema additions
+ * don't require updating this list.
+ *
+ * Takes the `RouterIntegrationCtx` rather than a bare `PostgresJsDatabase`
+ * so we can use the typed PGlite query API for the discovery SELECT — the
+ * postgres.js `db.execute()` `RowList` shape isn't usable without a cast.
+ */
+export async function truncateAll(ctx: RouterIntegrationCtx): Promise<void> {
+  const result = await ctx.pglite.query<PgTablesRow>(
+    `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
+  );
+  const tables = result.rows
+    .map((r) => r.tablename)
+    .filter((t) => t !== "drizzle_migrations" && !t.startsWith("_"));
+  if (tables.length === 0) return;
+  const quoted = tables.map((t) => `"${t}"`).join(", ");
+  await ctx.pglite.query(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`);
 }
