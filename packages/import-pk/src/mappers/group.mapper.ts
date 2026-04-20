@@ -13,13 +13,13 @@ import { normalisePkColor } from "./pk-mapper-helpers.js";
 import type { PKGroup } from "../validators/pk-payload.js";
 import type { GroupEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
+import type { CreateGroupBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface PkMappedGroup {
+export type PkMappedGroup = Omit<z.infer<typeof CreateGroupBodySchema>, "encryptedData"> & {
   readonly encrypted: GroupEncryptedFields;
-  readonly parentGroupId: null;
-  readonly sortOrder: 0;
   readonly memberIds: readonly string[];
-}
+};
 
 export function mapPkGroup(pk: PKGroup, ctx: MappingContext): MapperResult<PkMappedGroup> {
   if (typeof pk.name !== "string" || pk.name.trim().length === 0) {
@@ -71,7 +71,7 @@ export function mapPkGroup(pk: PKGroup, ctx: MappingContext): MapperResult<PkMap
   return mapped({
     encrypted,
     parentGroupId: null,
-    sortOrder: 0 as const,
+    sortOrder: 0,
     memberIds,
   });
 }
