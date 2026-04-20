@@ -220,6 +220,46 @@ describe("blob-s3-cleanup handler", () => {
     expect(heartbeatFn).toHaveBeenCalledTimes(3);
   });
 
+  // Abort granularity: the signal is checked BETWEEN sub-batches, not
+  // within one. Aborting after the first sub-batch completes should
+  // stop subsequent sub-batches without aborting any in-flight work.
+  it("stops processing further sub-batches after abort is fired mid-run", async () => {
+    const { db, chain } = mockDb();
+    // 12 rows / 5 per sub-batch = 3 sub-batches when no abort fires.
+    const archivedRows = Array.from({ length: 12 }, (_, i) => ({
+      id: `blob_${String(i)}`,
+      storageKey: `sys_test/blob_${String(i)}`,
+    }));
+    chain.limit.mockResolvedValueOnce(archivedRows);
+    const { adapter, deleteFn } = makeStorageAdapter();
+    const abortController = new AbortController();
+    // Fire the abort once the first sub-batch has started (first delete
+    // call). The sub-batch completes via Promise.allSettled; the next
+    // iteration sees the signal and breaks out before issuing any deletes.
+    // `heartbeat` runs after each sub-batch, which is a convenient
+    // post-sub-batch hook to fire the abort without tangling with the
+    // delete mock type signature.
+    let firstBatchSeen = false;
+    const heartbeatFn = vi.fn().mockImplementation(() => {
+      if (!firstBatchSeen) {
+        firstBatchSeen = true;
+        abortController.abort();
+      }
+      return Promise.resolve(undefined);
+    });
+    const handler = createBlobS3CleanupHandler(db, adapter);
+
+    await handler(stubJob(), {
+      heartbeat: { heartbeat: heartbeatFn },
+      signal: abortController.signal,
+    });
+
+    // Only the first sub-batch (5 rows) was issued; remaining 7 skipped.
+    expect(deleteFn).toHaveBeenCalledTimes(5);
+    // Exactly one heartbeat — one per completed sub-batch.
+    expect(heartbeatFn).toHaveBeenCalledTimes(1);
+  });
+
   // Partial-failure tolerance within a sub-batch: Promise.allSettled must
   // log rejected promises and continue with the remaining successes rather
   // than aborting the whole sub-batch.

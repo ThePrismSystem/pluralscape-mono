@@ -12,12 +12,14 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { updateNotificationConfig } from "../../services/notification-config.service.js";
 import {
   clearSwitchAlertConfigCache,
   dispatchSwitchAlertForSession,
 } from "../../services/switch-alert-dispatcher.js";
-import { asDb, testBlob } from "../helpers/integration-setup.js";
+import { asDb, makeAuth, testBlob } from "../helpers/integration-setup.js";
 
+import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { JobQueue } from "@pluralscape/queue";
 import type {
   AccountId,
@@ -668,6 +670,39 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     const sessionId2 = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
     await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId2, memberId, null, queue);
 
+    expect(enqueuedJobs).toHaveLength(1);
+  });
+
+  // End-to-end wire test: calling updateNotificationConfig through the real
+  // service path must invalidate the dispatcher's cache so the next dispatch
+  // observes the new value immediately — not after TTL expiry. Validates the
+  // mutation → invalidation wire together with the hoisted-after-commit fix.
+  it("invalidates dispatcher cache when updateNotificationConfig disables the row", async () => {
+    const { memberId } = await setupEligibleFriend();
+    const sessionId1 = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    const { queue, enqueuedJobs } = createMockQueue();
+
+    // Warm the cache with enabled=true
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId1, memberId, null, queue);
+    expect(enqueuedJobs).toHaveLength(1);
+
+    // Disable via the service layer — must invalidate the dispatcher cache.
+    const auth = makeAuth(accountIdA, systemIdA);
+    const noopAudit: AuditWriter = () => Promise.resolve();
+    await updateNotificationConfig(
+      asDb(db),
+      systemIdA,
+      "friend-switch-alert",
+      { enabled: false },
+      auth,
+      noopAudit,
+    );
+
+    const sessionId2 = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId2, memberId, null, queue);
+
+    // Must still be 1 — no new enqueue because the cache was invalidated and
+    // the dispatcher re-read the disabled row.
     expect(enqueuedJobs).toHaveLength(1);
   });
 });

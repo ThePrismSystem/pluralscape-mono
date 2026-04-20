@@ -11,6 +11,7 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { MAX_ANALYTICS_SESSIONS } from "../../quota.constants.js";
 import {
   computeCoFrontingBreakdown,
   computeFrontingBreakdown,
@@ -226,6 +227,54 @@ describe("analytics.service (PGlite integration)", () => {
       expect(result.subjectBreakdowns[0]?.subjectId).toBe(memberB);
       expect(result.subjectBreakdowns[1]?.subjectId).toBe(memberA);
     });
+
+    // Regression for the truncated-contract fix: aggregation now happens in
+    // Postgres so the aggregate-row count can be much smaller than the raw
+    // session count. `truncated` must reflect raw-session volume vs. the
+    // cap, not the post-aggregate row count. Seeds just over the cap across
+    // a small set of subjects and asserts the flag.
+    it("sets truncated=true when raw sessions exceed MAX_ANALYTICS_SESSIONS", async () => {
+      // Two subjects, many sessions each → aggregate-row count = 2 but
+      // raw-session count > MAX_ANALYTICS_SESSIONS. Prior contract would
+      // silently report truncated=false.
+      const memberA = brandId<MemberId>(await pgInsertMember(db, systemId));
+      const memberB = brandId<MemberId>(await pgInsertMember(db, systemId));
+
+      const totalSessions = MAX_ANALYTICS_SESSIONS + 1;
+      // Batch insert to keep PGlite happy; drizzle multi-row VALUES.
+      const BATCH = 500;
+      for (let batchStart = 0; batchStart < totalSessions; batchStart += BATCH) {
+        const batchRows: Record<string, unknown>[] = [];
+        const end = Math.min(batchStart + BATCH, totalSessions);
+        for (let i = batchStart; i < end; i++) {
+          // Stagger timestamps so SELECT by startTime stays deterministic.
+          const start = baseTime - (i + 1) * 1000;
+          batchRows.push({
+            id: genFrontingSessionId(),
+            systemId,
+            startTime: start,
+            endTime: start + 500,
+            memberId: i % 2 === 0 ? memberA : memberB,
+            customFrontId: null,
+            structureEntityId: null,
+            encryptedData: testBlob(),
+            createdAt: baseTime,
+            updatedAt: baseTime,
+            version: 1,
+            archived: false,
+            archivedAt: null,
+          });
+        }
+        await db.insert(frontingSessions).values(batchRows as never);
+      }
+
+      const dateRange = customRange(baseTime - totalSessions * 1000 - 5000, baseTime);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
+
+      expect(result.truncated).toBe(true);
+      // Aggregate still collapses to 2 subject rows.
+      expect(result.subjectBreakdowns).toHaveLength(2);
+    }, 60_000);
   });
 
   // ── computeCoFrontingBreakdown ──────────────────────────────────────
