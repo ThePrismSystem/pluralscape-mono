@@ -32,6 +32,7 @@ export interface MockChain {
   for: ReturnType<typeof vi.fn>;
   onConflictDoNothing: ReturnType<typeof vi.fn>;
   groupBy: ReturnType<typeof vi.fn>;
+  having: ReturnType<typeof vi.fn>;
   execute: ReturnType<typeof vi.fn>;
 }
 
@@ -58,6 +59,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
     onConflictDoNothing: vi.fn(),
     execute: vi.fn(),
     groupBy: vi.fn(),
+    having: vi.fn(),
   };
 
   // Apply overrides after construction so Partial<MockChain> doesn't widen types
@@ -89,7 +91,8 @@ export function mockDb(overrides?: Partial<MockChain>): {
   chain.delete.mockReturnValue(chain);
   chain.for.mockReturnValue(thenableChain);
   chain.onConflictDoNothing.mockReturnValue(chain);
-  chain.groupBy.mockResolvedValue([]);
+  chain.groupBy.mockReturnValue(chain);
+  chain.having.mockReturnValue(chain);
   // execute is used by RLS context helpers (setTenantContext, setAccountId)
   chain.execute.mockResolvedValue(undefined);
   // transaction passes the chain as tx and awaits the callback.
