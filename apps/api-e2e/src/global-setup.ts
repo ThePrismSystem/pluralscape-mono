@@ -258,28 +258,35 @@ async function globalSetup(): Promise<void> {
     // Spawn the API server
     await assertPortFree(E2E_PORT);
     console.info("[e2e] Starting API server on port", E2E_PORT);
+    // Strip VITEST from the inherited env — apps/api/src/index.ts gates its
+    // start() call on `!process.env["VITEST"]` to avoid an async teardown race
+    // when the module is `import`ed by unit tests. The spawned server is a
+    // separate process that SHOULD run start(); leaking a parent VITEST flag
+    // would silence start() and the health check times out.
+    const spawnEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      API_PORT: String(E2E_PORT),
+      DB_DIALECT: "pg",
+      DATABASE_URL: databaseUrl,
+      EMAIL_HASH_PEPPER: emailPepper,
+      WEBHOOK_PAYLOAD_ENCRYPTION_KEY:
+        process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] ?? DEFAULT_TEST_WEBHOOK_KEY,
+      NODE_ENV: "test",
+      DISABLE_RATE_LIMIT: "1",
+      BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
+      BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
+      BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
+      AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
+      AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
+      // Wire the i18n proxy to the local stub so the suite exercises the
+      // full Crowdin contract against a controllable fixture.
+      CROWDIN_DISTRIBUTION_HASH: E2E_CROWDIN_HASH,
+      CROWDIN_OTA_BASE_URL: crowdinStub.baseUrl,
+    };
+    delete spawnEnv["VITEST"];
     serverProcess = spawn("bun", ["run", "src/index.ts"], {
       cwd: API_DIR,
-      env: {
-        ...process.env,
-        API_PORT: String(E2E_PORT),
-        DB_DIALECT: "pg",
-        DATABASE_URL: databaseUrl,
-        EMAIL_HASH_PEPPER: emailPepper,
-        WEBHOOK_PAYLOAD_ENCRYPTION_KEY:
-          process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] ?? DEFAULT_TEST_WEBHOOK_KEY,
-        NODE_ENV: "test",
-        DISABLE_RATE_LIMIT: "1",
-        BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
-        BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
-        BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
-        AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
-        AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
-        // Wire the i18n proxy to the local stub so the suite exercises the
-        // full Crowdin contract against a controllable fixture.
-        CROWDIN_DISTRIBUTION_HASH: E2E_CROWDIN_HASH,
-        CROWDIN_OTA_BASE_URL: crowdinStub.baseUrl,
-      },
+      env: spawnEnv,
       stdio: "pipe",
     });
 
