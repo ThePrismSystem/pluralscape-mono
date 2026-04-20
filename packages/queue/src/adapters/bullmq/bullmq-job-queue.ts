@@ -86,6 +86,24 @@ function jobIdOf(job: BullMQJob): JobId {
 }
 
 /**
+ * Validate a BullMQ job's `data` field against {@link StoredJobDataSchema} and
+ * return the parsed shape. Throws {@link QueueCorruptionError} on failure so
+ * callers surface a typed error rather than a raw ZodError leaking across the
+ * queue API boundary.
+ *
+ * Use this at every point where we deserialize `job.data` — silent casts let
+ * partial writes, schema drift, or manual Redis edits produce malformed
+ * JobDefinitions downstream, which violates the fail-closed contract.
+ */
+function parseJobDataOrThrow(job: BullMQJob): StoredJobData {
+  const result = StoredJobDataSchema.safeParse(job.data);
+  if (!result.success) {
+    throw new QueueCorruptionError(jobIdOf(job), { cause: result.error });
+  }
+  return result.data as StoredJobData;
+}
+
+/**
  * BullMQ-backed implementation of JobQueue.
  *
  * Uses a single BullMQ queue with our JobDefinition embedded in job data.
@@ -335,7 +353,7 @@ export class BullMQJobQueue implements JobQueue {
         const job = (await fetchWorker.getNextJob(this.token)) as BullMQJob | undefined;
         if (job === undefined) break;
 
-        const def = job.data as StoredJobData;
+        const def = parseJobDataOrThrow(job);
         // Check type filter
         if (types !== undefined && !types.includes(def.type)) {
           putBack.push(job);
@@ -384,7 +402,7 @@ export class BullMQJobQueue implements JobQueue {
 
   async acknowledge(jobId: JobId, result: { message?: string }): Promise<JobDefinition> {
     const job = await this.requireBullMQJob(jobId);
-    const def = job.data as StoredJobData;
+    const def = parseJobDataOrThrow(job);
 
     if (def.status !== "running") {
       throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "acknowledge");
@@ -414,7 +432,7 @@ export class BullMQJobQueue implements JobQueue {
 
   async fail(jobId: JobId, error: string): Promise<JobDefinition> {
     const job = await this.requireBullMQJob(jobId);
-    const def = job.data as StoredJobData;
+    const def = parseJobDataOrThrow(job);
 
     if (def.status !== "running") {
       throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "fail");
@@ -488,7 +506,7 @@ export class BullMQJobQueue implements JobQueue {
     const job = await this.queue.getJob(jobId);
     if (job === undefined) throw new JobNotFoundError(jobId);
 
-    const def = job.data as StoredJobData;
+    const def = parseJobDataOrThrow(job);
     if (def.status !== "dead-letter") {
       throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "retry");
     }
@@ -527,7 +545,7 @@ export class BullMQJobQueue implements JobQueue {
     const job = await this.queue.getJob(jobId);
     if (job === undefined) throw new JobNotFoundError(jobId);
 
-    const def = job.data as StoredJobData;
+    const def = parseJobDataOrThrow(job);
     if (def.status === "completed") {
       throw new InvalidJobTransitionError(jobId, "completed", "cancel");
     }
@@ -641,7 +659,7 @@ export class BullMQJobQueue implements JobQueue {
     const job = await this.queue.getJob(jobId);
     if (job === undefined) throw new JobNotFoundError(jobId);
 
-    const hbData = job.data as StoredJobData;
+    const hbData = parseJobDataOrThrow(job);
     if (hbData.status !== "running") {
       throw new InvalidJobTransitionError(jobId, hbData.status as JobStatus, "heartbeat");
     }
@@ -654,15 +672,18 @@ export class BullMQJobQueue implements JobQueue {
     const currentTime = this.clock();
     const activeJobs = await this.queue.getJobs(["active"]);
 
+    // Parse once per job, then reuse the validated shape in the map() pass.
+    // Fail-closed: a corrupt active job surfaces QueueCorruptionError rather
+    // than silently masking a stalled job detection gap.
     return activeJobs
-      .filter((job) => {
-        const d = job.data as StoredJobData;
-        if (d.status !== "running") return false;
-        const lastBeat = d.lastHeartbeatAt ?? d.startedAt;
+      .map((job) => ({ job, data: parseJobDataOrThrow(job) }))
+      .filter(({ data }) => {
+        if (data.status !== "running") return false;
+        const lastBeat = data.lastHeartbeatAt ?? data.startedAt;
         if (lastBeat === null) return false;
-        return lastBeat + d.timeoutMs < currentTime;
+        return lastBeat + data.timeoutMs < currentTime;
       })
-      .map((j) => fromStoredData(jobIdOf(j), j.data as StoredJobData));
+      .map(({ job, data }) => fromStoredData(jobIdOf(job), data));
   }
 
   getRetryPolicy(type: JobType): RetryPolicy {
