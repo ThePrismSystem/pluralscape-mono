@@ -8,6 +8,7 @@
 import { serve } from "@hono/node-server";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { sleep, waitFor, waitForStable } from "../../helpers/async-wait.js";
 import { mockAuthFactory, mockRateLimitFactory } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH } from "../../helpers/route-test-setup.js";
 
@@ -138,45 +139,6 @@ async function readNextEvent(reader: SseReader, timeoutMs = 3000): Promise<strin
     if (sep !== -1) return buf.slice(0, sep);
   }
   return buf;
-}
-
-/** Poll a condition until it is truthy or a timeout expires. */
-async function waitFor(condition: () => boolean, timeoutMs = 3000, intervalMs = 25): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (!condition() && Date.now() < deadline) {
-    await new Promise<void>((r) => setTimeout(r, intervalMs));
-  }
-  if (!condition()) throw new Error("waitFor timed out");
-}
-
-/**
- * Bounded sleep helper. Exists so the test suite routes every wall-clock
- * wait through a named function and not bare `new Promise(r => setTimeout(r, n))`
- * calls scattered across the file. Use sparingly and only when there is no
- * observable side-effect to poll on (see waitFor / waitForStable).
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Poll an invariant for `stableMs` to prove it is *persistently* true — use
- * instead of a bare sleep when the test asserts a "must not change" property
- * (e.g. a warn counter should stay constant while another SSE client connects).
- * Returns early with an assertion failure the moment the invariant flips.
- */
-async function waitForStable(
-  invariant: () => boolean,
-  stableMs: number,
-  intervalMs = 25,
-): Promise<void> {
-  const deadline = Date.now() + stableMs;
-  while (Date.now() < deadline) {
-    if (!invariant()) {
-      throw new Error("waitForStable: invariant became false during the stability window");
-    }
-    await new Promise<void>((r) => setTimeout(r, intervalMs));
-  }
 }
 
 /** Read chunks from a reader into an accumulator until done or cancelled. */
