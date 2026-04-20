@@ -40,12 +40,31 @@ import type { ReactNode } from "react";
 // so they are hoisted to module scope. Previously they were re-allocated on
 // every locale transition via a useMemo keyed on `locale`, which broke
 // reference equality for downstream consumers and churned garbage.
-const i18nCache = new AsyncStorageI18nCache(AsyncStorage, I18N_CACHE_TTL_MS);
-const i18nBackend = createChainedBackend({
-  apiBaseUrl: getApiBaseUrl(),
-  loadBundled: loadBundledNamespace,
-  cache: i18nCache,
-});
+//
+// `getApiBaseUrl()` throws if eas.json extras are misconfigured (missing or
+// non-https outside a dev build). Without a try/catch the throw runs during
+// module import — before React mounts — and the user sees an unstyled
+// redbox / white screen instead of the `ErrorScreen` boundary. Capture the
+// failure so `RootLayout` can render `ErrorScreen` on the first paint.
+type I18nBackendType = ReturnType<typeof createChainedBackend>;
+
+function noop(): void {
+  // Module-scope i18n failure is non-recoverable at runtime — see the
+  // ErrorScreen branch in RootLayout.
+}
+
+let i18nBackend: I18nBackendType | null = null;
+let i18nInitError: Error | null = null;
+try {
+  const i18nCache = new AsyncStorageI18nCache(AsyncStorage, I18N_CACHE_TTL_MS);
+  i18nBackend = createChainedBackend({
+    apiBaseUrl: getApiBaseUrl(),
+    loadBundled: loadBundledNamespace,
+    cache: i18nCache,
+  });
+} catch (err) {
+  i18nInitError = err instanceof Error ? err : new Error(String(err));
+}
 
 const styles = StyleSheet.create({
   centered: {
@@ -209,13 +228,16 @@ export default function RootLayout(): React.JSX.Element {
   const connectionManagerRef = useRef<ConnectionManager | null>(null);
   connectionManagerRef.current ??= new ConnectionManager(connectionConfig);
 
-  const i18nConfig = useMemo<I18nConfig>(
-    () => ({
-      locale,
-      fallbackLocale: DEFAULT_LOCALE,
-      resources: {},
-      backend: i18nBackend,
-    }),
+  const i18nConfig = useMemo<I18nConfig | null>(
+    () =>
+      i18nBackend === null
+        ? null
+        : {
+            locale,
+            fallbackLocale: DEFAULT_LOCALE,
+            resources: {},
+            backend: i18nBackend,
+          },
     [locale],
   );
 
@@ -257,11 +279,19 @@ export default function RootLayout(): React.JSX.Element {
     return tokenStore.getToken();
   }, [tokenStore]);
 
+  if (i18nInitError !== null) {
+    // Module-scope i18n construction failed (typically `getApiBaseUrl()`
+    // throwing on a misconfigured build). There is nothing to retry at
+    // runtime — retrying would re-run a module-scope singleton that has
+    // already thrown — so surface the error with a no-op retry handler.
+    return <ErrorScreen error={i18nInitError} onRetry={noop} />;
+  }
+
   if (initError !== null) {
     return <ErrorScreen error={initError} onRetry={initPlatform} />;
   }
 
-  if (platform === null || tokenStore === null) {
+  if (platform === null || tokenStore === null || i18nConfig === null) {
     return <LoadingSpinner />;
   }
 
