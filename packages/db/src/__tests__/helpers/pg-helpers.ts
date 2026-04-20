@@ -89,7 +89,7 @@ import { pgTableToCreateDDL, pgTableToIndexDDL } from "./schema-to-ddl.js";
 
 import type { PGlite } from "@electric-sql/pglite";
 import type { BucketId, EncryptedBlob } from "@pluralscape/types";
-import type { PgTable } from "drizzle-orm/pg-core";
+import type { PgDatabase, PgQueryResultHKT, PgTable } from "drizzle-orm/pg-core";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 /** Creates a minimal valid EncryptedBlob for test fixtures. */
@@ -345,7 +345,7 @@ async function createPgBaseTables(client: PGlite): Promise<void> {
 }
 
 export async function pgInsertAccount(
-  db: PgliteDatabase<Record<string, unknown>>,
+  db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>,
   id?: string,
 ): Promise<string> {
   const resolvedId = id ?? crypto.randomUUID();
@@ -364,7 +364,7 @@ export async function pgInsertAccount(
 }
 
 export async function pgInsertSystem(
-  db: PgliteDatabase<Record<string, unknown>>,
+  db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>,
   accountId: string,
   id?: string,
 ): Promise<string> {
