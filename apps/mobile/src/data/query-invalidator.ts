@@ -1,6 +1,10 @@
 import { getEntityTypesForDocument, getTableDef } from "@pluralscape/sync/materializer";
 
-import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
+import type {
+  DataLayerEventMap,
+  EventBus,
+  SearchScope as EventSearchScope,
+} from "@pluralscape/sync";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 /**
@@ -12,11 +16,32 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 const LIST_DISCRIMINATOR_INDEX = 1;
 
 /**
- * Index into a search query key at which the scope (`"self" | "friend"`)
- * appears. Search keys are shaped `["search", debouncedQuery, scope]`
- * (see `src/hooks/use-search.ts`).
+ * Index into a search query key at which the scope
+ * (`"self" | "friends" | "all"`) appears. Search keys are shaped
+ * `["search", debouncedQuery, scope]` (see `src/hooks/use-search.ts`).
  */
 const SEARCH_SCOPE_INDEX = 2;
+
+/**
+ * Maps an event's search scope (the data source that materialized) to the
+ * set of UI-side query scopes that must be invalidated.
+ *
+ * Event scope union: `"self" | "friend"` (see `@pluralscape/sync` event map).
+ * Query scope union: `"self" | "friends" | "all"` (see `use-search.ts`).
+ *
+ * A self-materialization invalidates both `"self"`-only and `"all"`-scope
+ * searches; a friend-materialization invalidates both `"friends"`-only and
+ * `"all"`-scope searches. The `"all"` default is critical — it's what
+ * `useSearch()` uses when no scope is passed explicitly.
+ */
+function queryScopesToInvalidate(scope: EventSearchScope): ReadonlySet<string> {
+  switch (scope) {
+    case "self":
+      return new Set(["self", "all"]);
+    case "friend":
+      return new Set(["friends", "all"]);
+  }
+}
 
 function isListQuery(queryKey: QueryKey): boolean {
   return queryKey[LIST_DISCRIMINATOR_INDEX] === "list";
@@ -63,15 +88,20 @@ export function createQueryInvalidator(
   });
 
   const unsubSearch = eventBus.on("search:index-updated", (event) => {
-    // Search queries are keyed `["search", debouncedQuery, scope]` (see
-    // `use-search.ts`). Scope the invalidation so a `self` materialization
-    // does not purge friend search caches (and vice versa). Queries that
-    // lack a scope slot (e.g., a bare `["search"]` entry) fall through
-    // the predicate and stay cached.
-    const { scope } = event;
+    // Search queries are keyed `["search", debouncedQuery, scope]` where the
+    // UI-side scope union is `"self" | "friends" | "all"` (see
+    // `use-search.ts`). The event's scope is the data-source that
+    // materialized (`"self" | "friend"`). Map through
+    // `queryScopesToInvalidate` so an "all"-scope default search is not
+    // left stale after either kind of event. Queries without a string
+    // scope slot fall through and stay cached.
+    const targetScopes = queryScopesToInvalidate(event.scope);
     void queryClient.invalidateQueries({
       queryKey: ["search"],
-      predicate: (query) => query.queryKey[SEARCH_SCOPE_INDEX] === scope,
+      predicate: (query) => {
+        const scopeSlot = query.queryKey[SEARCH_SCOPE_INDEX];
+        return typeof scopeSlot === "string" && targetScopes.has(scopeSlot);
+      },
     });
   });
 

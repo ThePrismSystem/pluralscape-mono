@@ -209,7 +209,7 @@ describe("createQueryInvalidator", () => {
       expect(hasPredicate(filters)).toBe(true);
     });
 
-    it("predicate matches only queries with matching scope", () => {
+    it("self-scope event invalidates self and all query scopes (not friends)", () => {
       createQueryInvalidator(eventBus, queryClient);
 
       eventBus.emit("search:index-updated", {
@@ -219,16 +219,18 @@ describe("createQueryInvalidator", () => {
 
       const predicate = requirePredicate(filterAt(invalidateQueries, 0));
 
-      // Matching scope → invalidated.
+      // The UI-side scope union is "self" | "friends" | "all" (see
+      // use-search.ts). A "self"-scope event corresponds to own-data
+      // materialization, which must invalidate both the "self"-only view
+      // and the default "all" view, but not a friends-only view.
       expect(predicate({ queryKey: ["search", "hello", "self"] })).toBe(true);
-      expect(predicate({ queryKey: ["search", "", "self"] })).toBe(true);
-      // Other scope → preserved.
-      expect(predicate({ queryKey: ["search", "hello", "friend"] })).toBe(false);
+      expect(predicate({ queryKey: ["search", "hello", "all"] })).toBe(true);
+      expect(predicate({ queryKey: ["search", "hello", "friends"] })).toBe(false);
       // Key shape without scope slot → preserved.
       expect(predicate({ queryKey: ["search"] })).toBe(false);
     });
 
-    it("a friend-scope event does not invalidate self-scope queries", () => {
+    it("friend-scope event invalidates friends and all query scopes (not self)", () => {
       createQueryInvalidator(eventBus, queryClient);
 
       eventBus.emit("search:index-updated", {
@@ -239,8 +241,24 @@ describe("createQueryInvalidator", () => {
 
       const predicate = requirePredicate(filterAt(invalidateQueries, 0));
 
-      expect(predicate({ queryKey: ["search", "q", "friend"] })).toBe(true);
+      expect(predicate({ queryKey: ["search", "q", "friends"] })).toBe(true);
+      expect(predicate({ queryKey: ["search", "q", "all"] })).toBe(true);
       expect(predicate({ queryKey: ["search", "q", "self"] })).toBe(false);
+    });
+
+    it("preserves queries whose scope slot is not a recognized string value", () => {
+      createQueryInvalidator(eventBus, queryClient);
+
+      eventBus.emit("search:index-updated", {
+        type: "search:index-updated",
+        scope: "self",
+      });
+
+      const predicate = requirePredicate(filterAt(invalidateQueries, 0));
+
+      expect(predicate({ queryKey: ["search", "q", "bogus"] })).toBe(false);
+      expect(predicate({ queryKey: ["search", "q", 42] })).toBe(false);
+      expect(predicate({ queryKey: ["search", "q", undefined] })).toBe(false);
     });
   });
 
