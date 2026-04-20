@@ -20,7 +20,6 @@ import {
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { brandId } from "@pluralscape/types";
-import { TRPCError } from "@trpc/server";
 import { drizzle } from "drizzle-orm/pglite";
 import { expect } from "vitest";
 
@@ -142,38 +141,27 @@ export async function seedSecondTenant(db: PostgresJsDatabase): Promise<SeededTe
  * that requires authentication.
  */
 export async function expectAuthRequired(promise: Promise<unknown>): Promise<void> {
-  let caught: unknown;
-  try {
-    await promise;
-  } catch (err) {
-    caught = err;
-  }
-  if (caught === undefined) {
-    expect.unreachable("Expected UNAUTHORIZED rejection but promise resolved");
-  }
-  expect(caught).toBeInstanceOf(TRPCError);
-  expect((caught as TRPCError).code).toBe("UNAUTHORIZED");
+  await expect(promise).rejects.toThrow(
+    expect.objectContaining({
+      name: "TRPCError",
+      code: "UNAUTHORIZED",
+    }),
+  );
 }
 
 /**
  * Assert a promise rejects with a TRPCError indicating cross-tenant access
- * was denied. Accepts both FORBIDDEN (explicit deny) and NOT_FOUND (some
- * scope guards mask cross-tenant entities as not-found rather than forbidden
- * to avoid leaking existence).
+ * was denied. Accepts both FORBIDDEN (explicit deny) and NOT_FOUND because
+ * some scope guards mask cross-tenant entities as not-found rather than
+ * forbidden to avoid leaking existence.
  */
 export async function expectTenantDenied(promise: Promise<unknown>): Promise<void> {
-  let caught: unknown;
-  try {
-    await promise;
-  } catch (err) {
-    caught = err;
-  }
-  if (caught === undefined) {
-    expect.unreachable("Expected tenant-denied rejection but promise resolved");
-  }
-  expect(caught).toBeInstanceOf(TRPCError);
-  const code = (caught as TRPCError).code;
-  expect(["FORBIDDEN", "NOT_FOUND"]).toContain(code);
+  await expect(promise).rejects.toThrow(
+    expect.objectContaining({
+      name: "TRPCError",
+      code: expect.stringMatching(/^(FORBIDDEN|NOT_FOUND)$/),
+    }),
+  );
 }
 
 // ── Entity seed helpers ─────────────────────────────────────────────
