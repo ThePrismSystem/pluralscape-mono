@@ -10,7 +10,9 @@ import {
 import { brandId } from "@pluralscape/types";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
+import { NOTIFICATION_CONFIGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { logger } from "../lib/logger.js";
+import { QueryCache } from "../lib/query-cache.js";
 
 import type { JobQueue } from "@pluralscape/queue";
 import type {
@@ -31,6 +33,48 @@ const SWITCH_ALERT_EVENT: FriendNotificationEventType = "friend-switch-alert";
 export const ENQUEUE_CONCURRENCY = 10;
 
 /**
+ * Cached shape of the per-system switch-alert config. `null` means an
+ * explicit "no row exists / fail-closed" — the dispatcher treats both
+ * an absent row and a disabled row as a short-circuit.
+ */
+interface CachedNotificationConfig {
+  readonly enabled: boolean;
+  readonly pushEnabled: boolean;
+}
+
+/**
+ * Per-(systemId, eventType) cache for the notification config row that
+ * gates every switch-alert dispatch. Matches the webhook-dispatcher
+ * pattern: short TTL + explicit invalidation from mutation paths.
+ */
+const notificationConfigCache = new QueryCache<CachedNotificationConfig | null>(
+  NOTIFICATION_CONFIGS_CACHE_TTL_MS,
+);
+
+/** Invalidation key derived from the tenant + event-type tuple. */
+function cacheKey(systemId: SystemId, eventType: string): string {
+  return `${systemId}:${eventType}`;
+}
+
+/**
+ * Invalidate the cached switch-alert config for a system.
+ *
+ * Call from any mutation path that changes `notificationConfigs` rows so
+ * operator toggles take effect within a single dispatch rather than
+ * lingering for up to the TTL window. Accepts a plain string eventType so
+ * the call site doesn't have to narrow against `FriendNotificationEventType`
+ * — unrelated event types simply miss the cache harmlessly.
+ */
+export function invalidateSwitchAlertConfigCache(systemId: SystemId, eventType: string): void {
+  notificationConfigCache.invalidate(cacheKey(systemId, eventType));
+}
+
+/** Clear the entire cache (for test teardown). */
+export function clearSwitchAlertConfigCache(): void {
+  notificationConfigCache.clear();
+}
+
+/**
  * Dispatch switch alert notifications to all eligible friends after a fronting
  * session is created. Enqueues one `notification-send` job per active device
  * token on each eligible friend account.
@@ -49,20 +93,31 @@ export async function dispatchSwitchAlertForSession(
     // 1. Check system-level config: is friend-switch-alert enabled?
     // Fail-closed: missing config row = DO NOT dispatch. Explicit opt-in required
     // via `notificationConfigs.enabled && pushEnabled` set true.
-    const [config] = await db
-      .select({
-        enabled: notificationConfigs.enabled,
-        pushEnabled: notificationConfigs.pushEnabled,
-      })
-      .from(notificationConfigs)
-      .where(
-        and(
-          eq(notificationConfigs.systemId, systemId),
-          eq(notificationConfigs.eventType, SWITCH_ALERT_EVENT),
-          eq(notificationConfigs.archived, false),
-        ),
-      )
-      .limit(1);
+    //
+    // Cache at (systemId, eventType): fronting churn triggers the dispatcher
+    // on the hot path for every session. The cached value is the minimal
+    // pair of booleans actually consulted by the guard; invalidation fires
+    // from notification-config.service mutations.
+    const key = cacheKey(systemId, SWITCH_ALERT_EVENT);
+    let config: CachedNotificationConfig | null | undefined = notificationConfigCache.get(key);
+    if (config === undefined) {
+      const [row] = await db
+        .select({
+          enabled: notificationConfigs.enabled,
+          pushEnabled: notificationConfigs.pushEnabled,
+        })
+        .from(notificationConfigs)
+        .where(
+          and(
+            eq(notificationConfigs.systemId, systemId),
+            eq(notificationConfigs.eventType, SWITCH_ALERT_EVENT),
+            eq(notificationConfigs.archived, false),
+          ),
+        )
+        .limit(1);
+      config = row ? { enabled: row.enabled, pushEnabled: row.pushEnabled } : null;
+      notificationConfigCache.set(key, config);
+    }
 
     if (!config || !config.enabled || !config.pushEnabled) {
       return;

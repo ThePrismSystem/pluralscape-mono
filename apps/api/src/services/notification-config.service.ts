@@ -7,6 +7,8 @@ import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 import { MAX_PAGE_LIMIT } from "../service.constants.js";
 
+import { invalidateSwitchAlertConfigCache } from "./switch-alert-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -178,6 +180,7 @@ export async function updateNotificationConfig(
         systemId,
       });
 
+      invalidateSwitchAlertConfigCache(systemId, eventType);
       return result;
     }
 
@@ -189,6 +192,7 @@ export async function updateNotificationConfig(
       systemId,
     });
 
+    invalidateSwitchAlertConfigCache(systemId, eventType);
     return toNotificationConfigResult(updated);
   });
 }
