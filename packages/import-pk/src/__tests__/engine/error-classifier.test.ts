@@ -120,6 +120,53 @@ describe("classifyPkError", () => {
       const r = classifyPkError(makeApiError("not-a-status"), CTX);
       expect(r).toMatchObject({ fatal: true, recoverable: true });
     });
+
+    it("treats NaN as unknown (normalise rejects non-finite)", () => {
+      const r = classifyPkError(makeApiError(Number.NaN), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
+
+    it("treats Infinity as unknown (normalise rejects non-finite)", () => {
+      const r = classifyPkError(makeApiError(Number.POSITIVE_INFINITY), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
+
+    it("treats -Infinity as unknown (normalise rejects non-finite)", () => {
+      const r = classifyPkError(makeApiError(Number.NEGATIVE_INFINITY), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
+
+    it("treats a negative numeric status as unknown (no HTTP status is <0)", () => {
+      const r = classifyPkError(makeApiError(-401), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
+
+    it("treats 0 as unknown (falls below the 5xx range)", () => {
+      const r = classifyPkError(makeApiError(0), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
+
+    it("parses hex-prefixed strings as the leading integer (base-10)", () => {
+      // `parseInt("0x1A4", 10)` returns `0` — the prefix is not a valid base-10 char.
+      const r = classifyPkError(makeApiError("0x1A4"), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
+
+    it("parses partial numeric strings using parseInt's prefix rule", () => {
+      // `parseInt("401abc", 10)` returns `401` — classifies as fatal non-recoverable.
+      const r = classifyPkError(makeApiError("401abc"), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: false });
+    });
+
+    it("treats an empty string as unknown (parseInt returns NaN)", () => {
+      const r = classifyPkError(makeApiError(""), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
+
+    it("treats whitespace-only strings as unknown (parseInt returns NaN)", () => {
+      const r = classifyPkError(makeApiError("  "), CTX);
+      expect(r).toMatchObject({ fatal: true, recoverable: true });
+    });
   });
 
   describe("non-APIError delegation", () => {

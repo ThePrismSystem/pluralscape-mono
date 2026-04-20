@@ -121,6 +121,23 @@ describe("createPkApiImportSource", () => {
       ).not.toThrow();
     });
 
+    it("allows http://[::1] — IPv6 loopback with URL-bracket syntax", () => {
+      // Node's URL parser returns `[::1]` for the hostname; the guard strips
+      // the brackets before comparing against LOOPBACK_HOSTS.
+      expect(() =>
+        createPkApiImportSource({ token: "test-token", baseUrl: "http://[::1]:8080" }),
+      ).not.toThrow();
+    });
+
+    it("rejects a non-loopback IPv6 host over plaintext http", () => {
+      expect(() =>
+        createPkApiImportSource({
+          token: "test-token",
+          baseUrl: "http://[2001:db8::1]:8080",
+        }),
+      ).toThrow(/refusing to send API token to a non-HTTPS baseUrl/);
+    });
+
     it("rejects http:// baseUrl on a remote host", () => {
       expect(() =>
         createPkApiImportSource({ token: "test-token", baseUrl: "http://api.example.com" }),
@@ -151,6 +168,12 @@ describe("createPkApiImportSource", () => {
       expect(() => createPkApiImportSource({ token: "   " })).toThrow(
         /token must be a non-empty string/,
       );
+    });
+
+    it("preserves surrounding whitespace on an otherwise-valid token", () => {
+      // Tokens are opaque; silently trimming them would hide copy-paste bugs.
+      // The guard rejects empty-or-whitespace-only, not "has whitespace".
+      expect(() => createPkApiImportSource({ token: "  valid  " })).not.toThrow();
     });
   });
 
