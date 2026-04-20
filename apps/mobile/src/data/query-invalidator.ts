@@ -1,7 +1,19 @@
 import { getEntityTypesForDocument, getTableDef } from "@pluralscape/sync/materializer";
 
 import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
+
+/**
+ * Index into a React Query key at which list-style queries carry the
+ * `"list"` discriminator. See `src/hooks/use-*.ts` — all list hooks shape
+ * keys as `[tableName, "list", ...]` and detail hooks shape keys as
+ * `[tableName, entityId]`.
+ */
+const LIST_DISCRIMINATOR_INDEX = 1;
+
+function isListQuery(queryKey: QueryKey): boolean {
+  return queryKey[LIST_DISCRIMINATOR_INDEX] === "list";
+}
 
 /**
  * Bridges the sync/materialization event bus to React Query invalidations.
@@ -18,8 +30,23 @@ export function createQueryInvalidator(
   const unsubDocument = eventBus.on("materialized:document", (event) => {
     const entityTypes = getEntityTypesForDocument(event.documentType);
     for (const entityType of entityTypes) {
-      const { tableName } = getTableDef(entityType);
-      void queryClient.invalidateQueries({ queryKey: [tableName] });
+      const tableDef = getTableDef(entityType);
+      // Narrowing: for hot-path entity types, per-entity `materialized:entity`
+      // events (see `unsubEntity` below) already precisely invalidate detail
+      // queries (`[tableName, entityId]`). The document-level event only
+      // needs to cover list queries (`[tableName, "list", ...]`).
+      //
+      // For non-hot-path entity types no entity-level events fire, so the
+      // document event must broadly invalidate `[tableName]` to keep both
+      // list and detail queries in sync.
+      if (tableDef.hotPath) {
+        void queryClient.invalidateQueries({
+          queryKey: [tableDef.tableName],
+          predicate: (query) => isListQuery(query.queryKey),
+        });
+      } else {
+        void queryClient.invalidateQueries({ queryKey: [tableDef.tableName] });
+      }
     }
   });
 
