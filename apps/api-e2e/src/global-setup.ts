@@ -10,6 +10,7 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
+import { assertPortFree, pollHealth } from "@pluralscape/test-utils/e2e";
 import { MS_PER_SECOND } from "@pluralscape/types";
 
 import {
@@ -19,7 +20,6 @@ import {
 } from "./crowdin-stub-lifecycle.js";
 
 const E2E_PORT = 10_099;
-const HEALTH_POLL_MS = 100;
 const HEALTH_TIMEOUT_MS = 15_000;
 const PG_READY_POLL_MS = 200;
 const PG_READY_TIMEOUT_MS = 30_000;
@@ -47,20 +47,6 @@ const DEFAULT_TEST_WEBHOOK_KEY = crypto
   .digest("hex");
 
 let serverProcess: ChildProcess | null = null;
-
-async function pollHealth(baseUrl: string, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`${baseUrl}/health`);
-      if (res.ok) return;
-    } catch {
-      // Server not ready yet
-    }
-    await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
-  }
-  throw new Error(`API server did not become healthy within ${String(timeoutMs)}ms`);
-}
 
 function dockerIsAvailable(): boolean {
   try {
@@ -269,6 +255,7 @@ async function globalSetup(): Promise<void> {
   // before re-throwing so the socket is released even on aborted setups.
   try {
     // Spawn the API server
+    await assertPortFree(E2E_PORT);
     console.info("[e2e] Starting API server on port", E2E_PORT);
     serverProcess = spawn("bun", ["run", "src/index.ts"], {
       cwd: API_DIR,
@@ -295,12 +282,29 @@ async function globalSetup(): Promise<void> {
       stdio: "pipe",
     });
 
+    const stderrTail: string[] = [];
+    const STDERR_TAIL_MAX = 20;
     serverProcess.stderr?.on("data", (data: Buffer) => {
       const msg = data.toString();
-      // Surface errors and fatals, not routine pino JSON logs
-      if (msg.includes('"level":50') || msg.includes('"level":60')) {
-        process.stderr.write(`[api-e2e] ${msg}`);
+      // Classify per-line. A single 'data' event can contain multiple records;
+      // testing the entire chunk would misclassify raw Bun errors that happen
+      // to share a chunk with a pino INFO/DEBUG/WARN line.
+      const lines = msg.split(/\r?\n/);
+      let forwarded = "";
+      for (const line of lines) {
+        if (line === "") continue;
+        const isPinoJson = /^\s*\{.*"level":\d+/.test(line);
+        const isLowLevelPino =
+          isPinoJson && !line.includes('"level":50') && !line.includes('"level":60');
+        if (!isLowLevelPino) {
+          forwarded += `[api-e2e] ${line}\n`;
+        }
       }
+      if (forwarded !== "") {
+        process.stderr.write(forwarded);
+      }
+      stderrTail.push(msg);
+      if (stderrTail.length > STDERR_TAIL_MAX) stderrTail.shift();
     });
 
     if (!serverProcess.pid) {
@@ -308,7 +312,12 @@ async function globalSetup(): Promise<void> {
     }
     process.env["E2E_SERVER_PID"] = String(serverProcess.pid);
 
-    await pollHealth(`http://localhost:${String(E2E_PORT)}`, HEALTH_TIMEOUT_MS);
+    await pollHealth({
+      baseUrl: `http://localhost:${String(E2E_PORT)}`,
+      timeoutMs: HEALTH_TIMEOUT_MS,
+      child: serverProcess,
+      stderrTail,
+    });
     console.info("[e2e] API server is healthy. Running tests...");
   } catch (err: unknown) {
     // Setup aborted — close the stub we already started so it doesn't leak.

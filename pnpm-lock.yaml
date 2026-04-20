@@ -237,6 +237,9 @@ importers:
       '@pluralscape/sync':
         specifier: workspace:*
         version: link:../../packages/sync
+      '@pluralscape/test-utils':
+        specifier: workspace:*
+        version: link:../../tooling/test-utils
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
