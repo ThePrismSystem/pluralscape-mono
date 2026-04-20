@@ -8,6 +8,7 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
   const originalWebhookPayloadEncryptionKey = process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"];
   const originalApiKeyHmacKey = process.env["API_KEY_HMAC_KEY"];
   const originalCrowdinDistributionHash = process.env["CROWDIN_DISTRIBUTION_HASH"];
+  const originalAntiEnumSaltSecret = process.env["ANTI_ENUM_SALT_SECRET"];
 
   beforeEach(() => {
     vi.resetModules();
@@ -52,6 +53,11 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     } else {
       process.env["CROWDIN_DISTRIBUTION_HASH"] = originalCrowdinDistributionHash;
     }
+    if (originalAntiEnumSaltSecret === undefined) {
+      delete process.env["ANTI_ENUM_SALT_SECRET"];
+    } else {
+      process.env["ANTI_ENUM_SALT_SECRET"] = originalAntiEnumSaltSecret;
+    }
   });
 
   it("forces DISABLE_RATE_LIMIT to false in production and logs a critical warning", async () => {
@@ -63,6 +69,7 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] = "c".repeat(64);
     process.env["API_KEY_HMAC_KEY"] = "d".repeat(64);
     process.env["CROWDIN_DISTRIBUTION_HASH"] = "test-hash";
+    process.env["ANTI_ENUM_SALT_SECRET"] = "z".repeat(36);
 
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
@@ -100,6 +107,7 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] = "c".repeat(64);
     process.env["API_KEY_HMAC_KEY"] = "d".repeat(64);
     process.env["CROWDIN_DISTRIBUTION_HASH"] = "test-hash";
+    process.env["ANTI_ENUM_SALT_SECRET"] = "z".repeat(36);
 
     const { env } = await import("../env.js");
 

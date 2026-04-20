@@ -20,11 +20,22 @@ export type ClientPlatform = (typeof VALID_PLATFORMS)[number];
 /** Default platform when header is missing or unrecognized. */
 export const DEFAULT_PLATFORM = "web" as const satisfies ClientPlatform;
 
-/** Environment variable name for the anti-enumeration salt secret. */
-export const ANTI_ENUM_SALT_SECRET_ENV = "ANTI_ENUM_SALT_SECRET";
-
-/** Default anti-enumeration secret for development/test. */
+/**
+ * Default anti-enumeration secret for development/test.
+ *
+ * Used as fallback ONLY outside production — the env.ts Zod schema
+ * rejects this value when NODE_ENV=production and requires the
+ * ANTI_ENUM_SALT_SECRET env var to be set and at least 32 characters.
+ */
 export const ANTI_ENUM_SALT_SECRET_DEFAULT = "pluralscape-dev-anti-enum-secret-do-not-use-in-prod";
+
+/**
+ * Minimum length required for a production ANTI_ENUM_SALT_SECRET value.
+ *
+ * 32 bytes of entropy is sufficient collision-resistance for the BLAKE2B
+ * keyed hash that produces the anti-enumeration fake salt.
+ */
+export const ANTI_ENUM_SALT_SECRET_MIN_LENGTH = 32;
 
 /** Challenge nonce TTL in milliseconds (5 minutes). */
 export const CHALLENGE_NONCE_TTL_MS = 5 * 60 * 1_000;
@@ -64,9 +75,5 @@ export const ANTI_ENUM_TARGET_MS = 500;
 /** Expected length of EMAIL_HASH_PEPPER hex string (32 bytes = 64 hex chars). */
 export const PEPPER_HEX_LENGTH = 64;
 
-// Fail-closed: refuse to start in production without anti-enum salt secret
-if (process.env["NODE_ENV"] === "production" && !process.env[ANTI_ENUM_SALT_SECRET_ENV]) {
-  throw new Error(
-    `${ANTI_ENUM_SALT_SECRET_ENV} must be set in production to prevent email enumeration`,
-  );
-}
+// Production fail-closed check for ANTI_ENUM_SALT_SECRET is enforced
+// centrally by env.ts (Zod schema refuses boot if unset or too short).
