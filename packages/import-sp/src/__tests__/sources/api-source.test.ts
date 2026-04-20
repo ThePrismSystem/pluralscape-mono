@@ -82,6 +82,20 @@ describe("createApiImportSource — baseUrl safety", () => {
     ).not.toThrow();
   });
 
+  it("accepts plaintext http:// for [::1] (IPv6 loopback with URL brackets)", () => {
+    // Node's URL parser returns `[::1]` for the hostname; the guard strips
+    // the brackets before comparing against LOOPBACK_HOSTS.
+    expect(() =>
+      createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "http://[::1]:4000" }),
+    ).not.toThrow();
+  });
+
+  it("rejects a non-loopback IPv6 host over plaintext http", () => {
+    expect(() =>
+      createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "http://[2001:db8::1]:4000" }),
+    ).toThrow(/refusing to send API token to a non-HTTPS baseUrl/);
+  });
+
   it("throws on malformed baseUrl", () => {
     expect(() => createApiImportSource({ ...DEFAULT_INPUT, baseUrl: "not-a-url" })).toThrow(
       /baseUrl is not a valid URL/,
