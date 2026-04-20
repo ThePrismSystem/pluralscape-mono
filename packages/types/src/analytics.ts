@@ -12,6 +12,16 @@ import type { DateRange } from "./utility.js";
 /** A duration in milliseconds — branded for type safety. */
 export type Duration = Brand<number, "Duration">;
 
+/**
+ * Cast a plain number to a branded {@link Duration}. Compile-time only — no
+ * runtime cost. Centralises the `as Duration` pattern so future branding
+ * changes (e.g. a clamp) have a single update point. Mirrors `brandId` for
+ * string-branded IDs.
+ */
+export function toDuration(ms: number): Duration {
+  return ms as Duration;
+}
+
 /** Date range preset options for analytics queries. */
 export const DATE_RANGE_PRESETS = [
   "last-7-days",
