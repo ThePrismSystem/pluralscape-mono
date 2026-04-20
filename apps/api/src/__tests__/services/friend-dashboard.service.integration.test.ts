@@ -333,6 +333,33 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     expect(result.visibleMembers[0]?.id).toBe(visibleMemberId);
   });
 
+  // Regression for api-5y16: prior to the fix, queryVisibleEntities hard-capped
+  // at MAX_PAGE_LIMIT=100 so systems with more than 100 visible members silently
+  // truncated the friend's dashboard. Cap is now MAX_MEMBERS_PER_SYSTEM (5 000),
+  // so a realistic "many members visible" scenario returns every visible row.
+  it("returns more than the legacy MAX_PAGE_LIMIT of 100 visible members", async () => {
+    const { ownerConnectionId, friendConnectionId } = await insertBilateralConnections();
+    const bucketId = await insertBucket();
+    await insertBucketAssignment(ownerConnectionId, bucketId);
+
+    const TOTAL_MEMBERS = 120;
+    const memberIds: MemberId[] = [];
+    for (let i = 0; i < TOTAL_MEMBERS; i++) {
+      const id = await insertMember();
+      memberIds.push(id);
+      await insertBucketTag("member", id, bucketId);
+    }
+
+    const result = await getFriendDashboard(asDb(db), friendConnectionId, friendAuth);
+
+    expect(result.memberCount).toBe(TOTAL_MEMBERS);
+    expect(result.visibleMembers).toHaveLength(TOTAL_MEMBERS);
+    const returnedIds = new Set(result.visibleMembers.map((m) => m.id));
+    for (const id of memberIds) {
+      expect(returnedIds.has(id)).toBe(true);
+    }
+  }, 30_000);
+
   it("returns 404 for non-existent connection", async () => {
     const fakeConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
 
