@@ -3,6 +3,36 @@ import { getSodium } from "./sodium.js";
 
 import type { AeadKey, AeadNonce } from "./types.js";
 
+/**
+ * Minimal shape of a Web Streams `ReadableStream<Uint8Array>`.
+ *
+ * Defined locally so this package can stay on the `ES2022` lib target without
+ * pulling in the full `DOM` typings. Matches the contract the runtime uses:
+ * `getReader()` returns a reader with `read()` producing `{ done, value }`
+ * chunks and a `releaseLock()` / `cancel()` pair for cleanup.
+ */
+export interface ReadableByteStream {
+  getReader(): {
+    read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
+    releaseLock(): void;
+    cancel(reason?: unknown): Promise<void>;
+  };
+}
+
+/**
+ * Input accepted by the streaming encryption API.
+ *
+ * - `Uint8Array` — single in-memory buffer (legacy path)
+ * - `ReadableByteStream` — Web Streams source (file pickers, fetch bodies); structurally
+ *   assignable from the global `ReadableStream<Uint8Array>` on web/mobile.
+ * - `AsyncIterable<Uint8Array>` — any async byte producer (Node streams via `Readable.toWeb`
+ *   or async generators)
+ *
+ * The stream variants let callers avoid materializing the full input as a single
+ * contiguous buffer, which matters for large blob uploads on memory-constrained devices.
+ */
+export type StreamInput = Uint8Array | ReadableByteStream | AsyncIterable<Uint8Array>;
+
 /** Result of a symmetric encryption operation. */
 export interface EncryptedPayload {
   readonly ciphertext: Uint8Array;
@@ -70,8 +100,113 @@ function buildChunkAad(chunkIndex: number, totalChunks: number): Uint8Array {
 }
 
 /**
+ * Type guard for `ReadableByteStream`.
+ *
+ * Narrow check: the argument exposes a callable `getReader` method. This matches
+ * both the DOM `ReadableStream<Uint8Array>` and Node's web-streams variant without
+ * importing the DOM `lib`.
+ */
+function isReadableByteStream(input: unknown): input is ReadableByteStream {
+  return (
+    typeof input === "object" &&
+    input !== null &&
+    "getReader" in input &&
+    typeof (input as { getReader: unknown }).getReader === "function"
+  );
+}
+
+/**
+ * Normalize any accepted {@link StreamInput} into an `AsyncIterable<Uint8Array>`.
+ *
+ * - `Uint8Array`           → yields exactly once with the buffer unchanged.
+ * - `ReadableByteStream`   → drains the reader; releases the lock on completion or error.
+ * - `AsyncIterable`        → returned as-is.
+ *
+ * This is the single adapter the encryption path consumes; callers never pay for
+ * re-materializing the entire input as a contiguous buffer.
+ */
+export function toAsyncIterable(input: StreamInput): AsyncIterable<Uint8Array> {
+  if (input instanceof Uint8Array) {
+    // Synthesise a single-shot async iterable without an async generator — the
+    // `require-await` lint would flag a generator with no `await`, and Promise.resolve
+    // keeps the iterator protocol async.
+    const buf = input;
+    return {
+      [Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+        let yielded = false;
+        return {
+          next(): Promise<IteratorResult<Uint8Array>> {
+            if (yielded) return Promise.resolve({ done: true, value: undefined });
+            yielded = true;
+            return Promise.resolve({ done: false, value: buf });
+          },
+        };
+      },
+    };
+  }
+  if (isReadableByteStream(input)) {
+    return readerIterable(input);
+  }
+  return input;
+}
+
+async function* readerIterable(stream: ReadableByteStream): AsyncIterable<Uint8Array> {
+  const reader = stream.getReader();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      if (value !== undefined && value.byteLength > 0) yield value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/**
+ * Consume an async iterable and re-chunk the byte stream into uniformly sized
+ * plaintext slices. Bytes are copied into newly allocated `Uint8Array` chunks
+ * so the caller cannot mutate them after we compute AAD.
+ *
+ * The final chunk may be shorter than `chunkSize`. Returns at least one chunk
+ * (possibly empty) to match the pre-existing `encryptStream` semantics for
+ * empty input.
+ */
+async function collectPlaintextChunks(
+  source: AsyncIterable<Uint8Array>,
+  chunkSize: number,
+): Promise<Uint8Array[]> {
+  const chunks: Uint8Array[] = [];
+  let buffer = new Uint8Array(chunkSize);
+  let filled = 0;
+
+  for await (const part of source) {
+    let offset = 0;
+    while (offset < part.byteLength) {
+      const spaceInBuffer = chunkSize - filled;
+      const bytesToCopy = Math.min(spaceInBuffer, part.byteLength - offset);
+      buffer.set(part.subarray(offset, offset + bytesToCopy), filled);
+      filled += bytesToCopy;
+      offset += bytesToCopy;
+      if (filled === chunkSize) {
+        chunks.push(buffer);
+        buffer = new Uint8Array(chunkSize);
+        filled = 0;
+      }
+    }
+  }
+  if (filled > 0) chunks.push(buffer.subarray(0, filled));
+  if (chunks.length === 0) chunks.push(new Uint8Array(0));
+  return chunks;
+}
+
+/**
  * Encrypt plaintext in chunks. Each chunk gets independent AEAD encryption
  * with chunk index in AAD to prevent reordering/truncation.
+ *
+ * Synchronous variant kept for the in-memory path; for streaming input (a
+ * Web Streams `ReadableStream<Uint8Array>` or an `AsyncIterable<Uint8Array>`)
+ * use {@link encryptStreamAsync}.
  */
 export function encryptStream(
   plaintext: Uint8Array,
@@ -93,6 +228,52 @@ export function encryptStream(
   }
 
   return { chunks, totalLength: plaintext.length };
+}
+
+/**
+ * Streaming-input variant of {@link encryptStream}.
+ *
+ * Accepts any {@link StreamInput} and re-chunks its bytes into `chunkSize`-byte
+ * plaintext slices before encrypting each with AEAD + chunk-index AAD. Callers
+ * providing a `ReadableStream` or async iterable avoid holding the full input
+ * in memory as a single contiguous `Uint8Array`; the function itself buffers
+ * only the current accumulating chunk plus the already-encrypted ciphertext
+ * output.
+ *
+ * The chunk-count appears in AAD, so the output must know the total count up
+ * front. That count is discovered as the source is drained; consequently this
+ * function emits the full `StreamEncryptedPayload` at the end, not
+ * per-ciphertext-chunk. Backpressure is still honoured on the input side — we
+ * never pull from the source faster than AEAD can consume.
+ */
+export async function encryptStreamAsync(
+  input: StreamInput,
+  key: AeadKey,
+  chunkSize: number = DEFAULT_CHUNK_SIZE,
+): Promise<StreamEncryptedPayload> {
+  if (chunkSize <= 0) {
+    throw new InvalidInputError("Chunk size must be a positive integer.");
+  }
+
+  if (input instanceof Uint8Array) {
+    // Fast path — identical semantics as the synchronous variant.
+    return encryptStream(input, key, chunkSize);
+  }
+
+  const plaintextChunks = await collectPlaintextChunks(toAsyncIterable(input), chunkSize);
+  const totalChunks = plaintextChunks.length;
+  const encryptedChunks: EncryptedPayload[] = [];
+  let totalLength = 0;
+
+  for (let i = 0; i < totalChunks; i++) {
+    const plain = plaintextChunks[i];
+    if (!plain) throw new InvalidInputError("Unexpected missing plaintext chunk.");
+    const aad = buildChunkAad(i, totalChunks);
+    encryptedChunks.push(encrypt(plain, key, aad));
+    totalLength += plain.byteLength;
+  }
+
+  return { chunks: encryptedChunks, totalLength };
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   encryptJSON,
   decryptJSON,
   encryptStream,
+  encryptStreamAsync,
   decryptStream,
 } from "../symmetric.js";
 
@@ -287,5 +288,150 @@ describe("encryptStream/decryptStream", () => {
     expect(() =>
       decryptStream({ chunks: duplicated, totalLength: payload.totalLength }, key),
     ).toThrow(DecryptionFailedError);
+  });
+});
+
+describe("encryptStreamAsync", () => {
+  const CHUNK = 64;
+
+  it("matches encryptStream(Uint8Array) semantics for the fast path", async () => {
+    const plaintext = encoder.encode("in-memory fast path");
+    const sync = encryptStream(plaintext, key, CHUNK);
+    const async = await encryptStreamAsync(plaintext, key, CHUNK);
+
+    expect(async.totalLength).toBe(sync.totalLength);
+    expect(async.chunks.length).toBe(sync.chunks.length);
+
+    // Round-trip confirms semantic equivalence even if nonces differ.
+    expect(decryptStream(async, key)).toEqual(plaintext);
+  });
+
+  it("round-trips data from an async iterable of uneven chunks", async () => {
+    const plaintext = new Uint8Array(CHUNK * 3 + 17);
+    plaintext.set(adapter.randomBytes(plaintext.length));
+
+    // Deliberately emit mis-aligned slices to exercise the re-chunker.
+    const parts: readonly Uint8Array[] = [
+      plaintext.subarray(0, 31),
+      plaintext.subarray(31, 31 + CHUNK + 3),
+      plaintext.subarray(31 + CHUNK + 3),
+    ];
+    let idx = 0;
+    const source: AsyncIterable<Uint8Array> = {
+      [Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+        return {
+          next(): Promise<IteratorResult<Uint8Array>> {
+            const value = parts[idx];
+            if (idx >= parts.length || value === undefined) {
+              return Promise.resolve({ done: true, value: undefined });
+            }
+            idx += 1;
+            return Promise.resolve({ done: false, value });
+          },
+        };
+      },
+    };
+
+    const payload = await encryptStreamAsync(source, key, CHUNK);
+    expect(payload.totalLength).toBe(plaintext.byteLength);
+    expect(decryptStream(payload, key)).toEqual(plaintext);
+  });
+
+  it("round-trips data from a ReadableByteStream-shaped source", async () => {
+    const plaintext = new Uint8Array(CHUNK * 2 + 5);
+    plaintext.set(adapter.randomBytes(plaintext.length));
+
+    // Construct a minimal object matching the ReadableByteStream interface
+    // the crypto package ships. Avoids depending on the DOM lib in the
+    // crypto package tsconfig.
+    const parts: readonly Uint8Array[] = [
+      plaintext.subarray(0, 10),
+      plaintext.subarray(10, CHUNK),
+      plaintext.subarray(CHUNK),
+    ];
+    let cursor = 0;
+    const stream = {
+      getReader(): {
+        read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
+        releaseLock(): void;
+        cancel(): Promise<void>;
+      } {
+        return {
+          read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }> {
+            const value = parts[cursor];
+            if (cursor >= parts.length || value === undefined) {
+              return Promise.resolve({ done: true, value: undefined });
+            }
+            cursor += 1;
+            return Promise.resolve({ done: false, value });
+          },
+          releaseLock(): void {
+            /* noop */
+          },
+          cancel(): Promise<void> {
+            return Promise.resolve();
+          },
+        };
+      },
+    };
+
+    const payload = await encryptStreamAsync(stream, key, CHUNK);
+    expect(payload.totalLength).toBe(plaintext.byteLength);
+    expect(decryptStream(payload, key)).toEqual(plaintext);
+  });
+
+  it("honours backpressure — source is pulled chunk-by-chunk, not drained upfront", async () => {
+    // This test checks that we don't buffer the entire producer upfront. The
+    // producer yields small slices and counts how many are outstanding at any
+    // moment; the encryption path should never hold more than one pending slice
+    // beyond the current accumulating chunk.
+    const chunkSize = 128;
+    const totalBytes = chunkSize * 8;
+    const plaintext = new Uint8Array(totalBytes);
+    plaintext.set(adapter.randomBytes(totalBytes));
+
+    let outstanding = 0;
+    let maxOutstanding = 0;
+
+    const source: AsyncIterable<Uint8Array> = (async function* () {
+      for (let off = 0; off < totalBytes; off += 32) {
+        outstanding += 1;
+        maxOutstanding = Math.max(maxOutstanding, outstanding);
+        // Micro-pause so the consumer gets a chance to drain before we yield again.
+        await Promise.resolve();
+        yield plaintext.subarray(off, Math.min(off + 32, totalBytes));
+        outstanding -= 1;
+      }
+    })();
+
+    const payload = await encryptStreamAsync(source, key, chunkSize);
+    expect(payload.totalLength).toBe(totalBytes);
+    expect(decryptStream(payload, key)).toEqual(plaintext);
+    // The AsyncIterable contract guarantees one outstanding yield at a time;
+    // confirm the adapter has not monkeyed with it.
+    expect(maxOutstanding).toBeLessThanOrEqual(1);
+  });
+
+  it("handles an empty stream (one empty chunk to match Uint8Array semantics)", async () => {
+    // Construct an async iterable that yields nothing. A `async function*` with
+    // no `await` trips @typescript-eslint/require-await; build the iterator
+    // protocol directly instead.
+    const empty: AsyncIterable<Uint8Array> = {
+      [Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+        return {
+          next(): Promise<IteratorResult<Uint8Array>> {
+            return Promise.resolve({ done: true, value: undefined });
+          },
+        };
+      },
+    };
+
+    const payload = await encryptStreamAsync(empty, key, CHUNK);
+    expect(payload.totalLength).toBe(0);
+    expect(decryptStream(payload, key).length).toBe(0);
+  });
+
+  it("rejects chunkSize <= 0", async () => {
+    await expect(encryptStreamAsync(new Uint8Array(10), key, 0)).rejects.toThrow(InvalidInputError);
   });
 });

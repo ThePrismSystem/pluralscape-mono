@@ -122,7 +122,12 @@ export { generateMasterKey, unwrapMasterKey, wrapMasterKey } from "./master-key-
 export { deserializeEncryptedBlob, serializeEncryptedBlob } from "./blob-codec.js";
 
 // ── Symmetric encryption ────────────────────────────────────────────
-export type { EncryptedPayload, StreamEncryptedPayload } from "./symmetric.js";
+export type {
+  EncryptedPayload,
+  ReadableByteStream,
+  StreamEncryptedPayload,
+  StreamInput,
+} from "./symmetric.js";
 export {
   decrypt,
   decryptJSON,
@@ -130,6 +135,8 @@ export {
   encrypt,
   encryptJSON,
   encryptStream,
+  encryptStreamAsync,
+  toAsyncIterable,
 } from "./symmetric.js";
 
 // ── Tier helpers ────────────────────────────────────────────────────
