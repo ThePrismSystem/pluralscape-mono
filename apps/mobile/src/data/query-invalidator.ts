@@ -63,15 +63,20 @@ export function createQueryInvalidator(
     const entityTypes = getEntityTypesForDocument(event.documentType);
     for (const entityType of entityTypes) {
       const tableDef = getTableDef(entityType);
-      // Narrowing: for hot-path entity types, per-entity `materialized:entity`
-      // events (see `unsubEntity` below) already precisely invalidate detail
-      // queries (`[tableName, entityId]`). The document-level event only
-      // needs to cover list queries (`[tableName, "list", ...]`).
+      // Narrowing: for hot-path entity types whose detail keys are shaped
+      // `[tableName, entityId]`, per-entity `materialized:entity` events
+      // (see `unsubEntity` below) already precisely invalidate those detail
+      // queries. The document-level event only needs to cover list queries
+      // (`[tableName, "list", ...]`).
       //
-      // For non-hot-path entity types no entity-level events fire, so the
-      // document event must broadly invalidate `[tableName]` to keep both
-      // list and detail queries in sync.
-      if (tableDef.hotPath) {
+      // For non-hot-path entity types no entity-level events fire, and for
+      // hot-path entity types with compound detail keys (e.g., `messages`
+      // uses `[tableName, channelId, entityId]`) the list-only predicate
+      // would skip details that the entity-event prefix match also misses.
+      // In both cases the document event must broadly invalidate
+      // `[tableName]` so details stay fresh.
+      const canNarrowToLists = tableDef.hotPath && tableDef.compoundDetailKey !== true;
+      if (canNarrowToLists) {
         void queryClient.invalidateQueries({
           queryKey: [tableDef.tableName],
           predicate: (query) => isListQuery(query.queryKey),

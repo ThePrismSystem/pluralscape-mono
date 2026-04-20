@@ -112,8 +112,8 @@ describe("createQueryInvalidator", () => {
     it("narrows invalidation to list-style queries for hotPath entity types", () => {
       createQueryInvalidator(eventBus, queryClient);
 
-      // `fronting` document: every entity type is hotPath: true
-      // (fronting-session, fronting-comment, fronting-message, ...).
+      // `fronting` document: fronting-session, fronting-comment,
+      // check-in-record — all hotPath: true, all simple detail keys.
       eventBus.emit("materialized:document", {
         type: "materialized:document",
         documentType: "fronting",
@@ -126,6 +126,55 @@ describe("createQueryInvalidator", () => {
         const filters = filterAt(invalidateQueries, i);
         expect(hasPredicate(filters)).toBe(true);
       }
+    });
+
+    it("falls back to broad invalidation for compoundDetailKey entity types", () => {
+      createQueryInvalidator(eventBus, queryClient);
+
+      // `chat` document contains `message`, which is hotPath AND carries
+      // `compoundDetailKey: true` because `useMessage` keys details as
+      // `["messages", channelId, messageId]`. Narrowing to `"list"` would
+      // leave those details stale, so the invalidator must fall back to a
+      // broad `{ queryKey: ["messages"] }` call with no predicate.
+      eventBus.emit("materialized:document", {
+        type: "materialized:document",
+        documentType: "chat",
+      });
+
+      const messagesCallIndex = invalidateQueries.mock.calls.findIndex((call) => {
+        const [filters] = call;
+        if (filters === undefined) return false;
+        const key = filters.queryKey;
+        return Array.isArray(key) && key[0] === "messages";
+      });
+      expect(messagesCallIndex).toBeGreaterThanOrEqual(0);
+
+      const filters = filterAt(invalidateQueries, messagesCallIndex);
+      expect(filters.predicate).toBeUndefined();
+      expect(filters.queryKey).toEqual(["messages"]);
+    });
+
+    it("still narrows to lists for hotPath entity types with simple detail keys (regression)", () => {
+      createQueryInvalidator(eventBus, queryClient);
+
+      // `fronting-session` is hotPath and has NO compoundDetailKey flag —
+      // the narrowing optimization should still apply to it so detail
+      // refetches remain cheap.
+      eventBus.emit("materialized:document", {
+        type: "materialized:document",
+        documentType: "fronting",
+      });
+
+      const sessionsCallIndex = invalidateQueries.mock.calls.findIndex((call) => {
+        const [filters] = call;
+        if (filters === undefined) return false;
+        const key = filters.queryKey;
+        return Array.isArray(key) && key[0] === "fronting_sessions";
+      });
+      expect(sessionsCallIndex).toBeGreaterThanOrEqual(0);
+
+      const filters = filterAt(invalidateQueries, sessionsCallIndex);
+      expect(hasPredicate(filters)).toBe(true);
     });
 
     it("predicate matches list queries and rejects detail queries on the same table", () => {

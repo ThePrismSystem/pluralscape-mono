@@ -23,6 +23,20 @@ export interface EntityTableDef {
    * When false, document-level invalidation is emitted instead.
    */
   readonly hotPath: boolean;
+  /**
+   * When true, the React Query detail key for this entity type is NOT
+   * shaped `[tableName, entityId]` — it embeds additional scoping slots
+   * (e.g., `messages` uses `[tableName, channelId, entityId]`). Hot-path
+   * document-level invalidation normally narrows to list queries only
+   * (detail queries get covered by entity-level events whose key is
+   * `[tableName, entityId]`). For compound detail keys that prefix
+   * shortcut misses the detail, so the invalidator must fall back to
+   * broad `[tableName]` invalidation on document events even when
+   * `hotPath` is true.
+   *
+   * Consumed by the mobile query invalidator. Defaults to `false`.
+   */
+  readonly compoundDetailKey?: boolean;
 }
 
 // ── Shared column helpers ────────────────────────────────────────────
@@ -534,6 +548,14 @@ export const ENTITY_TABLE_REGISTRY: Record<SyncedEntityType, EntityTableDef> = {
     ],
     ftsColumns: ["content"],
     hotPath: true,
+    // `useMessage` keys details as `["messages", channelId, messageId]`
+    // (see apps/mobile/src/hooks/use-messages.ts). The hot-path narrowing
+    // optimization assumes detail keys are `[tableName, entityId]` and
+    // relies on per-entity events to cover them, but that shape doesn't
+    // prefix-match this compound key. Opt out of narrowing so document
+    // events broadly invalidate the `messages` table and keep details
+    // fresh.
+    compoundDetailKey: true,
   },
 
   "board-message": {
