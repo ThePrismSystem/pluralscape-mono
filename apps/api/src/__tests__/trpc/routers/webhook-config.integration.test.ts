@@ -278,6 +278,10 @@ describe("webhook-config router integration", () => {
         // behaviour is exercised in webhook-config.service.integration.test.ts.
         expect(typeof result.success).toBe("boolean");
         expect(typeof result.durationMs).toBe("number");
+        // Assert the signed-fetch pipeline actually invoked the global fetch
+        // stub — without this, a regression that silently skips the dispatch
+        // would still pass the shape checks above.
+        expect(fetchStub).toHaveBeenCalled();
       } finally {
         vi.unstubAllGlobals();
       }

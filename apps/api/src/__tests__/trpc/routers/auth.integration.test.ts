@@ -215,7 +215,7 @@ describe("auth router integration", () => {
           recoveryKeyBackupConfirmed: true,
           recoveryKeyHash: "zz",
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
