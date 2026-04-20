@@ -1,7 +1,6 @@
 import { brandId, extractErrorMessage, toUnixMillis } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 import { Queue, Worker } from "bullmq";
-import { z } from "zod";
 
 import {
   IdempotencyConflictError,
@@ -10,7 +9,6 @@ import {
   QueueCorruptionError,
 } from "../../errors.js";
 import { fireHook } from "../../fire-hook.js";
-import { PayloadSchemaByType } from "../../payload-schemas.js";
 import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js";
 import {
   DEFAULT_TIMEOUT_MS,
@@ -20,7 +18,7 @@ import {
   SCAN_COUNT,
 } from "../../queue.constants.js";
 
-import { fromStoredData } from "./job-mapper.js";
+import { fromStoredData, StoredJobDataSchema } from "./job-mapper.js";
 
 import type { StoredJobData } from "./job-mapper.js";
 import type { JobEventHooks } from "../../event-hooks.js";
@@ -39,45 +37,17 @@ import type {
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 import type { RedisOptions } from "ioredis";
+import type { z } from "zod";
 
-const StoredJobDataSchema = z
-  .object({
-    systemId: z.string().nullable(),
-    type: z.string(),
-    payload: z.unknown(),
-    status: z.string(),
-    attempts: z.number(),
-    maxAttempts: z.number(),
-    nextRetryAt: z.number().nullable(),
-    error: z.string().nullable(),
-    result: z.unknown().nullable(),
-    createdAt: z.number(),
-    startedAt: z.number().nullable(),
-    completedAt: z.number().nullable(),
-    idempotencyKey: z.string().nullable(),
-    lastHeartbeatAt: z.number().nullable(),
-    timeoutMs: z.number(),
-    scheduledFor: z.number().nullable(),
-    priority: z.number(),
-  })
-  .superRefine((data, ctx) => {
-    // `data.type` is `string` at the deserialization boundary — look it up via
-    // `Object.hasOwn` + a narrowed access so TS treats the index result as
-    // possibly-undefined. Casting `data.type as JobType` here would tell TS
-    // the access is total and trip `no-unnecessary-condition` on the guard.
-    if (!Object.hasOwn(PayloadSchemaByType, data.type)) {
-      ctx.addIssue({ code: "custom", message: `Unknown job type: ${data.type}` });
-      return;
-    }
-    const schema = PayloadSchemaByType[data.type as JobType];
-    const r = schema.safeParse(data.payload);
-    if (!r.success) {
-      ctx.addIssue({
-        code: "custom",
-        message: `Payload mismatch for type ${data.type}: ${r.error.message}`,
-      });
-    }
-  });
+/**
+ * Render a Zod error as a compact, operator-readable summary: one
+ * `path: message` pair per issue, joined by "; ". Used as the `details`
+ * string passed to {@link QueueCorruptionError} so the top-level message
+ * surfaces the failing field without requiring callers to chase `cause`.
+ */
+function formatZodIssues(err: z.ZodError): string {
+  return err.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ");
+}
 
 function jobIdOf(job: BullMQJob): JobId {
   const id = job.id;
@@ -98,9 +68,11 @@ function jobIdOf(job: BullMQJob): JobId {
 function parseJobDataOrThrow(job: BullMQJob): StoredJobData {
   const result = StoredJobDataSchema.safeParse(job.data);
   if (!result.success) {
-    throw new QueueCorruptionError(jobIdOf(job), { cause: result.error });
+    throw new QueueCorruptionError(jobIdOf(job), formatZodIssues(result.error), {
+      cause: result.error,
+    });
   }
-  return result.data as StoredJobData;
+  return result.data;
 }
 
 /**
@@ -405,7 +377,7 @@ export class BullMQJobQueue implements JobQueue {
     const def = parseJobDataOrThrow(job);
 
     if (def.status !== "running") {
-      throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "acknowledge");
+      throw new InvalidJobTransitionError(jobId, def.status, "acknowledge");
     }
 
     const currentTime = this.clock();
@@ -435,7 +407,7 @@ export class BullMQJobQueue implements JobQueue {
     const def = parseJobDataOrThrow(job);
 
     if (def.status !== "running") {
-      throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "fail");
+      throw new InvalidJobTransitionError(jobId, def.status, "fail");
     }
 
     const newAttempts = def.attempts + 1;
@@ -483,9 +455,9 @@ export class BullMQJobQueue implements JobQueue {
     if (cancelledRaw !== null) {
       let parsed: StoredJobData;
       try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
       } catch (err) {
-        throw new QueueCorruptionError(jobId, { cause: err });
+        throw new QueueCorruptionError(jobId, extractErrorMessage(err), { cause: err });
       }
       if (parsed.status !== "dead-letter") {
         throw new InvalidJobTransitionError(jobId, parsed.status, "retry");
@@ -508,7 +480,7 @@ export class BullMQJobQueue implements JobQueue {
 
     const def = parseJobDataOrThrow(job);
     if (def.status !== "dead-letter") {
-      throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "retry");
+      throw new InvalidJobTransitionError(jobId, def.status, "retry");
     }
 
     const updated: StoredJobData = {
@@ -530,9 +502,9 @@ export class BullMQJobQueue implements JobQueue {
     if (cancelledRaw !== null) {
       let parsed: StoredJobData;
       try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
       } catch (err) {
-        throw new QueueCorruptionError(jobId, { cause: err });
+        throw new QueueCorruptionError(jobId, extractErrorMessage(err), { cause: err });
       }
       if (parsed.status === "completed") {
         throw new InvalidJobTransitionError(jobId, "completed", "cancel");
@@ -567,7 +539,9 @@ export class BullMQJobQueue implements JobQueue {
     try {
       job = await this.queue.getJob(jobId);
     } catch (err) {
-      if (err instanceof SyntaxError) throw new QueueCorruptionError(jobId, { cause: err });
+      if (err instanceof SyntaxError) {
+        throw new QueueCorruptionError(jobId, extractErrorMessage(err), { cause: err });
+      }
       throw err;
     }
     if (job !== undefined) {
@@ -576,9 +550,11 @@ export class BullMQJobQueue implements JobQueue {
       // JobDefinition downstream.
       const parseResult = StoredJobDataSchema.safeParse(job.data);
       if (!parseResult.success) {
-        throw new QueueCorruptionError(jobId, { cause: parseResult.error });
+        throw new QueueCorruptionError(jobId, formatZodIssues(parseResult.error), {
+          cause: parseResult.error,
+        });
       }
-      return fromStoredData(jobIdOf(job), parseResult.data as StoredJobData);
+      return fromStoredData(jobIdOf(job), parseResult.data);
     }
 
     // Check cancelled store
@@ -586,9 +562,9 @@ export class BullMQJobQueue implements JobQueue {
     if (cancelledRaw !== null) {
       let parsed: StoredJobData;
       try {
-        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw)) as StoredJobData;
+        parsed = StoredJobDataSchema.parse(JSON.parse(cancelledRaw));
       } catch (err) {
-        throw new QueueCorruptionError(jobId, { cause: err });
+        throw new QueueCorruptionError(jobId, extractErrorMessage(err), { cause: err });
       }
       return fromStoredData(jobId, parsed);
     }
@@ -607,9 +583,11 @@ export class BullMQJobQueue implements JobQueue {
       // rather than silently yielding a malformed JobDefinition to callers.
       const parseResult = StoredJobDataSchema.safeParse(j.data);
       if (!parseResult.success) {
-        throw new QueueCorruptionError(jobIdOf(j), { cause: parseResult.error });
+        throw new QueueCorruptionError(jobIdOf(j), formatZodIssues(parseResult.error), {
+          cause: parseResult.error,
+        });
       }
-      return fromStoredData(jobIdOf(j), parseResult.data as StoredJobData);
+      return fromStoredData(jobIdOf(j), parseResult.data);
     });
 
     if (filter.status === undefined || filter.status === "cancelled") {
@@ -619,9 +597,7 @@ export class BullMQJobQueue implements JobQueue {
         if (raw !== null) {
           const id = brandId<JobId>(key.replace(`${this.prefix}:cancelled:`, ""));
           try {
-            allJobs.push(
-              fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw)) as StoredJobData),
-            );
+            allJobs.push(fromStoredData(id, StoredJobDataSchema.parse(JSON.parse(raw))));
           } catch {
             this.logger.warn("Corrupt cancelled job data, skipping", { jobId: id });
           }
@@ -661,20 +637,30 @@ export class BullMQJobQueue implements JobQueue {
 
     const hbData = parseJobDataOrThrow(job);
     if (hbData.status !== "running") {
-      throw new InvalidJobTransitionError(jobId, hbData.status as JobStatus, "heartbeat");
+      throw new InvalidJobTransitionError(jobId, hbData.status, "heartbeat");
     }
 
     const updated: StoredJobData = { ...hbData, lastHeartbeatAt: this.clock() };
     await job.updateData(updated);
   }
 
+  /**
+   * Return every active job whose last heartbeat + timeout is in the past.
+   *
+   * **Fail-closed blast radius:** a single corrupt active job aborts the
+   * entire sweep with {@link QueueCorruptionError}. Schedulers calling this
+   * periodically MUST supervise that error — alert an operator, open a
+   * ticket, quarantine the bad key — rather than re-invoke blindly, since
+   * the corrupt record will keep tripping the guard until it is repaired
+   * or removed. The explicit trade-off vs. silent-skip is that a partial
+   * sweep can hide a real stall; here we prefer an obvious paged incident
+   * over a silent detection gap.
+   */
   async findStalledJobs(): Promise<readonly JobDefinition[]> {
     const currentTime = this.clock();
     const activeJobs = await this.queue.getJobs(["active"]);
 
     // Parse once per job, then reuse the validated shape in the map() pass.
-    // Fail-closed: a corrupt active job surfaces QueueCorruptionError rather
-    // than silently masking a stalled job detection gap.
     return activeJobs
       .map((job) => ({ job, data: parseJobDataOrThrow(job) }))
       .filter(({ data }) => {
