@@ -3,8 +3,6 @@
 Auto-detaches billing from a single GCP project when month-to-date spend exceeds
 a threshold (default **$1 USD**). Confirms the kill via email.
 
-Design: [`docs/superpowers/specs/2026-04-18-gcp-billing-kill-switch-design.md`](../../docs/superpowers/specs/2026-04-18-gcp-billing-kill-switch-design.md)
-
 ## How it works
 
 ```
