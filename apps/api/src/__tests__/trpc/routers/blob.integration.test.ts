@@ -18,14 +18,32 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 // the in-memory mock shared with the service-level integration tests. The
 // quota is wrapped around a lightweight usage-query stub so upload quota is
 // effectively unlimited during these tests.
-vi.mock("../../../lib/storage.js", async () => {
+//
+// `mockAdapterRef` is hoisted via `vi.hoisted()` so it's initialised before
+// the `vi.mock()` factory runs (factories execute before module-level
+// statements). Tests reference the same adapter instance via the ref object,
+// avoiding a `getStorageAdapter() as ReturnType<typeof createMockBlobStorage>`
+// downcast since the production return type doesn't expose the in-memory
+// `.blobs` Map.
+const mocks = vi.hoisted(() => ({
+  adapterRef: {
+    current: null as ReturnType<
+      typeof import("../../helpers/mock-blob-storage.js").createMockBlobStorage
+    > | null,
+  },
+}));
+vi.mock("../../../lib/storage.js", async (): Promise<typeof import("../../../lib/storage.js")> => {
   const { createMockBlobQuota, createMockBlobStorage } =
     await import("../../helpers/mock-blob-storage.js");
   const adapter = createMockBlobStorage();
+  mocks.adapterRef.current = adapter;
   const quota = createMockBlobQuota();
   return {
     getStorageAdapter: () => adapter,
     getQuotaService: () => quota,
+    initStorageAdapter: () => {},
+    setStorageAdapterForTesting: () => {},
+    _resetStorageAdapterForTesting: () => {},
   };
 });
 
@@ -112,8 +130,8 @@ describe("blob router integration", () => {
   /**
    * Handle to the mocked storage adapter returned by `getStorageAdapter()` —
    * captured here so `seedBlob` shares state with the router under test.
-   * Imported dynamically inside `beforeAll` because the module is `vi.mock`ed
-   * at the top and must be resolved after that mock has registered.
+   * Hydrated in `beforeAll` from the hoisted `mocks.adapterRef` ref that the
+   * `vi.mock()` factory populated when the mocked module was first loaded.
    */
   let storageAdapter: ReturnType<typeof createMockBlobStorage>;
 
@@ -130,9 +148,11 @@ describe("blob router integration", () => {
     },
   );
 
-  beforeAll(async () => {
-    const storageModule = await import("../../../lib/storage.js");
-    storageAdapter = storageModule.getStorageAdapter() as ReturnType<typeof createMockBlobStorage>;
+  beforeAll(() => {
+    if (!mocks.adapterRef.current) {
+      throw new Error("storage mock adapter not initialized by vi.mock factory");
+    }
+    storageAdapter = mocks.adapterRef.current;
   });
 
   // ── Happy path: one test per procedure ─────────────────────────────

@@ -22,7 +22,7 @@ import {
   setupRouterFixture,
 } from "../integration-helpers.js";
 
-import type { FrontingSessionId, MemberId } from "@pluralscape/types";
+import type { FrontingCommentId, FrontingSessionId, MemberId } from "@pluralscape/types";
 
 /** Initial version returned by createFrontingComment; required input for `update`. */
 const INITIAL_COMMENT_VERSION = 1;
@@ -58,7 +58,7 @@ describe("fronting-comment router integration", () => {
    * comment id. Uses the per-test session + member as parent + subject so the
    * comment's tenant scoping mirrors the rest of the suite.
    */
-  async function seedComment(): Promise<string> {
+  async function seedComment(): Promise<FrontingCommentId> {
     const primary = fixture.getPrimary();
     const caller = fixture.getCaller(primary.auth);
     // Zod's `.and()` widens `optionalBrandedId` keys to `unknown` (not

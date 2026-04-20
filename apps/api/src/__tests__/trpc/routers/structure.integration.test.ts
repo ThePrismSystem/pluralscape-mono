@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
@@ -23,7 +24,7 @@ import {
   type SeededTenant,
 } from "../integration-helpers.js";
 
-import type { SystemStructureEntityTypeId } from "@pluralscape/types";
+import type { SystemStructureEntityId, SystemStructureEntityTypeId } from "@pluralscape/types";
 
 /** Initial version returned by createEntityType / createStructureEntity; required input for `update`. */
 const INITIAL_VERSION = 1;
@@ -204,7 +205,7 @@ describe("structure router integration", () => {
       // tests already cover the happy path with mocked execute(); here we
       // assert the procedure wiring + middleware by exercising the missing-
       // entity short-circuit, which throws NOT_FOUND before reaching the CTE.
-      const entityId = `ste_${crypto.randomUUID()}`;
+      const entityId = brandId<SystemStructureEntityId>(`ste_${crypto.randomUUID()}`);
       const caller = fixture.getCaller(primary.auth);
       await expect(
         caller.structure.entity.getHierarchy({
