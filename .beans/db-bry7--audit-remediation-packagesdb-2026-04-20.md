@@ -1,11 +1,11 @@
 ---
 # db-bry7
 title: "Audit remediation: packages/db (2026-04-20)"
-status: todo
+status: in-progress
 type: epic
 priority: critical
 created_at: 2026-04-20T09:20:30Z
-updated_at: 2026-04-20T09:20:30Z
+updated_at: 2026-04-20T21:19:40Z
 parent: ps-h2gl
 ---
 

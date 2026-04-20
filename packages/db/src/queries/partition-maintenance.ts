@@ -115,14 +115,18 @@ export async function pgDetachOldPartitions<
     if (!parsed) continue;
     const partitionDate = new Date(parsed.year, parsed.month - 1, 1);
     if (partitionDate < cutoff) {
+      // SECURITY: Never feed the raw partition_name from pg_inherits into sql.raw.
+      // Reconstruct the identifier from validated numeric components so a compromised
+      // catalog cannot smuggle arbitrary SQL through the DDL statement.
+      const safeName = formatPartitionName(options.table, parsed.year, parsed.month);
       try {
         await db.execute(
-          sql`ALTER TABLE ${sql.raw(`"${options.table}"`)} DETACH PARTITION ${sql.raw(`"${partition_name}"`)}`,
+          sql`ALTER TABLE ${sql.raw(`"${options.table}"`)} DETACH PARTITION ${sql.raw(`"${safeName}"`)}`,
         );
-        await db.execute(sql`DROP TABLE ${sql.raw(`"${partition_name}"`)}`);
+        await db.execute(sql`DROP TABLE ${sql.raw(`"${safeName}"`)}`);
         detachedCount++;
       } catch (err: unknown) {
-        errors.push({ partitionName: partition_name, error: extractErrorMessage(err) });
+        errors.push({ partitionName: safeName, error: extractErrorMessage(err) });
       }
     }
   }
