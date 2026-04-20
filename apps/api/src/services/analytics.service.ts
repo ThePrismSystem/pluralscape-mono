@@ -239,8 +239,13 @@ function brandSubjectId(type: FrontingSubjectType, id: string): SubjectId {
       return brandId<CustomFrontId>(id);
     case "structureEntity":
       return brandId<SystemStructureEntityId>(id);
-    default:
-      return type satisfies never;
+    default: {
+      // Compile-time exhaustiveness plus a runtime guard: `return type
+      // satisfies never` silently returned an unbranded string if a new
+      // discriminator was ever added. Throwing keeps the invariant loud.
+      const _exhaustive: never = type;
+      throw new Error(`unhandled fronting subject type: ${_exhaustive as string}`);
+    }
   }
 }
 
