@@ -1,9 +1,9 @@
 {
   "appName": "Pluralscape",
-  "ok": "OK",
-  "cancel": "Cancel",
-  "save": "Save",
-  "back": "Back",
-  "loading": "Loading...",
+  "ok": "De acuerdo",
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "back": "Atrás",
+  "loading": "Cargando...",
   "error": "Error"
 }
