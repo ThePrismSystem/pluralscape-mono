@@ -138,6 +138,42 @@ describe("GET /:locale/:namespace", () => {
     expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");
   });
 
+  // Path-traversal guards: reject unsafe locale/namespace segments before
+  // they reach the Crowdin CDN URL template. Covers both a naked "../.."
+  // segment and a percent-encoded equivalent that Hono decodes to the
+  // same traversal sequence at param extraction time.
+  it("returns 400 VALIDATION_ERROR when locale is path-traversal", async () => {
+    const res = await app.request("/..%2F..%2Fetc/common");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.message).toMatch(/locale/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 VALIDATION_ERROR when namespace contains a dot", async () => {
+    const res = await app.request("/es/..%2Fetc%2Fpasswd");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.message).toMatch(/namespace/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 VALIDATION_ERROR when locale uses an underscore separator", async () => {
+    const res = await app.request("/en_US/common");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts BCP-47 locale with script subtag", async () => {
+    const res = await app.request("/zh-Hant/common");
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   // Regression guard: once upstream returns translations, a subsequent
   // Valkey write failure must not be converted into a 5xx — the fresh
   // payload is already in hand.
