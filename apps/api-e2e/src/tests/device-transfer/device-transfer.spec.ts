@@ -62,6 +62,14 @@ test.describe("Device transfer endpoints", () => {
     const initBody = (await initRes.json()) as { data: { transferId: string } };
     const { transferId } = initBody.data;
 
+    // Approval is a precondition for completion (api-qcs0): completeTransfer
+    // now gates on status='approved' so a target device can't race around the
+    // approval step and brute-force the code.
+    const approveRes = await request.post(`/v1/account/device-transfer/${transferId}/approve`, {
+      headers: authHeaders,
+    });
+    expect(approveRes.status()).toBe(204);
+
     // Try to complete with wrong code
     const completeRes = await request.post(`/v1/account/device-transfer/${transferId}/complete`, {
       headers: authHeaders,
@@ -91,6 +99,14 @@ test.describe("Device transfer endpoints", () => {
     expect(initRes.status()).toBe(201);
     const initBody = (await initRes.json()) as { data: { transferId: string } };
     const { transferId } = initBody.data;
+
+    // Approval is a precondition for completion (api-qcs0): completeTransfer
+    // now gates on status='approved' so brute-force attempts can't bypass
+    // the source-device consent step.
+    const approveRes = await request.post(`/v1/account/device-transfer/${transferId}/approve`, {
+      headers: authHeaders,
+    });
+    expect(approveRes.status()).toBe(204);
 
     // Try 5 wrong codes
     for (let i = 0; i < 5; i++) {
