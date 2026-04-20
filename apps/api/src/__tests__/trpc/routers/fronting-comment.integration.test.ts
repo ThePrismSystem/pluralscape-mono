@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. Same block as the
 // canonical member router integration test — keep BEFORE any module-level
@@ -17,16 +17,10 @@ import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
   seedFrontingSession,
   seedMember,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { FrontingSessionId, MemberId } from "@pluralscape/types";
 
@@ -44,33 +38,19 @@ interface CommentSeed {
 }
 
 describe("fronting-comment router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<
-    typeof makeIntegrationCallerFactory<{ frontingComment: typeof frontingCommentRouter }>
-  >;
-  let primary: SeededTenant;
-  let other: SeededTenant;
+  const fixture = setupRouterFixture({ frontingComment: frontingCommentRouter });
+
+  // Lazy holder for the per-test parent chain. Populated in the secondary
+  // beforeEach below (which runs after the fixture's own beforeEach has
+  // already seeded the primary tenant).
   let primarySeed: CommentSeed;
 
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ frontingComment: frontingCommentRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
   beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-    const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-    const sessionId = await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
+    const primary = fixture.getPrimary();
+    const db = fixture.getCtx().db;
+    const memberId = await seedMember(db, primary.systemId, primary.auth);
+    const sessionId = await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
     primarySeed = { memberId, sessionId };
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
   });
 
   /**
@@ -79,7 +59,8 @@ describe("fronting-comment router integration", () => {
    * comment's tenant scoping mirrors the rest of the suite.
    */
   async function seedComment(): Promise<string> {
-    const caller = makeCaller(primary.auth);
+    const primary = fixture.getPrimary();
+    const caller = fixture.getCaller(primary.auth);
     // Zod's `.and()` widens `optionalBrandedId` keys to `unknown` (not
     // optional), so all subject keys must be present even when undefined.
     const result = await caller.frontingComment.create({
@@ -97,7 +78,8 @@ describe("fronting-comment router integration", () => {
 
   describe("frontingComment.create", () => {
     it("creates a comment attached to the caller's session", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingComment.create({
         systemId: primary.systemId,
         sessionId: primarySeed.sessionId,
@@ -113,8 +95,9 @@ describe("fronting-comment router integration", () => {
 
   describe("frontingComment.get", () => {
     it("returns a comment by id", async () => {
+      const primary = fixture.getPrimary();
       const commentId = await seedComment();
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingComment.get({
         systemId: primary.systemId,
         sessionId: primarySeed.sessionId,
@@ -126,9 +109,10 @@ describe("fronting-comment router integration", () => {
 
   describe("frontingComment.list", () => {
     it("returns comments for the given session", async () => {
+      const primary = fixture.getPrimary();
       await seedComment();
       await seedComment();
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listFrontingComments returns PaginatedResult ⇒ `data`, not `items`.
       const result = await caller.frontingComment.list({
         systemId: primary.systemId,
@@ -140,8 +124,9 @@ describe("fronting-comment router integration", () => {
 
   describe("frontingComment.update", () => {
     it("updates a comment's encrypted data", async () => {
+      const primary = fixture.getPrimary();
       const commentId = await seedComment();
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateFrontingCommentBodySchema requires `version` (optimistic
       // concurrency token). Newly seeded comments start at version 1.
       const result = await caller.frontingComment.update({
@@ -157,8 +142,9 @@ describe("fronting-comment router integration", () => {
 
   describe("frontingComment.archive", () => {
     it("archives a comment", async () => {
+      const primary = fixture.getPrimary();
       const commentId = await seedComment();
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingComment.archive({
         systemId: primary.systemId,
         sessionId: primarySeed.sessionId,
@@ -170,8 +156,9 @@ describe("fronting-comment router integration", () => {
 
   describe("frontingComment.restore", () => {
     it("restores an archived comment", async () => {
+      const primary = fixture.getPrimary();
       const commentId = await seedComment();
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.frontingComment.archive({
         systemId: primary.systemId,
         sessionId: primarySeed.sessionId,
@@ -188,8 +175,9 @@ describe("fronting-comment router integration", () => {
 
   describe("frontingComment.delete", () => {
     it("deletes a comment", async () => {
+      const primary = fixture.getPrimary();
       const commentId = await seedComment();
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingComment.delete({
         systemId: primary.systemId,
         sessionId: primarySeed.sessionId,
@@ -203,7 +191,8 @@ describe("fronting-comment router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(
         caller.frontingComment.list({
           systemId: primary.systemId,
@@ -217,16 +206,19 @@ describe("fronting-comment router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read another tenant's comment", async () => {
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const db = fixture.getCtx().db;
       // Build the full parent chain inside the other tenant so the comment
       // exists but is invisible to `primary`.
-      const otherMemberId = await seedMember(ctx.db, other.systemId, other.auth);
+      const otherMemberId = await seedMember(db, other.systemId, other.auth);
       const otherSessionId = await seedFrontingSession(
-        ctx.db,
+        db,
         other.systemId,
         other.auth,
         otherMemberId,
       );
-      const otherCaller = makeCaller(other.auth);
+      const otherCaller = fixture.getCaller(other.auth);
       const otherComment = await otherCaller.frontingComment.create({
         systemId: other.systemId,
         sessionId: otherSessionId,
@@ -236,7 +228,7 @@ describe("fronting-comment router integration", () => {
         structureEntityId: undefined,
       });
 
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.frontingComment.get({
           systemId: other.systemId,

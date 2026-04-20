@@ -1,6 +1,4 @@
-import { friendConnections } from "@pluralscape/db/pg";
-import { eq } from "drizzle-orm";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
@@ -19,52 +17,13 @@ import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
+  seedAcceptedFriendConnection,
   seedBucket,
-  seedFriendConnection,
   seedMember,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
-import type { BucketKeyRotationId, FriendConnectionId } from "@pluralscape/types";
-
-/**
- * Seed an *accepted* friend connection between `a` and `b`.
- *
- * `seedFriendConnection` walks the production code/redeem path which leaves
- * both rows in `pending` status — friend-bucket assignment requires
- * `accepted`. The production path to "accept" requires the *other* tenant's
- * auth to invoke `acceptFriendConnection`; doing that here would couple this
- * test to a separate router. We instead flip the status directly via SQL,
- * which is the same shape `acceptFriendConnection` would produce.
- *
- * Returns the connection id owned by `b` (matches `seedFriendConnection`'s
- * contract).
- */
-async function seedAcceptedFriendConnection(
-  ctx: RouterIntegrationCtx,
-  a: SeededTenant,
-  b: SeededTenant,
-): Promise<FriendConnectionId> {
-  const connectionId = await seedFriendConnection(ctx.db, a, b);
-  // Flip both sides to "accepted" — assignBucketToFriend only inspects the
-  // owner's row, but the reverse row is updated for consistency with the
-  // production accept path.
-  await ctx.db
-    .update(friendConnections)
-    .set({ status: "accepted" })
-    .where(eq(friendConnections.accountId, a.accountId));
-  await ctx.db
-    .update(friendConnections)
-    .set({ status: "accepted" })
-    .where(eq(friendConnections.accountId, b.accountId));
-  return connectionId;
-}
+import type { BucketKeyRotationId } from "@pluralscape/types";
 
 /** Initial version returned by createBucket; required input for `update`. */
 const INITIAL_BUCKET_VERSION = 1;
@@ -85,34 +44,14 @@ const TEST_ENCRYPTED_KEY_BASE64 = Buffer.from("test-encrypted-bucket-key").toStr
 const TEST_ROTATION_CHUNK_SIZE = 10;
 
 describe("bucket router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ bucket: typeof bucketRouter }>>;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ bucket: bucketRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ bucket: bucketRouter });
 
   // ── Bucket CRUD happy paths ─────────────────────────────────────────
 
   describe("bucket.create", () => {
     it("creates a bucket belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -124,8 +63,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.get", () => {
     it("returns a bucket by id", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.get({
         systemId: primary.systemId,
         bucketId,
@@ -136,9 +76,11 @@ describe("bucket router integration", () => {
 
   describe("bucket.list", () => {
     it("returns buckets of the caller's system", async () => {
-      await seedBucket(ctx.db, primary.systemId, primary.auth);
-      await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedBucket(db, primary.systemId, primary.auth);
+      await seedBucket(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listBuckets returns PaginatedResult<BucketResult> ⇒ `data`, not `items`.
       const result = await caller.bucket.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
@@ -147,8 +89,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.update", () => {
     it("updates a bucket's encrypted data", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateBucketBodySchema requires `version` (optimistic concurrency token).
       // Newly seeded buckets start at version 1.
       const result = await caller.bucket.update({
@@ -163,8 +106,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.archive", () => {
     it("archives a bucket", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.archive({
         systemId: primary.systemId,
         bucketId,
@@ -175,8 +119,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.restore", () => {
     it("restores an archived bucket", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.bucket.archive({ systemId: primary.systemId, bucketId });
       const restored = await caller.bucket.restore({
         systemId: primary.systemId,
@@ -188,8 +133,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.delete", () => {
     it("deletes a bucket", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.delete({
         systemId: primary.systemId,
         bucketId,
@@ -206,9 +152,12 @@ describe("bucket router integration", () => {
 
   describe("bucket.assignFriend", () => {
     it("assigns a bucket to a friend connection", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const connectionId = await seedAcceptedFriendConnection(ctx, other, primary);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const connectionId = await seedAcceptedFriendConnection(db, other, primary);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.assignFriend({
         systemId: primary.systemId,
         bucketId,
@@ -223,9 +172,12 @@ describe("bucket router integration", () => {
 
   describe("bucket.unassignFriend", () => {
     it("revokes a previously assigned friend bucket connection", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const connectionId = await seedAcceptedFriendConnection(ctx, other, primary);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const connectionId = await seedAcceptedFriendConnection(db, other, primary);
+      const caller = fixture.getCaller(primary.auth);
       await caller.bucket.assignFriend({
         systemId: primary.systemId,
         bucketId,
@@ -246,9 +198,12 @@ describe("bucket router integration", () => {
 
   describe("bucket.listFriendAssignments", () => {
     it("returns assignments for a bucket", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const connectionId = await seedAcceptedFriendConnection(ctx, other, primary);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const connectionId = await seedAcceptedFriendConnection(db, other, primary);
+      const caller = fixture.getCaller(primary.auth);
       await caller.bucket.assignFriend({
         systemId: primary.systemId,
         bucketId,
@@ -269,9 +224,11 @@ describe("bucket router integration", () => {
 
   describe("bucket.tagContent", () => {
     it("tags a member entity into a bucket", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.tagContent({
         systemId: primary.systemId,
         bucketId,
@@ -286,9 +243,11 @@ describe("bucket router integration", () => {
 
   describe("bucket.untagContent", () => {
     it("removes a content tag from a bucket", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.bucket.tagContent({
         systemId: primary.systemId,
         bucketId,
@@ -307,9 +266,11 @@ describe("bucket router integration", () => {
 
   describe("bucket.listTags", () => {
     it("returns tags currently attached to a bucket", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.bucket.tagContent({
         systemId: primary.systemId,
         bucketId,
@@ -329,8 +290,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.exportManifest", () => {
     it("returns an export manifest with per-entity-type entries", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.exportManifest({
         systemId: primary.systemId,
         bucketId,
@@ -342,9 +304,11 @@ describe("bucket router integration", () => {
 
   describe("bucket.exportPage", () => {
     it("returns a paginated page for a tagged entity type", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.bucket.tagContent({
         systemId: primary.systemId,
         bucketId,
@@ -372,8 +336,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.initiateRotation", () => {
     it("initiates a rotation for a bucket with no friend grants", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.bucket.initiateRotation({
         systemId: primary.systemId,
         bucketId,
@@ -389,8 +354,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.rotationProgress", () => {
     it("returns the current rotation state", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const initiated = await caller.bucket.initiateRotation({
         systemId: primary.systemId,
         bucketId,
@@ -410,8 +376,9 @@ describe("bucket router integration", () => {
 
   describe("bucket.claimRotationChunk", () => {
     it("returns an empty data array when no items are pending", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const initiated = await caller.bucket.initiateRotation({
         systemId: primary.systemId,
         bucketId,
@@ -440,9 +407,11 @@ describe("bucket router integration", () => {
     // the bucket so initiate creates a single rotation item, then claim it
     // before completing.
     it("marks a claimed item complete and advances the rotation", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.bucket.tagContent({
         systemId: primary.systemId,
         bucketId,
@@ -484,8 +453,9 @@ describe("bucket router integration", () => {
     // procedure wiring + middleware by asserting it rejects an `initiated`
     // rotation with CONFLICT, which is the documented contract.
     it("rejects retry on a rotation that has not failed", async () => {
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const initiated = await caller.bucket.initiateRotation({
         systemId: primary.systemId,
         bucketId,
@@ -508,7 +478,8 @@ describe("bucket router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.bucket.list({ systemId: primary.systemId }));
     });
   });
@@ -517,8 +488,10 @@ describe("bucket router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's bucket", async () => {
-      const otherBucketId = await seedBucket(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherBucketId = await seedBucket(fixture.getCtx().db, other.systemId, other.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.bucket.get({
           systemId: other.systemId,

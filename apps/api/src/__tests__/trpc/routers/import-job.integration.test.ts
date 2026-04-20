@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. Same block as the
 // canonical member router integration test — keep BEFORE any module-level
@@ -18,14 +18,8 @@ import { noopAudit } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { ImportCollectionType, ImportJobId, SystemId } from "@pluralscape/types";
@@ -99,36 +93,14 @@ async function seedImportJob(
 }
 
 describe("import-job router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<
-    typeof makeIntegrationCallerFactory<{ importJob: typeof importJobRouter }>
-  >;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ importJob: importJobRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ importJob: importJobRouter });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("importJob.create", () => {
     it("creates an import job belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.importJob.create({
         systemId: primary.systemId,
         source: "simply-plural",
@@ -143,8 +115,9 @@ describe("import-job router integration", () => {
 
   describe("importJob.get", () => {
     it("returns an import job by id", async () => {
-      const importJobId = await seedImportJob(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const importJobId = await seedImportJob(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.importJob.get({
         systemId: primary.systemId,
         importJobId,
@@ -155,9 +128,11 @@ describe("import-job router integration", () => {
 
   describe("importJob.list", () => {
     it("returns import jobs of the caller's system", async () => {
-      await seedImportJob(ctx.db, primary.systemId, primary.auth);
-      await seedImportJob(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedImportJob(db, primary.systemId, primary.auth);
+      await seedImportJob(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listImportJobs returns PaginatedResult<ImportJobResult>
       // ⇒ `data`, not `items`.
       const result = await caller.importJob.list({ systemId: primary.systemId });
@@ -167,8 +142,9 @@ describe("import-job router integration", () => {
 
   describe("importJob.update", () => {
     it("updates an import job's progress", async () => {
-      const importJobId = await seedImportJob(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const importJobId = await seedImportJob(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateImportJobBodySchema has no `version` token — the row is locked
       // SELECT … FOR UPDATE inside the transaction. A bare progress bump on
       // a same-state (`pending → pending`) update bypasses the transition
@@ -188,7 +164,8 @@ describe("import-job router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.importJob.list({ systemId: primary.systemId }));
     });
   });
@@ -197,8 +174,10 @@ describe("import-job router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's import job", async () => {
-      const otherJobId = await seedImportJob(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherJobId = await seedImportJob(fixture.getCtx().db, other.systemId, other.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.importJob.get({
           systemId: other.systemId,

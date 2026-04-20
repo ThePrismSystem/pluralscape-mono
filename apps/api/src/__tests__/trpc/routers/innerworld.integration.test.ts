@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
@@ -17,14 +17,8 @@ import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 /** Initial version returned by createEntity / createRegion; required input for `update`. */
 const INITIAL_VERSION = 1;
@@ -37,36 +31,14 @@ const INITIAL_VERSION = 1;
 const INITIAL_CANVAS_VERSION = 1;
 
 describe("innerworld router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<
-    typeof makeIntegrationCallerFactory<{ innerworld: typeof innerworldRouter }>
-  >;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ innerworld: innerworldRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ innerworld: innerworldRouter });
 
   // ── Entity CRUD happy paths ────────────────────────────────────────
 
   describe("innerworld.entity.create", () => {
     it("creates an entity belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.innerworld.entity.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -78,7 +50,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.entity.get", () => {
     it("returns an entity by id", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.entity.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -93,7 +66,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.entity.list", () => {
     it("returns entities of the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       await caller.innerworld.entity.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -110,7 +84,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.entity.update", () => {
     it("updates an entity's encrypted data", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.entity.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -129,7 +104,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.entity.archive", () => {
     it("archives an entity", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.entity.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -144,7 +120,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.entity.restore", () => {
     it("restores an archived entity", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.entity.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -164,7 +141,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.entity.delete", () => {
     it("deletes an entity", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.entity.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -181,7 +159,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.region.create", () => {
     it("creates a region belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.innerworld.region.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -193,7 +172,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.region.get", () => {
     it("returns a region by id", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.region.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -208,7 +188,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.region.list", () => {
     it("returns regions of the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       await caller.innerworld.region.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -225,7 +206,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.region.update", () => {
     it("updates a region's encrypted data", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.region.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -243,7 +225,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.region.archive", () => {
     it("archives a region", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.region.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -258,7 +241,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.region.restore", () => {
     it("restores an archived region", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.region.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -278,7 +262,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.region.delete", () => {
     it("deletes a region", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const created = await caller.innerworld.region.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -295,7 +280,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.canvas.upsert", () => {
     it("creates a canvas on first write with version=1", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       // upsertCanvas treats the first write as an INSERT and *requires*
       // version === 1 (any other value yields NOT_FOUND).
       const result = await caller.innerworld.canvas.upsert({
@@ -310,7 +296,8 @@ describe("innerworld router integration", () => {
 
   describe("innerworld.canvas.get", () => {
     it("returns the canvas after it has been created", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       await caller.innerworld.canvas.upsert({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -325,7 +312,8 @@ describe("innerworld router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.innerworld.entity.list({ systemId: primary.systemId }));
     });
   });
@@ -334,12 +322,14 @@ describe("innerworld router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's entity", async () => {
-      const otherCaller = makeCaller(other.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherCaller = fixture.getCaller(other.auth);
       const otherEntity = await otherCaller.innerworld.entity.create({
         systemId: other.systemId,
         encryptedData: testEncryptedDataBase64(),
       });
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.innerworld.entity.get({
           systemId: other.systemId,

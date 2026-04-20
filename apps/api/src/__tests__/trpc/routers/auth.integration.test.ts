@@ -9,7 +9,7 @@ import {
 } from "@pluralscape/crypto";
 import { accounts, recoveryKeys } from "@pluralscape/db/pg";
 import { brandId } from "@pluralscape/types";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Ensure EMAIL_HASH_PEPPER is available before env.ts is evaluated. The env
 // module reads process.env at import time; without this, hashEmail throws.
@@ -36,12 +36,7 @@ import { listSessions, loginAccount } from "../../../services/auth.service.js";
 import { authRouter } from "../../../trpc/routers/auth.js";
 import { noopAudit, registerTestAccount } from "../../helpers/integration-setup.js";
 import { createMockLogger } from "../../helpers/mock-logger.js";
-import {
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-} from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
+import { setupRouterFixture } from "../integration-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
@@ -146,29 +141,27 @@ async function insertAccountWithKnownRecoveryKey(db: PostgresJsDatabase): Promis
 }
 
 describe("auth router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ auth: typeof authRouter }>>;
+  // The auth router exercises real session/login flows that mutate the
+  // in-memory account-login backoff store; reset it between tests so
+  // anti-enumeration timing carryover doesn't bleed across cases.
+  const fixture = setupRouterFixture(
+    { auth: authRouter },
+    {
+      extraAfterEach: () => {
+        _resetAccountLoginStoreForTesting();
+      },
+    },
+  );
 
   beforeAll(async () => {
     await initSodium();
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ auth: authRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-    _resetAccountLoginStoreForTesting();
   });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("auth.registrationInitiate", () => {
     it("returns kdfSalt and challengeNonce for a fresh email (public, no auth)", async () => {
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       const email = `init-${crypto.randomUUID()}@test.local`;
       const result = await caller.auth.registrationInitiate({ email });
       expect(result.accountId).toMatch(/^acct_/);
@@ -185,7 +178,7 @@ describe("auth router integration", () => {
     // commit through the helper and assert on its result shape — which is
     // exactly what the tRPC procedure returns.
     it("completes phase 2 via the real two-phase flow", async () => {
-      const reg = await registerTestAccount(ctx.db);
+      const reg = await registerTestAccount(fixture.getCtx().db);
       expect(typeof reg.sessionToken).toBe("string");
       expect(reg.sessionToken.length).toBeGreaterThan(0);
       expect(reg.accountId).toMatch(/^acct_/);
@@ -195,7 +188,7 @@ describe("auth router integration", () => {
     it("rejects a malformed commit (missing crypto fields)", async () => {
       // Stand up a real phase-1 account shell first so the failure is
       // validation, not lookup.
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       const init = await caller.auth.registrationInitiate({
         email: `bad-${crypto.randomUUID()}@test.local`,
       });
@@ -222,8 +215,8 @@ describe("auth router integration", () => {
 
   describe("auth.login", () => {
     it("returns a session token for valid credentials", async () => {
-      const reg = await registerTestAccount(ctx.db);
-      const caller = makeCaller(null);
+      const reg = await registerTestAccount(fixture.getCtx().db);
+      const caller = fixture.getCaller(null);
       const result = await caller.auth.login({
         email: reg.email,
         authKey: reg.authKeyHex,
@@ -235,15 +228,15 @@ describe("auth router integration", () => {
     });
 
     it("throws UNAUTHORIZED for a wrong auth key", async () => {
-      const reg = await registerTestAccount(ctx.db);
-      const caller = makeCaller(null);
+      const reg = await registerTestAccount(fixture.getCtx().db);
+      const caller = fixture.getCaller(null);
       await expect(
         caller.auth.login({ email: reg.email, authKey: "ff".repeat(RECOVERY_KEY_BYTES) }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
 
     it("throws UNAUTHORIZED for a nonexistent email (anti-enumeration)", async () => {
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       await expect(
         caller.auth.login({
           email: `ghost-${crypto.randomUUID()}@test.local`,
@@ -255,8 +248,10 @@ describe("auth router integration", () => {
 
   describe("auth.resetPasswordWithRecoveryKey", () => {
     it("resets password and returns a new session on success", async () => {
-      const { email, recoveryKeyHex } = await insertAccountWithKnownRecoveryKey(ctx.db);
-      const caller = makeCaller(null);
+      const { email, recoveryKeyHex } = await insertAccountWithKnownRecoveryKey(
+        fixture.getCtx().db,
+      );
+      const caller = fixture.getCaller(null);
       const result = await caller.auth.resetPasswordWithRecoveryKey({
         email,
         newAuthKey: toHex(new Uint8Array(randomBytes(RECOVERY_KEY_BYTES))),
@@ -272,7 +267,7 @@ describe("auth router integration", () => {
     });
 
     it("throws UNAUTHORIZED for a nonexistent email (anti-enumeration)", async () => {
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       await expect(
         caller.auth.resetPasswordWithRecoveryKey({
           email: `ghost-${crypto.randomUUID()}@test.local`,
@@ -289,8 +284,8 @@ describe("auth router integration", () => {
 
   describe("auth.logout", () => {
     it("revokes the current session and returns success", async () => {
-      const { auth } = await registerAndBuildAuth(ctx.db);
-      const caller = makeCaller(auth);
+      const { auth } = await registerAndBuildAuth(fixture.getCtx().db);
+      const caller = fixture.getCaller(auth);
       const result = await caller.auth.logout();
       expect(result).toEqual({ success: true });
     });
@@ -298,8 +293,8 @@ describe("auth router integration", () => {
 
   describe("auth.session.list", () => {
     it("returns the caller's active sessions", async () => {
-      const { auth } = await registerAndBuildAuth(ctx.db);
-      const caller = makeCaller(auth);
+      const { auth } = await registerAndBuildAuth(fixture.getCtx().db);
+      const caller = fixture.getCaller(auth);
       const result = await caller.auth.session.list({});
       expect(result.sessions.length).toBeGreaterThanOrEqual(DEFAULT_EXPECTED_SESSIONS_MIN);
       expect(result.sessions[0]?.id).toMatch(/^sess_/);
@@ -308,11 +303,12 @@ describe("auth router integration", () => {
 
   describe("auth.session.revoke", () => {
     it("revokes a different session belonging to the caller's account", async () => {
-      const { accountId, authKeyHex, email, auth } = await registerAndBuildAuth(ctx.db);
+      const db = fixture.getCtx().db;
+      const { accountId, authKeyHex, email, auth } = await registerAndBuildAuth(db);
       // Log in again to create a second session; revoke THAT one — the
       // current sessionId is gated with BAD_REQUEST.
       const second = await loginAccount(
-        ctx.db,
+        db,
         { email, authKey: authKeyHex },
         "web",
         noopAudit,
@@ -320,10 +316,10 @@ describe("auth router integration", () => {
       );
       expect(second).not.toBeNull();
       const currentSessionId = requireSession(auth).sessionId;
-      const allSessions = await listSessions(ctx.db, accountId);
+      const allSessions = await listSessions(db, accountId);
       const otherSession = allSessions.sessions.find((s) => s.id !== currentSessionId);
       if (!otherSession) throw new Error("expected a second session after re-login");
-      const caller = makeCaller(auth);
+      const caller = fixture.getCaller(auth);
       const result = await caller.auth.session.revoke({
         sessionId: brandId<SessionId>(otherSession.id),
       });
@@ -331,9 +327,9 @@ describe("auth router integration", () => {
     });
 
     it("throws BAD_REQUEST when revoking the current session", async () => {
-      const { auth } = await registerAndBuildAuth(ctx.db);
+      const { auth } = await registerAndBuildAuth(fixture.getCtx().db);
       const currentSessionId = requireSession(auth).sessionId;
-      const caller = makeCaller(auth);
+      const caller = fixture.getCaller(auth);
       await expect(caller.auth.session.revoke({ sessionId: currentSessionId })).rejects.toThrow(
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
@@ -342,23 +338,24 @@ describe("auth router integration", () => {
 
   describe("auth.session.revokeAll", () => {
     it("revokes every session except the caller's current one", async () => {
-      const { authKeyHex, email, auth } = await registerAndBuildAuth(ctx.db);
+      const db = fixture.getCtx().db;
+      const { authKeyHex, email, auth } = await registerAndBuildAuth(db);
       // Create two additional sessions by logging in twice more.
       await loginAccount(
-        ctx.db,
+        db,
         { email, authKey: authKeyHex },
         "web",
         noopAudit,
         createMockLogger().logger,
       );
       await loginAccount(
-        ctx.db,
+        db,
         { email, authKey: authKeyHex },
         "web",
         noopAudit,
         createMockLogger().logger,
       );
-      const caller = makeCaller(auth);
+      const caller = fixture.getCaller(auth);
       const result = await caller.auth.session.revokeAll();
       expect(result.revokedCount).toBeGreaterThanOrEqual(2);
     });
@@ -368,14 +365,14 @@ describe("auth router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated auth.logout with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       await expect(caller.auth.logout()).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
 
     it("rejects unauthenticated auth.session.list with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       await expect(caller.auth.session.list({})).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -386,24 +383,26 @@ describe("auth router integration", () => {
 
   describe("account isolation", () => {
     it("rejects login when using account A's email with account B's auth key", async () => {
+      const db = fixture.getCtx().db;
       // Two independently registered accounts. Each has a distinct authKey.
       // Attempting to log in as A using B's key must fail with UNAUTHORIZED.
-      const accountA = await registerTestAccount(ctx.db);
-      const accountB = await registerTestAccount(ctx.db);
+      const accountA = await registerTestAccount(db);
+      const accountB = await registerTestAccount(db);
       expect(accountA.authKeyHex).not.toBe(accountB.authKeyHex);
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       await expect(
         caller.auth.login({ email: accountA.email, authKey: accountB.authKeyHex }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
 
     it("returns NOT_FOUND when revoking a session that belongs to a different account", async () => {
-      const accountA = await registerAndBuildAuth(ctx.db);
-      const accountB = await registerAndBuildAuth(ctx.db);
+      const db = fixture.getCtx().db;
+      const accountA = await registerAndBuildAuth(db);
+      const accountB = await registerAndBuildAuth(db);
       // Ask A to revoke B's session — the WHERE clause scopes by accountId,
       // so the update affects zero rows and the procedure surfaces NOT_FOUND.
       const otherSessionId = requireSession(accountB.auth).sessionId;
-      const callerA = makeCaller(accountA.auth);
+      const callerA = fixture.getCaller(accountA.auth);
       await expect(callerA.auth.session.revoke({ sessionId: otherSessionId })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );

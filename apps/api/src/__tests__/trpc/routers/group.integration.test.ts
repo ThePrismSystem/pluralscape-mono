@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
@@ -18,15 +18,9 @@ import { noopAudit, testEncryptedDataBase64 } from "../../helpers/integration-se
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
   seedMember,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { GroupId, MemberId, SystemId } from "@pluralscape/types";
@@ -68,34 +62,14 @@ async function seedGroup(
 }
 
 describe("group router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ group: typeof groupRouter }>>;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ group: groupRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ group: groupRouter });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("group.create", () => {
     it("creates a root group belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       // CreateGroupBodySchema requires `parentGroupId` (nullable, NOT optional)
       // and `sortOrder` (int >= 0). Pass `null` for root groups explicitly.
       const result = await caller.group.create({
@@ -111,8 +85,9 @@ describe("group router integration", () => {
 
   describe("group.get", () => {
     it("returns a group by id", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.group.get({
         systemId: primary.systemId,
         groupId,
@@ -123,9 +98,11 @@ describe("group router integration", () => {
 
   describe("group.list", () => {
     it("returns groups of the caller's system", async () => {
-      await seedGroup(ctx.db, primary.systemId, primary.auth);
-      await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedGroup(db, primary.systemId, primary.auth);
+      await seedGroup(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listGroups returns PaginatedResult<GroupResult> ⇒ `data`, not `items`.
       const result = await caller.group.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
@@ -134,8 +111,9 @@ describe("group router integration", () => {
 
   describe("group.update", () => {
     it("updates a group's encrypted data", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateGroupBodySchema requires `version` (optimistic concurrency token).
       // Newly seeded groups start at version 1.
       const result = await caller.group.update({
@@ -150,8 +128,9 @@ describe("group router integration", () => {
 
   describe("group.archive", () => {
     it("archives a group", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.group.archive({
         systemId: primary.systemId,
         groupId,
@@ -162,8 +141,9 @@ describe("group router integration", () => {
 
   describe("group.restore", () => {
     it("restores an archived group", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.group.archive({ systemId: primary.systemId, groupId });
       const restored = await caller.group.restore({
         systemId: primary.systemId,
@@ -175,8 +155,9 @@ describe("group router integration", () => {
 
   describe("group.delete", () => {
     it("deletes a group", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.group.delete({
         systemId: primary.systemId,
         groupId,
@@ -187,9 +168,11 @@ describe("group router integration", () => {
 
   describe("group.move", () => {
     it("re-parents a group under another group", async () => {
-      const parentId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const childId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const parentId = await seedGroup(db, primary.systemId, primary.auth);
+      const childId = await seedGroup(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // MoveGroupBodySchema requires `targetParentGroupId` (nullable) and
       // `version`. The freshly seeded child sits at version 1.
       const result = await caller.group.move({
@@ -205,8 +188,9 @@ describe("group router integration", () => {
 
   describe("group.copy", () => {
     it("creates a copy of an existing group", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // CopyGroupBodySchema's `targetParentGroupId` is optional — undefined
       // means "same parent as source". `copyMemberships` defaults to false but
       // tRPC input inference still expects the key to be present.
@@ -223,9 +207,11 @@ describe("group router integration", () => {
 
   describe("group.getTree", () => {
     it("returns the group hierarchy as a tree", async () => {
-      await seedGroup(ctx.db, primary.systemId, primary.auth);
-      await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedGroup(db, primary.systemId, primary.auth);
+      await seedGroup(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // getGroupTree returns GroupResultTree[] (roots with nested `children`).
       const result = await caller.group.getTree({ systemId: primary.systemId });
       expect(Array.isArray(result)).toBe(true);
@@ -235,8 +221,9 @@ describe("group router integration", () => {
 
   describe("group.reorder", () => {
     it("applies a batch of sortOrder updates", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.group.reorder({
         systemId: primary.systemId,
         operations: [{ groupId, sortOrder: REORDER_TARGET_SORT_ORDER }],
@@ -247,9 +234,11 @@ describe("group router integration", () => {
 
   describe("group.addMember", () => {
     it("adds a member to a group", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const groupId = await seedGroup(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.group.addMember({
         systemId: primary.systemId,
         groupId,
@@ -262,9 +251,11 @@ describe("group router integration", () => {
 
   describe("group.removeMember", () => {
     it("removes a previously added member from a group", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const groupId = await seedGroup(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.group.addMember({
         systemId: primary.systemId,
         groupId,
@@ -281,9 +272,11 @@ describe("group router integration", () => {
 
   describe("group.listMembers", () => {
     it("returns the membership rows attached to a group", async () => {
-      const groupId = await seedGroup(ctx.db, primary.systemId, primary.auth);
-      const memberId: MemberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const groupId = await seedGroup(db, primary.systemId, primary.auth);
+      const memberId: MemberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.group.addMember({
         systemId: primary.systemId,
         groupId,
@@ -304,7 +297,8 @@ describe("group router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.group.list({ systemId: primary.systemId }));
     });
   });
@@ -313,8 +307,10 @@ describe("group router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's group", async () => {
-      const otherGroupId = await seedGroup(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherGroupId = await seedGroup(fixture.getCtx().db, other.systemId, other.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.group.get({
           systemId: other.systemId,

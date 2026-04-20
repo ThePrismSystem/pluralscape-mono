@@ -1,7 +1,7 @@
 import { systemSnapshots } from "@pluralscape/db/pg";
 import { pgInsertSystem, testBlob } from "@pluralscape/db/test-helpers/pg-helpers";
 import { brandId } from "@pluralscape/types";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. If you find yourself adding
@@ -33,14 +33,8 @@ import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { SystemSnapshotId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -88,34 +82,14 @@ async function seedSnapshot(
 }
 
 describe("system router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ system: typeof systemRouter }>>;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ system: systemRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ system: systemRouter });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("system.create", () => {
     it("creates a new system on the caller's account", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.system.create();
       expect(result.id).toMatch(/^sys_/);
       // Distinct from the seed system — `create` always mints a fresh id.
@@ -126,7 +100,8 @@ describe("system router integration", () => {
 
   describe("system.get", () => {
     it("returns the system profile by id", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.system.get({ systemId: primary.systemId });
       expect(result.id).toBe(primary.systemId);
     });
@@ -134,7 +109,8 @@ describe("system router integration", () => {
 
   describe("system.list", () => {
     it("returns systems owned by the caller's account", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       // listSystems returns PaginatedResult<SystemProfileResult> ⇒ `data`,
       // not `items`. Only the seeded system on `primary.accountId` is visible
       // because RLS scopes by accountId.
@@ -146,7 +122,8 @@ describe("system router integration", () => {
 
   describe("system.update", () => {
     it("updates the system's encrypted profile data", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       // UpdateSystemBodySchema requires `version` (optimistic concurrency token).
       // Newly seeded systems start at version 1.
       const result = await caller.system.update({
@@ -161,10 +138,11 @@ describe("system router integration", () => {
 
   describe("system.archive", () => {
     it("soft-deletes the system when at least one sibling remains active", async () => {
+      const primary = fixture.getPrimary();
       // archiveSystem refuses to soft-delete the only active system on an
       // account, so a sibling row is required for the happy path.
-      await seedSiblingSystem(ctx.db, primary.accountId);
-      const caller = makeCaller(primary.auth);
+      await seedSiblingSystem(fixture.getCtx().db, primary.accountId);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.system.archive({ systemId: primary.systemId });
       expect(result.success).toBe(true);
     });
@@ -172,8 +150,9 @@ describe("system router integration", () => {
 
   describe("system.duplicate", () => {
     it("creates a new system seeded from an existing snapshot", async () => {
-      const snapshotId = await seedSnapshot(ctx.db, primary.systemId);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const snapshotId = await seedSnapshot(fixture.getCtx().db, primary.systemId);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.system.duplicate({
         systemId: primary.systemId,
         snapshotId,
@@ -186,10 +165,12 @@ describe("system router integration", () => {
 
   describe("system.purge", () => {
     it("permanently deletes an archived system without affecting other tenants", async () => {
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
       // Purge requires the target system to be archived first, and archive
       // requires at least one sibling system on the account.
-      await seedSiblingSystem(ctx.db, primary.accountId);
-      const caller = makeCaller(primary.auth);
+      await seedSiblingSystem(fixture.getCtx().db, primary.accountId);
+      const caller = fixture.getCaller(primary.auth);
       await caller.system.archive({ systemId: primary.systemId });
       const result = await caller.system.purge({
         systemId: primary.systemId,
@@ -198,7 +179,7 @@ describe("system router integration", () => {
       expect(result.success).toBe(true);
 
       // The other tenant's system must remain untouched after the cascade.
-      const otherCaller = makeCaller(other.auth);
+      const otherCaller = fixture.getCaller(other.auth);
       const remaining = await otherCaller.system.get({ systemId: other.systemId });
       expect(remaining.id).toBe(other.systemId);
     });
@@ -208,7 +189,7 @@ describe("system router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.system.list({}));
     });
   });
@@ -217,7 +198,9 @@ describe("system router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(caller.system.get({ systemId: other.systemId }));
     });
   });

@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
@@ -18,14 +18,8 @@ import { noopAudit, testEncryptedDataBase64 } from "../../helpers/integration-se
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { NoteId, SystemId } from "@pluralscape/types";
@@ -58,34 +52,14 @@ async function seedNote(
 }
 
 describe("note router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ note: typeof noteRouter }>>;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ note: noteRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ note: noteRouter });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("note.create", () => {
     it("creates a note belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.note.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -100,8 +74,9 @@ describe("note router integration", () => {
 
   describe("note.get", () => {
     it("returns a note by id", async () => {
-      const noteId = await seedNote(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const noteId = await seedNote(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.note.get({
         systemId: primary.systemId,
         noteId,
@@ -112,9 +87,11 @@ describe("note router integration", () => {
 
   describe("note.list", () => {
     it("returns notes of the caller's system", async () => {
-      await seedNote(ctx.db, primary.systemId, primary.auth);
-      await seedNote(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedNote(db, primary.systemId, primary.auth);
+      await seedNote(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listNotes returns PaginatedResult<NoteResult> ⇒ `data`, not `items`.
       const result = await caller.note.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
@@ -123,8 +100,9 @@ describe("note router integration", () => {
 
   describe("note.update", () => {
     it("updates a note's encrypted data", async () => {
-      const noteId = await seedNote(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const noteId = await seedNote(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateNoteBodySchema requires `version` (optimistic concurrency token).
       // Newly seeded notes start at version 1.
       const result = await caller.note.update({
@@ -139,8 +117,9 @@ describe("note router integration", () => {
 
   describe("note.archive", () => {
     it("archives a note", async () => {
-      const noteId = await seedNote(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const noteId = await seedNote(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.note.archive({
         systemId: primary.systemId,
         noteId,
@@ -151,8 +130,9 @@ describe("note router integration", () => {
 
   describe("note.restore", () => {
     it("restores an archived note", async () => {
-      const noteId = await seedNote(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const noteId = await seedNote(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.note.archive({
         systemId: primary.systemId,
         noteId,
@@ -167,8 +147,9 @@ describe("note router integration", () => {
 
   describe("note.delete", () => {
     it("deletes a note", async () => {
-      const noteId = await seedNote(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const noteId = await seedNote(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.note.delete({
         systemId: primary.systemId,
         noteId,
@@ -181,7 +162,8 @@ describe("note router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.note.list({ systemId: primary.systemId }));
     });
   });
@@ -190,8 +172,10 @@ describe("note router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's note", async () => {
-      const otherNoteId = await seedNote(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherNoteId = await seedNote(fixture.getCtx().db, other.systemId, other.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.note.get({
           systemId: other.systemId,

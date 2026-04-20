@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
@@ -17,16 +17,11 @@ import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
   seedMember,
-  seedSecondTenant,
   seedStructureEntity,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
+  setupRouterFixture,
   type SeededTenant,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { SystemStructureEntityTypeId } from "@pluralscape/types";
 
@@ -40,30 +35,7 @@ const DEFAULT_SORT_ORDER = 0;
 const NEXT_SORT_ORDER = 1;
 
 describe("structure router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<
-    typeof makeIntegrationCallerFactory<{ structure: typeof structureRouter }>
-  >;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ structure: structureRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ structure: structureRouter });
 
   /**
    * Create an entity type via the caller and return its branded id.
@@ -73,7 +45,7 @@ describe("structure router integration", () => {
   async function createEntityTypeViaCaller(
     tenant: SeededTenant,
   ): Promise<SystemStructureEntityTypeId> {
-    const caller = makeCaller(tenant.auth);
+    const caller = fixture.getCaller(tenant.auth);
     const result = await caller.structure.entityType.create({
       systemId: tenant.systemId,
       encryptedData: testEncryptedDataBase64(),
@@ -86,7 +58,8 @@ describe("structure router integration", () => {
 
   describe("structure.entityType.create", () => {
     it("creates an entity type belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entityType.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -99,8 +72,9 @@ describe("structure router integration", () => {
 
   describe("structure.entityType.get", () => {
     it("returns an entity type by id", async () => {
+      const primary = fixture.getPrimary();
       const entityTypeId = await createEntityTypeViaCaller(primary);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entityType.get({
         systemId: primary.systemId,
         entityTypeId,
@@ -111,9 +85,10 @@ describe("structure router integration", () => {
 
   describe("structure.entityType.list", () => {
     it("returns entity types of the caller's system", async () => {
+      const primary = fixture.getPrimary();
       await createEntityTypeViaCaller(primary);
       await createEntityTypeViaCaller(primary);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listEntityTypes returns PaginatedResult<EntityTypeResult> ⇒ `data`, not `items`.
       const result = await caller.structure.entityType.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
@@ -122,8 +97,9 @@ describe("structure router integration", () => {
 
   describe("structure.entityType.update", () => {
     it("updates an entity type's encrypted data and sort order", async () => {
+      const primary = fixture.getPrimary();
       const entityTypeId = await createEntityTypeViaCaller(primary);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateStructureEntityTypeBodySchema requires `version` (optimistic
       // concurrency token); newly created types start at version 1.
       const result = await caller.structure.entityType.update({
@@ -139,8 +115,9 @@ describe("structure router integration", () => {
 
   describe("structure.entityType.archive", () => {
     it("archives an entity type", async () => {
+      const primary = fixture.getPrimary();
       const entityTypeId = await createEntityTypeViaCaller(primary);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entityType.archive({
         systemId: primary.systemId,
         entityTypeId,
@@ -151,8 +128,9 @@ describe("structure router integration", () => {
 
   describe("structure.entityType.restore", () => {
     it("restores an archived entity type", async () => {
+      const primary = fixture.getPrimary();
       const entityTypeId = await createEntityTypeViaCaller(primary);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.structure.entityType.archive({
         systemId: primary.systemId,
         entityTypeId,
@@ -167,11 +145,12 @@ describe("structure router integration", () => {
 
   describe("structure.entityType.delete", () => {
     it("deletes an entity type with no referencing entities", async () => {
+      const primary = fixture.getPrimary();
       // deleteEntityType 409s when entities still reference the type, so we
       // create a fresh type via the caller (no associated entity) rather than
       // reusing the one seedStructureEntity creates internally.
       const entityTypeId = await createEntityTypeViaCaller(primary);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entityType.delete({
         systemId: primary.systemId,
         entityTypeId,
@@ -184,8 +163,9 @@ describe("structure router integration", () => {
 
   describe("structure.entity.create", () => {
     it("creates a structure entity belonging to the caller's system", async () => {
+      const primary = fixture.getPrimary();
       const entityTypeId = await createEntityTypeViaCaller(primary);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entity.create({
         systemId: primary.systemId,
         structureEntityTypeId: entityTypeId,
@@ -200,8 +180,13 @@ describe("structure router integration", () => {
 
   describe("structure.entity.get", () => {
     it("returns an entity by id", async () => {
-      const entityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const entityId = await seedStructureEntity(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entity.get({
         systemId: primary.systemId,
         entityId,
@@ -212,6 +197,7 @@ describe("structure router integration", () => {
 
   describe("structure.entity.getHierarchy", () => {
     it("returns NOT_FOUND when the entity does not exist", async () => {
+      const primary = fixture.getPrimary();
       // The happy-path branch executes a recursive CTE via tx.execute(sql\`…\`)
       // whose result shape differs between postgres-js (returns the rows array
       // directly) and pglite (returns { rows: [...] }). Service-level unit
@@ -219,7 +205,7 @@ describe("structure router integration", () => {
       // assert the procedure wiring + middleware by exercising the missing-
       // entity short-circuit, which throws NOT_FOUND before reaching the CTE.
       const entityId = `ste_${crypto.randomUUID()}`;
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expect(
         caller.structure.entity.getHierarchy({
           systemId: primary.systemId,
@@ -231,9 +217,11 @@ describe("structure router integration", () => {
 
   describe("structure.entity.list", () => {
     it("returns entities of the caller's system", async () => {
-      await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedStructureEntity(db, primary.systemId, primary.auth);
+      await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listStructureEntities returns PaginatedResult<StructureEntityResult>.
       const result = await caller.structure.entity.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
@@ -242,8 +230,13 @@ describe("structure router integration", () => {
 
   describe("structure.entity.update", () => {
     it("updates an entity's encrypted data and sort order", async () => {
-      const entityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const entityId = await seedStructureEntity(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       // UpdateStructureEntityBodySchema requires `version`; newly seeded
       // entities start at version 1.
       const result = await caller.structure.entity.update({
@@ -260,8 +253,13 @@ describe("structure router integration", () => {
 
   describe("structure.entity.archive", () => {
     it("archives an entity", async () => {
-      const entityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const entityId = await seedStructureEntity(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entity.archive({
         systemId: primary.systemId,
         entityId,
@@ -272,8 +270,13 @@ describe("structure router integration", () => {
 
   describe("structure.entity.restore", () => {
     it("restores an archived entity", async () => {
-      const entityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const entityId = await seedStructureEntity(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       await caller.structure.entity.archive({
         systemId: primary.systemId,
         entityId,
@@ -288,11 +291,16 @@ describe("structure router integration", () => {
 
   describe("structure.entity.delete", () => {
     it("deletes an entity with no junction-table dependents", async () => {
+      const primary = fixture.getPrimary();
       // seedStructureEntity creates an entity but does not add link, member-link,
       // or association rows referencing it, so deleteStructureEntity's
       // dependent-count guard passes.
-      const entityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const entityId = await seedStructureEntity(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.entity.delete({
         systemId: primary.systemId,
         entityId,
@@ -305,9 +313,11 @@ describe("structure router integration", () => {
 
   describe("structure.link.create", () => {
     it("creates a link between two entities in the same system", async () => {
-      const childId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const parentId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const childId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const parentId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.link.create({
         systemId: primary.systemId,
         entityId: childId,
@@ -322,9 +332,11 @@ describe("structure router integration", () => {
 
   describe("structure.link.list", () => {
     it("returns links for the caller's system", async () => {
-      const childId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const parentId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const childId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const parentId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.structure.link.create({
         systemId: primary.systemId,
         entityId: childId,
@@ -338,9 +350,11 @@ describe("structure router integration", () => {
 
   describe("structure.link.update", () => {
     it("updates a link's sort order", async () => {
-      const childId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const parentId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const childId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const parentId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const link = await caller.structure.link.create({
         systemId: primary.systemId,
         entityId: childId,
@@ -359,9 +373,11 @@ describe("structure router integration", () => {
 
   describe("structure.link.delete", () => {
     it("deletes a link", async () => {
-      const childId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const parentId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const childId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const parentId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const link = await caller.structure.link.create({
         systemId: primary.systemId,
         entityId: childId,
@@ -380,9 +396,11 @@ describe("structure router integration", () => {
 
   describe("structure.memberLink.create", () => {
     it("creates a member link under a parent entity", async () => {
-      const parentEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const parentEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.memberLink.create({
         systemId: primary.systemId,
         parentEntityId,
@@ -397,9 +415,11 @@ describe("structure router integration", () => {
 
   describe("structure.memberLink.list", () => {
     it("returns member links for the caller's system", async () => {
-      const parentEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const parentEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.structure.memberLink.create({
         systemId: primary.systemId,
         parentEntityId,
@@ -413,9 +433,11 @@ describe("structure router integration", () => {
 
   describe("structure.memberLink.delete", () => {
     it("deletes a member link", async () => {
-      const parentEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const parentEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const memberLink = await caller.structure.memberLink.create({
         systemId: primary.systemId,
         parentEntityId,
@@ -434,9 +456,11 @@ describe("structure router integration", () => {
 
   describe("structure.association.create", () => {
     it("creates an association between two entities", async () => {
-      const sourceEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const targetEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const sourceEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const targetEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.structure.association.create({
         systemId: primary.systemId,
         sourceEntityId,
@@ -450,9 +474,11 @@ describe("structure router integration", () => {
 
   describe("structure.association.list", () => {
     it("returns associations for the caller's system", async () => {
-      const sourceEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const targetEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const sourceEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const targetEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.structure.association.create({
         systemId: primary.systemId,
         sourceEntityId,
@@ -465,9 +491,11 @@ describe("structure router integration", () => {
 
   describe("structure.association.delete", () => {
     it("deletes an association", async () => {
-      const sourceEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const targetEntityId = await seedStructureEntity(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const sourceEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const targetEntityId = await seedStructureEntity(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const association = await caller.structure.association.create({
         systemId: primary.systemId,
         sourceEntityId,
@@ -485,7 +513,8 @@ describe("structure router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.structure.entityType.list({ systemId: primary.systemId }));
     });
   });
@@ -494,8 +523,14 @@ describe("structure router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's entity", async () => {
-      const otherEntityId = await seedStructureEntity(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherEntityId = await seedStructureEntity(
+        fixture.getCtx().db,
+        other.systemId,
+        other.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.structure.entity.get({
           systemId: other.systemId,
@@ -505,8 +540,10 @@ describe("structure router integration", () => {
     });
 
     it("rejects when primary tries to read other tenant's entity type", async () => {
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
       const otherEntityTypeId = await createEntityTypeViaCaller(other);
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.structure.entityType.get({
           systemId: other.systemId,

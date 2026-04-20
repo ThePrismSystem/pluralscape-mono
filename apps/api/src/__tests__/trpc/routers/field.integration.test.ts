@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. Same block as the
 // canonical member router integration test — keep BEFORE any module-level
@@ -21,16 +21,10 @@ import { noopAudit, testEncryptedDataBase64 } from "../../helpers/integration-se
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
   seedBucket,
   seedMember,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
@@ -68,38 +62,24 @@ async function seedFieldDefinition(
 }
 
 describe("field router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ field: typeof fieldRouter }>>;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ field: fieldRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    // The field-definition service memoizes list results at module scope; if
-    // we don't clear between tests, a `list` from a prior test's tenant can
-    // bleed through after `truncateAll` wipes the rows.
-    clearFieldDefCache();
-    await truncateAll(ctx);
-  });
+  // The field-definition service memoizes list results at module scope; if
+  // we don't clear between tests, a `list` from a prior test's tenant can
+  // bleed through after `truncateAll` wipes the rows.
+  const fixture = setupRouterFixture(
+    { field: fieldRouter },
+    {
+      extraAfterEach: () => {
+        clearFieldDefCache();
+      },
+    },
+  );
 
   // ── Field definitions ─────────────────────────────────────────────
 
   describe("field.definition.create", () => {
     it("creates a field definition belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.field.definition.create({
         systemId: primary.systemId,
         fieldType: "text",
@@ -114,8 +94,13 @@ describe("field router integration", () => {
 
   describe("field.definition.get", () => {
     it("returns a field definition by id", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const fieldDefinitionId = await seedFieldDefinition(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.field.definition.get({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -126,9 +111,11 @@ describe("field router integration", () => {
 
   describe("field.definition.list", () => {
     it("returns field definitions of the caller's system", async () => {
-      await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedFieldDefinition(db, primary.systemId, primary.auth);
+      await seedFieldDefinition(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listFieldDefinitions returns PaginatedResult<FieldDefinitionResult>
       // ⇒ `data`, not `items`.
       const result = await caller.field.definition.list({ systemId: primary.systemId });
@@ -138,8 +125,13 @@ describe("field router integration", () => {
 
   describe("field.definition.update", () => {
     it("updates a field definition's encrypted data", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const fieldDefinitionId = await seedFieldDefinition(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       // UpdateFieldDefinitionBodySchema requires `version` (optimistic
       // concurrency token). Newly seeded definitions start at version 1.
       const result = await caller.field.definition.update({
@@ -154,8 +146,13 @@ describe("field router integration", () => {
 
   describe("field.definition.archive", () => {
     it("archives a field definition", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const fieldDefinitionId = await seedFieldDefinition(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.field.definition.archive({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -166,8 +163,13 @@ describe("field router integration", () => {
 
   describe("field.definition.restore", () => {
     it("restores an archived field definition", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const fieldDefinitionId = await seedFieldDefinition(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       await caller.field.definition.archive({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -182,8 +184,13 @@ describe("field router integration", () => {
 
   describe("field.definition.delete", () => {
     it("deletes a field definition", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const fieldDefinitionId = await seedFieldDefinition(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.field.definition.delete({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -202,9 +209,11 @@ describe("field router integration", () => {
 
   describe("field.value.set", () => {
     it("sets a field value for a member owner", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const fieldDefinitionId = await seedFieldDefinition(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.field.value.set({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -218,9 +227,11 @@ describe("field router integration", () => {
 
   describe("field.value.list", () => {
     it("returns field values attached to a member owner", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const fieldDefinitionId = await seedFieldDefinition(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.field.value.set({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -239,9 +250,11 @@ describe("field router integration", () => {
 
   describe("field.value.remove", () => {
     it("removes a field value from a member owner", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const fieldDefinitionId = await seedFieldDefinition(db, primary.systemId, primary.auth);
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.field.value.set({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -261,9 +274,11 @@ describe("field router integration", () => {
 
   describe("field.bucketVisibility.set", () => {
     it("grants a bucket visibility over a field definition", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const fieldDefinitionId = await seedFieldDefinition(db, primary.systemId, primary.auth);
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.field.bucketVisibility.set({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -276,9 +291,11 @@ describe("field router integration", () => {
 
   describe("field.bucketVisibility.remove", () => {
     it("revokes a previously granted bucket visibility", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const fieldDefinitionId = await seedFieldDefinition(db, primary.systemId, primary.auth);
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.field.bucketVisibility.set({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -295,9 +312,11 @@ describe("field router integration", () => {
 
   describe("field.bucketVisibility.list", () => {
     it("returns bucket visibility entries for a field definition", async () => {
-      const fieldDefinitionId = await seedFieldDefinition(ctx.db, primary.systemId, primary.auth);
-      const bucketId = await seedBucket(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const fieldDefinitionId = await seedFieldDefinition(db, primary.systemId, primary.auth);
+      const bucketId = await seedBucket(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.field.bucketVisibility.set({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -316,7 +335,8 @@ describe("field router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.field.definition.list({ systemId: primary.systemId }));
     });
   });
@@ -325,8 +345,14 @@ describe("field router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's field definition", async () => {
-      const otherFieldId = await seedFieldDefinition(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherFieldId = await seedFieldDefinition(
+        fixture.getCtx().db,
+        other.systemId,
+        other.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.field.definition.get({
           systemId: other.systemId,

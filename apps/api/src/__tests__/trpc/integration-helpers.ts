@@ -131,15 +131,6 @@ export async function seedAccountAndSystem(db: PostgresJsDatabase): Promise<Seed
 }
 
 /**
- * Convenience alias for seeding a second tenant in cross-tenant isolation tests.
- * Identical behaviour to `seedAccountAndSystem`; named explicitly to make the
- * intent at the call site clear.
- */
-export async function seedSecondTenant(db: PostgresJsDatabase): Promise<SeededTenant> {
-  return seedAccountAndSystem(db);
-}
-
-/**
  * Assert a promise rejects with a TRPCError carrying the UNAUTHORIZED code.
  * Use for tests that pass `null` as the auth context against a procedure
  * that requires authentication.

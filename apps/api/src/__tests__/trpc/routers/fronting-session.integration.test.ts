@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. If you find yourself adding
@@ -19,16 +19,10 @@ import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
   seedFrontingSession,
   seedMember,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 /** Initial version returned by createFrontingSession; required input for `update`/`end`. */
 const INITIAL_SESSION_VERSION = 1;
@@ -37,37 +31,15 @@ const INITIAL_SESSION_VERSION = 1;
 const END_TIME_OFFSET_MS = 60_000;
 
 describe("fronting-session router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<
-    typeof makeIntegrationCallerFactory<{ frontingSession: typeof frontingSessionRouter }>
-  >;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ frontingSession: frontingSessionRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ frontingSession: frontingSessionRouter });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("frontingSession.create", () => {
     it("creates a fronting session attributed to a member", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // tRPC input inference widens optional branded-id fields to required
       // `unknown` keys, so we must spell out `undefined` for each unused
       // polymorphic subject.
@@ -87,9 +59,11 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.get", () => {
     it("returns a fronting session by id", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const sessionId = await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const sessionId = await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingSession.get({
         systemId: primary.systemId,
         sessionId,
@@ -100,10 +74,12 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.list", () => {
     it("returns sessions of the caller's system", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      const caller = fixture.getCaller(primary.auth);
       // listFrontingSessions returns PaginatedResult<FrontingSessionResult>
       // ⇒ `data`, not `items`.
       const result = await caller.frontingSession.list({ systemId: primary.systemId });
@@ -113,9 +89,11 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.update", () => {
     it("updates a session's encrypted data", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const sessionId = await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const sessionId = await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateFrontingSessionBodySchema requires `version` (optimistic
       // concurrency token). Newly seeded sessions start at version 1.
       const result = await caller.frontingSession.update({
@@ -130,9 +108,10 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.end", () => {
     it("ends an active session", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
       const startTime = Date.now();
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // Create via the router so we know the exact startTime — `end` rejects
       // any endTime that isn't strictly greater than the stored startTime.
       const created = await caller.frontingSession.create({
@@ -156,9 +135,11 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.archive", () => {
     it("archives a session", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const sessionId = await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const sessionId = await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingSession.archive({
         systemId: primary.systemId,
         sessionId,
@@ -169,9 +150,11 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.restore", () => {
     it("restores an archived session", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const sessionId = await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const sessionId = await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      const caller = fixture.getCaller(primary.auth);
       await caller.frontingSession.archive({
         systemId: primary.systemId,
         sessionId,
@@ -186,9 +169,11 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.delete", () => {
     it("deletes a session", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const sessionId = await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
+      const sessionId = await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingSession.delete({
         systemId: primary.systemId,
         sessionId,
@@ -199,10 +184,12 @@ describe("fronting-session router integration", () => {
 
   describe("frontingSession.getActive", () => {
     it("returns currently fronting sessions for the caller's system", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      const memberId = await seedMember(db, primary.systemId, primary.auth);
       // Seeded sessions have no endTime ⇒ they count as "active".
-      await seedFrontingSession(ctx.db, primary.systemId, primary.auth, memberId);
-      const caller = makeCaller(primary.auth);
+      await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.frontingSession.getActive({
         systemId: primary.systemId,
       });
@@ -214,7 +201,8 @@ describe("fronting-session router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.frontingSession.list({ systemId: primary.systemId }));
     });
   });
@@ -223,14 +211,17 @@ describe("fronting-session router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's session", async () => {
-      const otherMemberId = await seedMember(ctx.db, other.systemId, other.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const db = fixture.getCtx().db;
+      const otherMemberId = await seedMember(db, other.systemId, other.auth);
       const otherSessionId = await seedFrontingSession(
-        ctx.db,
+        db,
         other.systemId,
         other.auth,
         otherMemberId,
       );
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.frontingSession.get({
           systemId: other.systemId,

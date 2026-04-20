@@ -12,7 +12,6 @@ import {
   seedFriendConnection,
   seedFrontingSession,
   seedMember,
-  seedSecondTenant,
   seedStructureEntity,
   setupRouterIntegration,
   truncateAll,
@@ -107,11 +106,11 @@ describe("seedAccountAndSystem", () => {
     }
   });
 
-  it("seedSecondTenant creates a distinct tenant", async () => {
+  it("creates distinct tenants when called twice", async () => {
     const ctx = await setupRouterIntegration();
     try {
       const a = await seedAccountAndSystem(ctx.db);
-      const b = await seedSecondTenant(ctx.db);
+      const b = await seedAccountAndSystem(ctx.db);
       expect(a.accountId).not.toBe(b.accountId);
       expect(a.systemId).not.toBe(b.systemId);
     } finally {
@@ -192,7 +191,7 @@ describe("entity seed helpers", () => {
     const ctx = await setupRouterIntegration();
     try {
       const a = await seedAccountAndSystem(ctx.db);
-      const b = await seedSecondTenant(ctx.db);
+      const b = await seedAccountAndSystem(ctx.db);
       const connectionId = await seedFriendConnection(ctx.db, a, b);
       expect(connectionId).toBeTruthy();
     } finally {

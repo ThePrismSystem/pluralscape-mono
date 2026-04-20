@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
@@ -33,14 +33,8 @@ import { noopAudit } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { SystemId, WebhookEventType, WebhookId } from "@pluralscape/types";
@@ -84,39 +78,24 @@ async function seedWebhookConfig(
 }
 
 describe("webhook-config router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<
-    typeof makeIntegrationCallerFactory<{ webhookConfig: typeof webhookConfigRouter }>
-  >;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ webhookConfig: webhookConfigRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-    // Reset the cache-invalidation spy before every test so each block
-    // observes only its own mutation calls.
-    vi.mocked(invalidateWebhookConfigCache).mockClear();
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  // Reset the cache-invalidation spy before every test so each block
+  // observes only its own mutation calls. Runs FIRST in beforeEach via
+  // the fixture's clearMocks hook, before tenant seeding.
+  const fixture = setupRouterFixture(
+    { webhookConfig: webhookConfigRouter },
+    {
+      clearMocks: () => {
+        vi.mocked(invalidateWebhookConfigCache).mockClear();
+      },
+    },
+  );
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("webhookConfig.create", () => {
     it("creates a webhook config and invalidates the dispatcher cache", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.webhookConfig.create({
         systemId: primary.systemId,
         url: TEST_WEBHOOK_URL,
@@ -136,8 +115,13 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.get", () => {
     it("returns a webhook config by id", async () => {
-      const webhookId = await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const webhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.webhookConfig.get({
         systemId: primary.systemId,
         webhookId,
@@ -148,9 +132,11 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.list", () => {
     it("returns webhook configs of the caller's system", async () => {
-      await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedWebhookConfig(db, primary.systemId, primary.auth);
+      await seedWebhookConfig(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listWebhookConfigs returns PaginatedResult<WebhookConfigResult> ⇒ `data`, not `items`.
       const result = await caller.webhookConfig.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
@@ -159,8 +145,13 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.update", () => {
     it("updates a webhook config and invalidates the dispatcher cache", async () => {
-      const webhookId = await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const webhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       // Clear any prior invalidation calls (seed went through createWebhookConfig).
       vi.mocked(invalidateWebhookConfigCache).mockClear();
       // UpdateWebhookConfigBodySchema requires `version` (optimistic concurrency token).
@@ -178,8 +169,13 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.delete", () => {
     it("deletes a webhook config and invalidates the dispatcher cache", async () => {
-      const webhookId = await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const webhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       vi.mocked(invalidateWebhookConfigCache).mockClear();
       const result = await caller.webhookConfig.delete({
         systemId: primary.systemId,
@@ -192,8 +188,13 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.archive", () => {
     it("archives a webhook config and invalidates the dispatcher cache", async () => {
-      const webhookId = await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const webhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       vi.mocked(invalidateWebhookConfigCache).mockClear();
       const result = await caller.webhookConfig.archive({
         systemId: primary.systemId,
@@ -206,8 +207,13 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.restore", () => {
     it("restores an archived webhook config and invalidates the dispatcher cache", async () => {
-      const webhookId = await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const webhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       await caller.webhookConfig.archive({
         systemId: primary.systemId,
         webhookId,
@@ -225,8 +231,13 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.rotateSecret", () => {
     it("rotates the secret, returns a fresh value, and invalidates the dispatcher cache", async () => {
-      const webhookId = await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const webhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       vi.mocked(invalidateWebhookConfigCache).mockClear();
       // RotateWebhookSecretBodySchema requires the current OCC version (≥1).
       const result = await caller.webhookConfig.rotateSecret({
@@ -244,14 +255,19 @@ describe("webhook-config router integration", () => {
 
   describe("webhookConfig.test", () => {
     it("returns a WebhookTestResult for a synthetic delivery attempt", async () => {
-      const webhookId = await seedWebhookConfig(ctx.db, primary.systemId, primary.auth);
+      const primary = fixture.getPrimary();
+      const webhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+      );
       // Stub global fetch so the test ping doesn't hit the real network.
       // testWebhookConfig in the router uses default fetch (not injected via
       // input), so global stubbing is the only seam.
       const fetchStub = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
       vi.stubGlobal("fetch", fetchStub);
       try {
-        const caller = makeCaller(primary.auth);
+        const caller = fixture.getCaller(primary.auth);
         const result = await caller.webhookConfig.test({
           systemId: primary.systemId,
           webhookId,
@@ -272,7 +288,8 @@ describe("webhook-config router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.webhookConfig.list({ systemId: primary.systemId }));
     });
   });
@@ -281,8 +298,14 @@ describe("webhook-config router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's webhook config", async () => {
-      const otherWebhookId = await seedWebhookConfig(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherWebhookId = await seedWebhookConfig(
+        fixture.getCtx().db,
+        other.systemId,
+        other.auth,
+      );
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.webhookConfig.get({
           systemId: other.systemId,

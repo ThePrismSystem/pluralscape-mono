@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
@@ -36,14 +36,8 @@ import { createMockBlobQuota, createMockBlobStorage } from "../../helpers/mock-b
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { BlobId, SystemId } from "@pluralscape/types";
@@ -115,10 +109,6 @@ async function seedBlob(
 }
 
 describe("blob router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ blob: typeof blobRouter }>>;
-  let primary: SeededTenant;
-  let other: SeededTenant;
   /**
    * Handle to the mocked storage adapter returned by `getStorageAdapter()` —
    * captured here so `seedBlob` shares state with the router under test.
@@ -127,32 +117,30 @@ describe("blob router integration", () => {
    */
   let storageAdapter: ReturnType<typeof createMockBlobStorage>;
 
+  const fixture = setupRouterFixture(
+    { blob: blobRouter },
+    {
+      extraAfterEach: () => {
+        // Mock storage state persists across tests because the adapter
+        // instance is captured in the vi.mock() factory closure; clear it
+        // here so seeded blobs from one test don't leak into another's
+        // download/list assertions.
+        storageAdapter.blobs.clear();
+      },
+    },
+  );
+
   beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ blob: blobRouter }, ctx.db);
     const storageModule = await import("../../../lib/storage.js");
     storageAdapter = storageModule.getStorageAdapter() as ReturnType<typeof createMockBlobStorage>;
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-    storageAdapter.blobs.clear();
   });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("blob.createUploadUrl", () => {
     it("returns a presigned upload URL and inserts a pending blob row", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.blob.createUploadUrl({
         systemId: primary.systemId,
         purpose: TEST_BLOB_PURPOSE,
@@ -168,10 +156,11 @@ describe("blob router integration", () => {
 
   describe("blob.confirmUpload", () => {
     it("confirms a pending upload and returns the blob metadata", async () => {
+      const primary = fixture.getPrimary();
       // Use createUploadUrl (not seedBlob) to obtain a *pending* blobId —
       // seedBlob already confirms, and confirmUpload on an already-confirmed
       // blob is idempotent but doesn't exercise the pending→confirmed path.
-      const caller = makeCaller(primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const upload = await caller.blob.createUploadUrl({
         systemId: primary.systemId,
         purpose: TEST_BLOB_PURPOSE,
@@ -191,8 +180,14 @@ describe("blob router integration", () => {
 
   describe("blob.get", () => {
     it("returns a confirmed blob by id", async () => {
-      const blobId = await seedBlob(ctx.db, primary.systemId, primary.auth, storageAdapter);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const blobId = await seedBlob(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+        storageAdapter,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.blob.get({
         systemId: primary.systemId,
         blobId,
@@ -203,9 +198,11 @@ describe("blob router integration", () => {
 
   describe("blob.list", () => {
     it("returns confirmed, non-archived blobs of the caller's system", async () => {
-      await seedBlob(ctx.db, primary.systemId, primary.auth, storageAdapter);
-      await seedBlob(ctx.db, primary.systemId, primary.auth, storageAdapter);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedBlob(db, primary.systemId, primary.auth, storageAdapter);
+      await seedBlob(db, primary.systemId, primary.auth, storageAdapter);
+      const caller = fixture.getCaller(primary.auth);
       // listBlobs returns PaginatedResult<BlobResult> ⇒ `data`, not `items`.
       const result = await caller.blob.list({
         systemId: primary.systemId,
@@ -218,8 +215,14 @@ describe("blob router integration", () => {
 
   describe("blob.getDownloadUrl", () => {
     it("returns a presigned download URL for a confirmed blob", async () => {
-      const blobId = await seedBlob(ctx.db, primary.systemId, primary.auth, storageAdapter);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const blobId = await seedBlob(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+        storageAdapter,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.blob.getDownloadUrl({
         systemId: primary.systemId,
         blobId,
@@ -232,8 +235,14 @@ describe("blob router integration", () => {
 
   describe("blob.delete", () => {
     it("archives a confirmed blob", async () => {
-      const blobId = await seedBlob(ctx.db, primary.systemId, primary.auth, storageAdapter);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const blobId = await seedBlob(
+        fixture.getCtx().db,
+        primary.systemId,
+        primary.auth,
+        storageAdapter,
+      );
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.blob.delete({
         systemId: primary.systemId,
         blobId,
@@ -246,7 +255,8 @@ describe("blob router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(
         caller.blob.list({
           systemId: primary.systemId,
@@ -261,8 +271,15 @@ describe("blob router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's blob", async () => {
-      const otherBlobId = await seedBlob(ctx.db, other.systemId, other.auth, storageAdapter);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherBlobId = await seedBlob(
+        fixture.getCtx().db,
+        other.systemId,
+        other.auth,
+        storageAdapter,
+      );
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.blob.get({
           systemId: other.systemId,

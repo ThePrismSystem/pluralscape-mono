@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. If you find yourself adding
@@ -19,48 +19,22 @@ import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
   expectAuthRequired,
   expectTenantDenied,
-  seedAccountAndSystem,
   seedMember,
-  seedSecondTenant,
-  setupRouterIntegration,
-  truncateAll,
-  type RouterIntegrationCtx,
-  type SeededTenant,
+  setupRouterFixture,
 } from "../integration-helpers.js";
-import { makeIntegrationCallerFactory } from "../test-helpers.js";
 
 /** Initial version returned by createMember; required input for `update`. */
 const INITIAL_MEMBER_VERSION = 1;
 
 describe("member router integration", () => {
-  let ctx: RouterIntegrationCtx;
-  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<{ member: typeof memberRouter }>>;
-  let primary: SeededTenant;
-  let other: SeededTenant;
-
-  beforeAll(async () => {
-    ctx = await setupRouterIntegration();
-    makeCaller = makeIntegrationCallerFactory({ member: memberRouter }, ctx.db);
-  });
-
-  afterAll(async () => {
-    await ctx.teardown();
-  });
-
-  beforeEach(async () => {
-    primary = await seedAccountAndSystem(ctx.db);
-    other = await seedSecondTenant(ctx.db);
-  });
-
-  afterEach(async () => {
-    await truncateAll(ctx);
-  });
+  const fixture = setupRouterFixture({ member: memberRouter });
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("member.create", () => {
     it("creates a member belonging to the caller's system", async () => {
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.member.create({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -72,8 +46,9 @@ describe("member router integration", () => {
 
   describe("member.get", () => {
     it("returns a member by id", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.member.get({
         systemId: primary.systemId,
         memberId,
@@ -84,9 +59,11 @@ describe("member router integration", () => {
 
   describe("member.list", () => {
     it("returns members of the caller's system", async () => {
-      await seedMember(ctx.db, primary.systemId, primary.auth);
-      await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const db = fixture.getCtx().db;
+      await seedMember(db, primary.systemId, primary.auth);
+      await seedMember(db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // listMembers returns PaginatedResult<MemberResult> ⇒ `data`, not `items`.
       const result = await caller.member.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
@@ -95,8 +72,9 @@ describe("member router integration", () => {
 
   describe("member.update", () => {
     it("updates a member's encrypted data", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // UpdateMemberBodySchema requires `version` (optimistic concurrency token).
       // Newly seeded members start at version 1.
       const result = await caller.member.update({
@@ -111,8 +89,9 @@ describe("member router integration", () => {
 
   describe("member.duplicate", () => {
     it("creates a copy of an existing member", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.member.duplicate({
         systemId: primary.systemId,
         memberId,
@@ -125,8 +104,9 @@ describe("member router integration", () => {
 
   describe("member.archive", () => {
     it("archives a member", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.member.archive({
         systemId: primary.systemId,
         memberId,
@@ -137,8 +117,9 @@ describe("member router integration", () => {
 
   describe("member.restore", () => {
     it("restores an archived member", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       await caller.member.archive({
         systemId: primary.systemId,
         memberId,
@@ -153,8 +134,9 @@ describe("member router integration", () => {
 
   describe("member.delete", () => {
     it("deletes a member", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       const result = await caller.member.delete({
         systemId: primary.systemId,
         memberId,
@@ -165,8 +147,9 @@ describe("member router integration", () => {
 
   describe("member.listMemberships", () => {
     it("returns membership listings for a member", async () => {
-      const memberId = await seedMember(ctx.db, primary.systemId, primary.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
+      const caller = fixture.getCaller(primary.auth);
       // Returns MemberMembershipsResult: { groups, structureEntities } — an
       // object grouping memberships by structure type, not a flat array.
       const result = await caller.member.listMemberships({
@@ -182,7 +165,8 @@ describe("member router integration", () => {
 
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
-      const caller = makeCaller(null);
+      const primary = fixture.getPrimary();
+      const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.member.list({ systemId: primary.systemId }));
     });
   });
@@ -191,8 +175,10 @@ describe("member router integration", () => {
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's member", async () => {
-      const otherMemberId = await seedMember(ctx.db, other.systemId, other.auth);
-      const caller = makeCaller(primary.auth);
+      const primary = fixture.getPrimary();
+      const other = fixture.getOther();
+      const otherMemberId = await seedMember(fixture.getCtx().db, other.systemId, other.auth);
+      const caller = fixture.getCaller(primary.auth);
       await expectTenantDenied(
         caller.member.get({
           systemId: other.systemId,
