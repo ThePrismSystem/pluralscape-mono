@@ -1,11 +1,11 @@
 ---
 # crypto-cpir
 title: "Audit remediation: packages/crypto (2026-04-20)"
-status: todo
+status: in-progress
 type: epic
 priority: high
 created_at: 2026-04-20T09:20:30Z
-updated_at: 2026-04-20T09:20:30Z
+updated_at: 2026-04-20T11:45:02Z
 parent: ps-h2gl
 ---
 

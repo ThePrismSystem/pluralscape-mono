@@ -3,12 +3,11 @@
  *
  * Security model:
  * - Verification code: 10 decimal digits (~33.2 bits entropy)
- * - Protected by Argon2id mobile profile (32 MiB / 2 iterations) to slow brute force
+ * - Protected by Argon2id TRANSFER profile (see `crypto.constants.ts`) to slow brute force
  * - Transfer sessions expire after 5 minutes (TRANSFER_TIMEOUT_MS)
- * - QR payload includes cleartext verification code for convenience — security relies
- *   on physical proximity to the source device's screen (single-factor)
- * - To enable two-factor verification, remove `code` from QR payload and require
- *   separate manual entry on the target device
+ * - QR payload carries only {requestId, salt}. The verification code must be entered
+ *   manually on the target device. This two-factor split closes the MITM/photography
+ *   window: capturing the QR alone is insufficient to derive the transfer key.
  * - Offline brute force of the full code space is computationally expensive
  *   (~2,800 hours on a single 2024-era GPU per hashcat benchmarks) and mitigated
  *   by the 5-minute server-side timeout for online attacks
@@ -90,10 +89,15 @@ export interface TransferInitiation {
   readonly requestId: string;
 }
 
-/** Decoded QR payload fields. */
+/**
+ * Decoded QR payload fields.
+ *
+ * The QR code intentionally does not carry the verification code; the target device
+ * must obtain the 10-digit code through a separate out-of-band channel (manual entry)
+ * before deriving the transfer key via {@link deriveTransferKey}.
+ */
 export interface DecodedQRPayload {
   readonly requestId: string;
-  readonly code: string;
   readonly salt: PwhashSalt;
 }
 
@@ -132,16 +136,14 @@ function generateUUIDv4(): string {
 }
 
 /** Type guard for the expected shape of a parsed QR payload. */
-function isQRPayloadShape(v: unknown): v is { requestId: string; code: string; salt: string } {
+function isQRPayloadShape(v: unknown): v is { requestId: string; salt: string } {
+  if (typeof v !== "object" || v === null) return false;
+  const record = v as Record<string, unknown>;
   return (
-    typeof v === "object" &&
-    v !== null &&
-    "requestId" in v &&
-    typeof (v as Record<string, unknown>).requestId === "string" &&
-    "code" in v &&
-    typeof (v as Record<string, unknown>).code === "string" &&
-    "salt" in v &&
-    typeof (v as Record<string, unknown>).salt === "string"
+    "requestId" in record &&
+    typeof record.requestId === "string" &&
+    "salt" in record &&
+    typeof record.salt === "string"
   );
 }
 
@@ -230,15 +232,15 @@ export function decryptFromTransfer(payload: EncryptedPayload, transferKey: Aead
 /**
  * Encode a TransferInitiation as a JSON string for QR code embedding.
  *
- * Note: The QR payload includes the verification code for convenience — scanning
- * the QR replaces manual code entry. See file-level security model note for threat
- * analysis and two-factor upgrade path.
+ * The QR carries only `requestId` and `salt`. The 10-digit verification code is NOT
+ * embedded: it must be entered manually on the target device, forming the second
+ * factor alongside the QR-delivered salt. This closes the MITM/photography window
+ * where a passive observer capturing the QR alone could derive the transfer key.
  */
 export function encodeQRPayload(init: TransferInitiation): string {
   const saltHex = toHex(init.codeSalt);
   return JSON.stringify({
     requestId: init.requestId,
-    code: init.verificationCode,
     salt: saltHex,
   });
 }
@@ -247,6 +249,10 @@ export function encodeQRPayload(init: TransferInitiation): string {
  * Decode a QR payload string back into its structured fields.
  *
  * Throws InvalidInputError if the payload is not valid JSON or is missing required fields.
+ *
+ * The decoded payload contains only `requestId` and `salt`; the verification code
+ * is a separate manual-entry input and must be obtained out-of-band from the source
+ * device's screen.
  */
 export function decodeQRPayload(data: string): DecodedQRPayload {
   let parsed: unknown;
@@ -256,11 +262,11 @@ export function decodeQRPayload(data: string): DecodedQRPayload {
     throw new InvalidInputError("QR payload is not valid JSON.", { cause: error });
   }
   if (!isQRPayloadShape(parsed)) {
-    throw new InvalidInputError("QR payload missing required fields: requestId, code, salt.");
+    throw new InvalidInputError("QR payload missing required fields: requestId, salt.");
   }
   const salt = fromHex(parsed.salt);
   assertPwhashSalt(salt);
-  return { requestId: parsed.requestId, code: parsed.code, salt };
+  return { requestId: parsed.requestId, salt };
 }
 
 /**

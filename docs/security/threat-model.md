@@ -142,18 +142,14 @@ If an attacker exfiltrates the transfer session data from the database (the Argo
 
 #### Recommendation
 
-The codebase already contains comments documenting a two-factor upgrade path (see the file-level JSDoc in `packages/crypto/src/device-transfer.ts`):
+Implemented (crypto-5d49, 2026-04-20): the QR payload now carries only `requestId` and `salt`. The 10-digit verification code is NOT embedded and must be entered manually on the target device.
 
-> To enable two-factor verification, remove `code` from QR payload and require separate manual entry on the target device.
-
-This upgrade splits the transfer into two factors:
+This splits the transfer into two factors:
 
 1. **QR scan** (something you have access to): Transfers the `requestId` and `salt`
-2. **Manual code entry** (something you know): The 8-digit code displayed separately on the source device
+2. **Manual code entry** (something you know): The 10-digit code displayed separately on the source device
 
-With this change, capturing the QR code alone is insufficient to complete a transfer — the attacker must also observe and transcribe the displayed code.
-
-This should be implemented before production. The change is backward-compatible: the `decodeQRPayload` function can accept payloads with or without the `code` field, falling back to requiring manual entry when the code is absent.
+Capturing the QR code alone is now insufficient to complete a transfer — the attacker must also observe and transcribe the displayed code. `decodeQRPayload` silently ignores any legacy `code` field if emitted by an older client, so upgrading source devices do not prevent new target devices from decoding their payloads.
 
 ---
 

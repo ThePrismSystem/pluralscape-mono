@@ -11,6 +11,7 @@ import {
   isValidTransferCode,
 } from "../device-transfer.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
+import { toHex } from "../hex.js";
 import { generateMasterKey } from "../master-key-wrap.js";
 
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
@@ -123,14 +124,29 @@ describe("encryptForTransfer / decryptFromTransfer", () => {
 });
 
 describe("encodeQRPayload / decodeQRPayload", () => {
-  it("round-trip preserves all fields", () => {
+  it("round-trip preserves requestId and salt (code is NOT embedded)", () => {
     const init = generateTransferCode();
     const encoded = encodeQRPayload(init);
     const decoded = decodeQRPayload(encoded);
 
     expect(decoded.requestId).toBe(init.requestId);
-    expect(decoded.code).toBe(init.verificationCode);
     expect(decoded.salt).toEqual(init.codeSalt);
+  });
+
+  it("encoded QR payload does not embed the verification code", () => {
+    const init = generateTransferCode();
+    const encoded = encodeQRPayload(init);
+    const parsed = JSON.parse(encoded) as Record<string, unknown>;
+    expect(parsed).not.toHaveProperty("code");
+    expect(parsed).not.toHaveProperty("verificationCode");
+    // Defense-in-depth: also assert the literal digit sequence is absent
+    expect(encoded).not.toContain(init.verificationCode);
+  });
+
+  it("decoded QR payload has no `code` property (compile-time + runtime)", () => {
+    const init = generateTransferCode();
+    const decoded = decodeQRPayload(encodeQRPayload(init));
+    expect(Object.hasOwn(decoded, "code")).toBe(false);
   });
 
   it("invalid JSON throws InvalidInputError", () => {
@@ -138,29 +154,37 @@ describe("encodeQRPayload / decodeQRPayload", () => {
   });
 
   it("missing requestId field throws InvalidInputError", () => {
-    const payload = JSON.stringify({ code: "12345678", salt: "AAAA" });
-    expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
-  });
-
-  it("missing code field throws InvalidInputError", () => {
-    const payload = JSON.stringify({ requestId: "uuid", salt: "AAAA" });
+    const payload = JSON.stringify({ salt: "AAAA" });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
 
   it("missing salt field throws InvalidInputError", () => {
-    const payload = JSON.stringify({ requestId: "uuid", code: "12345678" });
+    const payload = JSON.stringify({ requestId: "uuid" });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
 
   it("invalid hex in salt throws InvalidInputError", () => {
-    const payload = JSON.stringify({ requestId: "uuid", code: "12345678", salt: "ZZZZ" });
+    const payload = JSON.stringify({ requestId: "uuid", salt: "ZZZZ" });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
 
   it("wrong-length salt hex throws InvalidInputError", () => {
     // 4 hex chars = 2 bytes, not the required 16
-    const payload = JSON.stringify({ requestId: "uuid", code: "12345678", salt: "aabb" });
+    const payload = JSON.stringify({ requestId: "uuid", salt: "aabb" });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
+  });
+
+  it("ignores legacy `code` field if present (forward-compat for old clients)", () => {
+    // An older source device encoding the code should not leak into DecodedQRPayload.
+    const init = generateTransferCode();
+    const legacy = JSON.stringify({
+      requestId: init.requestId,
+      code: init.verificationCode,
+      salt: toHex(init.codeSalt),
+    });
+    const decoded = decodeQRPayload(legacy);
+    expect(Object.hasOwn(decoded, "code")).toBe(false);
+    expect(decoded.requestId).toBe(init.requestId);
   });
 });
 
