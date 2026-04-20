@@ -1,11 +1,11 @@
 ---
 # mobile-e3l7
 title: "Audit remediation: apps/mobile (2026-04-20)"
-status: todo
+status: in-progress
 type: epic
 priority: critical
 created_at: 2026-04-20T09:20:30Z
-updated_at: 2026-04-20T09:20:30Z
+updated_at: 2026-04-20T18:43:29Z
 parent: ps-h2gl
 ---
 

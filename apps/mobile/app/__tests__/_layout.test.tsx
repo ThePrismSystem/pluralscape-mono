@@ -48,7 +48,7 @@ vi.mock("expo-router", () => ({
 }));
 
 vi.mock("expo-constants", () => ({
-  default: { expoConfig: { extra: { apiBaseUrl: "http://test:3000" } } },
+  default: { expoConfig: { extra: { apiBaseUrl: "https://test.example.com" } } },
 }));
 
 vi.mock("@microsoft/fetch-event-source", () => ({
