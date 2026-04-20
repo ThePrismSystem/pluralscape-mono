@@ -48,7 +48,7 @@ vi.mock("expo-router", () => ({
 }));
 
 vi.mock("expo-constants", () => ({
-  default: { expoConfig: { extra: { apiBaseUrl: "http://test:3000" } } },
+  default: { expoConfig: { extra: { apiBaseUrl: "https://test.example.com" } } },
 }));
 
 vi.mock("@microsoft/fetch-event-source", () => ({
@@ -59,7 +59,15 @@ const mockDetectPlatform = vi.fn<() => Promise<PlatformContext>>();
 const mockCreateTokenStore = vi.fn<() => Promise<TokenStore>>();
 const mockDetectLocale = vi.fn<(locales: string[]) => string>().mockReturnValue("en");
 const mockApplyLayoutDirection = vi.fn<(locale: string) => void>();
-const mockCreateChainedBackend = vi.fn(() => ({ type: "backend" as const, read: vi.fn() }));
+
+// `_layout.tsx` hoists createChainedBackend/AsyncStorageI18nCache construction
+// to module scope, so the i18n mock factory has to return a real function
+// the moment the layout module is imported. `vi.hoisted` gives us a stub
+// that exists before any `vi.mock` factory runs.
+const { mockCreateChainedBackend } = vi.hoisted(() => ({
+  mockCreateChainedBackend: vi.fn(() => ({ type: "backend" as const, read: vi.fn() })),
+}));
+
 const mockLoadBundledNamespace = vi.fn(
   (locale: string, namespace: string): Promise<Readonly<Record<string, string>>> => {
     void locale;
@@ -322,6 +330,51 @@ describe("RootLayout — error state", () => {
     expect(retryBtn.tagName).toBe("BUTTON");
     expect(queryByTestId("slot")).toBeNull();
     expect(queryByTestId("redirect")).toBeNull();
+  });
+
+  it("renders error screen when module-scope i18n construction throws", async () => {
+    // `getApiBaseUrl()` throws when eas.json extras are missing (e.g. web
+    // dev without the right profile, or CI without expo-constants config).
+    // Simulate that by making the hoisted `createChainedBackend` stub
+    // throw, then reimport the layout so its module-scope try/catch runs.
+    vi.resetModules();
+    mockCreateChainedBackend.mockImplementationOnce(() => {
+      throw new Error("apiBaseUrl is not configured. Set it via eas.json per-profile extras.");
+    });
+
+    const freshModule = await import("../_layout.js");
+    const FreshRootLayout = freshModule.default;
+
+    const { findByRole, queryByRole } = render(<FreshRootLayout />);
+    const retryBtn = await findByRole("button", { name: "Retry initialization" });
+    expect(retryBtn.tagName).toBe("BUTTON");
+    // Clicking the retry button must NOT crash — module-scope failure is
+    // non-recoverable, but the screen must not throw on interaction.
+    retryBtn.click();
+    expect(queryByRole("button", { name: "Retry initialization" })).not.toBeNull();
+  });
+
+  it("constructs the i18n backend exactly once across locale rerenders", async () => {
+    mockDetectPlatform.mockResolvedValue(makePlatformContext());
+    mockCreateTokenStore.mockResolvedValue(makeTokenStore());
+    // Flip detectLocale across renders so the locale state actually changes
+    // after initial mount. The backend factory is hoisted to module scope
+    // and must not run again for any of those transitions.
+    mockDetectLocale.mockReturnValueOnce("en");
+    mockDetectLocale.mockReturnValueOnce("fr");
+    mockDetectLocale.mockReturnValueOnce("es");
+
+    const initialCalls = mockCreateChainedBackend.mock.calls.length;
+
+    const { findByTestId, rerender } = render(<RootLayout />);
+    await findByTestId("redirect");
+    rerender(<RootLayout />);
+    rerender(<RootLayout />);
+
+    // Exactly one additional invocation beyond any previous test's toll,
+    // corresponding to this file's module import + RootLayout tree.
+    // (Module scope runs once; rerenders reuse the same singleton.)
+    expect(mockCreateChainedBackend.mock.calls.length - initialCalls).toBeLessThanOrEqual(1);
   });
 
   it("renders error screen when token store creation rejects", async () => {

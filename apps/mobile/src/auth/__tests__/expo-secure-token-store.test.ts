@@ -65,7 +65,7 @@ describe("expo-secure-token-store", () => {
     it("persists with WHEN_UNLOCKED_THIS_DEVICE_ONLY so the token does not travel in device backups", async () => {
       const store = createExpoSecureTokenStore();
       await store.setToken("accessibility-check");
-      const opts = secureStore.__lastOptions("pluralscape_session_token");
+      const opts = secureStore.__lastOptionsForMethod("setItemAsync", "pluralscape_session_token");
       expect(opts?.keychainAccessible).toBe(secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY);
     });
 

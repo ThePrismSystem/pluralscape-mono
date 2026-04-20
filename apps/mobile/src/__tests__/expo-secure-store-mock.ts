@@ -10,14 +10,16 @@ interface SecureStoreOptions {
   readonly authenticationPrompt?: string;
 }
 
+type SecureStoreMethod = "getItemAsync" | "setItemAsync" | "deleteItemAsync";
+
 const store = new Map<string, string>();
-const lastOptions = new Map<string, SecureStoreOptions | undefined>();
+const lastOptionsByMethod = new Map<string, SecureStoreOptions | undefined>();
 let throwOnNextOp: { method: string; error: Error } | null = null;
 
 // Mock the real expo-secure-store KeychainAccessibilityConstant values (strings,
-// not numbers). Production code in this repo does not currently pass options to
-// SecureStore.setItemAsync, but typing these as strings matches the real API so
-// future options-passing code won't fail at runtime against a number-typed mock.
+// not numbers). Production code in this repo passes these to options
+// parameters; typing them as strings matches the real API so options-passing
+// code exercises the same shapes the device sees.
 export const WHEN_UNLOCKED = "AccessibleWhenUnlocked" as const;
 export const WHEN_UNLOCKED_THIS_DEVICE_ONLY = "AccessibleWhenUnlockedThisDeviceOnly" as const;
 export const AFTER_FIRST_UNLOCK = "AccessibleAfterFirstUnlock" as const;
@@ -32,8 +34,13 @@ function maybeThrow(method: string): void {
   }
 }
 
-export function getItemAsync(key: string): Promise<string | null> {
+function byMethodKey(method: SecureStoreMethod, key: string): string {
+  return `${method}:${key}`;
+}
+
+export function getItemAsync(key: string, options?: SecureStoreOptions): Promise<string | null> {
   maybeThrow("getItemAsync");
+  lastOptionsByMethod.set(byMethodKey("getItemAsync", key), options);
   return Promise.resolve(store.has(key) ? (store.get(key) ?? null) : null);
 }
 
@@ -44,12 +51,13 @@ export function setItemAsync(
 ): Promise<void> {
   maybeThrow("setItemAsync");
   store.set(key, value);
-  lastOptions.set(key, options);
+  lastOptionsByMethod.set(byMethodKey("setItemAsync", key), options);
   return Promise.resolve();
 }
 
-export function deleteItemAsync(key: string): Promise<void> {
+export function deleteItemAsync(key: string, options?: SecureStoreOptions): Promise<void> {
   maybeThrow("deleteItemAsync");
+  lastOptionsByMethod.set(byMethodKey("deleteItemAsync", key), options);
   store.delete(key);
   return Promise.resolve();
 }
@@ -61,18 +69,18 @@ export function isAvailableAsync(): Promise<boolean> {
 // Test helpers — not part of the real expo-secure-store API.
 export function __reset(): void {
   store.clear();
-  lastOptions.clear();
+  lastOptionsByMethod.clear();
   throwOnNextOp = null;
 }
 
-export function __lastOptions(key: string): SecureStoreOptions | undefined {
-  return lastOptions.get(key);
+export function __lastOptionsForMethod(
+  method: SecureStoreMethod,
+  key: string,
+): SecureStoreOptions | undefined {
+  return lastOptionsByMethod.get(byMethodKey(method, key));
 }
 
-export function __throwOnNext(
-  method: "getItemAsync" | "setItemAsync" | "deleteItemAsync",
-  error: Error,
-): void {
+export function __throwOnNext(method: SecureStoreMethod, error: Error): void {
   throwOnNextOp = { method, error };
 }
 

@@ -9,11 +9,45 @@ import type { SystemId } from "@pluralscape/types";
 const SYSTEM_A = brandId<SystemId>("sys_aaaaaaaaaaaaaaaaaaaaaaaaa");
 const SYSTEM_B = brandId<SystemId>("sys_bbbbbbbbbbbbbbbbbbbbbbbbb");
 
+function tokenKey(systemId: SystemId): string {
+  return `pluralscape_sp_token_${systemId}`;
+}
+
 afterEach(() => {
   secureStore.__reset();
 });
 
 describe("sp-token-storage", () => {
+  describe("keychainAccessible", () => {
+    it("passes WHEN_UNLOCKED_THIS_DEVICE_ONLY to setItemAsync", async () => {
+      const storage = createSpTokenStorage();
+      await storage.set(SYSTEM_A, "stored-value");
+      const options = secureStore.__lastOptionsForMethod("setItemAsync", tokenKey(SYSTEM_A));
+      expect(options?.keychainAccessible).toBe(secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY);
+    });
+
+    it("passes WHEN_UNLOCKED_THIS_DEVICE_ONLY to getItemAsync on get()", async () => {
+      const storage = createSpTokenStorage();
+      await storage.get(SYSTEM_A);
+      const options = secureStore.__lastOptionsForMethod("getItemAsync", tokenKey(SYSTEM_A));
+      expect(options?.keychainAccessible).toBe(secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY);
+    });
+
+    it("passes WHEN_UNLOCKED_THIS_DEVICE_ONLY to getItemAsync on hasToken()", async () => {
+      const storage = createSpTokenStorage();
+      await storage.hasToken(SYSTEM_A);
+      const options = secureStore.__lastOptionsForMethod("getItemAsync", tokenKey(SYSTEM_A));
+      expect(options?.keychainAccessible).toBe(secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY);
+    });
+
+    it("passes WHEN_UNLOCKED_THIS_DEVICE_ONLY to deleteItemAsync", async () => {
+      const storage = createSpTokenStorage();
+      await storage.clear(SYSTEM_A);
+      const options = secureStore.__lastOptionsForMethod("deleteItemAsync", tokenKey(SYSTEM_A));
+      expect(options?.keychainAccessible).toBe(secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY);
+    });
+  });
+
   describe("get", () => {
     it("returns null when no token has been stored", async () => {
       const storage = createSpTokenStorage();

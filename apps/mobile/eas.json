@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 14.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "extra": {
+        "apiBaseUrl": "http://localhost:3000"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "extra": {
+        "apiBaseUrl": "https://api-preview.pluralscape.app"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "extra": {
+        "apiBaseUrl": "https://api.pluralscape.app"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
