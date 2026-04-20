@@ -102,16 +102,21 @@ async function aggregateSubjectBreakdown(
   dateRange: DateRangeFilter,
 ): Promise<{ rows: readonly SubjectAggregateRow[]; truncated: boolean }> {
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    // At least one of the three subject columns must be non-null for the row
+    // to have a meaningful subject breakdown. Drizzle's `or()` returns
+    // `undefined` only for an empty arg list; three non-null predicates always
+    // yield a defined expression, so the previous `?? sql\`TRUE\`` fallback
+    // was unreachable. `and(...)` accepts undefined entries and skips them, so
+    // the spread is safe if Drizzle's typing ever widens.
+    const subjectPresent = or(
+      isNotNull(frontingSessions.memberId),
+      isNotNull(frontingSessions.customFrontId),
+      isNotNull(frontingSessions.structureEntityId),
+    );
     const conditions = [
       eq(frontingSessions.systemId, systemId),
       eq(frontingSessions.archived, false),
-      // At least one of the three subject columns must be non-null for the
-      // row to have a meaningful subject breakdown.
-      or(
-        isNotNull(frontingSessions.memberId),
-        isNotNull(frontingSessions.customFrontId),
-        isNotNull(frontingSessions.structureEntityId),
-      ) ?? sql`TRUE`,
+      subjectPresent,
     ];
 
     if (dateRange.preset !== "all-time") {
