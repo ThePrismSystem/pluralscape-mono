@@ -94,6 +94,29 @@ describe("getApiBaseUrl", () => {
     constants.__setConfig({ extra: { apiBaseUrl: "ftp://example.com" } });
     expect(() => getApiBaseUrl()).toThrow(/unsupported scheme/);
   });
+
+  it("accepts https:// case-insensitively (URL normalizes the scheme)", () => {
+    // `new URL(...)` lower-cases the scheme, so "HTTPS://..." is safe to
+    // accept. A `startsWith("https://")` check would reject it outright —
+    // URL-parse dispatch catches the intent.
+    constants.__setConfig({ extra: { apiBaseUrl: "HTTPS://api.example.com" } });
+    expect(getApiBaseUrl()).toBe("HTTPS://api.example.com");
+  });
+
+  it("rejects http:example.com (missing // authority) as a malformed URL", () => {
+    // `"http:example.com"` parses as `{ protocol: "http:", pathname: "example.com" }`
+    // with empty host — a startsWith chain would have waved it through as
+    // "starts with http:". URL-parse gates on protocol + empty hostname.
+    setDev(true);
+    constants.__setConfig({ extra: { apiBaseUrl: "http:example.com" } });
+    expect(() => getApiBaseUrl()).toThrow(/non-loopback host in a dev build/);
+  });
+
+  it("permits http://[::1] in a dev build (IPv6 loopback)", () => {
+    setDev(true);
+    constants.__setConfig({ extra: { apiBaseUrl: "http://[::1]:3000" } });
+    expect(getApiBaseUrl()).toBe("http://[::1]:3000");
+  });
 });
 
 describe("getWsUrl", () => {
