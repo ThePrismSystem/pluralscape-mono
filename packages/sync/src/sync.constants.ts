@@ -14,7 +14,7 @@ export const MiB = KiB * 1024;
 // ── Compaction ──────────────────────────────────────────────────────
 
 /** Default compaction size threshold: 1 MiB. */
-export const DEFAULT_COMPACTION_SIZE_BYTES = MiB;
+export const DEFAULT_COMPACTION_SIZE_BYTES = 1 * MiB;
 
 // ── Time-split thresholds ───────────────────────────────────────────
 

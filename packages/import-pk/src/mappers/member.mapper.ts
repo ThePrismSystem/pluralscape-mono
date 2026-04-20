@@ -17,13 +17,15 @@ import { normalisePkColor } from "./pk-mapper-helpers.js";
 import type { PKMember } from "../validators/pk-payload.js";
 import type { MemberEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
+import type { CreateMemberBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface PkMappedMember {
+export type PkMappedMember = Omit<z.infer<typeof CreateMemberBodySchema>, "encryptedData"> & {
   readonly encrypted: MemberEncryptedFields;
   readonly archived: false;
   readonly fieldValues: readonly [];
   readonly bucketIds: readonly string[];
-}
+};
 
 export function mapPkMember(pk: PKMember, ctx: MappingContext): MapperResult<PkMappedMember> {
   if (typeof pk.name !== "string" || pk.name.trim().length === 0) {

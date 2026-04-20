@@ -1,44 +1,48 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreDependencies": ["@pluralscape/tsconfig", "@pluralscape/eslint-config"],
+  "ignoreDependencies": ["@pluralscape/eslint-config"],
   "ignoreBinaries": ["beans"],
+  "vitest": {
+    "config": ["vitest.config.ts", "vitest.*.config.ts"]
+  },
   "workspaces": {
     ".": {},
     "apps/api": {
       "entry": ["src/index.ts"],
-      "ignoreDependencies": ["@hono/node-server", "@pluralscape/test-utils"]
+      "ignoreDependencies": ["@pluralscape/test-utils"]
     },
     "apps/api-e2e": {
       "ignore": ["src/migrate.ts"],
-      "ignoreDependencies": ["drizzle-orm", "postgres"]
+      "ignoreDependencies": ["drizzle-orm"]
     },
     "apps/mobile": {
-      "entry": ["app/**/*.tsx"],
-      "ignoreDependencies": [
-        "@pluralscape/api-client",
-        "@pluralscape/crypto",
-        "@pluralscape/sync",
-        "@pluralscape/types",
-        "expo-localization",
-        "@tanstack/react-query",
-        "expo-modules-core",
-        "expo-updates",
-        "@babel/core",
-        "babel-preset-expo"
+      "entry": [
+        "app/**/*.tsx",
+        "src/__tests__/expo-sqlite-mock.ts",
+        "src/__tests__/react-native-mock.ts"
       ],
-      "ignore": ["metro.config.cjs", "modules/**"]
+      "ignoreDependencies": ["expo-updates", "@babel/core", "babel-preset-expo"]
+    },
+    "apps/mobile-web-e2e": {
+      "entry": ["src/harness/controller.ts"]
     },
     "packages/api-client": {
-      "ignoreDependencies": ["@tanstack/react-query", "@trpc/client", "@trpc/react-query"]
+      "ignoreDependencies": ["openapi-typescript"]
     },
     "packages/crypto": {
-      "ignoreDependencies": ["@pluralscape/test-utils", "react-native-libsodium"]
+      "ignoreDependencies": ["react-native-libsodium"]
     },
     "packages/db": {
-      "ignore": ["drizzle.config.pg.ts", "drizzle.config.sqlite.ts", "scripts/**"]
+      "ignore": ["drizzle.config.pg.ts", "drizzle.config.sqlite.ts", "scripts/**"],
+      "ignoreDependencies": ["@types/better-sqlite3"]
+    },
+    "packages/import-pk": {
+      "entry": ["src/__tests__/e2e/global-setup.ts", "src/__tests__/e2e/global-teardown.ts"]
+    },
+    "packages/import-sp": {
+      "entry": ["src/__tests__/e2e/global-setup.ts", "src/__tests__/e2e/global-teardown.ts"]
     },
     "packages/sync": {
-      "ignore": ["src/adapters/index.ts", "src/factories/index.ts", "src/strategies/index.ts"],
       "ignoreDependencies": ["@types/better-sqlite3"]
     },
     "tooling/eslint-config": {

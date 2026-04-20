@@ -20,11 +20,13 @@ import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 import type { MappingContext } from "./context.js";
 import type { SPPrivacyBucket } from "../sources/sp-types.js";
 import type { BucketEncryptedFields } from "@pluralscape/data";
+import type { CreateBucketBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
 /** The Pluralscape-shaped bucket payload the persister consumes. */
-export interface MappedPrivacyBucket {
+export type MappedPrivacyBucket = Omit<z.infer<typeof CreateBucketBodySchema>, "encryptedData"> & {
   readonly encrypted: BucketEncryptedFields;
-}
+};
 
 export function mapBucket(
   sp: SPPrivacyBucket,
