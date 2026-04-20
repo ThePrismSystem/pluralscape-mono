@@ -280,6 +280,9 @@ describe("computeFrontingBreakdown", () => {
 
   it("returns truncated=true when at session cap", async () => {
     const { db, chain } = mockDb();
+    // `truncated` is now driven by the pre-aggregate COUNT query
+    // (tx.select().from().where()), not the aggregate-row count.
+    chain.where.mockReturnValueOnce(Promise.resolve([{ n: 10_000 }]) as never);
     const rows = Array.from({ length: 10_000 }, (_, i) =>
       makeAggRow({ subjectId: `mem_${String(i)}` }),
     );
@@ -862,16 +865,22 @@ describe("analytics truncation", () => {
   /** Must match the production constant in analytics.service.ts. */
   const MAX_ANALYTICS_SESSIONS = 10_000;
 
+  /**
+   * Mock the pre-aggregate COUNT query (first `tx.select().from().where()`).
+   * The service uses this row to decide `truncated`, so the unit tests
+   * stub it explicitly rather than relying on the default empty-array
+   * behaviour of the shared mockDb chain.
+   */
+  function stubRawSessionCount(chain: ReturnType<typeof mockDb>["chain"], n: number): void {
+    chain.where.mockReturnValueOnce(Promise.resolve([{ n }]) as never);
+  }
+
   it("returns truncated: true when session count hits the limit", async () => {
     const { db, chain } = mockDb();
-    const sessions = Array.from({ length: MAX_ANALYTICS_SESSIONS }, (_, i) =>
-      makeSessionRow({
-        id: `fs_${String(i).padStart(36, "0")}`,
-        startTime: NOW - (MAX_ANALYTICS_SESSIONS - i) * 3_600_000,
-        endTime: NOW - (MAX_ANALYTICS_SESSIONS - i - 1) * 3_600_000,
-      }),
-    );
-    chain.limit.mockResolvedValueOnce(sessions);
+    stubRawSessionCount(chain, MAX_ANALYTICS_SESSIONS);
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({ totalDuration: 3_600_000, sessionCount: MAX_ANALYTICS_SESSIONS }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -881,7 +890,8 @@ describe("analytics truncation", () => {
 
   it("returns truncated: false when below the limit", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeSessionRow()]);
+    stubRawSessionCount(chain, 1);
+    chain.limit.mockResolvedValueOnce([makeAggRow()]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
