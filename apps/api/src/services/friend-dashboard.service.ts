@@ -13,7 +13,12 @@ import { filterVisibleEntities, loadBucketTags } from "../lib/bucket-access.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertFriendAccess } from "../lib/friend-access.js";
 import { withCrossAccountRead } from "../lib/rls-context.js";
-import { MAX_ACTIVE_SESSIONS, MAX_PAGE_LIMIT } from "../service.constants.js";
+import {
+  MAX_CUSTOM_FRONTS_PER_SYSTEM,
+  MAX_INNERWORLD_ENTITIES_PER_SYSTEM,
+  MAX_MEMBERS_PER_SYSTEM,
+} from "../quota.constants.js";
+import { MAX_ACTIVE_SESSIONS } from "../service.constants.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -120,6 +125,7 @@ async function queryVisibleEntities<TId extends string>(
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
   mapId: (id: string) => TId,
+  limit: number,
 ): Promise<readonly { readonly id: TId; readonly encryptedData: string }[]> {
   if (friendBucketIds.length === 0) {
     return [];
@@ -146,7 +152,7 @@ async function queryVisibleEntities<TId extends string>(
       ),
     )
     .where(and(...conds))
-    .limit(MAX_PAGE_LIMIT);
+    .limit(limit);
 
   return (rows as DashboardEntityRow[]).map((r) => ({
     id: mapId(r.id),
@@ -295,18 +301,36 @@ export async function queryVisibleActiveFronting(
   };
 }
 
-/** Fetch non-archived members visible to a friend via bucket intersection. */
+/**
+ * Fetch non-archived members visible to a friend via bucket intersection.
+ *
+ * Upper-bounded by MAX_MEMBERS_PER_SYSTEM — the same system-wide quota the
+ * member service enforces on writes. Previously capped at the generic
+ * MAX_PAGE_LIMIT (100), which silently truncated systems with more visible
+ * members. Clients that need incremental pagination over very large result
+ * sets should use `getFriendExportPage` (cursor-based) instead.
+ */
 export async function queryVisibleMembers(
   tx: PostgresJsDatabase,
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
 ): Promise<FriendDashboardResponse["visibleMembers"]> {
-  return queryVisibleEntities(tx, MEMBER_REF, "member", systemId, friendBucketIds, (id) =>
-    brandId<MemberId>(id),
+  return queryVisibleEntities(
+    tx,
+    MEMBER_REF,
+    "member",
+    systemId,
+    friendBucketIds,
+    (id) => brandId<MemberId>(id),
+    MAX_MEMBERS_PER_SYSTEM,
   );
 }
 
-/** Fetch non-archived custom fronts visible to a friend via bucket intersection. */
+/**
+ * Fetch non-archived custom fronts visible to a friend via bucket intersection.
+ *
+ * Upper-bounded by MAX_CUSTOM_FRONTS_PER_SYSTEM to prevent silent truncation.
+ */
 export async function queryVisibleCustomFronts(
   tx: PostgresJsDatabase,
   systemId: SystemId,
@@ -319,10 +343,16 @@ export async function queryVisibleCustomFronts(
     systemId,
     friendBucketIds,
     (id) => brandId<CustomFrontId>(id),
+    MAX_CUSTOM_FRONTS_PER_SYSTEM,
   );
 }
 
-/** Fetch non-archived structure entities visible to a friend via bucket intersection. */
+/**
+ * Fetch non-archived structure entities visible to a friend via bucket intersection.
+ *
+ * Upper-bounded by MAX_INNERWORLD_ENTITIES_PER_SYSTEM — the system-wide cap
+ * that the innerworld service enforces on writes.
+ */
 export async function queryVisibleStructureEntities(
   tx: PostgresJsDatabase,
   systemId: SystemId,
@@ -335,6 +365,7 @@ export async function queryVisibleStructureEntities(
     systemId,
     friendBucketIds,
     (id) => brandId<SystemStructureEntityId>(id),
+    MAX_INNERWORLD_ENTITIES_PER_SYSTEM,
   );
 }
 

@@ -12,9 +12,14 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { dispatchSwitchAlertForSession } from "../../services/switch-alert-dispatcher.js";
-import { asDb, testBlob } from "../helpers/integration-setup.js";
+import { updateNotificationConfig } from "../../services/notification-config.service.js";
+import {
+  clearSwitchAlertConfigCache,
+  dispatchSwitchAlertForSession,
+} from "../../services/switch-alert-dispatcher.js";
+import { asDb, makeAuth, testBlob } from "../helpers/integration-setup.js";
 
+import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { JobQueue } from "@pluralscape/queue";
 import type {
   AccountId,
@@ -113,6 +118,8 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     await db.delete(notificationConfigs);
     await db.delete(friendConnections);
     await db.delete(buckets).catch(() => {});
+    // Reset per-test config cache so each case starts with a cold lookup.
+    clearSwitchAlertConfigCache();
   });
 
   /**
@@ -622,5 +629,80 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     // B has 2 tokens, C has 1 token = 3 total
     expect(enqueuedJobs).toHaveLength(3);
     expect(enqueuedJobs.every((j) => j.type === "notification-send")).toBe(true);
+  });
+
+  // api-uo21: subsequent dispatches within the TTL must not re-read the
+  // notificationConfigs row. We delete the row after the first dispatch;
+  // if the cache is working the second dispatch still sees enabled=true
+  // and proceeds. (When the cache is absent this scenario fails closed.)
+  it("caches the notificationConfigs lookup across dispatches within TTL", async () => {
+    const { queue, enqueuedJobs } = createMockQueue();
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    const { memberId } = await setupEligibleFriend();
+
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
+    expect(enqueuedJobs).toHaveLength(1);
+
+    // Wipe the config row; cached value keeps the next dispatch alive.
+    await db.delete(notificationConfigs);
+
+    const sessionId2 = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId2, memberId, null, queue);
+
+    expect(enqueuedJobs).toHaveLength(2);
+  });
+
+  // api-uo21: cache invalidation path — a fresh call after clearing the
+  // cache reads the (now-deleted) row and fails closed. Without the
+  // invalidation hook in updateNotificationConfig, operator-initiated
+  // disables could linger for up to TTL.
+  it("fails closed when the config is deleted AND the cache is cleared", async () => {
+    const { queue, enqueuedJobs } = createMockQueue();
+    const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    const { memberId } = await setupEligibleFriend();
+
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
+    expect(enqueuedJobs).toHaveLength(1);
+
+    await db.delete(notificationConfigs);
+    clearSwitchAlertConfigCache();
+
+    const sessionId2 = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId2, memberId, null, queue);
+
+    expect(enqueuedJobs).toHaveLength(1);
+  });
+
+  // End-to-end wire test: calling updateNotificationConfig through the real
+  // service path must invalidate the dispatcher's cache so the next dispatch
+  // observes the new value immediately — not after TTL expiry. Validates the
+  // mutation → invalidation wire together with the hoisted-after-commit fix.
+  it("invalidates dispatcher cache when updateNotificationConfig disables the row", async () => {
+    const { memberId } = await setupEligibleFriend();
+    const sessionId1 = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    const { queue, enqueuedJobs } = createMockQueue();
+
+    // Warm the cache with enabled=true
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId1, memberId, null, queue);
+    expect(enqueuedJobs).toHaveLength(1);
+
+    // Disable via the service layer — must invalidate the dispatcher cache.
+    const auth = makeAuth(accountIdA, systemIdA);
+    const noopAudit: AuditWriter = () => Promise.resolve();
+    await updateNotificationConfig(
+      asDb(db),
+      systemIdA,
+      "friend-switch-alert",
+      { enabled: false },
+      auth,
+      noopAudit,
+    );
+
+    const sessionId2 = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
+    await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId2, memberId, null, queue);
+
+    // Must still be 1 — no new enqueue because the cache was invalidated and
+    // the dispatcher re-read the disabled row.
+    expect(enqueuedJobs).toHaveLength(1);
   });
 });

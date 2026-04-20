@@ -26,6 +26,7 @@ import type {
   KeyGrantId,
   MemberId,
   SystemId,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -38,6 +39,8 @@ const {
   keyGrants,
   members,
   customFronts,
+  systemStructureEntities,
+  systemStructureEntityTypes,
 } = schema;
 
 describe("friend-dashboard.service (PGlite integration)", () => {
@@ -88,6 +91,8 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     await db.delete(friendConnections);
     await db.delete(members);
     await db.delete(customFronts);
+    await db.delete(systemStructureEntities);
+    await db.delete(systemStructureEntityTypes);
     await db.delete(buckets);
   });
 
@@ -186,6 +191,38 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       updatedAt: ts,
     });
     return brandId<CustomFrontId>(id);
+  }
+
+  async function insertStructureEntityType(): Promise<string> {
+    const id = createId(ID_PREFIXES.structureEntityType);
+    const ts = now();
+    await db.insert(systemStructureEntityTypes).values({
+      id,
+      systemId,
+      sortOrder: 0,
+      encryptedData: testBlob(),
+      createdAt: ts,
+      updatedAt: ts,
+    });
+    return id;
+  }
+
+  async function insertStructureEntity(
+    entityTypeId: string,
+    sortOrder: number,
+  ): Promise<SystemStructureEntityId> {
+    const id = createId(ID_PREFIXES.structureEntity);
+    const ts = now();
+    await db.insert(systemStructureEntities).values({
+      id,
+      systemId,
+      entityTypeId,
+      sortOrder,
+      encryptedData: testBlob(),
+      createdAt: ts,
+      updatedAt: ts,
+    });
+    return brandId<SystemStructureEntityId>(id);
   }
 
   async function insertBucketTag(
@@ -332,6 +369,85 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     expect(result.visibleMembers).toHaveLength(1);
     expect(result.visibleMembers[0]?.id).toBe(visibleMemberId);
   });
+
+  // Regression for api-5y16: prior to the fix, queryVisibleEntities hard-capped
+  // at MAX_PAGE_LIMIT=100 so systems with more than 100 visible members silently
+  // truncated the friend's dashboard. Cap is now MAX_MEMBERS_PER_SYSTEM (5 000),
+  // so a realistic "many members visible" scenario returns every visible row.
+  it("returns more than the legacy MAX_PAGE_LIMIT of 100 visible members", async () => {
+    const { ownerConnectionId, friendConnectionId } = await insertBilateralConnections();
+    const bucketId = await insertBucket();
+    await insertBucketAssignment(ownerConnectionId, bucketId);
+
+    const TOTAL_MEMBERS = 120;
+    const memberIds: MemberId[] = [];
+    for (let i = 0; i < TOTAL_MEMBERS; i++) {
+      const id = await insertMember();
+      memberIds.push(id);
+      await insertBucketTag("member", id, bucketId);
+    }
+
+    const result = await getFriendDashboard(asDb(db), friendConnectionId, friendAuth);
+
+    expect(result.memberCount).toBe(TOTAL_MEMBERS);
+    expect(result.visibleMembers).toHaveLength(TOTAL_MEMBERS);
+    const returnedIds = new Set(result.visibleMembers.map((m) => m.id));
+    for (const id of memberIds) {
+      expect(returnedIds.has(id)).toBe(true);
+    }
+  }, 30_000);
+
+  // Regression for api-5y16: queryVisibleCustomFronts was capped at
+  // MAX_PAGE_LIMIT (100). Cap is now MAX_CUSTOM_FRONTS_PER_SYSTEM (200),
+  // so seeding 150 visible custom fronts should round-trip every row.
+  it("returns more than the legacy cap of 100 visible custom fronts", async () => {
+    const { ownerConnectionId, friendConnectionId } = await insertBilateralConnections();
+    const bucketId = await insertBucket();
+    await insertBucketAssignment(ownerConnectionId, bucketId);
+
+    const TOTAL = 150;
+    const customFrontIds: CustomFrontId[] = [];
+    for (let i = 0; i < TOTAL; i++) {
+      const id = await insertCustomFront();
+      customFrontIds.push(id);
+      await insertBucketTag("custom-front", id, bucketId);
+    }
+
+    const result = await getFriendDashboard(asDb(db), friendConnectionId, friendAuth);
+
+    expect(result.visibleCustomFronts).toHaveLength(TOTAL);
+    const returnedIds = new Set(result.visibleCustomFronts.map((cf) => cf.id));
+    for (const id of customFrontIds) {
+      expect(returnedIds.has(id)).toBe(true);
+    }
+  }, 30_000);
+
+  // Regression for api-5y16: queryVisibleStructureEntities was also capped at
+  // MAX_PAGE_LIMIT (100). Cap is now MAX_INNERWORLD_ENTITIES_PER_SYSTEM (500),
+  // so seeding 150 entities should round-trip every row.
+  it("returns more than the legacy cap of 100 visible structure entities", async () => {
+    const { ownerConnectionId, friendConnectionId } = await insertBilateralConnections();
+    const bucketId = await insertBucket();
+    await insertBucketAssignment(ownerConnectionId, bucketId);
+
+    const entityTypeId = await insertStructureEntityType();
+
+    const TOTAL = 150;
+    const entityIds: SystemStructureEntityId[] = [];
+    for (let i = 0; i < TOTAL; i++) {
+      const id = await insertStructureEntity(entityTypeId, i);
+      entityIds.push(id);
+      await insertBucketTag("structure-entity", id, bucketId);
+    }
+
+    const result = await getFriendDashboard(asDb(db), friendConnectionId, friendAuth);
+
+    expect(result.visibleStructureEntities).toHaveLength(TOTAL);
+    const returnedIds = new Set(result.visibleStructureEntities.map((e) => e.id));
+    for (const id of entityIds) {
+      expect(returnedIds.has(id)).toBe(true);
+    }
+  }, 30_000);
 
   it("returns 404 for non-existent connection", async () => {
     const fakeConnectionId = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));

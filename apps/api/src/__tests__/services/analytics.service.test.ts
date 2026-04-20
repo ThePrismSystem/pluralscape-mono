@@ -54,6 +54,30 @@ function makeSessionRow(overrides: Record<string, unknown> = {}): Record<string,
   };
 }
 
+/**
+ * Aggregated-row shape returned by the SQL GROUP BY in
+ * aggregateSubjectBreakdown. Unit tests that drive computeFrontingBreakdown
+ * stub the chain to return these directly so the math the service does in
+ * JS after the aggregate (percentage-of-total, averageSessionLength) is
+ * still exercised.
+ */
+function makeAggRow(
+  overrides: Partial<{
+    subjectType: "member" | "customFront" | "structureEntity";
+    subjectId: string;
+    totalDuration: number;
+    sessionCount: number;
+  }> = {},
+): Record<string, unknown> {
+  return {
+    subjectType: "member",
+    subjectId: "mem_test-member",
+    totalDuration: 3_600_000,
+    sessionCount: 1,
+    ...overrides,
+  };
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -78,10 +102,20 @@ describe("computeFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
+  // After api-njhu, computeFrontingBreakdown aggregates in SQL, so these
+  // unit tests drive the post-aggregation math (percentage-of-total,
+  // averageSessionLength, branding) by stubbing aggregated rows directly.
+  // The SQL itself is covered by analytics.service.integration.test.ts.
   it("computes breakdown for a single member session", async () => {
     const { db, chain } = mockDb();
-    const row = makeSessionRow({ startTime: NOW - 3_600_000, endTime: NOW });
-    chain.limit.mockResolvedValueOnce([row]);
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({
+        subjectType: "member",
+        subjectId: "mem_test-member",
+        totalDuration: 3_600_000,
+        sessionCount: 1,
+      }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -97,40 +131,28 @@ describe("computeFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
-  it("caps open sessions at current time", async () => {
+  it("surfaces open-session clamping via the DB's clamped duration", async () => {
     const { db, chain } = mockDb();
-    const row = makeSessionRow({ startTime: NOW - 7_200_000, endTime: null });
-    chain.limit.mockResolvedValueOnce([row]);
+    // The SQL layer clamps to NOW() for open sessions. In the unit test we
+    // just trust that contract and assert the service forwards the value.
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: 7_200_000, sessionCount: 1 })]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
     expect(result.subjectBreakdowns).toHaveLength(1);
-    // Duration should be approximately 7200000 (allow for test execution time)
-    expect(result.subjectBreakdowns[0]?.totalDuration).toBeGreaterThanOrEqual(7_199_000);
+    expect(result.subjectBreakdowns[0]?.totalDuration).toBe(7_200_000);
     expect(result.truncated).toBe(false);
   });
 
-  it("aggregates multiple sessions for the same member", async () => {
+  it("forwards sessionCount and computes averageSessionLength from aggregate totals", async () => {
     const { db, chain } = mockDb();
-    const row1 = makeSessionRow({
-      id: "fs_session-1",
-      startTime: NOW - 7_200_000,
-      endTime: NOW - 3_600_000,
-    });
-    const row2 = makeSessionRow({
-      id: "fs_session-2",
-      startTime: NOW - 1_800_000,
-      endTime: NOW,
-    });
-    chain.limit.mockResolvedValueOnce([row1, row2]);
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: 5_400_000, sessionCount: 2 })]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
     expect(result.subjectBreakdowns).toHaveLength(1);
     expect(result.subjectBreakdowns[0]).toMatchObject({
-      subjectType: "member",
-      subjectId: "mem_test-member",
-      totalDuration: 5_400_000, // 3600000 + 1800000
+      totalDuration: 5_400_000,
       sessionCount: 2,
       averageSessionLength: 2_700_000,
     });
@@ -139,13 +161,9 @@ describe("computeFrontingBreakdown", () => {
 
   it("includes custom fronts with subjectType discriminator", async () => {
     const { db, chain } = mockDb();
-    const row = makeSessionRow({
-      memberId: null,
-      customFrontId: "cf_test-cf",
-      startTime: NOW - 1_800_000,
-      endTime: NOW,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({ subjectType: "customFront", subjectId: "cf_test-cf", totalDuration: 1_800_000 }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -158,13 +176,13 @@ describe("computeFrontingBreakdown", () => {
 
   it("includes structure entities with subjectType discriminator", async () => {
     const { db, chain } = mockDb();
-    const row = makeSessionRow({
-      memberId: null,
-      structureEntityId: "ste_test-entity",
-      startTime: NOW - 1_800_000,
-      endTime: NOW,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({
+        subjectType: "structureEntity",
+        subjectId: "ste_test-entity",
+        totalDuration: 1_800_000,
+      }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -178,22 +196,20 @@ describe("computeFrontingBreakdown", () => {
   it("calculates correct percentages across multiple subjects", async () => {
     const { db, chain } = mockDb();
     // Member: 3 hours, Custom Front: 1 hour = 75% / 25%
-    const rows = [
-      makeSessionRow({
-        id: "fs_1",
-        memberId: "mem_a",
-        startTime: NOW - 10_800_000,
-        endTime: NOW,
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({
+        subjectType: "member",
+        subjectId: "mem_a",
+        totalDuration: 10_800_000,
+        sessionCount: 1,
       }),
-      makeSessionRow({
-        id: "fs_2",
-        memberId: null,
-        customFrontId: "cf_b",
-        startTime: NOW - 3_600_000,
-        endTime: NOW,
+      makeAggRow({
+        subjectType: "customFront",
+        subjectId: "cf_b",
+        totalDuration: 3_600_000,
+        sessionCount: 1,
       }),
-    ];
-    chain.limit.mockResolvedValueOnce(rows);
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -207,19 +223,16 @@ describe("computeFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
-  it("clamps session starting before date range", async () => {
+  it("forwards DB-clamped durations when session starts before the range", async () => {
     const { db, chain } = mockDb();
     const dateRange = makeDateRange({
       preset: "custom" as DateRangeFilter["preset"],
       start: (NOW - 3_600_000) as DateRangeFilter["start"],
       end: NOW as DateRangeFilter["end"],
     });
-    // Session starts 2h ago but range only starts 1h ago → clamped to 1h
-    const row = makeSessionRow({
-      startTime: NOW - 7_200_000,
-      endTime: NOW,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    // The clamping happens in SQL via GREATEST(startTime, rangeStart); we
+    // simulate the post-clamp total here.
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: 3_600_000 })]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, dateRange);
 
@@ -228,19 +241,14 @@ describe("computeFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
-  it("clamps session ending after date range", async () => {
+  it("forwards DB-clamped durations when session ends after the range", async () => {
     const { db, chain } = mockDb();
     const dateRange = makeDateRange({
       preset: "custom" as DateRangeFilter["preset"],
       start: (NOW - 7_200_000) as DateRangeFilter["start"],
       end: (NOW - 3_600_000) as DateRangeFilter["end"],
     });
-    // Session runs from 2h ago to now, but range ends 1h ago → clamped to 1h
-    const row = makeSessionRow({
-      startTime: NOW - 7_200_000,
-      endTime: NOW,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: 3_600_000 })]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, dateRange);
 
@@ -249,14 +257,11 @@ describe("computeFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
-  it("skips sessions with no subject", async () => {
+  it("yields no breakdowns when the aggregate returns zero rows", async () => {
+    // Rows with no subject are filtered out at the SQL layer via the
+    // HAVING clause; an empty result reaches the service here.
     const { db, chain } = mockDb();
-    const row = makeSessionRow({
-      memberId: null,
-      customFrontId: null,
-      structureEntityId: null,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    chain.limit.mockResolvedValueOnce([]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -266,7 +271,7 @@ describe("computeFrontingBreakdown", () => {
 
   it("returns truncated=false when under cap", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeSessionRow()]);
+    chain.limit.mockResolvedValueOnce([makeAggRow()]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -275,8 +280,11 @@ describe("computeFrontingBreakdown", () => {
 
   it("returns truncated=true when at session cap", async () => {
     const { db, chain } = mockDb();
+    // `truncated` is now driven by the pre-aggregate COUNT query
+    // (tx.select().from().where()), not the aggregate-row count.
+    chain.where.mockReturnValueOnce(Promise.resolve([{ n: 10_000 }]) as never);
     const rows = Array.from({ length: 10_000 }, (_, i) =>
-      makeSessionRow({ id: `fs_session-${String(i)}` }),
+      makeAggRow({ subjectId: `mem_${String(i)}` }),
     );
     chain.limit.mockResolvedValueOnce(rows);
 
@@ -287,21 +295,13 @@ describe("computeFrontingBreakdown", () => {
 
   it("sorts breakdowns descending by total duration", async () => {
     const { db, chain } = mockDb();
-    const rows = [
-      makeSessionRow({
-        id: "fs_short",
-        memberId: "mem_short",
-        startTime: NOW - 1_800_000,
-        endTime: NOW,
-      }),
-      makeSessionRow({
-        id: "fs_long",
-        memberId: "mem_long",
-        startTime: NOW - 7_200_000,
-        endTime: NOW,
-      }),
-    ];
-    chain.limit.mockResolvedValueOnce(rows);
+    // The SQL ORDER BY already sorts desc; the service resorts defensively
+    // after branding. Feed rows in ascending order to prove the service
+    // still produces a descending result.
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({ subjectId: "mem_short", totalDuration: 1_800_000, sessionCount: 1 }),
+      makeAggRow({ subjectId: "mem_long", totalDuration: 7_200_000, sessionCount: 1 }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -314,37 +314,24 @@ describe("computeFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
-  it("caps all open sessions at query time", async () => {
+  it("forwards per-subject clamped totals from the aggregate", async () => {
     const { db, chain } = mockDb();
-    // Two open sessions (endTime: null) from different members
-    const rows = [
-      makeSessionRow({
-        id: "fs_1",
-        memberId: "mem_a",
-        startTime: NOW - 7_200_000,
-        endTime: null,
-      }),
-      makeSessionRow({
-        id: "fs_2",
-        memberId: "mem_b",
-        startTime: NOW - 3_600_000,
-        endTime: null,
-      }),
-    ];
-    chain.limit.mockResolvedValueOnce(rows);
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({ subjectId: "mem_a", totalDuration: 7_200_000, sessionCount: 1 }),
+      makeAggRow({ subjectId: "mem_b", totalDuration: 3_600_000, sessionCount: 1 }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
     expect(result.subjectBreakdowns).toHaveLength(2);
-    // mem_a: ~2h, mem_b: ~1h — both capped at Date.now()
     const memberA = result.subjectBreakdowns.find(
       (b: { subjectId: string }) => b.subjectId === "mem_a",
     );
     const memberB = result.subjectBreakdowns.find(
       (b: { subjectId: string }) => b.subjectId === "mem_b",
     );
-    expect(memberA?.totalDuration).toBeGreaterThanOrEqual(7_199_000);
-    expect(memberB?.totalDuration).toBeGreaterThanOrEqual(3_599_000);
+    expect(memberA?.totalDuration).toBe(7_200_000);
+    expect(memberB?.totalDuration).toBe(3_600_000);
   });
 
   it("returns empty breakdown for date range with no matching sessions", async () => {
@@ -367,33 +354,15 @@ describe("computeFrontingBreakdown", () => {
 
   it("includes member, customFront, and structureEntity in flat breakdown array", async () => {
     const { db, chain } = mockDb();
-    const rows = [
-      makeSessionRow({
-        id: "fs_1",
-        memberId: "mem_alpha",
-        customFrontId: null,
-        structureEntityId: null,
-        startTime: NOW - 3_600_000,
-        endTime: NOW,
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({ subjectType: "member", subjectId: "mem_alpha", totalDuration: 3_600_000 }),
+      makeAggRow({ subjectType: "customFront", subjectId: "cf_beta", totalDuration: 1_800_000 }),
+      makeAggRow({
+        subjectType: "structureEntity",
+        subjectId: "ste_gamma",
+        totalDuration: 900_000,
       }),
-      makeSessionRow({
-        id: "fs_2",
-        memberId: null,
-        customFrontId: "cf_beta",
-        structureEntityId: null,
-        startTime: NOW - 1_800_000,
-        endTime: NOW,
-      }),
-      makeSessionRow({
-        id: "fs_3",
-        memberId: null,
-        customFrontId: null,
-        structureEntityId: "ste_gamma",
-        startTime: NOW - 900_000,
-        endTime: NOW,
-      }),
-    ];
-    chain.limit.mockResolvedValueOnce(rows);
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -417,20 +386,16 @@ describe("computeFrontingBreakdown", () => {
     expect(entity?.subjectType).toBe("structureEntity");
   });
 
-  it("applies no date clamping with all-time preset", async () => {
+  it("returns the full aggregate for all-time preset", async () => {
     const { db, chain } = mockDb();
-    // dateRange boundaries are INSIDE the session — if clamping were applied,
-    // duration would be 600_000 instead of the correct 1_000_000
     const dateRange = makeDateRange({
       preset: "all-time" as DateRangeFilter["preset"],
       start: 1_200_000 as DateRangeFilter["start"],
       end: 1_800_000 as DateRangeFilter["end"],
     });
-    const row = makeSessionRow({
-      startTime: 1_000_000,
-      endTime: 2_000_000,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    // In all-time mode the SQL layer does not clamp — the aggregate
+    // returns the full session duration.
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: 1_000_000 })]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, dateRange);
 
@@ -439,27 +404,16 @@ describe("computeFrontingBreakdown", () => {
     expect(result.dateRange.preset).toBe("all-time");
   });
 
-  it("drops zero-duration sessions silently", async () => {
+  it("drops zero-duration subjects via the SQL HAVING clause", async () => {
     const { db, chain } = mockDb();
-    const rows = [
-      makeSessionRow({
-        id: "fs_zero",
-        memberId: "mem_a",
-        startTime: NOW - 3_600_000,
-        endTime: NOW - 3_600_000, // same as startTime → zero duration
-      }),
-      makeSessionRow({
-        id: "fs_normal",
-        memberId: "mem_b",
-        startTime: NOW - 3_600_000,
-        endTime: NOW,
-      }),
-    ];
-    chain.limit.mockResolvedValueOnce(rows);
+    // Zero-duration rows are filtered by HAVING SUM(...) > 0 in SQL; the
+    // aggregate shape reaching the service contains only non-zero entries.
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({ subjectId: "mem_b", totalDuration: 3_600_000, sessionCount: 1 }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
-    // Only the non-zero session should appear
     expect(result.subjectBreakdowns).toHaveLength(1);
     expect(result.subjectBreakdowns[0]?.subjectId).toBe("mem_b");
     expect(result.truncated).toBe(false);
@@ -911,16 +865,22 @@ describe("analytics truncation", () => {
   /** Must match the production constant in analytics.service.ts. */
   const MAX_ANALYTICS_SESSIONS = 10_000;
 
+  /**
+   * Mock the pre-aggregate COUNT query (first `tx.select().from().where()`).
+   * The service uses this row to decide `truncated`, so the unit tests
+   * stub it explicitly rather than relying on the default empty-array
+   * behaviour of the shared mockDb chain.
+   */
+  function stubRawSessionCount(chain: ReturnType<typeof mockDb>["chain"], n: number): void {
+    chain.where.mockReturnValueOnce(Promise.resolve([{ n }]) as never);
+  }
+
   it("returns truncated: true when session count hits the limit", async () => {
     const { db, chain } = mockDb();
-    const sessions = Array.from({ length: MAX_ANALYTICS_SESSIONS }, (_, i) =>
-      makeSessionRow({
-        id: `fs_${String(i).padStart(36, "0")}`,
-        startTime: NOW - (MAX_ANALYTICS_SESSIONS - i) * 3_600_000,
-        endTime: NOW - (MAX_ANALYTICS_SESSIONS - i - 1) * 3_600_000,
-      }),
-    );
-    chain.limit.mockResolvedValueOnce(sessions);
+    stubRawSessionCount(chain, MAX_ANALYTICS_SESSIONS);
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({ totalDuration: 3_600_000, sessionCount: MAX_ANALYTICS_SESSIONS }),
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -930,7 +890,8 @@ describe("analytics truncation", () => {
 
   it("returns truncated: false when below the limit", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeSessionRow()]);
+    stubRawSessionCount(chain, 1);
+    chain.limit.mockResolvedValueOnce([makeAggRow()]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
@@ -943,8 +904,10 @@ describe("analytics truncation", () => {
 describe("computeFrontingBreakdown — all-time preset", () => {
   it("does not clamp start/end for all-time preset", async () => {
     const { db, chain } = mockDb();
-    const longAgo = NOW - 365 * 24 * 3_600_000; // 1 year ago
-    chain.limit.mockResolvedValueOnce([makeSessionRow({ startTime: longAgo, endTime: NOW })]);
+    // With all-time preset, the SQL emits the full session duration; the
+    // service forwards it verbatim.
+    const oneYearMs = 365 * 24 * 3_600_000;
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: oneYearMs })]);
 
     const allTimeRange: DateRangeFilter = {
       preset: "all-time",
@@ -1215,22 +1178,16 @@ describe("computeCoFrontingBreakdown — edge-case branches", () => {
 describe("computeFrontingBreakdown — edge-case branches", () => {
   it("uses all-time preset with open session (null endTime)", async () => {
     const { db, chain } = mockDb();
-    // Open session with all-time preset → getClampedInterval uses raw start and Date.now()
     const allTimeRange: DateRangeFilter = {
       preset: "all-time",
       start: 0 as DateRangeFilter["start"],
       end: 0 as DateRangeFilter["end"],
     };
-    const row = makeSessionRow({
-      startTime: NOW - 3_600_000,
-      endTime: null,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: 3_600_000 })]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, allTimeRange);
 
     expect(result.subjectBreakdowns).toHaveLength(1);
-    // Duration should be approximately 1 hour
     expect(result.subjectBreakdowns[0]?.totalDuration).toBeGreaterThanOrEqual(3_599_000);
   });
 
@@ -1242,53 +1199,36 @@ describe("computeFrontingBreakdown — edge-case branches", () => {
       start: (NOW - 7_200_000) as DateRangeFilter["start"],
       end: rangeEnd as DateRangeFilter["end"],
     });
-    // Open session → effectiveEndTime returns Date.now(), but clamped to rangeEnd
-    const row = makeSessionRow({
-      startTime: NOW - 7_200_000,
-      endTime: null,
-    });
-    chain.limit.mockResolvedValueOnce([row]);
+    // The SQL GREATEST/LEAST clamps the open session to rangeEnd; the
+    // service forwards the already-clamped value.
+    chain.limit.mockResolvedValueOnce([makeAggRow({ totalDuration: 5_400_000 })]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, dateRange);
 
     expect(result.subjectBreakdowns).toHaveLength(1);
-    // Duration clamped to [rangeStart, rangeEnd] = 7200000 - 1800000 = 5400000
     expect(result.subjectBreakdowns[0]?.totalDuration).toBe(5_400_000);
   });
 
-  it("mixes member and customFront sessions with varying durations", async () => {
+  it("mixes member and customFront subjects with varying durations", async () => {
     const { db, chain } = mockDb();
-    const rows = [
-      makeSessionRow({
-        id: "fs_m1",
-        memberId: "mem_x",
-        customFrontId: null,
-        structureEntityId: null,
-        startTime: NOW - 7_200_000,
-        endTime: NOW,
+    // mem_x: 7_200_000 + 1_800_000 = 9_000_000, 2 sessions; cf_y: 900_000, 1 session
+    chain.limit.mockResolvedValueOnce([
+      makeAggRow({
+        subjectType: "member",
+        subjectId: "mem_x",
+        totalDuration: 9_000_000,
+        sessionCount: 2,
       }),
-      makeSessionRow({
-        id: "fs_m2",
-        memberId: "mem_x",
-        customFrontId: null,
-        structureEntityId: null,
-        startTime: NOW - 3_600_000,
-        endTime: NOW - 1_800_000,
+      makeAggRow({
+        subjectType: "customFront",
+        subjectId: "cf_y",
+        totalDuration: 900_000,
+        sessionCount: 1,
       }),
-      makeSessionRow({
-        id: "fs_cf",
-        memberId: null,
-        customFrontId: "cf_y",
-        structureEntityId: null,
-        startTime: NOW - 900_000,
-        endTime: NOW,
-      }),
-    ];
-    chain.limit.mockResolvedValueOnce(rows);
+    ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
-    // mem_x: 7200000 + 1800000 = 9000000, cf_y: 900000
     expect(result.subjectBreakdowns).toHaveLength(2);
     const memX = result.subjectBreakdowns.find(
       (b: { subjectId: string }) => b.subjectId === "mem_x",
@@ -1299,7 +1239,6 @@ describe("computeFrontingBreakdown — edge-case branches", () => {
     expect(memX?.averageSessionLength).toBe(4_500_000);
     expect(cfY?.totalDuration).toBe(900_000);
     expect(cfY?.sessionCount).toBe(1);
-    // Percentages: 9000000/(9000000+900000) ≈ 90.9, 900000/9900000 ≈ 9.1
     expect(memX?.percentageOfTotal).toBeCloseTo(90.9, 1);
     expect(cfY?.percentageOfTotal).toBeCloseTo(9.1, 1);
   });

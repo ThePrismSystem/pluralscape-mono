@@ -1,6 +1,8 @@
 import { I18N_OTA_TIMEOUT_MS } from "@pluralscape/types";
 import { z } from "zod/v4";
 
+import { assertSafeLocaleAndNamespace } from "../routes/i18n/schemas.js";
+
 /**
  * Tagged-union description of every Crowdin OTA failure mode.
  *
@@ -130,6 +132,11 @@ export class CrowdinOtaService {
     locale: string,
     namespace: string,
   ): Promise<Readonly<Record<string, string>>> {
+    // Defence-in-depth: even though the REST/tRPC layers validate the same
+    // fields, a future internal caller (background job, admin tool) MUST
+    // NOT be able to smuggle path-traversal segments into the CDN URL.
+    // `assertSafeLocaleAndNamespace` throws a ZodError on invalid input.
+    assertSafeLocaleAndNamespace(locale, namespace);
     const url = `${this.baseUrl}/${this.distributionHash}/content/${locale}/${namespace}.json`;
     const json = await this.fetchJson(url);
     const parsed = CrowdinNamespaceSchema.safeParse(json);

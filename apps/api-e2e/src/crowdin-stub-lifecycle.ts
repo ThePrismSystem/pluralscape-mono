@@ -16,7 +16,7 @@ export const E2E_CROWDIN_HASH = "e2e-hash";
  */
 const FIXTURE_TIMESTAMP = 1_700_000_000;
 
-/** Injected status when the upstream-failure test requests `force5xx/broken`. */
+/** Injected status when the upstream-failure test requests `zz/broken`. */
 const FORCED_UPSTREAM_ERROR_STATUS = 500;
 
 export const E2E_CROWDIN_FIXTURES: CrowdinStubFixtures = {
@@ -34,11 +34,12 @@ export const E2E_CROWDIN_FIXTURES: CrowdinStubFixtures = {
     "es/common": { hello: "Hola" },
   },
   // Tests route specific locale/namespace pairs through the 5xx failure
-  // branch by requesting a path that hits this override. `force5xx` is
-  // served by the stub as a 5xx, which the API must map to 502
-  // UPSTREAM_UNAVAILABLE.
+  // branch by requesting a path that hits this override. `zz` is a
+  // BCP-47-shaped locale (so it survives the route's input validation,
+  // see apps/api/src/routes/i18n/schemas.ts) that the stub maps to 500,
+  // which the API must surface as 502 UPSTREAM_UNAVAILABLE.
   upstreamStatusFor: (pathname: string): number | undefined => {
-    if (pathname === `/${E2E_CROWDIN_HASH}/content/force5xx/broken.json`) {
+    if (pathname === `/${E2E_CROWDIN_HASH}/content/zz/broken.json`) {
       return FORCED_UPSTREAM_ERROR_STATUS;
     }
     return undefined;

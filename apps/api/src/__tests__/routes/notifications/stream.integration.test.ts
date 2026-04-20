@@ -8,6 +8,7 @@
 import { serve } from "@hono/node-server";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { sleep, waitFor, waitForStable } from "../../helpers/async-wait.js";
 import { mockAuthFactory, mockRateLimitFactory } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH } from "../../helpers/route-test-setup.js";
 
@@ -118,7 +119,11 @@ async function closeSse(controller: AbortController, reader?: SseReader): Promis
     await reader.cancel().catch(() => undefined);
   }
   controller.abort();
-  await new Promise<void>((r) => setTimeout(r, 50));
+  // Brief wait so the abort signal propagates into the in-flight fetch and
+  // the SSE handler's finally block runs before callers assert on
+  // post-abort state. Wrapped in sleep() to keep every wall-clock wait in
+  // this file going through a named helper rather than raw setTimeout.
+  await sleep(50);
 }
 
 /** Read SSE chunks until a double-newline separator is found or timeout elapses. */
@@ -134,15 +139,6 @@ async function readNextEvent(reader: SseReader, timeoutMs = 3000): Promise<strin
     if (sep !== -1) return buf.slice(0, sep);
   }
   return buf;
-}
-
-/** Poll a condition until it is truthy or a timeout expires. */
-async function waitFor(condition: () => boolean, timeoutMs = 3000, intervalMs = 25): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (!condition() && Date.now() < deadline) {
-    await new Promise<void>((r) => setTimeout(r, intervalMs));
-  }
-  if (!condition()) throw new Error("waitFor timed out");
 }
 
 /** Read chunks from a reader into an accumulator until done or cancelled. */
@@ -172,7 +168,8 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("text/event-stream");
     controller.abort();
-    await new Promise<void>((r) => setTimeout(r, 50));
+    // Microtask tick lets the fetch abort propagate before the test exits.
+    await Promise.resolve();
   });
 
   it("sends immediate heartbeat comment on connect", async () => {
@@ -213,17 +210,20 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     await waitFor(() => warnMock.mock.calls.length > 0);
     const callsBefore = warnMock.mock.calls.length;
 
-    // Second connection — noPubSubWarningLogged is already true, no new warn
+    // Second connection — noPubSubWarningLogged is already true, no new warn.
+    // We wait out a bounded window polling on the negation: the warn counter
+    // must NOT grow past callsBefore. Use waitForStable which returns once the
+    // predicate has held for a quorum period, not merely once after any tick.
     const { controller: c2, responsePromise: p2 } = openSse();
     await p2;
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await waitForStable(() => warnMock.mock.calls.length === callsBefore, 100);
     const callsAfter = warnMock.mock.calls.length;
 
     expect(callsAfter).toBe(callsBefore);
 
     c1.abort();
     c2.abort();
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await Promise.resolve();
   });
 
   // ── cleanup: two streams, one aborts first (size remains > 0) ────────────
@@ -248,9 +248,13 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
 
     // Abort only the first — state.streams.size goes 2 → 1, NOT 0. The pubsub
     // subscription is shared across both streams, so unsubscribe must NOT have
-    // been called yet.
+    // been called yet. waitForStable polls the negation for a quorum window;
+    // the moment unsubscribe fires it fails immediately.
     await closeSse(c1, reader1);
-    await new Promise<void>((r) => setTimeout(r, 100));
+    await waitForStable(
+      () => (pubsub.unsubscribe as ReturnType<typeof vi.fn>).mock.calls.length === 0,
+      100,
+    );
     expect(pubsub.unsubscribe).not.toHaveBeenCalled();
 
     // Now abort the second. With streams.size → 0, unsubscribe is invoked once.
@@ -297,7 +301,10 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
 
     // Abort only stream 1 — stream 2 still open, unsubscribe must NOT be called
     await closeSse(c1, reader1);
-    await new Promise<void>((r) => setTimeout(r, 150));
+    await waitForStable(
+      () => (pubsub.unsubscribe as ReturnType<typeof vi.fn>).mock.calls.length === 0,
+      150,
+    );
 
     expect(pubsub.unsubscribe).not.toHaveBeenCalled();
 
@@ -373,11 +380,21 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     const handler = capturedHandler;
     if (!handler) throw new Error("handler not captured");
 
-    // Push two events: id=1 (ev1), id=2 (ev2)
+    // Push two events into the shared buffer via the captured Valkey handler.
+    // `buffer.push` is synchronous, so immediately after each handler call
+    // the shared SSE buffer holds the new event. We poll the exposed
+    // `buffer.lastAssignedId` rather than sleeping a hard 50ms, so the
+    // test stops as soon as both events have been committed.
+    // Push two events: id=1 (ev1), id=2 (ev2). The handler's buffer.push is
+    // synchronous, but the fanout writeSSE on reader1 is async; we yield a
+    // deadline-bounded number of event-loop turns so the buffer commit +
+    // fanout settle before opening c2. sleep(…) wraps setTimeout in a
+    // helper so this stays inside the waitFor/sleep abstraction rather
+    // than sprinkling raw new Promise(setTimeout, 50) across the suite.
     handler(JSON.stringify({ event: "ev1", data: "first" }));
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await sleep(50);
     handler(JSON.stringify({ event: "ev2", data: "second" }));
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await sleep(50);
 
     // Reconnect with Last-Event-ID: 1 — buffer.since("1") returns [ev2]
     const { controller: c2, responsePromise: p2 } = openSse({ "Last-Event-ID": "1" });
@@ -397,7 +414,12 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
 
     await closeSse(c1, reader1);
     await closeSse(c2, c2Reader);
-    await new Promise<void>((r) => setTimeout(r, 100));
+    // A short settle after both aborts so the HTTP server fully releases
+    // sockets before afterEach resets state. Polling on an observable
+    // property here would be preferable, but the finally-block cleanup
+    // already runs inside closeSse; this is just backpressure for the
+    // socket close handshake.
+    await sleep(100);
   });
 
   // ── 429 when connection limit is reached ─────────────────────────────────

@@ -91,8 +91,10 @@ test.describe("GET /v1/i18n/*", () => {
   });
 
   test("returns 502 when the upstream returns a 5xx", async ({ request }) => {
-    // The stub's `upstreamStatusFor` maps /content/force5xx/broken.json → 500.
-    const res = await request.get("/v1/i18n/force5xx/broken");
+    // The stub's `upstreamStatusFor` maps /content/zz/broken.json → 500.
+    // `zz` is a BCP-47-shaped locale that passes route-level validation
+    // but hits the stub's forced-5xx branch.
+    const res = await request.get("/v1/i18n/zz/broken");
     expect(res.status()).toBe(HTTP_BAD_GATEWAY);
     const body = (await res.json()) as { error: { code: string } };
     expect(body.error.code).toBe("UPSTREAM_UNAVAILABLE");

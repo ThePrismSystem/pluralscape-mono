@@ -35,6 +35,7 @@ const mockTx: MockChain & { onConflictDoUpdate: ReturnType<typeof vi.fn> } = {
   onConflictDoNothing: vi.fn(),
   onConflictDoUpdate: vi.fn(),
   groupBy: vi.fn(),
+  having: vi.fn(),
   execute: vi.fn(),
 };
 

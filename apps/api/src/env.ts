@@ -1,6 +1,10 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
+import {
+  ANTI_ENUM_SALT_SECRET_DEFAULT,
+  ANTI_ENUM_SALT_SECRET_MIN_LENGTH,
+} from "./routes/auth/auth.constants.js";
 import { DEFAULT_PORT, MAX_PORT } from "./server.constants.js";
 
 const isProduction = process.env["NODE_ENV"] === "production";
@@ -55,6 +59,24 @@ export const env = createEnv({
       .optional()
       .refine((v) => !isProduction || v !== undefined, {
         message: "API_KEY_HMAC_KEY is required in production",
+      }),
+    // Anti-enumeration salt secret. Mixed into the BLAKE2B of an unknown
+    // email to produce a deterministic fake KDF salt so login probes
+    // can't distinguish existing accounts by salt stability. Must be at
+    // least 32 chars so a leaked default isn't trivially usable. Required
+    // in production — the dev default ("pluralscape-dev-...") is explicitly
+    // rejected here so a forgotten override can't ship to a prod build.
+    ANTI_ENUM_SALT_SECRET: z
+      .string()
+      .min(ANTI_ENUM_SALT_SECRET_MIN_LENGTH, {
+        message: `ANTI_ENUM_SALT_SECRET must be at least ${String(ANTI_ENUM_SALT_SECRET_MIN_LENGTH)} characters`,
+      })
+      .optional()
+      .refine((v) => !isProduction || v !== undefined, {
+        message: "ANTI_ENUM_SALT_SECRET is required in production",
+      })
+      .refine((v) => v !== ANTI_ENUM_SALT_SECRET_DEFAULT || !isProduction, {
+        message: "ANTI_ENUM_SALT_SECRET must not be the development default in production",
       }),
     BLOB_STORAGE_S3_BUCKET: z.string().optional(),
     BLOB_STORAGE_S3_REGION: z.string().default("us-east-1"),

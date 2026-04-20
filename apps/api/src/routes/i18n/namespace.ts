@@ -1,12 +1,19 @@
 import { I18N_CACHE_TTL_MS, type I18nNamespace } from "@pluralscape/types";
 
-import { HTTP_BAD_GATEWAY, HTTP_NOT_FOUND, HTTP_NOT_MODIFIED } from "../../http.constants.js";
+import {
+  HTTP_BAD_GATEWAY,
+  HTTP_BAD_REQUEST,
+  HTTP_NOT_FOUND,
+  HTTP_NOT_MODIFIED,
+} from "../../http.constants.js";
 import { computeTranslationsEtag } from "../../lib/i18n-etag.js";
 import { requireParam } from "../../lib/id-param.js";
 import { logger } from "../../lib/logger.js";
 import { envelope } from "../../lib/response.js";
 import { CrowdinOtaFailure } from "../../services/crowdin-ota.service.js";
 import { namespaceCacheKey, type CachedNamespace } from "../../services/i18n-shared.js";
+
+import { LocaleSchema, NamespaceSchema } from "./schemas.js";
 
 import type { I18nDeps } from "../../services/i18n-deps.js";
 import type { Context } from "hono";
@@ -33,8 +40,28 @@ export async function handleNamespace(c: Context, deps: I18nDeps): Promise<Respo
   // These params are present by virtue of the route's path spec, but we
   // validate anyway so a future misconfiguration surfaces as a 400 rather
   // than an unchecked undefined flowing into Crowdin URLs.
-  const locale = requireParam(c.req.param("locale"), "locale");
-  const namespace = requireParam(c.req.param("namespace"), "namespace");
+  const rawLocale = requireParam(c.req.param("locale"), "locale");
+  const rawNamespace = requireParam(c.req.param("namespace"), "namespace");
+
+  // Reject unsafe CDN URL segments up-front. Without these guards a crafted
+  // locale like "../../evil" or a percent-encoded variant would let the
+  // caller coax the server into fetching arbitrary paths on the Crowdin CDN.
+  const localeResult = LocaleSchema.safeParse(rawLocale);
+  const namespaceResult = NamespaceSchema.safeParse(rawNamespace);
+  if (!localeResult.success || !namespaceResult.success) {
+    return c.json(
+      {
+        error: {
+          code: "VALIDATION_ERROR",
+          message: !localeResult.success ? "Invalid locale format" : "Invalid namespace format",
+        },
+      },
+      HTTP_BAD_REQUEST,
+    );
+  }
+
+  const locale = localeResult.data;
+  const namespace = namespaceResult.data;
   const ifNoneMatch = c.req.header("if-none-match");
 
   const key = namespaceCacheKey(locale, namespace);

@@ -2,6 +2,7 @@ import { vi } from "vitest";
 
 import { MOCK_ACCOUNT_ONLY_AUTH, MOCK_AUTH } from "./route-test-setup.js";
 
+import type { ServerSecret } from "@pluralscape/types";
 import type { Context } from "hono";
 
 /** Factory for vi.mock("…/audit-writer.js") — returns a no-op audit writer. */
@@ -69,8 +70,16 @@ export function mockApiKeyServiceFactory(): Record<string, ReturnType<typeof vi.
   };
 }
 
-/** Factory for vi.mock("…/webhook-config.service.js") — returns all CRUD functions as mocks. */
-export function mockWebhookConfigServiceFactory(): Record<string, ReturnType<typeof vi.fn>> {
+/**
+ * Factory for vi.mock("…/webhook-config.service.js") — returns all CRUD
+ * functions as mocks plus a pass-through `toServerSecret` helper. The
+ * helper is a real function because tests rely on it to brand fixture
+ * bytes as `ServerSecret` without an `as unknown as` double-cast.
+ */
+export function mockWebhookConfigServiceFactory(): Record<
+  string,
+  ReturnType<typeof vi.fn> | ((bytes: Uint8Array) => ServerSecret)
+> {
   return {
     createWebhookConfig: vi.fn(),
     listWebhookConfigs: vi.fn(),
@@ -82,5 +91,12 @@ export function mockWebhookConfigServiceFactory(): Record<string, ReturnType<typ
     rotateWebhookSecret: vi.fn(),
     testWebhookConfig: vi.fn(),
     parseWebhookConfigQuery: vi.fn().mockReturnValue({}),
+    // Inline cast kept to avoid a circular evaluation: importing the real
+    // `toServerSecret` here would be served by the test file's own
+    // `vi.mock(...service.js, () => mockWebhookConfigServiceFactory())`
+    // before this module finishes loading. Semantically identical to the
+    // production helper — update both together if one ever gains runtime
+    // validation.
+    toServerSecret: (bytes: Uint8Array): ServerSecret => bytes as ServerSecret,
   };
 }

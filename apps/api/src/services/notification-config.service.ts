@@ -7,10 +7,13 @@ import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 import { MAX_PAGE_LIMIT } from "../service.constants.js";
 
+import { invalidateSwitchAlertConfigCache } from "./switch-alert-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AuditEventType,
+  FriendNotificationEventType,
   NotificationConfigId,
   NotificationEventType,
   SystemId,
@@ -22,6 +25,21 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Audit event: notification config was updated. */
 const AUDIT_CONFIG_UPDATED: AuditEventType = "notification-config.updated";
+
+/**
+ * The only {@link NotificationEventType} currently surfaced through the
+ * switch-alert dispatcher cache. Narrowing against this set avoids
+ * invalidating keys the dispatcher never stores.
+ */
+const FRIEND_NOTIFICATION_EVENT_TYPES: readonly FriendNotificationEventType[] = [
+  "friend-switch-alert",
+];
+
+function isFriendNotificationEventType(
+  eventType: NotificationEventType,
+): eventType is FriendNotificationEventType {
+  return (FRIEND_NOTIFICATION_EVENT_TYPES as readonly NotificationEventType[]).includes(eventType);
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -148,7 +166,11 @@ export async function updateNotificationConfig(
 ): Promise<NotificationConfigResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  // Cache invalidation MUST run after the transaction commits. Firing it
+  // inside the transaction races with concurrent readers that can repopulate
+  // the cache with the pre-commit row between invalidation and commit,
+  // leaving the stale value until the TTL expires.
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const timestamp = now();
 
     const setClause: Partial<typeof notificationConfigs.$inferInsert> = { updatedAt: timestamp };
@@ -168,7 +190,7 @@ export async function updateNotificationConfig(
       .returning();
 
     if (!updated) {
-      const result = await insertNotificationConfig(tx, systemId, eventType, params);
+      const inserted = await insertNotificationConfig(tx, systemId, eventType, params);
 
       await audit(tx, {
         eventType: AUDIT_CONFIG_UPDATED,
@@ -178,7 +200,7 @@ export async function updateNotificationConfig(
         systemId,
       });
 
-      return result;
+      return inserted;
     }
 
     await audit(tx, {
@@ -191,6 +213,11 @@ export async function updateNotificationConfig(
 
     return toNotificationConfigResult(updated);
   });
+
+  if (isFriendNotificationEventType(eventType)) {
+    invalidateSwitchAlertConfigCache(systemId, eventType);
+  }
+  return result;
 }
 
 /** List all non-archived notification configs for a system. */

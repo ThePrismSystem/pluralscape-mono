@@ -4,6 +4,7 @@ import { SaltFetchSchema } from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 
+import { env } from "../../env.js";
 import { equalizeAntiEnumTiming } from "../../lib/anti-enum-timing.js";
 import { getDb } from "../../lib/db.js";
 import { hashEmail } from "../../lib/email-hash.js";
@@ -12,7 +13,7 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 
-import { ANTI_ENUM_SALT_SECRET_DEFAULT, ANTI_ENUM_SALT_SECRET_ENV } from "./auth.constants.js";
+import { ANTI_ENUM_SALT_SECRET_DEFAULT } from "./auth.constants.js";
 
 export const saltRoute = new Hono();
 
@@ -38,9 +39,12 @@ saltRoute.post("/", async (c) => {
   }
 
   // Deterministic fake salt: BLAKE2B(PWHASH_SALT_BYTES, email, secret)
-  // so the same email always gets the same fake salt (prevents enumeration)
+  // so the same email always gets the same fake salt (prevents enumeration).
+  // env.ANTI_ENUM_SALT_SECRET is validated at boot (required and >=32 chars
+  // in production; dev default rejected). Fall through to the dev default
+  // only when the env var is unset outside production.
   const adapter = getSodium();
-  const secret = process.env[ANTI_ENUM_SALT_SECRET_ENV] ?? ANTI_ENUM_SALT_SECRET_DEFAULT;
+  const secret = env.ANTI_ENUM_SALT_SECRET ?? ANTI_ENUM_SALT_SECRET_DEFAULT;
   const secretBytes = new TextEncoder().encode(secret);
   const emailBytes = new TextEncoder().encode(parsed.email.toLowerCase().trim());
 

@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 
 import { computeTranslationsEtag } from "../../lib/i18n-etag.js";
 import { logger } from "../../lib/logger.js";
+import { LocaleSchema, NamespaceSchema } from "../../routes/i18n/schemas.js";
 import { CrowdinOtaFailure } from "../../services/crowdin-ota.service.js";
 import {
   MANIFEST_CACHE_KEY,
@@ -122,8 +123,10 @@ function buildRouter(getDeps: () => I18nRouterDeps | null) {
       .use(i18nFetchLimiter)
       .input(
         z.object({
-          locale: z.string().min(2),
-          namespace: z.string().min(1),
+          // Format-strict schemas reject path-traversal segments before
+          // they reach the Crowdin CDN URL template.
+          locale: LocaleSchema,
+          namespace: NamespaceSchema,
         }),
       )
       .query(async ({ input }): Promise<I18nNamespaceWithEtag> => {

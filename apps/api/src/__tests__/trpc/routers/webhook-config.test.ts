@@ -13,17 +13,25 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/webhook-config.service.js", () => ({
-  archiveWebhookConfig: vi.fn(),
-  createWebhookConfig: vi.fn(),
-  deleteWebhookConfig: vi.fn(),
-  getWebhookConfig: vi.fn(),
-  listWebhookConfigs: vi.fn(),
-  restoreWebhookConfig: vi.fn(),
-  rotateWebhookSecret: vi.fn(),
-  testWebhookConfig: vi.fn(),
-  updateWebhookConfig: vi.fn(),
-}));
+// Keep the real `toServerSecret` — it's a pure brand-narrowing helper with no
+// external deps, and importing it from the mocked module avoids duplicating
+// the `as ServerSecret` cast in every test file.
+vi.mock("../../../services/webhook-config.service.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../services/webhook-config.service.js")>();
+  return {
+    archiveWebhookConfig: vi.fn(),
+    createWebhookConfig: vi.fn(),
+    deleteWebhookConfig: vi.fn(),
+    getWebhookConfig: vi.fn(),
+    listWebhookConfigs: vi.fn(),
+    restoreWebhookConfig: vi.fn(),
+    rotateWebhookSecret: vi.fn(),
+    testWebhookConfig: vi.fn(),
+    updateWebhookConfig: vi.fn(),
+    toServerSecret: actual.toServerSecret,
+  };
+});
 
 const {
   archiveWebhookConfig,
@@ -34,6 +42,7 @@ const {
   restoreWebhookConfig,
   rotateWebhookSecret,
   testWebhookConfig,
+  toServerSecret,
   updateWebhookConfig,
 } = await import("../../../services/webhook-config.service.js");
 
@@ -148,6 +157,7 @@ describe("webhookConfig router", () => {
       vi.mocked(createWebhookConfig).mockResolvedValue({
         ...MOCK_WEBHOOK,
         secret: "whsec_test",
+        secretBytes: toServerSecret(Buffer.from("whsec_test")),
       });
       const caller = createCaller();
       await caller.webhookConfig.create(VALID_CREATE_INPUT);
@@ -254,6 +264,7 @@ describe("webhookConfig router", () => {
       vi.mocked(rotateWebhookSecret).mockResolvedValue({
         ...MOCK_WEBHOOK,
         secret: "whsec_rotated",
+        secretBytes: toServerSecret(Buffer.from("whsec_rotated")),
       });
       const caller = createCaller();
       await caller.webhookConfig.rotateSecret({
@@ -312,6 +323,7 @@ describe("webhookConfig router", () => {
     vi.mocked(createWebhookConfig).mockResolvedValue({
       ...MOCK_WEBHOOK,
       secret: "whsec_test",
+      secretBytes: toServerSecret(Buffer.from("whsec_test")),
     });
     const caller = createCaller();
     await assertProcedureRateLimited(

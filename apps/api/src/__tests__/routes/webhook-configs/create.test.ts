@@ -22,7 +22,8 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { createWebhookConfig } = await import("../../../services/webhook-config.service.js");
+const { createWebhookConfig, toServerSecret } =
+  await import("../../../services/webhook-config.service.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ const MOCK_CREATE_RESULT: WebhookConfigCreateResult = {
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(1000),
   secret: "dGVzdC1zZWNyZXQ=",
+  secretBytes: toServerSecret(Buffer.from("test-secret")),
 };
 
 // ── Tests ────────────────────────────────────────────────────────
