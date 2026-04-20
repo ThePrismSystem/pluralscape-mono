@@ -435,3 +435,51 @@ describe("encryptStreamAsync", () => {
     await expect(encryptStreamAsync(new Uint8Array(10), key, 0)).rejects.toThrow(InvalidInputError);
   });
 });
+
+describe("decryptStream output pre-allocation (crypto-tirn)", () => {
+  it(
+    "round-trips a multi-MiB payload without intermediate parts[] allocation",
+    { timeout: 60_000 },
+    () => {
+      const MIB = 1_024 * 1_024;
+      const chunkSize = 64 * 1_024; // 64 KiB — same as blob-pipeline default
+      // 2 MiB keeps WASM AEAD latency reasonable on CI while still producing
+      // 32 chunks — enough to prove the re-chunker/concat path is exercised.
+      const plaintext = new Uint8Array(2 * MIB);
+      plaintext.set(adapter.randomBytes(plaintext.length));
+
+      const payload = encryptStream(plaintext, key, chunkSize);
+      expect(payload.chunks.length).toBe(Math.ceil(plaintext.length / chunkSize));
+
+      const decrypted = decryptStream(payload, key);
+      expect(decrypted.byteLength).toBe(plaintext.byteLength);
+      expect(decrypted).toEqual(plaintext);
+    },
+  );
+
+  it("rejects a negative declared totalLength", () => {
+    const plaintext = encoder.encode("negative check");
+    const payload = encryptStream(plaintext, key, 64);
+    expect(() => decryptStream({ chunks: payload.chunks, totalLength: -1 }, key)).toThrow(
+      DecryptionFailedError,
+    );
+  });
+
+  it("rejects a non-integer declared totalLength", () => {
+    const plaintext = encoder.encode("nan check");
+    const payload = encryptStream(plaintext, key, 64);
+    expect(() => decryptStream({ chunks: payload.chunks, totalLength: Number.NaN }, key)).toThrow(
+      DecryptionFailedError,
+    );
+  });
+
+  it("rejects a totalLength smaller than the actual decrypted payload", () => {
+    const plaintext = new Uint8Array(200);
+    plaintext.set(adapter.randomBytes(plaintext.length));
+    const payload = encryptStream(plaintext, key, 64);
+    // Truthful totalLength would be 200; tamper down to 100.
+    expect(() => decryptStream({ chunks: payload.chunks, totalLength: 100 }, key)).toThrow(
+      DecryptionFailedError,
+    );
+  });
+});

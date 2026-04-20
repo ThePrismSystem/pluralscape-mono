@@ -279,10 +279,33 @@ export async function encryptStreamAsync(
 /**
  * Decrypt a stream-encrypted payload. Verifies chunk count against AAD
  * to detect truncation and reordering attacks.
+ *
+ * The output `Uint8Array` is pre-allocated to `payload.totalLength` and each
+ * decrypted chunk is written at its running offset — no intermediate
+ * array-of-parts, no second-pass concat. This halves the peak memory for a
+ * large-blob decrypt (previously: decrypted parts array + final buffer both
+ * resident; now: final buffer only).
+ *
+ * If `totalLength` is tampered to exceed the true sum, the post-loop offset
+ * check throws. If it is tampered to be smaller than a mid-loop write, the
+ * write is bounds-checked against the allocation and throws immediately via
+ * `Uint8Array.prototype.set`.
  */
 export function decryptStream(payload: StreamEncryptedPayload, key: AeadKey): Uint8Array {
   const totalChunks = payload.chunks.length;
-  const parts: Uint8Array[] = [];
+  const totalLength = payload.totalLength;
+
+  // Guard: totalLength must be a non-negative finite integer — Uint8Array
+  // would happily allocate NaN bytes (zero) or throw on negatives, but an
+  // explicit check produces a better error.
+  if (!Number.isInteger(totalLength) || totalLength < 0) {
+    throw new DecryptionFailedError(
+      "Stream payload has invalid totalLength: " + String(totalLength),
+    );
+  }
+
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
 
   for (let i = 0; i < totalChunks; i++) {
     const chunk = payload.chunks[i];
@@ -290,30 +313,38 @@ export function decryptStream(payload: StreamEncryptedPayload, key: AeadKey): Ui
       throw new DecryptionFailedError("Missing chunk in stream payload.");
     }
     const aad = buildChunkAad(i, totalChunks);
+    let plain: Uint8Array;
     try {
-      parts.push(decrypt(chunk, key, aad));
+      plain = decrypt(chunk, key, aad);
     } catch (error: unknown) {
       throw new DecryptionFailedError("Stream decryption failed at chunk " + String(i) + ".", {
         cause: error,
       });
     }
+
+    if (offset + plain.byteLength > totalLength) {
+      // totalLength is smaller than the actual decrypted payload — refuse to
+      // silently truncate. Bubble up as a decryption failure rather than
+      // letting `set` throw a RangeError with no cryptographic context.
+      throw new DecryptionFailedError(
+        "Decrypted stream length mismatch: chunk " +
+          String(i) +
+          " overflows declared totalLength of " +
+          String(totalLength) +
+          ".",
+      );
+    }
+
+    result.set(plain, offset);
+    offset += plain.byteLength;
   }
 
-  // Concatenate all decrypted parts
-  const totalBytes = parts.reduce((sum, p) => sum + p.length, 0);
-  const result = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const part of parts) {
-    result.set(part, offset);
-    offset += part.length;
-  }
-
-  if (result.length !== payload.totalLength) {
+  if (offset !== totalLength) {
     throw new DecryptionFailedError(
       "Decrypted stream length mismatch: expected " +
-        String(payload.totalLength) +
+        String(totalLength) +
         " bytes, got " +
-        String(result.length) +
+        String(offset) +
         ".",
     );
   }
