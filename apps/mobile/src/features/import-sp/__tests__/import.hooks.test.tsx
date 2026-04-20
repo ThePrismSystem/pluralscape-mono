@@ -98,6 +98,13 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
 vi.mock("expo-secure-store", () => {
   const store = new Map<string, string>();
   return {
+    // Expose the keychain-accessibility constants that sp-token-storage.ts
+    // reads at module load; omitting them causes a ReferenceError when the
+    // hooks are exercised against this inline mock.
+    WHEN_UNLOCKED: "AccessibleWhenUnlocked" as const,
+    WHEN_UNLOCKED_THIS_DEVICE_ONLY: "AccessibleWhenUnlockedThisDeviceOnly" as const,
+    AFTER_FIRST_UNLOCK: "AccessibleAfterFirstUnlock" as const,
+    AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: "AccessibleAfterFirstUnlockThisDeviceOnly" as const,
     getItemAsync: (key: string) => Promise.resolve(store.get(key) ?? null),
     setItemAsync: (key: string, value: string) => {
       store.set(key, value);
