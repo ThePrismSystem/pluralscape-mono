@@ -97,8 +97,8 @@ describe("seedAccountAndSystem", () => {
     const ctx = await setupRouterIntegration();
     try {
       const tenant = await seedAccountAndSystem(ctx.db);
-      expect(tenant.accountId).toMatch(/^[0-9a-f-]{36}$/i);
-      expect(tenant.systemId).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(tenant.accountId).toMatch(/^acc_[0-9a-f-]{36}$/i);
+      expect(tenant.systemId).toMatch(/^sys_[0-9a-f-]{36}$/i);
       expect(tenant.auth.accountId).toBe(tenant.accountId);
       expect(tenant.auth.systemId).toBe(tenant.systemId);
       expect(tenant.auth.ownedSystemIds.has(tenant.systemId)).toBe(true);
