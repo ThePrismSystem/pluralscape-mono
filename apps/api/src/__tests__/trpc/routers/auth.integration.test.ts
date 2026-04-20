@@ -31,8 +31,10 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 
 import { requireSession } from "../../../lib/auth-context.js";
 import { hashEmail } from "../../../lib/email-hash.js";
+import { checkRateLimit } from "../../../middleware/rate-limit.js";
 import { _resetAccountLoginStoreForTesting } from "../../../middleware/stores/account-login-store.js";
 import { listSessions, loginAccount } from "../../../services/auth.service.js";
+import { dispatchWebhookEvent } from "../../../services/webhook-dispatcher.js";
 import { authRouter } from "../../../trpc/routers/auth.js";
 import { noopAudit, registerTestAccount } from "../../helpers/integration-setup.js";
 import { createMockLogger } from "../../helpers/mock-logger.js";
@@ -150,6 +152,10 @@ describe("auth router integration", () => {
       extraAfterEach: () => {
         _resetAccountLoginStoreForTesting();
       },
+      clearMocks: () => {
+        vi.mocked(dispatchWebhookEvent).mockClear();
+        vi.mocked(checkRateLimit).mockClear();
+      },
     },
   );
 
@@ -225,6 +231,7 @@ describe("auth router integration", () => {
       expect(result.accountType).toBe("system");
       expect(typeof result.sessionToken).toBe("string");
       expect(result.sessionToken.length).toBeGreaterThan(0);
+      expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     });
 
     it("throws UNAUTHORIZED for a wrong auth key", async () => {

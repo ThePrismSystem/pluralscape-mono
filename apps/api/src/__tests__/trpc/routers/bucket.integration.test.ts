@@ -12,6 +12,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+import { dispatchWebhookEvent } from "../../../services/webhook-dispatcher.js";
 import { bucketRouter } from "../../../trpc/routers/bucket.js";
 import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
@@ -44,7 +45,14 @@ const TEST_ENCRYPTED_KEY_BASE64 = Buffer.from("test-encrypted-bucket-key").toStr
 const TEST_ROTATION_CHUNK_SIZE = 10;
 
 describe("bucket router integration", () => {
-  const fixture = setupRouterFixture({ bucket: bucketRouter });
+  const fixture = setupRouterFixture(
+    { bucket: bucketRouter },
+    {
+      clearMocks: () => {
+        vi.mocked(dispatchWebhookEvent).mockClear();
+      },
+    },
+  );
 
   // ── Bucket CRUD happy paths ─────────────────────────────────────────
 
@@ -58,6 +66,12 @@ describe("bucket router integration", () => {
       });
       expect(result.systemId).toBe(primary.systemId);
       expect(result.id).toMatch(/^bkt_/);
+      expect(vi.mocked(dispatchWebhookEvent)).toHaveBeenCalledWith(
+        expect.anything(),
+        primary.systemId,
+        "bucket.created",
+        expect.objectContaining({ bucketId: result.id }),
+      );
     });
   });
 

@@ -14,6 +14,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+import { dispatchWebhookEvent } from "../../../services/webhook-dispatcher.js";
 import { frontingSessionRouter } from "../../../trpc/routers/fronting-session.js";
 import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
@@ -31,7 +32,14 @@ const INITIAL_SESSION_VERSION = 1;
 const END_TIME_OFFSET_MS = 60_000;
 
 describe("fronting-session router integration", () => {
-  const fixture = setupRouterFixture({ frontingSession: frontingSessionRouter });
+  const fixture = setupRouterFixture(
+    { frontingSession: frontingSessionRouter },
+    {
+      clearMocks: () => {
+        vi.mocked(dispatchWebhookEvent).mockClear();
+      },
+    },
+  );
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
@@ -54,6 +62,12 @@ describe("fronting-session router integration", () => {
       expect(result.systemId).toBe(primary.systemId);
       expect(result.id).toMatch(/^fs_/);
       expect(result.memberId).toBe(memberId);
+      expect(vi.mocked(dispatchWebhookEvent)).toHaveBeenCalledWith(
+        expect.anything(),
+        primary.systemId,
+        "fronting.started",
+        expect.objectContaining({ sessionId: result.id }),
+      );
     });
   });
 
@@ -130,6 +144,12 @@ describe("fronting-session router integration", () => {
       });
       expect(result.id).toBe(created.id);
       expect(result.endTime).toBe(startTime + END_TIME_OFFSET_MS);
+      expect(vi.mocked(dispatchWebhookEvent)).toHaveBeenCalledWith(
+        expect.anything(),
+        primary.systemId,
+        "fronting.ended",
+        expect.objectContaining({ sessionId: created.id }),
+      );
     });
   });
 

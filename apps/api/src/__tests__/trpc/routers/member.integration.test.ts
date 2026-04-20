@@ -14,6 +14,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+import { dispatchWebhookEvent } from "../../../services/webhook-dispatcher.js";
 import { memberRouter } from "../../../trpc/routers/member.js";
 import { testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {
@@ -27,7 +28,14 @@ import {
 const INITIAL_MEMBER_VERSION = 1;
 
 describe("member router integration", () => {
-  const fixture = setupRouterFixture({ member: memberRouter });
+  const fixture = setupRouterFixture(
+    { member: memberRouter },
+    {
+      clearMocks: () => {
+        vi.mocked(dispatchWebhookEvent).mockClear();
+      },
+    },
+  );
 
   // ── Happy path: one test per procedure ─────────────────────────────
 
@@ -41,6 +49,12 @@ describe("member router integration", () => {
       });
       expect(result.systemId).toBe(primary.systemId);
       expect(result.id).toMatch(/^mem_/);
+      expect(vi.mocked(dispatchWebhookEvent)).toHaveBeenCalledWith(
+        expect.anything(),
+        primary.systemId,
+        "member.created",
+        expect.objectContaining({ memberId: result.id }),
+      );
     });
   });
 
