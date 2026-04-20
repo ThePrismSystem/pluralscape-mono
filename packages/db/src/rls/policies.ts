@@ -14,7 +14,30 @@ export type RlsScopeType =
   | "dual"
   | "account-fk"
   | "system-fk"
-  | "account-bidirectional";
+  | "account-bidirectional"
+  /**
+   * systems table: combine the PK id check with account_id ownership so a
+   * compromised `app.current_system_id` alone cannot unlock another account's
+   * system row. See audit finding db-zy79.
+   */
+  | "systems-pk"
+  /**
+   * audit_log: NULL-aware dual-tenant USING clause. Rows whose accountId or
+   * systemId were nullified by ON DELETE SET NULL (after account/system
+   * deletion) must not be readable through normal tenant context. Regular
+   * tenant rows still match `account_id = current_account_id() AND system_id
+   *  = current_system_id()`. See audit finding db-dpp7.
+   */
+  | "audit-log-dual"
+  /**
+   * key_grants: two read paths. The owning system (which issued the grant)
+   * reads via `system_id = current_system_id()`. Friends receiving the grant
+   * read via `friend_account_id = current_account_id()` — they may not know
+   * or be allowed to set the originating system's ID as their session
+   * context. Writes remain restricted to the originating system.
+   * See audit finding db-eigy.
+   */
+  | "key-grants";
 
 /**
  * Returns a SQL expression for reading a GUC variable fail-closed.
@@ -70,6 +93,76 @@ export function dualTenantRlsPolicy(tableName: string): string {
     `USING (account_id = ${account} AND system_id = ${system}) ` +
     `WITH CHECK (account_id = ${account} AND system_id = ${system})`
   );
+}
+
+/**
+ * Creates the systems PK policy combining `id = current_system_id()` with
+ * `account_id = current_account_id()`. A session whose system GUC is set to
+ * another tenant's system must NOT be able to read or write that system row
+ * just because it happens to know the UUID. See audit finding db-zy79.
+ */
+export function systemsPkRlsPolicy(): string {
+  const systemSetting = currentSettingSql("app.current_system_id");
+  const accountSetting = currentSettingSql("app.current_account_id");
+  return (
+    `CREATE POLICY systems_system_isolation ON systems ` +
+    `USING (id = ${systemSetting} AND account_id = ${accountSetting}) ` +
+    `WITH CHECK (id = ${systemSetting} AND account_id = ${accountSetting})`
+  );
+}
+
+/**
+ * Creates the audit_log dual-tenant policy with NULL-awareness for rows
+ * whose account_id or system_id were nullified by ON DELETE SET NULL.
+ *
+ * Regular tenant rows match when both GUCs equal the stored IDs. Rows whose
+ * references were nullified (post account/system purge) are NOT readable
+ * through this policy — accessing them requires an admin/forensic path via
+ * a privileged database role that bypasses RLS (BYPASSRLS).
+ *
+ * Without the explicit NULL handling, rows with NULL tenant columns become
+ * permanently invisible because `NULL = <anything>` evaluates to NULL (not
+ * TRUE), which the USING clause filters out. That behavior is correct for
+ * normal tenant isolation but the intent deserves an explicit comment.
+ *
+ * See audit finding db-dpp7.
+ */
+export function auditLogRlsPolicy(): string {
+  const systemSetting = currentSettingSql("app.current_system_id");
+  const accountSetting = currentSettingSql("app.current_account_id");
+  return (
+    `CREATE POLICY audit_log_tenant_isolation ON audit_log ` +
+    `USING (account_id IS NOT NULL AND system_id IS NOT NULL AND account_id = ${accountSetting} AND system_id = ${systemSetting}) ` +
+    `WITH CHECK (account_id = ${accountSetting} AND system_id = ${systemSetting})`
+  );
+}
+
+/**
+ * Creates the key_grants policies covering the two legitimate read paths.
+ *
+ * Write policies (INSERT/UPDATE/DELETE) remain tied to the originating
+ * system via `system_id = current_system_id()`. The originating system is
+ * the one that generated and encrypted the grant.
+ *
+ * Read policies:
+ * 1. `key_grants_owner_read`: the originating system reads grants it issued.
+ * 2. `key_grants_friend_read`: the recipient friend reads grants addressed
+ *    to their account (`friend_account_id = current_account_id()`). The
+ *    friend typically cannot set the originating system's ID as their
+ *    session context, so the owner-read policy would otherwise block them.
+ *
+ * See audit finding db-eigy.
+ */
+export function keyGrantsRlsPolicy(): string[] {
+  const systemSetting = currentSettingSql("app.current_system_id");
+  const accountSetting = currentSettingSql("app.current_account_id");
+  return [
+    `CREATE POLICY key_grants_owner_read ON key_grants FOR SELECT USING (system_id = ${systemSetting})`,
+    `CREATE POLICY key_grants_friend_read ON key_grants FOR SELECT USING (friend_account_id = ${accountSetting})`,
+    `CREATE POLICY key_grants_write_insert ON key_grants FOR INSERT WITH CHECK (system_id = ${systemSetting})`,
+    `CREATE POLICY key_grants_write_update ON key_grants FOR UPDATE USING (system_id = ${systemSetting}) WITH CHECK (system_id = ${systemSetting})`,
+    `CREATE POLICY key_grants_write_delete ON key_grants FOR DELETE USING (system_id = ${systemSetting})`,
+  ];
 }
 
 /** FK mapping type: fkColumn is the child column, fkTable is the parent, parentIdColumn is the parent PK, fkTenantColumn is the tenant column in parent. */
@@ -208,18 +301,18 @@ export const RLS_TABLE_POLICIES = {
 
   // Special PK tables
   accounts: "account-pk",
-  systems: "system-pk",
+  systems: "systems-pk",
   nomenclature_settings: "system-pk",
   system_settings: "system-pk",
   innerworld_canvas: "system-pk",
 
   // Dual-column tables (account_id + system_id)
   api_keys: "dual",
-  audit_log: "dual",
+  audit_log: "audit-log-dual",
   device_tokens: "dual",
 
   // System-scoped (denormalized system_id)
-  key_grants: "system",
+  key_grants: "key-grants",
   bucket_content_tags: "system",
   friend_bucket_assignments: "system",
   field_bucket_visibility: "system",
@@ -350,6 +443,18 @@ export function generateRlsStatements(tableName: RlsTableName): string[] {
     case "account-bidirectional": {
       const policies = accountBidirectionalRlsPolicy(tableName);
       statements.push(...policies);
+      break;
+    }
+    case "systems-pk": {
+      statements.push(systemsPkRlsPolicy());
+      break;
+    }
+    case "audit-log-dual": {
+      statements.push(auditLogRlsPolicy());
+      break;
+    }
+    case "key-grants": {
+      statements.push(...keyGrantsRlsPolicy());
       break;
     }
     default: {

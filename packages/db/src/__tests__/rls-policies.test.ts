@@ -177,12 +177,14 @@ describe("generateRlsStatements", () => {
     expect(stmts[2]).toContain("system_id =");
   });
 
-  it("returns id-based policy for systems table", () => {
+  it("returns combined id + account_id policy for systems table", () => {
     const stmts = generateRlsStatements("systems");
 
     expect(stmts).toHaveLength(3);
     expect(stmts[2]).toContain("id =");
-    expect(stmts[2]).not.toContain("system_id =");
+    expect(stmts[2]).toContain("account_id =");
+    expect(stmts[2]).toContain("current_setting('app.current_system_id', true)");
+    expect(stmts[2]).toContain("current_setting('app.current_account_id', true)");
   });
 
   it("returns id-based policy for accounts table", () => {
@@ -201,11 +203,15 @@ describe("generateRlsStatements", () => {
     expect(stmts[2]).toContain("system_id");
   });
 
-  it("returns dual-column policy for audit_log", () => {
+  it("returns NULL-aware dual-column policy for audit_log", () => {
     const stmts = generateRlsStatements("audit_log");
 
     expect(stmts).toHaveLength(3);
-    expect(stmts[2]).toContain("tenant_isolation");
+    expect(stmts[2]).toContain("audit_log_tenant_isolation");
+    // NULL-aware USING clause — rows whose tenant columns were nullified by
+    // ON DELETE SET NULL must not leak through regular tenant context.
+    expect(stmts[2]).toContain("account_id IS NOT NULL");
+    expect(stmts[2]).toContain("system_id IS NOT NULL");
   });
 
   it("returns system-fk subquery policy for sync_changes", () => {
@@ -246,12 +252,18 @@ describe("generateRlsStatements", () => {
     expect(stmts[5]).toContain("FOR DELETE");
   });
 
-  it("returns direct system_id policy for key_grants", () => {
+  it("returns dual-path (owner + friend) policies for key_grants", () => {
     const stmts = generateRlsStatements("key_grants");
 
-    expect(stmts).toHaveLength(3);
-    expect(stmts[2]).toContain("system_id =");
-    expect(stmts[2]).not.toContain("EXISTS");
+    // 2 enable statements + 5 policies: owner SELECT, friend SELECT,
+    // INSERT, UPDATE, DELETE.
+    expect(stmts).toHaveLength(7);
+    expect(stmts.some((s) => s.includes("key_grants_owner_read"))).toBe(true);
+    expect(stmts.some((s) => s.includes("key_grants_friend_read"))).toBe(true);
+    expect(stmts.some((s) => s.includes("friend_account_id ="))).toBe(true);
+    expect(stmts.some((s) => s.includes("FOR INSERT"))).toBe(true);
+    expect(stmts.some((s) => s.includes("FOR UPDATE"))).toBe(true);
+    expect(stmts.some((s) => s.includes("FOR DELETE"))).toBe(true);
   });
 
   it("returns direct system_id policy for field_bucket_visibility", () => {
@@ -280,7 +292,7 @@ describe("RLS_TABLE_POLICIES", () => {
   it("covers core tables with correct scopes", () => {
     const expected: Array<[string, RlsScopeType]> = [
       ["members", "system"],
-      ["systems", "system-pk"],
+      ["systems", "systems-pk"],
       ["accounts", "account-pk"],
       ["sessions", "account"],
       ["channels", "system"],
@@ -290,9 +302,9 @@ describe("RLS_TABLE_POLICIES", () => {
       ["groups", "system"],
       ["journal_entries", "system"],
       ["api_keys", "dual"],
-      ["audit_log", "dual"],
+      ["audit_log", "audit-log-dual"],
       ["device_tokens", "dual"],
-      ["key_grants", "system"],
+      ["key_grants", "key-grants"],
       ["bucket_content_tags", "system"],
       ["friend_bucket_assignments", "system"],
       ["field_bucket_visibility", "system"],
@@ -340,6 +352,9 @@ describe("RLS_TABLE_POLICIES", () => {
       "account-fk",
       "system-fk",
       "account-bidirectional",
+      "systems-pk",
+      "audit-log-dual",
+      "key-grants",
     ]);
 
     for (const [table, scope] of Object.entries(RLS_TABLE_POLICIES)) {
