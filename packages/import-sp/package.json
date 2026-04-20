@@ -19,7 +19,6 @@
     "@pluralscape/types": "workspace:*",
     "@pluralscape/validation": "workspace:*",
     "clarinet": "^0.12.6",
-    "jszip": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

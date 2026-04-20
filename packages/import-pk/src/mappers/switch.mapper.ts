@@ -16,20 +16,23 @@
  *    (endTime = null).
  */
 import { mapped, type BatchMapperOutput, type SourceDocument } from "@pluralscape/import-core";
+import { brandId } from "@pluralscape/types";
 
 import { PKSwitchSchema } from "../validators/pk-payload.js";
 
 import type { FrontingSessionEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
+import type { MemberId } from "@pluralscape/types";
+import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface PkMappedFrontingSession {
+export type PkMappedFrontingSession = Omit<
+  z.infer<typeof CreateFrontingSessionBodySchema>,
+  "encryptedData" | "endTime"
+> & {
   readonly encrypted: FrontingSessionEncryptedFields;
-  readonly startTime: number;
   readonly endTime: number | null;
-  readonly memberId: string | undefined;
-  readonly customFrontId: undefined;
-  readonly structureEntityId: undefined;
-}
+};
 
 interface ParsedSwitch {
   readonly timestampMs: number;
@@ -37,7 +40,7 @@ interface ParsedSwitch {
 }
 
 function buildSession(
-  memberId: string,
+  memberId: MemberId,
   startTime: number,
   endTime: number | null,
 ): PkMappedFrontingSession {
@@ -137,7 +140,7 @@ export function mapSwitchBatch(
         const endTime = sw.timestampMs === startTime ? sw.timestampMs + 1 : sw.timestampMs;
         outputs.push({
           sourceEntityId: `session:${pkMemberId}:${String(startTime)}`,
-          result: mapped(buildSession(resolved, startTime, endTime)),
+          result: mapped(buildSession(brandId<MemberId>(resolved), startTime, endTime)),
         });
         activeFronters.delete(pkMemberId);
       }
@@ -159,7 +162,7 @@ export function mapSwitchBatch(
     }
     outputs.push({
       sourceEntityId: `session:${pkMemberId}:${String(startTime)}`,
-      result: mapped(buildSession(resolved, startTime, null)),
+      result: mapped(buildSession(brandId<MemberId>(resolved), startTime, null)),
     });
   }
 

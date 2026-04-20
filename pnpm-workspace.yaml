@@ -20,6 +20,7 @@ catalog:
   better-sqlite3-multiple-ciphers: ^12.9.0
   drizzle-orm: ^0.45.1
   eslint: ^10.2.1
+  happy-dom: ^20.8.9
   jszip: ^3.10.1
   postgres: ^3.4.9
   react-dom: ^19.2.5

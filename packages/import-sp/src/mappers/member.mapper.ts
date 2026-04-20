@@ -29,8 +29,10 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 import type { MappingContext } from "./context.js";
 import type { SPMember } from "../sources/sp-types.js";
 import type { MemberEncryptedFields } from "@pluralscape/data";
+import type { CreateMemberBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedMember {
+export type MappedMember = Omit<z.infer<typeof CreateMemberBodySchema>, "encryptedData"> & {
   readonly encrypted: MemberEncryptedFields;
   readonly archived: boolean;
   readonly fieldValues: readonly ExtractedFieldValue[];
@@ -40,7 +42,7 @@ export interface MappedMember {
    * {@link MappingContext.translate} — consumers never need to re-resolve.
    */
   readonly bucketIds: readonly string[];
-}
+};
 
 /**
  * Resolve a member's privacy bucket source IDs.
