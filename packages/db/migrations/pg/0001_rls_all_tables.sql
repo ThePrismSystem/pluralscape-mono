@@ -41,7 +41,7 @@ CREATE POLICY accounts_account_isolation ON accounts USING (id = NULLIF(current_
 ALTER TABLE systems ENABLE ROW LEVEL SECURITY;
 ALTER TABLE systems FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS systems_system_isolation ON systems;
-CREATE POLICY systems_system_isolation ON systems USING (id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+CREATE POLICY systems_system_isolation ON systems USING (id = NULLIF(current_setting('app.current_system_id', true), '')::varchar AND account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar) WITH CHECK (id = NULLIF(current_setting('app.current_system_id', true), '')::varchar AND account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
 
 -- nomenclature_settings
 ALTER TABLE nomenclature_settings ENABLE ROW LEVEL SECURITY;
@@ -71,7 +71,7 @@ CREATE POLICY api_keys_tenant_isolation ON api_keys USING (account_id = NULLIF(c
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS audit_log_tenant_isolation ON audit_log;
-CREATE POLICY audit_log_tenant_isolation ON audit_log USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+CREATE POLICY audit_log_tenant_isolation ON audit_log USING (account_id IS NOT NULL AND system_id IS NOT NULL AND account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- device_tokens
 ALTER TABLE device_tokens ENABLE ROW LEVEL SECURITY;
@@ -82,8 +82,16 @@ CREATE POLICY device_tokens_tenant_isolation ON device_tokens USING (account_id 
 -- key_grants
 ALTER TABLE key_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE key_grants FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS key_grants_system_isolation ON key_grants;
-CREATE POLICY key_grants_system_isolation ON key_grants USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+DROP POLICY IF EXISTS key_grants_owner_read ON key_grants;
+CREATE POLICY key_grants_owner_read ON key_grants FOR SELECT USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+DROP POLICY IF EXISTS key_grants_friend_read ON key_grants;
+CREATE POLICY key_grants_friend_read ON key_grants FOR SELECT USING (friend_account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
+DROP POLICY IF EXISTS key_grants_write_insert ON key_grants;
+CREATE POLICY key_grants_write_insert ON key_grants FOR INSERT WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+DROP POLICY IF EXISTS key_grants_write_update ON key_grants;
+CREATE POLICY key_grants_write_update ON key_grants FOR UPDATE USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+DROP POLICY IF EXISTS key_grants_write_delete ON key_grants;
+CREATE POLICY key_grants_write_delete ON key_grants FOR DELETE USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- bucket_content_tags
 ALTER TABLE bucket_content_tags ENABLE ROW LEVEL SECURITY;
