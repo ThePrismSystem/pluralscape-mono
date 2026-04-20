@@ -16,7 +16,21 @@ export {
 
 // API server management
 export { E2E_PORT, API_BASE_URL, pollHealth, spawnApiServer, killServer } from "./api-server.js";
-export type { SpawnedServer } from "./api-server.js";
+export type { PollHealthOptions, SpawnedServer } from "./api-server.js";
+
+// Env helper (VITEST stripping)
+export { inheritEnvWithoutVitest } from "./api-env.js";
+
+// Stderr classifier
+export { createStderrClassifier } from "./classify-pino-stderr.js";
+export type {
+  StderrClassifier,
+  StderrClassifierOptions,
+  StderrClassifierResult,
+} from "./classify-pino-stderr.js";
+
+// Port-probe helper
+export { assertPortFree } from "./assert-port-free.js";
 
 // Account registration
 export { registerTestAccount, getSystemId } from "./account.js";

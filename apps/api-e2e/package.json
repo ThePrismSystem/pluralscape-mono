@@ -15,6 +15,7 @@
     "@pluralscape/api": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/sync": "workspace:*",
+    "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@types/node": "^24.12.2",

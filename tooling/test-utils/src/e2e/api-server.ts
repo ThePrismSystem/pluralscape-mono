@@ -8,6 +8,9 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
+import { inheritEnvWithoutVitest } from "./api-env.js";
+import { assertPortFree } from "./assert-port-free.js";
+import { createStderrClassifier } from "./classify-pino-stderr.js";
 import {
   DOCKER_CONTAINER_NAME,
   MINIO_BUCKET,
@@ -17,6 +20,7 @@ import {
 
 const HEALTH_POLL_MS = 100;
 const HEALTH_TIMEOUT_MS = 15_000;
+const STDERR_TAIL_MAX_LINES = 200;
 
 /** Stable 64-char hex pepper for local E2E tests (not used in production). */
 const DEFAULT_TEST_PEPPER = crypto.createHash("sha256").update("e2e-test-pepper").digest("hex");
@@ -24,18 +28,59 @@ const DEFAULT_TEST_PEPPER = crypto.createHash("sha256").update("e2e-test-pepper"
 export const E2E_PORT = 10_099;
 export const API_BASE_URL = `http://localhost:${String(E2E_PORT)}`;
 
-export async function pollHealth(baseUrl: string, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`${baseUrl}/health`);
-      if (res.ok) return;
-    } catch {
-      // Server not ready yet
+interface PollHealthBase {
+  readonly baseUrl: string;
+  readonly timeoutMs: number;
+}
+
+/**
+ * Options for pollHealth. A discriminated union: when `child` is provided,
+ * `stderrTail` may accompany it and is used in the early-exit error
+ * message; when `child` is absent, `stderrTail` must also be absent (it
+ * would otherwise be silently ignored).
+ */
+export type PollHealthOptions =
+  | (PollHealthBase & { readonly child?: undefined; readonly stderrTail?: undefined })
+  | (PollHealthBase & {
+      readonly child: ChildProcess;
+      readonly stderrTail?: readonly string[];
+    });
+
+export async function pollHealth(options: PollHealthOptions): Promise<void> {
+  const { baseUrl, timeoutMs } = options;
+  const child = options.child;
+  const stderrTail = options.stderrTail;
+  // Seed earlyExit from exitCode/signalCode so a child that exited before
+  // pollHealth was called is still detected — the 'exit' event never fires
+  // retroactively, so the listener alone is insufficient.
+  let earlyExit: { code: number | null; signal: NodeJS.Signals | null } | null =
+    child && child.exitCode !== null ? { code: child.exitCode, signal: child.signalCode } : null;
+  const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+    earlyExit = { code, signal };
+  };
+  child?.on("exit", onExit);
+  try {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      if (earlyExit !== null) {
+        const tail = (stderrTail ?? []).join("\n");
+        throw new Error(
+          `API server exited before becoming healthy (code=${String(earlyExit.code)}, signal=${String(earlyExit.signal)}).\n` +
+            `Recent stderr:\n${tail}`,
+        );
+      }
+      try {
+        const res = await fetch(`${baseUrl}/health`);
+        if (res.ok) return;
+      } catch {
+        // Server not ready yet
+      }
+      await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
     }
-    await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
+    throw new Error(`API server did not become healthy within ${String(timeoutMs)}ms`);
+  } finally {
+    child?.off("exit", onExit);
   }
-  throw new Error(`API server did not become healthy within ${String(timeoutMs)}ms`);
 }
 
 export interface SpawnedServer {
@@ -76,14 +121,10 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
     throw new Error(`Migration failed:\nstdout: ${stdout}\nstderr: ${stderr}`);
   }
 
+  await assertPortFree(E2E_PORT);
   log(`Starting API server on port ${String(E2E_PORT)}`);
-  // Strip VITEST from the inherited env — apps/api/src/index.ts gates its
-  // start() call on `!process.env["VITEST"]` to avoid an async teardown race
-  // when the module is `import`ed by unit tests. The spawned server is a
-  // separate process that SHOULD run start(); leaking the parent's VITEST
-  // flag silences start() and the health check times out.
   const spawnEnv: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...inheritEnvWithoutVitest(),
     API_PORT: String(E2E_PORT),
     DB_DIALECT: "pg",
     DATABASE_URL: databaseUrl,
@@ -96,17 +137,28 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
     AWS_ACCESS_KEY_ID: "minioadmin",
     AWS_SECRET_ACCESS_KEY: "minioadmin",
   };
-  delete spawnEnv["VITEST"];
   const serverProcess = spawn("bun", ["run", "src/index.ts"], {
     cwd: apiDir,
     env: spawnEnv,
     stdio: "pipe",
   });
 
+  const stderrTail: string[] = [];
+  const classifier = createStderrClassifier();
   serverProcess.stderr.on("data", (data: Buffer) => {
-    const msg = data.toString();
-    if (msg.includes('"level":50') || msg.includes('"level":60')) {
-      process.stderr.write(msg);
+    const { forwarded, tailLines } = classifier.process(data.toString());
+    if (forwarded !== "") process.stderr.write(forwarded);
+    for (const line of tailLines) {
+      stderrTail.push(line);
+      if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
+    }
+  });
+  serverProcess.stderr.on("end", () => {
+    const { forwarded, tailLines } = classifier.flush();
+    if (forwarded !== "") process.stderr.write(forwarded);
+    for (const line of tailLines) {
+      stderrTail.push(line);
+      if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
     }
   });
 
@@ -114,7 +166,12 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
     throw new Error("Failed to spawn API server — pid is undefined");
   }
 
-  await pollHealth(API_BASE_URL, HEALTH_TIMEOUT_MS);
+  await pollHealth({
+    baseUrl: API_BASE_URL,
+    timeoutMs: HEALTH_TIMEOUT_MS,
+    child: serverProcess,
+    stderrTail,
+  });
   log("API server is healthy. Running tests...");
 
   return { process: serverProcess, pid: serverProcess.pid };

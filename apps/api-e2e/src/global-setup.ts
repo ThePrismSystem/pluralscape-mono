@@ -10,6 +10,10 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
+import { inheritEnvWithoutVitest } from "@pluralscape/test-utils/e2e/api-env";
+import { E2E_PORT, pollHealth } from "@pluralscape/test-utils/e2e/api-server";
+import { assertPortFree } from "@pluralscape/test-utils/e2e/assert-port-free";
+import { createStderrClassifier } from "@pluralscape/test-utils/e2e/classify-pino-stderr";
 import { MS_PER_SECOND } from "@pluralscape/types";
 
 import {
@@ -18,9 +22,8 @@ import {
   stopE2ECrowdinStub,
 } from "./crowdin-stub-lifecycle.js";
 
-const E2E_PORT = 10_099;
-const HEALTH_POLL_MS = 100;
 const HEALTH_TIMEOUT_MS = 15_000;
+const STDERR_TAIL_MAX_LINES = 200;
 const PG_READY_POLL_MS = 200;
 const PG_READY_TIMEOUT_MS = 30_000;
 const DOCKER_CONTAINER_NAME = "pluralscape-e2e-pg";
@@ -47,20 +50,6 @@ const DEFAULT_TEST_WEBHOOK_KEY = crypto
   .digest("hex");
 
 let serverProcess: ChildProcess | null = null;
-
-async function pollHealth(baseUrl: string, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`${baseUrl}/health`);
-      if (res.ok) return;
-    } catch {
-      // Server not ready yet
-    }
-    await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
-  }
-  throw new Error(`API server did not become healthy within ${String(timeoutMs)}ms`);
-}
 
 function dockerIsAvailable(): boolean {
   try {
@@ -269,37 +258,50 @@ async function globalSetup(): Promise<void> {
   // before re-throwing so the socket is released even on aborted setups.
   try {
     // Spawn the API server
+    await assertPortFree(E2E_PORT);
     console.info("[e2e] Starting API server on port", E2E_PORT);
+    const spawnEnv: NodeJS.ProcessEnv = {
+      ...inheritEnvWithoutVitest(),
+      API_PORT: String(E2E_PORT),
+      DB_DIALECT: "pg",
+      DATABASE_URL: databaseUrl,
+      EMAIL_HASH_PEPPER: emailPepper,
+      WEBHOOK_PAYLOAD_ENCRYPTION_KEY:
+        process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] ?? DEFAULT_TEST_WEBHOOK_KEY,
+      NODE_ENV: "test",
+      DISABLE_RATE_LIMIT: "1",
+      BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
+      BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
+      BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
+      AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
+      AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
+      // Wire the i18n proxy to the local stub so the suite exercises the
+      // full Crowdin contract against a controllable fixture.
+      CROWDIN_DISTRIBUTION_HASH: E2E_CROWDIN_HASH,
+      CROWDIN_OTA_BASE_URL: crowdinStub.baseUrl,
+    };
     serverProcess = spawn("bun", ["run", "src/index.ts"], {
       cwd: API_DIR,
-      env: {
-        ...process.env,
-        API_PORT: String(E2E_PORT),
-        DB_DIALECT: "pg",
-        DATABASE_URL: databaseUrl,
-        EMAIL_HASH_PEPPER: emailPepper,
-        WEBHOOK_PAYLOAD_ENCRYPTION_KEY:
-          process.env["WEBHOOK_PAYLOAD_ENCRYPTION_KEY"] ?? DEFAULT_TEST_WEBHOOK_KEY,
-        NODE_ENV: "test",
-        DISABLE_RATE_LIMIT: "1",
-        BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
-        BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
-        BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
-        AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
-        AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
-        // Wire the i18n proxy to the local stub so the suite exercises the
-        // full Crowdin contract against a controllable fixture.
-        CROWDIN_DISTRIBUTION_HASH: E2E_CROWDIN_HASH,
-        CROWDIN_OTA_BASE_URL: crowdinStub.baseUrl,
-      },
+      env: spawnEnv,
       stdio: "pipe",
     });
 
+    const stderrTail: string[] = [];
+    const classifier = createStderrClassifier({ prefix: "[api-e2e] " });
     serverProcess.stderr?.on("data", (data: Buffer) => {
-      const msg = data.toString();
-      // Surface errors and fatals, not routine pino JSON logs
-      if (msg.includes('"level":50') || msg.includes('"level":60')) {
-        process.stderr.write(`[api-e2e] ${msg}`);
+      const { forwarded, tailLines } = classifier.process(data.toString());
+      if (forwarded !== "") process.stderr.write(forwarded);
+      for (const line of tailLines) {
+        stderrTail.push(line);
+        if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
+      }
+    });
+    serverProcess.stderr?.on("end", () => {
+      const { forwarded, tailLines } = classifier.flush();
+      if (forwarded !== "") process.stderr.write(forwarded);
+      for (const line of tailLines) {
+        stderrTail.push(line);
+        if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
       }
     });
 
@@ -308,7 +310,12 @@ async function globalSetup(): Promise<void> {
     }
     process.env["E2E_SERVER_PID"] = String(serverProcess.pid);
 
-    await pollHealth(`http://localhost:${String(E2E_PORT)}`, HEALTH_TIMEOUT_MS);
+    await pollHealth({
+      baseUrl: `http://localhost:${String(E2E_PORT)}`,
+      timeoutMs: HEALTH_TIMEOUT_MS,
+      child: serverProcess,
+      stderrTail,
+    });
     console.info("[e2e] API server is healthy. Running tests...");
   } catch (err: unknown) {
     // Setup aborted — close the stub we already started so it doesn't leak.
