@@ -158,11 +158,28 @@ async function aggregateSubjectBreakdown(
     END`;
     const subjectIdSql = sql<string>`COALESCE(${frontingSessions.memberId}, ${frontingSessions.customFrontId}, ${frontingSessions.structureEntityId})`;
 
+    // Pre-aggregate COUNT to preserve the original `truncated` contract:
+    // aggregation switched from "raw rows" to "one row per subject", so the
+    // post-aggregate row count ≥ cap would silently report `truncated:
+    // false` for systems with >cap raw sessions across few subjects. Run
+    // the same WHERE against frontingSessions to count raw-session volume
+    // explicitly; aggregate LIMIT remains a pathology safety valve.
+    const [rawCountRow] = await tx
+      .select({ n: count().as("n") })
+      .from(frontingSessions)
+      .where(and(...conditions));
+    const rawSessionCount = rawCountRow?.n ?? 0;
+
+    // Clamp SUM(bigint) to JS safe-int so the mapWith(Number) cast never
+    // silently loses precision for long all-time windows where per-session
+    // clamped durations can aggregate past 2^53 ms.
+    const clampedSumSql = sql<number>`LEAST(SUM(${clampedDurationSql}), ${Number.MAX_SAFE_INTEGER}::bigint)`;
+
     const rows = await tx
       .select({
         subjectType: subjectTypeSql.as("subject_type"),
         subjectId: subjectIdSql.as("subject_id"),
-        totalDuration: sum(clampedDurationSql).mapWith(Number).as("total_duration"),
+        totalDuration: clampedSumSql.mapWith(Number).as("total_duration"),
         sessionCount: count().as("session_count"),
       })
       .from(frontingSessions)
@@ -172,8 +189,10 @@ async function aggregateSubjectBreakdown(
       .orderBy(desc(sum(clampedDurationSql)))
       .limit(MAX_ANALYTICS_SESSIONS);
 
-    // `truncated` is conservative: only reports true when the DB hit the
-    // safety LIMIT, matching the contract of the legacy implementation.
+    // `truncated` reflects the raw-session count vs. the cap, matching the
+    // legacy "did we see more rows than we could hold" contract. The
+    // aggregate LIMIT stays as a pathology safety net but doesn't feed
+    // the flag directly.
     return {
       rows: rows.map((r) => ({
         subjectType: r.subjectType,
@@ -181,7 +200,7 @@ async function aggregateSubjectBreakdown(
         totalDuration: r.totalDuration,
         sessionCount: r.sessionCount,
       })),
-      truncated: rows.length >= MAX_ANALYTICS_SESSIONS,
+      truncated: rawSessionCount >= MAX_ANALYTICS_SESSIONS,
     };
   });
 }
