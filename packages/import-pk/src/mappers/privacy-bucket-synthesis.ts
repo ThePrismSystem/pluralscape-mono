@@ -15,10 +15,14 @@ import { z } from "zod/v4";
 
 import type { BucketEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
+import type { CreateBucketBodySchema } from "@pluralscape/validation";
 
-export interface PkMappedPrivacyBucket {
+export type PkMappedPrivacyBucket = Omit<
+  z.infer<typeof CreateBucketBodySchema>,
+  "encryptedData"
+> & {
   readonly encrypted: BucketEncryptedFields;
-}
+};
 
 /** All PK privacy fields to check for "private" values. */
 const PRIVACY_FIELDS = [
