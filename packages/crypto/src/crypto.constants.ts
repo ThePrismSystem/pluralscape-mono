@@ -67,17 +67,67 @@ export const PWHASH_MEMLIMIT_MODERATE = 256 * 1_024 * 1_024;
 // Rationale: a single unified profile either over-pays on short-lived
 // derivations (like the device-transfer key) or under-protects long-lived
 // ones (like the master-key wrap). Each profile bundles (opslimit, memlimit)
-// indivisibly so callers can't accidentally mix tiers.
+// indivisibly so callers can't accidentally mix tiers, and carries a
+// phantom brand so the *compiler* can reject a TRANSFER profile being passed
+// where a MASTER_KEY profile is expected (or vice versa). The runtime shape
+// is unchanged — libsodium only sees the numeric fields.
 //
 // Numbers follow the OWASP ASVS 4.x V2.4 / Password Storage Cheat Sheet
 // guidance for Argon2id with parallelism = 1 (libsodium's hard-coded value).
 
-/** Argon2id profile shape — opslimit and memlimit travel together. */
-export interface Argon2idProfile {
+declare const __argon2idKind: unique symbol;
+
+/** Allowed profile kinds — each call site accepts only the correct kind. */
+export type Argon2idProfileKind = "master-key" | "transfer";
+
+/**
+ * Argon2id profile shape — opslimit and memlimit travel together, and the
+ * phantom `[__argon2idKind]` tag prevents cross-tier mixing at compile time.
+ *
+ * The brand slot is declared optional because it is a purely-phantom marker
+ * (the unique symbol has no runtime value), which lets literal objects be
+ * assigned to a `Argon2idProfile<K>` binding without a cast. Cross-tier
+ * assignments are still rejected because `"transfer" | undefined` is not
+ * assignable to `"master-key" | undefined`.
+ */
+export interface Argon2idProfile<K extends Argon2idProfileKind = Argon2idProfileKind> {
   /** libsodium pwhash opslimit (iterations). */
   readonly opslimit: number;
   /** libsodium pwhash memlimit in bytes. */
   readonly memlimit: number;
+  /** Phantom brand — never present at runtime; exists only to tag the kind. */
+  readonly [__argon2idKind]?: K;
+}
+
+/** OWASP ASVS V2.4 floor on Argon2id memlimit for password storage (19 MiB). */
+const ARGON2ID_MIN_MEMLIMIT = 19 * 1_024 * 1_024;
+
+/**
+ * Runtime validator for {@link Argon2idProfile}-shaped values.
+ *
+ * Defence in depth: all callers bind to a branded `Argon2idProfile<K>`, but
+ * a malicious caller bypassing the brand (e.g., via `unknown` casts from
+ * config) would still face this assertion before the numeric fields reach
+ * libsodium's `pwhash`. Rejects non-integer / negative / under-OWASP values.
+ */
+export function assertArgon2idProfile(profile: unknown): asserts profile is Argon2idProfile {
+  if (typeof profile !== "object" || profile === null) {
+    throw new TypeError("Argon2id profile must be an object.");
+  }
+  const opslimit = (profile as { readonly opslimit?: unknown }).opslimit;
+  const memlimit = (profile as { readonly memlimit?: unknown }).memlimit;
+  if (typeof opslimit !== "number" || !Number.isInteger(opslimit) || opslimit < 1) {
+    throw new TypeError("Argon2id profile opslimit must be a positive integer.");
+  }
+  if (
+    typeof memlimit !== "number" ||
+    !Number.isInteger(memlimit) ||
+    memlimit < ARGON2ID_MIN_MEMLIMIT
+  ) {
+    throw new TypeError(
+      `Argon2id profile memlimit must be an integer >= ${String(ARGON2ID_MIN_MEMLIMIT)} bytes (OWASP floor).`,
+    );
+  }
 }
 
 /**
@@ -87,7 +137,7 @@ export interface Argon2idProfile {
  * (m >= 64 MiB, t >= 3) and matches the previous unified profile, so
  * existing dev artifacts remain compatible.
  */
-export const ARGON2ID_PROFILE_MASTER_KEY: Argon2idProfile = Object.freeze({
+export const ARGON2ID_PROFILE_MASTER_KEY: Argon2idProfile<"master-key"> = Object.freeze({
   opslimit: 4,
   memlimit: 64 * 1_024 * 1_024,
 });
@@ -99,7 +149,7 @@ export const ARGON2ID_PROFILE_MASTER_KEY: Argon2idProfile = Object.freeze({
  * exceeds the OWASP minimum (m >= 19 MiB, t >= 2) while materially improving
  * pair-a-new-device latency on low-end mobile hardware.
  */
-export const ARGON2ID_PROFILE_TRANSFER: Argon2idProfile = Object.freeze({
+export const ARGON2ID_PROFILE_TRANSFER: Argon2idProfile<"transfer"> = Object.freeze({
   opslimit: 3,
   memlimit: 32 * 1_024 * 1_024,
 });

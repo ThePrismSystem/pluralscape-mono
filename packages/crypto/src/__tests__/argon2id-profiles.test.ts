@@ -19,6 +19,7 @@ import {
   ARGON2ID_PROFILE_MASTER_KEY,
   ARGON2ID_PROFILE_TRANSFER,
   PWHASH_SALT_BYTES,
+  assertArgon2idProfile,
 } from "../crypto.constants.js";
 import { deriveTransferKey, generateTransferCode } from "../device-transfer.js";
 import { hashPin } from "../pin.js";
@@ -108,5 +109,77 @@ describe("Argon2id profile wiring", () => {
     );
 
     expect(transferKey).not.toEqual(masterKey);
+  });
+});
+
+describe("Argon2id profile invariants", () => {
+  it("MASTER_KEY profile is frozen against runtime mutation", () => {
+    "use strict";
+    expect(() => {
+      (ARGON2ID_PROFILE_MASTER_KEY as { opslimit: number }).opslimit = 99;
+    }).toThrow(TypeError);
+  });
+
+  it("TRANSFER profile is frozen against runtime mutation", () => {
+    "use strict";
+    expect(() => {
+      (ARGON2ID_PROFILE_TRANSFER as { memlimit: number }).memlimit = 1;
+    }).toThrow(TypeError);
+  });
+});
+
+describe("assertArgon2idProfile", () => {
+  it("accepts both shipped profiles", () => {
+    expect(() => {
+      assertArgon2idProfile(ARGON2ID_PROFILE_MASTER_KEY);
+    }).not.toThrow();
+    expect(() => {
+      assertArgon2idProfile(ARGON2ID_PROFILE_TRANSFER);
+    }).not.toThrow();
+  });
+
+  it("rejects null and non-object inputs", () => {
+    expect(() => {
+      assertArgon2idProfile(null);
+    }).toThrow(TypeError);
+    expect(() => {
+      assertArgon2idProfile("profile");
+    }).toThrow(TypeError);
+    expect(() => {
+      assertArgon2idProfile(42);
+    }).toThrow(TypeError);
+  });
+
+  it("rejects profiles with non-integer opslimit", () => {
+    expect(() => {
+      assertArgon2idProfile({ opslimit: 1.5, memlimit: 64 * 1_024 * 1_024 });
+    }).toThrow(TypeError);
+  });
+
+  it("rejects profiles with opslimit < 1", () => {
+    expect(() => {
+      assertArgon2idProfile({ opslimit: 0, memlimit: 64 * 1_024 * 1_024 });
+    }).toThrow(TypeError);
+    expect(() => {
+      assertArgon2idProfile({ opslimit: -1, memlimit: 64 * 1_024 * 1_024 });
+    }).toThrow(TypeError);
+  });
+
+  it("rejects profiles below the OWASP memlimit floor (19 MiB)", () => {
+    expect(() => {
+      assertArgon2idProfile({ opslimit: 3, memlimit: 1024 });
+    }).toThrow(TypeError);
+    expect(() => {
+      assertArgon2idProfile({ opslimit: 3, memlimit: 8 * 1_024 * 1_024 });
+    }).toThrow(TypeError);
+  });
+
+  it("rejects profiles missing required numeric fields", () => {
+    expect(() => {
+      assertArgon2idProfile({ opslimit: 3 });
+    }).toThrow(TypeError);
+    expect(() => {
+      assertArgon2idProfile({ memlimit: 64 * 1_024 * 1_024 });
+    }).toThrow(TypeError);
   });
 });

@@ -1,6 +1,12 @@
 import { KDF_KEY_BYTES } from "../crypto.constants.js";
+import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
-import { encrypt, encryptStream, encryptStreamAsync } from "../symmetric.js";
+import {
+  MAX_DECRYPT_STREAM_BYTES,
+  encrypt,
+  encryptStream,
+  encryptStreamAsync,
+} from "../symmetric.js";
 import { assertAeadKey } from "../validation.js";
 
 import {
@@ -158,6 +164,15 @@ function serializeStreamPayload(payload: ReturnType<typeof encryptStream>): Uint
   // Format: uint32le(chunkCount) || uint32le(totalLength) || for each chunk: uint32le(nonceLen) || nonce || uint32le(ctLen) || ciphertext
   const CHUNK_OVERHEAD = 8; // 4 bytes nonce len + 4 bytes ct len
   const FILE_HEADER = 8; // chunkCount + totalLength
+
+  // Both header fields are u32 on the wire; producing a value that would
+  // overflow them would emit a payload we cannot parse back.
+  if (payload.chunks.length > MAX_DECRYPT_STREAM_BYTES) {
+    throw new InvalidInputError("Encrypted stream chunk count exceeds u32 wire maximum.");
+  }
+  if (payload.totalLength > MAX_DECRYPT_STREAM_BYTES) {
+    throw new InvalidInputError("Encrypted stream total length exceeds u32 wire maximum (4 GiB).");
+  }
 
   let totalSize = FILE_HEADER;
   for (const chunk of payload.chunks) {

@@ -10,9 +10,6 @@ export const U32_SIZE = 4;
 /** Threshold for switching to streaming encryption (64 KiB). */
 export const STREAM_THRESHOLD = 65_536;
 
-/** Maximum number of stream chunks allowed during deserialization. */
-export const MAX_STREAM_CHUNKS = 65_536;
-
 // ── Thumbnail defaults ───────────────────────────────────────────────
 
 /** Default thumbnail maximum width in pixels. */

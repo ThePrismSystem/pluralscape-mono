@@ -7,13 +7,16 @@ import type { AeadKey, AeadNonce } from "./types.js";
  * Minimal shape of a Web Streams `ReadableStream<Uint8Array>`.
  *
  * Defined locally so this package can stay on the `ES2022` lib target without
- * pulling in the full `DOM` typings. Matches the contract the runtime uses:
- * `getReader()` returns a reader with `read()` producing `{ done, value }`
- * chunks and a `releaseLock()` / `cancel()` pair for cleanup.
+ * pulling in the full `DOM` typings. The `read()` result is a discriminated
+ * union so `done: true` cannot coexist with a present `value`, which matches
+ * the Streams spec and removes the optional-value trap at the call site.
  */
 export interface ReadableByteStream {
   getReader(): {
-    read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
+    read(): Promise<
+      | { readonly done: true; readonly value?: undefined }
+      | { readonly done: false; readonly value: Uint8Array }
+    >;
     releaseLock(): void;
     cancel(reason?: unknown): Promise<void>;
   };
@@ -46,6 +49,32 @@ export interface StreamEncryptedPayload {
 }
 
 const DEFAULT_CHUNK_SIZE = 65536; // 64 KiB
+
+/**
+ * Upper bound on a stream payload's declared totalLength in bytes.
+ *
+ * Matches the `u32` width of the on-wire serializer (blob-pipeline), so a
+ * header that exceeds this value could not have been produced by our
+ * encryptor and is treated as an attack.
+ */
+export const MAX_DECRYPT_STREAM_BYTES = 0xffffffff;
+
+/**
+ * Upper bound on a single plaintext chunk after re-chunking, in bytes (16 MiB).
+ *
+ * Used only by `decryptStream`'s cross-check: `totalLength` must not exceed
+ * `chunks.length * MAX_PLAINTEXT_CHUNK_BYTES`, so an attacker cannot submit a
+ * one-chunk payload with a multi-GiB `totalLength` to force a huge allocation.
+ */
+export const MAX_PLAINTEXT_CHUNK_BYTES = 16_777_216;
+
+/**
+ * Upper bound on the number of chunks in a stream payload.
+ *
+ * 65_536 chunks × 16 MiB plaintext/chunk ≈ 1 TiB — far above any legitimate
+ * blob size, but far below what an attacker could use to exhaust memory.
+ */
+export const MAX_STREAM_CHUNKS = 65_536;
 
 /** Encrypt plaintext with XChaCha20-Poly1305 AEAD. */
 export function encrypt(plaintext: Uint8Array, key: AeadKey, aad?: Uint8Array): EncryptedPayload {
@@ -102,48 +131,35 @@ function buildChunkAad(chunkIndex: number, totalChunks: number): Uint8Array {
 /**
  * Type guard for `ReadableByteStream`.
  *
- * Narrow check: the argument exposes a callable `getReader` method. This matches
- * both the DOM `ReadableStream<Uint8Array>` and Node's web-streams variant without
- * importing the DOM `lib`.
+ * Narrow check: the argument exposes a callable `getReader` method. The
+ * `"getReader" in input` check narrows `input` to an object with an unknown
+ * `getReader` field, so no additional cast is required.
  */
 function isReadableByteStream(input: unknown): input is ReadableByteStream {
   return (
     typeof input === "object" &&
     input !== null &&
     "getReader" in input &&
-    typeof (input as { getReader: unknown }).getReader === "function"
+    typeof input.getReader === "function"
   );
 }
 
 /**
- * Normalize any accepted {@link StreamInput} into an `AsyncIterable<Uint8Array>`.
+ * Normalize a streaming source into an `AsyncIterable<Uint8Array>`.
  *
- * - `Uint8Array`           → yields exactly once with the buffer unchanged.
- * - `ReadableByteStream`   → drains the reader; releases the lock on completion or error.
+ * - `ReadableByteStream`   → drains the reader; releases the lock on normal
+ *                            completion, and cancels the reader on error or
+ *                            early termination so the upstream producer
+ *                            (fetch body, file handle, ...) can free buffers.
  * - `AsyncIterable`        → returned as-is.
  *
- * This is the single adapter the encryption path consumes; callers never pay for
- * re-materializing the entire input as a contiguous buffer.
+ * `Uint8Array` inputs are handled by the `encryptStreamAsync` fast path
+ * before this helper is called, so the helper only deals with genuinely
+ * streaming inputs.
  */
-export function toAsyncIterable(input: StreamInput): AsyncIterable<Uint8Array> {
-  if (input instanceof Uint8Array) {
-    // Synthesise a single-shot async iterable without an async generator — the
-    // `require-await` lint would flag a generator with no `await`, and Promise.resolve
-    // keeps the iterator protocol async.
-    const buf = input;
-    return {
-      [Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
-        let yielded = false;
-        return {
-          next(): Promise<IteratorResult<Uint8Array>> {
-            if (yielded) return Promise.resolve({ done: true, value: undefined });
-            yielded = true;
-            return Promise.resolve({ done: false, value: buf });
-          },
-        };
-      },
-    };
-  }
+export function toAsyncIterable(
+  input: ReadableByteStream | AsyncIterable<Uint8Array>,
+): AsyncIterable<Uint8Array> {
   if (isReadableByteStream(input)) {
     return readerIterable(input);
   }
@@ -152,25 +168,42 @@ export function toAsyncIterable(input: StreamInput): AsyncIterable<Uint8Array> {
 
 async function* readerIterable(stream: ReadableByteStream): AsyncIterable<Uint8Array> {
   const reader = stream.getReader();
+  let normalCompletion = false;
   try {
     for (;;) {
-      const { done, value } = await reader.read();
-      if (done) return;
-      if (value !== undefined && value.byteLength > 0) yield value;
+      const result = await reader.read();
+      if (result.done) {
+        normalCompletion = true;
+        return;
+      }
+      if (result.value.byteLength > 0) yield result.value;
     }
   } finally {
+    if (!normalCompletion) {
+      // Signal the upstream producer that we abandoned the read so it can
+      // release any pending buffers. Suppress any cancel rejection — we are
+      // already unwinding a prior failure and must not mask it.
+      await reader.cancel().catch((): void => undefined);
+    }
     reader.releaseLock();
   }
 }
 
 /**
  * Consume an async iterable and re-chunk the byte stream into uniformly sized
- * plaintext slices. Bytes are copied into newly allocated `Uint8Array` chunks
- * so the caller cannot mutate them after we compute AAD.
+ * plaintext slices.
+ *
+ * Completed chunks are freshly allocated `Uint8Array`s (the source cannot
+ * mutate them after we compute AAD). The final partial chunk is a
+ * `buffer.subarray(...)` view aliasing `buffer`, so no extra allocation is
+ * made for it.
+ *
+ * On any error thrown by the source or by copying, every collected chunk —
+ * plus the in-flight `buffer` — is memzero'd before the error is re-thrown,
+ * so no plaintext outlives the aborted call.
  *
  * The final chunk may be shorter than `chunkSize`. Returns at least one chunk
- * (possibly empty) to match the pre-existing `encryptStream` semantics for
- * empty input.
+ * (possibly empty) to match `encryptStream`'s semantics for empty input.
  */
 async function collectPlaintextChunks(
   source: AsyncIterable<Uint8Array>,
@@ -180,24 +213,31 @@ async function collectPlaintextChunks(
   let buffer = new Uint8Array(chunkSize);
   let filled = 0;
 
-  for await (const part of source) {
-    let offset = 0;
-    while (offset < part.byteLength) {
-      const spaceInBuffer = chunkSize - filled;
-      const bytesToCopy = Math.min(spaceInBuffer, part.byteLength - offset);
-      buffer.set(part.subarray(offset, offset + bytesToCopy), filled);
-      filled += bytesToCopy;
-      offset += bytesToCopy;
-      if (filled === chunkSize) {
-        chunks.push(buffer);
-        buffer = new Uint8Array(chunkSize);
-        filled = 0;
+  try {
+    for await (const part of source) {
+      let offset = 0;
+      while (offset < part.byteLength) {
+        const spaceInBuffer = chunkSize - filled;
+        const bytesToCopy = Math.min(spaceInBuffer, part.byteLength - offset);
+        buffer.set(part.subarray(offset, offset + bytesToCopy), filled);
+        filled += bytesToCopy;
+        offset += bytesToCopy;
+        if (filled === chunkSize) {
+          chunks.push(buffer);
+          buffer = new Uint8Array(chunkSize);
+          filled = 0;
+        }
       }
     }
+    if (filled > 0) chunks.push(buffer.subarray(0, filled));
+    if (chunks.length === 0) chunks.push(new Uint8Array(0));
+    return chunks;
+  } catch (error: unknown) {
+    const adapter = getSodium();
+    for (const chunk of chunks) adapter.memzero(chunk);
+    adapter.memzero(buffer);
+    throw error;
   }
-  if (filled > 0) chunks.push(buffer.subarray(0, filled));
-  if (chunks.length === 0) chunks.push(new Uint8Array(0));
-  return chunks;
 }
 
 /**
@@ -216,18 +256,18 @@ export function encryptStream(
   if (chunkSize <= 0) {
     throw new InvalidInputError("Chunk size must be a positive integer.");
   }
-  const totalChunks = Math.max(1, Math.ceil(plaintext.length / chunkSize));
+  const totalChunks = Math.max(1, Math.ceil(plaintext.byteLength / chunkSize));
   const chunks: EncryptedPayload[] = [];
 
   for (let i = 0; i < totalChunks; i++) {
     const start = i * chunkSize;
-    const end = Math.min(start + chunkSize, plaintext.length);
+    const end = Math.min(start + chunkSize, plaintext.byteLength);
     const chunk = plaintext.subarray(start, end);
     const aad = buildChunkAad(i, totalChunks);
     chunks.push(encrypt(chunk, key, aad));
   }
 
-  return { chunks, totalLength: plaintext.length };
+  return { chunks, totalLength: plaintext.byteLength };
 }
 
 /**
@@ -245,6 +285,10 @@ export function encryptStream(
  * function emits the full `StreamEncryptedPayload` at the end, not
  * per-ciphertext-chunk. Backpressure is still honoured on the input side — we
  * never pull from the source faster than AEAD can consume.
+ *
+ * Plaintext chunks are memzero'd once their ciphertext is produced (both
+ * success and error paths), so plaintext does not outlive the ciphertext it
+ * produced.
  */
 export async function encryptStreamAsync(
   input: StreamInput,
@@ -261,19 +305,17 @@ export async function encryptStreamAsync(
   }
 
   const plaintextChunks = await collectPlaintextChunks(toAsyncIterable(input), chunkSize);
-  const totalChunks = plaintextChunks.length;
-  const encryptedChunks: EncryptedPayload[] = [];
-  let totalLength = 0;
-
-  for (let i = 0; i < totalChunks; i++) {
-    const plain = plaintextChunks[i];
-    if (!plain) throw new InvalidInputError("Unexpected missing plaintext chunk.");
-    const aad = buildChunkAad(i, totalChunks);
-    encryptedChunks.push(encrypt(plain, key, aad));
-    totalLength += plain.byteLength;
+  const adapter = getSodium();
+  try {
+    const totalChunks = plaintextChunks.length;
+    const encryptedChunks = plaintextChunks.map((plain, i) =>
+      encrypt(plain, key, buildChunkAad(i, totalChunks)),
+    );
+    const totalLength = plaintextChunks.reduce((n, p) => n + p.byteLength, 0);
+    return { chunks: encryptedChunks, totalLength };
+  } finally {
+    for (const chunk of plaintextChunks) adapter.memzero(chunk);
   }
-
-  return { chunks: encryptedChunks, totalLength };
 }
 
 /**
@@ -282,25 +324,56 @@ export async function encryptStreamAsync(
  *
  * The output `Uint8Array` is pre-allocated to `payload.totalLength` and each
  * decrypted chunk is written at its running offset — no intermediate
- * array-of-parts, no second-pass concat. This halves the peak memory for a
- * large-blob decrypt (previously: decrypted parts array + final buffer both
- * resident; now: final buffer only).
+ * array-of-parts, no second-pass concat.
+ *
+ * Before allocation, three impossible-payload guards reject malicious headers:
+ *   1. `totalLength` is a non-negative integer no larger than
+ *      `MAX_DECRYPT_STREAM_BYTES` (the on-wire `u32` maximum).
+ *   2. `chunks.length` does not exceed `MAX_STREAM_CHUNKS`.
+ *   3. `totalLength` does not exceed `chunks.length * MAX_PLAINTEXT_CHUNK_BYTES`
+ *      — rejects small-chunk / huge-length headers that would force a
+ *      multi-GiB allocation.
  *
  * If `totalLength` is tampered to exceed the true sum, the post-loop offset
  * check throws. If it is tampered to be smaller than a mid-loop write, the
- * write is bounds-checked against the allocation and throws immediately via
- * `Uint8Array.prototype.set`.
+ * bounds check throws immediately before `Uint8Array.prototype.set`.
  */
 export function decryptStream(payload: StreamEncryptedPayload, key: AeadKey): Uint8Array {
   const totalChunks = payload.chunks.length;
   const totalLength = payload.totalLength;
 
-  // Guard: totalLength must be a non-negative finite integer — Uint8Array
-  // would happily allocate NaN bytes (zero) or throw on negatives, but an
-  // explicit check produces a better error.
   if (!Number.isInteger(totalLength) || totalLength < 0) {
     throw new DecryptionFailedError(
       "Stream payload has invalid totalLength: " + String(totalLength),
+    );
+  }
+  if (totalLength > MAX_DECRYPT_STREAM_BYTES) {
+    throw new DecryptionFailedError(
+      "Stream payload totalLength " +
+        String(totalLength) +
+        " exceeds supported maximum of " +
+        String(MAX_DECRYPT_STREAM_BYTES) +
+        " bytes.",
+    );
+  }
+  if (totalChunks > MAX_STREAM_CHUNKS) {
+    throw new DecryptionFailedError(
+      "Stream payload chunk count " +
+        String(totalChunks) +
+        " exceeds supported maximum of " +
+        String(MAX_STREAM_CHUNKS) +
+        ".",
+    );
+  }
+  if (totalLength > totalChunks * MAX_PLAINTEXT_CHUNK_BYTES) {
+    throw new DecryptionFailedError(
+      "Stream payload totalLength " +
+        String(totalLength) +
+        " exceeds what " +
+        String(totalChunks) +
+        " chunks can carry (" +
+        String(MAX_PLAINTEXT_CHUNK_BYTES) +
+        " bytes per chunk).",
     );
   }
 

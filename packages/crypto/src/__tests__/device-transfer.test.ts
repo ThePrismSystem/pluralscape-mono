@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PWHASH_SALT_BYTES } from "../crypto.constants.js";
 import {
+  QR_PAYLOAD_VERSION,
   decodeQRPayload,
   decryptFromTransfer,
   deriveTransferKey,
@@ -136,11 +137,18 @@ describe("encodeQRPayload / decodeQRPayload", () => {
   it("encoded QR payload does not embed the verification code", () => {
     const init = generateTransferCode();
     const encoded = encodeQRPayload(init);
-    const parsed = JSON.parse(encoded) as Record<string, unknown>;
+    const parsed = JSON.parse(encoded) as { readonly version?: unknown };
     expect(parsed).not.toHaveProperty("code");
     expect(parsed).not.toHaveProperty("verificationCode");
     // Defense-in-depth: also assert the literal digit sequence is absent
     expect(encoded).not.toContain(init.verificationCode);
+  });
+
+  it("encoded QR payload includes schema version", () => {
+    const init = generateTransferCode();
+    const encoded = encodeQRPayload(init);
+    const parsed = JSON.parse(encoded) as { readonly version?: unknown };
+    expect(parsed.version).toBe(QR_PAYLOAD_VERSION);
   });
 
   it("decoded QR payload has no `code` property (compile-time + runtime)", () => {
@@ -153,38 +161,69 @@ describe("encodeQRPayload / decodeQRPayload", () => {
     expect(() => decodeQRPayload("not json at all")).toThrow(InvalidInputError);
   });
 
+  it("missing version field throws InvalidInputError", () => {
+    const payload = JSON.stringify({ requestId: "uuid", salt: toHex(new Uint8Array(16)) });
+    expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
+  });
+
+  it("wrong version (pre-v2 implicit version 1) throws InvalidInputError", () => {
+    const payload = JSON.stringify({
+      version: 1,
+      requestId: "uuid",
+      salt: toHex(new Uint8Array(16)),
+    });
+    expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
+  });
+
   it("missing requestId field throws InvalidInputError", () => {
-    const payload = JSON.stringify({ salt: "AAAA" });
+    const payload = JSON.stringify({ version: QR_PAYLOAD_VERSION, salt: "AAAA" });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
 
   it("missing salt field throws InvalidInputError", () => {
-    const payload = JSON.stringify({ requestId: "uuid" });
+    const payload = JSON.stringify({ version: QR_PAYLOAD_VERSION, requestId: "uuid" });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
 
   it("invalid hex in salt throws InvalidInputError", () => {
-    const payload = JSON.stringify({ requestId: "uuid", salt: "ZZZZ" });
+    const payload = JSON.stringify({
+      version: QR_PAYLOAD_VERSION,
+      requestId: "uuid",
+      salt: "ZZZZ",
+    });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
 
   it("wrong-length salt hex throws InvalidInputError", () => {
     // 4 hex chars = 2 bytes, not the required 16
-    const payload = JSON.stringify({ requestId: "uuid", salt: "aabb" });
+    const payload = JSON.stringify({
+      version: QR_PAYLOAD_VERSION,
+      requestId: "uuid",
+      salt: "aabb",
+    });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
 
-  it("ignores legacy `code` field if present (forward-compat for old clients)", () => {
-    // An older source device encoding the code should not leak into DecodedQRPayload.
+  it("rejects payloads carrying a legacy `code` field", () => {
     const init = generateTransferCode();
     const legacy = JSON.stringify({
+      version: QR_PAYLOAD_VERSION,
       requestId: init.requestId,
       code: init.verificationCode,
       salt: toHex(init.codeSalt),
     });
-    const decoded = decodeQRPayload(legacy);
-    expect(Object.hasOwn(decoded, "code")).toBe(false);
-    expect(decoded.requestId).toBe(init.requestId);
+    expect(() => decodeQRPayload(legacy)).toThrow(InvalidInputError);
+  });
+
+  it("rejects payloads larger than 1 KiB without invoking JSON.parse", () => {
+    const padding = "x".repeat(2000);
+    const huge = JSON.stringify({
+      version: QR_PAYLOAD_VERSION,
+      requestId: "uuid",
+      salt: toHex(new Uint8Array(16)),
+      extra: padding,
+    });
+    expect(() => decodeQRPayload(huge)).toThrow(InvalidInputError);
   });
 });
 

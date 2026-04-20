@@ -7,6 +7,7 @@ import {
   PASSWORD_KEY_BYTES,
   RECOVERY_KEY_HASH_BYTES,
   SPLIT_KEY_BYTES,
+  assertArgon2idProfile,
 } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
@@ -59,6 +60,7 @@ export function deriveAuthAndPasswordKeys(
   }
 
   const adapter = getSodium();
+  assertArgon2idProfile(ARGON2ID_PROFILE_MASTER_KEY);
   const derived = adapter.pwhash(
     SPLIT_KEY_BYTES,
     password,

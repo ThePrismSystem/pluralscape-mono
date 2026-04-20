@@ -1,11 +1,11 @@
 import { brandId } from "@pluralscape/types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { WasmSodiumAdapter } from "../../adapter/wasm-adapter.js";
 import { decryptBlob } from "../../blob-pipeline/decrypt-blob.js";
 import { encryptBlob, encryptBlobStream } from "../../blob-pipeline/encrypt-blob.js";
 import { DecryptionFailedError } from "../../errors.js";
-import { _resetForTesting, configureSodium, initSodium } from "../../sodium.js";
+import { getSodium } from "../../sodium.js";
+import { setupSodium, teardownSodium } from "../helpers/setup-sodium.js";
 
 import type { SodiumAdapter } from "../../adapter/interface.js";
 import type { AeadKey, KdfMasterKey } from "../../types.js";
@@ -16,16 +16,14 @@ let masterKey: KdfMasterKey;
 let bucketKey: AeadKey;
 
 beforeAll(async () => {
-  _resetForTesting();
-  adapter = new WasmSodiumAdapter();
-  configureSodium(adapter);
-  await initSodium();
+  await setupSodium();
+  adapter = getSodium();
   masterKey = adapter.kdfKeygen();
   bucketKey = adapter.aeadKeygen();
 });
 
 afterAll(() => {
-  _resetForTesting();
+  teardownSodium();
 });
 
 describe("encryptBlob / decryptBlob", () => {
@@ -148,15 +146,18 @@ describe("encryptBlob / decryptBlob", () => {
         plaintext.subarray(100, STREAM_THRESHOLD),
         plaintext.subarray(STREAM_THRESHOLD),
       ];
+      type ReadResult =
+        | { readonly done: true; readonly value?: undefined }
+        | { readonly done: false; readonly value: Uint8Array };
       let cursor = 0;
       const stream = {
         getReader(): {
-          read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
+          read(): Promise<ReadResult>;
           releaseLock(): void;
           cancel(): Promise<void>;
         } {
           return {
-            read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }> {
+            read(): Promise<ReadResult> {
               const value = parts[cursor];
               if (cursor >= parts.length || value === undefined) {
                 return Promise.resolve({ done: true, value: undefined });
@@ -205,6 +206,24 @@ describe("encryptBlob / decryptBlob", () => {
       });
       expect(decrypted).toEqual(plaintext);
     });
+
+    it(
+      "T1: round-trips a Uint8Array above the stream threshold via encryptBlobStream",
+      { timeout: 15_000 },
+      async () => {
+        const plaintext = new Uint8Array(STREAM_THRESHOLD + 4096).fill(0xcd);
+        const result = await encryptBlobStream({ data: plaintext, tier: 1, masterKey });
+
+        expect(result.metadata.streamed).toBe(true);
+        const decrypted = decryptBlob({
+          encryptedData: result.encryptedData,
+          metadata: result.metadata,
+          tier: 1,
+          masterKey,
+        });
+        expect(decrypted).toEqual(plaintext);
+      },
+    );
   });
 
   describe("wrong key failure", () => {

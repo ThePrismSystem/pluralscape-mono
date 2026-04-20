@@ -1,4 +1,4 @@
-import { ARGON2ID_PROFILE_MASTER_KEY } from "./crypto.constants.js";
+import { ARGON2ID_PROFILE_MASTER_KEY, assertArgon2idProfile } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 
@@ -21,6 +21,7 @@ export function hashPin(pin: string): string {
     throw new InvalidInputError(`PIN must be at least ${String(MIN_PIN_LENGTH)} characters.`);
   }
   const adapter = getSodium();
+  assertArgon2idProfile(ARGON2ID_PROFILE_MASTER_KEY);
   const pinBytes = new TextEncoder().encode(pin);
   try {
     return adapter.pwhashStr(

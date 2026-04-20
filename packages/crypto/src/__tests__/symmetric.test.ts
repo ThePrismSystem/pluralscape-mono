@@ -1,10 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import { AEAD_NONCE_BYTES } from "../crypto.constants.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
-import { _resetForTesting, configureSodium, initSodium, getSodium } from "../sodium.js";
+import { getSodium } from "../sodium.js";
 import {
+  MAX_DECRYPT_STREAM_BYTES,
+  MAX_PLAINTEXT_CHUNK_BYTES,
+  MAX_STREAM_CHUNKS,
   encrypt,
   decrypt,
   encryptJSON,
@@ -13,6 +15,8 @@ import {
   encryptStreamAsync,
   decryptStream,
 } from "../symmetric.js";
+
+import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";
 import type { EncryptedPayload } from "../symmetric.js";
@@ -25,15 +29,13 @@ let key: AeadKey;
 let adapter: SodiumAdapter;
 
 beforeAll(async () => {
-  _resetForTesting();
-  adapter = new WasmSodiumAdapter();
-  configureSodium(adapter);
-  await initSodium();
-  key = getSodium().aeadKeygen();
+  await setupSodium();
+  adapter = getSodium();
+  key = adapter.aeadKeygen();
 });
 
 afterAll(() => {
-  _resetForTesting();
+  teardownSodium();
 });
 
 describe("encrypt/decrypt", () => {
@@ -349,15 +351,18 @@ describe("encryptStreamAsync", () => {
       plaintext.subarray(10, CHUNK),
       plaintext.subarray(CHUNK),
     ];
+    type ReadResult =
+      | { readonly done: true; readonly value?: undefined }
+      | { readonly done: false; readonly value: Uint8Array };
     let cursor = 0;
     const stream = {
       getReader(): {
-        read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }>;
+        read(): Promise<ReadResult>;
         releaseLock(): void;
         cancel(): Promise<void>;
       } {
         return {
-          read(): Promise<{ readonly done: boolean; readonly value?: Uint8Array }> {
+          read(): Promise<ReadResult> {
             const value = parts[cursor];
             if (cursor >= parts.length || value === undefined) {
               return Promise.resolve({ done: true, value: undefined });
@@ -481,5 +486,191 @@ describe("decryptStream output pre-allocation (crypto-tirn)", () => {
     expect(() => decryptStream({ chunks: payload.chunks, totalLength: 100 }, key)).toThrow(
       DecryptionFailedError,
     );
+  });
+});
+
+describe("decryptStream impossible-payload guards", () => {
+  it("rejects a totalLength above MAX_DECRYPT_STREAM_BYTES before allocating", () => {
+    const plaintext = encoder.encode("small");
+    const payload = encryptStream(plaintext, key, 64);
+    expect(() =>
+      decryptStream({ chunks: payload.chunks, totalLength: MAX_DECRYPT_STREAM_BYTES + 1 }, key),
+    ).toThrow(DecryptionFailedError);
+  });
+
+  it("rejects a chunk count above MAX_STREAM_CHUNKS", () => {
+    const overflowChunks = Array.from(
+      { length: MAX_STREAM_CHUNKS + 1 },
+      (): EncryptedPayload => ({
+        ciphertext: new Uint8Array(0),
+        nonce: adapter.randomBytes(AEAD_NONCE_BYTES) as EncryptedPayload["nonce"],
+      }),
+    );
+    expect(() => decryptStream({ chunks: overflowChunks, totalLength: 1 }, key)).toThrow(
+      DecryptionFailedError,
+    );
+  });
+
+  it("rejects totalLength > chunks * MAX_PLAINTEXT_CHUNK_BYTES (cross-check)", () => {
+    const plaintext = encoder.encode("small");
+    const payload = encryptStream(plaintext, key, 64);
+    // One chunk cannot legitimately carry more than MAX_PLAINTEXT_CHUNK_BYTES;
+    // declaring otherwise is an attacker submitting a huge totalLength with a
+    // tiny chunk list.
+    const totalLength = MAX_PLAINTEXT_CHUNK_BYTES * payload.chunks.length + 1;
+    expect(() => decryptStream({ chunks: payload.chunks, totalLength }, key)).toThrow(
+      DecryptionFailedError,
+    );
+  });
+});
+
+describe("encryptStreamAsync cleanup paths", () => {
+  it("memzeros plaintext chunks after a successful encryption", async () => {
+    const plaintext = new Uint8Array(200);
+    plaintext.set(adapter.randomBytes(plaintext.length));
+    const source: AsyncIterable<Uint8Array> = {
+      [Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+        let yielded = false;
+        return {
+          next(): Promise<IteratorResult<Uint8Array>> {
+            if (yielded) return Promise.resolve({ done: true, value: undefined });
+            yielded = true;
+            return Promise.resolve({ done: false, value: plaintext });
+          },
+        };
+      },
+    };
+
+    const memzeroSpy = vi.spyOn(getSodium(), "memzero");
+    try {
+      await encryptStreamAsync(source, key, 64);
+      // Each chunk is memzero'd at least once after the encryption.
+      expect(memzeroSpy).toHaveBeenCalled();
+    } finally {
+      memzeroSpy.mockRestore();
+    }
+  });
+
+  it("memzeros plaintext buffers when the source throws", async () => {
+    const failure = new Error("producer boom");
+    const source: AsyncIterable<Uint8Array> = {
+      [Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+        let step = 0;
+        return {
+          next(): Promise<IteratorResult<Uint8Array>> {
+            step += 1;
+            if (step === 1) {
+              return Promise.resolve({ done: false, value: new Uint8Array(32) });
+            }
+            return Promise.reject(failure);
+          },
+        };
+      },
+    };
+
+    const memzeroSpy = vi.spyOn(getSodium(), "memzero");
+    try {
+      await expect(encryptStreamAsync(source, key, 64)).rejects.toBe(failure);
+      // The collected chunk + the in-flight buffer are both memzero'd.
+      expect(memzeroSpy).toHaveBeenCalled();
+    } finally {
+      memzeroSpy.mockRestore();
+    }
+  });
+
+  it("cancels the underlying reader when the consumer errors", async () => {
+    const plaintext = new Uint8Array(200);
+    plaintext.set(adapter.randomBytes(plaintext.length));
+    let cancelled = false;
+    const boom = new Error("downstream boom");
+
+    // The first read returns a chunk; the second read throws, simulating an
+    // upstream failure after the reader has been locked.
+    let step = 0;
+    type ReadResult =
+      | { readonly done: true; readonly value?: undefined }
+      | { readonly done: false; readonly value: Uint8Array };
+    const stream = {
+      getReader(): {
+        read(): Promise<ReadResult>;
+        releaseLock(): void;
+        cancel(): Promise<void>;
+      } {
+        return {
+          read(): Promise<ReadResult> {
+            step += 1;
+            if (step === 1) return Promise.resolve({ done: false, value: plaintext });
+            return Promise.reject(boom);
+          },
+          releaseLock(): void {
+            /* noop */
+          },
+          cancel(): Promise<void> {
+            cancelled = true;
+            return Promise.resolve();
+          },
+        };
+      },
+    };
+
+    await expect(encryptStreamAsync(stream, key, 64)).rejects.toBe(boom);
+    expect(cancelled).toBe(true);
+  });
+
+  it("handles a single tail chunk below chunkSize (filled > 0 path)", async () => {
+    const plaintext = encoder.encode("tail");
+    const source: AsyncIterable<Uint8Array> = {
+      [Symbol.asyncIterator](): AsyncIterator<Uint8Array> {
+        let yielded = false;
+        return {
+          next(): Promise<IteratorResult<Uint8Array>> {
+            if (yielded) return Promise.resolve({ done: true, value: undefined });
+            yielded = true;
+            return Promise.resolve({ done: false, value: plaintext });
+          },
+        };
+      },
+    };
+
+    const payload = await encryptStreamAsync(source, key, 64);
+    expect(payload.totalLength).toBe(plaintext.byteLength);
+    expect(decryptStream(payload, key)).toEqual(plaintext);
+  });
+
+  it("skips zero-length chunks yielded by a ReadableByteStream", async () => {
+    const plaintext = encoder.encode("valid bytes only");
+    const parts: readonly Uint8Array[] = [new Uint8Array(0), plaintext];
+    let cursor = 0;
+    type ReadResult =
+      | { readonly done: true; readonly value?: undefined }
+      | { readonly done: false; readonly value: Uint8Array };
+    const stream = {
+      getReader(): {
+        read(): Promise<ReadResult>;
+        releaseLock(): void;
+        cancel(): Promise<void>;
+      } {
+        return {
+          read(): Promise<ReadResult> {
+            const value = parts[cursor];
+            if (cursor >= parts.length || value === undefined) {
+              return Promise.resolve({ done: true, value: undefined });
+            }
+            cursor += 1;
+            return Promise.resolve({ done: false, value });
+          },
+          releaseLock(): void {
+            /* noop */
+          },
+          cancel(): Promise<void> {
+            return Promise.resolve();
+          },
+        };
+      },
+    };
+
+    const payload = await encryptStreamAsync(stream, key, 64);
+    expect(payload.totalLength).toBe(plaintext.byteLength);
+    expect(decryptStream(payload, key)).toEqual(plaintext);
   });
 });
