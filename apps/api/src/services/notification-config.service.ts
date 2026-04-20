@@ -13,6 +13,7 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AuditEventType,
+  FriendNotificationEventType,
   NotificationConfigId,
   NotificationEventType,
   SystemId,
@@ -24,6 +25,21 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Audit event: notification config was updated. */
 const AUDIT_CONFIG_UPDATED: AuditEventType = "notification-config.updated";
+
+/**
+ * The only {@link NotificationEventType} currently surfaced through the
+ * switch-alert dispatcher cache. Narrowing against this set avoids
+ * invalidating keys the dispatcher never stores.
+ */
+const FRIEND_NOTIFICATION_EVENT_TYPES: readonly FriendNotificationEventType[] = [
+  "friend-switch-alert",
+];
+
+function isFriendNotificationEventType(
+  eventType: NotificationEventType,
+): eventType is FriendNotificationEventType {
+  return (FRIEND_NOTIFICATION_EVENT_TYPES as readonly NotificationEventType[]).includes(eventType);
+}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -198,7 +214,9 @@ export async function updateNotificationConfig(
     return toNotificationConfigResult(updated);
   });
 
-  invalidateSwitchAlertConfigCache(systemId, eventType);
+  if (isFriendNotificationEventType(eventType)) {
+    invalidateSwitchAlertConfigCache(systemId, eventType);
+  }
   return result;
 }
 

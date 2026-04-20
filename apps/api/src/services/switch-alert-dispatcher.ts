@@ -52,7 +52,7 @@ const notificationConfigCache = new QueryCache<CachedNotificationConfig | null>(
 );
 
 /** Invalidation key derived from the tenant + event-type tuple. */
-function cacheKey(systemId: SystemId, eventType: string): string {
+function cacheKey(systemId: SystemId, eventType: FriendNotificationEventType): string {
   return `${systemId}:${eventType}`;
 }
 
@@ -61,11 +61,15 @@ function cacheKey(systemId: SystemId, eventType: string): string {
  *
  * Call from any mutation path that changes `notificationConfigs` rows so
  * operator toggles take effect within a single dispatch rather than
- * lingering for up to the TTL window. Accepts a plain string eventType so
- * the call site doesn't have to narrow against `FriendNotificationEventType`
- * — unrelated event types simply miss the cache harmlessly.
+ * lingering for up to the TTL window. Only caches keyed by
+ * `FriendNotificationEventType` live in this map; passing an unrelated
+ * event type would miss harmlessly but the narrowed signature rules it out
+ * at the type system.
  */
-export function invalidateSwitchAlertConfigCache(systemId: SystemId, eventType: string): void {
+export function invalidateSwitchAlertConfigCache(
+  systemId: SystemId,
+  eventType: FriendNotificationEventType,
+): void {
   notificationConfigCache.invalidate(cacheKey(systemId, eventType));
 }
 
