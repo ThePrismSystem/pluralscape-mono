@@ -43,11 +43,14 @@ function assertBaseUrlIsSafe(baseUrl: string): void {
   let parsed: URL;
   try {
     parsed = new URL(baseUrl);
-  } catch {
-    throw new Error(`PK import: baseUrl is not a valid URL: ${baseUrl}`);
+  } catch (cause) {
+    throw new Error(`PK import: baseUrl is not a valid URL: ${baseUrl}`, { cause });
   }
+  // `URL.hostname` preserves the `[...]` brackets for IPv6 literals (e.g.
+  // `[::1]`). Strip them so the bare address compares against LOOPBACK_HOSTS.
+  const host = parsed.hostname.replace(/^\[|\]$/g, "");
   if (parsed.protocol === "https:") return;
-  if (parsed.protocol === "http:" && LOOPBACK_HOSTS.has(parsed.hostname)) return;
+  if (parsed.protocol === "http:" && LOOPBACK_HOSTS.has(host)) return;
   throw new Error(
     `PK import: refusing to send API token to a non-HTTPS baseUrl (${baseUrl}). ` +
       `Use https:// for remote hosts; http:// is only permitted for loopback (localhost, 127.0.0.1, ::1).`,
@@ -59,9 +62,14 @@ function assertBaseUrlIsSafe(baseUrl: string): void {
  * sends empty/whitespace tokens and surfaces a server 401 only after a round
  * trip — which leaves a blank Authorization header on the wire. This guard
  * short-circuits at the source boundary.
+ *
+ * Note: the guard rejects empty-or-whitespace-only tokens but preserves any
+ * surrounding whitespace on an otherwise-valid token. Tokens are opaque
+ * secrets; silently trimming them is surprising and can mask copy-paste bugs
+ * that the caller should see as a 401 rather than a silent rewrite.
  */
 function assertTokenIsSane(token: string): void {
-  if (typeof token !== "string" || token.trim().length === 0) {
+  if (token.trim().length === 0) {
     throw new Error("PK import: token must be a non-empty string");
   }
 }

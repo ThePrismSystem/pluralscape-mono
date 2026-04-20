@@ -4,20 +4,17 @@ import { APIError } from "pkapi.js";
 import type { ClassifyContext } from "@pluralscape/import-core";
 import type { ImportError } from "@pluralscape/types";
 
-/** HTTP 401 Unauthorized — bearer token missing or invalid. Fatal: no retry helps. */
+/** 401 Unauthorized / 403 Forbidden — fatal: no retry helps. */
 const HTTP_UNAUTHORIZED = 401;
-/** HTTP 403 Forbidden — token lacks permission. Fatal: no retry helps. */
 const HTTP_FORBIDDEN = 403;
-/** HTTP 404 Not Found — may be transient when the engine is mid-sync. Non-fatal. */
+/** 404 may resolve mid-sync as the engine completes prerequisite steps. */
 const HTTP_NOT_FOUND = 404;
-/** HTTP 429 Too Many Requests — PK is rate-limiting us. Non-fatal. */
+/** 429 — rate-limit, retry with backoff. */
 const HTTP_RATE_LIMITED = 429;
 /** Lower bound of the HTTP 5xx server-error range (inclusive). */
 const HTTP_SERVER_ERROR_MIN = 500;
 /** Upper bound of the HTTP 5xx server-error range (exclusive — next family starts at 600). */
 const HTTP_SERVER_ERROR_MAX_EXCLUSIVE = 600;
-/** Base for parseInt() on HTTP status codes. */
-const DECIMAL_RADIX = 10;
 
 /**
  * Normalise a pkapi.js `APIError.status` to a fixed numeric | undefined shape.
@@ -33,23 +30,40 @@ function normaliseStatus(raw: unknown): number | undefined {
     return Number.isFinite(raw) ? raw : undefined;
   }
   if (typeof raw === "string") {
-    const parsed = Number.parseInt(raw, DECIMAL_RADIX);
+    const parsed = Number.parseInt(raw, 10);
     return Number.isFinite(parsed) ? parsed : undefined;
   }
   return undefined;
 }
 
-function isServerError(status: number): boolean {
+/**
+ * A status the engine should retry rather than surface as fatal: 429 (rate
+ * limit), 404 (may resolve when the engine finishes a prior step), and any
+ * 5xx (transient server-side failure).
+ */
+function isRetryableHttpStatus(status: number | undefined): boolean {
+  if (status === undefined) return false;
+  if (status === HTTP_RATE_LIMITED || status === HTTP_NOT_FOUND) return true;
   return status >= HTTP_SERVER_ERROR_MIN && status < HTTP_SERVER_ERROR_MAX_EXCLUSIVE;
+}
+
+/**
+ * Build a stable suffix for the error message without coercing non-primitive
+ * `thrown.status` shapes (arrays, objects) via String(). Falls back to `???`
+ * rather than producing `[object Object]`.
+ */
+function formatStatusSuffix(normalised: number | undefined, raw: unknown): string {
+  if (normalised !== undefined) return String(normalised);
+  if (typeof raw === "string" || typeof raw === "number") return String(raw);
+  return "???";
 }
 
 export function classifyPkError(thrown: unknown, ctx: ClassifyContext): ImportError {
   if (thrown instanceof APIError) {
     const status = normaliseStatus(thrown.status);
-    const messageSuffix = status ?? thrown.status ?? "???";
-    const message = thrown.message ?? `PK API error (${String(messageSuffix)})`;
+    const message = thrown.message ?? `PK API error (${formatStatusSuffix(status, thrown.status)})`;
 
-    // Auth failures are fatal and not recoverable — no point retrying with the same credentials
+    // 401/403: auth failures — no retry will succeed with the same credentials.
     if (status === HTTP_UNAUTHORIZED || status === HTTP_FORBIDDEN) {
       return {
         entityType: ctx.entityType,
@@ -60,12 +74,8 @@ export function classifyPkError(thrown: unknown, ctx: ClassifyContext): ImportEr
       };
     }
 
-    // Rate limit, server errors, and 404 are non-fatal — may resolve on retry
-    if (
-      status === HTTP_RATE_LIMITED ||
-      status === HTTP_NOT_FOUND ||
-      (status !== undefined && isServerError(status))
-    ) {
+    // 429 rate limit, 404 mid-sync, and 5xx transient failures — may resolve on retry.
+    if (isRetryableHttpStatus(status)) {
       return { entityType: ctx.entityType, entityId: ctx.entityId, message, fatal: false };
     }
 
