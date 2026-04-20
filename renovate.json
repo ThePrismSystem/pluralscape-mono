@@ -21,6 +21,11 @@
       "matchManagers": ["github-actions"],
       "pinDigests": true,
       "groupName": "GitHub Actions"
+    },
+    {
+      "matchPackageNames": ["fast-xml-parser"],
+      "allowedVersions": "~5.5.7",
+      "description": "Pinned: 5.7.x rejects &#xD; entities in S3 XML responses, breaking @aws-sdk/xml-builder. Revisit when upstream regression is fixed."
     }
   ]
 }
