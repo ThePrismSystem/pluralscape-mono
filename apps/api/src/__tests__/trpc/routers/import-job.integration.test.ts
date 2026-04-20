@@ -63,15 +63,9 @@ const SEED_SELECTED_CATEGORIES = {
 } as const satisfies Record<ImportCollectionType, boolean | undefined>;
 
 /**
- * Seed an import job via the real `createImportJob` service path. Kept local
- * to this test file because no other router test needs an import job; if a
- * second caller surfaces, promote to `integration-helpers.ts`.
- *
  * Defaults to a `simply-plural` source with `avatarMode: "skip"` and a single
  * selected collection — the minimal valid happy-path shape. The job lands in
- * `status: "pending"` with `progressPercent: 0`. State transitions are
- * exercised by `concurrent-guard-semantics.integration.test.ts`; this file
- * only verifies router wiring + auth + tenant isolation.
+ * `status: "pending"` with `progressPercent: 0`.
  */
 async function seedImportJob(
   db: PostgresJsDatabase,
@@ -94,8 +88,6 @@ async function seedImportJob(
 
 describe("import-job router integration", () => {
   const fixture = setupRouterFixture({ importJob: importJobRouter });
-
-  // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("importJob.create", () => {
     it("creates an import job belonging to the caller's system", async () => {
@@ -133,8 +125,6 @@ describe("import-job router integration", () => {
       await seedImportJob(db, primary.systemId, primary.auth);
       await seedImportJob(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listImportJobs returns PaginatedResult<ImportJobResult>
-      // ⇒ `data`, not `items`.
       const result = await caller.importJob.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -148,8 +138,7 @@ describe("import-job router integration", () => {
       // UpdateImportJobBodySchema has no `version` token — the row is locked
       // SELECT … FOR UPDATE inside the transaction. A bare progress bump on
       // a same-state (`pending → pending`) update bypasses the transition
-      // guard entirely; full state-machine coverage lives in
-      // `concurrent-guard-semantics.integration.test.ts`.
+      // guard entirely.
       const result = await caller.importJob.update({
         systemId: primary.systemId,
         importJobId,
@@ -160,8 +149,6 @@ describe("import-job router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -169,8 +156,6 @@ describe("import-job router integration", () => {
       await expectAuthRequired(caller.importJob.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's import job", async () => {

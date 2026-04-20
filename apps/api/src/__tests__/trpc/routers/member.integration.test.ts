@@ -24,7 +24,6 @@ import {
   setupRouterFixture,
 } from "../integration-helpers.js";
 
-/** Initial version returned by createMember; required input for `update`. */
 const INITIAL_MEMBER_VERSION = 1;
 
 describe("member router integration", () => {
@@ -36,8 +35,6 @@ describe("member router integration", () => {
       },
     },
   );
-
-  // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("member.create", () => {
     it("creates a member belonging to the caller's system", async () => {
@@ -78,7 +75,6 @@ describe("member router integration", () => {
       await seedMember(db, primary.systemId, primary.auth);
       await seedMember(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listMembers returns PaginatedResult<MemberResult> ⇒ `data`, not `items`.
       const result = await caller.member.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -89,8 +85,6 @@ describe("member router integration", () => {
       const primary = fixture.getPrimary();
       const memberId = await seedMember(fixture.getCtx().db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // UpdateMemberBodySchema requires `version` (optimistic concurrency token).
-      // Newly seeded members start at version 1.
       const result = await caller.member.update({
         systemId: primary.systemId,
         memberId,
@@ -175,8 +169,6 @@ describe("member router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -184,8 +176,6 @@ describe("member router integration", () => {
       await expectAuthRequired(caller.member.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's member", async () => {

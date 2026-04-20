@@ -33,8 +33,6 @@ const INITIAL_CANVAS_VERSION = 1;
 describe("innerworld router integration", () => {
   const fixture = setupRouterFixture({ innerworld: innerworldRouter });
 
-  // ── Entity CRUD happy paths ────────────────────────────────────────
-
   describe("innerworld.entity.create", () => {
     it("creates an entity belonging to the caller's system", async () => {
       const primary = fixture.getPrimary();
@@ -76,7 +74,6 @@ describe("innerworld router integration", () => {
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
       });
-      // listEntities returns PaginatedResult<EntityResult> ⇒ `data`, not `items`.
       const result = await caller.innerworld.entity.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -90,8 +87,6 @@ describe("innerworld router integration", () => {
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
       });
-      // UpdateEntityBodySchema requires `version` (optimistic concurrency token).
-      // Newly created entities start at version 1.
       const result = await caller.innerworld.entity.update({
         systemId: primary.systemId,
         entityId: created.id,
@@ -155,8 +150,6 @@ describe("innerworld router integration", () => {
     });
   });
 
-  // ── Region CRUD happy paths ────────────────────────────────────────
-
   describe("innerworld.region.create", () => {
     it("creates a region belonging to the caller's system", async () => {
       const primary = fixture.getPrimary();
@@ -198,7 +191,6 @@ describe("innerworld router integration", () => {
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
       });
-      // listRegions returns PaginatedResult<RegionResult> ⇒ `data`, not `items`.
       const result = await caller.innerworld.region.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -212,7 +204,6 @@ describe("innerworld router integration", () => {
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
       });
-      // UpdateRegionBodySchema requires `version` (optimistic concurrency token).
       const result = await caller.innerworld.region.update({
         systemId: primary.systemId,
         regionId: created.id,
@@ -276,8 +267,6 @@ describe("innerworld router integration", () => {
     });
   });
 
-  // ── Canvas (system-scoped, no parent entity) ───────────────────────
-
   describe("innerworld.canvas.upsert", () => {
     it("creates a canvas on first write with version=1", async () => {
       const primary = fixture.getPrimary();
@@ -308,8 +297,6 @@ describe("innerworld router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -317,8 +304,6 @@ describe("innerworld router integration", () => {
       await expectAuthRequired(caller.innerworld.entity.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's entity", async () => {

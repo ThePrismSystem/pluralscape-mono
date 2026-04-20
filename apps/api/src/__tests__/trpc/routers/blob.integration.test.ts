@@ -82,10 +82,6 @@ const VALID_CHECKSUM_HEX = "a".repeat(64);
 const TEST_LIST_LIMIT = 10;
 
 /**
- * Router-local helper: seed a fully-uploaded blob by walking the real
- * `createUploadUrl` → `confirmUpload` flow. Only the blob router depends on
- * this; promote to integration-helpers if a second router ever needs it.
- *
  * The storage adapter argument is the mock returned by `getStorageAdapter()` —
  * passed explicitly so tests can assert against the same adapter instance the
  * router uses.
@@ -155,8 +151,6 @@ describe("blob router integration", () => {
     storageAdapter = mocks.adapterRef.current;
   });
 
-  // ── Happy path: one test per procedure ─────────────────────────────
-
   describe("blob.createUploadUrl", () => {
     it("returns a presigned upload URL and inserts a pending blob row", async () => {
       const primary = fixture.getPrimary();
@@ -223,7 +217,6 @@ describe("blob router integration", () => {
       await seedBlob(db, primary.systemId, primary.auth, storageAdapter);
       await seedBlob(db, primary.systemId, primary.auth, storageAdapter);
       const caller = fixture.getCaller(primary.auth);
-      // listBlobs returns PaginatedResult<BlobResult> ⇒ `data`, not `items`.
       const result = await caller.blob.list({
         systemId: primary.systemId,
         limit: TEST_LIST_LIMIT,
@@ -271,8 +264,6 @@ describe("blob router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -286,8 +277,6 @@ describe("blob router integration", () => {
       );
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's blob", async () => {

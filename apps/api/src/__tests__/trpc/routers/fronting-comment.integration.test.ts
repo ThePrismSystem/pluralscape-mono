@@ -24,7 +24,6 @@ import {
 
 import type { FrontingCommentId, FrontingSessionId, MemberId } from "@pluralscape/types";
 
-/** Initial version returned by createFrontingComment; required input for `update`. */
 const INITIAL_COMMENT_VERSION = 1;
 
 /**
@@ -74,8 +73,6 @@ describe("fronting-comment router integration", () => {
     return result.id;
   }
 
-  // ── Happy path: one test per procedure ─────────────────────────────
-
   describe("frontingComment.create", () => {
     it("creates a comment attached to the caller's session", async () => {
       const primary = fixture.getPrimary();
@@ -113,7 +110,6 @@ describe("fronting-comment router integration", () => {
       await seedComment();
       await seedComment();
       const caller = fixture.getCaller(primary.auth);
-      // listFrontingComments returns PaginatedResult ⇒ `data`, not `items`.
       const result = await caller.frontingComment.list({
         systemId: primary.systemId,
         sessionId: primarySeed.sessionId,
@@ -187,8 +183,6 @@ describe("fronting-comment router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -201,8 +195,6 @@ describe("fronting-comment router integration", () => {
       );
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read another tenant's comment", async () => {

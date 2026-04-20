@@ -30,14 +30,9 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** Initial version returned by createFieldDefinition; required input for `update`. */
 const INITIAL_DEFINITION_VERSION = 1;
 
 /**
- * Seed a field definition via the real `createFieldDefinition` service path.
- * Kept local to this test file because no other router test needs it; if a
- * second caller surfaces, promote to `integration-helpers.ts`.
- *
  * Defaults to a `text` field (non-required, sortOrder 0) — the happy-path
  * shape the router tests exercise.
  */
@@ -73,8 +68,6 @@ describe("field router integration", () => {
       },
     },
   );
-
-  // ── Field definitions ─────────────────────────────────────────────
 
   describe("field.definition.create", () => {
     it("creates a field definition belonging to the caller's system", async () => {
@@ -116,8 +109,6 @@ describe("field router integration", () => {
       await seedFieldDefinition(db, primary.systemId, primary.auth);
       await seedFieldDefinition(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listFieldDefinitions returns PaginatedResult<FieldDefinitionResult>
-      // ⇒ `data`, not `items`.
       const result = await caller.field.definition.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -132,8 +123,6 @@ describe("field router integration", () => {
         primary.auth,
       );
       const caller = fixture.getCaller(primary.auth);
-      // UpdateFieldDefinitionBodySchema requires `version` (optimistic
-      // concurrency token). Newly seeded definitions start at version 1.
       const result = await caller.field.definition.update({
         systemId: primary.systemId,
         fieldDefinitionId,
@@ -199,13 +188,10 @@ describe("field router integration", () => {
     });
   });
 
-  // ── Field values (attach to member owners) ────────────────────────
-  //
   // Every value procedure needs both a field definition and an owner entity;
   // we use members as owners because the shared `seedMember` helper already
   // exists. The discriminated-union owner schema accepts "group" and
-  // "structureEntity" too, but the routing logic is identical — covered by
-  // the unit tests on field-value.service.
+  // "structureEntity" too, but the routing logic is identical.
 
   describe("field.value.set", () => {
     it("sets a field value for a member owner", async () => {
@@ -270,8 +256,6 @@ describe("field router integration", () => {
     });
   });
 
-  // ── Field bucket visibility ───────────────────────────────────────
-
   describe("field.bucketVisibility.set", () => {
     it("grants a bucket visibility over a field definition", async () => {
       const primary = fixture.getPrimary();
@@ -331,8 +315,6 @@ describe("field router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -340,8 +322,6 @@ describe("field router integration", () => {
       await expectAuthRequired(caller.field.definition.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's field definition", async () => {

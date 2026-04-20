@@ -39,7 +39,6 @@ import {
 import type { SystemSnapshotId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** Initial version returned by createSystem; required input for `update`. */
 const INITIAL_SYSTEM_VERSION = 1;
 
 /**
@@ -84,8 +83,6 @@ async function seedSnapshot(
 describe("system router integration", () => {
   const fixture = setupRouterFixture({ system: systemRouter });
 
-  // ── Happy path: one test per procedure ─────────────────────────────
-
   describe("system.create", () => {
     it("creates a new system on the caller's account", async () => {
       const primary = fixture.getPrimary();
@@ -111,9 +108,8 @@ describe("system router integration", () => {
     it("returns systems owned by the caller's account", async () => {
       const primary = fixture.getPrimary();
       const caller = fixture.getCaller(primary.auth);
-      // listSystems returns PaginatedResult<SystemProfileResult> ⇒ `data`,
-      // not `items`. Only the seeded system on `primary.accountId` is visible
-      // because RLS scopes by accountId.
+      // Only the seeded system on `primary.accountId` is visible because RLS
+      // scopes by accountId.
       const result = await caller.system.list({});
       expect(result.data.length).toBe(1);
       expect(result.data[0]?.id).toBe(primary.systemId);
@@ -124,8 +120,6 @@ describe("system router integration", () => {
     it("updates the system's encrypted profile data", async () => {
       const primary = fixture.getPrimary();
       const caller = fixture.getCaller(primary.auth);
-      // UpdateSystemBodySchema requires `version` (optimistic concurrency token).
-      // Newly seeded systems start at version 1.
       const result = await caller.system.update({
         systemId: primary.systemId,
         encryptedData: testEncryptedDataBase64(),
@@ -185,16 +179,12 @@ describe("system router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.system.list({}));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's system", async () => {

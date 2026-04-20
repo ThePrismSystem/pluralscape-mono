@@ -163,8 +163,6 @@ describe("auth router integration", () => {
     await initSodium();
   });
 
-  // ── Happy path: one test per procedure ─────────────────────────────
-
   describe("auth.registrationInitiate", () => {
     it("returns kdfSalt and challengeNonce for a fresh email (public, no auth)", async () => {
       const caller = fixture.getCaller(null);
@@ -368,8 +366,6 @@ describe("auth router integration", () => {
     });
   });
 
-  // ── Auth-failure: protected procedures only ────────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated auth.logout with UNAUTHORIZED", async () => {
       const caller = fixture.getCaller(null);
@@ -385,8 +381,6 @@ describe("auth router integration", () => {
       );
     });
   });
-
-  // ── Cross-account isolation: replace tenant-isolation for auth ─────
 
   describe("account isolation", () => {
     it("rejects login when using account A's email with account B's auth key", async () => {

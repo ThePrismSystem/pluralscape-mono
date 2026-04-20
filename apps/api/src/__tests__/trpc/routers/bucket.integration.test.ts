@@ -26,10 +26,8 @@ import {
 
 import type { BucketKeyRotationId } from "@pluralscape/types";
 
-/** Initial version returned by createBucket; required input for `update`. */
 const INITIAL_BUCKET_VERSION = 1;
 
-/** Key version for the first friend bucket-key grant (>= 1 per AssignBucketBodySchema). */
 const INITIAL_KEY_VERSION = 1;
 
 /**
@@ -53,8 +51,6 @@ describe("bucket router integration", () => {
       },
     },
   );
-
-  // ── Bucket CRUD happy paths ─────────────────────────────────────────
 
   describe("bucket.create", () => {
     it("creates a bucket belonging to the caller's system", async () => {
@@ -95,7 +91,6 @@ describe("bucket router integration", () => {
       await seedBucket(db, primary.systemId, primary.auth);
       await seedBucket(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listBuckets returns PaginatedResult<BucketResult> ⇒ `data`, not `items`.
       const result = await caller.bucket.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -106,8 +101,6 @@ describe("bucket router integration", () => {
       const primary = fixture.getPrimary();
       const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // UpdateBucketBodySchema requires `version` (optimistic concurrency token).
-      // Newly seeded buckets start at version 1.
       const result = await caller.bucket.update({
         systemId: primary.systemId,
         bucketId,
@@ -158,8 +151,6 @@ describe("bucket router integration", () => {
     });
   });
 
-  // ── Friend assignments ─────────────────────────────────────────────
-  //
   // assignFriend requires a connection where `accountId === primary.accountId`.
   // `seedFriendConnection(db, a, b)` returns the redeemer's (B's) connection,
   // so seed with `(other, primary)` to get primary's owning side.
@@ -234,8 +225,6 @@ describe("bucket router integration", () => {
     });
   });
 
-  // ── Content tags ───────────────────────────────────────────────────
-
   describe("bucket.tagContent", () => {
     it("tags a member entity into a bucket", async () => {
       const primary = fixture.getPrimary();
@@ -300,8 +289,6 @@ describe("bucket router integration", () => {
     });
   });
 
-  // ── Export ─────────────────────────────────────────────────────────
-
   describe("bucket.exportManifest", () => {
     it("returns an export manifest with per-entity-type entries", async () => {
       const primary = fixture.getPrimary();
@@ -342,8 +329,6 @@ describe("bucket router integration", () => {
     });
   });
 
-  // ── Key rotation ───────────────────────────────────────────────────
-  //
   // initiateRotation works on an empty bucket (no content tags ⇒ no
   // rotation items). The rotation transitions through
   // initiated → migrating once any chunk is claimed.
@@ -461,11 +446,9 @@ describe("bucket router integration", () => {
   });
 
   describe("bucket.retryRotation", () => {
-    // retryRotation only accepts rotations in `failed` state. Driving a
-    // rotation to `failed` end-to-end requires multi-step setup that
-    // duplicates the key-rotation service tests; here we exercise the
-    // procedure wiring + middleware by asserting it rejects an `initiated`
-    // rotation with CONFLICT, which is the documented contract.
+    // retryRotation only accepts rotations in `failed` state; here we assert
+    // it rejects an `initiated` rotation with CONFLICT, which is the
+    // documented contract.
     it("rejects retry on a rotation that has not failed", async () => {
       const primary = fixture.getPrimary();
       const bucketId = await seedBucket(fixture.getCtx().db, primary.systemId, primary.auth);
@@ -488,8 +471,6 @@ describe("bucket router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -497,8 +478,6 @@ describe("bucket router integration", () => {
       await expectAuthRequired(caller.bucket.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's bucket", async () => {

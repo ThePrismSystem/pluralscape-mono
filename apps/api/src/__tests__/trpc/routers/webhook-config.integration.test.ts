@@ -3,10 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 // Hoisted mocks for dispatch-style external services. This same block lives at
 // the top of every router integration test file. Keep these BEFORE any
 // module-level import that could transitively pull in the real implementations.
-//
-// invalidateWebhookConfigCache is asserted against further down — the
-// webhook-config service calls it on every successful mutation to keep the
-// in-memory dispatcher cache in sync.
 vi.mock("../../../services/webhook-dispatcher.js", () => ({
   dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
   invalidateWebhookConfigCache: vi.fn(),
@@ -40,7 +36,6 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type { SystemId, WebhookEventType, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** Initial version returned by createWebhookConfig; required input for `update` and `rotateSecret`. */
 const INITIAL_WEBHOOK_VERSION = 1;
 
 /** Default webhook URL for seeding. HTTPS is mandatory unless host is localhost. */
@@ -90,8 +85,6 @@ describe("webhook-config router integration", () => {
     },
   );
 
-  // ── Happy path: one test per procedure ─────────────────────────────
-
   describe("webhookConfig.create", () => {
     it("creates a webhook config and invalidates the dispatcher cache", async () => {
       const primary = fixture.getPrimary();
@@ -137,7 +130,6 @@ describe("webhook-config router integration", () => {
       await seedWebhookConfig(db, primary.systemId, primary.auth);
       await seedWebhookConfig(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listWebhookConfigs returns PaginatedResult<WebhookConfigResult> ⇒ `data`, not `items`.
       const result = await caller.webhookConfig.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -154,7 +146,6 @@ describe("webhook-config router integration", () => {
       const caller = fixture.getCaller(primary.auth);
       // Clear any prior invalidation calls (seed went through createWebhookConfig).
       vi.mocked(invalidateWebhookConfigCache).mockClear();
-      // UpdateWebhookConfigBodySchema requires `version` (optimistic concurrency token).
       const result = await caller.webhookConfig.update({
         systemId: primary.systemId,
         webhookId,
@@ -274,8 +265,7 @@ describe("webhook-config router integration", () => {
         });
         // Whether this returns success=true depends on the SSRF + signed-fetch
         // pipeline succeeding end-to-end. We assert only the result shape so
-        // the test stays stable across signed-fetch refactors; success-path
-        // behaviour is exercised in webhook-config.service.integration.test.ts.
+        // the test stays stable across signed-fetch refactors.
         expect(typeof result.success).toBe("boolean");
         expect(typeof result.durationMs).toBe("number");
         // Assert the signed-fetch pipeline actually invoked the global fetch
@@ -288,8 +278,6 @@ describe("webhook-config router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -297,8 +285,6 @@ describe("webhook-config router integration", () => {
       await expectAuthRequired(caller.webhookConfig.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's webhook config", async () => {

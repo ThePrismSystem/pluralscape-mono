@@ -26,7 +26,6 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type { GroupId, MemberId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** Initial version returned by createGroup; required input for `update`/`move`. */
 const INITIAL_GROUP_VERSION = 1;
 
 /** Default sortOrder used when seeding groups via the local helper. */
@@ -63,8 +62,6 @@ async function seedGroup(
 
 describe("group router integration", () => {
   const fixture = setupRouterFixture({ group: groupRouter });
-
-  // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("group.create", () => {
     it("creates a root group belonging to the caller's system", async () => {
@@ -103,7 +100,6 @@ describe("group router integration", () => {
       await seedGroup(db, primary.systemId, primary.auth);
       await seedGroup(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listGroups returns PaginatedResult<GroupResult> ⇒ `data`, not `items`.
       const result = await caller.group.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -114,8 +110,6 @@ describe("group router integration", () => {
       const primary = fixture.getPrimary();
       const groupId = await seedGroup(fixture.getCtx().db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // UpdateGroupBodySchema requires `version` (optimistic concurrency token).
-      // Newly seeded groups start at version 1.
       const result = await caller.group.update({
         systemId: primary.systemId,
         groupId,
@@ -282,8 +276,6 @@ describe("group router integration", () => {
         groupId,
         memberId,
       });
-      // listGroupMembers returns PaginatedResult<GroupMembershipResult>
-      // ⇒ `data`, not `items`.
       const result = await caller.group.listMembers({
         systemId: primary.systemId,
         groupId,
@@ -293,8 +285,6 @@ describe("group router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -302,8 +292,6 @@ describe("group router integration", () => {
       await expectAuthRequired(caller.group.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's group", async () => {

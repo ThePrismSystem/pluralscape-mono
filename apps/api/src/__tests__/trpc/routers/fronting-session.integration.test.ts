@@ -25,7 +25,6 @@ import {
   setupRouterFixture,
 } from "../integration-helpers.js";
 
-/** Initial version returned by createFrontingSession; required input for `update`/`end`. */
 const INITIAL_SESSION_VERSION = 1;
 
 /** Offset (ms) added to a session's startTime to produce a valid endTime in tests. */
@@ -40,8 +39,6 @@ describe("fronting-session router integration", () => {
       },
     },
   );
-
-  // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("frontingSession.create", () => {
     it("creates a fronting session attributed to a member", async () => {
@@ -94,8 +91,6 @@ describe("fronting-session router integration", () => {
       await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
       await seedFrontingSession(db, primary.systemId, primary.auth, memberId);
       const caller = fixture.getCaller(primary.auth);
-      // listFrontingSessions returns PaginatedResult<FrontingSessionResult>
-      // ⇒ `data`, not `items`.
       const result = await caller.frontingSession.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -217,8 +212,6 @@ describe("fronting-session router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -226,8 +219,6 @@ describe("fronting-session router integration", () => {
       await expectAuthRequired(caller.frontingSession.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's session", async () => {

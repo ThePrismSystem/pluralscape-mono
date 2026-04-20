@@ -25,14 +25,9 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type { NoteId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** Initial version returned by createNote; required input for `update`. */
 const INITIAL_NOTE_VERSION = 1;
 
 /**
- * Seed a note via the real `createNote` service path. Kept local to this
- * test file because no other router test needs it; if a second caller
- * surfaces, promote to `integration-helpers.ts`.
- *
  * Defaults to a system-wide note (no author entity) — the simplest happy-
  * path shape that exercises the same insert path as authored notes.
  */
@@ -53,8 +48,6 @@ async function seedNote(
 
 describe("note router integration", () => {
   const fixture = setupRouterFixture({ note: noteRouter });
-
-  // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("note.create", () => {
     it("creates a note belonging to the caller's system", async () => {
@@ -92,7 +85,6 @@ describe("note router integration", () => {
       await seedNote(db, primary.systemId, primary.auth);
       await seedNote(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listNotes returns PaginatedResult<NoteResult> ⇒ `data`, not `items`.
       const result = await caller.note.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -103,8 +95,6 @@ describe("note router integration", () => {
       const primary = fixture.getPrimary();
       const noteId = await seedNote(fixture.getCtx().db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // UpdateNoteBodySchema requires `version` (optimistic concurrency token).
-      // Newly seeded notes start at version 1.
       const result = await caller.note.update({
         systemId: primary.systemId,
         noteId,
@@ -158,8 +148,6 @@ describe("note router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -167,8 +155,6 @@ describe("note router integration", () => {
       await expectAuthRequired(caller.note.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's note", async () => {

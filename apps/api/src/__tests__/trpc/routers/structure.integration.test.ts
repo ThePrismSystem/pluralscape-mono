@@ -55,8 +55,6 @@ describe("structure router integration", () => {
     return result.id;
   }
 
-  // ── Entity Types ───────────────────────────────────────────────────
-
   describe("structure.entityType.create", () => {
     it("creates an entity type belonging to the caller's system", async () => {
       const primary = fixture.getPrimary();
@@ -90,7 +88,6 @@ describe("structure router integration", () => {
       await createEntityTypeViaCaller(primary);
       await createEntityTypeViaCaller(primary);
       const caller = fixture.getCaller(primary.auth);
-      // listEntityTypes returns PaginatedResult<EntityTypeResult> ⇒ `data`, not `items`.
       const result = await caller.structure.entityType.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -160,8 +157,6 @@ describe("structure router integration", () => {
     });
   });
 
-  // ── Structure Entities ─────────────────────────────────────────────
-
   describe("structure.entity.create", () => {
     it("creates a structure entity belonging to the caller's system", async () => {
       const primary = fixture.getPrimary();
@@ -201,10 +196,9 @@ describe("structure router integration", () => {
       const primary = fixture.getPrimary();
       // The happy-path branch executes a recursive CTE via tx.execute(sql\`…\`)
       // whose result shape differs between postgres-js (returns the rows array
-      // directly) and pglite (returns { rows: [...] }). Service-level unit
-      // tests already cover the happy path with mocked execute(); here we
-      // assert the procedure wiring + middleware by exercising the missing-
-      // entity short-circuit, which throws NOT_FOUND before reaching the CTE.
+      // directly) and pglite (returns { rows: [...] }). Here we assert the
+      // procedure wiring + middleware by exercising the missing-entity
+      // short-circuit, which throws NOT_FOUND before reaching the CTE.
       const entityId = brandId<SystemStructureEntityId>(`ste_${crypto.randomUUID()}`);
       const caller = fixture.getCaller(primary.auth);
       await expect(
@@ -223,7 +217,6 @@ describe("structure router integration", () => {
       await seedStructureEntity(db, primary.systemId, primary.auth);
       await seedStructureEntity(db, primary.systemId, primary.auth);
       const caller = fixture.getCaller(primary.auth);
-      // listStructureEntities returns PaginatedResult<StructureEntityResult>.
       const result = await caller.structure.entity.list({ systemId: primary.systemId });
       expect(result.data.length).toBe(2);
     });
@@ -310,8 +303,6 @@ describe("structure router integration", () => {
     });
   });
 
-  // ── Entity Links ───────────────────────────────────────────────────
-
   describe("structure.link.create", () => {
     it("creates a link between two entities in the same system", async () => {
       const primary = fixture.getPrimary();
@@ -393,8 +384,6 @@ describe("structure router integration", () => {
     });
   });
 
-  // ── Entity Member Links ────────────────────────────────────────────
-
   describe("structure.memberLink.create", () => {
     it("creates a member link under a parent entity", async () => {
       const primary = fixture.getPrimary();
@@ -453,8 +442,6 @@ describe("structure router integration", () => {
     });
   });
 
-  // ── Entity Associations ────────────────────────────────────────────
-
   describe("structure.association.create", () => {
     it("creates an association between two entities", async () => {
       const primary = fixture.getPrimary();
@@ -510,8 +497,6 @@ describe("structure router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const primary = fixture.getPrimary();
@@ -519,8 +504,6 @@ describe("structure router integration", () => {
       await expectAuthRequired(caller.structure.entityType.list({ systemId: primary.systemId }));
     });
   });
-
-  // ── Tenant isolation: one test per major namespace ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when primary tries to read other tenant's entity", async () => {

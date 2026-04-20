@@ -159,8 +159,6 @@ export async function expectTenantDenied(promise: Promise<unknown>): Promise<voi
   );
 }
 
-// ── Entity seed helpers ─────────────────────────────────────────────
-//
 // Each helper wraps the same service function the production routers call,
 // so seeded state matches what end-to-end flows would produce. Helpers
 // accept the minimum required parameters and use sensible defaults
@@ -324,8 +322,6 @@ export async function seedAcceptedFriendConnection(
   return connectionId;
 }
 
-// ── Router fixture ──────────────────────────────────────────────────
-//
 // `setupRouterFixture` registers the standard set of vitest hooks
 // (beforeAll/afterAll/beforeEach/afterEach) used by every router
 // integration test file. It returns lazy accessors so test bodies can

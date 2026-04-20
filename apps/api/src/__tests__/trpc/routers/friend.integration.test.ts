@@ -23,7 +23,6 @@ import {
   setupRouterFixture,
 } from "../integration-helpers.js";
 
-/** Initial version on a freshly-created friend connection; required by updateVisibility. */
 const INITIAL_FRIEND_CONNECTION_VERSION = 1;
 
 /** Default page size for friend.exportData test calls. */
@@ -31,8 +30,6 @@ const TEST_EXPORT_PAGE_LIMIT = 25;
 
 describe("friend router integration", () => {
   const fixture = setupRouterFixture({ friend: friendRouter });
-
-  // ── Happy path: one test per procedure ─────────────────────────────
 
   describe("friend.list", () => {
     it("returns friend connections for the caller's account", async () => {
@@ -260,16 +257,12 @@ describe("friend router integration", () => {
     });
   });
 
-  // ── Auth-failure: one test for the whole router ────────────────────
-
   describe("auth", () => {
     it("rejects unauthenticated calls with UNAUTHORIZED", async () => {
       const caller = fixture.getCaller(null);
       await expectAuthRequired(caller.friend.list({}));
     });
   });
-
-  // ── Tenant isolation: one test for the whole router ────────────────
 
   describe("tenant isolation", () => {
     it("rejects when an outsider tries to read another tenant's friend connection", async () => {
