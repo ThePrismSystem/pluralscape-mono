@@ -19,6 +19,7 @@ import {
   TransferExpiredError,
   TransferNotFoundError,
   TransferValidationError,
+  approveTransfer,
   completeTransfer,
   initiateTransfer,
 } from "../../services/device-transfer.service.js";
@@ -195,8 +196,8 @@ describe("device-transfer.service (PGlite integration)", () => {
   // ── completeTransfer ──────────────────────────────────────────────
 
   describe("completeTransfer", () => {
-    it("returns encrypted key material hex on valid code", async () => {
-      // Initiate a transfer first
+    it("returns encrypted key material hex on valid code after approval", async () => {
+      // Initiate and approve a transfer first
       const { transferId } = await initiateTransfer(
         asDb(db),
         accountId,
@@ -204,6 +205,7 @@ describe("device-transfer.service (PGlite integration)", () => {
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
         noopAudit,
       );
+      await approveTransfer(asDb(db), transferId, accountId, sessionId, noopAudit);
 
       const targetSessionId = await insertSession(db, accountId);
       const audit = spyAudit();
@@ -233,6 +235,33 @@ describe("device-transfer.service (PGlite integration)", () => {
       expect(audit.calls[0]?.eventType).toBe("auth.device-transfer-completed");
     });
 
+    it("throws TransferNotFoundError when transfer has not been approved yet", async () => {
+      // Initiate but do NOT approve
+      const { transferId } = await initiateTransfer(
+        asDb(db),
+        accountId,
+        sessionId,
+        { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
+        noopAudit,
+      );
+
+      const targetSessionId = await insertSession(db, accountId);
+
+      // completeTransfer must require status='approved'; a 'pending' transfer
+      // must not be completable (prevents brute-force racing around approval).
+      await expect(
+        completeTransfer(asDb(db), transferId, accountId, targetSessionId, "1234567890", noopAudit),
+      ).rejects.toThrow(TransferNotFoundError);
+
+      // Row should still exist in 'pending' state — completion did not mutate
+      const [row] = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, transferId));
+      expect(row?.status).toBe("pending");
+      expect(row?.codeAttempts).toBe(0);
+    });
+
     it("throws TransferNotFoundError for non-existent transferId", async () => {
       const targetSessionId = await insertSession(db, accountId);
 
@@ -256,6 +285,7 @@ describe("device-transfer.service (PGlite integration)", () => {
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
         noopAudit,
       );
+      await approveTransfer(asDb(db), transferId, accountId, sessionId, noopAudit);
 
       const targetSessionId = await insertSession(db, accountId);
 
@@ -273,6 +303,7 @@ describe("device-transfer.service (PGlite integration)", () => {
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
         noopAudit,
       );
+      await approveTransfer(asDb(db), transferId, accountId, sessionId, noopAudit);
 
       // Create a separate account
       const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
@@ -295,7 +326,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
   describe("expired or invalid transfer", () => {
     it("throws TransferNotFoundError for an already-completed (deleted) transfer", async () => {
-      // Initiate and complete a transfer
+      // Initiate, approve, and complete a transfer
       const { transferId } = await initiateTransfer(
         asDb(db),
         accountId,
@@ -303,6 +334,7 @@ describe("device-transfer.service (PGlite integration)", () => {
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
         noopAudit,
       );
+      await approveTransfer(asDb(db), transferId, accountId, sessionId, noopAudit);
 
       const targetSessionId = await insertSession(db, accountId);
       await completeTransfer(
@@ -337,7 +369,9 @@ describe("device-transfer.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      // Manually set the transfer status to expired
+      // Approve first, then manually mark as expired — simulates the case
+      // where cleanup ran between approval and completion.
+      await approveTransfer(asDb(db), transferId, accountId, sessionId, noopAudit);
       await db
         .update(deviceTransferRequests)
         .set({ status: "expired" })
@@ -357,6 +391,7 @@ describe("device-transfer.service (PGlite integration)", () => {
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
         noopAudit,
       );
+      await approveTransfer(asDb(db), transferId, accountId, sessionId, noopAudit);
 
       // Set expiresAt to a time in the past (the check constraint requires
       // expiresAt > createdAt, so we set both to the past)
@@ -386,6 +421,7 @@ describe("device-transfer.service (PGlite integration)", () => {
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
         noopAudit,
       );
+      await approveTransfer(asDb(db), transferId, accountId, sessionId, noopAudit);
 
       const targetSessionId = await insertSession(db, accountId);
 

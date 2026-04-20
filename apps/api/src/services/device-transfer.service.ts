@@ -215,7 +215,11 @@ export async function completeTransfer(
     throw new TransferValidationError("Invalid transfer code format");
   }
 
-  // Select only the fields we need, use DB time for expiry comparison
+  // Select only the fields we need, use DB time for expiry comparison.
+  // completeTransfer is only valid once the source session has explicitly
+  // approved the transfer via approveTransfer (status='approved'). Matching
+  // 'pending' here would let a target device race around the approval step
+  // and brute-force the code before the source device consents.
   const row = await withAccountTransaction(db, accountId, async (tx) => {
     const [result] = await tx
       .select({
@@ -229,7 +233,7 @@ export async function completeTransfer(
         and(
           eq(deviceTransferRequests.id, transferId),
           eq(deviceTransferRequests.accountId, accountId),
-          eq(deviceTransferRequests.status, "pending"),
+          eq(deviceTransferRequests.status, "approved"),
           gt(deviceTransferRequests.expiresAt, sql`now()`),
         ),
       )
@@ -270,7 +274,8 @@ export async function completeTransfer(
   }
 
   if (!codeCorrect) {
-    // Atomic counter increment with status guard to prevent TOCTOU race
+    // Atomic counter increment with status guard to prevent TOCTOU race.
+    // Uses 'approved' because a completion attempt requires prior approval.
     const updated = await withAccountTransaction(db, accountId, async (tx) => {
       const [result] = await tx
         .update(deviceTransferRequests)
@@ -278,7 +283,7 @@ export async function completeTransfer(
         .where(
           and(
             eq(deviceTransferRequests.id, transferId),
-            eq(deviceTransferRequests.status, "pending"),
+            eq(deviceTransferRequests.status, "approved"),
           ),
         )
         .returning({ codeAttempts: deviceTransferRequests.codeAttempts });
@@ -297,7 +302,7 @@ export async function completeTransfer(
           .where(
             and(
               eq(deviceTransferRequests.id, transferId),
-              eq(deviceTransferRequests.status, "pending"),
+              eq(deviceTransferRequests.status, "approved"),
             ),
           );
       });
