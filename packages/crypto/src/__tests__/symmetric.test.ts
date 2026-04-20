@@ -499,13 +499,16 @@ describe("decryptStream impossible-payload guards", () => {
   });
 
   it("rejects a chunk count above MAX_STREAM_CHUNKS", () => {
-    const overflowChunks = Array.from(
-      { length: MAX_STREAM_CHUNKS + 1 },
-      (): EncryptedPayload => ({
-        ciphertext: new Uint8Array(0),
-        nonce: adapter.randomBytes(AEAD_NONCE_BYTES) as EncryptedPayload["nonce"],
-      }),
-    );
+    // The guard fires on `.chunks.length` alone, so sharing a single dummy
+    // chunk across the array keeps this test allocation-light instead of
+    // producing 65_537 real nonces.
+    const dummy: EncryptedPayload = {
+      ciphertext: new Uint8Array(0),
+      nonce: new Uint8Array(AEAD_NONCE_BYTES) as EncryptedPayload["nonce"],
+    };
+    const overflowChunks: readonly EncryptedPayload[] = new Array<EncryptedPayload>(
+      MAX_STREAM_CHUNKS + 1,
+    ).fill(dummy);
     expect(() => decryptStream({ chunks: overflowChunks, totalLength: 1 }, key)).toThrow(
       DecryptionFailedError,
     );
