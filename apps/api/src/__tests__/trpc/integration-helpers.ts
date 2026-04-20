@@ -20,7 +20,9 @@ import {
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { brandId } from "@pluralscape/types";
+import { TRPCError } from "@trpc/server";
 import { drizzle } from "drizzle-orm/pglite";
+import { expect } from "vitest";
 
 import { asDb, makeAuth } from "../helpers/integration-setup.js";
 
@@ -110,4 +112,44 @@ export async function seedAccountAndSystem(db: PostgresJsDatabase): Promise<Seed
  */
 export async function seedSecondTenant(db: PostgresJsDatabase): Promise<SeededTenant> {
   return seedAccountAndSystem(db);
+}
+
+/**
+ * Assert a promise rejects with a TRPCError carrying the UNAUTHORIZED code.
+ * Use for tests that pass `null` as the auth context against a procedure
+ * that requires authentication.
+ */
+export async function expectAuthRequired(promise: Promise<unknown>): Promise<void> {
+  let caught: unknown;
+  try {
+    await promise;
+  } catch (err) {
+    caught = err;
+  }
+  if (caught === undefined) {
+    expect.unreachable("Expected UNAUTHORIZED rejection but promise resolved");
+  }
+  expect(caught).toBeInstanceOf(TRPCError);
+  expect((caught as TRPCError).code).toBe("UNAUTHORIZED");
+}
+
+/**
+ * Assert a promise rejects with a TRPCError indicating cross-tenant access
+ * was denied. Accepts both FORBIDDEN (explicit deny) and NOT_FOUND (some
+ * scope guards mask cross-tenant entities as not-found rather than forbidden
+ * to avoid leaking existence).
+ */
+export async function expectTenantDenied(promise: Promise<unknown>): Promise<void> {
+  let caught: unknown;
+  try {
+    await promise;
+  } catch (err) {
+    caught = err;
+  }
+  if (caught === undefined) {
+    expect.unreachable("Expected tenant-denied rejection but promise resolved");
+  }
+  expect(caught).toBeInstanceOf(TRPCError);
+  const code = (caught as TRPCError).code;
+  expect(["FORBIDDEN", "NOT_FOUND"]).toContain(code);
 }

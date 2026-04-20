@@ -1,9 +1,12 @@
 import { pgInsertAccount, pgInsertSystem } from "@pluralscape/db/test-helpers/pg-helpers";
+import { TRPCError } from "@trpc/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { router as makeRouter, publicProcedure } from "../../trpc/trpc.js";
 
 import {
+  expectAuthRequired,
+  expectTenantDenied,
   seedAccountAndSystem,
   seedSecondTenant,
   setupRouterIntegration,
@@ -109,5 +112,27 @@ describe("seedAccountAndSystem", () => {
     } finally {
       await ctx.teardown();
     }
+  });
+});
+
+describe("expectAuthRequired / expectTenantDenied", () => {
+  it("expectAuthRequired passes when promise rejects with UNAUTHORIZED TRPCError", async () => {
+    const promise = Promise.reject(new TRPCError({ code: "UNAUTHORIZED", message: "no auth" }));
+    await expectAuthRequired(promise);
+  });
+
+  it("expectAuthRequired throws when promise rejects with a different code", async () => {
+    const promise = Promise.reject(new TRPCError({ code: "FORBIDDEN", message: "wrong" }));
+    await expect(expectAuthRequired(promise)).rejects.toThrow();
+  });
+
+  it("expectTenantDenied passes when promise rejects with FORBIDDEN TRPCError", async () => {
+    const promise = Promise.reject(new TRPCError({ code: "FORBIDDEN", message: "denied" }));
+    await expectTenantDenied(promise);
+  });
+
+  it("expectTenantDenied also accepts NOT_FOUND (some scope guards mask as not-found)", async () => {
+    const promise = Promise.reject(new TRPCError({ code: "NOT_FOUND", message: "not found" }));
+    await expectTenantDenied(promise);
   });
 });
