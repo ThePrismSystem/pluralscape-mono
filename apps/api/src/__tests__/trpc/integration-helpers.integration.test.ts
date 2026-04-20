@@ -8,7 +8,12 @@ import {
   expectAuthRequired,
   expectTenantDenied,
   seedAccountAndSystem,
+  seedBucket,
+  seedFriendConnection,
+  seedFrontingSession,
+  seedMember,
   seedSecondTenant,
+  seedStructureEntity,
   setupRouterIntegration,
   truncateAll,
 } from "./integration-helpers.js";
@@ -134,5 +139,64 @@ describe("expectAuthRequired / expectTenantDenied", () => {
   it("expectTenantDenied also accepts NOT_FOUND (some scope guards mask as not-found)", async () => {
     const promise = Promise.reject(new TRPCError({ code: "NOT_FOUND", message: "not found" }));
     await expectTenantDenied(promise);
+  });
+});
+
+describe("entity seed helpers", () => {
+  it("seedMember inserts a member belonging to the given system", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const tenant = await seedAccountAndSystem(ctx.db);
+      const memberId = await seedMember(ctx.db, tenant.systemId, tenant.auth);
+      expect(memberId).toMatch(/^mem_/);
+    } finally {
+      await ctx.teardown();
+    }
+  });
+
+  it("seedBucket inserts a bucket belonging to the given system", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const tenant = await seedAccountAndSystem(ctx.db);
+      const bucketId = await seedBucket(ctx.db, tenant.systemId, tenant.auth);
+      expect(bucketId).toMatch(/^bkt_/);
+    } finally {
+      await ctx.teardown();
+    }
+  });
+
+  it("seedFrontingSession requires a parent member", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const tenant = await seedAccountAndSystem(ctx.db);
+      const memberId = await seedMember(ctx.db, tenant.systemId, tenant.auth);
+      const sessionId = await seedFrontingSession(ctx.db, tenant.systemId, tenant.auth, memberId);
+      expect(sessionId).toMatch(/^fs_/);
+    } finally {
+      await ctx.teardown();
+    }
+  });
+
+  it("seedStructureEntity inserts a system structure entity", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const tenant = await seedAccountAndSystem(ctx.db);
+      const entityId = await seedStructureEntity(ctx.db, tenant.systemId, tenant.auth);
+      expect(entityId).toMatch(/^ste_/);
+    } finally {
+      await ctx.teardown();
+    }
+  });
+
+  it("seedFriendConnection bidirectionally connects two systems", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const a = await seedAccountAndSystem(ctx.db);
+      const b = await seedSecondTenant(ctx.db);
+      const connectionId = await seedFriendConnection(ctx.db, a, b);
+      expect(connectionId).toBeTruthy();
+    } finally {
+      await ctx.teardown();
+    }
   });
 });

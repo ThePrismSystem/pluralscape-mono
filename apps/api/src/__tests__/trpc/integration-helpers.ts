@@ -24,10 +24,30 @@ import { TRPCError } from "@trpc/server";
 import { drizzle } from "drizzle-orm/pglite";
 import { expect } from "vitest";
 
-import { asDb, makeAuth } from "../helpers/integration-setup.js";
+import { createBucket } from "../../services/bucket.service.js";
+import { generateFriendCode, redeemFriendCode } from "../../services/friend-code.service.js";
+import { createFrontingSession } from "../../services/fronting-session.service.js";
+import { createMember } from "../../services/member.service.js";
+import { createStructureEntity } from "../../services/structure-entity-crud.service.js";
+import { createEntityType } from "../../services/structure-entity-type.service.js";
+import {
+  asDb,
+  makeAuth,
+  noopAudit,
+  testEncryptedDataBase64,
+} from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketId,
+  FriendConnectionId,
+  FrontingSessionId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -152,4 +172,137 @@ export async function expectTenantDenied(promise: Promise<unknown>): Promise<voi
   expect(caught).toBeInstanceOf(TRPCError);
   const code = (caught as TRPCError).code;
   expect(["FORBIDDEN", "NOT_FOUND"]).toContain(code);
+}
+
+// ── Entity seed helpers ─────────────────────────────────────────────
+//
+// Each helper wraps the same service function the production routers call,
+// so seeded state matches what end-to-end flows would produce. Helpers
+// accept the minimum required parameters and use sensible defaults
+// (encrypted blob, sortOrder, etc.) internally — add an `opts` parameter
+// only when 2+ tests need to vary the seed shape.
+
+/**
+ * Seed a member belonging to the given system via the real `createMember`
+ * service path. Returns the new member's branded id.
+ */
+export async function seedMember(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+): Promise<MemberId> {
+  const result = await createMember(
+    db,
+    systemId,
+    { encryptedData: testEncryptedDataBase64() },
+    auth,
+    noopAudit,
+  );
+  return result.id;
+}
+
+/**
+ * Seed a privacy bucket belonging to the given system via the real
+ * `createBucket` service path. Returns the new bucket's branded id.
+ */
+export async function seedBucket(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+): Promise<BucketId> {
+  const result = await createBucket(
+    db,
+    systemId,
+    { encryptedData: testEncryptedDataBase64() },
+    auth,
+    noopAudit,
+  );
+  return result.id;
+}
+
+/** Default startTime offset (ms) used when seeding a fronting session. */
+const FRONTING_SESSION_DEFAULT_START_OFFSET_MS = 0;
+
+/**
+ * Seed a fronting session attributed to the given member via the real
+ * `createFrontingSession` service path. The member must already exist
+ * in the system. Returns the new session's branded id.
+ */
+export async function seedFrontingSession(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+  memberId: MemberId,
+): Promise<FrontingSessionId> {
+  const result = await createFrontingSession(
+    db,
+    systemId,
+    {
+      encryptedData: testEncryptedDataBase64(),
+      startTime: Date.now() + FRONTING_SESSION_DEFAULT_START_OFFSET_MS,
+      memberId,
+    },
+    auth,
+    noopAudit,
+  );
+  return result.id;
+}
+
+/** Default sortOrder used when seeding entity types and entities. */
+const STRUCTURE_DEFAULT_SORT_ORDER = 0;
+
+/**
+ * Seed a system structure entity via the real `createStructureEntity`
+ * service path. Internally seeds a structure entity type first because
+ * `createStructureEntity` rejects unknown type ids. Returns the new
+ * entity's branded id.
+ */
+export async function seedStructureEntity(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+): Promise<SystemStructureEntityId> {
+  const entityType = await createEntityType(
+    db,
+    systemId,
+    {
+      encryptedData: testEncryptedDataBase64(),
+      sortOrder: STRUCTURE_DEFAULT_SORT_ORDER,
+    },
+    auth,
+    noopAudit,
+  );
+  const typeId: SystemStructureEntityTypeId = entityType.id;
+  const result = await createStructureEntity(
+    db,
+    systemId,
+    {
+      structureEntityTypeId: typeId,
+      encryptedData: testEncryptedDataBase64(),
+      parentEntityId: null,
+      sortOrder: STRUCTURE_DEFAULT_SORT_ORDER,
+    },
+    auth,
+    noopAudit,
+  );
+  return result.id;
+}
+
+/**
+ * Seed a bidirectional friend connection between two seeded tenants.
+ *
+ * Walks the real two-step flow: `a` generates a friend code and `b`
+ * redeems it, creating mirrored connection rows. Returns the connection
+ * id owned by the redeemer (`b`) — symmetrical to what a friend-list
+ * query for `b` would surface.
+ */
+export async function seedFriendConnection(
+  db: PostgresJsDatabase,
+  a: SeededTenant,
+  b: SeededTenant,
+): Promise<FriendConnectionId> {
+  const code = await generateFriendCode(db, a.accountId, a.auth, noopAudit);
+  const result = await redeemFriendCode(db, code.code, b.auth, noopAudit);
+  // connectionIds: [ownerSide, redeemerSide]; return the redeemer's row.
+  return result.connectionIds[1];
 }
