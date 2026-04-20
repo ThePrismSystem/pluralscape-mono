@@ -3,6 +3,8 @@
  * Domain: service-layer in-memory caching.
  */
 
+import type { SystemId } from "@pluralscape/types";
+
 /** Cache TTL for system settings reads (60 seconds). */
 export const SYSTEM_SETTINGS_CACHE_TTL_MS = 60_000;
 
@@ -21,3 +23,27 @@ export const WEBHOOK_CONFIGS_CACHE_TTL_MS = 60_000;
  * settings linger after operator toggles.
  */
 export const NOTIFICATION_CONFIGS_CACHE_TTL_MS = 60_000;
+
+/**
+ * Per-domain cache key prefixes so different services can share a single
+ * in-memory cache without colliding on opaque keys. Values double as the
+ * second colon-separated segment of every generated key.
+ */
+export const CACHE_DOMAINS = {
+  switchAlert: "switch-alert",
+  fieldDefinition: "field-definition",
+} as const;
+
+export type CacheDomain = (typeof CACHE_DOMAINS)[keyof typeof CACHE_DOMAINS];
+
+/**
+ * Build a canonical cache key of the form `systemId:domain:partA:partB...`.
+ * Centralises the shape so services don't invent incompatible variants.
+ */
+export function buildCacheKey(
+  systemId: SystemId,
+  domain: CacheDomain,
+  ...parts: readonly string[]
+): string {
+  return [systemId, domain, ...parts].join(":");
+}

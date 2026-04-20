@@ -10,7 +10,11 @@ import {
 import { brandId } from "@pluralscape/types";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
-import { NOTIFICATION_CONFIGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
+import {
+  CACHE_DOMAINS,
+  NOTIFICATION_CONFIGS_CACHE_TTL_MS,
+  buildCacheKey,
+} from "../lib/cache.constants.js";
 import { logger } from "../lib/logger.js";
 import { QueryCache } from "../lib/query-cache.js";
 
@@ -53,7 +57,7 @@ const notificationConfigCache = new QueryCache<CachedNotificationConfig | null>(
 
 /** Invalidation key derived from the tenant + event-type tuple. */
 function cacheKey(systemId: SystemId, eventType: FriendNotificationEventType): string {
-  return `${systemId}:${eventType}`;
+  return buildCacheKey(systemId, CACHE_DOMAINS.switchAlert, eventType);
 }
 
 /**

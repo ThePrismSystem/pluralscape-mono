@@ -21,7 +21,11 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { FIELD_DEFINITIONS_CACHE_TTL_MS } from "../lib/cache.constants.js";
+import {
+  CACHE_DOMAINS,
+  FIELD_DEFINITIONS_CACHE_TTL_MS,
+  buildCacheKey,
+} from "../lib/cache.constants.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
@@ -61,7 +65,13 @@ function listCacheKey(
   limit?: number,
   includeArchived?: boolean,
 ): string {
-  return `${systemId}:${cursor ?? ""}:${String(limit ?? "")}:${String(includeArchived ?? false)}`;
+  return buildCacheKey(
+    systemId,
+    CACHE_DOMAINS.fieldDefinition,
+    cursor ?? "",
+    String(limit ?? ""),
+    String(includeArchived ?? false),
+  );
 }
 
 /** Invalidate all cached list results (clears entire cache on any write). */
