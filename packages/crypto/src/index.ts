@@ -52,10 +52,13 @@ export {
 } from "./errors.js";
 
 // ── Constants ───────────────────────────────────────────────────────
+export type { Argon2idProfile } from "./crypto.constants.js";
 export {
   AEAD_KEY_BYTES,
   AEAD_NONCE_BYTES,
   AEAD_TAG_BYTES,
+  ARGON2ID_PROFILE_MASTER_KEY,
+  ARGON2ID_PROFILE_TRANSFER,
   BOX_MAC_BYTES,
   BOX_NONCE_BYTES,
   BOX_PUBLIC_KEY_BYTES,
@@ -71,10 +74,8 @@ export {
   KDF_KEY_BYTES,
   PWHASH_MEMLIMIT_INTERACTIVE,
   PWHASH_MEMLIMIT_MODERATE,
-  PWHASH_MEMLIMIT_SENSITIVE,
   PWHASH_OPSLIMIT_INTERACTIVE,
   PWHASH_OPSLIMIT_MODERATE,
-  PWHASH_OPSLIMIT_SENSITIVE,
   AUTH_KEY_HASH_BYTES,
   PWHASH_SALT_BYTES,
   ENCRYPTED_BLOB_MIN_BYTES,
@@ -121,7 +122,12 @@ export { generateMasterKey, unwrapMasterKey, wrapMasterKey } from "./master-key-
 export { deserializeEncryptedBlob, serializeEncryptedBlob } from "./blob-codec.js";
 
 // ── Symmetric encryption ────────────────────────────────────────────
-export type { EncryptedPayload, StreamEncryptedPayload } from "./symmetric.js";
+export type {
+  EncryptedPayload,
+  ReadableByteStream,
+  StreamEncryptedPayload,
+  StreamInput,
+} from "./symmetric.js";
 export {
   decrypt,
   decryptJSON,
@@ -129,6 +135,8 @@ export {
   encrypt,
   encryptJSON,
   encryptStream,
+  encryptStreamAsync,
+  toAsyncIterable,
 } from "./symmetric.js";
 
 // ── Tier helpers ────────────────────────────────────────────────────

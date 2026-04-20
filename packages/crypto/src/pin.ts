@@ -1,4 +1,4 @@
-import { PWHASH_MEMLIMIT_UNIFIED, PWHASH_OPSLIMIT_UNIFIED } from "./crypto.constants.js";
+import { ARGON2ID_PROFILE_MASTER_KEY, assertArgon2idProfile } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 
@@ -11,15 +11,24 @@ export const MIN_PIN_LENGTH = 4;
  * Returns the standard `$argon2id$v=19$m=...,t=...,p=...` encoded string
  * suitable for storage in `systemSettings.pinHash`. The string embeds the
  * salt and parameters — no separate salt column is needed.
+ *
+ * Uses the MASTER_KEY Argon2id profile (ADR 037): PIN verification sits in
+ * the same unlock stack as the master-key wrap, so it should not be protected
+ * by a weaker KDF than the key it unlocks.
  */
 export function hashPin(pin: string): string {
   if (pin.length < MIN_PIN_LENGTH) {
     throw new InvalidInputError(`PIN must be at least ${String(MIN_PIN_LENGTH)} characters.`);
   }
   const adapter = getSodium();
+  assertArgon2idProfile(ARGON2ID_PROFILE_MASTER_KEY);
   const pinBytes = new TextEncoder().encode(pin);
   try {
-    return adapter.pwhashStr(pinBytes, PWHASH_OPSLIMIT_UNIFIED, PWHASH_MEMLIMIT_UNIFIED);
+    return adapter.pwhashStr(
+      pinBytes,
+      ARGON2ID_PROFILE_MASTER_KEY.opslimit,
+      ARGON2ID_PROFILE_MASTER_KEY.memlimit,
+    );
   } finally {
     adapter.memzero(pinBytes);
   }

@@ -419,14 +419,15 @@ Master Key (256-bit, random, persistent)
 
 **The master key is NOT derived from the password.** It is a random 256-bit value generated at registration and persisted (encrypted) in the database. This means password changes do not invalidate derived keys -- only the KEK wrapping layer is re-encrypted.
 
-**Argon2id profiles:**
+**Argon2id profiles (ADR 037):**
 
-| Profile | Iterations                      | Memory                                 | Use Case                                              |
-| ------- | ------------------------------- | -------------------------------------- | ----------------------------------------------------- |
-| Server  | 4 (`PWHASH_OPSLIMIT_SENSITIVE`) | 64 MiB (`PWHASH_MEMLIMIT_INTERACTIVE`) | Registration, login, password reset (server-side)     |
-| Mobile  | 2 (`PWHASH_OPSLIMIT_MOBILE`)    | 32 MiB (`PWHASH_MEMLIMIT_MOBILE`)      | Device transfer key derivation, mobile key derivation |
+| Profile                       | Iterations | Memory | Use Case                                                     |
+| ----------------------------- | ---------- | ------ | ------------------------------------------------------------ |
+| `ARGON2ID_PROFILE_MASTER_KEY` | 4          | 64 MiB | Auth-key split derivation (login, registration), PIN hashing |
+| `ARGON2ID_PROFILE_TRANSFER`   | 3          | 32 MiB | Device-transfer one-shot key derivation (5-min session)      |
 
-The server profile meets OWASP Sensitive tier requirements (m=65536, t>=4, p=1).
+Both profiles exceed the OWASP ASVS 4.x / Password Storage Cheat Sheet
+minimums. See `docs/adr/037-argon2id-context-profiles.md` for rationale.
 
 **Salt:** 16 bytes (`PWHASH_SALT_BYTES`), generated randomly at registration, stored as hex in `accounts.kdfSalt`.
 

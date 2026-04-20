@@ -1,15 +1,15 @@
 import { AEAD_TAG_BYTES, KDF_KEY_BYTES } from "../crypto.constants.js";
 import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
-import { decrypt, decryptStream } from "../symmetric.js";
+import {
+  MAX_DECRYPT_STREAM_BYTES,
+  MAX_STREAM_CHUNKS,
+  decrypt,
+  decryptStream,
+} from "../symmetric.js";
 import { assertAeadKey, assertAeadNonce } from "../validation.js";
 
-import {
-  KDF_CONTEXT_BLOB,
-  MAX_STREAM_CHUNKS,
-  SUBKEY_BLOB_ENCRYPTION,
-  U32_SIZE,
-} from "./blob-constants.js";
+import { KDF_CONTEXT_BLOB, SUBKEY_BLOB_ENCRYPTION, U32_SIZE } from "./blob-constants.js";
 
 import type { EncryptedPayload, StreamEncryptedPayload } from "../symmetric.js";
 import type { AeadKey, KdfMasterKey } from "../types.js";
@@ -103,6 +103,11 @@ function deserializeStreamPayload(data: Uint8Array): StreamEncryptedPayload {
   if (chunkCount > MAX_STREAM_CHUNKS) {
     throw new InvalidInputError(
       `Stream chunk count ${String(chunkCount)} exceeds maximum ${String(MAX_STREAM_CHUNKS)}.`,
+    );
+  }
+  if (totalLength > MAX_DECRYPT_STREAM_BYTES) {
+    throw new InvalidInputError(
+      `Stream totalLength ${String(totalLength)} exceeds maximum ${String(MAX_DECRYPT_STREAM_BYTES)}.`,
     );
   }
 

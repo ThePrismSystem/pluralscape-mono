@@ -1,6 +1,12 @@
 import { KDF_KEY_BYTES } from "../crypto.constants.js";
+import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
-import { encrypt, encryptStream } from "../symmetric.js";
+import {
+  MAX_DECRYPT_STREAM_BYTES,
+  encrypt,
+  encryptStream,
+  encryptStreamAsync,
+} from "../symmetric.js";
 import { assertAeadKey } from "../validation.js";
 
 import {
@@ -10,15 +16,33 @@ import {
   U32_SIZE,
 } from "./blob-constants.js";
 
+import type { StreamInput } from "../symmetric.js";
 import type { AeadKey, KdfMasterKey } from "../types.js";
 import type { EncryptedBlobResult } from "./blob-encryption-metadata.js";
 import type { BucketId } from "@pluralscape/types";
 
-/** Parameters for encrypting a blob. */
+/** Parameters for encrypting an in-memory blob. */
 export type EncryptBlobParams =
   | { readonly data: Uint8Array; readonly tier: 1; readonly masterKey: KdfMasterKey }
   | {
       readonly data: Uint8Array;
+      readonly tier: 2;
+      readonly bucketKey: AeadKey;
+      readonly bucketId: BucketId;
+    };
+
+/**
+ * Parameters for encrypting a streaming blob.
+ *
+ * Callers that produce bytes as a `ReadableStream<Uint8Array>` or an
+ * `AsyncIterable<Uint8Array>` (large file uploads, camera roll pipes, decoded
+ * videos, fetch bodies) should prefer {@link encryptBlobStream} over buffering
+ * the full payload into a single `Uint8Array`.
+ */
+export type EncryptBlobStreamParams =
+  | { readonly data: StreamInput; readonly tier: 1; readonly masterKey: KdfMasterKey }
+  | {
+      readonly data: StreamInput;
       readonly tier: 2;
       readonly bucketKey: AeadKey;
       readonly bucketId: BucketId;
@@ -72,8 +96,54 @@ export function encryptBlob(params: EncryptBlobParams): EncryptedBlobResult {
   }
 }
 
-/** Resolve the encryption key based on tier. */
-function resolveBlobKey(params: EncryptBlobParams): AeadKey {
+/**
+ * Streaming-input variant of {@link encryptBlob}.
+ *
+ * Produces the same {@link EncryptedBlobResult} but never requires the caller
+ * to materialize the full plaintext as a single `Uint8Array`. When
+ * `params.data` is already a `Uint8Array`, this delegates to {@link encryptBlob}
+ * to preserve the small-blob fast path.
+ */
+export async function encryptBlobStream(
+  params: EncryptBlobStreamParams,
+): Promise<EncryptedBlobResult> {
+  if (params.data instanceof Uint8Array) {
+    // In-memory input — delegate to the synchronous path so the sub-threshold
+    // fast path (no chunking) is preserved.
+    if (params.tier === 1) {
+      return encryptBlob({ data: params.data, tier: 1, masterKey: params.masterKey });
+    }
+    return encryptBlob({
+      data: params.data,
+      tier: 2,
+      bucketKey: params.bucketKey,
+      bucketId: params.bucketId,
+    });
+  }
+
+  const key = resolveBlobKey(params);
+  try {
+    const payload = await encryptStreamAsync(params.data, key);
+    const encryptedData = serializeStreamPayload(payload);
+    return {
+      encryptedData,
+      metadata: {
+        tier: params.tier,
+        algorithm: "xchacha20-poly1305",
+        bucketId: params.tier === 2 ? params.bucketId : null,
+        streamed: true,
+      },
+      payload,
+    };
+  } finally {
+    if (params.tier === 1) {
+      getSodium().memzero(key);
+    }
+  }
+}
+
+/** Resolve the encryption key based on tier. Shared between the sync and stream paths. */
+function resolveBlobKey(params: EncryptBlobParams | EncryptBlobStreamParams): AeadKey {
   if (params.tier === 1) {
     const adapter = getSodium();
     const derivedKey = adapter.kdfDeriveFromKey(
@@ -94,6 +164,15 @@ function serializeStreamPayload(payload: ReturnType<typeof encryptStream>): Uint
   // Format: uint32le(chunkCount) || uint32le(totalLength) || for each chunk: uint32le(nonceLen) || nonce || uint32le(ctLen) || ciphertext
   const CHUNK_OVERHEAD = 8; // 4 bytes nonce len + 4 bytes ct len
   const FILE_HEADER = 8; // chunkCount + totalLength
+
+  // Both header fields are u32 on the wire; producing a value that would
+  // overflow them would emit a payload we cannot parse back.
+  if (payload.chunks.length > MAX_DECRYPT_STREAM_BYTES) {
+    throw new InvalidInputError("Encrypted stream chunk count exceeds u32 wire maximum.");
+  }
+  if (payload.totalLength > MAX_DECRYPT_STREAM_BYTES) {
+    throw new InvalidInputError("Encrypted stream total length exceeds u32 wire maximum (4 GiB).");
+  }
 
   let totalSize = FILE_HEADER;
   for (const chunk of payload.chunks) {

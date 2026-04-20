@@ -1,13 +1,13 @@
 import {
+  ARGON2ID_PROFILE_MASTER_KEY,
   AUTH_KEY_BYTES,
   AUTH_KEY_HASH_BYTES,
   CHALLENGE_NONCE_BYTES,
   MIN_PASSWORD_LENGTH,
   PASSWORD_KEY_BYTES,
-  PWHASH_MEMLIMIT_UNIFIED,
-  PWHASH_OPSLIMIT_UNIFIED,
   RECOVERY_KEY_HASH_BYTES,
   SPLIT_KEY_BYTES,
+  assertArgon2idProfile,
 } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
@@ -36,8 +36,9 @@ export interface SplitKeyResult {
 /**
  * Derive an auth key and a password key from a single Argon2id derivation.
  *
- * Runs `Argon2id(password, salt, opsLimit=4, memLimit=64 MiB)` producing 64 bytes,
- * then splits: bytes [0..31] → authKey, bytes [32..63] → passwordKey (AeadKey).
+ * Runs the MASTER_KEY Argon2id profile (see `ARGON2ID_PROFILE_MASTER_KEY` —
+ * currently t=4, m=64 MiB, per ADR 037) producing 64 bytes, then splits:
+ * bytes [0..31] → authKey, bytes [32..63] → passwordKey (AeadKey).
  * The 64-byte derivation buffer is zeroed before return.
  *
  * @param password       - UTF-8 encoded password bytes. Must be ≥ MIN_PASSWORD_LENGTH.
@@ -59,12 +60,13 @@ export function deriveAuthAndPasswordKeys(
   }
 
   const adapter = getSodium();
+  assertArgon2idProfile(ARGON2ID_PROFILE_MASTER_KEY);
   const derived = adapter.pwhash(
     SPLIT_KEY_BYTES,
     password,
     salt,
-    PWHASH_OPSLIMIT_UNIFIED,
-    PWHASH_MEMLIMIT_UNIFIED,
+    ARGON2ID_PROFILE_MASTER_KEY.opslimit,
+    ARGON2ID_PROFILE_MASTER_KEY.memlimit,
   );
 
   // Split: copy out both halves before zeroing the source buffer.

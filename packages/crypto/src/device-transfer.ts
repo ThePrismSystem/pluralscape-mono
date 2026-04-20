@@ -3,22 +3,21 @@
  *
  * Security model:
  * - Verification code: 10 decimal digits (~33.2 bits entropy)
- * - Protected by Argon2id mobile profile (32 MiB / 2 iterations) to slow brute force
+ * - Protected by Argon2id TRANSFER profile (see `crypto.constants.ts`) to slow brute force
  * - Transfer sessions expire after 5 minutes (TRANSFER_TIMEOUT_MS)
- * - QR payload includes cleartext verification code for convenience — security relies
- *   on physical proximity to the source device's screen (single-factor)
- * - To enable two-factor verification, remove `code` from QR payload and require
- *   separate manual entry on the target device
+ * - QR payload carries only {requestId, salt}. The verification code must be entered
+ *   manually on the target device. This two-factor split closes the MITM/photography
+ *   window: capturing the QR alone is insufficient to derive the transfer key.
  * - Offline brute force of the full code space is computationally expensive
  *   (~2,800 hours on a single 2024-era GPU per hashcat benchmarks) and mitigated
  *   by the 5-minute server-side timeout for online attacks
  */
 
 import {
+  ARGON2ID_PROFILE_TRANSFER,
   KDF_KEY_BYTES,
-  PWHASH_MEMLIMIT_UNIFIED,
-  PWHASH_OPSLIMIT_UNIFIED,
   PWHASH_SALT_BYTES,
+  assertArgon2idProfile,
 } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { fromHex, toHex } from "./hex.js";
@@ -43,6 +42,22 @@ export const TRANSFER_TIMEOUT_MS = 300_000;
 
 /** Transfer code validation pattern — exactly 10 decimal digits. */
 const TRANSFER_CODE_PATTERN = /^\d{10}$/;
+
+/**
+ * QR payload schema version. Currently v2: `{ version, requestId, salt }`.
+ * v1 (`{ requestId, code, salt }`) is rejected — see ADR 024 / threat model
+ * L6 for the rationale behind removing the verification code from the QR.
+ */
+export const QR_PAYLOAD_VERSION = 2;
+
+/**
+ * Maximum byte length accepted by `decodeQRPayload`.
+ *
+ * Real payloads are ~150 bytes (UUID + hex-encoded 16-byte salt + wrapping
+ * JSON). 1 KiB is generously above that while still cheap enough to reject
+ * malformed input without full `JSON.parse` on megabyte-scale strings.
+ */
+const QR_PAYLOAD_MAX_LENGTH = 1024;
 
 /** Multiplier to combine two uint32 values into a 64-bit BigInt (2^32). */
 const UINT32_MULTIPLIER = 0x100000000n;
@@ -90,10 +105,15 @@ export interface TransferInitiation {
   readonly requestId: string;
 }
 
-/** Decoded QR payload fields. */
+/**
+ * Decoded QR payload fields.
+ *
+ * The QR code intentionally does not carry the verification code; the target device
+ * must obtain the 10-digit code through a separate out-of-band channel (manual entry)
+ * before deriving the transfer key via {@link deriveTransferKey}.
+ */
 export interface DecodedQRPayload {
   readonly requestId: string;
-  readonly code: string;
   readonly salt: PwhashSalt;
 }
 
@@ -131,18 +151,18 @@ function generateUUIDv4(): string {
   ].join("-");
 }
 
-/** Type guard for the expected shape of a parsed QR payload. */
-function isQRPayloadShape(v: unknown): v is { requestId: string; code: string; salt: string } {
-  return (
-    typeof v === "object" &&
-    v !== null &&
-    "requestId" in v &&
-    typeof (v as Record<string, unknown>).requestId === "string" &&
-    "code" in v &&
-    typeof (v as Record<string, unknown>).code === "string" &&
-    "salt" in v &&
-    typeof (v as Record<string, unknown>).salt === "string"
-  );
+/** Type guard for the expected shape of a parsed v2 QR payload. */
+function isQRPayloadShape(
+  v: unknown,
+): v is { version: typeof QR_PAYLOAD_VERSION; requestId: string; salt: string } {
+  if (typeof v !== "object" || v === null) return false;
+  // Narrow per-field `as { field?: unknown }` probes are the canonical
+  // TS ≥4.9 idiom for validating an untrusted JSON shape without the loose
+  // `Record<string, unknown>` cast banned by house rules.
+  if ((v as { version?: unknown }).version !== QR_PAYLOAD_VERSION) return false;
+  if (typeof (v as { requestId?: unknown }).requestId !== "string") return false;
+  if (typeof (v as { salt?: unknown }).salt !== "string") return false;
+  return true;
 }
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -177,14 +197,15 @@ export function deriveTransferKey(code: string, salt: PwhashSalt): AeadKey {
     );
   }
   const adapter = getSodium();
+  assertArgon2idProfile(ARGON2ID_PROFILE_TRANSFER);
   const codeBytes = new TextEncoder().encode(code);
   try {
     const raw = adapter.pwhash(
       KDF_KEY_BYTES,
       codeBytes,
       salt,
-      PWHASH_OPSLIMIT_UNIFIED,
-      PWHASH_MEMLIMIT_UNIFIED,
+      ARGON2ID_PROFILE_TRANSFER.opslimit,
+      ARGON2ID_PROFILE_TRANSFER.memlimit,
     );
     assertAeadKey(raw);
     return raw;
@@ -230,15 +251,18 @@ export function decryptFromTransfer(payload: EncryptedPayload, transferKey: Aead
 /**
  * Encode a TransferInitiation as a JSON string for QR code embedding.
  *
- * Note: The QR payload includes the verification code for convenience — scanning
- * the QR replaces manual code entry. See file-level security model note for threat
- * analysis and two-factor upgrade path.
+ * The QR carries `{ version, requestId, salt }`. The 10-digit verification
+ * code is NOT embedded: it must be entered manually on the target device,
+ * forming the second factor alongside the QR-delivered salt. This closes the
+ * MITM/photography window where a passive observer capturing the QR alone
+ * could derive the transfer key. The `version` field lets the decoder reject
+ * pre-v2 layouts up-front (see {@link QR_PAYLOAD_VERSION}).
  */
 export function encodeQRPayload(init: TransferInitiation): string {
   const saltHex = toHex(init.codeSalt);
   return JSON.stringify({
+    version: QR_PAYLOAD_VERSION,
     requestId: init.requestId,
-    code: init.verificationCode,
     salt: saltHex,
   });
 }
@@ -246,9 +270,22 @@ export function encodeQRPayload(init: TransferInitiation): string {
 /**
  * Decode a QR payload string back into its structured fields.
  *
- * Throws InvalidInputError if the payload is not valid JSON or is missing required fields.
+ * Accepts only v2 payloads (`{ version: 2, requestId, salt }`); any payload
+ * missing `version`, carrying a different version, or containing legacy
+ * fields such as `code` is rejected. This is the enforcement point for
+ * threat-model finding L6 — an older source device with a v1 payload would
+ * have leaked the verification code inside the QR, so decoders must refuse
+ * to interoperate with it.
+ *
+ * Throws InvalidInputError if the payload is over {@link QR_PAYLOAD_MAX_LENGTH}
+ * bytes, is not valid JSON, or is missing / malformed required fields.
  */
 export function decodeQRPayload(data: string): DecodedQRPayload {
+  if (data.length > QR_PAYLOAD_MAX_LENGTH) {
+    throw new InvalidInputError(
+      `QR payload exceeds maximum length of ${String(QR_PAYLOAD_MAX_LENGTH)} bytes.`,
+    );
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(data) as unknown;
@@ -256,11 +293,18 @@ export function decodeQRPayload(data: string): DecodedQRPayload {
     throw new InvalidInputError("QR payload is not valid JSON.", { cause: error });
   }
   if (!isQRPayloadShape(parsed)) {
-    throw new InvalidInputError("QR payload missing required fields: requestId, code, salt.");
+    throw new InvalidInputError(
+      `QR payload is not a valid v${String(QR_PAYLOAD_VERSION)} schema (missing version, requestId, or salt).`,
+    );
+  }
+  if (Object.hasOwn(parsed, "code")) {
+    // A v1 payload would embed the 10-digit code in the QR. Refusing to
+    // decode it enforces the two-factor split from ADR 024 / L6.
+    throw new InvalidInputError("QR payload contains forbidden legacy `code` field.");
   }
   const salt = fromHex(parsed.salt);
   assertPwhashSalt(salt);
-  return { requestId: parsed.requestId, code: parsed.code, salt };
+  return { requestId: parsed.requestId, salt };
 }
 
 /**

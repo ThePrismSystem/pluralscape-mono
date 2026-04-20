@@ -1,3 +1,9 @@
+/**
+ * QR carries `{ version, requestId, salt }` only; the 10-digit verification
+ * code is manual entry. See `packages/crypto/src/device-transfer.ts` and
+ * ADR 037 for the threat-model rationale.
+ */
+
 import { trpc } from "@pluralscape/api-client/trpc";
 
 import { type TRPCMutation } from "./types.js";
