@@ -146,13 +146,22 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
   const STDERR_TAIL_MAX = 20;
   serverProcess.stderr.on("data", (data: Buffer) => {
     const msg = data.toString();
-    // Suppress only well-formed pino INFO/DEBUG/WARN JSON. Forward anything
-    // else (raw Bun errors, malformed JSON, ERROR/FATAL pino) so startup
-    // failures are visible instead of silently eaten.
-    const isPinoJson = /^\s*\{.*"level":\d+/.test(msg);
-    const isLowLevelPino = isPinoJson && !msg.includes('"level":50') && !msg.includes('"level":60');
-    if (!isLowLevelPino) {
-      process.stderr.write(msg);
+    // Classify per-line. A single 'data' event can contain multiple records;
+    // testing the entire chunk would misclassify raw Bun errors that happen to
+    // share a chunk with a pino INFO/DEBUG/WARN line.
+    const lines = msg.split(/\r?\n/);
+    let forwarded = "";
+    for (const line of lines) {
+      if (line === "") continue;
+      const isPinoJson = /^\s*\{.*"level":\d+/.test(line);
+      const isLowLevelPino =
+        isPinoJson && !line.includes('"level":50') && !line.includes('"level":60');
+      if (!isLowLevelPino) {
+        forwarded += `${line}\n`;
+      }
+    }
+    if (forwarded !== "") {
+      process.stderr.write(forwarded);
     }
     stderrTail.push(msg);
     if (stderrTail.length > STDERR_TAIL_MAX) stderrTail.shift();
