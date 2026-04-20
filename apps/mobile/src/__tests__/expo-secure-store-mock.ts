@@ -13,7 +13,6 @@ interface SecureStoreOptions {
 type SecureStoreMethod = "getItemAsync" | "setItemAsync" | "deleteItemAsync";
 
 const store = new Map<string, string>();
-const lastOptions = new Map<string, SecureStoreOptions | undefined>();
 const lastOptionsByMethod = new Map<string, SecureStoreOptions | undefined>();
 let throwOnNextOp: { method: string; error: Error } | null = null;
 
@@ -52,7 +51,6 @@ export function setItemAsync(
 ): Promise<void> {
   maybeThrow("setItemAsync");
   store.set(key, value);
-  lastOptions.set(key, options);
   lastOptionsByMethod.set(byMethodKey("setItemAsync", key), options);
   return Promise.resolve();
 }
@@ -71,13 +69,8 @@ export function isAvailableAsync(): Promise<boolean> {
 // Test helpers — not part of the real expo-secure-store API.
 export function __reset(): void {
   store.clear();
-  lastOptions.clear();
   lastOptionsByMethod.clear();
   throwOnNextOp = null;
-}
-
-export function __lastOptions(key: string): SecureStoreOptions | undefined {
-  return lastOptions.get(key);
 }
 
 export function __lastOptionsForMethod(
