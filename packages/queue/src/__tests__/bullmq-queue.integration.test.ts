@@ -503,11 +503,15 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
     const rawKey = `bull:${q.name}:${job.id}`;
     const current = await redis.hget(rawKey, "data");
     if (current !== null) {
-      const parsed = JSON.parse(current) as Record<string, unknown>;
-      parsed["lastHeartbeatAt"] = null;
-      parsed["startedAt"] = null;
-      parsed["status"] = "running";
-      await redis.hset(rawKey, "data", JSON.stringify(parsed));
+      const parsed: unknown = JSON.parse(current);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error("expected `data` hash field to be a JSON object");
+      }
+      const obj = parsed as { [k: string]: unknown };
+      obj["lastHeartbeatAt"] = null;
+      obj["startedAt"] = null;
+      obj["status"] = "running";
+      await redis.hset(rawKey, "data", JSON.stringify(obj));
     }
 
     // With startedAt=null and lastHeartbeatAt=null the lastBeat guard returns false
@@ -805,93 +809,81 @@ describe.skipIf(!ctx.available)("BullMQJobQueue — branch coverage", () => {
     await redisConn.hset(rawKey, "data", JSON.stringify(parsed));
   }
 
-  it("dequeue throws QueueCorruptionError when next job has corrupt data", async () => {
+  // Each case drives the queue to the status the method requires, corrupts
+  // the stored data, and asserts the method surfaces QueueCorruptionError.
+  // `driveToRunning` — whether the job must be dequeued first so the method's
+  //   reachable parse path is the corrupt one (e.g. acknowledge/heartbeat).
+  // `timeoutMs` — overrides the default enqueue timeout; `findStalledJobs`
+  //   needs `1` so the stall check considers the job stalled if it parsed.
+  interface CorruptionCase {
+    readonly name: string;
+    readonly driveToRunning: boolean;
+    readonly timeoutMs?: number;
+    readonly invoke: (q: BullMQJobQueue, id: JobId) => Promise<unknown>;
+  }
+
+  const corruptionCases: readonly CorruptionCase[] = [
+    { name: "dequeue", driveToRunning: false, invoke: (q) => q.dequeue() },
+    { name: "acknowledge", driveToRunning: true, invoke: (q, id) => q.acknowledge(id, {}) },
+    { name: "fail", driveToRunning: true, invoke: (q, id) => q.fail(id, "boom") },
+    { name: "retry", driveToRunning: false, invoke: (q, id) => q.retry(id) },
+    { name: "cancel", driveToRunning: false, invoke: (q, id) => q.cancel(id) },
+    { name: "heartbeat", driveToRunning: true, invoke: (q, id) => q.heartbeat(id) },
+    {
+      name: "findStalledJobs",
+      driveToRunning: true,
+      timeoutMs: 1,
+      invoke: (q) => q.findStalledJobs(),
+    },
+  ];
+
+  it.each(corruptionCases)(
+    "$name throws QueueCorruptionError when stored data is corrupt",
+    async ({ driveToRunning, timeoutMs, invoke }) => {
+      const q = createQueue();
+      activeQueues.push(q);
+      if (redis === null) throw new Error("Valkey not available");
+
+      const enqueueOpts =
+        timeoutMs === undefined
+          ? { type: "sync-push" as const }
+          : { type: "sync-push" as const, timeoutMs };
+      const job = await q.enqueue(makeJobParams(enqueueOpts));
+      if (driveToRunning) await dequeueOrFail(q);
+      await corruptJobData(redis, q.name, job.id);
+
+      await expect(invoke(q, job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
+    },
+  );
+
+  // ── findStalledJobs mixed-batch fail-closed (I2) ─────────────────────
+  //
+  // One corrupt active job aborts the ENTIRE sweep, not just that job's
+  // row. This is intentional — silently skipping corrupt records would
+  // hide stalled-detection gaps from operators. Documented explicitly so
+  // schedulers supervising this call don't assume partial success.
+
+  it("findStalledJobs aborts the whole sweep when one of several active jobs is corrupt", async () => {
     const q = createQueue();
     activeQueues.push(q);
     if (redis === null) throw new Error("Valkey not available");
 
-    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
-    await corruptJobData(redis, q.name, job.id);
+    const jobA = await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
+    const jobB = await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
+    const jobC = await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
 
-    await expect(q.dequeue()).rejects.toBeInstanceOf(QueueCorruptionError);
-  });
-
-  it("acknowledge throws QueueCorruptionError when stored data is corrupt", async () => {
-    const q = createQueue();
-    activeQueues.push(q);
-    if (redis === null) throw new Error("Valkey not available");
-
-    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
-    // Drive job to 'running' before corrupting so acknowledge's status check
-    // is reachable; then rewrite data so the parse step fails first.
     await dequeueOrFail(q);
-    await corruptJobData(redis, q.name, job.id);
-
-    await expect(q.acknowledge(job.id, {})).rejects.toBeInstanceOf(QueueCorruptionError);
-  });
-
-  it("fail throws QueueCorruptionError when stored data is corrupt", async () => {
-    const q = createQueue();
-    activeQueues.push(q);
-    if (redis === null) throw new Error("Valkey not available");
-
-    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
     await dequeueOrFail(q);
-    await corruptJobData(redis, q.name, job.id);
-
-    await expect(q.fail(job.id, "boom")).rejects.toBeInstanceOf(QueueCorruptionError);
-  });
-
-  it("retry throws QueueCorruptionError when BullMQ-store data is corrupt", async () => {
-    const q = createQueue();
-    activeQueues.push(q);
-    if (redis === null) throw new Error("Valkey not available");
-
-    // Produce a job with stored data corruption while still in BullMQ (not
-    // yet promoted to the cancelled store). retry() reads via queue.getJob
-    // and must surface QueueCorruptionError rather than a raw ZodError.
-    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
-    await corruptJobData(redis, q.name, job.id);
-
-    await expect(q.retry(job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
-  });
-
-  it("cancel throws QueueCorruptionError when BullMQ-store data is corrupt", async () => {
-    const q = createQueue();
-    activeQueues.push(q);
-    if (redis === null) throw new Error("Valkey not available");
-
-    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
-    await corruptJobData(redis, q.name, job.id);
-
-    await expect(q.cancel(job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
-  });
-
-  it("heartbeat throws QueueCorruptionError when stored data is corrupt", async () => {
-    const q = createQueue();
-    activeQueues.push(q);
-    if (redis === null) throw new Error("Valkey not available");
-
-    const job = await q.enqueue(makeJobParams({ type: "sync-push" }));
     await dequeueOrFail(q);
-    await corruptJobData(redis, q.name, job.id);
 
-    await expect(q.heartbeat(job.id)).rejects.toBeInstanceOf(QueueCorruptionError);
-  });
+    await corruptJobData(redis, q.name, jobB.id);
 
-  it("findStalledJobs throws QueueCorruptionError when an active job has corrupt data", async () => {
-    const q = createQueue();
-    activeQueues.push(q);
-    if (redis === null) throw new Error("Valkey not available");
-
-    // A job in BullMQ's "active" state with corrupt stored data must fail
-    // closed — findStalledJobs used to silently skip these, hiding potential
-    // stalled-detection gaps from operators.
-    const job = await q.enqueue(makeJobParams({ type: "sync-push", timeoutMs: 1 }));
-    await dequeueOrFail(q);
-    await corruptJobData(redis, q.name, job.id);
-
+    // Even though jobA and jobC parse cleanly and would be reported stalled,
+    // the first corrupt row short-circuits the sweep.
     await expect(q.findStalledJobs()).rejects.toBeInstanceOf(QueueCorruptionError);
+
+    void jobA;
+    void jobC;
   });
 
   it("findStalledJobs skips a job whose stored status differs from running", async () => {
