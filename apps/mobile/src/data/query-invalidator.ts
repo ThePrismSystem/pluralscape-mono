@@ -11,6 +11,13 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
  */
 const LIST_DISCRIMINATOR_INDEX = 1;
 
+/**
+ * Index into a search query key at which the scope (`"self" | "friend"`)
+ * appears. Search keys are shaped `["search", debouncedQuery, scope]`
+ * (see `src/hooks/use-search.ts`).
+ */
+const SEARCH_SCOPE_INDEX = 2;
+
 function isListQuery(queryKey: QueryKey): boolean {
   return queryKey[LIST_DISCRIMINATOR_INDEX] === "list";
 }
@@ -55,8 +62,17 @@ export function createQueryInvalidator(
     void queryClient.invalidateQueries({ queryKey: [tableName, event.entityId] });
   });
 
-  const unsubSearch = eventBus.on("search:index-updated", () => {
-    void queryClient.invalidateQueries({ queryKey: ["search"] });
+  const unsubSearch = eventBus.on("search:index-updated", (event) => {
+    // Search queries are keyed `["search", debouncedQuery, scope]` (see
+    // `use-search.ts`). Scope the invalidation so a `self` materialization
+    // does not purge friend search caches (and vice versa). Queries that
+    // lack a scope slot (e.g., a bare `["search"]` entry) fall through
+    // the predicate and stay cached.
+    const { scope } = event;
+    void queryClient.invalidateQueries({
+      queryKey: ["search"],
+      predicate: (query) => query.queryKey[SEARCH_SCOPE_INDEX] === scope,
+    });
   });
 
   return () => {

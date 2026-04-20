@@ -195,7 +195,7 @@ describe("createQueryInvalidator", () => {
   });
 
   describe("search:index-updated", () => {
-    it("invalidates the search query key", () => {
+    it("invalidates the search key with a scope-filtering predicate", () => {
       createQueryInvalidator(eventBus, queryClient);
 
       eventBus.emit("search:index-updated", {
@@ -203,10 +203,32 @@ describe("createQueryInvalidator", () => {
         scope: "self",
       });
 
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["search"] });
+      expect(invalidateQueries).toHaveBeenCalledTimes(1);
+      const filters = filterAt(invalidateQueries, 0);
+      expect(filters.queryKey).toEqual(["search"]);
+      expect(hasPredicate(filters)).toBe(true);
     });
 
-    it("invalidates search regardless of scope", () => {
+    it("predicate matches only queries with matching scope", () => {
+      createQueryInvalidator(eventBus, queryClient);
+
+      eventBus.emit("search:index-updated", {
+        type: "search:index-updated",
+        scope: "self",
+      });
+
+      const predicate = requirePredicate(filterAt(invalidateQueries, 0));
+
+      // Matching scope → invalidated.
+      expect(predicate({ queryKey: ["search", "hello", "self"] })).toBe(true);
+      expect(predicate({ queryKey: ["search", "", "self"] })).toBe(true);
+      // Other scope → preserved.
+      expect(predicate({ queryKey: ["search", "hello", "friend"] })).toBe(false);
+      // Key shape without scope slot → preserved.
+      expect(predicate({ queryKey: ["search"] })).toBe(false);
+    });
+
+    it("a friend-scope event does not invalidate self-scope queries", () => {
       createQueryInvalidator(eventBus, queryClient);
 
       eventBus.emit("search:index-updated", {
@@ -215,7 +237,10 @@ describe("createQueryInvalidator", () => {
         documentType: "system-core",
       });
 
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["search"] });
+      const predicate = requirePredicate(filterAt(invalidateQueries, 0));
+
+      expect(predicate({ queryKey: ["search", "q", "friend"] })).toBe(true);
+      expect(predicate({ queryKey: ["search", "q", "self"] })).toBe(false);
     });
   });
 
