@@ -13,12 +13,7 @@
  *   by the 5-minute server-side timeout for online attacks
  */
 
-import {
-  KDF_KEY_BYTES,
-  PWHASH_MEMLIMIT_UNIFIED,
-  PWHASH_OPSLIMIT_UNIFIED,
-  PWHASH_SALT_BYTES,
-} from "./crypto.constants.js";
+import { ARGON2ID_PROFILE_TRANSFER, KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { fromHex, toHex } from "./hex.js";
 import { getSodium } from "./sodium.js";
@@ -185,8 +180,8 @@ export function deriveTransferKey(code: string, salt: PwhashSalt): AeadKey {
       KDF_KEY_BYTES,
       codeBytes,
       salt,
-      PWHASH_OPSLIMIT_UNIFIED,
-      PWHASH_MEMLIMIT_UNIFIED,
+      ARGON2ID_PROFILE_TRANSFER.opslimit,
+      ARGON2ID_PROFILE_TRANSFER.memlimit,
     );
     assertAeadKey(raw);
     return raw;

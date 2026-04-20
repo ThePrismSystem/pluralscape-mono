@@ -62,17 +62,47 @@ export const PWHASH_OPSLIMIT_MODERATE = 3;
 /** Moderate memory limit in bytes (256 MiB). */
 export const PWHASH_MEMLIMIT_MODERATE = 256 * 1_024 * 1_024;
 
-/** Sensitive ops limit (OWASP minimum for server-side password hashing). */
-export const PWHASH_OPSLIMIT_SENSITIVE = 4;
+// ── Argon2id context-specific profiles (ADR 037) ────────────────────
+//
+// Rationale: a single unified profile either over-pays on short-lived
+// derivations (like the device-transfer key) or under-protects long-lived
+// ones (like the master-key wrap). Each profile bundles (opslimit, memlimit)
+// indivisibly so callers can't accidentally mix tiers.
+//
+// Numbers follow the OWASP ASVS 4.x V2.4 / Password Storage Cheat Sheet
+// guidance for Argon2id with parallelism = 1 (libsodium's hard-coded value).
 
-/** Sensitive memory limit in bytes (1 GiB). */
-export const PWHASH_MEMLIMIT_SENSITIVE = 1_073_741_824;
+/** Argon2id profile shape — opslimit and memlimit travel together. */
+export interface Argon2idProfile {
+  /** libsodium pwhash opslimit (iterations). */
+  readonly opslimit: number;
+  /** libsodium pwhash memlimit in bytes. */
+  readonly memlimit: number;
+}
 
-/** Unified Argon2id ops limit — OWASP Sensitive tier (t=4). All clients use this. */
-export const PWHASH_OPSLIMIT_UNIFIED = 4;
+/**
+ * MASTER_KEY — long-lived derivations that protect the account for the
+ * lifetime of the password. Used by auth-key split derivation and PIN
+ * hashing. (t=4, m=64 MiB) exceeds the OWASP high-memory recommendation
+ * (m >= 64 MiB, t >= 3) and matches the previous unified profile, so
+ * existing dev artifacts remain compatible.
+ */
+export const ARGON2ID_PROFILE_MASTER_KEY: Argon2idProfile = Object.freeze({
+  opslimit: 4,
+  memlimit: 64 * 1_024 * 1_024,
+});
 
-/** Unified Argon2id memory limit in bytes (64 MiB). All clients use this. */
-export const PWHASH_MEMLIMIT_UNIFIED = 64 * 1_024 * 1_024;
+/**
+ * TRANSFER — one-shot KDF for device-transfer sessions. The source input is
+ * a 10-digit code (~33.2 bits of entropy) protected by a 5-minute server-side
+ * timeout and rate limiting (ADR 024). (t=3, m=32 MiB) still comfortably
+ * exceeds the OWASP minimum (m >= 19 MiB, t >= 2) while materially improving
+ * pair-a-new-device latency on low-end mobile hardware.
+ */
+export const ARGON2ID_PROFILE_TRANSFER: Argon2idProfile = Object.freeze({
+  opslimit: 3,
+  memlimit: 32 * 1_024 * 1_024,
+});
 
 /** Output length for split key derivation: auth_key (32B) + password_key (32B). */
 export const SPLIT_KEY_BYTES = 64;
@@ -166,16 +196,14 @@ export const SODIUM_CONSTANTS = Object.freeze({
   PWHASH_MEMLIMIT_INTERACTIVE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_MEMLIMIT_MODERATE,
-  PWHASH_OPSLIMIT_SENSITIVE,
-  PWHASH_MEMLIMIT_SENSITIVE,
   KDF_KEY_BYTES,
   KDF_CONTEXT_BYTES,
   KDF_BYTES_MIN,
   KDF_BYTES_MAX,
   GENERIC_HASH_BYTES_MIN,
   GENERIC_HASH_BYTES_MAX,
-  PWHASH_OPSLIMIT_UNIFIED,
-  PWHASH_MEMLIMIT_UNIFIED,
+  ARGON2ID_PROFILE_MASTER_KEY,
+  ARGON2ID_PROFILE_TRANSFER,
   SPLIT_KEY_BYTES,
   AUTH_KEY_BYTES,
   PASSWORD_KEY_BYTES,

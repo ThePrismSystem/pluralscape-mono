@@ -4,6 +4,8 @@ import {
   AEAD_KEY_BYTES,
   AEAD_NONCE_BYTES,
   AEAD_TAG_BYTES,
+  ARGON2ID_PROFILE_MASTER_KEY,
+  ARGON2ID_PROFILE_TRANSFER,
   BOX_MAC_BYTES,
   BOX_NONCE_BYTES,
   BOX_PUBLIC_KEY_BYTES,
@@ -122,5 +124,36 @@ describe("KDF constants", () => {
 describe("SODIUM_CONSTANTS", () => {
   it("is frozen", () => {
     expect(Object.isFrozen(SODIUM_CONSTANTS)).toBe(true);
+  });
+});
+
+describe("Argon2id context profiles (ADR 037)", () => {
+  const MIB = 1_024 * 1_024;
+
+  it("MASTER_KEY profile exposes opslimit=4 and memlimit=64 MiB", () => {
+    expect(ARGON2ID_PROFILE_MASTER_KEY.opslimit).toBe(4);
+    expect(ARGON2ID_PROFILE_MASTER_KEY.memlimit).toBe(64 * MIB);
+  });
+
+  it("TRANSFER profile exposes opslimit=3 and memlimit=32 MiB", () => {
+    expect(ARGON2ID_PROFILE_TRANSFER.opslimit).toBe(3);
+    expect(ARGON2ID_PROFILE_TRANSFER.memlimit).toBe(32 * MIB);
+  });
+
+  it("TRANSFER is weaker than MASTER_KEY on both dimensions", () => {
+    expect(ARGON2ID_PROFILE_TRANSFER.opslimit).toBeLessThan(ARGON2ID_PROFILE_MASTER_KEY.opslimit);
+    expect(ARGON2ID_PROFILE_TRANSFER.memlimit).toBeLessThan(ARGON2ID_PROFILE_MASTER_KEY.memlimit);
+  });
+
+  it("both profiles satisfy OWASP ASVS 4.x minimum (m >= 19 MiB, t >= 2)", () => {
+    for (const profile of [ARGON2ID_PROFILE_MASTER_KEY, ARGON2ID_PROFILE_TRANSFER]) {
+      expect(profile.opslimit).toBeGreaterThanOrEqual(2);
+      expect(profile.memlimit).toBeGreaterThanOrEqual(19 * MIB);
+    }
+  });
+
+  it("both profiles are frozen (indivisible tuples)", () => {
+    expect(Object.isFrozen(ARGON2ID_PROFILE_MASTER_KEY)).toBe(true);
+    expect(Object.isFrozen(ARGON2ID_PROFILE_TRANSFER)).toBe(true);
   });
 });
