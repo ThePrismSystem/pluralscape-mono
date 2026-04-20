@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
-import type { ServerSecret, UnixMillis, WebhookId } from "@pluralscape/types";
+import type { UnixMillis, WebhookId } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -13,18 +13,25 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/webhook-config.service.js", () => ({
-  archiveWebhookConfig: vi.fn(),
-  createWebhookConfig: vi.fn(),
-  deleteWebhookConfig: vi.fn(),
-  getWebhookConfig: vi.fn(),
-  listWebhookConfigs: vi.fn(),
-  restoreWebhookConfig: vi.fn(),
-  rotateWebhookSecret: vi.fn(),
-  testWebhookConfig: vi.fn(),
-  updateWebhookConfig: vi.fn(),
-  toServerSecret: (bytes: Uint8Array): ServerSecret => bytes as ServerSecret,
-}));
+// Keep the real `toServerSecret` — it's a pure brand-narrowing helper with no
+// external deps, and importing it from the mocked module avoids duplicating
+// the `as ServerSecret` cast in every test file.
+vi.mock("../../../services/webhook-config.service.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../services/webhook-config.service.js")>();
+  return {
+    archiveWebhookConfig: vi.fn(),
+    createWebhookConfig: vi.fn(),
+    deleteWebhookConfig: vi.fn(),
+    getWebhookConfig: vi.fn(),
+    listWebhookConfigs: vi.fn(),
+    restoreWebhookConfig: vi.fn(),
+    rotateWebhookSecret: vi.fn(),
+    testWebhookConfig: vi.fn(),
+    updateWebhookConfig: vi.fn(),
+    toServerSecret: actual.toServerSecret,
+  };
+});
 
 const {
   archiveWebhookConfig,

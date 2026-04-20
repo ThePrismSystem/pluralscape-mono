@@ -1,5 +1,5 @@
 import { frontingSessions } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toDuration } from "@pluralscape/types";
 import { and, count, desc, eq, gt, isNull, isNotNull, lte, or, sql, sum } from "drizzle-orm";
 
 import { withTenantRead } from "../lib/rls-context.js";
@@ -13,7 +13,6 @@ import type {
   CoFrontingPair,
   CustomFrontId,
   DateRangeFilter,
-  Duration,
   FrontingAnalytics,
   FrontingSubjectType,
   MemberId,
@@ -264,11 +263,11 @@ export async function computeFrontingBreakdown(
   const subjectBreakdowns: SubjectFrontingBreakdown[] = rows.map((r) => ({
     subjectType: r.subjectType,
     subjectId: brandSubjectId(r.subjectType, r.subjectId),
-    totalDuration: r.totalDuration as Duration,
+    totalDuration: toDuration(r.totalDuration),
     sessionCount: r.sessionCount,
-    averageSessionLength: (r.sessionCount > 0
-      ? Math.round(r.totalDuration / r.sessionCount)
-      : 0) as Duration,
+    averageSessionLength: toDuration(
+      r.sessionCount > 0 ? Math.round(r.totalDuration / r.sessionCount) : 0,
+    ),
     percentageOfTotal: toOneDecimalPercent(r.totalDuration, totalDuration),
   }));
 
@@ -407,7 +406,7 @@ export async function computeCoFrontingBreakdown(
     pairs.push({
       memberA: brandId<MemberId>(pair.memberA),
       memberB: brandId<MemberId>(pair.memberB),
-      totalDuration: pair.totalDuration as Duration,
+      totalDuration: toDuration(pair.totalDuration),
       sessionCount: pair.sessionCount,
       percentageOfTotal: toOneDecimalPercent(pair.totalDuration, totalFrontingUnion),
     });

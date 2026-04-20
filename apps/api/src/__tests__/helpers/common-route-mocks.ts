@@ -91,6 +91,12 @@ export function mockWebhookConfigServiceFactory(): Record<
     rotateWebhookSecret: vi.fn(),
     testWebhookConfig: vi.fn(),
     parseWebhookConfigQuery: vi.fn().mockReturnValue({}),
+    // Inline cast kept to avoid a circular evaluation: importing the real
+    // `toServerSecret` here would be served by the test file's own
+    // `vi.mock(...service.js, () => mockWebhookConfigServiceFactory())`
+    // before this module finishes loading. Semantically identical to the
+    // production helper — update both together if one ever gains runtime
+    // validation.
     toServerSecret: (bytes: Uint8Array): ServerSecret => bytes as ServerSecret,
   };
 }
