@@ -20,8 +20,9 @@ import {
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { brandId } from "@pluralscape/types";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { expect } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect } from "vitest";
 
 import { createBucket } from "../../services/bucket.service.js";
 import { generateFriendCode, redeemFriendCode } from "../../services/friend-code.service.js";
@@ -29,12 +30,15 @@ import { createFrontingSession } from "../../services/fronting-session.service.j
 import { createMember } from "../../services/member.service.js";
 import { createStructureEntity } from "../../services/structure-entity-crud.service.js";
 import { createEntityType } from "../../services/structure-entity-type.service.js";
+import { router } from "../../trpc/trpc.js";
 import {
   asDb,
   makeAuth,
   noopAudit,
   testEncryptedDataBase64,
 } from "../helpers/integration-setup.js";
+
+import { makeIntegrationCallerFactory } from "./test-helpers.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
@@ -295,4 +299,143 @@ export async function seedFriendConnection(
   const result = await redeemFriendCode(db, code.code, b.auth, noopAudit);
   // connectionIds: [ownerSide, redeemerSide]; return the redeemer's row.
   return result.connectionIds[1];
+}
+
+/**
+ * Seed an *accepted* friend connection between two tenants by first
+ * generating + redeeming a friend code (which produces a PENDING pair),
+ * then flipping both rows to ACCEPTED via direct SQL.
+ *
+ * Bypasses `acceptFriendConnection` so this helper doesn't depend on the
+ * friend router being correctly wired — useful for downstream router
+ * tests (bucket assignment, etc.) that need an `accepted` precondition.
+ *
+ * Returns the connection id owned by the redeemer (`b`), matching
+ * `seedFriendConnection`'s contract.
+ */
+export async function seedAcceptedFriendConnection(
+  db: PostgresJsDatabase,
+  a: SeededTenant,
+  b: SeededTenant,
+): Promise<FriendConnectionId> {
+  const connectionId = await seedFriendConnection(db, a, b);
+  // Flip both sides to "accepted" — assignBucketToFriend only inspects the
+  // owner's row, but the reverse row is updated for consistency with the
+  // production accept path.
+  await db
+    .update(schema.friendConnections)
+    .set({ status: "accepted" })
+    .where(eq(schema.friendConnections.accountId, a.accountId));
+  await db
+    .update(schema.friendConnections)
+    .set({ status: "accepted" })
+    .where(eq(schema.friendConnections.accountId, b.accountId));
+  return connectionId;
+}
+
+// ── Router fixture ──────────────────────────────────────────────────
+//
+// `setupRouterFixture` registers the standard set of vitest hooks
+// (beforeAll/afterAll/beforeEach/afterEach) used by every router
+// integration test file. It returns lazy accessors so test bodies can
+// read the per-test state (ctx, caller factory, two seeded tenants)
+// without juggling `let` declarations and beforeEach mutation in every
+// file.
+
+/** Constraint matches `makeIntegrationCallerFactory`'s router-record shape. */
+type RouterRecordInput = Parameters<typeof router>[0];
+
+/**
+ * Bundle of refs returned by `setupRouterFixture`. The accessors throw
+ * if called outside a `beforeEach`/`it` body — they assume the fixture
+ * has been populated by the registered hooks.
+ */
+export interface RouterFixtureAccessors<TRouters extends RouterRecordInput> {
+  readonly getCtx: () => RouterIntegrationCtx;
+  readonly getCaller: ReturnType<typeof makeIntegrationCallerFactory<TRouters>>;
+  readonly getPrimary: () => SeededTenant;
+  readonly getOther: () => SeededTenant;
+}
+
+export interface RouterFixtureOptions {
+  /**
+   * Extra teardown step to run after `truncateAll` in the per-test
+   * `afterEach`. Wrapped in try/finally with `truncateAll` so it always
+   * runs, even if `truncateAll` throws. Use for in-memory store resets
+   * (auth login store, blob storage adapter, webhook config cache).
+   */
+  readonly extraAfterEach?: (ctx: RouterIntegrationCtx) => Promise<void> | void;
+  /**
+   * Mock-clearing step to run at the start of `beforeEach`, before tenant
+   * seeding. Use for `vi.mocked(dispatchWebhookEvent).mockClear()` etc. —
+   * required because `clearMocks: false` in vitest config means mock call
+   * history accumulates across tests by default. Runs FIRST so the test
+   * starts with a clean slate; tests that need finer-grained isolation
+   * can `mockClear()` again immediately before the action under test.
+   */
+  readonly clearMocks?: () => void;
+}
+
+/**
+ * Register the standard `beforeAll` / `afterAll` / `beforeEach` / `afterEach`
+ * hooks for a tRPC router integration test file. Sets up PGlite once per
+ * file, seeds a fresh primary + secondary tenant per test, and truncates
+ * all tables between tests. Returns lazy accessors so the test bodies can
+ * read the per-test state without dealing with `let` declarations and
+ * `beforeEach` mutation in every file.
+ */
+export function setupRouterFixture<TRouters extends RouterRecordInput>(
+  routers: TRouters,
+  options: RouterFixtureOptions = {},
+): RouterFixtureAccessors<TRouters> {
+  let ctx: RouterIntegrationCtx | undefined;
+  let makeCaller: ReturnType<typeof makeIntegrationCallerFactory<TRouters>> | undefined;
+  let primary: SeededTenant | undefined;
+  let other: SeededTenant | undefined;
+
+  beforeAll(async () => {
+    ctx = await setupRouterIntegration();
+    makeCaller = makeIntegrationCallerFactory<TRouters>(routers, ctx.db);
+  });
+
+  afterAll(async () => {
+    if (ctx) await ctx.teardown();
+  });
+
+  beforeEach(async () => {
+    if (!ctx) throw new Error("setupRouterFixture: ctx not initialized");
+    options.clearMocks?.();
+    primary = await seedAccountAndSystem(ctx.db);
+    other = await seedAccountAndSystem(ctx.db);
+  });
+
+  afterEach(async () => {
+    if (!ctx) return;
+    try {
+      await truncateAll(ctx);
+    } finally {
+      await options.extraAfterEach?.(ctx);
+    }
+  });
+
+  const getCaller: ReturnType<typeof makeIntegrationCallerFactory<TRouters>> = (auth) => {
+    if (!makeCaller) throw new Error("getCaller() called outside of test body");
+    return makeCaller(auth);
+  };
+
+  return {
+    getCtx: () => {
+      if (!ctx) throw new Error("getCtx() called outside of test body");
+      return ctx;
+    },
+    getCaller,
+    getPrimary: () => {
+      if (!primary) throw new Error("getPrimary() called outside of test body");
+      return primary;
+    },
+    getOther: () => {
+      if (!other) throw new Error("getOther() called outside of test body");
+      return other;
+    },
+  };
 }
