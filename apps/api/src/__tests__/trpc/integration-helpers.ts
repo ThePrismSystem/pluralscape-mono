@@ -14,11 +14,18 @@
  */
 import { PGlite } from "@electric-sql/pglite";
 import * as schema from "@pluralscape/db/pg";
-import { createPgAllTables } from "@pluralscape/db/test-helpers/pg-helpers";
+import {
+  createPgAllTables,
+  pgInsertAccount,
+  pgInsertSystem,
+} from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 
-import { asDb } from "../helpers/integration-setup.js";
+import { asDb, makeAuth } from "../helpers/integration-setup.js";
 
+import type { AuthContext } from "../../lib/auth-context.js";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -66,4 +73,41 @@ export async function truncateAll(ctx: RouterIntegrationCtx): Promise<void> {
   if (tables.length === 0) return;
   const quoted = tables.map((t) => `"${t}"`).join(", ");
   await ctx.pglite.query(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`);
+}
+
+/** A fully-seeded tenant: account + system + a session AuthContext for it. */
+export interface SeededTenant {
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly auth: AuthContext;
+}
+
+/**
+ * Seed a fresh account + system pair and return a SeededTenant whose
+ * AuthContext is suitable for invoking authenticated tRPC procedures.
+ *
+ * The `as never` cast on `db` mirrors `concurrent-guard-semantics.integration.test.ts`:
+ * the pg-helpers functions take `PgliteDatabase<Record<string, unknown>>` but we
+ * carry a `PostgresJsDatabase` by the time it reaches a router test. Both are
+ * `PgDatabase` subclasses with identical insert APIs.
+ */
+export async function seedAccountAndSystem(db: PostgresJsDatabase): Promise<SeededTenant> {
+  const accountIdRaw = await pgInsertAccount(db as never);
+  const systemIdRaw = await pgInsertSystem(db as never, accountIdRaw);
+  const accountId = brandId<AccountId>(accountIdRaw);
+  const systemId = brandId<SystemId>(systemIdRaw);
+  return {
+    accountId,
+    systemId,
+    auth: makeAuth(accountId, systemId),
+  };
+}
+
+/**
+ * Convenience alias for seeding a second tenant in cross-tenant isolation tests.
+ * Identical behaviour to `seedAccountAndSystem`; named explicitly to make the
+ * intent at the call site clear.
+ */
+export async function seedSecondTenant(db: PostgresJsDatabase): Promise<SeededTenant> {
+  return seedAccountAndSystem(db);
 }

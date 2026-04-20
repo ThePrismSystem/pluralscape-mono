@@ -3,7 +3,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { router as makeRouter, publicProcedure } from "../../trpc/trpc.js";
 
-import { setupRouterIntegration, truncateAll } from "./integration-helpers.js";
+import {
+  seedAccountAndSystem,
+  seedSecondTenant,
+  setupRouterIntegration,
+  truncateAll,
+} from "./integration-helpers.js";
 import { makeIntegrationCallerFactory } from "./test-helpers.js";
 
 import type { RouterIntegrationCtx } from "./integration-helpers.js";
@@ -73,6 +78,34 @@ describe("makeIntegrationCallerFactory", () => {
       const caller = makeCaller(null);
       const result = await caller.probe.ping();
       expect(result).toBe("pong");
+    } finally {
+      await ctx.teardown();
+    }
+  });
+});
+
+describe("seedAccountAndSystem", () => {
+  it("inserts an account + system and returns a usable AuthContext", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const tenant = await seedAccountAndSystem(ctx.db);
+      expect(tenant.accountId).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(tenant.systemId).toMatch(/^[0-9a-f-]{36}$/i);
+      expect(tenant.auth.accountId).toBe(tenant.accountId);
+      expect(tenant.auth.systemId).toBe(tenant.systemId);
+      expect(tenant.auth.ownedSystemIds.has(tenant.systemId)).toBe(true);
+    } finally {
+      await ctx.teardown();
+    }
+  });
+
+  it("seedSecondTenant creates a distinct tenant", async () => {
+    const ctx = await setupRouterIntegration();
+    try {
+      const a = await seedAccountAndSystem(ctx.db);
+      const b = await seedSecondTenant(ctx.db);
+      expect(a.accountId).not.toBe(b.accountId);
+      expect(a.systemId).not.toBe(b.systemId);
     } finally {
       await ctx.teardown();
     }
