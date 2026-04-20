@@ -2,10 +2,11 @@ import { brandId, extractErrorMessage } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 import { Worker } from "bullmq";
 
+import { QueueCorruptionError } from "../../errors.js";
 import { BASE_36 } from "../../queue.constants.js";
 import { BaseJobWorker } from "../base-job-worker.js";
 
-import { fromStoredData } from "./job-mapper.js";
+import { fromStoredData, StoredJobDataSchema } from "./job-mapper.js";
 
 import type { StoredJobData } from "./job-mapper.js";
 import type { HeartbeatHandle } from "../../heartbeat.js";
@@ -111,8 +112,34 @@ export class BullMQJobWorker extends BaseJobWorker {
     if (rawId === undefined) throw new Error("BullMQ job missing id");
     const jobId = brandId<JobId>(rawId);
 
-    // Update status to running
-    const currentData = bullmqJob.data as StoredJobData;
+    // Validate stored data once, at the worker's entry point into BullMQ's
+    // untyped `job.data`. Fail-closed: corrupt data here surfaces as a
+    // typed QueueCorruptionError via queue.fail, not a silent `as` cast that
+    // carries malformed state into handler code.
+    const parseResult = StoredJobDataSchema.safeParse(bullmqJob.data);
+    if (!parseResult.success) {
+      const details = parseResult.error.issues
+        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+        .join("; ");
+      const corruption = new QueueCorruptionError(jobId, details, {
+        cause: parseResult.error,
+      });
+      this.logger.error("worker.corrupt-job-data", {
+        jobId,
+        error: extractErrorMessage(corruption),
+      });
+      try {
+        await this.queue.fail(jobId, extractErrorMessage(corruption));
+      } catch (failErr) {
+        this.logger.error("worker.fail-delegation-error", {
+          jobId,
+          error: extractErrorMessage(failErr),
+        });
+      }
+      return;
+    }
+    const currentData: StoredJobData = parseResult.data;
+
     const runningData: StoredJobData = {
       ...currentData,
       status: "running",
@@ -142,9 +169,13 @@ export class BullMQJobWorker extends BaseJobWorker {
 
     const heartbeatHandle: HeartbeatHandle = {
       heartbeat: async () => {
-        const data = bullmqJob.data as StoredJobData;
         try {
-          await bullmqJob.updateData({ ...data, lastHeartbeatAt: this.clock() });
+          // Reuse the validated `runningData` captured above — the job is
+          // locked by our worker token for the duration of processing, so
+          // no other writer can have mutated `bullmqJob.data` between
+          // heartbeats. Re-reading `bullmqJob.data` would bypass schema
+          // validation for no gain.
+          await bullmqJob.updateData({ ...runningData, lastHeartbeatAt: this.clock() });
         } catch (err) {
           const msg = `Heartbeat failed for job "${jobId}": ${extractErrorMessage(err)}`;
           this.logger.error("worker.heartbeat-update-failed", {

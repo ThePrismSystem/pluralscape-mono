@@ -18,31 +18,51 @@ export type EmailTemplateName =
   | "webhook-failure-digest"
   | "account-change-email";
 
+/**
+ * Runtime-visible enumeration of every supported job type.
+ *
+ * Expressed as a `const` tuple so it can double as a zod enum source at
+ * deserialization boundaries. Keep {@link JobType} derived from this tuple —
+ * a stray string literal in the type union but not in the tuple would silently
+ * slip past schema validation.
+ */
+export const JOB_TYPE_VALUES = [
+  "sync-push",
+  "sync-pull",
+  "blob-upload",
+  "blob-cleanup",
+  "export-generate",
+  "import-process",
+  "webhook-deliver",
+  "notification-send",
+  "analytics-compute",
+  "account-purge",
+  "bucket-key-rotation",
+  "report-generate",
+  "sync-queue-cleanup",
+  "audit-log-cleanup",
+  "partition-maintenance",
+  "sync-compaction",
+  "device-transfer-cleanup",
+  "check-in-generate",
+  "webhook-delivery-cleanup",
+  "email-send",
+] as const;
+
 /** The kind of background job. */
-export type JobType =
-  | "sync-push"
-  | "sync-pull"
-  | "blob-upload"
-  | "blob-cleanup"
-  | "export-generate"
-  | "import-process"
-  | "webhook-deliver"
-  | "notification-send"
-  | "analytics-compute"
-  | "account-purge"
-  | "bucket-key-rotation"
-  | "report-generate"
-  | "sync-queue-cleanup"
-  | "audit-log-cleanup"
-  | "partition-maintenance"
-  | "sync-compaction"
-  | "device-transfer-cleanup"
-  | "check-in-generate"
-  | "webhook-delivery-cleanup"
-  | "email-send";
+export type JobType = (typeof JOB_TYPE_VALUES)[number];
+
+/** Runtime-visible enumeration of every supported job status. */
+export const JOB_STATUS_VALUES = [
+  "pending",
+  "running",
+  "completed",
+  "cancelled",
+  "dead-letter",
+] as const;
 
 /** Current status of a background job. */
-export type JobStatus = "pending" | "running" | "completed" | "cancelled" | "dead-letter";
+export type JobStatus = (typeof JOB_STATUS_VALUES)[number];
 
 /** Backoff strategy for retry timing. */
 export type BackoffStrategy = "exponential" | "linear";

@@ -433,6 +433,7 @@ export type {
   JobResult,
   JobDefinition,
 } from "./jobs.js";
+export { JOB_TYPE_VALUES, JOB_STATUS_VALUES } from "./jobs.js";
 
 // ── Blob ──────────────────────────────────────────────────────
 export type {

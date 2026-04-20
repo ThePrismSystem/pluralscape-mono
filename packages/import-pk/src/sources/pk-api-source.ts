@@ -30,6 +30,50 @@ export interface PkApiImportSourceArgs {
   readonly baseUrl?: string;
 }
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+/**
+ * Refuse to send the PK API token to a plaintext-HTTP baseUrl. The only
+ * exception is loopback, for local dev against a mock or self-hosted PK
+ * instance on the same machine. Mirrors the assertBaseUrlIsSafe guard in
+ * packages/import-sp/src/sources/api-source.ts — the last-line safety net
+ * that prevents a token from ever leaving the device over cleartext.
+ */
+function assertBaseUrlIsSafe(baseUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch (cause) {
+    throw new Error(`PK import: baseUrl is not a valid URL: ${baseUrl}`, { cause });
+  }
+  // `URL.hostname` preserves the `[...]` brackets for IPv6 literals (e.g.
+  // `[::1]`). Strip them so the bare address compares against LOOPBACK_HOSTS.
+  const host = parsed.hostname.replace(/^\[|\]$/g, "");
+  if (parsed.protocol === "https:") return;
+  if (parsed.protocol === "http:" && LOOPBACK_HOSTS.has(host)) return;
+  throw new Error(
+    `PK import: refusing to send API token to a non-HTTPS baseUrl (${baseUrl}). ` +
+      `Use https:// for remote hosts; http:// is only permitted for loopback (localhost, 127.0.0.1, ::1).`,
+  );
+}
+
+/**
+ * Reject obviously-invalid tokens before they reach pkapi.js. pkapi.js happily
+ * sends empty/whitespace tokens and surfaces a server 401 only after a round
+ * trip — which leaves a blank Authorization header on the wire. This guard
+ * short-circuits at the source boundary.
+ *
+ * Note: the guard rejects empty-or-whitespace-only tokens but preserves any
+ * surrounding whitespace on an otherwise-valid token. Tokens are opaque
+ * secrets; silently trimming them is surprising and can mask copy-paste bugs
+ * that the caller should see as a 401 rather than a silent rewrite.
+ */
+function assertTokenIsSane(token: string): void {
+  if (token.trim().length === 0) {
+    throw new Error("PK import: token must be a non-empty string");
+  }
+}
+
 interface CollectedMemberPrivacy {
   readonly pkMemberId: string;
   readonly privacy?: Record<string, string>;
@@ -57,6 +101,12 @@ function extractTimestamp(sw: PkSwitch): string {
 }
 
 export function createPkApiImportSource(args: PkApiImportSourceArgs): ImportDataSource {
+  assertTokenIsSane(args.token);
+  // Only validate baseUrl when caller overrides the pkapi.js default — the
+  // SDK's built-in default (https://api.pluralkit.me) is already HTTPS and
+  // leaving `undefined` alone lets pkapi.js apply its own fallback.
+  if (args.baseUrl !== undefined) assertBaseUrlIsSafe(args.baseUrl);
+
   const api = new PKAPI({
     token: args.token,
     base_url: args.baseUrl,

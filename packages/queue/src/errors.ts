@@ -75,13 +75,19 @@ export class DuplicateHandlerError extends Error {
  * Wraps the underlying parse error as `cause` so diagnostics are preserved
  * without leaking a bare `SyntaxError` / Zod `ZodError` across the queue API
  * boundary. Callers receive a typed, stable error they can branch on.
+ *
+ * Pass a `details` string to surface a compact, operator-readable summary in
+ * the top-level message — otherwise operators must chase `error.cause` for
+ * actionable context (path, field, reason). Keep details short; the full
+ * structured error stays on `cause`.
  */
 export class QueueCorruptionError extends Error {
   override readonly name = "QueueCorruptionError" as const;
   readonly jobId: JobId;
 
-  constructor(jobId: JobId, options?: ErrorOptions) {
-    super(`Corrupt stored data for job "${jobId}".`, options);
+  constructor(jobId: JobId, details?: string, options?: ErrorOptions) {
+    const base = `Corrupt stored data for job "${jobId}".`;
+    super(details === undefined || details.length === 0 ? base : `${base} ${details}`, options);
     this.jobId = jobId;
   }
 }

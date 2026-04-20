@@ -21,14 +21,16 @@ export function rowToJob(row: JobRow): JobDefinition {
   // dropped a type). Use `Object.hasOwn` to narrow the index access so the
   // subsequent safeParse is well-defined.
   if (!Object.hasOwn(PayloadSchemaByType, row.type)) {
-    throw new QueueCorruptionError(row.id, {
-      cause: new Error(`Unknown job type: ${row.type}`),
-    });
+    const cause = new Error(`Unknown job type: ${row.type}`);
+    throw new QueueCorruptionError(row.id, cause.message, { cause });
   }
   const schema = PayloadSchemaByType[row.type];
   const parsed = schema.safeParse(row.payload);
   if (!parsed.success) {
-    throw new QueueCorruptionError(row.id, { cause: parsed.error });
+    const details = parsed.error.issues
+      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("; ");
+    throw new QueueCorruptionError(row.id, details, { cause: parsed.error });
   }
 
   return {
