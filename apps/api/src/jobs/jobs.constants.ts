@@ -18,6 +18,14 @@ export const BLOB_S3_CLEANUP_GRACE_PERIOD_MS = 30 * MS_PER_DAY;
 export const BLOB_S3_CLEANUP_BATCH_SIZE = 100;
 
 /**
+ * Number of concurrent S3 DELETE requests issued per parallel sub-batch
+ * when draining the cleanup queue. Twenty is a conservative cap against
+ * S3's per-connection limits while still giving a ~20x speed-up over
+ * the previous sequential for-loop.
+ */
+export const BLOB_S3_CLEANUP_PARALLEL_BATCH_SIZE = 20;
+
+/**
  * Retention period for confirmed offline queue entries before cleanup deletes them.
  * Entries that have been successfully synced to the server are kept for 7 days
  * to allow for debugging, then permanently deleted.

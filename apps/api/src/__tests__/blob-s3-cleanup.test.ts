@@ -14,6 +14,9 @@ const mockLogWarn = vi.fn();
 vi.mock("../jobs/jobs.constants.js", () => ({
   BLOB_S3_CLEANUP_GRACE_PERIOD_MS: 30 * 86_400_000,
   BLOB_S3_CLEANUP_BATCH_SIZE: 100,
+  // Small sub-batch so the batched parallel test path exercises the
+  // multi-iteration loop (BATCH_SIZE=100 / PARALLEL=5 → 20 iterations max).
+  BLOB_S3_CLEANUP_PARALLEL_BATCH_SIZE: 5,
 }));
 
 vi.mock("../lib/logger.js", () => ({
@@ -191,5 +194,57 @@ describe("blob-s3-cleanup handler", () => {
     await handler(stubJob(), ctx);
 
     expect(heartbeatFn).toHaveBeenCalled();
+  });
+
+  // Regression: the previous implementation looped sequentially, calling
+  // storageAdapter.delete one blob at a time and heartbeating per row.
+  // The new implementation fires a sub-batch of PARALLEL_BATCH_SIZE deletes
+  // via Promise.allSettled and heartbeats once per sub-batch. Given the
+  // mocked PARALLEL_BATCH_SIZE=5 and 12 rows, we expect ceil(12/5)=3 sub-
+  // batches (and therefore 3 heartbeats), with every delete still issued.
+  it("processes rows in parallel sub-batches (one heartbeat per batch)", async () => {
+    const { db, chain } = mockDb();
+    const archivedRows = Array.from({ length: 12 }, (_, i) => ({
+      id: `blob_${String(i)}`,
+      storageKey: `sys_test/blob_${String(i)}`,
+    }));
+    chain.limit.mockResolvedValueOnce(archivedRows);
+    const { adapter, deleteFn } = makeStorageAdapter();
+    const handler = createBlobS3CleanupHandler(db, adapter);
+    const { ctx, heartbeatFn } = stubCtx();
+
+    await handler(stubJob(), ctx);
+
+    expect(deleteFn).toHaveBeenCalledTimes(12);
+    // ceil(12 / 5) = 3 sub-batches
+    expect(heartbeatFn).toHaveBeenCalledTimes(3);
+  });
+
+  // Partial-failure tolerance within a sub-batch: Promise.allSettled must
+  // log rejected promises and continue with the remaining successes rather
+  // than aborting the whole sub-batch.
+  it("tolerates partial failures inside a parallel sub-batch", async () => {
+    const { db, chain } = mockDb();
+    const archivedRows = [
+      { id: "blob_ok1", storageKey: "sys_test/blob_ok1" },
+      { id: "blob_bad", storageKey: "sys_test/blob_bad" },
+      { id: "blob_ok2", storageKey: "sys_test/blob_ok2" },
+    ];
+    chain.limit.mockResolvedValueOnce(archivedRows);
+    const { adapter, deleteFn } = makeStorageAdapter();
+    deleteFn
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("S3 transient"))
+      .mockResolvedValueOnce(undefined);
+    const handler = createBlobS3CleanupHandler(db, adapter);
+    const { ctx } = stubCtx();
+
+    await handler(stubJob(), ctx);
+
+    expect(deleteFn).toHaveBeenCalledTimes(3);
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      "Failed to delete S3 object for blob",
+      expect.objectContaining({ blobId: "blob_bad", err: expect.any(Error) }),
+    );
   });
 });
