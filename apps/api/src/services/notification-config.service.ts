@@ -150,7 +150,11 @@ export async function updateNotificationConfig(
 ): Promise<NotificationConfigResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  // Cache invalidation MUST run after the transaction commits. Firing it
+  // inside the transaction races with concurrent readers that can repopulate
+  // the cache with the pre-commit row between invalidation and commit,
+  // leaving the stale value until the TTL expires.
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const timestamp = now();
 
     const setClause: Partial<typeof notificationConfigs.$inferInsert> = { updatedAt: timestamp };
@@ -170,7 +174,7 @@ export async function updateNotificationConfig(
       .returning();
 
     if (!updated) {
-      const result = await insertNotificationConfig(tx, systemId, eventType, params);
+      const inserted = await insertNotificationConfig(tx, systemId, eventType, params);
 
       await audit(tx, {
         eventType: AUDIT_CONFIG_UPDATED,
@@ -180,8 +184,7 @@ export async function updateNotificationConfig(
         systemId,
       });
 
-      invalidateSwitchAlertConfigCache(systemId, eventType);
-      return result;
+      return inserted;
     }
 
     await audit(tx, {
@@ -192,9 +195,11 @@ export async function updateNotificationConfig(
       systemId,
     });
 
-    invalidateSwitchAlertConfigCache(systemId, eventType);
     return toNotificationConfigResult(updated);
   });
+
+  invalidateSwitchAlertConfigCache(systemId, eventType);
+  return result;
 }
 
 /** List all non-archived notification configs for a system. */
