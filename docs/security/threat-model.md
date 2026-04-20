@@ -87,9 +87,9 @@ This check should apply to both subscribe requests and snapshot/change fetch ope
 
 ### Transfer Code Entropy — M4
 
-**Finding**: The device transfer verification code is 8 decimal digits, providing approximately 26.5 bits of entropy (log2(10^8)). While multiple compensating controls protect against online brute-force, offline attacks against exfiltrated transfer data are feasible.
+**Finding**: The device transfer verification code is 10 decimal digits, providing approximately 33.2 bits of entropy (log2(10^10)). Online brute-force is well-mitigated by server-side rate limits; offline attacks against exfiltrated transfer data are costly but not impossible, and remain the load-bearing residual risk.
 
-**Current state**: The transfer protocol (see `packages/crypto/src/device-transfer.ts` and ADR 024) derives a symmetric key from the 8-digit code via Argon2id (mobile profile: 2 iterations, 32 MiB memory). The encrypted master key is transmitted through a server relay during the 5-minute transfer window.
+**Current state**: The transfer protocol (see `packages/crypto/src/device-transfer.ts` and ADR 024) derives a symmetric key from the 10-digit code via Argon2id under the TRANSFER profile (see ADR 037: `t = 3, m = 32 MiB`). The encrypted master key is transmitted through a server relay during the 5-minute transfer window.
 
 #### Online brute-force protection
 
@@ -100,30 +100,30 @@ Online attacks are well-mitigated by multiple overlapping controls:
 | Attempt limiting | Maximum 5 incorrect attempts per transfer session (`MAX_TRANSFER_CODE_ATTEMPTS`). After 5 failures, the transfer is expired server-side.                                                          |
 | Rate limiting    | Initiation is limited to 3 per hour per account (`TRANSFER_INITIATION_LIMIT`). Completion is limited to 5 attempts per transfer session (`MAX_TRANSFER_CODE_ATTEMPTS` per `TRANSFER_TIMEOUT_MS`). |
 | Session timeout  | Transfer sessions expire after 5 minutes (`TRANSFER_TIMEOUT_MS = 300_000`). The server destroys the encrypted payload after expiry.                                                               |
-| KDF cost         | Each attempt requires a full Argon2id computation (~250ms on mobile hardware), preventing rapid local enumeration.                                                                                |
+| KDF cost         | Each attempt requires a full Argon2id computation under the TRANSFER profile (~380ms on mid-range mobile hardware), preventing rapid local enumeration.                                           |
 
-At 5 attempts per transfer and 3 transfer initiations possible per hour (the account-level initiation limit), an online attacker can test at most 15 codes per hour — exhausting the 10^8 keyspace would take approximately 760,000 years.
+At 5 attempts per transfer and 3 transfer initiations possible per hour (the account-level initiation limit), an online attacker can test at most 15 codes per hour — exhausting the 10^10 keyspace is computationally infeasible on these parameters (well past any realistic attack window).
 
 #### Offline brute-force exposure
 
-If an attacker exfiltrates the transfer session data from the database (the Argon2id salt and the encrypted master key ciphertext), they can brute-force the 8-digit code offline without server-side rate limiting.
+If an attacker exfiltrates the transfer session data from the database (the Argon2id salt and the encrypted master key ciphertext), they can brute-force the 10-digit code offline without server-side rate limiting.
 
 **Attack parameters**:
 
-- Keyspace: 10^8 (100 million combinations)
-- Argon2id mobile profile: 2 iterations, 32 MiB memory
-- Estimated throughput on 4x RTX 4090: ~1,000 hashes/second (per hashcat benchmarks for Argon2id with 32 MiB, as of 2026 — revisit as GPU capabilities evolve)
-- Time to exhaustion: approximately 28 hours
+- Keyspace: 10^10 (10 billion combinations)
+- Argon2id TRANSFER profile: `t = 3, m = 32 MiB`, `p = 1` (ADR 037)
+- Estimated throughput on 4x RTX 4090: ~660 hashes/second (extrapolated from hashcat benchmarks for Argon2id with 32 MiB / t=2, scaled by the 1.5× iteration increase of t=3)
+- Time to exhaustion: approximately 175 days
 
 **Mitigating factors**: This attack requires database access (a severe compromise on its own) and only captures transfers that are in-flight during the 5-minute window. Under normal operation, transfer sessions are ephemeral.
 
 #### Recommendations
 
-1. **Increase code length before production**: Extending to 10 digits raises the keyspace to 10^10 (~33.2 bits), increasing offline brute-force time to approximately 116 days on the same hardware. 12 digits (~39.9 bits) would push it to approximately 31 years. The usability trade-off is documented in ADR 024; 10 digits is a reasonable compromise.
+1. **Increase code length before production** — ✓ Implemented. `TRANSFER_CODE_LENGTH = 10` with per-session attempt limits; see ADR 024 for the usability trade-off rationale.
 
 2. **Delete transfer records after completion or expiry**: Completed and expired transfer sessions should be purged from the database immediately, eliminating the persistent ciphertext that enables offline attack. The cleanup job should zero the encrypted payload and salt columns, then delete the row.
 
-3. **Consider server KDF profile**: Using the server Argon2id profile (4 iterations, 64 MiB) instead of the mobile profile would increase the offline brute-force cost by approximately 4× (iterations double from 2 to 4 and memory doubles from 32 to 64 MiB). The trade-off is slower transfer completion on low-end mobile devices.
+3. **Implement context-specific Argon2id profile** — ✓ Implemented. Device transfer uses the `ARGON2ID_PROFILE_TRANSFER` (t=3, m=32 MiB) profile per ADR 037, raising offline brute-force cost against the TRANSFER tier without penalising master-key login latency on low-end devices.
 
 ### QR Payload — L6
 
@@ -142,14 +142,14 @@ If an attacker exfiltrates the transfer session data from the database (the Argo
 
 #### Recommendation
 
-Implemented (crypto-5d49, 2026-04-20): the QR payload now carries only `requestId` and `salt`. The 10-digit verification code is NOT embedded and must be entered manually on the target device.
+Implemented (ADR 037): the QR payload now carries `{ version: 2, requestId, salt }` only. The 10-digit verification code is NOT embedded and must be entered manually on the target device.
 
 This splits the transfer into two factors:
 
 1. **QR scan** (something you have access to): Transfers the `requestId` and `salt`
 2. **Manual code entry** (something you know): The 10-digit code displayed separately on the source device
 
-Capturing the QR code alone is now insufficient to complete a transfer — the attacker must also observe and transcribe the displayed code. `decodeQRPayload` silently ignores any legacy `code` field if emitted by an older client, so upgrading source devices do not prevent new target devices from decoding their payloads.
+Capturing the QR code alone is now insufficient to complete a transfer — the attacker must also observe and transcribe the displayed code. `decodeQRPayload` rejects payloads without `version === 2` (or carrying a legacy `code` field), enforcing the two-factor split at the schema boundary.
 
 ---
 

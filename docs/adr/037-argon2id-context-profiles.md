@@ -49,18 +49,36 @@ constants with three context-specific _profiles_ that callers select by intent:
 | `TRANSFER`   | 3        | 32 MiB   | device-transfer short-lived key derivation       |
 | `MASTER_KEY` | 4        | 64 MiB   | auth-key / password-key split derivation and PIN |
 
-Each profile is exposed as a `readonly` object in
+Each profile is exposed as a frozen, branded object in
 `packages/crypto/src/crypto.constants.ts`:
 
 ```ts
-export const ARGON2ID_PROFILE_TRANSFER = { opslimit: 3, memlimit: 32 MiB };
-export const ARGON2ID_PROFILE_MASTER_KEY = { opslimit: 4, memlimit: 64 MiB };
+export const ARGON2ID_PROFILE_TRANSFER: Argon2idProfile<"transfer"> = Object.freeze({
+  opslimit: 3,
+  memlimit: 32 * 1_024 * 1_024,
+});
+
+export const ARGON2ID_PROFILE_MASTER_KEY: Argon2idProfile<"master-key"> = Object.freeze({
+  opslimit: 4,
+  memlimit: 64 * 1_024 * 1_024,
+});
 ```
 
 Call sites read `PROFILE.opslimit` / `PROFILE.memlimit` rather than importing
 loose scalar constants. This keeps the profile indivisible (you cannot mix the
 opslimit of one tier with the memlimit of another by accident) and makes
 intent explicit at the call site.
+
+The `Argon2idProfile<K>` generic carries a phantom `unique symbol` brand (the
+`K` parameter is `"master-key"` or `"transfer"`). The brand has no runtime
+representation — libsodium still sees only `opslimit` and `memlimit` — but
+the compiler uses it to reject passing a `TRANSFER` profile where a
+`MASTER_KEY` profile is expected, closing the accidental-mix hole even when
+future callers accept a profile as a parameter. A runtime validator
+`assertArgon2idProfile` sits alongside the brand and checks the numeric
+fields against the OWASP floor (m ≥ 19 MiB, t ≥ 1) before they reach
+`pwhash` / `pwhashStr`, providing defence-in-depth for code paths that
+bypass the brand (e.g., values sourced from runtime config).
 
 ### Why these numbers
 

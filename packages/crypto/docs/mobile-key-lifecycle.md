@@ -188,7 +188,7 @@ biometric available + enrolled?
 - Verification code: 10 decimal digits (~33.2 bits entropy)
 - Protected by `ARGON2ID_PROFILE_TRANSFER` (32 MiB / 3 iterations, ADR 037) to slow brute force
 - Transfer sessions expire after 5 minutes (`TRANSFER_TIMEOUT_MS = 300_000`)
-- QR payload carries only `{ requestId, salt }`; the 10-digit verification code must be entered manually on the target device (crypto-5d49, 2026-04-20)
+- QR payload carries only `{ version, requestId, salt }`; the 10-digit verification code must be entered manually on the target device (ADR 037 / device-transfer.ts)
 
 ### Public API
 
