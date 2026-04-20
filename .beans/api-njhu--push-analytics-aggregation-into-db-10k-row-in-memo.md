@@ -13,4 +13,8 @@ Finding [P1] from audit 2026-04-20. apps/api/src/services/analytics.service.ts:1
 
 ## Summary of Changes
 
-Pushed computeFrontingBreakdown aggregation into Postgres via Drizzle-generated GROUP BY + SUM(clamped_duration) query. The 10K-row in-memory sweep (MAX_ANALYTICS_SESSIONS) is retained only as a safety LIMIT on the aggregate output (N unique subjects per system is bounded by quota constants). SQL uses to_timestamp + GREATEST/LEAST for date-range clamping and EXTRACT(EPOCH ...) \* 1000 for millisecond duration. Updated unit tests to mock aggregated rows directly (math is in SQL now); integration tests exercise the real SQL. computeCoFrontingBreakdown keeps its in-memory sweep-line (accurate overlap math in SQL would require window functions the current schema doesn't indicate) but still runs against the same capped fetch.
+Partial fix — single-subject breakdown only.
+
+- **computeFrontingBreakdown (single-subject)**: aggregation pushed into Postgres via Drizzle-generated GROUP BY + SUM(clamped_duration). No in-memory rows loaded; SQL uses to_timestamp + GREATEST/LEAST for date-range clamping and EXTRACT(EPOCH ...) \* 1000 for millisecond duration. This is the primary hot path for analytics dashboards.
+- **computeCoFrontingBreakdown (pairwise overlap)**: unchanged. Still loads up to MAX_ANALYTICS_SESSIONS=10000 rows via fetchSessionsInRange and runs sweep-line pair-overlap math in JS. Smaller workload than single-subject but retains the original behavior. Tracked as follow-up in **api-4hfa** (parented to M15 ps-9u4w).
+- Updated unit tests to mock aggregated rows directly for the single-subject path (math is in SQL now); integration tests exercise the real SQL. Co-fronting tests unchanged.

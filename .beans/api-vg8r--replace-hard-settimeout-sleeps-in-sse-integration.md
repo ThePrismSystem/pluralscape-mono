@@ -13,4 +13,12 @@ Finding [TQ-01] from audit 2026-04-20. apps/api/src/**tests**/routes/notificatio
 
 ## Summary of Changes
 
-Replaced bare new Promise(r => setTimeout(r, n)) calls in the SSE stream integration suite with deadline-polling helpers (waitFor, waitForStable) wherever an observable side-effect exists (pubsub.unsubscribe call count, pubsub warn count). A named sleep() helper wraps the few remaining wall-clock waits — the buffered-replay test uses a ReadableStream fanout path with no observable settle signal, and the socket-close handshake needs a brief backpressure wait that polling cannot replace. Ran 5x in a loop to confirm stability (5/5 pass).
+Partial replacement — 5 of 9 hard waits converted to deadline-polling.
+
+- **5 of 9** bare `new Promise(r => setTimeout(r, n))` calls replaced with deadline-polling helpers (`waitFor`, `waitForStable`) wherever an observable predicate exists (pubsub.unsubscribe call count, pubsub warn count stability).
+- **4 of 9** retained as bounded `sleep()` calls where no observable predicate is available. The categories covered by the retained waits are:
+  - abort signal propagation across the SSE transport (no completion event exposed),
+  - buffered-replay cross-module state settlement (ReadableStream fanout path with no settle signal),
+  - socket close handshake backpressure wait.
+    Each retained call is wrapped in a named `sleep()` helper with an explanatory comment documenting why polling is not possible.
+- Ran 5x in a loop to confirm stability (5/5 pass).
