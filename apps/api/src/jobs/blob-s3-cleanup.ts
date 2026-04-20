@@ -84,6 +84,15 @@ export function createBlobS3CleanupHandler(
     // parallelism gives us a ~20x speed-up over the previous sequential
     // for-loop. Re-check the abort signal through a local accessor so the
     // compiler doesn't narrow it to `false` from the top-of-function check.
+    //
+    // Abort granularity: the abort signal is only inspected BETWEEN
+    // sub-batches, not within one. Per-object deletes are idempotent and
+    // any in-flight sub-batch is drained by Promise.allSettled before the
+    // next abort check. This trades a bounded worst-case latency
+    // (BLOB_S3_CLEANUP_PARALLEL_BATCH_SIZE deletes) for simpler error
+    // accounting — the alternative of cancelling mid-allSettled would
+    // require per-delete AbortSignal plumbing for no real benefit because
+    // the work is idempotent anyway.
     const signal: AbortSignal = ctx.signal;
     const allDeletedIds: string[] = [];
     for (let i = 0; i < rows.length; i += BLOB_S3_CLEANUP_PARALLEL_BATCH_SIZE) {
