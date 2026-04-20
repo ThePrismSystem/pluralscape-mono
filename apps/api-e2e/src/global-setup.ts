@@ -10,8 +10,10 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
-import { pollHealth } from "@pluralscape/test-utils/e2e/api-server";
+import { inheritEnvWithoutVitest } from "@pluralscape/test-utils/e2e/api-env";
+import { E2E_PORT, pollHealth } from "@pluralscape/test-utils/e2e/api-server";
 import { assertPortFree } from "@pluralscape/test-utils/e2e/assert-port-free";
+import { createStderrClassifier } from "@pluralscape/test-utils/e2e/classify-pino-stderr";
 import { MS_PER_SECOND } from "@pluralscape/types";
 
 import {
@@ -20,8 +22,8 @@ import {
   stopE2ECrowdinStub,
 } from "./crowdin-stub-lifecycle.js";
 
-const E2E_PORT = 10_099;
 const HEALTH_TIMEOUT_MS = 15_000;
+const STDERR_TAIL_MAX_LINES = 200;
 const PG_READY_POLL_MS = 200;
 const PG_READY_TIMEOUT_MS = 30_000;
 const DOCKER_CONTAINER_NAME = "pluralscape-e2e-pg";
@@ -258,13 +260,8 @@ async function globalSetup(): Promise<void> {
     // Spawn the API server
     await assertPortFree(E2E_PORT);
     console.info("[e2e] Starting API server on port", E2E_PORT);
-    // Strip VITEST from the inherited env — apps/api/src/index.ts gates its
-    // start() call on `!process.env["VITEST"]` to avoid an async teardown race
-    // when the module is `import`ed by unit tests. The spawned server is a
-    // separate process that SHOULD run start(); leaking a parent VITEST flag
-    // would silence start() and the health check times out.
     const spawnEnv: NodeJS.ProcessEnv = {
-      ...process.env,
+      ...inheritEnvWithoutVitest(),
       API_PORT: String(E2E_PORT),
       DB_DIALECT: "pg",
       DATABASE_URL: databaseUrl,
@@ -283,7 +280,6 @@ async function globalSetup(): Promise<void> {
       CROWDIN_DISTRIBUTION_HASH: E2E_CROWDIN_HASH,
       CROWDIN_OTA_BASE_URL: crowdinStub.baseUrl,
     };
-    delete spawnEnv["VITEST"];
     serverProcess = spawn("bun", ["run", "src/index.ts"], {
       cwd: API_DIR,
       env: spawnEnv,
@@ -291,28 +287,22 @@ async function globalSetup(): Promise<void> {
     });
 
     const stderrTail: string[] = [];
-    const STDERR_TAIL_MAX = 20;
+    const classifier = createStderrClassifier({ prefix: "[api-e2e] " });
     serverProcess.stderr?.on("data", (data: Buffer) => {
-      const msg = data.toString();
-      // Classify per-line. A single 'data' event can contain multiple records;
-      // testing the entire chunk would misclassify raw Bun errors that happen
-      // to share a chunk with a pino INFO/DEBUG/WARN line.
-      const lines = msg.split(/\r?\n/);
-      let forwarded = "";
-      for (const line of lines) {
-        if (line === "") continue;
-        const isPinoJson = /^\s*\{.*"level":\d+/.test(line);
-        const isLowLevelPino =
-          isPinoJson && !line.includes('"level":50') && !line.includes('"level":60');
-        if (!isLowLevelPino) {
-          forwarded += `[api-e2e] ${line}\n`;
-        }
+      const { forwarded, tailLines } = classifier.process(data.toString());
+      if (forwarded !== "") process.stderr.write(forwarded);
+      for (const line of tailLines) {
+        stderrTail.push(line);
+        if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
       }
-      if (forwarded !== "") {
-        process.stderr.write(forwarded);
+    });
+    serverProcess.stderr?.on("end", () => {
+      const { forwarded, tailLines } = classifier.flush();
+      if (forwarded !== "") process.stderr.write(forwarded);
+      for (const line of tailLines) {
+        stderrTail.push(line);
+        if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
       }
-      stderrTail.push(msg);
-      if (stderrTail.length > STDERR_TAIL_MAX) stderrTail.shift();
     });
 
     if (!serverProcess.pid) {

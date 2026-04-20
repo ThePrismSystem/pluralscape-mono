@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { once } from "node:events";
 import http from "node:http";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -68,25 +69,20 @@ describe("pollHealth", () => {
     ]);
     const stderrTail: string[] = [];
     child.stderr.on("data", (d: Buffer) => {
-      stderrTail.push(d.toString());
+      for (const line of d.toString().split(/\r?\n/)) {
+        if (line !== "") stderrTail.push(line);
+      }
     });
-    cleanups.push(() => {
-      if (child.exitCode === null) child.kill("SIGKILL");
-      return Promise.resolve();
+    cleanups.push(async () => {
+      if (child.exitCode === null) {
+        child.kill("SIGKILL");
+        await once(child, "close");
+      }
     });
 
-    // Wait for the child to fully exit and for stderr to drain BEFORE
-    // calling pollHealth, so detection is deterministic (seeded via
-    // child.exitCode rather than a race against the 'exit' event).
-    await new Promise<void>((resolve) => {
-      if (child.exitCode !== null) resolve();
-      else
-        child.once("exit", () => {
-          resolve();
-        });
-    });
-    // Give the stderr 'data' handler a tick to flush.
-    await new Promise((r) => setTimeout(r, 10));
+    // Wait for the child to fully close (fires after exit + stdio drain)
+    // so detection is deterministic — pollHealth sees exitCode !== null.
+    await once(child, "close");
 
     const err = await pollHealth({
       baseUrl: "http://127.0.0.1:1",
@@ -100,5 +96,46 @@ describe("pollHealth", () => {
     expect(msg).toMatch(/exited before becoming healthy/);
     expect(msg).toContain("code=42");
     expect(msg).toContain("boom");
+  });
+
+  it("throws via the live onExit listener when the child exits DURING the poll loop", async () => {
+    // The earlier test seeds earlyExit from child.exitCode because the
+    // child is already dead. This test covers the other branch: the
+    // 'exit' event fires while pollHealth is mid-loop, exercising the
+    // live onExit listener and the finally-branch off() cleanup.
+    const child = spawn(process.execPath, [
+      "-e",
+      'process.stderr.write("slow-boom\\n"); setTimeout(() => process.exit(7), 100);',
+    ]);
+    const stderrTail: string[] = [];
+    child.stderr.on("data", (d: Buffer) => {
+      for (const line of d.toString().split(/\r?\n/)) {
+        if (line !== "") stderrTail.push(line);
+      }
+    });
+    cleanups.push(async () => {
+      if (child.exitCode === null) {
+        child.kill("SIGKILL");
+        await once(child, "close");
+      }
+    });
+
+    // Child is still alive when pollHealth is called; it will exit
+    // ~100ms later, firing the 'exit' event that the live listener
+    // translates into earlyExit.
+    expect(child.exitCode).toBeNull();
+
+    const err = await pollHealth({
+      baseUrl: "http://127.0.0.1:1",
+      timeoutMs: 5000,
+      child,
+      stderrTail,
+    }).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(Error);
+    const msg = (err as Error).message;
+    expect(msg).toMatch(/exited before becoming healthy/);
+    expect(msg).toContain("code=7");
+    expect(msg).toContain("slow-boom");
   });
 });

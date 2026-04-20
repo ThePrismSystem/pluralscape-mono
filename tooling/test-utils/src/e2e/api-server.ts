@@ -8,7 +8,9 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
+import { inheritEnvWithoutVitest } from "./api-env.js";
 import { assertPortFree } from "./assert-port-free.js";
+import { createStderrClassifier } from "./classify-pino-stderr.js";
 import {
   DOCKER_CONTAINER_NAME,
   MINIO_BUCKET,
@@ -18,6 +20,7 @@ import {
 
 const HEALTH_POLL_MS = 100;
 const HEALTH_TIMEOUT_MS = 15_000;
+const STDERR_TAIL_MAX_LINES = 200;
 
 /** Stable 64-char hex pepper for local E2E tests (not used in production). */
 const DEFAULT_TEST_PEPPER = crypto.createHash("sha256").update("e2e-test-pepper").digest("hex");
@@ -25,24 +28,28 @@ const DEFAULT_TEST_PEPPER = crypto.createHash("sha256").update("e2e-test-pepper"
 export const E2E_PORT = 10_099;
 export const API_BASE_URL = `http://localhost:${String(E2E_PORT)}`;
 
-export interface PollHealthOptions {
+interface PollHealthBase {
   readonly baseUrl: string;
   readonly timeoutMs: number;
-  /**
-   * Optional spawned child to monitor. If the child exits before /health
-   * becomes healthy, the promise rejects immediately with the exit code
-   * and the most recent stderr chunks.
-   */
-  readonly child?: ChildProcess;
-  /**
-   * Bounded ring of recent stderr chunks captured by the caller. Used
-   * verbatim in the early-exit error message.
-   */
-  readonly stderrTail?: readonly string[];
 }
 
+/**
+ * Options for pollHealth. A discriminated union: when `child` is provided,
+ * `stderrTail` may accompany it and is used in the early-exit error
+ * message; when `child` is absent, `stderrTail` must also be absent (it
+ * would otherwise be silently ignored).
+ */
+export type PollHealthOptions =
+  | (PollHealthBase & { readonly child?: undefined; readonly stderrTail?: undefined })
+  | (PollHealthBase & {
+      readonly child: ChildProcess;
+      readonly stderrTail?: readonly string[];
+    });
+
 export async function pollHealth(options: PollHealthOptions): Promise<void> {
-  const { baseUrl, timeoutMs, child, stderrTail } = options;
+  const { baseUrl, timeoutMs } = options;
+  const child = options.child;
+  const stderrTail = options.stderrTail;
   // Seed earlyExit from exitCode/signalCode so a child that exited before
   // pollHealth was called is still detected — the 'exit' event never fires
   // retroactively, so the listener alone is insufficient.
@@ -56,7 +63,7 @@ export async function pollHealth(options: PollHealthOptions): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       if (earlyExit !== null) {
-        const tail = (stderrTail ?? []).join("");
+        const tail = (stderrTail ?? []).join("\n");
         throw new Error(
           `API server exited before becoming healthy (code=${String(earlyExit.code)}, signal=${String(earlyExit.signal)}).\n` +
             `Recent stderr:\n${tail}`,
@@ -116,13 +123,8 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
 
   await assertPortFree(E2E_PORT);
   log(`Starting API server on port ${String(E2E_PORT)}`);
-  // Strip VITEST from the inherited env — apps/api/src/index.ts gates its
-  // start() call on `!process.env["VITEST"]` to avoid an async teardown race
-  // when the module is `import`ed by unit tests. The spawned server is a
-  // separate process that SHOULD run start(); leaking the parent's VITEST
-  // flag silences start() and the health check times out.
   const spawnEnv: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...inheritEnvWithoutVitest(),
     API_PORT: String(E2E_PORT),
     DB_DIALECT: "pg",
     DATABASE_URL: databaseUrl,
@@ -135,7 +137,6 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
     AWS_ACCESS_KEY_ID: "minioadmin",
     AWS_SECRET_ACCESS_KEY: "minioadmin",
   };
-  delete spawnEnv["VITEST"];
   const serverProcess = spawn("bun", ["run", "src/index.ts"], {
     cwd: apiDir,
     env: spawnEnv,
@@ -143,28 +144,22 @@ export async function spawnApiServer(options: SpawnApiServerOptions): Promise<Sp
   });
 
   const stderrTail: string[] = [];
-  const STDERR_TAIL_MAX = 20;
+  const classifier = createStderrClassifier();
   serverProcess.stderr.on("data", (data: Buffer) => {
-    const msg = data.toString();
-    // Classify per-line. A single 'data' event can contain multiple records;
-    // testing the entire chunk would misclassify raw Bun errors that happen to
-    // share a chunk with a pino INFO/DEBUG/WARN line.
-    const lines = msg.split(/\r?\n/);
-    let forwarded = "";
-    for (const line of lines) {
-      if (line === "") continue;
-      const isPinoJson = /^\s*\{.*"level":\d+/.test(line);
-      const isLowLevelPino =
-        isPinoJson && !line.includes('"level":50') && !line.includes('"level":60');
-      if (!isLowLevelPino) {
-        forwarded += `${line}\n`;
-      }
+    const { forwarded, tailLines } = classifier.process(data.toString());
+    if (forwarded !== "") process.stderr.write(forwarded);
+    for (const line of tailLines) {
+      stderrTail.push(line);
+      if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
     }
-    if (forwarded !== "") {
-      process.stderr.write(forwarded);
+  });
+  serverProcess.stderr.on("end", () => {
+    const { forwarded, tailLines } = classifier.flush();
+    if (forwarded !== "") process.stderr.write(forwarded);
+    for (const line of tailLines) {
+      stderrTail.push(line);
+      if (stderrTail.length > STDERR_TAIL_MAX_LINES) stderrTail.shift();
     }
-    stderrTail.push(msg);
-    if (stderrTail.length > STDERR_TAIL_MAX) stderrTail.shift();
   });
 
   if (!serverProcess.pid) {
