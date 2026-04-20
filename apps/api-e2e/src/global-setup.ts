@@ -10,7 +10,8 @@ import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_pro
 import crypto from "node:crypto";
 import path from "node:path";
 
-import { assertPortFree, pollHealth } from "@pluralscape/test-utils/e2e";
+import { pollHealth } from "@pluralscape/test-utils/e2e/api-server";
+import { assertPortFree } from "@pluralscape/test-utils/e2e/assert-port-free";
 import { MS_PER_SECOND } from "@pluralscape/types";
 
 import {

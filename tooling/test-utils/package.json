@@ -8,7 +8,9 @@
     "./db": "./src/db/index.ts",
     "./crypto": "./src/crypto/index.ts",
     "./factories": "./src/factories/index.ts",
-    "./e2e": "./src/e2e/index.ts"
+    "./e2e": "./src/e2e/index.ts",
+    "./e2e/assert-port-free": "./src/e2e/assert-port-free.ts",
+    "./e2e/api-server": "./src/e2e/api-server.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
