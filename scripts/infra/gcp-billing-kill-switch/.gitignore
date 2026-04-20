@@ -1,0 +1,17 @@
+# Repo-wide terraform patterns live in the root .gitignore. Module-specific
+# entries below.
+
+# Function source build artifact (zip created by archive_file in function.tf)
+terraform/.build/
+
+# Terraform local override files (not committed by convention)
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+
+# Python (function source local dev only)
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
