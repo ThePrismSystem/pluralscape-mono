@@ -20,22 +20,23 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/import-entity-ref/list.js", () => ({
+vi.mock("../../../services/system/import-entity-refs/list.js", () => ({
   listImportEntityRefs: vi.fn(),
 }));
-vi.mock("../../../services/import-entity-ref/lookup.js", () => ({
+vi.mock("../../../services/system/import-entity-refs/lookup.js", () => ({
   lookupImportEntityRef: vi.fn(),
   lookupImportEntityRefBatch: vi.fn(),
 }));
-vi.mock("../../../services/import-entity-ref/upsert-batch.js", () => ({
+vi.mock("../../../services/system/import-entity-refs/upsert-batch.js", () => ({
   upsertImportEntityRefBatch: vi.fn(),
 }));
 
-const { listImportEntityRefs } = await import("../../../services/import-entity-ref/list.js");
+const { listImportEntityRefs } =
+  await import("../../../services/system/import-entity-refs/list.js");
 const { lookupImportEntityRef, lookupImportEntityRefBatch } =
-  await import("../../../services/import-entity-ref/lookup.js");
+  await import("../../../services/system/import-entity-refs/lookup.js");
 const { upsertImportEntityRefBatch } =
-  await import("../../../services/import-entity-ref/upsert-batch.js");
+  await import("../../../services/system/import-entity-refs/upsert-batch.js");
 
 const { importEntityRefRouter } = await import("../../../trpc/routers/import-entity-ref.js");
 

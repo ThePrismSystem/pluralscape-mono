@@ -9,9 +9,9 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { listImportEntityRefs } from "../../services/import-entity-ref/list.js";
-import { lookupImportEntityRef } from "../../services/import-entity-ref/lookup.js";
-import { recordImportEntityRef } from "../../services/import-entity-ref/record.js";
+import { listImportEntityRefs } from "../../services/system/import-entity-refs/list.js";
+import { lookupImportEntityRef } from "../../services/system/import-entity-refs/lookup.js";
+import { recordImportEntityRef } from "../../services/system/import-entity-refs/record.js";
 import { asDb, assertApiError, makeAuth } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";

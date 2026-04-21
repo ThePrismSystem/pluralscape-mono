@@ -2,16 +2,16 @@ import { importEntityRefs } from "@pluralscape/db/pg";
 import { ImportEntityRefQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
-import { buildPaginatedResult, parseCursor } from "../../lib/pagination.js";
-import { withTenantRead } from "../../lib/rls-context.js";
-import { assertSystemOwnership } from "../../lib/system-ownership.js";
-import { tenantCtx } from "../../lib/tenant-context.js";
-import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
+import { buildPaginatedResult, parseCursor } from "../../../lib/pagination.js";
+import { withTenantRead } from "../../../lib/rls-context.js";
+import { assertSystemOwnership } from "../../../lib/system-ownership.js";
+import { tenantCtx } from "../../../lib/tenant-context.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
 
 import { toResult } from "./internal.js";
 
 import type { ImportEntityRefResult } from "./internal.js";
-import type { AuthContext } from "../../lib/auth-context.js";
+import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
   ImportEntityType,
   ImportSourceFormat,

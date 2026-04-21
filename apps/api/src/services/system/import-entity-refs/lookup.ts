@@ -1,14 +1,14 @@
 import { importEntityRefs } from "@pluralscape/db/pg";
 import { and, eq, inArray } from "drizzle-orm";
 
-import { withTenantRead } from "../../lib/rls-context.js";
-import { assertSystemOwnership } from "../../lib/system-ownership.js";
-import { tenantCtx } from "../../lib/tenant-context.js";
+import { withTenantRead } from "../../../lib/rls-context.js";
+import { assertSystemOwnership } from "../../../lib/system-ownership.js";
+import { tenantCtx } from "../../../lib/tenant-context.js";
 
 import { toResult } from "./internal.js";
 
 import type { ImportEntityRefResult } from "./internal.js";
-import type { AuthContext } from "../../lib/auth-context.js";
+import type { AuthContext } from "../../../lib/auth-context.js";
 import type { ImportEntityType, ImportSourceFormat, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

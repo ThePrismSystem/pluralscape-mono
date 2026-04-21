@@ -4,7 +4,7 @@ import { getDb } from "../../lib/db.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
-import { listSystems } from "../../services/system.service.js";
+import { listSystems } from "../../services/system/list.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

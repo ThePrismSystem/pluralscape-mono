@@ -8,7 +8,7 @@ import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { lookupImportEntityRefBatch } from "../../../services/import-entity-ref/lookup.js";
+import { lookupImportEntityRefBatch } from "../../../services/system/import-entity-refs/lookup.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 
