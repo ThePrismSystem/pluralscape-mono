@@ -70,6 +70,10 @@ function createMockQueue(options?: { failOnNth?: number }): {
   const enqueuedJobs: EnqueuedJob[] = [];
   let callCount = 0;
 
+  // Typed via JobQueue["enqueue"] so param inference flows from the interface.
+  // The returned JobDefinition<T> is narrower than the interface's JobDefinition;
+  // a single widening cast at the Promise.resolve boundary keeps the body strict
+  // while satisfying the distributive-union return signature.
   const enqueue: JobQueue["enqueue"] = (params) => {
     callCount++;
     if (options?.failOnNth === callCount) {
@@ -81,10 +85,7 @@ function createMockQueue(options?: { failOnNth?: number }): {
       idempotencyKey: params.idempotencyKey,
     });
     const jobId = brandId<JobId>(`job_${crypto.randomUUID()}`);
-    const now = Date.now() as UnixMillis;
-    // JobDefinition is a distributive union over JobType; the test only
-    // cares about the id/type/payload/idempotencyKey fields, so we fill the
-    // rest with sensible defaults and narrow at the return boundary.
+    const nowTs = Date.now() as UnixMillis;
     const job = {
       id: jobId,
       systemId: null,
@@ -96,7 +97,7 @@ function createMockQueue(options?: { failOnNth?: number }): {
       nextRetryAt: null,
       error: null,
       result: null,
-      createdAt: now,
+      createdAt: nowTs,
       startedAt: null,
       completedAt: null,
       idempotencyKey: params.idempotencyKey,
