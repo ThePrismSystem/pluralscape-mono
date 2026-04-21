@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:07:38Z
+updated_at: 2026-04-21T23:41:09Z
 parent: api-6l1q
 ---
 
@@ -27,3 +27,9 @@ Part of epic api-6l1q PR 2. Refactor `lifecycle-event.service.ts` (~422 LOC) int
 - `pnpm tsc -p apps/api/tsconfig.json --noEmit` passes
 - `pnpm vitest run --project api` passes
 - Max file LOC ≤300 target (350-400 acceptable if natural split)
+
+## Findings
+
+- apps/api/src/services/lifecycle-event.service.ts:99-120 — cursor encode/decode only used by list, kept local to queries.ts — low
+- apps/api/src/services/lifecycle-event.service.ts:392-398 — LIFECYCLE_EVENT_LIFECYCLE shared by archive+restore (2 consumers) — moved to internal.ts — low
+- apps/api/src/__tests__/services/analytics.service.test.ts:645 — pre-existing flaky test "returns truncated flag" times out at 15s under full-parallel load; unrelated to this refactor — informational

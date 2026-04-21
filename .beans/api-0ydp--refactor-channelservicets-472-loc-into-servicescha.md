@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T23:07:21Z
+updated_at: 2026-04-21T23:41:42Z
 parent: api-6l1q
 ---
 
@@ -27,3 +27,9 @@ Part of epic api-6l1q PR 2. Refactor `channel.service.ts` (~472 LOC) into `servi
 - `pnpm tsc -p apps/api/tsconfig.json --noEmit` passes
 - `pnpm vitest run --project api` passes
 - Max file LOC ≤300 target (350-400 acceptable if natural split)
+
+## Findings
+
+- apps/api/src/services/channel.service.ts:438 — CHANNEL_LIFECYCLE config shared by archive + restore; moved to internal.ts per >=2 verbs rule — low
+- apps/api/src/__tests__/services/analytics.service.test.ts:645 — flaky timeout (15s) under concurrent vitest runs; unrelated to channel refactor — medium
+- Test vi.mock call sites (crud.test.ts, trpc router test) previously mocked the old barrel path — rewritten into per-verb vi.mock blocks in the same test files — low
