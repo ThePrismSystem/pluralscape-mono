@@ -179,7 +179,7 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
   - Key creation UI uses plain language, visual scope indicators, and confirmation prompts for high-access keys
   - OpenAPI 3.1 specification with automated reconciliation script and CI drift check
 - **tRPC internal API** — end-to-end type-safe API layer for the Expo mobile client (ADR 032) [complete]
-  - 39 routers mirroring the full REST surface; same service layer, same validation, same rate limits
+  - 38 routers mirroring the full REST surface; same service layer, same validation, same rate limits
   - `@pluralscape/api-client` package with TanStack Query integration, React provider, and typed hooks
   - CI-enforced parity script verifying 1:1 REST ↔ tRPC coverage
   - [tRPC consumer guide](../trpc-guide.md) and [API consumer guide](../guides/api-consumer-guide.md)
