@@ -42,9 +42,10 @@ import { ApiHttpError } from "../../lib/api-error.js";
 import { MAX_FRIEND_CODES_PER_ACCOUNT } from "../../quota.constants.js";
 import { generateFriendCode } from "../../services/account/friend-codes/generate.js";
 import { redeemFriendCode } from "../../services/account/friend-codes/redeem.js";
-import { createImportJob, updateImportJob } from "../../services/import-job.service.js";
 import { createPoll } from "../../services/poll/create.js";
 import { castVote } from "../../services/poll/votes/cast.js";
+import { createImportJob } from "../../services/system/import-jobs/create.js";
+import { updateImportJob } from "../../services/system/import-jobs/update.js";
 import {
   asDb,
   makeAuth,

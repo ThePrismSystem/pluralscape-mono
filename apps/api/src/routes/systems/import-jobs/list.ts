@@ -8,7 +8,7 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { MAX_PAGE_LIMIT } from "../../../service.constants.js";
-import { listImportJobs } from "../../../services/import-job.service.js";
+import { listImportJobs } from "../../../services/system/import-jobs/list.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

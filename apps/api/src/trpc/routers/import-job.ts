@@ -7,12 +7,10 @@ import {
 import { z } from "zod/v4";
 
 import { MAX_PAGE_LIMIT } from "../../service.constants.js";
-import {
-  createImportJob,
-  getImportJob,
-  listImportJobs,
-  updateImportJob,
-} from "../../services/import-job.service.js";
+import { createImportJob } from "../../services/system/import-jobs/create.js";
+import { getImportJob } from "../../services/system/import-jobs/get.js";
+import { listImportJobs } from "../../services/system/import-jobs/list.js";
+import { updateImportJob } from "../../services/system/import-jobs/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

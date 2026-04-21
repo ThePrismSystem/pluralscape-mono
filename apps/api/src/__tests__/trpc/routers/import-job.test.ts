@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { assertProcedureRateLimited, makeCallerFactory, MOCK_SYSTEM_ID } from "../test-helpers.js";
 
-import type { ImportJobResult } from "../../../services/import-job.service.js";
+import type { ImportJobResult } from "../../../services/system/import-jobs/internal.js";
 import type { AccountId, ImportCollectionType, ImportJobId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
@@ -14,15 +14,23 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/import-job.service.js", () => ({
+vi.mock("../../../services/system/import-jobs/create.js", () => ({
   createImportJob: vi.fn(),
+}));
+vi.mock("../../../services/system/import-jobs/get.js", () => ({
   getImportJob: vi.fn(),
+}));
+vi.mock("../../../services/system/import-jobs/list.js", () => ({
   listImportJobs: vi.fn(),
+}));
+vi.mock("../../../services/system/import-jobs/update.js", () => ({
   updateImportJob: vi.fn(),
 }));
 
-const { createImportJob, getImportJob, listImportJobs, updateImportJob } =
-  await import("../../../services/import-job.service.js");
+const { createImportJob } = await import("../../../services/system/import-jobs/create.js");
+const { getImportJob } = await import("../../../services/system/import-jobs/get.js");
+const { listImportJobs } = await import("../../../services/system/import-jobs/list.js");
+const { updateImportJob } = await import("../../../services/system/import-jobs/update.js");
 
 const { importJobRouter } = await import("../../../trpc/routers/import-job.js");
 
