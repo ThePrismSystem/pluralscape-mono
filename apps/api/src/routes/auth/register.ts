@@ -13,7 +13,7 @@ import {
   ValidationError,
   commitRegistration,
   initiateRegistration,
-} from "../../services/auth.service.js";
+} from "../../services/auth/register.js";
 
 export const registerRoute = new Hono();
 

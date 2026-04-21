@@ -17,7 +17,7 @@ vi.mock("../../../lib/request-meta.js", () => ({
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../../services/auth.service.js", () => ({
+vi.mock("../../../services/auth/register.js", () => ({
   initiateRegistration: vi.fn(),
   commitRegistration: vi.fn(),
   ValidationError: class ValidationError extends Error {
@@ -36,7 +36,7 @@ vi.mock("../../../middleware/idempotency.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { initiateRegistration, commitRegistration, ValidationError } =
-  await import("../../../services/auth.service.js");
+  await import("../../../services/auth/register.js");
 const { registerRoute } = await import("../../../routes/auth/register.js");
 const { authRoutes } = await import("../../../routes/auth/index.js");
 

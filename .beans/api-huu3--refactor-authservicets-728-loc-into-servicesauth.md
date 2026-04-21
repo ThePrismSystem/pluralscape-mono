@@ -1,10 +1,11 @@
 ---
 # api-huu3
 title: Refactor auth.service.ts (728 LOC) into services/auth/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T21:07:17Z
 parent: api-6l1q
 ---
 
@@ -16,12 +17,12 @@ Currently concentrates session creation / MFA / device transfer / login lifecycl
 
 ## Scope
 
-- [ ] Create apps/api/src/services/auth/ directory
-- [ ] Split into per-verb files with index.ts re-exporter so caller imports stay stable
-- [ ] Keep existing public exports identical
-- [ ] Preserve all existing tests; no coverage regression
-- [ ] Each resulting file ≤300 LOC; stretch target 200 LOC
-- [ ] Follow the conventions established by api-trlq
+- [x] Create apps/api/src/services/auth/ directory
+- [x] Split into per-verb files (Option E: no barrel; callers import directly from verb files)
+- [x] Keep existing public exports identical
+- [x] Preserve all existing tests; no coverage regression
+- [x] Each resulting file ≤300 LOC; stretch target 200 LOC (register.ts 311 — acceptable per 350-400 band)
+- [x] Follow the conventions established by api-trlq
 
 ## Out of scope
 

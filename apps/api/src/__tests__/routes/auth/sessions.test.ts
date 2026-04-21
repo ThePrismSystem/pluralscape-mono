@@ -15,7 +15,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../../services/auth.service.js", () => ({
+vi.mock("../../../services/auth/sessions.js", () => ({
   listSessions: vi.fn(),
   logoutCurrentSession: vi.fn(),
   revokeSession: vi.fn(),
@@ -56,7 +56,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { listSessions, logoutCurrentSession, revokeSession, revokeAllSessions } =
-  await import("../../../services/auth.service.js");
+  await import("../../../services/auth/sessions.js");
 const { authMiddleware } = await import("../../../middleware/auth.js");
 const { sessionsRoute } = await import("../../../routes/auth/sessions.js");
 const { authRoutes } = await import("../../../routes/auth/index.js");

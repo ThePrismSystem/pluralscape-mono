@@ -27,7 +27,7 @@ import {
   getAccountInfo,
   updateAccountSettings,
 } from "../../services/account.service.js";
-import { ValidationError } from "../../services/auth.service.js";
+import { ValidationError } from "../../services/auth/register.js";
 import { asDb, noopAudit, registerTestAccount, spyAudit } from "../helpers/integration-setup.js";
 
 import type { SignSecretKey } from "@pluralscape/crypto";

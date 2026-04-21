@@ -67,7 +67,7 @@ describe("recovery-key.service uses shared anti-enum timing", () => {
 });
 
 describe("auth.service login anti-enum timing", () => {
-  const authPath = resolve(import.meta.dirname, "../../services/auth.service.ts");
+  const authPath = resolve(import.meta.dirname, "../../services/auth/login.ts");
   const authSource = readFileSync(authPath, "utf8");
 
   it("uses dummy auth key verification on not-found path", () => {

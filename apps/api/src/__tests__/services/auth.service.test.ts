@@ -14,19 +14,20 @@ import { fromCursor } from "../../lib/pagination.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { MAX_SESSIONS_PER_ACCOUNT } from "../../quota.constants.js";
 import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
+import { cleanupExpiredRegistrations } from "../../services/auth/cleanup.js";
+import { LoginThrottledError, loginAccount } from "../../services/auth/login.js";
 import {
-  LoginThrottledError,
   ValidationError,
-  cleanupExpiredRegistrations,
   commitRegistration,
   initiateRegistration,
   isDuplicateEmailError,
+} from "../../services/auth/register.js";
+import {
   listSessions,
-  loginAccount,
   logoutCurrentSession,
   revokeAllSessions,
   revokeSession,
-} from "../../services/auth.service.js";
+} from "../../services/auth/sessions.js";
 import { mockDb, type MockChain } from "../helpers/mock-db.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 

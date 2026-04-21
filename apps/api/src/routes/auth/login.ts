@@ -11,7 +11,7 @@ import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ACCOUNT_LOGIN_WINDOW_MS } from "../../middleware/stores/account-login-store.js";
-import { LoginThrottledError, loginAccount } from "../../services/auth.service.js";
+import { LoginThrottledError, loginAccount } from "../../services/auth/login.js";
 
 import { AUTH_GENERIC_LOGIN_ERROR } from "./auth.constants.js";
 

@@ -19,19 +19,18 @@ import {
   _resetAccountLoginStoreForTesting,
   setAccountLoginStore,
 } from "../../middleware/stores/account-login-store.js";
+import { LoginThrottledError, loginAccount } from "../../services/auth/login.js";
+import { isDuplicateEmailError } from "../../services/auth/register.js";
 import {
-  LoginThrottledError,
-  isDuplicateEmailError,
   listSessions,
-  loginAccount,
   logoutCurrentSession,
   revokeAllSessions,
   revokeSession,
-} from "../../services/auth.service.js";
+} from "../../services/auth/sessions.js";
 import { asDb, noopAudit, registerTestAccount, spyAudit } from "../helpers/integration-setup.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
-import type { RegistrationCommitResult } from "../../services/auth.service.js";
+import type { RegistrationCommitResult } from "../../services/auth/register.js";
 import type { AccountId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 

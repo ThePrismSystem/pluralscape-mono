@@ -21,7 +21,7 @@ vi.mock("../../../services/recovery-key.service.js", () => ({
   },
 }));
 
-vi.mock("../../../services/auth.service.js", () => ({
+vi.mock("../../../services/auth/register.js", () => ({
   ValidationError: class ValidationError extends Error {
     override readonly name = "ValidationError" as const;
   },
@@ -53,7 +53,7 @@ vi.mock("../../../lib/queue.js", () => ({
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup, NoActiveRecoveryKeyError } =
   await import("../../../services/recovery-key.service.js");
-const { ValidationError } = await import("../../../services/auth.service.js");
+const { ValidationError } = await import("../../../services/auth/register.js");
 const { recoveryKeyRoutes } = await import("../../../routes/auth/recovery-key.js");
 const { authRoutes } = await import("../../../routes/auth/index.js");
 
