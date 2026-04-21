@@ -1,10 +1,11 @@
 ---
 # api-6fzx
 title: Refactor key-rotation.service.ts (658 LOC) into services/key-rotation/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T21:07:38Z
 parent: api-6l1q
 ---
 
