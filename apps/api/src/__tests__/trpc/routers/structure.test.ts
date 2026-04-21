@@ -36,13 +36,23 @@ vi.mock("../../../services/structure-entity-type.service.js", () => ({
   restoreEntityType: vi.fn(),
 }));
 
-vi.mock("../../../services/structure-entity-crud.service.js", () => ({
+vi.mock("../../../services/structure/entity-crud/create.js", () => ({
   createStructureEntity: vi.fn(),
+}));
+
+vi.mock("../../../services/structure/entity-crud/queries.js", () => ({
   getStructureEntity: vi.fn(),
   listStructureEntities: vi.fn(),
+}));
+
+vi.mock("../../../services/structure/entity-crud/update.js", () => ({
   updateStructureEntity: vi.fn(),
+}));
+
+vi.mock("../../../services/structure/entity-crud/lifecycle.js", () => ({
   archiveStructureEntity: vi.fn(),
   restoreStructureEntity: vi.fn(),
+  deleteStructureEntity: vi.fn(),
 }));
 
 vi.mock("../../../services/structure-entity-link.service.js", () => ({
@@ -73,14 +83,18 @@ const {
   restoreEntityType,
 } = await import("../../../services/structure-entity-type.service.js");
 
-const {
-  createStructureEntity,
-  getStructureEntity,
-  listStructureEntities,
-  updateStructureEntity,
-  archiveStructureEntity,
-  restoreStructureEntity,
-} = await import("../../../services/structure-entity-crud.service.js");
+const { createStructureEntity } = await import(
+  "../../../services/structure/entity-crud/create.js"
+);
+const { getStructureEntity, listStructureEntities } = await import(
+  "../../../services/structure/entity-crud/queries.js"
+);
+const { updateStructureEntity } = await import(
+  "../../../services/structure/entity-crud/update.js"
+);
+const { archiveStructureEntity, restoreStructureEntity } = await import(
+  "../../../services/structure/entity-crud/lifecycle.js"
+);
 
 const { createEntityLink, listEntityLinks, updateEntityLink, deleteEntityLink } =
   await import("../../../services/structure-entity-link.service.js");

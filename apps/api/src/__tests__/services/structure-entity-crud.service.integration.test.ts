@@ -11,15 +11,17 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { createStructureEntity } from "../../services/structure/entity-crud/create.js";
 import {
   archiveStructureEntity,
-  createStructureEntity,
   deleteStructureEntity,
+  restoreStructureEntity,
+} from "../../services/structure/entity-crud/lifecycle.js";
+import {
   getStructureEntity,
   listStructureEntities,
-  restoreStructureEntity,
-  updateStructureEntity,
-} from "../../services/structure-entity-crud.service.js";
+} from "../../services/structure/entity-crud/queries.js";
+import { updateStructureEntity } from "../../services/structure/entity-crud/update.js";
 import {
   createEntityType,
   deleteEntityType,
