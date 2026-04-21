@@ -41,18 +41,13 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const {
-  createFrontingSession,
-  listFrontingSessions,
-  getFrontingSession,
-  updateFrontingSession,
-  endFrontingSession,
-  deleteFrontingSession,
-  archiveFrontingSession,
-  restoreFrontingSession,
-  getActiveFronting,
-  parseFrontingSessionQuery,
-} = await import("../../services/fronting-session.service.js");
+const { createFrontingSession } = await import("../../services/fronting-session/create.js");
+const { listFrontingSessions, getFrontingSession, getActiveFronting, parseFrontingSessionQuery } =
+  await import("../../services/fronting-session/queries.js");
+const { updateFrontingSession, endFrontingSession } =
+  await import("../../services/fronting-session/update.js");
+const { deleteFrontingSession, archiveFrontingSession, restoreFrontingSession } =
+  await import("../../services/fronting-session/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

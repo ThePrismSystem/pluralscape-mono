@@ -10,17 +10,26 @@ import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/fronting-session.service.js", () => ({
+vi.mock("../../../services/fronting-session/create.js", () => ({
   createFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/queries.js", () => ({
   listFrontingSessions: vi.fn(),
   getFrontingSession: vi.fn(),
+  getActiveFronting: vi.fn(),
+  parseFrontingSessionQuery: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock("../../../services/fronting-session/update.js", () => ({
   updateFrontingSession: vi.fn(),
   endFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/lifecycle.js", () => ({
   deleteFrontingSession: vi.fn(),
   archiveFrontingSession: vi.fn(),
   restoreFrontingSession: vi.fn(),
-  parseFrontingSessionQuery: vi.fn().mockReturnValue({}),
-  getActiveFronting: vi.fn(),
 }));
 
 vi.mock("../../../services/fronting-comment.service.js", () => ({
@@ -42,7 +51,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getActiveFronting } = await import("../../../services/fronting-session.service.js");
+const { getActiveFronting } = await import("../../../services/fronting-session/queries.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

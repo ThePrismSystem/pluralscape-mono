@@ -9,7 +9,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   listFrontingSessions,
   parseFrontingSessionQuery,
-} from "../../services/fronting-session.service.js";
+} from "../../services/fronting-session/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
