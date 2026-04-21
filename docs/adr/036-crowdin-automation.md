@@ -22,19 +22,21 @@ We adopt a machine-translation pipeline with four components:
 
 1. **Config-as-code**: `scripts/crowdin-glossary.json` is the source of truth for glossary terms. A `crowdin-config` GitHub Actions workflow applies changes to Crowdin via its API on every push to `main` touching glossary or setup files. Crowdin project state is derived; the repo is canonical.
 
-2. **Dual MT engines**: DeepL Free for the 10 languages it supports (de, es, fr, it, ja, ko, nl, pt-BR, ru, zh-Hans); Google Cloud Translation for the two it does not (ar, es-419). Both engines run with glossary enforcement.
+2. **Dual MT engines**: DeepL Free for the 10 languages it supports (de, es-ES, fr, it, ja, ko, nl, pt-BR, ru, zh-CN); Google Cloud Translation for Arabic. Latin American Spanish (es-419) has no MT engine — DeepL does not support it, and Google's Crowdin integration rejects it (HTTP 400 "Languages [es-419] are not supported by Mt Engine"); `es-419` is included in the TM pass but left for human translation on the MT pass. Both engines run with glossary enforcement.
 
 3. **Automatic pre-translation**: After the sync workflow uploads English sources to Crowdin, it runs `scripts/crowdin-pretranslate.ts` to kick off a TM + MT pre-translation job. New strings typically arrive pre-translated within a few minutes of the daily sync; the workflow allows up to 10 minutes per pre-translate pass before failing.
 
-4. **Auto-merge for translation-only PRs**: A `crowdin-automerge` workflow evaluates an 8-step guard chain (author, branch, label, path allowlist, no deletions, reviews, CI status, required-check allowlist) and squash-merges eligible PRs. `apps/mobile/locales/en/**` is explicitly excluded from the allowlist so a mixed-content PR is always rejected. The required-check allowlist rejects a PR as `ci_missing` when any configured required check never posts, guarding against a "zero checks = green" misinterpretation.
+4. **Auto-merge for translation-only PRs**: The `crowdin-sync` workflow enables GitHub's native auto-merge on the daily translation PR via `gh pr merge --auto --squash --delete-branch`. Safety is enforced by branch protection on `main` (required status checks must pass) plus a GitHub ruleset on `chore/crowdin-translations` that restricts pushes to the Pluralscape Crowdin Bot GitHub App — only Crowdin-originated commits reach the branch, and a failing check blocks the merge. The earlier custom `crowdin-automerge` workflow and its multi-step guard chain were replaced by this native flow in PR #476.
 
 Export policy: all translations (not just approved) are exported from Crowdin, since there are no human approvers. Manual edits in the Crowdin UI automatically supersede MT in Crowdin's translation priority ranking.
 
 Crowdin pre-translates new strings in two passes: (1) translation memory for all
 12 target languages, reusing prior translations across the project; (2) machine
 translation for anything TM did not fill — DeepL for 10 languages it supports,
-Google Translate for Arabic and Latin American Spanish. All results are
-auto-approved as the shipping translation during the transitional phase.
+Google Translate for Arabic. Latin American Spanish (es-419) has no supported
+MT engine and is skipped on the MT pass, staying at whatever TM provided until
+a human translator edits it. All MT results are auto-approved as the shipping
+translation during the transitional phase.
 
 ## Transitional posture
 
@@ -80,13 +82,12 @@ downloads, and a separate ADR will document the gated workflow.
 
 ## Rollout plan
 
-Auto-merge ships gated behind repo variable `CROWDIN_AUTOMERGE_DRY_RUN`,
-defaulting to `true`. In dry-run mode the workflow logs its merge decision and
-posts the comment it _would_ have posted, but does not call `gh pr merge`.
-After at least one week of dry-run decisions on real Crowdin PRs with no
-false-positive "would-merge" outcomes, a maintainer flips the repo variable to
-`false` via the GitHub Actions variables UI. Flipping back is a single UI
-change with no code revert required.
+Auto-merge was initially gated behind a custom `crowdin-automerge` workflow
+with a dry-run repo variable. That workflow and its guard chain were removed
+in PR #476 in favour of GitHub's native auto-merge, with safety provided by
+required status checks on `main` and the App-scoped ruleset on
+`chore/crowdin-translations`. A maintainer can disable the flow on any given
+PR by clicking "Disable auto-merge" in the GitHub UI.
 
 ## References
 
