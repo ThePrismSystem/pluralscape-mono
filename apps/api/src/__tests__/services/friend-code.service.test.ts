@@ -18,8 +18,10 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { generateFriendCode, listFriendCodes, archiveFriendCode, redeemFriendCode } =
-  await import("../../services/friend-code.service.js");
+const { generateFriendCode } = await import("../../services/account/friend-codes/generate.js");
+const { listFriendCodes } = await import("../../services/account/friend-codes/list.js");
+const { archiveFriendCode } = await import("../../services/account/friend-codes/archive.js");
+const { redeemFriendCode } = await import("../../services/account/friend-codes/redeem.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

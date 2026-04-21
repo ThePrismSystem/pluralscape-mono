@@ -1,12 +1,10 @@
 import { RedeemFriendCodeBodySchema, brandedIdQueryParam } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import {
-  archiveFriendCode,
-  generateFriendCode,
-  listFriendCodes,
-  redeemFriendCode,
-} from "../../services/friend-code.service.js";
+import { archiveFriendCode } from "../../services/account/friend-codes/archive.js";
+import { generateFriendCode } from "../../services/account/friend-codes/generate.js";
+import { listFriendCodes } from "../../services/account/friend-codes/list.js";
+import { redeemFriendCode } from "../../services/account/friend-codes/redeem.js";
 import { protectedProcedure } from "../middlewares/auth.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { router } from "../trpc.js";

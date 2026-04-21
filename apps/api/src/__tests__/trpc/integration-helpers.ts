@@ -24,8 +24,9 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, expect } from "vitest";
 
+import { generateFriendCode } from "../../services/account/friend-codes/generate.js";
+import { redeemFriendCode } from "../../services/account/friend-codes/redeem.js";
 import { createBucket } from "../../services/bucket/create.js";
-import { generateFriendCode, redeemFriendCode } from "../../services/friend-code.service.js";
 import { createFrontingSession } from "../../services/fronting-session/create.js";
 import { createMember } from "../../services/member/create.js";
 import { createStructureEntity } from "../../services/structure-entity-crud.service.js";

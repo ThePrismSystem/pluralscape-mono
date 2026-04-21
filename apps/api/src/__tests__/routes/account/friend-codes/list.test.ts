@@ -9,10 +9,16 @@ import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-t
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/friend-code.service.js", () => ({
+vi.mock("../../../../services/account/friend-codes/generate.js", () => ({
   generateFriendCode: vi.fn(),
+}));
+vi.mock("../../../../services/account/friend-codes/list.js", () => ({
   listFriendCodes: vi.fn(),
+}));
+vi.mock("../../../../services/account/friend-codes/archive.js", () => ({
   archiveFriendCode: vi.fn(),
+}));
+vi.mock("../../../../services/account/friend-codes/redeem.js", () => ({
   redeemFriendCode: vi.fn(),
 }));
 
@@ -23,7 +29,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listFriendCodes } = await import("../../../../services/friend-code.service.js");
+const { listFriendCodes } = await import("../../../../services/account/friend-codes/list.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
