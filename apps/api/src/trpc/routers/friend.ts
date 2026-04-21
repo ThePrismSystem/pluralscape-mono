@@ -21,8 +21,8 @@ import {
   removeFriendConnection,
 } from "../../services/account/friends/transitions.js";
 import { updateFriendVisibility } from "../../services/account/friends/update.js";
+import { getFriendDashboard } from "../../services/friend-dashboard/get-dashboard.js";
 import { getFriendDashboardSync } from "../../services/friend-dashboard-sync.service.js";
-import { getFriendDashboard } from "../../services/friend-dashboard.service.js";
 import {
   getFriendExportManifest,
   getFriendExportPage,

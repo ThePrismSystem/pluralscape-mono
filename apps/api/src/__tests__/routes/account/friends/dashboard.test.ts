@@ -13,7 +13,7 @@ import type { ApiErrorResponse, FriendDashboardResponse, SystemId } from "@plura
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/friend-dashboard.service.js", () => ({
+vi.mock("../../../../services/friend-dashboard/get-dashboard.js", () => ({
   getFriendDashboard: vi.fn(),
 }));
 
@@ -47,7 +47,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getFriendDashboard } = await import("../../../../services/friend-dashboard.service.js");
+const { getFriendDashboard } = await import("../../../../services/friend-dashboard/get-dashboard.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

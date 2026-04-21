@@ -22,7 +22,7 @@ vi.mock("../../../../services/friend-dashboard-sync.service.js", () => ({
   getFriendDashboardSync: vi.fn(),
 }));
 
-vi.mock("../../../../services/friend-dashboard.service.js", () => ({
+vi.mock("../../../../services/friend-dashboard/get-dashboard.js", () => ({
   getFriendDashboard: vi.fn(),
 }));
 
