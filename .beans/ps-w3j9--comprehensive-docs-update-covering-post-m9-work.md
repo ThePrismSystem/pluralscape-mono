@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T03:55:54Z
-updated_at: 2026-04-21T05:42:54Z
+updated_at: 2026-04-21T11:44:47Z
 ---
 
 Full sweep of repo docs to reflect 80 PRs merged since the last comprehensive docs update (PR #424 on 2026-04-14). Covers README, CHANGELOG, milestones, features, architecture, OpenAPI spec, db schema diagram, 15 package READMEs, trpc/REST consumer guides, and new CONTRIBUTORS.md. Marks Milestone 9 (ps-h2gl) completed at end.
@@ -79,7 +79,16 @@ Completed three-pass accuracy review (claim extraction → ground-truth check �
 
 1. **OpenAPI list-wrapper inconsistency**: 25+ list endpoints use varied response keys (items/members/groups/...) in OpenAPI while handlers return `data` via `buildPaginatedResult`. Needs spec-wide rename or server-side settlement + ADR.
 2. **SCOPE_INSUFFICIENT constant unused**: defined in `error-codes.ts` but no handler emits it; handlers use `FORBIDDEN`. Decide to emit the constant or drop it.
-3. **Orphan `apps/api/src/trpc/routers/i18n.ts`**: 6.7KB file not imported by root.ts (only `i18n-composer.ts` wired in). Dead code candidate.
+3. ~~Orphan `apps/api/src/trpc/routers/i18n.ts`~~ — INVALID. `i18n-composer.ts` imports `createI18nRouter` from `i18n.ts` and wires it into root.ts. Both files are live.
 4. **Missing `packages/logger/README.md`**: the package exists but has no README; was out of the 15-README scope.
 
 Milestone 9 (ps-h2gl) marked completed.
+
+## Follow-ups resolved (same branch)
+
+- **#1 OpenAPI list-wrapper rename** → commit `4a5ea65d`: 3 schemas + 38 inline renames across 23 path files, all list wrapper keys normalized to `data` to match `buildPaginatedResult`.
+- **#2 SCOPE_INSUFFICIENT emission** → commit `28566d45`: REST scope-gate middleware distinguishes FORBIDDEN (endpoint not registered) from SCOPE_INSUFFICIENT (scope mismatch). tRPC scope-gate keeps FORBIDDEN (code enum fixed). Docs updated.
+- **#3 Orphan i18n.ts** → INVALID; `i18n-composer.ts` imports `createI18nRouter` from `i18n.ts` and wires it into `root.ts`.
+- **#4 logger README** → commit `50126200`: new README for `@pluralscape/logger` covering mobile logger, default PII redaction, options, testing, design rationale.
+
+All four items verified: `openapi:check`, `openapi:lint`, `trpc:parity`, scope-gate tests (8/8 pass).
