@@ -198,6 +198,31 @@ describe("SyncEngine steady-state", () => {
         }),
       ).rejects.toThrow(NoActiveSessionError);
     });
+
+    it("accepts typed overload with documentType discriminant (sync-orkv)", async () => {
+      const appendChange = vi.fn();
+      const engine = await createBootstrappedEngine({
+        storageAdapter: mockStorageAdapter({ appendChange }),
+      });
+
+      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
+        const d = doc as Record<string, Record<string, unknown>>;
+        d["_typed"] = { marker: 1 };
+      });
+
+      expect(seq).toBe(1);
+      expect(appendChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects typed overload when documentType mismatches docId (sync-orkv)", async () => {
+      const engine = await createBootstrappedEngine();
+
+      await expect(
+        engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "fronting", () => {
+          /* no-op */
+        }),
+      ).rejects.toThrow(NoActiveSessionError);
+    });
   });
 
   describe("handleIncomingChanges", () => {
