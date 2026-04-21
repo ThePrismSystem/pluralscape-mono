@@ -60,12 +60,24 @@ export function mockSystemOwnershipFactory(): { assertSystemOwnership: ReturnTyp
   return { assertSystemOwnership: vi.fn() };
 }
 
-/** Factory for vi.mock("…/api-key.service.js") — returns all CRUD functions as mocks. */
-export function mockApiKeyServiceFactory(): Record<string, ReturnType<typeof vi.fn>> {
+/** Factory for vi.mock("…/api-key/create.js") — create verb. */
+export function mockApiKeyCreateFactory(): Record<string, ReturnType<typeof vi.fn>> {
   return {
     createApiKey: vi.fn(),
+  };
+}
+
+/** Factory for vi.mock("…/api-key/queries.js") — read verbs. */
+export function mockApiKeyQueriesFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
     listApiKeys: vi.fn(),
     getApiKey: vi.fn(),
+  };
+}
+
+/** Factory for vi.mock("…/api-key/revoke.js") — revoke verb. */
+export function mockApiKeyRevokeFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
     revokeApiKey: vi.fn(),
   };
 }

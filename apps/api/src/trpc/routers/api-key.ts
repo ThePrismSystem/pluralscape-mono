@@ -1,12 +1,9 @@
 import { CreateApiKeyBodySchema, brandedIdQueryParam } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import {
-  createApiKey,
-  getApiKey,
-  listApiKeys,
-  revokeApiKey,
-} from "../../services/api-key.service.js";
+import { createApiKey } from "../../services/api-key/create.js";
+import { getApiKey, listApiKeys } from "../../services/api-key/queries.js";
+import { revokeApiKey } from "../../services/api-key/revoke.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

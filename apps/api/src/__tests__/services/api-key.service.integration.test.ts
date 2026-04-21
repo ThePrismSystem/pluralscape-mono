@@ -9,13 +9,10 @@ import { ALL_API_KEY_SCOPES, brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  createApiKey,
-  getApiKey,
-  listApiKeys,
-  revokeApiKey,
-  validateApiKey,
-} from "../../services/api-key.service.js";
+import { createApiKey } from "../../services/api-key/create.js";
+import { getApiKey, listApiKeys } from "../../services/api-key/queries.js";
+import { revokeApiKey } from "../../services/api-key/revoke.js";
+import { validateApiKey } from "../../services/api-key/validate.js";
 import {
   asDb,
   assertApiError,

@@ -1,11 +1,11 @@
 ---
 # api-1i0u
 title: Refactor api-key.service.ts (356 LOC) into services/api-key/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:11Z
-updated_at: 2026-04-21T22:28:11Z
+updated_at: 2026-04-21T23:08:30Z
 parent: api-6l1q
 ---
 
