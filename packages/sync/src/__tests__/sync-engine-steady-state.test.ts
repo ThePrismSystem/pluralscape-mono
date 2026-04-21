@@ -149,7 +149,7 @@ describe("SyncEngine steady-state", () => {
       });
 
       // Use Automerge-compatible mutation (untyped via the unknown doc)
-      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
+      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_test"] = { value: "hello" };
       });
@@ -161,7 +161,7 @@ describe("SyncEngine steady-state", () => {
     it("updates sync state after successful submission", async () => {
       const engine = await createBootstrappedEngine();
 
-      await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
+      await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_test2"] = { value: 1 };
       });
@@ -176,11 +176,11 @@ describe("SyncEngine steady-state", () => {
         networkAdapter: relayNetworkAdapter(relay),
       });
 
-      const seq1 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
+      const seq1 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_a"] = { v: 1 };
       });
-      const seq2 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
+      const seq2 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_b"] = { v: 2 };
       });
@@ -193,28 +193,13 @@ describe("SyncEngine steady-state", () => {
       const engine = await createBootstrappedEngine();
 
       await expect(
-        engine.applyLocalChange(NONEXISTENT_DOC_ID, () => {
+        engine.applyLocalChange(NONEXISTENT_DOC_ID, "system-core", () => {
           /* no-op */
         }),
       ).rejects.toThrow(NoActiveSessionError);
     });
 
-    it("accepts typed overload with documentType discriminant (sync-orkv)", async () => {
-      const appendChange = vi.fn();
-      const engine = await createBootstrappedEngine({
-        storageAdapter: mockStorageAdapter({ appendChange }),
-      });
-
-      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_typed"] = { marker: 1 };
-      });
-
-      expect(seq).toBe(1);
-      expect(appendChange).toHaveBeenCalledTimes(1);
-    });
-
-    it("rejects typed overload when documentType mismatches docId (sync-orkv)", async () => {
+    it("rejects when documentType mismatches docId (sync-orkv)", async () => {
       const engine = await createBootstrappedEngine();
 
       await expect(
@@ -310,7 +295,7 @@ describe("SyncEngine steady-state", () => {
         offlineQueueAdapter,
       });
 
-      await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
+      await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_offline_test"] = { value: "test" };
       });
@@ -338,7 +323,7 @@ describe("SyncEngine steady-state", () => {
         offlineQueueAdapter,
       });
 
-      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
+      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_sync_test"] = { value: 1 };
       });
@@ -371,7 +356,7 @@ describe("SyncEngine steady-state", () => {
       });
 
       await expect(
-        engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
+        engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
           const d = doc as Record<string, Record<string, unknown>>;
           d["_fail_test"] = { value: 1 };
         }),

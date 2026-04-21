@@ -626,7 +626,7 @@ describe("SyncEngine edge cases", () => {
 
       // applyLocalChange should reject with the network error
       await expect(
-        engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
+        engine.applyLocalChange(asSyncDocId("system-core-sys_test"), "system-core", (doc) => {
           const d = doc as Record<string, Record<string, string>>;
           d["test_key"] = { value: "test" };
         }),

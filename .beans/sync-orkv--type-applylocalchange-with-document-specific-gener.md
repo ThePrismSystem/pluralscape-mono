@@ -13,14 +13,21 @@ Finding [T-2] from audit 2026-04-20. packages/sync/src/engine/sync-engine.ts:251
 
 ## Summary of Changes
 
-applyLocalChange now supports two overloads:
+applyLocalChange has a single, strongly-typed signature:
 
-- `applyLocalChange(docId, documentType, changeFn)`: narrow variant where
-  changeFn receives DocumentTypeMap[T]. Engine asserts that
-  parseDocumentId(docId).documentType === documentType AND the stored
-  session's documentType matches, throwing NoActiveSessionError otherwise.
-- `applyLocalChange(docId, changeFn)`: legacy variant with Record<string,
-  unknown> changeFn. Still works for dynamic access code paths.
+- `applyLocalChange<T extends SyncDocumentType>(docId, documentType, changeFn)`:
+  changeFn receives `DocumentTypeMap[T]`. Engine asserts that
+  `parseDocumentId(docId).documentType === documentType` AND the stored
+  session's documentType matches, throwing `NoActiveSessionError` otherwise.
 
-Callers can no longer accidentally mutate the wrong document shape when
-they opt into the typed overload.
+Pre-release posture (CLAUDE.md): the earlier `applyLocalChange(docId, changeFn)`
+back-compat overload was removed outright — no deprecated shim retained.
+The three internal sync-package tests that exercised the 2-arg form
+(`sync-engine-steady-state`, `sync-engine-runtime-hardening`,
+`sync-engine-edge-cases`) were migrated to the typed 3-arg form. No
+external consumers existed, so no downstream packages or apps required
+changes.
+
+Callers can no longer accidentally mutate the wrong document shape: the
+document-type literal is required at the call site and the closure is
+typed against the matching `DocumentTypeMap` entry.

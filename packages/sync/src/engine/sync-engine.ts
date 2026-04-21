@@ -266,29 +266,14 @@ export class SyncEngine {
    *
    * Returns the server-assigned sequence number.
    */
-  applyLocalChange<T extends SyncDocumentType>(
+  async applyLocalChange<T extends SyncDocumentType>(
     docId: SyncDocumentId,
     documentType: T,
     changeFn: (doc: DocumentTypeMap[T]) => void,
-  ): Promise<number>;
-  applyLocalChange(
-    docId: SyncDocumentId,
-    changeFn: (doc: Record<string, unknown>) => void,
-  ): Promise<number>;
-  async applyLocalChange<T extends SyncDocumentType>(
-    docId: SyncDocumentId,
-    documentTypeOrChangeFn: T | ((doc: Record<string, unknown>) => void),
-    changeFn?: (doc: DocumentTypeMap[T]) => void,
   ): Promise<number> {
-    // Normalise the two overloads into (documentType | null, changeFn).
-    const hasExplicitType = typeof documentTypeOrChangeFn === "string";
-    const expectedType: T | null = hasExplicitType ? documentTypeOrChangeFn : null;
-    const effectiveChangeFn: (doc: Record<string, unknown>) => void = hasExplicitType
-      ? (doc) => {
-          if (changeFn === undefined) throw new NoActiveSessionError(docId);
-          changeFn(doc as DocumentTypeMap[T]);
-        }
-      : documentTypeOrChangeFn;
+    const effectiveChangeFn: (doc: Record<string, unknown>) => void = (doc) => {
+      changeFn(doc as DocumentTypeMap[T]);
+    };
 
     return this.enqueueDocumentOperation(docId, async () => {
       const entry = this.sessions.get(docId);
@@ -299,11 +284,9 @@ export class SyncEngine {
       // Guard against caller passing the wrong documentType for this docId.
       // parseDocumentId is the authoritative source — entry.documentType
       // must equal the parsed value (invariant enforced at hydration).
-      if (expectedType !== null) {
-        const parsed = parseDocumentId(docId);
-        if (parsed.documentType !== expectedType || entry.documentType !== expectedType) {
-          throw new NoActiveSessionError(docId);
-        }
+      const parsed = parseDocumentId(docId);
+      if (parsed.documentType !== documentType || entry.documentType !== documentType) {
+        throw new NoActiveSessionError(docId);
       }
 
       const envelope = entry.session.change(effectiveChangeFn);

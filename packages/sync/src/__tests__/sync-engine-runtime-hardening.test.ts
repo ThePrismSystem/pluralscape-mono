@@ -496,7 +496,7 @@ describe("P-M4: operation promise cleanup", () => {
     vi.useFakeTimers();
     const engine = await createBootstrappedEngine();
 
-    await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
+    await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), "system-core", (doc) => {
       const d = doc as Record<string, Record<string, unknown>>;
       d["_cleanup_test"] = { value: "test" };
     });
@@ -508,10 +508,14 @@ describe("P-M4: operation promise cleanup", () => {
     expect(engine.pendingOperationCount).toBe(0);
 
     // Engine should still work with the cleaned-up queue
-    const seq2 = await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
-      const d = doc as Record<string, Record<string, unknown>>;
-      d["_cleanup_test2"] = { value: "test2" };
-    });
+    const seq2 = await engine.applyLocalChange(
+      asSyncDocId("system-core-sys_test"),
+      "system-core",
+      (doc) => {
+        const d = doc as Record<string, Record<string, unknown>>;
+        d["_cleanup_test2"] = { value: "test2" };
+      },
+    );
 
     expect(seq2).toBe(2);
 
