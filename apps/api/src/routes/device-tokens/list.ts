@@ -5,11 +5,11 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { listDeviceTokens } from "../../services/device-token/queries.js";
 import {
   DEFAULT_DEVICE_TOKEN_LIMIT,
   MAX_DEVICE_TOKENS_PER_LIST,
 } from "../../services/device-token.constants.js";
-import { listDeviceTokens } from "../../services/device-token.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

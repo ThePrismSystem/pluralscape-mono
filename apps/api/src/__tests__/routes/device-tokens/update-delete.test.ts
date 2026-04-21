@@ -12,11 +12,23 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/device-token.service.js", () => ({
+vi.mock("../../../services/device-token/register.js", () => ({
   registerDeviceToken: vi.fn(),
+}));
+
+vi.mock("../../../services/device-token/update.js", () => ({
   updateDeviceToken: vi.fn(),
+}));
+
+vi.mock("../../../services/device-token/delete.js", () => ({
   deleteDeviceToken: vi.fn(),
+}));
+
+vi.mock("../../../services/device-token/revoke.js", () => ({
   revokeDeviceToken: vi.fn(),
+}));
+
+vi.mock("../../../services/device-token/queries.js", () => ({
   listDeviceTokens: vi.fn(),
 }));
 
@@ -29,8 +41,8 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { updateDeviceToken, deleteDeviceToken } =
-  await import("../../../services/device-token.service.js");
+const { updateDeviceToken } = await import("../../../services/device-token/update.js");
+const { deleteDeviceToken } = await import("../../../services/device-token/delete.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

@@ -5,13 +5,11 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import {
-  deleteDeviceToken,
-  listDeviceTokens,
-  registerDeviceToken,
-  revokeDeviceToken,
-  updateDeviceToken,
-} from "../../services/device-token.service.js";
+import { deleteDeviceToken } from "../../services/device-token/delete.js";
+import { listDeviceTokens } from "../../services/device-token/queries.js";
+import { registerDeviceToken } from "../../services/device-token/register.js";
+import { revokeDeviceToken } from "../../services/device-token/revoke.js";
+import { updateDeviceToken } from "../../services/device-token/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

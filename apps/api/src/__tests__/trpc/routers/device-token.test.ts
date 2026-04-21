@@ -19,15 +19,30 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/device-token.service.js", () => ({
+vi.mock("../../../services/device-token/register.js", () => ({
   registerDeviceToken: vi.fn(),
+}));
+
+vi.mock("../../../services/device-token/queries.js", () => ({
   listDeviceTokens: vi.fn(),
+}));
+
+vi.mock("../../../services/device-token/revoke.js", () => ({
   revokeDeviceToken: vi.fn(),
+}));
+
+vi.mock("../../../services/device-token/delete.js", () => ({
   deleteDeviceToken: vi.fn(),
 }));
 
-const { registerDeviceToken, listDeviceTokens, revokeDeviceToken, deleteDeviceToken } =
-  await import("../../../services/device-token.service.js");
+vi.mock("../../../services/device-token/update.js", () => ({
+  updateDeviceToken: vi.fn(),
+}));
+
+const { registerDeviceToken } = await import("../../../services/device-token/register.js");
+const { listDeviceTokens } = await import("../../../services/device-token/queries.js");
+const { revokeDeviceToken } = await import("../../../services/device-token/revoke.js");
+const { deleteDeviceToken } = await import("../../../services/device-token/delete.js");
 
 const { deviceTokenRouter } = await import("../../../trpc/routers/device-token.js");
 

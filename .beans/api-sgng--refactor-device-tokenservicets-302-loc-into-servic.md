@@ -1,11 +1,11 @@
 ---
 # api-sgng
 title: Refactor device-token.service.ts (302 LOC) into services/device-token/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:11Z
-updated_at: 2026-04-21T22:28:11Z
+updated_at: 2026-04-21T23:08:41Z
 parent: api-6l1q
 ---
 
