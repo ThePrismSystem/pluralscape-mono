@@ -29,6 +29,8 @@ Community terminology is used throughout: "system" (not patient), "member" (not 
         (primary DB)    (cache/pub-sub) (blob storage)
 ```
 
+On iOS and Android the client uses `expo-sqlite` with SQLCipher. On web, the client substitutes OPFS-backed `wa-sqlite` (with an IndexedDB fallback for browsers that lack OPFS), preserving the same SQLite-shaped adapter interfaces — see [adr/031-web-storage-backend.md](adr/031-web-storage-backend.md).
+
 ### Self-Hosted Deployment
 
 ```
@@ -80,7 +82,7 @@ Tooling packages (`eslint-config`, `prettier-config`, `tsconfig`, `test-utils`) 
             │               │                              │
             ▼               ▼                              ▼
         ┌──────┐     ┌────────────┐                ┌────────────┐
-        │crypto│     │ validation │                │    i18n    │
+        │crypto│     │ validation │                │    i18n    │  (types)
         └──┬───┘     └─────┬──────┘                └────────────┘
            │               │
       ┌────┴────┐      ┌────┘
@@ -107,12 +109,16 @@ Tooling packages (`eslint-config`, `prettier-config`, `tsconfig`, `test-utils`) 
   │ email │  (no @pluralscape deps)
   └───────┘
 
+  ┌────────┐
+  │ logger │  (types)
+  └────────┘
+
   ┌────────────┐
   │ api-client │  (depends on @pluralscape/api for router types)
   └────────────┘
 
   ┌──────┐
-  │ data │  (api-client + crypto + sync + types)
+  │ data │  (api-client + crypto + types)
   └──────┘
 
   ┌─────────────┐
@@ -122,25 +128,27 @@ Tooling packages (`eslint-config`, `prettier-config`, `tsconfig`, `test-utils`) 
     │         │
     ▼         ▼
 ┌───────────┐  ┌───────────┐
-│ import-sp │  │ import-pk │  (import-core + types + validation)
+│ import-sp │  │ import-pk │  (import-core + types + validation; import-pk also depends on data)
 └───────────┘  └───────────┘
 ```
 
+`packages/import-core` is the shared orchestration engine (dependency-ordered walks, checkpoint-based resumption, error classification, bounded warning buffers, `Persister` boundary) behind both SP and PK imports — see [adr/034-import-core-extraction.md](adr/034-import-core-extraction.md).
+
 ### Classification
 
-| Category    | Packages                                                      |
-| ----------- | ------------------------------------------------------------- |
-| Server-only | `db`, `queue`, `rotation-worker`, `email`                     |
-| Client-only | `api-client`, `data`, `import-core`, `import-sp`, `import-pk` |
-| Shared      | `types`, `crypto`, `sync`, `validation`, `i18n`, `storage`    |
+| Category    | Packages                                                                |
+| ----------- | ----------------------------------------------------------------------- |
+| Server-only | `db`, `queue`, `rotation-worker`, `email`                               |
+| Client-only | `api-client`, `data`, `import-core`, `import-sp`, `import-pk`, `logger` |
+| Shared      | `types`, `crypto`, `sync`, `validation`, `i18n`, `storage`              |
 
 ### App Consumers
 
-| App            | Packages consumed                                                                                |
-| -------------- | ------------------------------------------------------------------------------------------------ |
-| `apps/api`     | `crypto`, `db`, `email`, `queue`, `storage`, `sync`, `types`, `validation`                       |
-| `apps/mobile`  | `api-client`, `crypto`, `data`, `i18n`, `import-core`, `import-sp`, `import-pk`, `sync`, `types` |
-| `apps/api-e2e` | `api` (for router types), `crypto`, `sync`, `types`                                              |
+| App            | Packages consumed                                                              |
+| -------------- | ------------------------------------------------------------------------------ |
+| `apps/api`     | `crypto`, `db`, `email`, `queue`, `storage`, `sync`, `types`, `validation`     |
+| `apps/mobile`  | `api-client`, `crypto`, `data`, `i18n`, `import-sp`, `logger`, `sync`, `types` |
+| `apps/api-e2e` | `api` (for router types), `crypto`, `sync`, `types`                            |
 
 ---
 
@@ -204,11 +212,11 @@ Offline queue  ──▶  CRDT merge (conflict resolution)
 
 ### Encryption Boundaries
 
-| Tier                  | Scope                                                  | Algorithm                                       | Key holder                                       |
-| --------------------- | ------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------ |
-| T1 — User content     | Member profiles, journal entries, front logs, messages | XChaCha20-Poly1305 (libsodium)                  | Client only; server sees ciphertext              |
-| T2 — Operational data | Email addresses, webhook URLs                          | AES-256-GCM (BLAKE2b hash preserved for lookup) | Server; encrypted at rest, decrypted transiently |
-| T3 — Infrastructure   | Push tokens, session metadata                          | Plaintext (TLS in transit)                      | Server; no application-level encryption          |
+| Tier                  | Scope                                                  | Algorithm                                              | Key holder                                       |
+| --------------------- | ------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------ |
+| T1 — User content     | Member profiles, journal entries, front logs, messages | XChaCha20-Poly1305 (libsodium)                         | Client only; server sees ciphertext              |
+| T2 — Operational data | Email addresses, webhook URLs                          | XChaCha20-Poly1305 (BLAKE2b hash preserved for lookup) | Server; encrypted at rest, decrypted transiently |
+| T3 — Infrastructure   | Push tokens, session metadata                          | Plaintext (TLS in transit)                             | Server; no application-level encryption          |
 
 Per-bucket symmetric keys are derived client-side. The server never holds T1 key material.
 
@@ -216,25 +224,30 @@ Per-bucket symmetric keys are derived client-side. The server never holds T1 key
 
 ## 4. Key Architecture Decisions
 
-| Pattern             | Decision                                                      | ADR                                                                              |
-| ------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| License             | AGPL-3.0 — copyleft to protect community data                 | [adr/001-agpl-3-license.md](adr/001-agpl-3-license.md)                           |
-| Frontend framework  | React Native via Expo — single codebase for iOS, Android, Web | [adr/002-frontend-framework.md](adr/002-frontend-framework.md)                   |
-| API framework       | Hono on Bun — fast, edge-compatible, supports Bun native APIs | [adr/003-api-framework.md](adr/003-api-framework.md)                             |
-| Database            | PostgreSQL (hosted) + SQLite/SQLCipher (client + self-hosted) | [adr/004-database.md](adr/004-database.md)                                       |
-| Offline sync        | CRDT-based encrypted sync; server relays opaque ciphertext    | [adr/005-offline-sync.md](adr/005-offline-sync.md)                               |
-| Encryption          | libsodium — XChaCha20-Poly1305, X25519, Argon2id              | [adr/006-encryption.md](adr/006-encryption.md)                                   |
-| Real-time           | WebSocket + SSE via tRPC subscriptions                        | [adr/007-realtime.md](adr/007-realtime.md)                                       |
-| Runtime             | Bun — faster cold start, native SQLite, built-in test runner  | [adr/008-runtime.md](adr/008-runtime.md)                                         |
-| Blob storage        | S3-compatible (MinIO self-hosted); pre-signed URLs            | [adr/009-blob-media-storage.md](adr/009-blob-media-storage.md)                   |
-| Background jobs     | BullMQ-compatible queue on Valkey                             | [adr/010-background-jobs.md](adr/010-background-jobs.md)                         |
-| Key recovery        | Recovery code derivation via Argon2id, sharded backup         | [adr/011-key-recovery.md](adr/011-key-recovery.md)                               |
-| Self-hosted tiers   | Minimal (single binary) vs Full (Docker Compose)              | [adr/012-self-hosted-tiers.md](adr/012-self-hosted-tiers.md)                     |
-| Encryption boundary | T1/T2/T3 classification; fail-closed on unmapped data         | [adr/018-encryption-at-rest-boundary.md](adr/018-encryption-at-rest-boundary.md) |
-| RLS denormalization | system_id/account_id columns on every table for RLS           | [adr/020-rls-denormalization.md](adr/020-rls-denormalization.md)                 |
-| Email encryption    | Server-side AES-256-GCM; BLAKE2b hash for lookup              | [adr/029-server-side-encrypted-email.md](adr/029-server-side-encrypted-email.md) |
-| Web storage backend | OPFS+wa-sqlite preferred, IndexedDB fallback; auto-detected   | [adr/031-web-storage-backend.md](adr/031-web-storage-backend.md)                 |
-| tRPC parity         | `pnpm trpc:parity` enforces REST+tRPC coverage on every PR    | [adr/032-trpc-parity-enforcement.md](adr/032-trpc-parity-enforcement.md)         |
+| Pattern             | Decision                                                                                           | ADR                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| License             | AGPL-3.0 — copyleft to protect community data                                                      | [adr/001-agpl-3-license.md](adr/001-agpl-3-license.md)                             |
+| Frontend framework  | React Native via Expo — single codebase for iOS, Android, Web                                      | [adr/002-frontend-framework.md](adr/002-frontend-framework.md)                     |
+| API framework       | Hono on Bun — fast, edge-compatible, supports Bun native APIs                                      | [adr/003-api-framework.md](adr/003-api-framework.md)                               |
+| Database            | PostgreSQL (hosted) + SQLite/SQLCipher (client + self-hosted)                                      | [adr/004-database.md](adr/004-database.md)                                         |
+| Offline sync        | CRDT-based encrypted sync; server relays opaque ciphertext                                         | [adr/005-offline-sync.md](adr/005-offline-sync.md)                                 |
+| Encryption          | libsodium — XChaCha20-Poly1305, X25519, Argon2id                                                   | [adr/006-encryption.md](adr/006-encryption.md)                                     |
+| Real-time           | WebSocket + SSE via tRPC subscriptions                                                             | [adr/007-realtime.md](adr/007-realtime.md)                                         |
+| Runtime             | Bun — faster cold start, native SQLite, built-in test runner                                       | [adr/008-runtime.md](adr/008-runtime.md)                                           |
+| Blob storage        | S3-compatible (MinIO self-hosted); pre-signed URLs                                                 | [adr/009-blob-media-storage.md](adr/009-blob-media-storage.md)                     |
+| Background jobs     | BullMQ-compatible queue on Valkey                                                                  | [adr/010-background-jobs.md](adr/010-background-jobs.md)                           |
+| Key recovery        | Recovery code derivation via Argon2id, sharded backup                                              | [adr/011-key-recovery.md](adr/011-key-recovery.md)                                 |
+| Self-hosted tiers   | Minimal (single binary) vs Full (Docker Compose)                                                   | [adr/012-self-hosted-tiers.md](adr/012-self-hosted-tiers.md)                       |
+| Encryption boundary | T1/T2/T3 classification; fail-closed on unmapped data                                              | [adr/018-encryption-at-rest-boundary.md](adr/018-encryption-at-rest-boundary.md)   |
+| RLS denormalization | system_id/account_id columns on every table for RLS                                                | [adr/020-rls-denormalization.md](adr/020-rls-denormalization.md)                   |
+| Email encryption    | Server-side XChaCha20-Poly1305 (AEAD); BLAKE2b hash for lookup                                     | [adr/029-server-side-encrypted-email.md](adr/029-server-side-encrypted-email.md)   |
+| Web storage backend | OPFS+wa-sqlite preferred, IndexedDB fallback; auto-detected                                        | [adr/031-web-storage-backend.md](adr/031-web-storage-backend.md)                   |
+| tRPC parity         | `pnpm trpc:parity` enforces REST+tRPC coverage on every PR                                         | [adr/032-trpc-parity-enforcement.md](adr/032-trpc-parity-enforcement.md)           |
+| PluralKit client    | Adopt `pkapi.js` (BSD-2-Clause) for PK API v2 with built-in rate limiting                          | [adr/033-pluralkit-api-client-library.md](adr/033-pluralkit-api-client-library.md) |
+| Import core         | Shared orchestration engine behind SP and PK import engines                                        | [adr/034-import-core-extraction.md](adr/034-import-core-extraction.md)             |
+| i18n OTA delivery   | `i18next-chained-backend` (bundled + HTTP), API proxies Crowdin with 24h TTL                       | [adr/035-i18n-ota-delivery.md](adr/035-i18n-ota-delivery.md)                       |
+| Crowdin automation  | Config-as-code glossary, DeepL+Google MT, TM+MT pre-translate, auto-merge for translation-only PRs | [adr/036-crowdin-automation.md](adr/036-crowdin-automation.md)                     |
+| Argon2id profiles   | Context-specific profiles (`TRANSFER`, `MASTER_KEY`) replacing the unified parameter set           | [adr/037-argon2id-context-profiles.md](adr/037-argon2id-context-profiles.md)       |
 
 ---
 
@@ -242,9 +255,9 @@ Per-bucket symmetric keys are derived client-side. The server never holds T1 key
 
 ### Zero-Knowledge Server
 
-The server stores only T1 ciphertext. It cannot read member profiles, journal entries, front logs, or messages. Raw passwords and master keys never reach the server.
+The server stores only T1 ciphertext. It cannot read member profiles, journal entries, front logs, or messages. Raw passwords and master keys never reach the server. All master-key derivation, unwrap, rewrap, and recovery operations execute on the client; the server persists only the encrypted master-key blobs and the auth-key hash.
 
-Authentication uses a split key derivation protocol (ADR 006): a single Argon2id pass over the password produces an `auth_key` (sent to the server, stored as a BLAKE2B hash) and a `password_key` (client-only, used to unwrap the master key). The server verifies a hash of the auth key — it cannot derive the password key or the master key from what it stores.
+Authentication uses a split key derivation protocol (ADR 006): a single Argon2id pass over the password produces an `auth_key` (sent to the server, stored as a BLAKE2B hash) and a `password_key` (client-only, used to unwrap the master key). The server verifies a hash of the auth key — it cannot derive the password key or the master key from what it stores. Argon2id runs against context-specific profiles (`TRANSFER`, `MASTER_KEY`) rather than a single unified parameter set — see [adr/037-argon2id-context-profiles.md](adr/037-argon2id-context-profiles.md).
 
 Per-bucket symmetric keys are generated client-side and exchanged between devices via encrypted key bundles (X25519 ECDH). Key rotation is lazy: triggered on device removal or compromise, not on every write.
 

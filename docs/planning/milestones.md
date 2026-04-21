@@ -285,4 +285,4 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 For system topology, package dependencies, data flow, encryption boundaries, and the development sequence rationale, see the [Architecture Overview](../architecture.md).
 
-34 accepted ADRs are documented in [`docs/adr/`](../adr/).
+37 accepted ADRs are documented in [`docs/adr/`](../adr/).
