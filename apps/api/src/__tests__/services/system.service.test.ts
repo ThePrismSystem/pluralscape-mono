@@ -32,8 +32,11 @@ vi.mock("../../lib/audit-log.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const { listSystems, getSystemProfile, updateSystemProfile, archiveSystem, createSystem } =
-  await import("../../services/system.service.js");
+const { listSystems } = await import("../../services/system/list.js");
+const { getSystemProfile } = await import("../../services/system/get.js");
+const { updateSystemProfile } = await import("../../services/system/update.js");
+const { archiveSystem } = await import("../../services/system/archive.js");
+const { createSystem } = await import("../../services/system/create.js");
 // ── Fixtures ─────────────────────────────────────────────────────────
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");

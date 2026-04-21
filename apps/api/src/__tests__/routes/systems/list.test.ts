@@ -9,17 +9,13 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { SystemProfileResult } from "../../../services/system.service.js";
+import type { SystemProfileResult } from "../../../services/system/internal.js";
 import type { PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/system.service.js", () => ({
+vi.mock("../../../services/system/list.js", () => ({
   listSystems: vi.fn(),
-  getSystemProfile: vi.fn(),
-  updateSystemProfile: vi.fn(),
-  archiveSystem: vi.fn(),
-  createSystem: vi.fn(),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -31,7 +27,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listSystems } = await import("../../../services/system.service.js");
+const { listSystems } = await import("../../../services/system/list.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

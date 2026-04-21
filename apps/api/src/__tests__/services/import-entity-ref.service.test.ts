@@ -92,10 +92,11 @@ vi.mock("@pluralscape/db/pg", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { lookupImportEntityRef, lookupImportEntityRefBatch } =
-  await import("../../services/import-entity-ref/lookup.js");
+  await import("../../services/system/import-entity-refs/lookup.js");
 const { upsertImportEntityRefBatch } =
-  await import("../../services/import-entity-ref/upsert-batch.js");
-const { recordImportEntityRef } = await import("../../services/import-entity-ref/record.js");
+  await import("../../services/system/import-entity-refs/upsert-batch.js");
+const { recordImportEntityRef } =
+  await import("../../services/system/import-entity-refs/record.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { asDb } = await import("../helpers/mock-db.js");
 

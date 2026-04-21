@@ -8,7 +8,7 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { lookupImportEntityRef } from "../../../services/import-entity-ref/lookup.js";
+import { lookupImportEntityRef } from "../../../services/system/import-entity-refs/lookup.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

@@ -10,12 +10,10 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  archiveSystem,
-  getSystemProfile,
-  listSystems,
-  updateSystemProfile,
-} from "../../services/system.service.js";
+import { archiveSystem } from "../../services/system/archive.js";
+import { getSystemProfile } from "../../services/system/get.js";
+import { listSystems } from "../../services/system/list.js";
+import { updateSystemProfile } from "../../services/system/update.js";
 import {
   asDb,
   assertApiError,
