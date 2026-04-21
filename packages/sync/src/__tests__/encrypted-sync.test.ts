@@ -7,6 +7,7 @@ import {
   encryptSnapshot,
   decryptSnapshot,
   verifyEnvelopeSignature,
+  KeyBindingMismatchError,
   SignatureVerificationError,
 } from "../encrypted-sync.js";
 
@@ -145,5 +146,51 @@ describe("encryptSnapshot / decryptSnapshot", () => {
     const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
     const wrongKey = sodium.aeadKeygen();
     expect(() => decryptSnapshot(envelope, wrongKey, sodium)).toThrow();
+  });
+});
+
+describe("authorPublicKey ↔ encryption key binding", () => {
+  it("decryptChange rejects envelope whose authorPublicKey was swapped after signing", () => {
+    const plaintext = testBytes(32);
+    const envelope = encryptChange(plaintext, DOCUMENT_ID, keys, sodium);
+
+    // Forge a valid signature under a different key over the same ciphertext.
+    // This simulates an attacker who has a validly-signed envelope but whose
+    // signing key is not the one used to encrypt.
+    const attackerKeys = sodium.signKeypair();
+    const forgedSignature = sodium.signDetached(envelope.ciphertext, attackerKeys.secretKey);
+    const forged = {
+      ...envelope,
+      authorPublicKey: attackerKeys.publicKey,
+      signature: forgedSignature,
+      seq: 0,
+    };
+
+    // Signature check alone passes — attacker signed with their own key.
+    expect(verifyEnvelopeSignature(forged, sodium)).toBe(true);
+
+    // Decryption rejects because authorPublicKey is in the AD: AEAD tag
+    // computed under the original key does not match AD with attacker key.
+    expect(() => decryptChange(forged, keys.encryptionKey, sodium)).toThrow(
+      KeyBindingMismatchError,
+    );
+  });
+
+  it("decryptSnapshot rejects snapshot envelope with swapped authorPublicKey", () => {
+    const snapshot = testBytes(64);
+    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 7, keys, sodium);
+
+    const attackerKeys = sodium.signKeypair();
+    const forgedSignature = sodium.signDetached(envelope.ciphertext, attackerKeys.secretKey);
+    const forged = {
+      ...envelope,
+      authorPublicKey: attackerKeys.publicKey,
+      signature: forgedSignature,
+    };
+
+    expect(verifyEnvelopeSignature(forged, sodium)).toBe(true);
+    expect(() => decryptSnapshot(forged, keys.encryptionKey, sodium)).toThrow(
+      KeyBindingMismatchError,
+    );
   });
 });

@@ -496,9 +496,8 @@ describe("P-M4: operation promise cleanup", () => {
     vi.useFakeTimers();
     const engine = await createBootstrappedEngine();
 
-    await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
-      const d = doc as Record<string, Record<string, unknown>>;
-      d["_cleanup_test"] = { value: "test" };
+    await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), "system-core", (doc) => {
+      doc.system.name = new Automerge.ImmutableString("cleanup-test");
     });
 
     // Drain the microtask queue so the cleanup .then() handler fires
@@ -508,10 +507,13 @@ describe("P-M4: operation promise cleanup", () => {
     expect(engine.pendingOperationCount).toBe(0);
 
     // Engine should still work with the cleaned-up queue
-    const seq2 = await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
-      const d = doc as Record<string, Record<string, unknown>>;
-      d["_cleanup_test2"] = { value: "test2" };
-    });
+    const seq2 = await engine.applyLocalChange(
+      asSyncDocId("system-core-sys_test"),
+      "system-core",
+      (doc) => {
+        doc.system.name = new Automerge.ImmutableString("cleanup-test2");
+      },
+    );
 
     expect(seq2).toBe(2);
 

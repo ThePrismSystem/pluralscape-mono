@@ -11,6 +11,7 @@ import { parseTimeToMinutes, WEBHOOK_EVENT_TYPE_VALUES } from "@pluralscape/vali
 
 import { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
 
+import type { SyncedEntityType } from "./strategies/crdt-strategies.js";
 import type { EncryptedSyncSession } from "./sync-session.js";
 import type {
   ConflictNotification,
@@ -112,6 +113,23 @@ const ENTITY_FIELD_MAP: ReadonlyMap<string, string> = new Map(
   Object.entries(ENTITY_CRDT_STRATEGIES).map(([type, strat]) => [type, strat.fieldName]),
 );
 
+/** Reverse map: document field name → entity type. */
+const FIELD_TO_ENTITY_TYPE: ReadonlyMap<string, SyncedEntityType> = new Map(
+  Object.entries(ENTITY_CRDT_STRATEGIES).map(
+    ([type, strat]) => [strat.fieldName, type as SyncedEntityType] as const,
+  ),
+);
+
+/**
+ * Look up the entity type whose CRDT strategy stores entities under the given
+ * top-level Automerge field name. Returns `undefined` when the field is not
+ * backed by a synced entity (e.g. non-entity fields, or fields owned by a
+ * different document topology).
+ */
+export function getEntityTypeByFieldName(fieldName: string): SyncedEntityType | undefined {
+  return FIELD_TO_ENTITY_TYPE.get(fieldName);
+}
+
 // ── Validation functions ────────────────────────────────────────────
 
 /**
@@ -119,17 +137,29 @@ const ENTITY_FIELD_MAP: ReadonlyMap<string, string> = new Map(
  * entity that is currently archived. This ensures tombstone wins over concurrent
  * un-archive operations by making the archive the latest CRDT write.
  *
+ * When `dirtyEntityTypes` is provided, only those entity types are scanned —
+ * a member-only change no longer forces a walk of all 20+ entity types.
+ * Omit for the default scan of every lww-map / append-lww entity type (no
+ * dirty filter).
+ *
  * Returns notifications and the correction envelope (if any mutations were applied).
  */
-export function enforceTombstones(session: EncryptedSyncSession<unknown>): {
+export function enforceTombstones(
+  session: EncryptedSyncSession<unknown>,
+  dirtyEntityTypes?: ReadonlySet<SyncedEntityType>,
+): {
   notifications: ConflictNotification[];
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
 } {
   const notifications: ConflictNotification[] = [];
   const doc = session.document as DocRecord;
 
-  const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(([, strategy]) => {
-    return strategy.storageType === "lww-map" || strategy.storageType === "append-lww";
+  const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(([entityType, strategy]) => {
+    if (strategy.storageType !== "lww-map" && strategy.storageType !== "append-lww") return false;
+    if (dirtyEntityTypes !== undefined && !dirtyEntityTypes.has(entityType as SyncedEntityType)) {
+      return false;
+    }
+    return true;
   });
 
   const mutations: Array<{ fieldName: string; entityId: string; entityType: string }> = [];
@@ -780,10 +810,16 @@ export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>):
  * Run all post-merge validations and return aggregate results.
  * Detects the document type from the session content and runs appropriate validators.
  * Each validator is independently try/caught so partial failures preserve prior results.
+ *
+ * When `dirtyEntityTypes` is supplied, validators that accept it (currently
+ * `enforceTombstones`) narrow their scan to only those entity types; other
+ * validators ignore the hint and run their full logic. Omit for the default
+ * behaviour (full scan everywhere).
  */
 export function runAllValidations(
   session: EncryptedSyncSession<unknown>,
   onError?: (message: string, error: unknown) => void,
+  dirtyEntityTypes?: ReadonlySet<SyncedEntityType>,
 ): PostMergeValidationResult {
   const doc = session.document as DocRecord;
   const now = Date.now();
@@ -802,7 +838,7 @@ export function runAllValidations(
 
   // Always run tombstone enforcement first
   try {
-    const tombstoneResult = enforceTombstones(session);
+    const tombstoneResult = enforceTombstones(session, dirtyEntityTypes);
     if (tombstoneResult.envelope) {
       correctionEnvelopes.push(tombstoneResult.envelope);
     }

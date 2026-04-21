@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { generateFtsStatements, generateSchemaStatements } from "../local-schema.js";
+import {
+  generateAllDdl,
+  generateFtsStatements,
+  generateSchemaStatements,
+} from "../local-schema.js";
 
 describe("generateSchemaStatements", () => {
   it("generates CREATE TABLE for crdt_documents", () => {
@@ -85,5 +89,29 @@ describe("generateFtsStatements", () => {
     expect(updateTrigger).toContain("'delete'");
     expect(updateTrigger).toContain("old.rowid");
     expect(updateTrigger).toContain("new.rowid");
+  });
+});
+
+describe("generateAllDdl", () => {
+  it("concatenates schema and FTS statements, schema first", () => {
+    const all = generateAllDdl();
+    const schema = generateSchemaStatements();
+    const fts = generateFtsStatements();
+
+    // The full DDL must be exactly the schema statements followed by FTS.
+    expect(all).toEqual([...schema, ...fts]);
+    // Sanity: crdt_documents lives in the schema prefix.
+    const crdtIndex = all.findIndex((s) => s.includes("crdt_documents"));
+    const firstFtsIndex = all.findIndex((s) => s.includes("USING fts5"));
+    expect(crdtIndex).toBeLessThan(firstFtsIndex);
+  });
+
+  it("emits a non-empty list of DDL statements", () => {
+    const all = generateAllDdl();
+    expect(all.length).toBeGreaterThan(0);
+    for (const stmt of all) {
+      expect(typeof stmt).toBe("string");
+      expect(stmt.length).toBeGreaterThan(0);
+    }
   });
 });

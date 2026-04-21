@@ -66,6 +66,8 @@ export {
   decryptSnapshot,
   verifyEnvelopeSignature,
   SignatureVerificationError,
+  KeyBindingMismatchError,
+  EncryptionKeyMismatchError,
 } from "./encrypted-sync.js";
 
 // ── Errors ───────────────────────────────────────────────────────────
@@ -77,6 +79,7 @@ export {
   NoChangeProducedError,
   UnsupportedDocumentTypeError,
   DocumentNotFoundError,
+  DocumentTypeMismatchError,
   NoActiveSessionError,
 } from "./errors.js";
 

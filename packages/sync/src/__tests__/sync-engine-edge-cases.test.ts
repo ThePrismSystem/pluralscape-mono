@@ -626,9 +626,8 @@ describe("SyncEngine edge cases", () => {
 
       // applyLocalChange should reject with the network error
       await expect(
-        engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
-          const d = doc as Record<string, Record<string, string>>;
-          d["test_key"] = { value: "test" };
+        engine.applyLocalChange(asSyncDocId("system-core-sys_test"), "system-core", (doc) => {
+          doc.system.name = new Automerge.ImmutableString("net-fail-test");
         }),
       ).rejects.toThrow("Connection refused");
 

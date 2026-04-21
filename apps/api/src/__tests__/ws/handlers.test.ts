@@ -3,10 +3,15 @@ import { EncryptedRelay } from "@pluralscape/sync";
 import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-// Disable envelope signature verification before module load.
-// The IIFE in envelope-verification-config.ts reads this at import time.
-vi.hoisted(() => {
-  process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+// Envelope signature verification is unconditional. Mock data has invalid
+// signatures, so we stub verifyEnvelopeSignature at module-mock time for
+// tests that do not specifically exercise the verification path.
+vi.mock("@pluralscape/sync", async () => {
+  const actual = await vi.importActual<typeof import("@pluralscape/sync")>("@pluralscape/sync");
+  return {
+    ...actual,
+    verifyEnvelopeSignature: vi.fn(() => true),
+  };
 });
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
@@ -42,6 +47,12 @@ import type {
   UnsubscribeRequest,
 } from "@pluralscape/sync";
 import type { AccountId, SessionId, SyncDocumentId, SystemId } from "@pluralscape/types";
+
+// Sodium must be initialised before handlers run — verifyEnvelopeOrError
+// calls getSodium() unconditionally before checking signatures.
+beforeAll(async () => {
+  await initSodium();
+});
 
 // ── Test helpers ──────────────────────────────────────────────────────
 
@@ -907,28 +918,31 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
 });
 
 // ── Sec-M2: Signature verification tests ────────────────────────────
+//
+// Server-side Ed25519 verification is unconditional. The file-level mock of
+// `verifyEnvelopeSignature` returns true by default; individual tests override
+// with the real implementation (or a specific return value) to exercise
+// verification outcomes.
 
 describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
-  async function enableVerification(): Promise<void> {
-    const mod = await import("../../ws/envelope-verification-config.js");
-    vi.spyOn(mod, "shouldVerifyEnvelopeSignatures").mockReturnValue(true);
-  }
-
-  async function disableVerification(): Promise<void> {
-    const mod = await import("../../ws/envelope-verification-config.js");
-    vi.spyOn(mod, "shouldVerifyEnvelopeSignatures").mockReturnValue(false);
-  }
-
   beforeAll(async () => {
     await initSodium();
   });
 
-  afterEach(async () => {
-    await disableVerification();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("returns SyncError with INVALID_ENVELOPE when verification is enabled and signature is invalid", async () => {
-    await enableVerification();
+  async function useRealVerify(): Promise<void> {
+    const actual = await vi.importActual<typeof import("@pluralscape/sync")>("@pluralscape/sync");
+    const syncModule = await import("@pluralscape/sync");
+    vi.spyOn(syncModule, "verifyEnvelopeSignature").mockImplementation(
+      actual.verifyEnvelopeSignature,
+    );
+  }
+
+  it("returns SyncError with INVALID_ENVELOPE when signature is invalid", async () => {
+    await useRealVerify();
 
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());
@@ -955,26 +969,8 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     expect(stored.envelopes).toHaveLength(0);
   });
 
-  it("accepts the envelope when verification is disabled", async () => {
-    await disableVerification();
-
-    const relay = new EncryptedRelay();
-    const docId = asSyncDocId(crypto.randomUUID());
-
-    const message: SubmitChangeRequest = {
-      type: "SubmitChangeRequest",
-      correlationId: crypto.randomUUID(),
-      docId,
-      change: mockChangeWithoutSeq(docId),
-    };
-
-    const result = await handleSubmitChange(message, relay.asService(), mockDb(), TEST_ACCOUNT_ID);
-
-    expect(isSubmitChangeResult(result)).toBe(true);
-  });
-
-  it("accepts a properly signed envelope when verification is enabled", async () => {
-    await enableVerification();
+  it("accepts a properly signed envelope", async () => {
+    await useRealVerify();
 
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());
@@ -1012,7 +1008,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
   });
 
   it("returns INVALID_ENVELOPE when envelope fields have wrong byte lengths", async () => {
-    await enableVerification();
+    await useRealVerify();
 
     const relay = new EncryptedRelay();
     const docId = asSyncDocId(crypto.randomUUID());

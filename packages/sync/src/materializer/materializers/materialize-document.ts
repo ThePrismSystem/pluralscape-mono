@@ -10,14 +10,21 @@ import { extractEntities } from "./extract-entities.js";
 
 import type { SyncDocumentType } from "../../document-types.js";
 import type { EventBus, DataLayerEventMap } from "../../event-bus/index.js";
+import type { SyncedEntityType } from "../../strategies/crdt-strategies.js";
 
 /**
  * Shared materialization logic for all document types.
  *
  * For each entity type belonging to the document:
  * 1. Extracts incoming entities from the Automerge doc
- * 2. Queries current SQLite state
+ * 2. Queries current SQLite state (skipped when entity type is clean)
  * 3. Diffs and applies changes
+ *
+ * The optional `dirtyEntityTypes` set, when provided, narrows materialisation
+ * to only those entity types whose CRDT fields were touched by the incoming
+ * change. Clean types are skipped entirely — no SQL is issued for them. When
+ * omitted, every entity type for the document is scanned (default — no dirty
+ * filter).
  *
  * After all entity types are processed, emits `materialized:document`
  * and `search:index-updated` events.
@@ -27,10 +34,14 @@ export function materializeDocument(
   doc: Record<string, unknown>,
   db: MaterializerDb,
   eventBus: EventBus<DataLayerEventMap>,
+  dirtyEntityTypes?: ReadonlySet<SyncedEntityType>,
 ): void {
   const entityTypes = getEntityTypesForDocument(documentType);
 
   for (const entityType of entityTypes) {
+    // Skip entity types whose CRDT fields were not touched by this change.
+    if (dirtyEntityTypes !== undefined && !dirtyEntityTypes.has(entityType)) continue;
+
     const incoming = extractEntities(entityType, doc);
 
     // Skip entity types with no incoming data — avoids full-table scan

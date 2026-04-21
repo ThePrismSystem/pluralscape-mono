@@ -6,11 +6,11 @@
  * operations and the adapter interfaces for I/O.
  */
 import { parseDocumentId } from "../document-types.js";
-import { NoActiveSessionError } from "../errors.js";
+import { DocumentTypeMismatchError, NoActiveSessionError } from "../errors.js";
 import { createDocument } from "../factories/document-factory.js";
 import { mapConcurrent } from "../map-concurrent.js";
 import { replayOfflineQueue } from "../offline-queue-manager.js";
-import { runAllValidations } from "../post-merge-validator.js";
+import { getEntityTypeByFieldName, runAllValidations } from "../post-merge-validator.js";
 import { filterManifest } from "../subscription-filter.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 import {
@@ -31,6 +31,8 @@ import type { DataLayerEventMap } from "../event-bus/event-map.js";
 import type { ReplayResult } from "../offline-queue-manager.js";
 import type { DocumentSyncState, ReplicationProfile } from "../replication-profiles.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
+import type { AnyDocumentSession, DocumentSession, DocumentTypeMap } from "./session-types.js";
+import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
@@ -69,7 +71,7 @@ export interface FailedConflictBatch {
  * server manifest, apply remote changes, submit local changes.
  */
 export class SyncEngine {
-  private readonly sessions = new Map<SyncDocumentId, EncryptedSyncSession<unknown>>();
+  private readonly sessions = new Map<SyncDocumentId, AnyDocumentSession>();
   private readonly syncStates = new Map<SyncDocumentId, DocumentSyncState>();
   private readonly subscriptions: Array<{ unsubscribe(): void }> = [];
   private readonly documentQueues = new Map<SyncDocumentId, Promise<void>>();
@@ -89,6 +91,26 @@ export class SyncEngine {
       message,
       error,
     });
+  }
+
+  /**
+   * Compare top-level Automerge fields before/after a merge and derive the
+   * set of entity types whose CRDT fields changed identity. Automerge returns
+   * a fresh root object for any touched sub-tree, so shallow reference
+   * inequality is a sound (conservative) over-approximation of "dirty".
+   */
+  private static computeDirtyEntityTypes(
+    preDoc: Record<string, unknown>,
+    postDoc: Record<string, unknown>,
+  ): ReadonlySet<SyncedEntityType> {
+    const dirty = new Set<SyncedEntityType>();
+    const fieldNames = new Set<string>([...Object.keys(preDoc), ...Object.keys(postDoc)]);
+    for (const fieldName of fieldNames) {
+      if (preDoc[fieldName] === postDoc[fieldName]) continue;
+      const entityType = getEntityTypeByFieldName(fieldName);
+      if (entityType !== undefined) dirty.add(entityType);
+    }
+    return dirty;
   }
 
   /** Number of documents with in-flight queued operations. */
@@ -177,14 +199,17 @@ export class SyncEngine {
       if (result.replayed > 0) {
         for (const [docId] of this.sessions) {
           await this.enqueueDocumentOperation(docId, async () => {
-            const session = this.sessions.get(docId);
-            if (!session) return;
+            const entry = this.sessions.get(docId);
+            if (!entry) {
+              this.handleError("Session evicted during offline replay", null);
+              return;
+            }
             const changes = await this.config.storageAdapter.loadChangesSince(
               docId,
-              session.lastSyncedSeq,
+              entry.session.lastSyncedSeq,
             );
             if (changes.length > 0) {
-              session.applyEncryptedChanges(changes);
+              entry.session.applyEncryptedChanges(changes);
             }
           });
         }
@@ -204,13 +229,33 @@ export class SyncEngine {
   // ── Session access ──────────────────────────────────────────────────
 
   /**
-   * Get a hydrated session by document ID.
-   * Note: The generic type T is caller-asserted — the engine stores sessions
-   * as EncryptedSyncSession<unknown>. Callers must ensure T matches the
-   * actual document type for the given docId.
+   * Get the hydrated AnyDocumentSession for a document.
+   *
+   * The returned value is a discriminated union tagged by `documentType`;
+   * consumers narrow via `.documentType` to see the concrete CRDT shape of
+   * `session.document`. Use `getTypedSession` for a single-step narrow
+   * keyed by a known document type.
    */
-  getSession<T>(docId: SyncDocumentId): EncryptedSyncSession<T> | undefined {
-    return this.sessions.get(docId) as EncryptedSyncSession<T> | undefined;
+  getSession(docId: SyncDocumentId): AnyDocumentSession | undefined {
+    return this.sessions.get(docId);
+  }
+
+  /**
+   * Get a session narrowed to the known document type. Returns undefined
+   * both when the document is not hydrated and when its stored type does
+   * not match the requested discriminant — protecting callers from
+   * mutating the wrong CRDT shape.
+   */
+  getTypedSession<T extends SyncDocumentType>(
+    docId: SyncDocumentId,
+    documentType: T,
+  ): DocumentSession<T>["session"] | undefined {
+    const entry = this.sessions.get(docId);
+    if (entry === undefined) return undefined;
+    if (entry.documentType !== documentType) {
+      throw new DocumentTypeMismatchError(docId, documentType, entry.documentType);
+    }
+    return entry.session;
   }
 
   /** Get sync state for a document. */
@@ -228,9 +273,9 @@ export class SyncEngine {
    * Structurally satisfies DocumentSnapshotProvider from @pluralscape/data.
    */
   getDocumentSnapshot(documentId: SyncDocumentId): unknown {
-    const session = this.sessions.get(documentId);
-    if (!session) throw new NoActiveSessionError(documentId);
-    return session.document;
+    const entry = this.sessions.get(documentId);
+    if (!entry) throw new NoActiveSessionError(documentId);
+    return entry.session.document;
   }
 
   // ── Steady-state: outbound ──────────────────────────────────────────
@@ -248,15 +293,34 @@ export class SyncEngine {
    *
    * Returns the server-assigned sequence number.
    */
-  async applyLocalChange(docId: SyncDocumentId, changeFn: (doc: unknown) => void): Promise<number> {
+  async applyLocalChange<T extends SyncDocumentType>(
+    docId: SyncDocumentId,
+    documentType: T,
+    changeFn: (doc: DocumentTypeMap[T]) => void,
+  ): Promise<number> {
+    const effectiveChangeFn: (doc: Record<string, unknown>) => void = (doc) => {
+      // The storage-level doc is `Record<string, unknown>`; the caller's
+      // `changeFn` needs it narrowed to the schema-typed shape. The cast
+      // travels via the intersection (a supertype of the schema and a
+      // subtype of Record), which is sound because `documentType` has been
+      // verified against the session's discriminant above.
+      changeFn(doc as Record<string, unknown> & DocumentTypeMap[T]);
+    };
+
     return this.enqueueDocumentOperation(docId, async () => {
-      const session = this.sessions.get(docId);
-      if (!session) {
+      const entry = this.sessions.get(docId);
+      if (!entry) {
         throw new NoActiveSessionError(docId);
       }
 
-      // Produce encrypted change (no seq yet)
-      const envelope = session.change(changeFn);
+      // Guard against caller passing the wrong documentType for this docId.
+      // The hydration path establishes `entry.documentType === parseDocumentId(docId).documentType`,
+      // so a single comparison is sufficient.
+      if (entry.documentType !== documentType) {
+        throw new DocumentTypeMismatchError(docId, documentType, entry.documentType);
+      }
+
+      const envelope = entry.session.change(effectiveChangeFn);
 
       // Phase 1: Enqueue locally if offline queue adapter is configured
       let queueEntryId: string | undefined;
@@ -364,8 +428,12 @@ export class SyncEngine {
     docId: SyncDocumentId,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
-    const session = this.sessions.get(docId);
-    if (!session) return;
+    const entry = this.sessions.get(docId);
+    if (!entry) {
+      this.handleError("Session evicted while applying incoming changes", null);
+      return;
+    }
+    const { session } = entry;
 
     const currentSeq = session.lastSyncedSeq;
 
@@ -373,11 +441,16 @@ export class SyncEngine {
     const newChanges = changes.filter((c) => c.seq > currentSeq);
     if (newChanges.length === 0) return;
 
+    // Capture pre-merge root for dirty-type derivation before applying.
+    const preDoc = session.document;
+
     // Apply FIRST (has built-in rollback on crypto failure)
     session.applyEncryptedChanges(newChanges);
 
+    const dirty = SyncEngine.computeDirtyEntityTypes(preDoc, session.document);
+
     // Run post-merge validation to correct merge artifacts
-    const postMergeResult = await this.runPostMergeValidation(docId, session);
+    const postMergeResult = await this.runPostMergeValidation(docId, session, dirty);
 
     // Emit sync:changes-merged event
     if (this.config.eventBus) {
@@ -448,10 +521,14 @@ export class SyncEngine {
     // Use whichever snapshot is newer
     const snapshot = serverSnapshotSeq > localSnapshotSeq ? serverSnapshot : localSnapshot;
 
-    let session: EncryptedSyncSession<unknown>;
+    let session: EncryptedSyncSession<Record<string, unknown>>;
 
     if (snapshot) {
-      session = EncryptedSyncSession.fromSnapshot(snapshot, keys, this.config.sodium);
+      session = EncryptedSyncSession.fromSnapshot<Record<string, unknown>>(
+        snapshot,
+        keys,
+        this.config.sodium,
+      );
 
       // Persist server snapshot locally if newer
       if (serverSnapshot && serverSnapshotSeq > localSnapshotSeq) {
@@ -466,7 +543,7 @@ export class SyncEngine {
       });
     } else {
       // Fresh document — create empty
-      session = new EncryptedSyncSession({
+      session = new EncryptedSyncSession<Record<string, unknown>>({
         doc: createDocument(docType) as Record<string, unknown>,
         keys,
         documentId: docId,
@@ -489,10 +566,12 @@ export class SyncEngine {
         session.lastSyncedSeq,
       );
       if (changes.length > 0) {
+        const preDoc = session.document;
         session.applyEncryptedChanges(changes);
+        const dirty = SyncEngine.computeDirtyEntityTypes(preDoc, session.document);
 
         // Run post-merge validation to correct merge artifacts
-        const postMergeResult = await this.runPostMergeValidation(docId, session);
+        const postMergeResult = await this.runPostMergeValidation(docId, session, dirty);
 
         // Emit sync:changes-merged event
         this.config.eventBus?.emit("sync:changes-merged", {
@@ -506,7 +585,9 @@ export class SyncEngine {
       }
     }
 
-    this.sessions.set(docId, session);
+    // Wrap the raw session in a discriminated DocumentSession<T> so that
+    // downstream consumers can narrow session.document by documentType.
+    this.sessions.set(docId, this.wrapSession(docType, session));
     this.syncStates.set(docId, {
       docId,
       lastSyncedSeq: session.lastSyncedSeq,
@@ -515,12 +596,25 @@ export class SyncEngine {
     });
   }
 
+  /**
+   * Produce a typed `DocumentSession<T>` from a raw session and its document
+   * type. The return type is assignable to `AnyDocumentSession` for any `T`
+   * in the union, so callers can store it directly without casting.
+   */
+  private wrapSession<T extends SyncDocumentType>(
+    documentType: T,
+    session: EncryptedSyncSession<Record<string, unknown>>,
+  ): DocumentSession<T> {
+    return { documentType, session };
+  }
+
   private async runPostMergeValidation(
     docId: SyncDocumentId,
-    session: EncryptedSyncSession<unknown>,
+    session: EncryptedSyncSession<Record<string, unknown>>,
+    dirtyEntityTypes?: ReadonlySet<SyncedEntityType>,
   ): Promise<{ readonly notifications: readonly ConflictNotification[] }> {
     // runAllValidations never throws — each validator is independently try/caught
-    const result = runAllValidations(session, this.config.onError);
+    const result = runAllValidations(session, this.config.onError, dirtyEntityTypes);
     const { correctionEnvelopes, notifications } = result;
 
     // Submit correction envelopes to server and persist locally

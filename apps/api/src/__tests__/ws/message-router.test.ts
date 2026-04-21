@@ -3,10 +3,14 @@ import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Disable envelope signature verification before module load.
-// The IIFE in envelope-verification-config.ts reads this at import time.
-vi.hoisted(() => {
-  process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+// Envelope signature verification is unconditional. Mock data has invalid
+// signatures, so we stub verifyEnvelopeSignature at module-mock time.
+vi.mock("@pluralscape/sync", async () => {
+  const actual = await vi.importActual<typeof import("@pluralscape/sync")>("@pluralscape/sync");
+  return {
+    ...actual,
+    verifyEnvelopeSignature: vi.fn(() => true),
+  };
 });
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
@@ -906,8 +910,8 @@ describe("message-router", () => {
     });
 
     it("returns INVALID_ENVELOPE and skips broadcast when signature verification fails", async () => {
-      const configMod = await import("../../ws/envelope-verification-config.js");
-      vi.spyOn(configMod, "shouldVerifyEnvelopeSignatures").mockReturnValue(true);
+      const syncModule = await import("@pluralscape/sync");
+      const spy = vi.spyOn(syncModule, "verifyEnvelopeSignature").mockReturnValue(false);
 
       // Register a subscriber to verify no broadcast is sent
       manager.reserveUnauthSlot();
@@ -951,6 +955,9 @@ describe("message-router", () => {
 
       // Ownership should NOT have been set
       expect(ctx.documentOwnership.has("doc-sig-fail")).toBe(false);
+
+      // Restore so later tests use the default mock (verifyEnvelopeSignature=true)
+      spy.mockRestore();
     });
 
     it("sends INTERNAL_ERROR when handleDocumentLoad throws", async () => {

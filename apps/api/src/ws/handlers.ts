@@ -16,7 +16,6 @@ import { eq } from "drizzle-orm";
 
 import { withAccountRead } from "../lib/rls-context.js";
 
-import { shouldVerifyEnvelopeSignatures } from "./envelope-verification-config.js";
 import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
@@ -198,6 +197,8 @@ export interface SubmitChangeResult {
 /**
  * Verify an envelope signature and return a SyncError on failure, or null on success.
  * Shared by both change and snapshot submission handlers.
+ *
+ * Server-side Ed25519 verification is unconditional — there is no kill-switch.
  */
 export function verifyEnvelopeOrError(
   envelope: {
@@ -209,7 +210,6 @@ export function verifyEnvelopeOrError(
   correlationId: string | null,
   docId: SyncDocumentId,
 ): SyncError | null {
-  if (!shouldVerifyEnvelopeSignatures()) return null;
   try {
     const sodium = getSodium();
     const valid = verifyEnvelopeSignature({ ...envelope, documentId: docId, seq: 0 }, sodium);
@@ -285,9 +285,8 @@ export async function verifyKeyOwnership(
 /**
  * Handle a SubmitChangeRequest. Returns ChangeAccepted and the sequenced envelope.
  *
- * When envelope signature verification is enabled (VERIFY_ENVELOPE_SIGNATURES env var),
- * the server verifies the envelope signature before storing/broadcasting. On failure,
- * returns a SyncError with code INVALID_ENVELOPE and the envelope is dropped.
+ * The server unconditionally verifies the envelope signature before storing/broadcasting.
+ * On failure, returns a SyncError with code INVALID_ENVELOPE and the envelope is dropped.
  *
  * After signature verification, validates that the authorPublicKey belongs to the
  * authenticated account's registered signing keys.
