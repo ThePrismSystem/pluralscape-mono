@@ -27,6 +27,10 @@ export interface MaterializerDb {
  *
  * Comparison is done by JSON-serializing all non-`id` fields so that
  * deep equality is handled without a dependency on a comparison library.
+ *
+ * Both sides are materialised into `Map<id, hash>` in a single pass each,
+ * then compared directly — rowHash is called exactly once per row on either
+ * side.
  */
 export function diffEntities(
   current: readonly EntityRow[],
@@ -37,24 +41,26 @@ export function diffEntities(
     currentMap.set(row.id, rowHash(row));
   }
 
+  const incomingMap = new Map<string, { row: EntityRow; hash: string }>();
+  for (const row of incoming) {
+    incomingMap.set(row.id, { row, hash: rowHash(row) });
+  }
+
   const inserts: EntityRow[] = [];
   const updates: EntityRow[] = [];
-  const seenIds = new Set<string>();
-
-  for (const row of incoming) {
-    seenIds.add(row.id);
-    const existingHash = currentMap.get(row.id);
+  for (const [id, { row, hash }] of incomingMap) {
+    const existingHash = currentMap.get(id);
     if (existingHash === undefined) {
       inserts.push(row);
-    } else if (existingHash !== rowHash(row)) {
+    } else if (existingHash !== hash) {
       updates.push(row);
     }
   }
 
   const deletes: string[] = [];
-  for (const row of current) {
-    if (!seenIds.has(row.id)) {
-      deletes.push(row.id);
+  for (const id of currentMap.keys()) {
+    if (!incomingMap.has(id)) {
+      deletes.push(id);
     }
   }
 
