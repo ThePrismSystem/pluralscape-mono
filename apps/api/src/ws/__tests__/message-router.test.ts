@@ -17,10 +17,16 @@ import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 import { brandId } from "@pluralscape/types";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-// Disable envelope signature verification — mock data has invalid signatures.
-vi.mock("../envelope-verification-config.js", () => ({
-  shouldVerifyEnvelopeSignatures: vi.fn(() => false),
-}));
+// Envelope signature verification is unconditional. Mock data has invalid
+// signatures, so we stub verifyEnvelopeSignature to return true for tests that
+// do not exercise the verification path itself.
+vi.mock("@pluralscape/sync", async () => {
+  const actual = await vi.importActual<typeof import("@pluralscape/sync")>("@pluralscape/sync");
+  return {
+    ...actual,
+    verifyEnvelopeSignature: vi.fn(() => true),
+  };
+});
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
