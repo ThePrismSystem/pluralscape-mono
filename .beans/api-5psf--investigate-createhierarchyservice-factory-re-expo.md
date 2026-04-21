@@ -16,9 +16,11 @@ During api-6l1q api-jhyt (group service refactor), bare re-exports of factory me
 This suggests TS's generic inference may not propagate cleanly through factory method re-exports. Other services using factory patterns (createHierarchyService or similar) may have the same issue — worth a sweep.
 
 Known instances:
+
 - apps/api/src/services/group/{create,update,lifecycle,queries}.ts — workaround applied, explicit types
 
 ## Scope
+
 - [ ] Grep for `createHierarchyService` and similar factory functions in services/
 - [ ] For each factory consumer, check if method re-exports lose inference
 - [ ] If pattern repeats: consider a helper type `FactoryMethodType<Factory, K>` to make annotations less boilerplate
@@ -26,6 +28,7 @@ Known instances:
 - [ ] Document the chosen pattern
 
 ## Acceptance
+
 - Sweep complete
 - Either all factory-method re-exports follow a consistent pattern, or a decision recorded not to use factories this way
 - No `no-unsafe-call` regressions introduced

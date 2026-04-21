@@ -16,12 +16,14 @@ During api-6l1q PR 1 refactor, api-43vk surfaced that field-definition's `update
 Likely pattern exists in other update paths across services. A sweep would upgrade type safety across the codebase without behavior changes.
 
 ## Scope
-- [ ] Grep: `Record<string, unknown>` in apps/api/src/services/**/update.ts (and any non-split services still using the pattern)
+
+- [ ] Grep: `Record<string, unknown>` in apps/api/src/services/\*\*/update.ts (and any non-split services still using the pattern)
 - [ ] For each, replace with `Partial<typeof <table>.$inferInsert>` or a narrower type
 - [ ] Verify typecheck still passes; adjust call sites if narrowing reveals bugs
 - [ ] No runtime changes expected
 
 ## Acceptance
+
 - Zero `Record<string, unknown>` setClause patterns in services/
 - All update paths use drizzle-inferred types
 - Typecheck + unit + integration tests green

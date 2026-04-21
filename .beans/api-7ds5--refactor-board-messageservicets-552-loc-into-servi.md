@@ -44,8 +44,8 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 ## Findings
 
 - apps/api/src/services/board-message.service.ts (pre-split) — `board-message.service` module mixed 10 exports across 8 verb categories with inline toBoardMessageResult helper; split into verb files following services/member pattern (Option E, no barrel) — info
-- apps/api/src/__tests__/services/board-message.service.test.ts — unit test uses `await import` after `vi.mock`, forcing tests to mock each verb module path individually after split — info
-- apps/api/src/__tests__/routes/board-messages/crud.test.ts — preserves `parseBoardMessageQuery` via importOriginal on queries.js mock; other service mocks are pure vi.fn() — info
+- apps/api/src/**tests**/services/board-message.service.test.ts — unit test uses `await import` after `vi.mock`, forcing tests to mock each verb module path individually after split — info
+- apps/api/src/**tests**/routes/board-messages/crud.test.ts — preserves `parseBoardMessageQuery` via importOriginal on queries.js mock; other service mocks are pure vi.fn() — info
 
 ## Summary of Changes
 

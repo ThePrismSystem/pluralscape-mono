@@ -45,7 +45,7 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 
 - services/import-entity-ref.service.ts:87-226 — toResult switch handles 21 entity-type branches; kept intact in internal.ts since list/lookup/record all rely on it — low
 - services/import-entity-ref.service.ts:40 — ImportEntityRefResult is a direct alias of ImportEntityRef; preserved in internal.ts for caller-facing API compat — low
-- apps/api/src/__tests__/routes/systems/import-entity-refs/{lookup-batch,upsert-batch}.test.ts — original single vi.mock of the service barrel included every export; now split into 4 per-verb vi.mock calls so the route-side mocks still intercept every service call graph entry — low
+- apps/api/src/**tests**/routes/systems/import-entity-refs/{lookup-batch,upsert-batch}.test.ts — original single vi.mock of the service barrel included every export; now split into 4 per-verb vi.mock calls so the route-side mocks still intercept every service call graph entry — low
 
 ## Summary of Changes
 

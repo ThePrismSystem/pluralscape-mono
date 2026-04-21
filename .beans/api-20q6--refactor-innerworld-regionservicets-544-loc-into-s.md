@@ -44,8 +44,8 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 ## Findings
 
 - apps/api/src/services/innerworld-region.service.ts:544 — Monolithic service with 7 exports; split cleanly by verb (create/queries/update/lifecycle) + internal for shared RegionResult + toRegionResult — info
-- apps/api/src/__tests__/trpc/routers/innerworld.test.ts:31 — Single vi.mock on old service path split into four path-specific mocks so each verb file is mockable independently — info
-- apps/api/src/__tests__/services/innerworld-region.service.test.ts:84 — Service test imports now target 4 verb files; tests unmodified in spirit, only import paths updated — info
+- apps/api/src/**tests**/trpc/routers/innerworld.test.ts:31 — Single vi.mock on old service path split into four path-specific mocks so each verb file is mockable independently — info
+- apps/api/src/**tests**/services/innerworld-region.service.test.ts:84 — Service test imports now target 4 verb files; tests unmodified in spirit, only import paths updated — info
 - Max LOC after split: lifecycle.ts 257 lines (archive+restore+delete grouped by lifecycle semantics); well under 300 budget — info
 
 ## Summary of Changes

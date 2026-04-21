@@ -16,6 +16,7 @@ During api-6l1q api-u12f (fronting-comment refactor), found that `apps/api/src/_
 This was preserved during the refactor (lifecycle mock still omits deleteFrontingComment) to stay true to the code-motion constraint, but it is a genuine test-coverage gap.
 
 ## Scope
+
 - [ ] Add `deleteFrontingComment: vi.fn()` to the lifecycle mock block in `__tests__/trpc/routers/fronting-comment.test.ts`
 - [ ] Add at least one test covering the `frontingComment.delete` tRPC procedure:
   - Happy path: delete returns success for owned comment
@@ -24,6 +25,7 @@ This was preserved during the refactor (lifecycle mock still omits deleteFrontin
 - [ ] Verify the integration test (`fronting-comment.integration.test.ts`) also covers delete, or add there
 
 ## Acceptance
+
 - `frontingComment.delete` has at least one passing unit test
 - Integration test exercises delete at least once
 - Coverage report shows the delete path covered
