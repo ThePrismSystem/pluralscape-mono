@@ -6,7 +6,7 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
-import { listCustomFronts } from "../../services/custom-front.service.js";
+import { listCustomFronts } from "../../services/custom-front/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

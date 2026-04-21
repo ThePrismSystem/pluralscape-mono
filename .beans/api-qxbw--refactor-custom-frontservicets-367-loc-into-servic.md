@@ -1,11 +1,11 @@
 ---
 # api-qxbw
 title: Refactor custom-front.service.ts (367 LOC) into services/custom-front/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:08:27Z
 parent: api-6l1q
 ---
 

@@ -5,15 +5,14 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createCustomFront } from "../../services/custom-front/create.js";
+import { deleteCustomFront } from "../../services/custom-front/delete.js";
 import {
   archiveCustomFront,
-  createCustomFront,
-  deleteCustomFront,
-  getCustomFront,
-  listCustomFronts,
   restoreCustomFront,
-  updateCustomFront,
-} from "../../services/custom-front.service.js";
+} from "../../services/custom-front/lifecycle.js";
+import { getCustomFront, listCustomFronts } from "../../services/custom-front/queries.js";
+import { updateCustomFront } from "../../services/custom-front/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

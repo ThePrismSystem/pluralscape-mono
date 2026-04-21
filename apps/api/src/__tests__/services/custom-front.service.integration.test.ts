@@ -15,15 +15,11 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
   clearWebhookConfigCache: vi.fn(),
 }));
 
-import {
-  archiveCustomFront,
-  createCustomFront,
-  deleteCustomFront,
-  getCustomFront,
-  listCustomFronts,
-  restoreCustomFront,
-  updateCustomFront,
-} from "../../services/custom-front.service.js";
+import { createCustomFront } from "../../services/custom-front/create.js";
+import { deleteCustomFront } from "../../services/custom-front/delete.js";
+import { archiveCustomFront, restoreCustomFront } from "../../services/custom-front/lifecycle.js";
+import { getCustomFront, listCustomFronts } from "../../services/custom-front/queries.js";
+import { updateCustomFront } from "../../services/custom-front/update.js";
 import {
   assertApiError,
   asDb,
