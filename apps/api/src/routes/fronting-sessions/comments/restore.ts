@@ -6,7 +6,7 @@ import { getDb } from "../../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { restoreFrontingComment } from "../../../services/fronting-comment.service.js";
+import { restoreFrontingComment } from "../../../services/fronting-session/comments/lifecycle.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

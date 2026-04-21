@@ -12,11 +12,20 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/fronting-comment.service.js", () => ({
+vi.mock("../../../services/fronting-session/comments/create.js", () => ({
   createFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/queries.js", () => ({
   listFrontingComments: vi.fn(),
   getFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/update.js", () => ({
   updateFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/lifecycle.js", () => ({
   deleteFrontingComment: vi.fn(),
   archiveFrontingComment: vi.fn(),
   restoreFrontingComment: vi.fn(),
@@ -53,15 +62,14 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createFrontingComment,
-  listFrontingComments,
-  getFrontingComment,
-  updateFrontingComment,
-  deleteFrontingComment,
-  archiveFrontingComment,
-  restoreFrontingComment,
-} = await import("../../../services/fronting-comment.service.js");
+const { createFrontingComment } =
+  await import("../../../services/fronting-session/comments/create.js");
+const { listFrontingComments, getFrontingComment } =
+  await import("../../../services/fronting-session/comments/queries.js");
+const { updateFrontingComment } =
+  await import("../../../services/fronting-session/comments/update.js");
+const { deleteFrontingComment, archiveFrontingComment, restoreFrontingComment } =
+  await import("../../../services/fronting-session/comments/lifecycle.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

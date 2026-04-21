@@ -16,15 +16,17 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
   clearWebhookConfigCache: vi.fn(),
 }));
 
+import { createFrontingComment } from "../../services/fronting-session/comments/create.js";
 import {
   archiveFrontingComment,
-  createFrontingComment,
   deleteFrontingComment,
+  restoreFrontingComment,
+} from "../../services/fronting-session/comments/lifecycle.js";
+import {
   getFrontingComment,
   listFrontingComments,
-  restoreFrontingComment,
-  updateFrontingComment,
-} from "../../services/fronting-comment.service.js";
+} from "../../services/fronting-session/comments/queries.js";
+import { updateFrontingComment } from "../../services/fronting-session/comments/update.js";
 import { createFrontingSession } from "../../services/fronting-session/create.js";
 import { archiveFrontingSession } from "../../services/fronting-session/lifecycle.js";
 import {
