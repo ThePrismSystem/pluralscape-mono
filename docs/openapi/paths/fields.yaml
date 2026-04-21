@@ -18,9 +18,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [fields]
+                  required: [data]
                   properties:
-                    fields:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"

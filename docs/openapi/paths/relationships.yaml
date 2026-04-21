@@ -22,9 +22,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [relationships]
+                  required: [data]
                   properties:
-                    relationships:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/relationships.yaml#/RelationshipResponse"

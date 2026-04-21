@@ -274,9 +274,9 @@ SessionInfo:
 
 SessionListResponse:
   type: object
-  required: [sessions, hasMore]
+  required: [data, hasMore]
   properties:
-    sessions:
+    data:
       type: array
       items:
         $ref: "#/SessionInfo"

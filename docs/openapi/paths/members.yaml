@@ -23,9 +23,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [members]
+                  required: [data]
                   properties:
-                    members:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/members.yaml#/MemberResponse"
@@ -280,9 +280,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [memberships]
+                  required: [data]
                   properties:
-                    memberships:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/groups.yaml#/GroupMembership"

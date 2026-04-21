@@ -54,9 +54,9 @@ BucketExportEntity:
 
 BucketExportPageResponse:
   type: object
-  required: [items, nextCursor, hasMore, totalCount, etag]
+  required: [data, nextCursor, hasMore, totalCount, etag]
   properties:
-    items:
+    data:
       type: array
       items:
         $ref: "#/BucketExportEntity"

@@ -20,9 +20,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [systems]
+                  required: [data]
                   properties:
-                    systems:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/systems.yaml#/SystemProfile"
@@ -235,9 +235,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [items]
+                  required: [data]
                   properties:
-                    items:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/systems.yaml#/SnapshotResponse"

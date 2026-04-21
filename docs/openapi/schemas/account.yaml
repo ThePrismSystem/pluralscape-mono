@@ -120,9 +120,9 @@ AuditLogEntry:
 
 AuditLogResponse:
   type: object
-  required: [events, hasMore]
+  required: [data, hasMore]
   properties:
-    events:
+    data:
       type: array
       items:
         $ref: "#/AuditLogEntry"

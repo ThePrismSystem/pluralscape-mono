@@ -1720,9 +1720,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - systems
+                      - data
                     properties:
-                      systems:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/SystemProfile"
@@ -1939,9 +1939,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/SnapshotResponse"
@@ -2370,9 +2370,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - members
+                      - data
                     properties:
-                      members:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/MemberResponse"
@@ -2631,9 +2631,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - memberships
+                      - data
                     properties:
-                      memberships:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/GroupMembership"
@@ -2896,9 +2896,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - groups
+                      - data
                     properties:
-                      groups:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/GroupResponse"
@@ -3251,9 +3251,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - members
+                      - data
                     properties:
-                      members:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/GroupMembership"
@@ -3353,9 +3353,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - customFronts
+                      - data
                     properties:
-                      customFronts:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/CustomFrontResponse"
@@ -3820,9 +3820,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - fields
+                      - data
                     properties:
-                      fields:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/FieldDefinitionResponse"
@@ -4170,9 +4170,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - relationships
+                      - data
                     properties:
-                      relationships:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/RelationshipResponse"
@@ -4410,9 +4410,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - entityTypes
+                      - data
                     properties:
-                      entityTypes:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityTypeResponse"
@@ -4627,9 +4627,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - entities
+                      - data
                     properties:
-                      entities:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityResponse"
@@ -4849,9 +4849,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - links
+                      - data
                     properties:
-                      links:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityLinkResponse"
@@ -4986,9 +4986,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - memberLinks
+                      - data
                     properties:
-                      memberLinks:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityMemberLinkResponse"
@@ -5086,9 +5086,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - associations
+                      - data
                     properties:
-                      associations:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityAssociationResponse"
@@ -5185,9 +5185,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - events
+                      - data
                     properties:
-                      events:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/LifecycleEventResponse"
@@ -5352,9 +5352,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - regions
+                      - data
                     properties:
-                      regions:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/RegionResponse"
@@ -5566,9 +5566,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - entities
+                      - data
                     properties:
-                      entities:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/EntityResponse"
@@ -5836,9 +5836,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - blobs
+                      - data
                     properties:
-                      blobs:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/BlobResponse"
@@ -6046,9 +6046,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/BucketResponse"
@@ -6955,9 +6955,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/FrontingSessionResponse"
@@ -7289,9 +7289,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/FrontingCommentResponse"
@@ -7941,9 +7941,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/WebhookConfigResponse"
@@ -8266,9 +8266,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/WebhookDeliveryResponse"
@@ -8368,9 +8368,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ApiKeyResponse"
@@ -8530,9 +8530,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ChannelResponse"
@@ -8808,9 +8808,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/MessageResponse"
@@ -9141,9 +9141,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/BoardMessageResponse"
@@ -9513,9 +9513,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/NoteResponse"
@@ -9775,9 +9775,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/PollResponse"
@@ -10009,9 +10009,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/PollVoteResponse"
@@ -10304,9 +10304,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/AcknowledgementResponse"
@@ -10553,9 +10553,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/TimerConfigResponse"
@@ -10782,9 +10782,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/CheckInRecordResponse"
@@ -11171,9 +11171,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ImportJobResponse"
@@ -11371,9 +11371,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ImportEntityRefResponse"
@@ -12173,10 +12173,10 @@ components:
     SessionListResponse:
       type: object
       required:
-        - sessions
+        - data
         - hasMore
       properties:
-        sessions:
+        data:
           type: array
           items:
             $ref: "#/components/schemas/SessionInfo"
@@ -12363,10 +12363,10 @@ components:
     AuditLogResponse:
       type: object
       required:
-        - events
+        - data
         - hasMore
       properties:
-        events:
+        data:
           type: array
           items:
             $ref: "#/components/schemas/AuditLogEntry"
@@ -16187,13 +16187,13 @@ components:
     BucketExportPageResponse:
       type: object
       required:
-        - items
+        - data
         - nextCursor
         - hasMore
         - totalCount
         - etag
       properties:
-        items:
+        data:
           type: array
           items:
             $ref: "#/components/schemas/BucketExportEntity"

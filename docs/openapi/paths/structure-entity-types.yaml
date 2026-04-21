@@ -18,9 +18,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [entityTypes]
+                  required: [data]
                   properties:
-                    entityTypes:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"

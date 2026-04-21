@@ -25,9 +25,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [events]
+                  required: [data]
                   properties:
-                    events:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/lifecycle-events.yaml#/LifecycleEventResponse"

@@ -27,9 +27,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [items]
+                  required: [data]
                   properties:
-                    items:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/timers.yaml#/TimerConfigResponse"

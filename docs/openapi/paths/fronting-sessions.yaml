@@ -74,9 +74,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [items]
+                  required: [data]
                   properties:
-                    items:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
@@ -402,9 +402,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [items]
+                  required: [data]
                   properties:
-                    items:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"

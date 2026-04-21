@@ -23,9 +23,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [entities]
+                  required: [data]
                   properties:
-                    entities:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/structures.yaml#/StructureEntityResponse"
@@ -281,9 +281,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [links]
+                  required: [data]
                   properties:
-                    links:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/structures.yaml#/StructureEntityLinkResponse"
@@ -415,9 +415,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [memberLinks]
+                  required: [data]
                   properties:
-                    memberLinks:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/structures.yaml#/StructureEntityMemberLinkResponse"
@@ -513,9 +513,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [associations]
+                  required: [data]
                   properties:
-                    associations:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/structures.yaml#/StructureEntityAssociationResponse"
