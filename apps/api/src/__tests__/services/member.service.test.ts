@@ -40,16 +40,11 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const {
-  createMember,
-  listMembers,
-  getMember,
-  updateMember,
-  duplicateMember,
-  archiveMember,
-  restoreMember,
-  deleteMember,
-} = await import("../../services/member.js");
+const { createMember, duplicateMember } = await import("../../services/member/create.js");
+const { listMembers, getMember } = await import("../../services/member/queries.js");
+const { updateMember } = await import("../../services/member/update.js");
+const { archiveMember, restoreMember, deleteMember } =
+  await import("../../services/member/lifecycle.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { dispatchWebhookEvent: mockDispatchWebhookEvent } =
   await import("../../services/webhook-dispatcher.js");

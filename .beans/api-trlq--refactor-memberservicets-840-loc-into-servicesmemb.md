@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:35Z
-updated_at: 2026-04-21T20:18:07Z
+updated_at: 2026-04-21T20:49:03Z
 parent: api-6l1q
 ---
 
@@ -61,3 +61,30 @@ Refactored `member.service.ts` (840 LOC) into `services/member/`:
 Barrel: `services/member.ts` (6 LOC, sibling file — NOT nested index.ts — required for Bundler module resolution).
 
 Max file LOC: 302 (`lifecycle.ts`). 23 caller files updated (9 routes, 1 tRPC router, 1 integration-helpers, 12 test files). Full /verify green (format, lint, typecheck, unit, integration, e2e, e2e-slow, sp-import, pk-import).
+
+## Update: converted to Option E (no barrel)
+
+After research into modern TS best practices (Vercel, Nx, barrel-file ESLint rules), switched from sibling-barrel to no-barrel. Callers now import specific verb files directly:
+
+```typescript
+// Before (Option B — sibling barrel)
+import { createMember, listMembers } from "../../services/member.js";
+
+// After (Option E — no barrel)
+import { createMember } from "../../services/member/create.js";
+import { listMembers } from "../../services/member/queries.js";
+```
+
+Why: for a Bun-run API in a turbo/pnpm monorepo with explicit `.js` specifiers, barrels defeat turbo's affected-graph granularity and add no value (no client tree-shaking concern; no public API boundary). Major OSS projects (tRPC, Drizzle, Hono, Prisma, Effect) use `foo/index.ts` when they use barrels at all, never sibling `foo.ts` + `foo/`.
+
+### Plan updates required before Task 3 dispatch
+
+- Spec subagent brief template (`docs/superpowers/specs/2026-04-21-api-6l1q-service-refactor-design.md`): remove the "create `services/<domain>/index.ts` barrel" step; callers import from specific verb files.
+- Plan Task 2 Step 9: already retroactively addressed here.
+- Plan Task 17 Step 2 (ps-lg9y ESLint cap): the `ignores: ["src/services/**/index.ts"]` carve-out is now unnecessary — drop it.
+
+### Final structure of `services/member/`
+
+- `create.ts` (246 LOC), `queries.ts` (164), `update.ts` (91), `lifecycle.ts` (302), `internal.ts` (38).
+- No barrel file.
+- Full /verify green (run 30713).

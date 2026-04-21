@@ -7,12 +7,12 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { listMembers } from "../../services/member.js";
+import { listMembers } from "../../services/member/queries.js";
 
 import { DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT } from "./members.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { MemberResult } from "../../services/member.js";
+import type { MemberResult } from "../../services/member/internal.js";
 
 const MEMBER_FIELDS = [
   "id",

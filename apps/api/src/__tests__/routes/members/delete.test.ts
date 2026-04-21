@@ -12,7 +12,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/member.js", () => ({
+vi.mock("../../../services/member/lifecycle.js", () => ({
   deleteMember: vi.fn(),
 }));
 
@@ -23,7 +23,7 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-const { deleteMember } = await import("../../../services/member.js");
+const { deleteMember } = await import("../../../services/member/lifecycle.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const MEMBER_URL =
