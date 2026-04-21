@@ -79,15 +79,13 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
 
-const {
-  createEntityType,
-  listEntityTypes,
-  getEntityType,
-  updateEntityType,
-  archiveEntityType,
-  restoreEntityType,
-  deleteEntityType,
-} = await import("../../services/structure-entity-type.service.js");
+const { createEntityType } = await import("../../services/structure/entity-type/create.js");
+const { listEntityTypes } = await import("../../services/structure/entity-type/list.js");
+const { getEntityType } = await import("../../services/structure/entity-type/get.js");
+const { updateEntityType } = await import("../../services/structure/entity-type/update.js");
+const { archiveEntityType } = await import("../../services/structure/entity-type/archive.js");
+const { restoreEntityType } = await import("../../services/structure/entity-type/restore.js");
+const { deleteEntityType } = await import("../../services/structure/entity-type/delete.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

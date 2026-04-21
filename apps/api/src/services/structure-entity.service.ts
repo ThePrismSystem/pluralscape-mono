@@ -1,4 +1,11 @@
-export * from "./structure-entity-type.service.js";
+export * from "./structure/entity-type/create.js";
+export * from "./structure/entity-type/list.js";
+export * from "./structure/entity-type/get.js";
+export * from "./structure/entity-type/update.js";
+export * from "./structure/entity-type/archive.js";
+export * from "./structure/entity-type/restore.js";
+export * from "./structure/entity-type/delete.js";
+export type { EntityTypeResult } from "./structure/entity-type/internal.js";
 export * from "./structure-entity-crud.service.js";
 export * from "./structure-entity-link.service.js";
 export * from "./structure-entity-member-link.service.js";

@@ -18,13 +18,6 @@ vi.mock("../../../../services/structure-entity-link.service.js", () => ({
   deleteEntityLink: vi.fn(),
   listEntityLinks: vi.fn(),
 }));
-vi.mock("../../../../services/structure-entity-type.service.js", () => ({
-  createEntityType: vi.fn(),
-  listEntityTypes: vi.fn(),
-  getEntityType: vi.fn(),
-  updateEntityType: vi.fn(),
-  deleteEntityType: vi.fn(),
-}));
 vi.mock("../../../../services/structure-entity-crud.service.js", () => ({
   createEntity: vi.fn(),
   listEntities: vi.fn(),
