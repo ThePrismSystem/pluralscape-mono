@@ -87,8 +87,10 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, deleteEntity, restoreEntity } =
   await import("../../lib/entity-lifecycle.js");
 
-const { createNote, getNote, listNotes, updateNote, deleteNote, archiveNote, restoreNote } =
-  await import("../../services/note.service.js");
+const { createNote } = await import("../../services/note/create.js");
+const { getNote, listNotes } = await import("../../services/note/queries.js");
+const { updateNote } = await import("../../services/note/update.js");
+const { deleteNote, archiveNote, restoreNote } = await import("../../services/note/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

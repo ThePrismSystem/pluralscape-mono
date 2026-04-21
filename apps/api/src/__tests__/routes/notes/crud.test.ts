@@ -9,23 +9,32 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { NoteResult } from "../../../services/note.service.js";
+import type { NoteResult } from "../../../services/note/internal.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/note.service.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../../services/note.service.js")>();
+vi.mock("../../../services/note/create.js", () => ({
+  createNote: vi.fn(),
+}));
+
+vi.mock("../../../services/note/queries.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../services/note/queries.js")>();
   return {
-    createNote: vi.fn(),
     getNote: vi.fn(),
     listNotes: vi.fn(),
-    updateNote: vi.fn(),
-    deleteNote: vi.fn(),
-    archiveNote: vi.fn(),
-    restoreNote: vi.fn(),
     parseNoteQuery: original.parseNoteQuery,
   };
 });
+
+vi.mock("../../../services/note/update.js", () => ({
+  updateNote: vi.fn(),
+}));
+
+vi.mock("../../../services/note/lifecycle.js", () => ({
+  deleteNote: vi.fn(),
+  archiveNote: vi.fn(),
+  restoreNote: vi.fn(),
+}));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -34,8 +43,11 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { createNote, getNote, listNotes, updateNote, deleteNote, archiveNote, restoreNote } =
-  await import("../../../services/note.service.js");
+const { createNote } = await import("../../../services/note/create.js");
+const { getNote, listNotes } = await import("../../../services/note/queries.js");
+const { updateNote } = await import("../../../services/note/update.js");
+const { deleteNote, archiveNote, restoreNote } =
+  await import("../../../services/note/lifecycle.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

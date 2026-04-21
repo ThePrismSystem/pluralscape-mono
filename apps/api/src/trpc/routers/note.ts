@@ -6,15 +6,10 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import {
-  archiveNote,
-  createNote,
-  deleteNote,
-  getNote,
-  listNotes,
-  restoreNote,
-  updateNote,
-} from "../../services/note.service.js";
+import { createNote } from "../../services/note/create.js";
+import { archiveNote, deleteNote, restoreNote } from "../../services/note/lifecycle.js";
+import { getNote, listNotes } from "../../services/note/queries.js";
+import { updateNote } from "../../services/note/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
