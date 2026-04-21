@@ -18,6 +18,23 @@ We welcome contributions from everyone. This project is community-driven by desi
 - Update documentation if behavior changes
 - List any deferred work in the "Deferred Items" section of the PR template
 
+### Required pre-PR gates
+
+Every PR must pass these checks locally before it is opened; CI enforces them as well:
+
+- `pnpm format` — Prettier formatting
+- `pnpm lint` — ESLint with zero warnings (`--max-warnings 0`)
+- `pnpm typecheck` — TypeScript strict type-checking
+- `pnpm test` — unit + integration suites
+- `pnpm openapi:check` — REST spec reconciler; the checked-in `docs/openapi.yaml` must match generated output
+- `pnpm trpc:parity` — REST route / tRPC procedure parity (see [Adding API Endpoints](#adding-api-endpoints))
+
+The `/verify` command runs the full suite (format, lint, typecheck, unit, integration, e2e) in one shot.
+
+### Pre-release code hygiene
+
+Pluralscape is pre-production. Remove deprecated code outright — no backwards-compatible aliases, re-exports, or `@deprecated` shims. Delete old symbols in the same PR that introduces the replacement.
+
 ## Commit Conventions
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
@@ -34,6 +51,18 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`, `ci`
 ## Architecture Decisions
 
 Major technical decisions are documented as ADRs in `docs/adr/`. If your contribution involves a significant architectural choice, please write an ADR using the template at `docs/adr/000-template.md`.
+
+### Zero-knowledge rule
+
+The server must never perform master-key operations or handle raw user-secret material. All envelope encryption, bucket key derivation, and recovery-package assembly happen client-side. See [ADR 013 — API Auth & Encryption](docs/adr/013-api-auth-encryption.md) and the master-key migration in PR #439 for the authoritative boundary. PRs that route master-key material through the server will be rejected.
+
+## Work Tracking (Beans)
+
+Work items are tracked as **beans** (a CLI issue tracker) with files committed under `.beans/` alongside the code they describe. Full conventions live in [docs/work-tracking.md](docs/work-tracking.md).
+
+- Before committing, mark the bean as completed and add a `## Summary of Changes` section describing what shipped.
+- Include the bean file in the **same commit** as the code change so history stays self-contained.
+- Use the existing prefixes (`ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, `client-`, `infra-`). Epics are containers — break them into `feature` / `task` / `bug` children.
 
 ## Development Methodology — TDD
 
@@ -163,11 +192,11 @@ Test coverage is enforced in CI. The thresholds below are minimums — aim highe
 
 | Test Type   | Coverage Target              | Tool       | What It Covers                                     |
 | ----------- | ---------------------------- | ---------- | -------------------------------------------------- |
-| Unit        | 85% lines/functions/branches | Vitest     | Pure functions, utilities, domain logic            |
-| Integration | 85% lines/functions/branches | Vitest     | API routes, database queries, cross-module flows   |
+| Unit        | 89% lines/functions/branches | Vitest     | Pure functions, utilities, domain logic            |
+| Integration | 89% lines/functions/branches | Vitest     | API routes, database queries, cross-module flows   |
 | E2E         | Critical paths               | Playwright | User-facing flows: auth, fronting, switching, sync |
 
-- **Unit + Integration** (85% combined): Lines, functions, branches, and statements are all measured. Type-only files and barrel/index files are excluded from coverage. Measured across the combined unit + integration run.
+- **Unit + Integration** (89% combined): Lines, functions, branches, and statements are all measured. Type-only files and barrel/index files are excluded from coverage. Measured across the combined unit + integration run.
 - **E2E tests**: No line-coverage metric — instead, all critical user journeys must have corresponding tests. Tracked via a test matrix in the test plan.
 
 Coverage is checked in CI on every PR. PRs that drop coverage below thresholds will not merge.
@@ -181,7 +210,7 @@ Coverage is checked in CI on every PR. PRs that drop coverage below thresholds w
 
 ## Translations
 
-Pluralscape uses [Crowdin](https://crowdin.com) for translation management. The project qualifies for the free open-source tier.
+Pluralscape uses [Crowdin](https://crowdin.com) for translation management. The project qualifies for the free open-source tier. The automation design is authoritative in [ADR 036 — Crowdin automation](docs/adr/036-crowdin-automation.md); operational runbook lives in [docs/i18n/crowdin-operations.md](docs/i18n/crowdin-operations.md).
 
 ### How translations flow
 
