@@ -11,16 +11,14 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  archivePoll,
-  closePoll,
-  createPoll,
-  deletePoll,
-  getPoll,
-  listPolls,
-  restorePoll,
-  updatePoll,
-} from "../../services/poll.service.js";
+import { archivePoll } from "../../services/poll/archive.js";
+import { closePoll } from "../../services/poll/close.js";
+import { createPoll } from "../../services/poll/create.js";
+import { deletePoll } from "../../services/poll/delete.js";
+import { getPoll } from "../../services/poll/get.js";
+import { listPolls } from "../../services/poll/list.js";
+import { restorePoll } from "../../services/poll/restore.js";
+import { updatePoll } from "../../services/poll/update.js";
 import { expectSingleAuditEvent } from "../helpers/audit-assertions.js";
 import {
   assertApiError,

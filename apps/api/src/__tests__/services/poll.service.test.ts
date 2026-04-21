@@ -95,16 +95,14 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, deleteEntity, restoreEntity } =
   await import("../../lib/entity-lifecycle.js");
 
-const {
-  createPoll,
-  getPoll,
-  listPolls,
-  updatePoll,
-  closePoll,
-  deletePoll,
-  archivePoll,
-  restorePoll,
-} = await import("../../services/poll.service.js");
+const { createPoll } = await import("../../services/poll/create.js");
+const { getPoll } = await import("../../services/poll/get.js");
+const { listPolls } = await import("../../services/poll/list.js");
+const { updatePoll } = await import("../../services/poll/update.js");
+const { closePoll } = await import("../../services/poll/close.js");
+const { deletePoll } = await import("../../services/poll/delete.js");
+const { archivePoll } = await import("../../services/poll/archive.js");
+const { restorePoll } = await import("../../services/poll/restore.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
