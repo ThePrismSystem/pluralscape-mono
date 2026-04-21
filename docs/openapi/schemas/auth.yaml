@@ -333,11 +333,8 @@ RevokeAllResponse:
   properties:
     data:
       type: object
-      required: [success, revokedCount]
+      required: [revokedCount]
       properties:
-        success:
-          type: boolean
-          const: true
         revokedCount:
           type: integer
           description: Number of sessions revoked

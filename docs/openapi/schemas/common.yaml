@@ -20,6 +20,7 @@ ErrorResponse:
             - BUCKET_ACCESS_DENIED
             - NOT_FOUND
             - CONFLICT
+            - INVALID_STATE
             - HAS_DEPENDENTS
             - ROTATION_IN_PROGRESS
             - FRIEND_CODE_EXPIRED

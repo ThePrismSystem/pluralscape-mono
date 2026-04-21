@@ -773,7 +773,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/account_PinRequest"
+              $ref: "#/components/schemas/PinRequest-2"
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -802,7 +802,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/account_PinRequest"
+              $ref: "#/components/schemas/PinRequest-2"
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -833,7 +833,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/account_PinRequest"
+              $ref: "#/components/schemas/PinRequest-2"
       responses:
         "200":
           description: PIN verified
@@ -6918,6 +6918,18 @@ paths:
             type: integer
             format: int64
           description: Filter sessions starting at or before this Unix timestamp (ms)
+        - name: endFrom
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Filter sessions ending at or after this Unix timestamp (ms)
+        - name: endUntil
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Filter sessions ending at or before this Unix timestamp (ms)
         - name: activeOnly
           in: query
           schema:
@@ -11650,6 +11662,31 @@ paths:
                     $ref: "#/components/schemas/I18nNamespace"
         "304":
           description: Not modified
+        "404":
+          description: Translation not found for the given locale/namespace
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - NAMESPACE_NOT_FOUND
+                      message:
+                        type: string
+              example:
+                error:
+                  code: NAMESPACE_NOT_FOUND
+                  message: Translation not found
         "429":
           $ref: "#/components/responses/RateLimited"
         "502":
@@ -11731,6 +11768,7 @@ components:
                 - BUCKET_ACCESS_DENIED
                 - NOT_FOUND
                 - CONFLICT
+                - INVALID_STATE
                 - HAS_DEPENDENTS
                 - ROTATION_IN_PROGRESS
                 - FRIEND_CODE_EXPIRED
@@ -12186,12 +12224,8 @@ components:
         data:
           type: object
           required:
-            - success
             - revokedCount
           properties:
-            success:
-              type: boolean
-              const: true
             revokedCount:
               type: integer
               description: Number of sessions revoked
@@ -12573,9 +12607,6 @@ components:
       type: object
       required:
         - encryptedData
-        - copyPhotos
-        - copyFields
-        - copyMemberships
       properties:
         encryptedData:
           type: string
@@ -12585,12 +12616,15 @@ components:
           description: T1-encrypted PlaintextMember for the new duplicate (see ./plaintext.yaml#/PlaintextMember)
         copyPhotos:
           type: boolean
+          default: false
           description: Whether to copy the source member's photos to the duplicate
         copyFields:
           type: boolean
+          default: false
           description: Whether to copy the source member's custom field values to the duplicate
         copyMemberships:
           type: boolean
+          default: false
           description: Whether to copy the source member's group memberships to the duplicate
     CreateMemberPhotoRequest:
       type: object
@@ -16045,7 +16079,7 @@ components:
         notes:
           type: string
           nullable: true
-    account_PinRequest:
+    PinRequest-2:
       type: object
       required:
         - pin
@@ -16420,22 +16454,81 @@ components:
       type: string
       enum:
         - read:members
-        - write:members
         - read:fronting
-        - write:fronting
         - read:groups
-        - write:groups
         - read:system
-        - write:system
+        - read:structure
+        - read:reports
         - read:webhooks
-        - write:webhooks
-        - read:audit-log
         - read:blobs
-        - write:blobs
         - read:notifications
+        - read:acknowledgements
+        - read:channels
+        - read:messages
+        - read:notes
+        - read:polls
+        - read:relationships
+        - read:innerworld
+        - read:fields
+        - read:check-ins
+        - read:lifecycle-events
+        - read:timers
+        - read:buckets
+        - write:members
+        - write:fronting
+        - write:groups
+        - write:system
+        - write:structure
+        - write:reports
+        - write:webhooks
+        - write:blobs
         - write:notifications
+        - write:acknowledgements
+        - write:channels
+        - write:messages
+        - write:notes
+        - write:polls
+        - write:relationships
+        - write:innerworld
+        - write:fields
+        - write:check-ins
+        - write:lifecycle-events
+        - write:timers
+        - write:buckets
+        - delete:members
+        - delete:fronting
+        - delete:groups
+        - delete:system
+        - delete:structure
+        - delete:reports
+        - delete:webhooks
+        - delete:blobs
+        - delete:notifications
+        - delete:acknowledgements
+        - delete:channels
+        - delete:messages
+        - delete:notes
+        - delete:polls
+        - delete:relationships
+        - delete:innerworld
+        - delete:fields
+        - delete:check-ins
+        - delete:lifecycle-events
+        - delete:timers
+        - delete:buckets
+        - read:audit-log
+        - read-all
+        - write-all
+        - delete-all
         - full
-      description: Permission scope granted to this API key
+      description: |
+        Permission scope granted to an API key. Scopes follow the
+        `<tier>:<domain>` pattern plus a small set of special values.
+
+        - Tiers: `read` (list/get), `write` (create/update), `delete` (destroy).
+        - Aggregates: `read-all`, `write-all`, `delete-all` grant the tier across every domain.
+        - `read:audit-log` is the only audit-log scope (read-only by design).
+        - `full` grants unrestricted access including audit-log and api-key management endpoints.
     ApiKeyResponse:
       description: |
         An API key. The plaintext `token` is only returned on creation and
@@ -17364,7 +17457,7 @@ components:
           type: object
           additionalProperties:
             type: boolean
-          description: Map of ImportEntityType → whether to import. At least one must be true.
+          description: Map of ImportCollectionType → whether to import. At least one must be true.
         avatarMode:
           $ref: "#/components/schemas/ImportAvatarMode"
     UpdateImportJobBody:

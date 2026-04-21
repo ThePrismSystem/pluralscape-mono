@@ -42,6 +42,18 @@
           type: integer
           format: int64
         description: Filter sessions starting at or before this Unix timestamp (ms)
+      - name: endFrom
+        in: query
+        schema:
+          type: integer
+          format: int64
+        description: Filter sessions ending at or after this Unix timestamp (ms)
+      - name: endUntil
+        in: query
+        schema:
+          type: integer
+          format: int64
+        description: Filter sessions ending at or before this Unix timestamp (ms)
       - name: activeOnly
         in: query
         schema:
