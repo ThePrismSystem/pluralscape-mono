@@ -28,19 +28,19 @@ import {
   MAX_TRANSFER_CODE_ATTEMPTS,
   TRANSFER_INITIATION_LIMIT,
 } from "../../routes/account/device-transfer.constants.js";
+import { enqueueAccountEmailChangedNotification } from "../../services/account/notifications.js";
+import { getAccountInfo } from "../../services/account/queries.js";
+import {
+  changeEmail,
+  changePassword,
+  updateAccountSettings,
+} from "../../services/account/update.js";
 import { deleteAccount } from "../../services/account-deletion.service.js";
 import {
   removeAccountPin,
   setAccountPin,
   verifyAccountPin,
 } from "../../services/account-pin.service.js";
-import {
-  changeEmail,
-  changePassword,
-  enqueueAccountEmailChangedNotification,
-  getAccountInfo,
-  updateAccountSettings,
-} from "../../services/account.service.js";
 import { queryAuditLog } from "../../services/audit-log-query.service.js";
 import { enrollBiometric, verifyBiometric } from "../../services/biometric.service.js";
 import {

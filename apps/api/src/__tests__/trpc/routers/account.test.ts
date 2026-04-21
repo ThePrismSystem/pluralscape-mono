@@ -28,11 +28,17 @@ vi.mock("../../../trpc/middlewares/rate-limit.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../services/account.service.js", () => ({
+vi.mock("../../../services/account/queries.js", () => ({
   getAccountInfo: vi.fn(),
+}));
+
+vi.mock("../../../services/account/update.js", () => ({
   changeEmail: vi.fn(),
   changePassword: vi.fn(),
   updateAccountSettings: vi.fn(),
+}));
+
+vi.mock("../../../services/account/notifications.js", () => ({
   enqueueAccountEmailChangedNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -72,13 +78,11 @@ vi.mock("../../../services/device-transfer.service.js", () => ({
   TransferSessionMismatchError: class TransferSessionMismatchError extends Error {},
 }));
 
-const {
-  getAccountInfo,
-  changeEmail,
-  changePassword,
-  updateAccountSettings,
-  enqueueAccountEmailChangedNotification,
-} = await import("../../../services/account.service.js");
+const { getAccountInfo } = await import("../../../services/account/queries.js");
+const { changeEmail, changePassword, updateAccountSettings } =
+  await import("../../../services/account/update.js");
+const { enqueueAccountEmailChangedNotification } =
+  await import("../../../services/account/notifications.js");
 const { setAccountPin, removeAccountPin, verifyAccountPin } =
   await import("../../../services/account-pin.service.js");
 const { enrollBiometric, verifyBiometric } = await import("../../../services/biometric.service.js");

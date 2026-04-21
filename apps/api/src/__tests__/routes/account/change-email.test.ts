@@ -12,13 +12,22 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/account.service.js", () => ({
-  getAccountInfo: vi.fn(),
-  changeEmail: vi.fn(),
-  enqueueAccountEmailChangedNotification: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../../services/account/internal.js", () => ({
   ConcurrencyError: class ConcurrencyError extends Error {
     override readonly name = "ConcurrencyError" as const;
   },
+}));
+
+vi.mock("../../../services/account/queries.js", () => ({
+  getAccountInfo: vi.fn(),
+}));
+
+vi.mock("../../../services/account/update.js", () => ({
+  changeEmail: vi.fn(),
+}));
+
+vi.mock("../../../services/account/notifications.js", () => ({
+  enqueueAccountEmailChangedNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../services/auth/register.js", () => ({
@@ -52,8 +61,10 @@ vi.mock("../../../lib/queue.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
-const { changeEmail, enqueueAccountEmailChangedNotification, ConcurrencyError } =
-  await import("../../../services/account.service.js");
+const { ConcurrencyError } = await import("../../../services/account/internal.js");
+const { changeEmail } = await import("../../../services/account/update.js");
+const { enqueueAccountEmailChangedNotification } =
+  await import("../../../services/account/notifications.js");
 const { ValidationError } = await import("../../../services/auth/register.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
 

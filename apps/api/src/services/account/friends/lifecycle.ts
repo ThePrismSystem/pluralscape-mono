@@ -1,13 +1,13 @@
 import { friendConnections } from "@pluralscape/db/pg";
 
-import { archiveAccountEntity, restoreAccountEntity } from "../../lib/entity-lifecycle.js";
+import { archiveAccountEntity, restoreAccountEntity } from "../../../lib/entity-lifecycle.js";
 
 import { toFriendConnectionResult } from "./internal.js";
 
 import type { FriendConnectionResult } from "./internal.js";
-import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
+import type { AuditWriter } from "../../../lib/audit-writer.js";
+import type { AuthContext } from "../../../lib/auth-context.js";
+import type { AccountArchivableEntityConfig } from "../../../lib/entity-lifecycle.js";
 import type { AccountId, AuditEventType, FriendConnectionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

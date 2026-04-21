@@ -9,21 +9,21 @@ import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-t
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/friend-connection/lifecycle.js", () => ({
+vi.mock("../../../../services/account/friends/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/queries.js", () => ({
+vi.mock("../../../../services/account/friends/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/transitions.js", () => ({
+vi.mock("../../../../services/account/friends/transitions.js", () => ({
   acceptFriendConnection: vi.fn(),
   blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/update.js", () => ({
+vi.mock("../../../../services/account/friends/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 
@@ -34,7 +34,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listFriendConnections } = await import("../../../../services/friend-connection/queries.js");
+const { listFriendConnections } = await import("../../../../services/account/friends/queries.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

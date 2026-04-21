@@ -7,7 +7,8 @@ import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { ConcurrencyError, updateAccountSettings } from "../../services/account.service.js";
+import { ConcurrencyError } from "../../services/account/internal.js";
+import { updateAccountSettings } from "../../services/account/update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

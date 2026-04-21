@@ -16,21 +16,21 @@ vi.mock("../../../../services/key-grant.service.js", () => ({
   listReceivedKeyGrants: vi.fn(),
 }));
 
-vi.mock("../../../../services/friend-connection/lifecycle.js", () => ({
+vi.mock("../../../../services/account/friends/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/queries.js", () => ({
+vi.mock("../../../../services/account/friends/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/transitions.js", () => ({
+vi.mock("../../../../services/account/friends/transitions.js", () => ({
   acceptFriendConnection: vi.fn(),
   blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/update.js", () => ({
+vi.mock("../../../../services/account/friends/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 

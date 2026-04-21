@@ -1,17 +1,17 @@
 import { friendConnections } from "@pluralscape/db/pg";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../../http.constants.js";
-import { assertAccountOwnership } from "../../lib/account-ownership.js";
-import { ApiHttpError } from "../../lib/api-error.js";
-import { buildCompositePaginatedResult, fromCompositeCursor } from "../../lib/pagination.js";
-import { withAccountRead } from "../../lib/rls-context.js";
-import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
+import { HTTP_NOT_FOUND } from "../../../http.constants.js";
+import { assertAccountOwnership } from "../../../lib/account-ownership.js";
+import { ApiHttpError } from "../../../lib/api-error.js";
+import { buildCompositePaginatedResult, fromCompositeCursor } from "../../../lib/pagination.js";
+import { withAccountRead } from "../../../lib/rls-context.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
 
 import { toFriendConnectionResult } from "./internal.js";
 
 import type { FriendConnectionResult } from "./internal.js";
-import type { AuthContext } from "../../lib/auth-context.js";
+import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
   AccountId,
   FriendConnectionId,

@@ -2,17 +2,17 @@ import { friendConnections } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { and, eq, sql } from "drizzle-orm";
 
-import { assertAccountOwnership } from "../../lib/account-ownership.js";
-import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
-import { assertOccUpdated } from "../../lib/occ-update.js";
-import { withAccountTransaction } from "../../lib/rls-context.js";
-import { MAX_ENCRYPTED_DATA_BYTES } from "../../service.constants.js";
+import { assertAccountOwnership } from "../../../lib/account-ownership.js";
+import { validateEncryptedBlob } from "../../../lib/encrypted-blob.js";
+import { assertOccUpdated } from "../../../lib/occ-update.js";
+import { withAccountTransaction } from "../../../lib/rls-context.js";
+import { MAX_ENCRYPTED_DATA_BYTES } from "../../../service.constants.js";
 
 import { toFriendConnectionResult } from "./internal.js";
 
 import type { FriendConnectionResult } from "./internal.js";
-import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AuthContext } from "../../lib/auth-context.js";
+import type { AuditWriter } from "../../../lib/audit-writer.js";
+import type { AuthContext } from "../../../lib/auth-context.js";
 import type { AccountId, AuditEventType, FriendConnectionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

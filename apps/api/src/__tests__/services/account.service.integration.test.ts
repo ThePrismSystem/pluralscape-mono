@@ -20,13 +20,13 @@ vi.mock("../../env.js", () => ({
   },
 }));
 
+import { ConcurrencyError } from "../../services/account/internal.js";
+import { getAccountInfo } from "../../services/account/queries.js";
 import {
   changeEmail,
   changePassword,
-  ConcurrencyError,
-  getAccountInfo,
   updateAccountSettings,
-} from "../../services/account.service.js";
+} from "../../services/account/update.js";
 import { ValidationError } from "../../services/auth/register.js";
 import { asDb, noopAudit, registerTestAccount, spyAudit } from "../helpers/integration-setup.js";
 

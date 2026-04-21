@@ -27,12 +27,18 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // Also mock services used by other account routes to prevent import errors
-vi.mock("../../../services/account.service.js", () => ({
+vi.mock("../../../services/account/internal.js", () => ({
+  ConcurrencyError: class ConcurrencyError extends Error {},
+}));
+
+vi.mock("../../../services/account/queries.js", () => ({
   getAccountInfo: vi.fn(),
+}));
+
+vi.mock("../../../services/account/update.js", () => ({
   changeEmail: vi.fn(),
   changePassword: vi.fn(),
   updateAccountSettings: vi.fn(),
-  ConcurrencyError: class ConcurrencyError extends Error {},
 }));
 
 vi.mock("../../../services/account-delete.service.js", () => ({
@@ -47,21 +53,21 @@ vi.mock("../../../services/friend-code.service.js", () => ({
   revokeFriendCode: vi.fn(),
 }));
 
-vi.mock("../../../services/friend-connection/lifecycle.js", () => ({
+vi.mock("../../../services/account/friends/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/queries.js", () => ({
+vi.mock("../../../services/account/friends/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/transitions.js", () => ({
+vi.mock("../../../services/account/friends/transitions.js", () => ({
   acceptFriendConnection: vi.fn(),
   blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/update.js", () => ({
+vi.mock("../../../services/account/friends/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 
