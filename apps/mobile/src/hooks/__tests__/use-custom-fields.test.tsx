@@ -1,22 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import {
-  encryptFieldDefinitionInput,
-  encryptFieldValueInput,
-} from "@pluralscape/data/transforms/custom-field";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawFieldDefinition, makeRawFieldValue } from "../../__tests__/factories.js";
 
-import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
-import type { FieldDefinitionId, FieldValueId, MemberId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { FieldDefinitionId, MemberId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -132,45 +125,6 @@ const {
   useMemberFieldValues,
   useUpdateMemberFieldValues,
 } = await import("../use-custom-fields.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawFieldDefinition(id: string): FieldDefinitionRaw {
-  const encrypted = encryptFieldDefinitionInput(
-    { name: `Field ${id}`, description: "A test field", options: null },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<FieldDefinitionId>(id),
-    systemId: TEST_SYSTEM_ID,
-    fieldType: "text",
-    required: false,
-    sortOrder: 0,
-    archived: false,
-    archivedAt: null,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
-
-function makeRawFieldValue(id: string): FieldValueRaw {
-  const encrypted = encryptFieldValueInput({ fieldType: "text", value: "hello" }, TEST_MASTER_KEY);
-  return {
-    id: brandId<FieldValueId>(id),
-    fieldDefinitionId: brandId<FieldDefinitionId>("fd-1"),
-    memberId: brandId<MemberId>("m-1"),
-    structureEntityId: null,
-    groupId: null,
-    systemId: TEST_SYSTEM_ID,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

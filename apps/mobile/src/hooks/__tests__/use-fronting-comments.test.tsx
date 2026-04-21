@@ -1,24 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptFrontingCommentInput } from "@pluralscape/data/transforms/fronting-comment";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawFrontingComment } from "../../__tests__/factories.js";
 
-import type { FrontingCommentRaw } from "@pluralscape/data/transforms/fronting-comment";
-import type {
-  FrontingCommentId,
-  FrontingSessionId,
-  MemberId,
-  UnixMillis,
-} from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { FrontingCommentId, FrontingSessionId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -108,27 +99,7 @@ const {
   useDeleteComment,
 } = await import("../use-fronting-comments.js");
 
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
 const SESSION_ID = brandId<FrontingSessionId>("fs-1");
-
-function makeRawComment(id: string): FrontingCommentRaw {
-  const encrypted = encryptFrontingCommentInput({ content: `Comment ${id}` }, TEST_MASTER_KEY);
-  return {
-    id: brandId<FrontingCommentId>(id),
-    frontingSessionId: SESSION_ID,
-    systemId: TEST_SYSTEM_ID,
-    memberId: brandId<MemberId>("m-1"),
-    customFrontId: null,
-    structureEntityId: null,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();
@@ -138,7 +109,7 @@ beforeEach(() => {
 // ── Query tests ──────────────────────────────────────────────────────
 describe("useFrontingComment", () => {
   it("returns decrypted comment data", async () => {
-    fixtures.set("frontingComment.get", makeRawComment("fc-1"));
+    fixtures.set("frontingComment.get", makeRawFrontingComment("fc-1"));
     const { result } = renderHookWithProviders(() =>
       useFrontingComment(brandId<FrontingCommentId>("fc-1"), SESSION_ID),
     );
@@ -163,7 +134,7 @@ describe("useFrontingComment", () => {
   });
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
-    fixtures.set("frontingComment.get", makeRawComment("fc-1"));
+    fixtures.set("frontingComment.get", makeRawFrontingComment("fc-1"));
     const { result, rerender } = renderHookWithProviders(() =>
       useFrontingComment(brandId<FrontingCommentId>("fc-1"), SESSION_ID),
     );
@@ -179,8 +150,8 @@ describe("useFrontingComment", () => {
 
 describe("useFrontingCommentsList", () => {
   it("returns decrypted paginated comments", async () => {
-    const raw1 = makeRawComment("fc-1");
-    const raw2 = makeRawComment("fc-2");
+    const raw1 = makeRawFrontingComment("fc-1");
+    const raw2 = makeRawFrontingComment("fc-2");
     fixtures.set("frontingComment.list", { data: [raw1, raw2], nextCursor: null });
 
     const { result } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
@@ -204,7 +175,10 @@ describe("useFrontingCommentsList", () => {
   });
 
   it("select is stable across rerenders", async () => {
-    fixtures.set("frontingComment.list", { data: [makeRawComment("fc-1")], nextCursor: null });
+    fixtures.set("frontingComment.list", {
+      data: [makeRawFrontingComment("fc-1")],
+      nextCursor: null,
+    });
     const { result, rerender } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
 
     await waitFor(() => {

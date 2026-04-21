@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptSnapshotInput } from "@pluralscape/data/transforms/snapshot";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawSnapshot } from "../../__tests__/factories.js";
 
-import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
-import type { SnapshotContent, SystemSnapshotId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { SystemSnapshotId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -86,38 +82,6 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
 // Must import AFTER vi.mock
 const { useSnapshot, useSnapshotsList, useCreateSnapshot, useDeleteSnapshot } =
   await import("../use-snapshots.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeSnapshotContent(): SnapshotContent {
-  return {
-    name: "Test Snapshot",
-    description: null,
-    members: [],
-    structureEntityTypes: [],
-    structureEntities: [],
-    structureEntityLinks: [],
-    structureEntityMemberLinks: [],
-    structureEntityAssociations: [],
-    relationships: [],
-    groups: [],
-    innerworldRegions: [],
-    innerworldEntities: [],
-  };
-}
-
-function makeRawSnapshot(id: string): SnapshotRaw {
-  const content = makeSnapshotContent();
-  const encrypted = encryptSnapshotInput(content, TEST_MASTER_KEY);
-  return {
-    id: brandId<SystemSnapshotId>(id),
-    systemId: TEST_SYSTEM_ID,
-    snapshotTrigger: "manual",
-    createdAt: NOW,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptPollInput, encryptPollVoteInput } from "@pluralscape/data/transforms/poll";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawPoll, makeRawPollVote, TEST_SYSTEM_ID } from "../../__tests__/factories.js";
 
-import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
-import type { PollId, PollOptionId, PollVoteId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
+
+import type { PollId, PollOptionId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -184,62 +180,6 @@ const {
   useUpdateVote,
   useDeleteVote,
 } = await import("../use-polls.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawPoll(id: string): PollRaw {
-  const encrypted = encryptPollInput(
-    {
-      title: `Poll ${id}`,
-      description: null,
-      options: [
-        {
-          id: brandId<PollOptionId>("opt-1"),
-          label: "Yes",
-          voteCount: 0,
-          color: null,
-          emoji: null,
-        },
-      ],
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<PollId>(id),
-    systemId: TEST_SYSTEM_ID,
-    createdByMemberId: null,
-    kind: "standard",
-    status: "open",
-    closedAt: null,
-    endsAt: null,
-    allowMultipleVotes: false,
-    maxVotesPerMember: 1,
-    allowAbstain: false,
-    allowVeto: false,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
-
-function makeRawPollVote(id: string, pollId: string): PollVoteRaw {
-  const encrypted = encryptPollVoteInput({ comment: "My comment" }, TEST_MASTER_KEY);
-  return {
-    id: brandId<PollVoteId>(id),
-    pollId: brandId<PollId>(pollId),
-    optionId: brandId<PollOptionId>("opt-1"),
-    voter: null,
-    isVeto: false,
-    votedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

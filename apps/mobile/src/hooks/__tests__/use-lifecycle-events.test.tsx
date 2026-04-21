@@ -1,22 +1,16 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptLifecycleEventInput } from "@pluralscape/data/transforms/lifecycle-event";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawLifecycleEvent } from "../../__tests__/factories.js";
 
-import type {
-  LifecycleEventEncryptedPayload,
-  LifecycleEventRaw,
-} from "@pluralscape/data/transforms/lifecycle-event";
-import type { LifecycleEventId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { LifecycleEventRaw } from "@pluralscape/data/transforms/lifecycle-event";
+import type { LifecycleEventId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -124,33 +118,8 @@ const {
   useDeleteLifecycleEvent,
 } = await import("../use-lifecycle-events.js");
 
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawEvent(
-  id: string,
-  eventType: string,
-  payload: LifecycleEventEncryptedPayload,
-  plaintextMetadata: LifecycleEventRaw["plaintextMetadata"],
-): LifecycleEventRaw {
-  const encrypted = encryptLifecycleEventInput(payload, TEST_MASTER_KEY);
-  return {
-    id: brandId<LifecycleEventId>(id),
-    systemId: TEST_SYSTEM_ID,
-    eventType: eventType as LifecycleEventRaw["eventType"],
-    occurredAt: NOW,
-    recordedAt: NOW,
-    updatedAt: NOW,
-    plaintextMetadata,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
-
 function makeDiscoveryEvent(id: string, memberId: string): LifecycleEventRaw {
-  return makeRawEvent(id, "discovery", { notes: null }, { memberIds: [memberId] });
+  return makeRawLifecycleEvent(id, "discovery", { notes: null }, { memberIds: [memberId] });
 }
 
 beforeEach(() => {

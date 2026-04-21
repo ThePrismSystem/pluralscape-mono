@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptNoteInput } from "@pluralscape/data/transforms/note";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawNote } from "../../__tests__/factories.js";
 
-import type { NoteRaw } from "@pluralscape/data/transforms/note";
-import type { NoteId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { NoteId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -120,28 +116,6 @@ const {
   useRestoreNote,
   useDeleteNote,
 } = await import("../use-notes.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawNote(id: string): NoteRaw {
-  const encrypted = encryptNoteInput(
-    { title: "Note", content: "Body", backgroundColor: null },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<NoteId>(id),
-    systemId: TEST_SYSTEM_ID,
-    authorEntityType: null,
-    authorEntityId: null,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

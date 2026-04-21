@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptAcknowledgementInput } from "@pluralscape/data/transforms/acknowledgement";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawAcknowledgement } from "../../__tests__/factories.js";
 
-import type { AcknowledgementRaw } from "@pluralscape/data/transforms/acknowledgement";
-import type { AcknowledgementId, MemberId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { AcknowledgementId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -120,32 +116,6 @@ const {
   useRestoreAcknowledgement,
   useDeleteAcknowledgement,
 } = await import("../use-acknowledgements.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawAcknowledgement(id: string): AcknowledgementRaw {
-  const encrypted = encryptAcknowledgementInput(
-    {
-      message: "Please read",
-      targetMemberId: brandId<MemberId>("m-1"),
-      confirmedAt: null,
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<AcknowledgementId>(id),
-    systemId: TEST_SYSTEM_ID,
-    createdByMemberId: null,
-    confirmed: false,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

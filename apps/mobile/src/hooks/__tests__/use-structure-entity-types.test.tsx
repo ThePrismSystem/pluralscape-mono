@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptStructureEntityTypeInput } from "@pluralscape/data/transforms/structure-entity-type";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawStructureEntityType } from "../../__tests__/factories.js";
 
-import type { StructureEntityTypeRaw } from "@pluralscape/data/transforms/structure-entity-type";
-import type { SystemStructureEntityTypeId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { SystemStructureEntityTypeId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -125,32 +121,6 @@ const {
   useDeleteStructureEntityType,
 } = await import("../use-structure-entity-types.js");
 
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawEntityType(id: string): StructureEntityTypeRaw {
-  const encrypted = encryptStructureEntityTypeInput(
-    {
-      name: `Type ${id}`,
-      description: "A test entity type",
-      emoji: null,
-      color: null,
-      imageSource: null,
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<SystemStructureEntityTypeId>(id),
-    systemId: TEST_SYSTEM_ID,
-    sortOrder: 0,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
-
 beforeEach(() => {
   fixtures.clear();
   vi.clearAllMocks();
@@ -158,7 +128,7 @@ beforeEach(() => {
 
 describe("useStructureEntityType", () => {
   it("returns decrypted entity type data", async () => {
-    fixtures.set("structure.entityType.get", makeRawEntityType("stet_1"));
+    fixtures.set("structure.entityType.get", makeRawStructureEntityType("stet_1"));
     const { result } = renderHookWithProviders(() =>
       useStructureEntityType(brandId<SystemStructureEntityTypeId>("stet_1")),
     );
@@ -181,7 +151,7 @@ describe("useStructureEntityType", () => {
   });
 
   it("select is stable across rerenders", async () => {
-    fixtures.set("structure.entityType.get", makeRawEntityType("stet_1"));
+    fixtures.set("structure.entityType.get", makeRawStructureEntityType("stet_1"));
     const { result, rerender } = renderHookWithProviders(() =>
       useStructureEntityType(brandId<SystemStructureEntityTypeId>("stet_1")),
     );
@@ -198,7 +168,7 @@ describe("useStructureEntityType", () => {
 describe("useStructureEntityTypesList", () => {
   it("returns decrypted paginated entity types", async () => {
     fixtures.set("structure.entityType.list", {
-      data: [makeRawEntityType("stet_1"), makeRawEntityType("stet_2")],
+      data: [makeRawStructureEntityType("stet_1"), makeRawStructureEntityType("stet_2")],
       nextCursor: null,
     });
     const { result } = renderHookWithProviders(() => useStructureEntityTypesList());
@@ -225,7 +195,7 @@ describe("useStructureEntityTypesList", () => {
 
   it("select is stable across rerenders", async () => {
     fixtures.set("structure.entityType.list", {
-      data: [makeRawEntityType("stet_1")],
+      data: [makeRawStructureEntityType("stet_1")],
       nextCursor: null,
     });
     const { result, rerender } = renderHookWithProviders(() => useStructureEntityTypesList());
