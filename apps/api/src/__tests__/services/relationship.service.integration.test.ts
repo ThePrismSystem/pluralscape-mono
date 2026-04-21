@@ -10,15 +10,14 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { createRelationship } from "../../services/relationship/create.js";
 import {
   archiveRelationship,
-  createRelationship,
   deleteRelationship,
-  getRelationship,
-  listRelationships,
   restoreRelationship,
-  updateRelationship,
-} from "../../services/relationship.service.js";
+} from "../../services/relationship/lifecycle.js";
+import { getRelationship, listRelationships } from "../../services/relationship/queries.js";
+import { updateRelationship } from "../../services/relationship/update.js";
 import {
   asDb,
   assertApiError,

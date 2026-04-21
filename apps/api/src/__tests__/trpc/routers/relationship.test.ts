@@ -19,25 +19,31 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/relationship.service.js", () => ({
+vi.mock("../../../services/relationship/create.js", () => ({
   createRelationship: vi.fn(),
+}));
+
+vi.mock("../../../services/relationship/queries.js", () => ({
   getRelationship: vi.fn(),
   listRelationships: vi.fn(),
+}));
+
+vi.mock("../../../services/relationship/update.js", () => ({
   updateRelationship: vi.fn(),
+}));
+
+vi.mock("../../../services/relationship/lifecycle.js", () => ({
   archiveRelationship: vi.fn(),
   restoreRelationship: vi.fn(),
   deleteRelationship: vi.fn(),
 }));
 
-const {
-  createRelationship,
-  getRelationship,
-  listRelationships,
-  updateRelationship,
-  archiveRelationship,
-  restoreRelationship,
-  deleteRelationship,
-} = await import("../../../services/relationship.service.js");
+const { createRelationship } = await import("../../../services/relationship/create.js");
+const { getRelationship, listRelationships } =
+  await import("../../../services/relationship/queries.js");
+const { updateRelationship } = await import("../../../services/relationship/update.js");
+const { archiveRelationship, restoreRelationship, deleteRelationship } =
+  await import("../../../services/relationship/lifecycle.js");
 
 const { relationshipRouter } = await import("../../../trpc/routers/relationship.js");
 

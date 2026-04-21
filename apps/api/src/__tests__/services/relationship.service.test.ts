@@ -35,15 +35,12 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const {
-  createRelationship,
-  listRelationships,
-  getRelationship,
-  updateRelationship,
-  deleteRelationship,
-  archiveRelationship,
-  restoreRelationship,
-} = await import("../../services/relationship.service.js");
+const { createRelationship } = await import("../../services/relationship/create.js");
+const { listRelationships, getRelationship } =
+  await import("../../services/relationship/queries.js");
+const { updateRelationship } = await import("../../services/relationship/update.js");
+const { deleteRelationship, archiveRelationship, restoreRelationship } =
+  await import("../../services/relationship/lifecycle.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
