@@ -13,12 +13,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/field-definition.service.js", () => ({
-  listFieldDefinitions: vi.fn(),
-  createFieldDefinition: vi.fn(),
-  getFieldDefinition: vi.fn(),
-  updateFieldDefinition: vi.fn(),
-  archiveFieldDefinition: vi.fn(),
+vi.mock("../../../services/field-definition/restore.js", () => ({
   restoreFieldDefinition: vi.fn(),
 }));
 
@@ -33,7 +28,7 @@ vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { restoreFieldDefinition } = await import("../../../services/field-definition.service.js");
+const { restoreFieldDefinition } = await import("../../../services/field-definition/restore.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

@@ -7,12 +7,12 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { listFieldDefinitions } from "../../services/field-definition.service.js";
+import { listFieldDefinitions } from "../../services/field-definition/list.js";
 
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "./fields.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { FieldDefinitionResult } from "../../services/field-definition.service.js";
+import type { FieldDefinitionResult } from "../../services/field-definition/internal.js";
 
 const FIELD_DEF_FIELDS = [
   "id",
