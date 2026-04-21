@@ -74,6 +74,43 @@ describe("diffEntities", () => {
     expect(diff.deletes).toHaveLength(1);
     expect(diff.deletes[0]).toBe("remove");
   });
+
+  it("golden vector: insert + update + delete + identical rows produce the expected DiffResult", () => {
+    const current: EntityRow[] = [
+      { id: "identical", name: "Same", score: 5 },
+      { id: "to-update", name: "Before", score: 1 },
+      { id: "to-delete", name: "Gone", score: 0 },
+    ];
+    const incoming: EntityRow[] = [
+      { id: "identical", name: "Same", score: 5 },
+      { id: "to-update", name: "After", score: 2 },
+      { id: "to-insert", name: "Fresh", score: 9 },
+    ];
+
+    const diff = diffEntities(current, incoming);
+
+    expect(diff).toEqual({
+      inserts: [{ id: "to-insert", name: "Fresh", score: 9 }],
+      updates: [{ id: "to-update", name: "After", score: 2 }],
+      deletes: ["to-delete"],
+    });
+  });
+
+  it("dedupes duplicate ids in `incoming` last-write-wins (later duplicate supersedes earlier)", () => {
+    const current: EntityRow[] = [{ id: "a", name: "Original" }];
+    const incoming: EntityRow[] = [
+      { id: "a", name: "First" },
+      { id: "a", name: "Last" },
+    ];
+
+    const diff = diffEntities(current, incoming);
+
+    // Only one update, reflecting the LAST occurrence — the earlier duplicate
+    // is silently discarded by the incoming map.
+    expect(diff.inserts).toHaveLength(0);
+    expect(diff.deletes).toHaveLength(0);
+    expect(diff.updates).toEqual([{ id: "a", name: "Last" }]);
+  });
 });
 
 // ── toSnakeCase ───────────────────────────────────────────────────────

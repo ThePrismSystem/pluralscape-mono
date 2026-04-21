@@ -255,7 +255,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
     expect(session.document.members[asMemberId("mem_1")]?.archived).toBe(false);
   });
 
-  it("skips entity types not in dirtyEntityTypes (sync-2yh3)", () => {
+  it("skips entity types not in dirtyEntityTypes", () => {
     const base = createSystemCoreDocument();
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
@@ -291,7 +291,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
     expect(envelope).toBeNull();
   });
 
-  it("re-stamps when the dirty set does include the affected entity type (sync-2yh3)", () => {
+  it("re-stamps when the dirty set does include the affected entity type", () => {
     const base = createSystemCoreDocument();
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
@@ -323,6 +323,45 @@ describe("PostMergeValidator: enforceTombstones", () => {
 
     expect(notifications.length).toBeGreaterThan(0);
     expect(notifications[0]?.entityType).toBe("member");
+  });
+
+  it("returns no notifications and no envelope when dirty set is empty, even with archived entities present", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-tomb-empty-dirty"),
+      sodium,
+    });
+
+    // Seed multiple archived entities across different types; an empty dirty
+    // set must still short-circuit every scan.
+    session.change((d) => {
+      d.members[asMemberId("mem_1")] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Archived"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.groups[asGroupId("grp_archived")] = makeGroup("grp_archived", 1);
+      const archivedGroup = d.groups[asGroupId("grp_archived")];
+      if (archivedGroup) archivedGroup.archived = true;
+    });
+
+    const { notifications, envelope } = enforceTombstones(session, new Set());
+
+    expect(notifications).toHaveLength(0);
+    expect(envelope).toBeNull();
   });
 });
 

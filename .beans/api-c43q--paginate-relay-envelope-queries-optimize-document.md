@@ -31,6 +31,6 @@ Implements three M3 audit findings for WS handlers and relay DB service:
 
 - `handleSubmitChange` verifies envelope signatures using `verifyEnvelopeSignature()` before storing/broadcasting
 - On verification failure, returns `INVALID_ENVELOPE` SyncError and drops the envelope
-- Configurable via `VERIFY_ENVELOPE_SIGNATURES` env var (defaults to `true` for secure-by-default)
+- Was configurable via `VERIFY_ENVELOPE_SIGNATURES` env var; sync-ge3a removed the kill-switch — verification is now unconditional.
 - Added `INVALID_ENVELOPE` to `SyncErrorCode` union
 - Message router updated to handle the new error return path

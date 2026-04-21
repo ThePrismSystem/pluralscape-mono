@@ -18,7 +18,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
 import { SyncEngine } from "../engine/sync-engine.js";
-import { NoActiveSessionError } from "../errors.js";
+import { DocumentTypeMismatchError, NoActiveSessionError } from "../errors.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
@@ -148,10 +148,8 @@ describe("SyncEngine steady-state", () => {
         storageAdapter: mockStorageAdapter({ appendChange }),
       });
 
-      // Use Automerge-compatible mutation (untyped via the unknown doc)
       const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_test"] = { value: "hello" };
+        doc.system.name = new Automerge.ImmutableString("hello");
       });
 
       expect(seq).toBe(1);
@@ -162,8 +160,7 @@ describe("SyncEngine steady-state", () => {
       const engine = await createBootstrappedEngine();
 
       await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_test2"] = { value: 1 };
+        doc.system.name = new Automerge.ImmutableString("state-test");
       });
 
       const state = engine.getSyncState(SYSTEM_CORE_DOC_ID);
@@ -177,12 +174,10 @@ describe("SyncEngine steady-state", () => {
       });
 
       const seq1 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_a"] = { v: 1 };
+        doc.system.name = new Automerge.ImmutableString("first");
       });
       const seq2 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_b"] = { v: 2 };
+        doc.system.name = new Automerge.ImmutableString("second");
       });
 
       expect(seq1).toBe(1);
@@ -199,14 +194,30 @@ describe("SyncEngine steady-state", () => {
       ).rejects.toThrow(NoActiveSessionError);
     });
 
-    it("rejects when documentType mismatches docId (sync-orkv)", async () => {
+    it("rejects with DocumentTypeMismatchError when documentType mismatches the hydrated session", async () => {
       const engine = await createBootstrappedEngine();
 
       await expect(
         engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "fronting", () => {
           /* no-op */
         }),
-      ).rejects.toThrow(NoActiveSessionError);
+      ).rejects.toThrow(DocumentTypeMismatchError);
+    });
+  });
+
+  describe("getTypedSession", () => {
+    it("returns undefined for a non-hydrated document without throwing", async () => {
+      const engine = await createBootstrappedEngine();
+
+      expect(engine.getTypedSession(NONEXISTENT_DOC_ID, "system-core")).toBeUndefined();
+    });
+
+    it("throws DocumentTypeMismatchError when the hydrated session has a different type", async () => {
+      const engine = await createBootstrappedEngine();
+
+      expect(() => engine.getTypedSession(SYSTEM_CORE_DOC_ID, "fronting")).toThrow(
+        DocumentTypeMismatchError,
+      );
     });
   });
 
@@ -296,8 +307,7 @@ describe("SyncEngine steady-state", () => {
       });
 
       await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_offline_test"] = { value: "test" };
+        doc.system.name = new Automerge.ImmutableString("offline-test");
       });
 
       // Enqueue should have been called before submit
@@ -324,8 +334,7 @@ describe("SyncEngine steady-state", () => {
       });
 
       const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_sync_test"] = { value: 1 };
+        doc.system.name = new Automerge.ImmutableString("sync-test");
       });
 
       expect(markSynced).toHaveBeenCalledTimes(1);
@@ -357,8 +366,7 @@ describe("SyncEngine steady-state", () => {
 
       await expect(
         engine.applyLocalChange(SYSTEM_CORE_DOC_ID, "system-core", (doc) => {
-          const d = doc as Record<string, Record<string, unknown>>;
-          d["_fail_test"] = { value: 1 };
+          doc.system.name = new Automerge.ImmutableString("fail-test");
         }),
       ).rejects.toThrow("Network offline");
 

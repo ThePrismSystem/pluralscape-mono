@@ -30,7 +30,9 @@ export interface MaterializerDb {
  *
  * Both sides are materialised into `Map<id, hash>` in a single pass each,
  * then compared directly — rowHash is called exactly once per row on either
- * side.
+ * side. If `incoming` contains duplicate ids, the last occurrence wins
+ * (last-write-wins via the incoming map) and earlier duplicates are silently
+ * dropped — callers must not rely on ordering when passing duplicates.
  */
 export function diffEntities(
   current: readonly EntityRow[],

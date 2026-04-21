@@ -10,6 +10,7 @@ import { extractEntities } from "./extract-entities.js";
 
 import type { SyncDocumentType } from "../../document-types.js";
 import type { EventBus, DataLayerEventMap } from "../../event-bus/index.js";
+import type { SyncedEntityType } from "../../strategies/crdt-strategies.js";
 
 /**
  * Shared materialization logic for all document types.
@@ -22,7 +23,8 @@ import type { EventBus, DataLayerEventMap } from "../../event-bus/index.js";
  * The optional `dirtyEntityTypes` set, when provided, narrows materialisation
  * to only those entity types whose CRDT fields were touched by the incoming
  * change. Clean types are skipped entirely — no SQL is issued for them. When
- * omitted, all entity types for the document are scanned (legacy behaviour).
+ * omitted, every entity type for the document is scanned (default — no dirty
+ * filter).
  *
  * After all entity types are processed, emits `materialized:document`
  * and `search:index-updated` events.
@@ -32,7 +34,7 @@ export function materializeDocument(
   doc: Record<string, unknown>,
   db: MaterializerDb,
   eventBus: EventBus<DataLayerEventMap>,
-  dirtyEntityTypes?: ReadonlySet<string>,
+  dirtyEntityTypes?: ReadonlySet<SyncedEntityType>,
 ): void {
   const entityTypes = getEntityTypesForDocument(documentType);
 

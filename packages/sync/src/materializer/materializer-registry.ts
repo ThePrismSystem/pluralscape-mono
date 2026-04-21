@@ -3,6 +3,7 @@ import { materializeDocument } from "./materializers/materialize-document.js";
 import type { SyncDocumentType } from "../document-types.js";
 import type { MaterializerDb } from "./base-materializer.js";
 import type { EventBus, DataLayerEventMap } from "../event-bus/index.js";
+import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
 
 /**
  * A materializer that knows how to extract entities from an Automerge document
@@ -15,8 +16,8 @@ export interface DocumentMaterializer {
    * Materialize all entity types from the given Automerge document into SQLite.
    *
    * When `dirtyEntityTypes` is provided, only the listed entity types are
-   * processed; clean types are skipped entirely. Omit to scan all entity
-   * types (legacy behaviour — O(N) SQL scans per merge).
+   * processed; clean types are skipped entirely. Omit for the default scan
+   * of every entity type (no dirty filter — full O(N) SQL scans per merge).
    *
    * Emits `materialized:document` and `search:index-updated` events when done.
    */
@@ -24,7 +25,7 @@ export interface DocumentMaterializer {
     doc: Record<string, unknown>,
     db: MaterializerDb,
     eventBus: EventBus<DataLayerEventMap>,
-    dirtyEntityTypes?: ReadonlySet<string>,
+    dirtyEntityTypes?: ReadonlySet<SyncedEntityType>,
   ): void;
 }
 
@@ -51,7 +52,7 @@ export function createMaterializer(documentType: SyncDocumentType): DocumentMate
       doc: Record<string, unknown>,
       db: MaterializerDb,
       eventBus: EventBus<DataLayerEventMap>,
-      dirtyEntityTypes?: ReadonlySet<string>,
+      dirtyEntityTypes?: ReadonlySet<SyncedEntityType>,
     ): void {
       materializeDocument(documentType, doc, db, eventBus, dirtyEntityTypes);
     },

@@ -7,7 +7,6 @@ import {
   encryptSnapshot,
   decryptSnapshot,
   verifyEnvelopeSignature,
-  verifyKeyBinding,
   KeyBindingMismatchError,
   SignatureVerificationError,
 } from "../encrypted-sync.js";
@@ -150,7 +149,7 @@ describe("encryptSnapshot / decryptSnapshot", () => {
   });
 });
 
-describe("authorPublicKey ↔ encryption key binding (sync-ldoi)", () => {
+describe("authorPublicKey ↔ encryption key binding", () => {
   it("decryptChange rejects envelope whose authorPublicKey was swapped after signing", () => {
     const plaintext = testBytes(32);
     const envelope = encryptChange(plaintext, DOCUMENT_ID, keys, sodium);
@@ -193,38 +192,5 @@ describe("authorPublicKey ↔ encryption key binding (sync-ldoi)", () => {
     expect(() => decryptSnapshot(forged, keys.encryptionKey, sodium)).toThrow(
       KeyBindingMismatchError,
     );
-  });
-
-  it("verifyKeyBinding passes for a legitimately produced change envelope", () => {
-    const plaintext = testBytes(32);
-    const envelope = encryptChange(plaintext, DOCUMENT_ID, keys, sodium);
-    const withSeq = { ...envelope, seq: 0 };
-    expect(() => {
-      verifyKeyBinding(withSeq, keys.encryptionKey, sodium);
-    }).not.toThrow();
-  });
-
-  it("verifyKeyBinding passes for a legitimately produced snapshot envelope", () => {
-    const snapshot = testBytes(64);
-    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 3, keys, sodium);
-    expect(() => {
-      verifyKeyBinding(envelope, keys.encryptionKey, sodium);
-    }).not.toThrow();
-  });
-
-  it("verifyKeyBinding throws KeyBindingMismatchError for a forged authorPublicKey", () => {
-    const plaintext = testBytes(32);
-    const envelope = encryptChange(plaintext, DOCUMENT_ID, keys, sodium);
-    const attackerKeys = sodium.signKeypair();
-    const forgedSignature = sodium.signDetached(envelope.ciphertext, attackerKeys.secretKey);
-    const forged = {
-      ...envelope,
-      authorPublicKey: attackerKeys.publicKey,
-      signature: forgedSignature,
-      seq: 0,
-    };
-    expect(() => {
-      verifyKeyBinding(forged, keys.encryptionKey, sodium);
-    }).toThrow(KeyBindingMismatchError);
   });
 });

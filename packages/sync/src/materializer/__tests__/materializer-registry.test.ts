@@ -53,7 +53,7 @@ describe("materializer-registry", () => {
     });
   });
 
-  describe("DocumentMaterializer.materialize (sync-qh8l / sync-f4ma)", () => {
+  describe("DocumentMaterializer.materialize", () => {
     function makeDb(): MaterializerDb {
       return {
         queryAll: vi.fn().mockReturnValue([] as EntityRow[]),
@@ -95,7 +95,6 @@ describe("materializer-registry", () => {
       };
       const bus = makeEventBus();
 
-      // With dirty set empty, queryAll must never be called.
       m.materialize({}, db, bus, new Set());
       expect(queryAll).not.toHaveBeenCalled();
     });

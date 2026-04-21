@@ -1,5 +1,5 @@
 import type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
-import type { AeadKey, SodiumAdapter } from "@pluralscape/crypto";
+import type { AeadKey, AeadNonce, SodiumAdapter } from "@pluralscape/crypto";
 import type { SyncDocumentId } from "@pluralscape/types";
 
 export class SignatureVerificationError extends Error {
@@ -15,6 +15,23 @@ export class KeyBindingMismatchError extends Error {
 
   constructor(
     message = "Envelope authorPublicKey is not cryptographically bound to the document encryption key.",
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+  }
+}
+
+/**
+ * Thrown when AEAD decryption fails under a provided encryption key but the
+ * signature over the ciphertext verified successfully is NOT asserted. Covers
+ * benign causes such as rotated or stale encryption keys — the decryption
+ * failure reflects key desync, not an active forgery attempt.
+ */
+export class EncryptionKeyMismatchError extends Error {
+  override readonly name = "EncryptionKeyMismatchError" as const;
+
+  constructor(
+    message = "AEAD decryption failed under the provided encryption key.",
     options?: ErrorOptions,
   ) {
     super(message, options);
@@ -78,6 +95,33 @@ function buildSnapshotAD(
   return ad;
 }
 
+/**
+ * Attempt AEAD decryption and classify a failure into the appropriate error.
+ *
+ * When `authorPublicKeyIsBound` is true, the caller has already verified the
+ * envelope signature and the AD includes the envelope's authorPublicKey — the
+ * only remaining cause of decryption failure under the provided key is a
+ * binding mismatch (forged authorPublicKey). Otherwise a decrypt failure is
+ * attributed to benign encryption-key desync.
+ */
+function aeadDecryptOrClassify(
+  ciphertext: Uint8Array,
+  nonce: AeadNonce,
+  ad: Uint8Array,
+  encryptionKey: AeadKey,
+  sodium: SodiumAdapter,
+  authorPublicKeyIsBound: boolean,
+): Uint8Array {
+  try {
+    return sodium.aeadDecrypt(ciphertext, nonce, ad, encryptionKey);
+  } catch (err: unknown) {
+    if (authorPublicKeyIsBound) {
+      throw new KeyBindingMismatchError(undefined, { cause: err });
+    }
+    throw new EncryptionKeyMismatchError(undefined, { cause: err });
+  }
+}
+
 export function encryptChange(
   change: Uint8Array,
   documentId: SyncDocumentId,
@@ -112,13 +156,14 @@ export function decryptChange(
   }
 
   const ad = buildChangeAD(envelope.documentId, envelope.authorPublicKey);
-  try {
-    return sodium.aeadDecrypt(envelope.ciphertext, envelope.nonce, ad, encryptionKey);
-  } catch (err: unknown) {
-    // A valid signature paired with an AEAD failure indicates key-binding
-    // mismatch: the envelope's signing key is not the one used to encrypt.
-    throw new KeyBindingMismatchError(undefined, { cause: err });
-  }
+  return aeadDecryptOrClassify(
+    envelope.ciphertext,
+    envelope.nonce,
+    ad,
+    encryptionKey,
+    sodium,
+    true,
+  );
 }
 
 export function encryptSnapshot(
@@ -161,11 +206,14 @@ export function decryptSnapshot(
     envelope.snapshotVersion,
     envelope.authorPublicKey,
   );
-  try {
-    return sodium.aeadDecrypt(envelope.ciphertext, envelope.nonce, ad, encryptionKey);
-  } catch (err: unknown) {
-    throw new KeyBindingMismatchError(undefined, { cause: err });
-  }
+  return aeadDecryptOrClassify(
+    envelope.ciphertext,
+    envelope.nonce,
+    ad,
+    encryptionKey,
+    sodium,
+    true,
+  );
 }
 
 export function verifyEnvelopeSignature(
@@ -177,30 +225,4 @@ export function verifyEnvelopeSignature(
     envelope.ciphertext,
     envelope.authorPublicKey,
   );
-}
-
-/**
- * Assert that the signing key in an envelope is cryptographically bound to
- * the encryption key. Succeeds if decryption under the provided encryption
- * key and the envelope's advertised authorPublicKey produces a valid AEAD
- * authentication tag. Throws KeyBindingMismatchError otherwise.
- *
- * Callers that already need the plaintext should use decryptChange /
- * decryptSnapshot directly — those functions enforce the same binding and
- * return the plaintext in the same call.
- */
-export function verifyKeyBinding(
-  envelope: EncryptedChangeEnvelope | EncryptedSnapshotEnvelope,
-  encryptionKey: AeadKey,
-  sodium: SodiumAdapter,
-): void {
-  const ad =
-    "snapshotVersion" in envelope
-      ? buildSnapshotAD(envelope.documentId, envelope.snapshotVersion, envelope.authorPublicKey)
-      : buildChangeAD(envelope.documentId, envelope.authorPublicKey);
-  try {
-    sodium.aeadDecrypt(envelope.ciphertext, envelope.nonce, ad, encryptionKey);
-  } catch (err: unknown) {
-    throw new KeyBindingMismatchError(undefined, { cause: err });
-  }
 }

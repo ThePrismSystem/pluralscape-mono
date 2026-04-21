@@ -4,6 +4,7 @@ import { createEventBus } from "../../event-bus/index.js";
 import { materializeDocument } from "../materializers/materialize-document.js";
 
 import type { DataLayerEventMap, EventBus } from "../../event-bus/index.js";
+import type { SyncedEntityType } from "../../strategies/crdt-strategies.js";
 import type { EntityRow, MaterializerDb } from "../base-materializer.js";
 
 // ── Test helpers ──────────────────────────────────────────────────────
@@ -263,7 +264,7 @@ describe("materializeDocument", () => {
   });
 });
 
-describe("materializeDocument dirtyEntityTypes (sync-f4ma)", () => {
+describe("materializeDocument dirtyEntityTypes", () => {
   it("skips queryAll for entity types not in the dirty set", () => {
     const { db, queries } = makeDb();
     const { eventBus } = makeEventBus();
@@ -298,14 +299,14 @@ describe("materializeDocument dirtyEntityTypes (sync-f4ma)", () => {
 
     // Mark only members dirty — system should not be queried even though
     // it is present in the document.
-    const dirty = new Set(["member"]);
+    const dirty = new Set<SyncedEntityType>(["member"]);
     materializeDocument("system-core", doc, db, eventBus, dirty);
 
     expect(queries).toHaveLength(1);
     expect(queries[0]).toContain("members");
   });
 
-  it("scans all entity types when dirtyEntityTypes is undefined (legacy behaviour)", () => {
+  it("scans all entity types when dirtyEntityTypes is undefined (default — no dirty filter)", () => {
     const { db, queries } = makeDb();
     const { eventBus } = makeEventBus();
 
@@ -331,7 +332,6 @@ describe("materializeDocument dirtyEntityTypes (sync-f4ma)", () => {
 
     materializeDocument("system-core", doc, db, eventBus);
 
-    // Only members extracted from doc → only members queried.
     expect(queries).toHaveLength(1);
     expect(queries[0]).toContain("members");
   });
@@ -361,7 +361,7 @@ describe("materializeDocument dirtyEntityTypes (sync-f4ma)", () => {
     };
 
     // Dirty set points at an entity type that is not in the document.
-    const dirty = new Set(["group"]);
+    const dirty = new Set<SyncedEntityType>(["group"]);
     materializeDocument("system-core", doc, db, eventBus, dirty);
 
     expect(queries).toHaveLength(0);

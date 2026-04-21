@@ -26,3 +26,4 @@ Completed via PR #457 (`fix(api): security, validation, and trust boundary harde
 
 - Removed `systemId`/`webhookId` from webhook test delivery payload (info disclosure)
 - Cached `VERIFY_ENVELOPE_SIGNATURES` at startup; eliminated mutable one-shot flag in `ws/handlers.ts`
+- sync-ge3a (M9) subsequently removed the `VERIFY_ENVELOPE_SIGNATURES` env var entirely; `ws/handlers.ts` no longer reads it.

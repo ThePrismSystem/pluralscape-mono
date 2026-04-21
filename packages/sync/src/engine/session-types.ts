@@ -1,12 +1,8 @@
 /**
  * Strongly-typed sync session variants.
  *
- * SyncEngine stores sessions in a map keyed by SyncDocumentId. Previously the
- * value type was `EncryptedSyncSession<unknown>`, which forced every consumer
- * to cast the session document back to a concrete CRDT shape. This module
- * provides a discriminated union over document type so that a narrow step
- * (via `parseDocumentId` or an explicit `documentType` argument) yields a
- * session whose concrete shape is known.
+ * SyncEngine stores sessions in a discriminated union keyed by `documentType`,
+ * so a single narrow step yields the concrete CRDT shape.
  *
  * Usage:
  *   const session = engine.getSession(docId);       // AnyDocumentSession
@@ -36,13 +32,13 @@ import type { EncryptedSyncSession } from "../sync-session.js";
  * need the concrete shape.
  */
 export interface DocumentTypeMap {
-  readonly "system-core": SystemCoreDocument & Record<string, unknown>;
-  readonly fronting: FrontingDocument & Record<string, unknown>;
-  readonly chat: ChatDocument & Record<string, unknown>;
-  readonly journal: JournalDocument & Record<string, unknown>;
-  readonly note: NoteDocument & Record<string, unknown>;
-  readonly "privacy-config": PrivacyConfigDocument & Record<string, unknown>;
-  readonly bucket: BucketProjectionDocument & Record<string, unknown>;
+  readonly "system-core": SystemCoreDocument;
+  readonly fronting: FrontingDocument;
+  readonly chat: ChatDocument;
+  readonly journal: JournalDocument;
+  readonly note: NoteDocument;
+  readonly "privacy-config": PrivacyConfigDocument;
+  readonly bucket: BucketProjectionDocument;
 }
 
 /**

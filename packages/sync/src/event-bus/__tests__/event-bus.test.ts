@@ -158,7 +158,6 @@ describe("createEventBus", () => {
 
     bus.emit("test:alpha", { type: "test:alpha", value: 1 });
 
-    // Both listeners fired on the first emit.
     expect(captured).toEqual(expect.arrayContaining([1, 10]));
     expect(captured).toHaveLength(2);
 
@@ -172,11 +171,8 @@ describe("createEventBus", () => {
     const bus = createEventBus<TestEventMap>();
     const listener = vi.fn();
     const unsub = bus.on("test:alpha", listener);
-
-    // First unsubscribe removes the only listener and the bucket.
     unsub();
 
-    // Subsequent emit finds no bucket and returns early.
     bus.emit("test:alpha", { type: "test:alpha", value: 0 });
     expect(listener).not.toHaveBeenCalled();
   });

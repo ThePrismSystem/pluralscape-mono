@@ -497,8 +497,7 @@ describe("P-M4: operation promise cleanup", () => {
     const engine = await createBootstrappedEngine();
 
     await engine.applyLocalChange(asSyncDocId("system-core-sys_test"), "system-core", (doc) => {
-      const d = doc as Record<string, Record<string, unknown>>;
-      d["_cleanup_test"] = { value: "test" };
+      doc.system.name = new Automerge.ImmutableString("cleanup-test");
     });
 
     // Drain the microtask queue so the cleanup .then() handler fires
@@ -512,8 +511,7 @@ describe("P-M4: operation promise cleanup", () => {
       asSyncDocId("system-core-sys_test"),
       "system-core",
       (doc) => {
-        const d = doc as Record<string, Record<string, unknown>>;
-        d["_cleanup_test2"] = { value: "test2" };
+        doc.system.name = new Automerge.ImmutableString("cleanup-test2");
       },
     );
 

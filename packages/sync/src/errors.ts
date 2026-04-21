@@ -103,6 +103,31 @@ export class NoActiveSessionError extends Error {
 }
 
 /**
+ * Thrown when a caller invokes a session-typed operation with a `documentType`
+ * discriminant that does not match the hydrated session for that document.
+ *
+ * Distinguishes caller-side bugs (wrong type on a hydrated doc) from the
+ * "not hydrated yet" case surfaced by `NoActiveSessionError` so consumers can
+ * alert on the former while gracefully recovering from the latter.
+ */
+export class DocumentTypeMismatchError extends Error {
+  override readonly name = "DocumentTypeMismatchError" as const;
+  readonly docId: string;
+  readonly expectedType: string;
+  readonly actualType: string;
+
+  constructor(docId: string, expectedType: string, actualType: string, options?: ErrorOptions) {
+    super(
+      `Document type mismatch for ${docId}: expected ${expectedType}, got ${actualType}`,
+      options,
+    );
+    this.docId = docId;
+    this.expectedType = expectedType;
+    this.actualType = actualType;
+  }
+}
+
+/**
  * Thrown when a document is not found (e.g. in relay service operations).
  */
 export class DocumentNotFoundError extends Error {
