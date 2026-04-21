@@ -182,6 +182,35 @@ If the new endpoint is REST-only by design (SSE, infrastructure), add an entry t
 
 Rate limit categories are defined in `@pluralscape/types`. Use the exact same category on the REST route and the tRPC procedure — the parity check flags mismatches.
 
+### Typed auth context
+
+Every protected route group must type its Hono instance with `AuthEnv`:
+
+```ts
+import { Hono } from "hono";
+
+import type { AuthEnv } from "../../lib/auth-context.js";
+
+export const myRoute = new Hono<AuthEnv>();
+
+myRoute.get("/", (c) => {
+  const auth = c.get("auth"); // typed as AuthContext, no assertion needed
+  // ...
+});
+```
+
+The parent mount must attach `authMiddleware()` via `.use()` before the typed
+sub-app is `.route()`-mounted; the middleware is responsible for calling
+`c.set("auth", session)` with the resolved `AuthContext`. Removing
+`authMiddleware()` from a typed sub-app's mount chain surfaces as a compile
+error at any downstream handler that reads `auth`, because `c.set`
+guarantees the variable is present.
+
+**Public (unauthenticated) routes** — `auth/login`, `auth/register`,
+`auth/salt`, `auth/password-reset`, `i18n`, and the top-level `v1` mount —
+use bare `new Hono()` and must NOT call `c.get("auth")`. Add auth mid-path
+only if the route is moved behind authentication.
+
 ### Linting
 
 Zero warnings are tolerated. All ESLint warnings are treated as errors in CI, git hooks, and local scripts (`--max-warnings 0`). If a rule is too noisy, discuss changing its severity — do not leave warnings in the codebase.

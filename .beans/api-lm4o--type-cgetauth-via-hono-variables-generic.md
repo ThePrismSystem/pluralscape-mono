@@ -1,7 +1,7 @@
 ---
 # api-lm4o
 title: Type c.get("auth") via Hono Variables generic
-status: todo
+status: completed
 type: task
 created_at: 2026-04-21T13:58:21Z
 updated_at: 2026-04-21T13:58:21Z
@@ -18,11 +18,11 @@ Hono supports a Variables generic on Context that lets middleware declare what i
 
 ## Scope
 
-- [ ] Define AuthEnv = { Variables: { auth: AuthenticatedSession } } in apps/api/src/lib/auth-context.ts (already exists for some routes — standardize)
-- [ ] Type every Hono sub-app that uses c.get("auth") as Hono<AuthEnv>
-- [ ] Remove any existing `as AuthenticatedSession` or `!` non-null assertions on c.get("auth") return values — they become unnecessary
-- [ ] Ensure the auth middleware sets the typed variable via c.set("auth", session)
-- [ ] Document the pattern in CONTRIBUTING.md's "Adding API Endpoints" section
+- [x] Define AuthEnv = { Variables: { auth: AuthenticatedSession } } in apps/api/src/lib/auth-context.ts (already exists for some routes — standardize)
+- [x] Type every Hono sub-app that uses c.get("auth") as Hono<AuthEnv>
+- [x] Remove any existing `as AuthenticatedSession` or `!` non-null assertions on c.get("auth") return values — they become unnecessary
+- [x] Ensure the auth middleware sets the typed variable via c.set("auth", session)
+- [x] Document the pattern in CONTRIBUTING.md's "Adding API Endpoints" section
 
 ## Out of scope
 
@@ -34,3 +34,11 @@ Hono supports a Variables generic on Context that lets middleware declare what i
 - pnpm typecheck passes
 - Deleting c.use("\*", authMiddleware()) from any protected sub-app causes a type error in the downstream handler
 - pnpm test:e2e passes (no behavioral regression)
+
+## Summary of Changes
+
+- Audited 7 bare `new Hono()` files; confirmed each is either unauthenticated or does not access `c.get("auth")`.
+- 0 files converted to `Hono<AuthEnv>()`.
+- No `c.get("auth")!` non-null assertions or `as AuthContext`/`as AuthenticatedSession` casts remain in `apps/api/src` (the one cast in `trpc/context.ts` is out-of-scope tRPC territory with a documented reason).
+- Added "Typed auth context" subsection to CONTRIBUTING.md under "Adding API Endpoints".
+- pnpm typecheck, pnpm lint, pnpm test:e2e all pass.
