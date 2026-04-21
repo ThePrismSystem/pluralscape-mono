@@ -19,23 +19,32 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/fronting-comment.service.js", () => ({
+vi.mock("../../../services/fronting-session/comments/create.js", () => ({
   createFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/queries.js", () => ({
   getFrontingComment: vi.fn(),
   listFrontingComments: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/update.js", () => ({
   updateFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/lifecycle.js", () => ({
   archiveFrontingComment: vi.fn(),
   restoreFrontingComment: vi.fn(),
 }));
 
-const {
-  createFrontingComment,
-  getFrontingComment,
-  listFrontingComments,
-  updateFrontingComment,
-  archiveFrontingComment,
-  restoreFrontingComment,
-} = await import("../../../services/fronting-comment.service.js");
+const { createFrontingComment } =
+  await import("../../../services/fronting-session/comments/create.js");
+const { getFrontingComment, listFrontingComments } =
+  await import("../../../services/fronting-session/comments/queries.js");
+const { updateFrontingComment } =
+  await import("../../../services/fronting-session/comments/update.js");
+const { archiveFrontingComment, restoreFrontingComment } =
+  await import("../../../services/fronting-session/comments/lifecycle.js");
 
 const { frontingCommentRouter } = await import("../../../trpc/routers/fronting-comment.js");
 

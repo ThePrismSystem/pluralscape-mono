@@ -7,7 +7,7 @@ import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { updateFrontingComment } from "../../../services/fronting-comment.service.js";
+import { updateFrontingComment } from "../../../services/fronting-session/comments/update.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

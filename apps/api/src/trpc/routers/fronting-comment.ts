@@ -5,15 +5,17 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createFrontingComment } from "../../services/fronting-session/comments/create.js";
 import {
   archiveFrontingComment,
-  createFrontingComment,
   deleteFrontingComment,
+  restoreFrontingComment,
+} from "../../services/fronting-session/comments/lifecycle.js";
+import {
   getFrontingComment,
   listFrontingComments,
-  restoreFrontingComment,
-  updateFrontingComment,
-} from "../../services/fronting-comment.service.js";
+} from "../../services/fronting-session/comments/queries.js";
+import { updateFrontingComment } from "../../services/fronting-session/comments/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

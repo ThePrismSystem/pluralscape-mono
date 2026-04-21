@@ -32,11 +32,20 @@ vi.mock("../../../services/fronting-session/lifecycle.js", () => ({
   restoreFrontingSession: vi.fn(),
 }));
 
-vi.mock("../../../services/fronting-comment.service.js", () => ({
+vi.mock("../../../services/fronting-session/comments/create.js", () => ({
   createFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/queries.js", () => ({
   listFrontingComments: vi.fn(),
   getFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/update.js", () => ({
   updateFrontingComment: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/comments/lifecycle.js", () => ({
   deleteFrontingComment: vi.fn(),
   archiveFrontingComment: vi.fn(),
   restoreFrontingComment: vi.fn(),

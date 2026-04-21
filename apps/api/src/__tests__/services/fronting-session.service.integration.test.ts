@@ -17,10 +17,8 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
   clearWebhookConfigCache: vi.fn(),
 }));
 
-import {
-  createFrontingComment as createComment,
-  deleteFrontingComment,
-} from "../../services/fronting-comment.service.js";
+import { createFrontingComment as createComment } from "../../services/fronting-session/comments/create.js";
+import { deleteFrontingComment } from "../../services/fronting-session/comments/lifecycle.js";
 import { createFrontingSession } from "../../services/fronting-session/create.js";
 import {
   archiveFrontingSession,
