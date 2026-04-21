@@ -1,10 +1,11 @@
 ---
 # api-sxo1
 title: Refactor import-entity-ref.service.ts (538 LOC) into services/import-entity-ref/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T21:08:11Z
 parent: api-6l1q
 ---
 
