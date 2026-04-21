@@ -9,7 +9,7 @@ import {
   DEFAULT_PHOTO_LIMIT,
   listMemberPhotos,
   MAX_PHOTO_LIMIT,
-} from "../../../services/member-photo.service.js";
+} from "../../../services/member/photos/queries.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

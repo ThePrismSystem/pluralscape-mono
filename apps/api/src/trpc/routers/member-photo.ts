@@ -6,15 +6,14 @@ import {
 import { z } from "zod/v4";
 
 import { fromCompositeCursor } from "../../lib/pagination.js";
+import { createMemberPhoto } from "../../services/member/photos/create.js";
 import {
   archiveMemberPhoto,
-  createMemberPhoto,
   deleteMemberPhoto,
-  getMemberPhoto,
-  listMemberPhotos,
-  reorderMemberPhotos,
   restoreMemberPhoto,
-} from "../../services/member-photo.service.js";
+} from "../../services/member/photos/lifecycle.js";
+import { getMemberPhoto, listMemberPhotos } from "../../services/member/photos/queries.js";
+import { reorderMemberPhotos } from "../../services/member/photos/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
