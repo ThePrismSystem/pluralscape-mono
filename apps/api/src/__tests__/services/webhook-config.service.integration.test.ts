@@ -18,18 +18,19 @@ vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
 });
 
 import { WEBHOOK_SECRET_BYTES } from "../../service.constants.js";
+import { createWebhookConfig } from "../../services/webhook-config/create.js";
 import {
   archiveWebhookConfig,
-  createWebhookConfig,
   deleteWebhookConfig,
+  restoreWebhookConfig,
+} from "../../services/webhook-config/lifecycle.js";
+import {
   getWebhookConfig,
   listWebhookConfigs,
   parseWebhookConfigQuery,
-  restoreWebhookConfig,
-  rotateWebhookSecret,
-  testWebhookConfig,
-  updateWebhookConfig,
-} from "../../services/webhook-config.service.js";
+} from "../../services/webhook-config/queries.js";
+import { testWebhookConfig } from "../../services/webhook-config/test.js";
+import { rotateWebhookSecret, updateWebhookConfig } from "../../services/webhook-config/update.js";
 import {
   asDb,
   assertApiError,

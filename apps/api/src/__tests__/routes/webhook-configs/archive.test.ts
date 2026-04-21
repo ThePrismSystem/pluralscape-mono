@@ -13,7 +13,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/webhook-config.service.js", () => ({
+vi.mock("../../../services/webhook-config/lifecycle.js", () => ({
   archiveWebhookConfig: vi.fn(),
 }));
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -23,7 +23,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { archiveWebhookConfig } = await import("../../../services/webhook-config.service.js");
+const { archiveWebhookConfig } = await import("../../../services/webhook-config/lifecycle.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

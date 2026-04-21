@@ -7,7 +7,7 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockWebhookConfigServiceFactory,
+  mockWebhookConfigLifecycleFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
@@ -15,7 +15,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/webhook-config.service.js", () => mockWebhookConfigServiceFactory());
+vi.mock("../../../services/webhook-config/lifecycle.js", () => mockWebhookConfigLifecycleFactory());
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -23,7 +23,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { deleteWebhookConfig } = await import("../../../services/webhook-config.service.js");
+const { deleteWebhookConfig } = await import("../../../services/webhook-config/lifecycle.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

@@ -5,7 +5,11 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockWebhookConfigServiceFactory,
+  mockWebhookConfigCreateFactory,
+  mockWebhookConfigLifecycleFactory,
+  mockWebhookConfigQueriesFactory,
+  mockWebhookConfigTestFactory,
+  mockWebhookConfigUpdateFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
@@ -21,7 +25,11 @@ vi.mock("../../../services/webhook-delivery.service.js", () => ({
   parseWebhookDeliveryQuery: vi.fn().mockReturnValue({}),
 }));
 
-vi.mock("../../../services/webhook-config.service.js", () => mockWebhookConfigServiceFactory());
+vi.mock("../../../services/webhook-config/create.js", () => mockWebhookConfigCreateFactory());
+vi.mock("../../../services/webhook-config/queries.js", () => mockWebhookConfigQueriesFactory());
+vi.mock("../../../services/webhook-config/update.js", () => mockWebhookConfigUpdateFactory());
+vi.mock("../../../services/webhook-config/lifecycle.js", () => mockWebhookConfigLifecycleFactory());
+vi.mock("../../../services/webhook-config/test.js", () => mockWebhookConfigTestFactory());
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
