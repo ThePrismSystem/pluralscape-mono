@@ -4,6 +4,10 @@
 
 Accepted
 
+## Superseded-by
+
+ADR-027 — the rotation procedure; the in-place overwrite approach described in mitigation #4 of this ADR is replaced by the create-then-archive pattern.
+
 ## Context
 
 Pluralscape uses a three-tier encryption model:

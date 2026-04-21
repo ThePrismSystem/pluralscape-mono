@@ -4,6 +4,10 @@
 
 Accepted
 
+## Supersedes
+
+ADR-006 — the O(bucket_size) synchronous bucket-key rotation stated as a consequence of ADR-006 is replaced by the lazy, non-blocking rotation protocol defined here.
+
 ## Context
 
 ADR 006 specifies that on friend removal from a privacy bucket, the bucket key is rotated and all bucket content is re-encrypted with the new key. This is O(bucket_size) — a blocking, synchronous operation that either freezes the UI or creates race conditions between concurrent writers and the re-encryption process.

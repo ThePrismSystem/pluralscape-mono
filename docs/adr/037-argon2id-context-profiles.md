@@ -4,6 +4,10 @@
 
 Accepted
 
+## Supersedes
+
+ADR-006 — context-specific Argon2id profiles replace the unified `PWHASH_*_UNIFIED` constants implicit in ADR-006's password-hashing decision.
+
 ## Context
 
 Every Argon2id key derivation in Pluralscape currently runs against a single

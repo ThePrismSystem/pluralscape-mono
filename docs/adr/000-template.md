@@ -2,7 +2,15 @@
 
 ## Status
 
-Proposed | Accepted | Deprecated | Superseded by [ADR NNN](NNN-title.md)
+Proposed | Accepted | Superseded | Deprecated
+
+## Supersedes
+
+_(optional) ADR-### — one-line rationale. Remove this section if N/A._
+
+## Superseded-by
+
+_(optional) ADR-### — one-line rationale. Remove this section if N/A._
 
 ## Context
 
