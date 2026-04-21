@@ -1,10 +1,11 @@
 ---
 # api-43vk
 title: Refactor field-definition.service.ts (599 LOC) into services/field-definition/
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -39,3 +40,15 @@ Currently concentrates custom-field CRUD / type validation / ordering in a singl
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Findings
+
+- field-definition.service.ts:506-582 — delete verb embeds a custom HAS_DEPENDENTS cascade with three parallel count queries and Promise.resolve() stubs; candidate for shared dependents-check helper — medium
+- field-definition.service.ts:319-376 — update path uses `setClause: Record<string, unknown>`; drizzle `$Type<typeof fieldDefinitions.$inferInsert>` would restore type safety — low
+- route tests (create/get/list/update/archive/restore) previously shared an identical 7-function mock object irrespective of what was used; split-mocks now mirror each file's actual dependency — low
+
+## Summary of Changes
+
+field-definition.service.ts (599 LOC) → services/field-definition/ (8 files). Max 143 LOC. 18 callers updated. No barrel (Option E). Findings surfaced → api-ep2a (checkDependents helper) and api-voa8 ($inferInsert setClauses).
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).

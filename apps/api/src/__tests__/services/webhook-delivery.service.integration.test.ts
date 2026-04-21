@@ -9,7 +9,7 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { createWebhookConfig } from "../../services/webhook-config.service.js";
+import { createWebhookConfig } from "../../services/webhook-config/create.js";
 import {
   deleteWebhookDelivery,
   getWebhookDelivery,

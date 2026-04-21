@@ -13,7 +13,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/group.service.js", () => ({
+vi.mock("../../../services/group/update.js", () => ({
   updateGroup: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
-const { updateGroup } = await import("../../../services/group.service.js");
+const { updateGroup } = await import("../../../services/group/update.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);

@@ -12,16 +12,26 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/fronting-session.service.js", () => ({
+vi.mock("../../../services/fronting-session/create.js", () => ({
   createFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/queries.js", () => ({
   listFrontingSessions: vi.fn(),
   getFrontingSession: vi.fn(),
+  getActiveFronting: vi.fn(),
+  parseFrontingSessionQuery: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock("../../../services/fronting-session/update.js", () => ({
   updateFrontingSession: vi.fn(),
   endFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/lifecycle.js", () => ({
   deleteFrontingSession: vi.fn(),
   archiveFrontingSession: vi.fn(),
   restoreFrontingSession: vi.fn(),
-  parseFrontingSessionQuery: vi.fn().mockReturnValue({}),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -33,16 +43,13 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createFrontingSession,
-  listFrontingSessions,
-  getFrontingSession,
-  updateFrontingSession,
-  endFrontingSession,
-  deleteFrontingSession,
-  archiveFrontingSession,
-  restoreFrontingSession,
-} = await import("../../../services/fronting-session.service.js");
+const { createFrontingSession } = await import("../../../services/fronting-session/create.js");
+const { listFrontingSessions, getFrontingSession } =
+  await import("../../../services/fronting-session/queries.js");
+const { updateFrontingSession, endFrontingSession } =
+  await import("../../../services/fronting-session/update.js");
+const { deleteFrontingSession, archiveFrontingSession, restoreFrontingSession } =
+  await import("../../../services/fronting-session/lifecycle.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

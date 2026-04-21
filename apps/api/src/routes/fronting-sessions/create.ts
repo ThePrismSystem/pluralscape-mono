@@ -10,7 +10,7 @@ import { getQueue } from "../../lib/queue.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { createFrontingSession } from "../../services/fronting-session.service.js";
+import { createFrontingSession } from "../../services/fronting-session/create.js";
 import { dispatchSwitchAlertForSession } from "../../services/switch-alert-dispatcher.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";

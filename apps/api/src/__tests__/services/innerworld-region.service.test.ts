@@ -73,15 +73,11 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const {
-  createRegion,
-  listRegions,
-  getRegion,
-  updateRegion,
-  archiveRegion,
-  restoreRegion,
-  deleteRegion,
-} = await import("../../services/innerworld-region.service.js");
+const { createRegion } = await import("../../services/innerworld-region/create.js");
+const { listRegions, getRegion } = await import("../../services/innerworld-region/queries.js");
+const { updateRegion } = await import("../../services/innerworld-region/update.js");
+const { archiveRegion, restoreRegion, deleteRegion } =
+  await import("../../services/innerworld-region/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

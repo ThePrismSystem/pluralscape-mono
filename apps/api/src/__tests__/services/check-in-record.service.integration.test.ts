@@ -10,16 +10,16 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { archiveCheckInRecord } from "../../services/check-in-record/archive.js";
+import { createCheckInRecord } from "../../services/check-in-record/create.js";
+import { deleteCheckInRecord } from "../../services/check-in-record/delete.js";
+import { dismissCheckInRecord } from "../../services/check-in-record/dismiss.js";
+import { getCheckInRecord } from "../../services/check-in-record/get.js";
 import {
-  archiveCheckInRecord,
-  createCheckInRecord,
-  deleteCheckInRecord,
-  dismissCheckInRecord,
-  getCheckInRecord,
   listCheckInRecords,
   parseCheckInRecordQuery,
-  respondCheckInRecord,
-} from "../../services/check-in-record.service.js";
+} from "../../services/check-in-record/list.js";
+import { respondCheckInRecord } from "../../services/check-in-record/respond.js";
 import { createTimerConfig } from "../../services/timer-config.service.js";
 import {
   assertApiError,

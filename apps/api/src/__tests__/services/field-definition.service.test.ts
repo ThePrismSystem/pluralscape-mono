@@ -34,16 +34,14 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const {
-  clearFieldDefCache,
-  createFieldDefinition,
-  listFieldDefinitions,
-  getFieldDefinition,
-  updateFieldDefinition,
-  archiveFieldDefinition,
-  restoreFieldDefinition,
-  deleteFieldDefinition,
-} = await import("../../services/field-definition.service.js");
+const { clearFieldDefCache } = await import("../../services/field-definition/internal.js");
+const { createFieldDefinition } = await import("../../services/field-definition/create.js");
+const { listFieldDefinitions } = await import("../../services/field-definition/list.js");
+const { getFieldDefinition } = await import("../../services/field-definition/get.js");
+const { updateFieldDefinition } = await import("../../services/field-definition/update.js");
+const { archiveFieldDefinition } = await import("../../services/field-definition/archive.js");
+const { restoreFieldDefinition } = await import("../../services/field-definition/restore.js");
+const { deleteFieldDefinition } = await import("../../services/field-definition/delete.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

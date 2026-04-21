@@ -12,11 +12,19 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../services/key-rotation.service.js", () => ({
+vi.mock("../../services/key-rotation/initiate.js", () => ({
   initiateRotation: vi.fn(),
+}));
+vi.mock("../../services/key-rotation/claim.js", () => ({
   claimRotationChunk: vi.fn(),
+}));
+vi.mock("../../services/key-rotation/complete.js", () => ({
   completeRotationChunk: vi.fn(),
+}));
+vi.mock("../../services/key-rotation/queries.js", () => ({
   getRotationProgress: vi.fn(),
+}));
+vi.mock("../../services/key-rotation/retry.js", () => ({
   retryRotation: vi.fn(),
 }));
 
@@ -29,7 +37,7 @@ vi.mock("../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { retryRotation } = await import("../../services/key-rotation.service.js");
+const { retryRotation } = await import("../../services/key-rotation/retry.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

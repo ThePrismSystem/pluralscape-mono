@@ -8,7 +8,7 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ConcurrencyError, changePassword } from "../../services/account.service.js";
-import { ValidationError } from "../../services/auth.service.js";
+import { ValidationError } from "../../services/auth/register.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

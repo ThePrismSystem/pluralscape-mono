@@ -6,17 +6,10 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import {
-  archiveMember,
-  createMember,
-  deleteMember,
-  duplicateMember,
-  getMember,
-  listAllMemberMemberships,
-  listMembers,
-  restoreMember,
-  updateMember,
-} from "../../services/member.service.js";
+import { createMember, duplicateMember } from "../../services/member/create.js";
+import { archiveMember, deleteMember, restoreMember } from "../../services/member/lifecycle.js";
+import { getMember, listAllMemberMemberships, listMembers } from "../../services/member/queries.js";
+import { updateMember } from "../../services/member/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

@@ -6,17 +6,15 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createWebhookConfig } from "../../services/webhook-config/create.js";
 import {
   archiveWebhookConfig,
-  createWebhookConfig,
   deleteWebhookConfig,
-  getWebhookConfig,
-  listWebhookConfigs,
   restoreWebhookConfig,
-  rotateWebhookSecret,
-  testWebhookConfig,
-  updateWebhookConfig,
-} from "../../services/webhook-config.service.js";
+} from "../../services/webhook-config/lifecycle.js";
+import { getWebhookConfig, listWebhookConfigs } from "../../services/webhook-config/queries.js";
+import { testWebhookConfig } from "../../services/webhook-config/test.js";
+import { rotateWebhookSecret, updateWebhookConfig } from "../../services/webhook-config/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

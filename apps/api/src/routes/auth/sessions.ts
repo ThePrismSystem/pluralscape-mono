@@ -15,7 +15,7 @@ import {
   logoutCurrentSession,
   revokeAllSessions,
   revokeSession,
-} from "../../services/auth.service.js";
+} from "../../services/auth/sessions.js";
 
 import { DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT } from "./auth.constants.js";
 

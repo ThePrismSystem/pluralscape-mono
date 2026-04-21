@@ -19,17 +19,29 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/group.service.js", () => ({
+vi.mock("../../../services/group/create.js", () => ({
   createGroup: vi.fn(),
-  getGroup: vi.fn(),
-  listGroups: vi.fn(),
+}));
+
+vi.mock("../../../services/group/update.js", () => ({
   updateGroup: vi.fn(),
+}));
+
+vi.mock("../../../services/group/lifecycle.js", () => ({
   deleteGroup: vi.fn(),
   archiveGroup: vi.fn(),
   restoreGroup: vi.fn(),
+}));
+
+vi.mock("../../../services/group/queries.js", () => ({
+  getGroup: vi.fn(),
+  listGroups: vi.fn(),
+  getGroupTree: vi.fn(),
+}));
+
+vi.mock("../../../services/group/structure.js", () => ({
   moveGroup: vi.fn(),
   copyGroup: vi.fn(),
-  getGroupTree: vi.fn(),
   reorderGroups: vi.fn(),
 }));
 
@@ -39,19 +51,13 @@ vi.mock("../../../services/group-membership.service.js", () => ({
   listGroupMembers: vi.fn(),
 }));
 
-const {
-  createGroup,
-  getGroup,
-  listGroups,
-  updateGroup,
-  deleteGroup,
-  archiveGroup,
-  restoreGroup,
-  moveGroup,
-  copyGroup,
-  getGroupTree,
-  reorderGroups,
-} = await import("../../../services/group.service.js");
+const { createGroup } = await import("../../../services/group/create.js");
+const { updateGroup } = await import("../../../services/group/update.js");
+const { deleteGroup, archiveGroup, restoreGroup } =
+  await import("../../../services/group/lifecycle.js");
+const { getGroup, listGroups, getGroupTree } = await import("../../../services/group/queries.js");
+const { moveGroup, copyGroup, reorderGroups } =
+  await import("../../../services/group/structure.js");
 
 const { addMember, removeMember, listGroupMembers } =
   await import("../../../services/group-membership.service.js");

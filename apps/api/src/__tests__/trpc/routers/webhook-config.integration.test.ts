@@ -22,7 +22,7 @@ vi.mock("../../../lib/ip-validation.js", async (importOriginal) => {
   };
 });
 
-import { createWebhookConfig } from "../../../services/webhook-config.service.js";
+import { createWebhookConfig } from "../../../services/webhook-config/create.js";
 import { invalidateWebhookConfigCache } from "../../../services/webhook-dispatcher.js";
 import { webhookConfigRouter } from "../../../trpc/routers/webhook-config.js";
 import { noopAudit } from "../../helpers/integration-setup.js";

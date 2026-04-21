@@ -70,30 +70,63 @@ export function mockApiKeyServiceFactory(): Record<string, ReturnType<typeof vi.
   };
 }
 
+/** Factory for vi.mock("…/webhook-config/create.js") — create verb. */
+export function mockWebhookConfigCreateFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
+    createWebhookConfig: vi.fn(),
+  };
+}
+
 /**
- * Factory for vi.mock("…/webhook-config.service.js") — returns all CRUD
- * functions as mocks plus a pass-through `toServerSecret` helper. The
- * helper is a real function because tests rely on it to brand fixture
- * bytes as `ServerSecret` without an `as unknown as` double-cast.
+ * Factory for vi.mock("…/webhook-config/queries.js") — read verbs.
+ * `parseWebhookConfigQuery` is prewired to return `{}` so list routes
+ * exercise the default pagination path unless a test overrides it.
  */
-export function mockWebhookConfigServiceFactory(): Record<
+export function mockWebhookConfigQueriesFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
+    listWebhookConfigs: vi.fn(),
+    getWebhookConfig: vi.fn(),
+    parseWebhookConfigQuery: vi.fn().mockReturnValue({}),
+  };
+}
+
+/** Factory for vi.mock("…/webhook-config/update.js") — update + rotate verbs. */
+export function mockWebhookConfigUpdateFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
+    updateWebhookConfig: vi.fn(),
+    rotateWebhookSecret: vi.fn(),
+  };
+}
+
+/** Factory for vi.mock("…/webhook-config/lifecycle.js") — delete/archive/restore. */
+export function mockWebhookConfigLifecycleFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
+    deleteWebhookConfig: vi.fn(),
+    archiveWebhookConfig: vi.fn(),
+    restoreWebhookConfig: vi.fn(),
+  };
+}
+
+/** Factory for vi.mock("…/webhook-config/test.js") — synthetic delivery test. */
+export function mockWebhookConfigTestFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
+    testWebhookConfig: vi.fn(),
+  };
+}
+
+/**
+ * Factory for vi.mock("…/webhook-config/internal.js") — shared helpers.
+ * `toServerSecret` is a real function because tests rely on it to brand
+ * fixture bytes as `ServerSecret` without an `as unknown as` double-cast.
+ */
+export function mockWebhookConfigInternalFactory(): Record<
   string,
   ReturnType<typeof vi.fn> | ((bytes: Uint8Array) => ServerSecret)
 > {
   return {
-    createWebhookConfig: vi.fn(),
-    listWebhookConfigs: vi.fn(),
-    getWebhookConfig: vi.fn(),
-    updateWebhookConfig: vi.fn(),
-    deleteWebhookConfig: vi.fn(),
-    archiveWebhookConfig: vi.fn(),
-    restoreWebhookConfig: vi.fn(),
-    rotateWebhookSecret: vi.fn(),
-    testWebhookConfig: vi.fn(),
-    parseWebhookConfigQuery: vi.fn().mockReturnValue({}),
     // Inline cast kept to avoid a circular evaluation: importing the real
     // `toServerSecret` here would be served by the test file's own
-    // `vi.mock(...service.js, () => mockWebhookConfigServiceFactory())`
+    // `vi.mock(...internal.js, () => mockWebhookConfigInternalFactory())`
     // before this module finishes loading. Semantically identical to the
     // production helper — update both together if one ever gains runtime
     // validation.

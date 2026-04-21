@@ -12,7 +12,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-import { createGroup } from "../../../services/group.service.js";
+import { createGroup } from "../../../services/group/create.js";
 import { groupRouter } from "../../../trpc/routers/group.js";
 import { noopAudit, testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {

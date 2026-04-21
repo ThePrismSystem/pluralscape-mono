@@ -13,12 +13,10 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  claimRotationChunk,
-  completeRotationChunk,
-  getRotationProgress,
-  initiateRotation,
-} from "../../services/key-rotation.service.js";
+import { claimRotationChunk } from "../../services/key-rotation/claim.js";
+import { completeRotationChunk } from "../../services/key-rotation/complete.js";
+import { initiateRotation } from "../../services/key-rotation/initiate.js";
+import { getRotationProgress } from "../../services/key-rotation/queries.js";
 import {
   assertApiError,
   genBucketId,

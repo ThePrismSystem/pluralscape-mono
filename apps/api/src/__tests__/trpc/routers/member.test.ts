@@ -19,29 +19,33 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/member.service.js", () => ({
+vi.mock("../../../services/member/create.js", () => ({
   createMember: vi.fn(),
+  duplicateMember: vi.fn(),
+}));
+
+vi.mock("../../../services/member/queries.js", () => ({
   getMember: vi.fn(),
   listMembers: vi.fn(),
-  updateMember: vi.fn(),
-  duplicateMember: vi.fn(),
-  archiveMember: vi.fn(),
-  restoreMember: vi.fn(),
-  deleteMember: vi.fn(),
   listAllMemberMemberships: vi.fn(),
 }));
 
-const {
-  createMember,
-  getMember,
-  listMembers,
-  updateMember,
-  duplicateMember,
-  archiveMember,
-  restoreMember,
-  deleteMember,
-  listAllMemberMemberships,
-} = await import("../../../services/member.service.js");
+vi.mock("../../../services/member/update.js", () => ({
+  updateMember: vi.fn(),
+}));
+
+vi.mock("../../../services/member/lifecycle.js", () => ({
+  archiveMember: vi.fn(),
+  restoreMember: vi.fn(),
+  deleteMember: vi.fn(),
+}));
+
+const { createMember, duplicateMember } = await import("../../../services/member/create.js");
+const { getMember, listMembers, listAllMemberMemberships } =
+  await import("../../../services/member/queries.js");
+const { updateMember } = await import("../../../services/member/update.js");
+const { archiveMember, restoreMember, deleteMember } =
+  await import("../../../services/member/lifecycle.js");
 
 const { memberRouter } = await import("../../../trpc/routers/member.js");
 

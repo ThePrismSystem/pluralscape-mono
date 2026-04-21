@@ -11,17 +11,10 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  archiveMember,
-  createMember,
-  deleteMember,
-  duplicateMember,
-  getMember,
-  listAllMemberMemberships,
-  listMembers,
-  restoreMember,
-  updateMember,
-} from "../../services/member.service.js";
+import { createMember, duplicateMember } from "../../services/member/create.js";
+import { archiveMember, deleteMember, restoreMember } from "../../services/member/lifecycle.js";
+import { getMember, listAllMemberMemberships, listMembers } from "../../services/member/queries.js";
+import { updateMember } from "../../services/member/update.js";
 import {
   assertApiError,
   asDb,

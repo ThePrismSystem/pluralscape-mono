@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-vi.mock("../../../services/group.service.js", () => ({
+vi.mock("../../../services/group/structure.js", () => ({
   reorderGroups: vi.fn(),
 }));
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -16,7 +16,7 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-const { reorderGroups } = await import("../../../services/group.service.js");
+const { reorderGroups } = await import("../../../services/group/structure.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);

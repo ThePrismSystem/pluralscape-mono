@@ -14,7 +14,7 @@ import {
   changeEmail,
   enqueueAccountEmailChangedNotification,
 } from "../../services/account.service.js";
-import { ValidationError } from "../../services/auth.service.js";
+import { ValidationError } from "../../services/auth/register.js";
 
 import { EMAIL_CHANGE_FAILED_ERROR } from "./account.constants.js";
 

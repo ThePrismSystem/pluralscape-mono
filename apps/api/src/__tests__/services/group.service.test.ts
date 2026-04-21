@@ -40,19 +40,12 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const {
-  createGroup,
-  listGroups,
-  getGroup,
-  updateGroup,
-  deleteGroup,
-  moveGroup,
-  getGroupTree,
-  reorderGroups,
-  archiveGroup,
-  restoreGroup,
-  copyGroup,
-} = await import("../../services/group.service.js");
+const { createGroup } = await import("../../services/group/create.js");
+const { updateGroup } = await import("../../services/group/update.js");
+const { deleteGroup, archiveGroup, restoreGroup } =
+  await import("../../services/group/lifecycle.js");
+const { listGroups, getGroup, getGroupTree } = await import("../../services/group/queries.js");
+const { moveGroup, reorderGroups, copyGroup } = await import("../../services/group/structure.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

@@ -31,14 +31,16 @@ vi.mock("../../../services/recovery-key.service.js", () => ({
   },
 }));
 
-vi.mock("../../../services/auth.service.js", () => ({
+vi.mock("../../../services/auth/register.js", () => ({
   initiateRegistration: vi.fn(),
   commitRegistration: vi.fn(),
+  ValidationError: class ValidationError extends Error {
+    override readonly name = "ValidationError" as const;
+  },
+}));
+
+vi.mock("../../../services/auth/login.js", () => ({
   loginAccount: vi.fn(),
-  logoutCurrentSession: vi.fn(),
-  listSessions: vi.fn(),
-  revokeSession: vi.fn(),
-  revokeAllSessions: vi.fn(),
   LoginThrottledError: class LoginThrottledError extends Error {
     override readonly name = "LoginThrottledError" as const;
     readonly windowResetAt: number;
@@ -47,21 +49,20 @@ vi.mock("../../../services/auth.service.js", () => ({
       this.windowResetAt = windowResetAt;
     }
   },
-  ValidationError: class ValidationError extends Error {
-    override readonly name = "ValidationError" as const;
-  },
 }));
 
-const {
-  initiateRegistration,
-  commitRegistration,
-  loginAccount,
-  logoutCurrentSession,
-  listSessions,
-  revokeSession,
-  revokeAllSessions,
-  LoginThrottledError,
-} = await import("../../../services/auth.service.js");
+vi.mock("../../../services/auth/sessions.js", () => ({
+  logoutCurrentSession: vi.fn(),
+  listSessions: vi.fn(),
+  revokeSession: vi.fn(),
+  revokeAllSessions: vi.fn(),
+}));
+
+const { initiateRegistration, commitRegistration } =
+  await import("../../../services/auth/register.js");
+const { loginAccount, LoginThrottledError } = await import("../../../services/auth/login.js");
+const { logoutCurrentSession, listSessions, revokeSession, revokeAllSessions } =
+  await import("../../../services/auth/sessions.js");
 
 const { resetPasswordWithRecoveryKey, NoActiveRecoveryKeyError } =
   await import("../../../services/recovery-key.service.js");

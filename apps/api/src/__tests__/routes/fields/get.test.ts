@@ -13,13 +13,8 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/field-definition.service.js", () => ({
-  listFieldDefinitions: vi.fn(),
-  createFieldDefinition: vi.fn(),
+vi.mock("../../../services/field-definition/get.js", () => ({
   getFieldDefinition: vi.fn(),
-  updateFieldDefinition: vi.fn(),
-  archiveFieldDefinition: vi.fn(),
-  restoreFieldDefinition: vi.fn(),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -33,7 +28,7 @@ vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getFieldDefinition } = await import("../../../services/field-definition.service.js");
+const { getFieldDefinition } = await import("../../../services/field-definition/get.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

@@ -28,13 +28,23 @@ vi.mock("../../../services/innerworld-entity.service.js", () => ({
   restoreEntity: vi.fn(),
 }));
 
-vi.mock("../../../services/innerworld-region.service.js", () => ({
+vi.mock("../../../services/innerworld-region/create.js", () => ({
   createRegion: vi.fn(),
+}));
+
+vi.mock("../../../services/innerworld-region/queries.js", () => ({
   getRegion: vi.fn(),
   listRegions: vi.fn(),
+}));
+
+vi.mock("../../../services/innerworld-region/update.js", () => ({
   updateRegion: vi.fn(),
+}));
+
+vi.mock("../../../services/innerworld-region/lifecycle.js", () => ({
   archiveRegion: vi.fn(),
   restoreRegion: vi.fn(),
+  deleteRegion: vi.fn(),
 }));
 
 vi.mock("../../../services/innerworld-canvas.service.js", () => ({
@@ -45,8 +55,11 @@ vi.mock("../../../services/innerworld-canvas.service.js", () => ({
 const { createEntity, getEntity, listEntities, updateEntity, archiveEntity, restoreEntity } =
   await import("../../../services/innerworld-entity.service.js");
 
-const { createRegion, getRegion, listRegions, updateRegion, archiveRegion, restoreRegion } =
-  await import("../../../services/innerworld-region.service.js");
+const { createRegion } = await import("../../../services/innerworld-region/create.js");
+const { getRegion, listRegions } = await import("../../../services/innerworld-region/queries.js");
+const { updateRegion } = await import("../../../services/innerworld-region/update.js");
+const { archiveRegion, restoreRegion } =
+  await import("../../../services/innerworld-region/lifecycle.js");
 
 const { getCanvas, upsertCanvas } = await import("../../../services/innerworld-canvas.service.js");
 

@@ -22,7 +22,7 @@ import {
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { ANTI_ENUM_TARGET_MS } from "../../routes/auth/auth.constants.js";
-import { commitRegistration, initiateRegistration } from "../../services/auth.service.js";
+import { commitRegistration, initiateRegistration } from "../../services/auth/register.js";
 
 import type { Context } from "hono";
 

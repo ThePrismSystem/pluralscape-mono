@@ -10,7 +10,8 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { castVote, listVotes } from "../../services/poll-vote.service.js";
+import { castVote } from "../../services/poll-vote/cast.js";
+import { listVotes } from "../../services/poll-vote/list.js";
 import { archivePoll, createPoll } from "../../services/poll.service.js";
 import {
   assertApiError,

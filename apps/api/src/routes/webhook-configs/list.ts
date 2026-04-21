@@ -9,7 +9,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   listWebhookConfigs,
   parseWebhookConfigQuery,
-} from "../../services/webhook-config.service.js";
+} from "../../services/webhook-config/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

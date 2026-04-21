@@ -9,7 +9,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   listCheckInRecords,
   parseCheckInRecordQuery,
-} from "../../services/check-in-record.service.js";
+} from "../../services/check-in-record/list.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

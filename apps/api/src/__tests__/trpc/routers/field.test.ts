@@ -20,16 +20,34 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/field-definition.service.js", () => ({
+vi.mock("../../../services/field-definition/create.js", () => ({
   createFieldDefinition: vi.fn(),
-  getFieldDefinition: vi.fn(),
-  listFieldDefinitions: vi.fn(),
-  updateFieldDefinition: vi.fn(),
-  archiveFieldDefinition: vi.fn(),
-  restoreFieldDefinition: vi.fn(),
-  deleteFieldDefinition: vi.fn(),
-  clearFieldDefCache: vi.fn(),
 }));
+vi.mock("../../../services/field-definition/get.js", () => ({
+  getFieldDefinition: vi.fn(),
+}));
+vi.mock("../../../services/field-definition/list.js", () => ({
+  listFieldDefinitions: vi.fn(),
+}));
+vi.mock("../../../services/field-definition/update.js", () => ({
+  updateFieldDefinition: vi.fn(),
+}));
+vi.mock("../../../services/field-definition/archive.js", () => ({
+  archiveFieldDefinition: vi.fn(),
+}));
+vi.mock("../../../services/field-definition/restore.js", () => ({
+  restoreFieldDefinition: vi.fn(),
+}));
+vi.mock("../../../services/field-definition/delete.js", () => ({
+  deleteFieldDefinition: vi.fn(),
+}));
+vi.mock("../../../services/field-definition/internal.js", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    clearFieldDefCache: vi.fn(),
+  };
+});
 
 vi.mock("../../../services/field-value.service.js", () => ({
   setFieldValueForOwner: vi.fn(),
@@ -43,15 +61,13 @@ vi.mock("../../../services/field-bucket-visibility.service.js", () => ({
   listFieldBucketVisibility: vi.fn(),
 }));
 
-const {
-  createFieldDefinition,
-  getFieldDefinition,
-  listFieldDefinitions,
-  updateFieldDefinition,
-  archiveFieldDefinition,
-  restoreFieldDefinition,
-  deleteFieldDefinition,
-} = await import("../../../services/field-definition.service.js");
+const { createFieldDefinition } = await import("../../../services/field-definition/create.js");
+const { getFieldDefinition } = await import("../../../services/field-definition/get.js");
+const { listFieldDefinitions } = await import("../../../services/field-definition/list.js");
+const { updateFieldDefinition } = await import("../../../services/field-definition/update.js");
+const { archiveFieldDefinition } = await import("../../../services/field-definition/archive.js");
+const { restoreFieldDefinition } = await import("../../../services/field-definition/restore.js");
+const { deleteFieldDefinition } = await import("../../../services/field-definition/delete.js");
 
 const { setFieldValueForOwner, listFieldValuesForOwner, deleteFieldValueForOwner } =
   await import("../../../services/field-value.service.js");

@@ -13,15 +13,21 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/friend-connection.service.js", () => ({
-  acceptFriendConnection: vi.fn(),
+vi.mock("../../../services/friend-connection/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
-  blockFriendConnection: vi.fn(),
+  restoreFriendConnection: vi.fn(),
+}));
+vi.mock("../../../services/friend-connection/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
+}));
+vi.mock("../../../services/friend-connection/transitions.js", () => ({
+  acceptFriendConnection: vi.fn(),
+  blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
-  restoreFriendConnection: vi.fn(),
+}));
+vi.mock("../../../services/friend-connection/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 
@@ -47,17 +53,17 @@ vi.mock("../../../services/key-grant.service.js", () => ({
   listReceivedKeyGrants: vi.fn(),
 }));
 
+const { archiveFriendConnection, restoreFriendConnection } =
+  await import("../../../services/friend-connection/lifecycle.js");
+const { getFriendConnection, listFriendConnections } =
+  await import("../../../services/friend-connection/queries.js");
 const {
   acceptFriendConnection,
-  archiveFriendConnection,
   blockFriendConnection,
-  getFriendConnection,
-  listFriendConnections,
   rejectFriendConnection,
   removeFriendConnection,
-  restoreFriendConnection,
-  updateFriendVisibility,
-} = await import("../../../services/friend-connection.service.js");
+} = await import("../../../services/friend-connection/transitions.js");
+const { updateFriendVisibility } = await import("../../../services/friend-connection/update.js");
 const { getFriendDashboardSync } =
   await import("../../../services/friend-dashboard-sync.service.js");
 const { getFriendDashboard } = await import("../../../services/friend-dashboard.service.js");

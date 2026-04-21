@@ -15,13 +15,17 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   archiveFriendConnection,
-  blockFriendConnection,
+  restoreFriendConnection,
+} from "../../services/friend-connection/lifecycle.js";
+import {
   getFriendConnection,
   listFriendConnections,
+} from "../../services/friend-connection/queries.js";
+import {
+  blockFriendConnection,
   removeFriendConnection,
-  restoreFriendConnection,
-  updateFriendVisibility,
-} from "../../services/friend-connection.service.js";
+} from "../../services/friend-connection/transitions.js";
+import { updateFriendVisibility } from "../../services/friend-connection/update.js";
 import {
   assertApiError,
   asDb,

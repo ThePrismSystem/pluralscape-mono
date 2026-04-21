@@ -1,10 +1,11 @@
 ---
 # api-6fzx
 title: Refactor key-rotation.service.ts (658 LOC) into services/key-rotation/
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -39,3 +40,15 @@ Currently concentrates rotation state machine / envelope re-wrapping / ledger wr
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Findings
+
+- apps/api/src/services/key-rotation.service.ts:46-75 — two helpers (toRotationResult shared by 4 verbs, toItemResult used only by claim) — low
+- apps/api/src/services/key-rotation.service.ts — 5 exports mapped 1:1 to verb files (initiate/claim/complete/retry/queries), no artificial grouping needed — low
+- route+test vi.mock paths: splitting one mock into five per test preserved isolation; no shared re-export seam required — low
+
+## Summary of Changes
+
+key-rotation.service.ts (658 LOC) → services/key-rotation/ (6 files: initiate, claim, complete, retry, queries, internal). Max 238 LOC. 13 callers updated. No barrel (Option E). Will be relocated under services/bucket/rotations/ in PR 2.
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).

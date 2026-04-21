@@ -12,16 +12,30 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/check-in-record.service.js", () => ({
+vi.mock("../../../services/check-in-record/create.js", () => ({
   createCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/list.js", () => ({
   listCheckInRecords: vi.fn(),
-  getCheckInRecord: vi.fn(),
-  respondCheckInRecord: vi.fn(),
-  dismissCheckInRecord: vi.fn(),
-  archiveCheckInRecord: vi.fn(),
-  restoreCheckInRecord: vi.fn(),
-  deleteCheckInRecord: vi.fn(),
   parseCheckInRecordQuery: vi.fn().mockReturnValue({}),
+}));
+vi.mock("../../../services/check-in-record/get.js", () => ({
+  getCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/respond.js", () => ({
+  respondCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/dismiss.js", () => ({
+  dismissCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/archive.js", () => ({
+  archiveCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/restore.js", () => ({
+  restoreCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/delete.js", () => ({
+  deleteCheckInRecord: vi.fn(),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -33,7 +47,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { restoreCheckInRecord } = await import("../../../services/check-in-record.service.js");
+const { restoreCheckInRecord } = await import("../../../services/check-in-record/restore.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

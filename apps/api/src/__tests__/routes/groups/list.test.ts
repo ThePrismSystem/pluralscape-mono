@@ -9,12 +9,12 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { GroupResult } from "../../../services/group.service.js";
+import type { GroupResult } from "../../../services/group/queries.js";
 import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/group.service.js", () => ({
+vi.mock("../../../services/group/queries.js", () => ({
   listGroups: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-const { listGroups } = await import("../../../services/group.service.js");
+const { listGroups } = await import("../../../services/group/queries.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

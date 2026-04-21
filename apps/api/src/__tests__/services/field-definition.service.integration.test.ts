@@ -11,15 +11,13 @@ import { createId, ID_PREFIXES, now, brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  clearFieldDefCache,
-  createFieldDefinition,
-  deleteFieldDefinition,
-  getFieldDefinition,
-  listFieldDefinitions,
-  restoreFieldDefinition,
-  updateFieldDefinition,
-} from "../../services/field-definition.service.js";
+import { createFieldDefinition } from "../../services/field-definition/create.js";
+import { deleteFieldDefinition } from "../../services/field-definition/delete.js";
+import { getFieldDefinition } from "../../services/field-definition/get.js";
+import { clearFieldDefCache } from "../../services/field-definition/internal.js";
+import { listFieldDefinitions } from "../../services/field-definition/list.js";
+import { restoreFieldDefinition } from "../../services/field-definition/restore.js";
+import { updateFieldDefinition } from "../../services/field-definition/update.js";
 import { asDb, assertApiError, makeAuth, noopAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";

@@ -13,7 +13,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/member-photo.service.js", () => ({
+vi.mock("../../../../services/member/photos/queries.js", () => ({
   listMemberPhotos: vi.fn(),
   DEFAULT_PHOTO_LIMIT: 25,
   MAX_PHOTO_LIMIT: 50,
@@ -30,7 +30,7 @@ vi.mock("../../../../lib/system-ownership.js", () => mockSystemOwnershipFactory(
 vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listMemberPhotos } = await import("../../../../services/member-photo.service.js");
+const { listMemberPhotos } = await import("../../../../services/member/photos/queries.js");
 const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 

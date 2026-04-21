@@ -9,7 +9,7 @@ import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext, AuthEnv } from "../../../lib/auth-context.js";
-import type { FriendConnectionResult } from "../../../services/friend-connection.service.js";
+import type { FriendConnectionResult } from "../../../services/friend-connection/internal.js";
 import type { AccountId, FriendConnectionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

@@ -11,7 +11,7 @@ import { envelope } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { ValidationError } from "../../services/auth.service.js";
+import { ValidationError } from "../../services/auth/register.js";
 import {
   NoActiveRecoveryKeyError,
   getRecoveryKeyStatus,

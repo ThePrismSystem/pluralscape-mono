@@ -5,7 +5,7 @@ import { getDb } from "../../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { getMemberPhoto } from "../../../services/member-photo.service.js";
+import { getMemberPhoto } from "../../../services/member/photos/queries.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

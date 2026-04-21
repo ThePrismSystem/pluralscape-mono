@@ -12,10 +12,8 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-import {
-  clearFieldDefCache,
-  createFieldDefinition,
-} from "../../../services/field-definition.service.js";
+import { createFieldDefinition } from "../../../services/field-definition/create.js";
+import { clearFieldDefCache } from "../../../services/field-definition/internal.js";
 import { fieldRouter } from "../../../trpc/routers/field.js";
 import { noopAudit, testEncryptedDataBase64 } from "../../helpers/integration-setup.js";
 import {

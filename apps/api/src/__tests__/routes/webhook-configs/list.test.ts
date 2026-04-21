@@ -5,16 +5,16 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockWebhookConfigServiceFactory,
+  mockWebhookConfigQueriesFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { WebhookConfigResult } from "../../../services/webhook-config.service.js";
+import type { WebhookConfigResult } from "../../../services/webhook-config/internal.js";
 import type { PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/webhook-config.service.js", () => mockWebhookConfigServiceFactory());
+vi.mock("../../../services/webhook-config/queries.js", () => mockWebhookConfigQueriesFactory());
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -22,7 +22,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listWebhookConfigs } = await import("../../../services/webhook-config.service.js");
+const { listWebhookConfigs } = await import("../../../services/webhook-config/queries.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

@@ -11,15 +11,13 @@ import {
   setFieldBucketVisibility,
   listFieldBucketVisibility,
 } from "../../services/field-bucket-visibility.service.js";
-import {
-  archiveFieldDefinition,
-  createFieldDefinition,
-  deleteFieldDefinition,
-  getFieldDefinition,
-  listFieldDefinitions,
-  restoreFieldDefinition,
-  updateFieldDefinition,
-} from "../../services/field-definition.service.js";
+import { archiveFieldDefinition } from "../../services/field-definition/archive.js";
+import { createFieldDefinition } from "../../services/field-definition/create.js";
+import { deleteFieldDefinition } from "../../services/field-definition/delete.js";
+import { getFieldDefinition } from "../../services/field-definition/get.js";
+import { listFieldDefinitions } from "../../services/field-definition/list.js";
+import { restoreFieldDefinition } from "../../services/field-definition/restore.js";
+import { updateFieldDefinition } from "../../services/field-definition/update.js";
 import {
   deleteFieldValueForOwner,
   listFieldValuesForOwner,
