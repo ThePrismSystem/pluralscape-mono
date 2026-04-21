@@ -10,15 +10,11 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { archiveChannel, createChannel } from "../../services/channel.service.js";
-import {
-  archiveMessage,
-  createMessage,
-  deleteMessage,
-  getMessage,
-  listMessages,
-  restoreMessage,
-  updateMessage,
-} from "../../services/message.service.js";
+import { createMessage } from "../../services/message/create.js";
+import { deleteMessage } from "../../services/message/delete.js";
+import { archiveMessage, restoreMessage } from "../../services/message/lifecycle.js";
+import { getMessage, listMessages } from "../../services/message/queries.js";
+import { updateMessage } from "../../services/message/update.js";
 import {
   assertApiError,
   asDb,

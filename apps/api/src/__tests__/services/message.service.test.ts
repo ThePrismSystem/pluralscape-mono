@@ -88,15 +88,11 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
 
-const {
-  createMessage,
-  listMessages,
-  getMessage,
-  updateMessage,
-  deleteMessage,
-  archiveMessage,
-  restoreMessage,
-} = await import("../../services/message.service.js");
+const { createMessage } = await import("../../services/message/create.js");
+const { listMessages, getMessage } = await import("../../services/message/queries.js");
+const { updateMessage } = await import("../../services/message/update.js");
+const { deleteMessage } = await import("../../services/message/delete.js");
+const { archiveMessage, restoreMessage } = await import("../../services/message/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
