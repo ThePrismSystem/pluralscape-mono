@@ -15,12 +15,15 @@ optional connection pooling. `StubEmailAdapter` is a no-op suitable as a product
 when no provider is configured. `InMemoryEmailAdapter` (available via the `./testing` entry
 point) captures sent messages in memory for test assertions.
 
-The `./templates` entry point provides five typed security notification templates:
-`recovery-key-regenerated`, `new-device-login`, `password-changed`, `two-factor-changed`, and
-`webhook-failure-digest`. Each template is rendered to `{ subject, html, text }` via
-`renderTemplate`, keeping HTML generation separate from delivery.
+The `./templates` entry point provides six typed security notification templates:
+`recovery-key-regenerated`, `new-device-login`, `password-changed`, `two-factor-changed`,
+`webhook-failure-digest`, and `account-change-email`. Each template is rendered to
+`{ subject, html, text }` via `renderTemplate`, keeping HTML generation separate from delivery.
 
-Design rationale: ADR 029 (Server-Side Encrypted Email), ADR 030 (Email Provider Selection).
+This package is transport-only. Email addresses themselves are encrypted at rest on the server
+via XChaCha20-Poly1305 with a server-held symmetric key; decryption and address resolution live
+in the API (`resolveAccountEmail`), not here. See ADR 029 (Server-Side Encrypted Email) and
+ADR 030 (Email Provider Selection) for design rationale.
 
 ## Key Exports
 
@@ -34,12 +37,17 @@ Design rationale: ADR 029 (Server-Side Encrypted Email), ADR 030 (Email Provider
 | `StubEmailAdapter`        | class     | No-op adapter, safe as a production fallback                           |
 | `EmailDeliveryError`      | class     | Provider rejected the message                                          |
 | `EmailConfigurationError` | class     | Adapter is misconfigured (bad API key, SMTP connection failure)        |
-| `EmailRateLimitError`     | class     | Provider rate-limited the request                                      |
-| `InvalidRecipientError`   | class     | Recipient address rejected by the provider                             |
+| `EmailRateLimitError`     | class     | Provider rate-limited the request (carries `retryAfterSeconds`)        |
+| `EmailValidationError`    | class     | Send params failed local validation (carries `field`, `actual`, `max`) |
+| `InvalidRecipientError`   | class     | Recipient, `from`, or `replyTo` address rejected                       |
 | `DEFAULT_FROM_ADDRESS`    | const     | Default sender address                                                 |
 | `MAX_RECIPIENTS`          | const     | Maximum recipients per send                                            |
 | `MAX_SUBJECT_LENGTH`      | const     | Maximum subject line length                                            |
 | `validateSendParams`      | function  | Throws on invalid params before hitting the provider                   |
+
+`validateSendParams` checks recipient count, subject length, and the shape of optional `from`
+and `replyTo` addresses. The address check is implemented as a linear scan (not a regex) to
+avoid polynomial-time backtracking on adversarial inputs (CodeQL `js/polynomial-redos`).
 
 ### Resend adapter (`@pluralscape/email/resend`)
 
@@ -72,6 +80,7 @@ Factory methods: `SmtpEmailAdapter.create(config, fromAddress?)`, `SmtpEmailAdap
 | `PasswordChangedVars`        | interface | `{ timestamp }`                                                         |
 | `TwoFactorChangedVars`       | interface | `{ timestamp, action }`                                                 |
 | `WebhookFailureDigestVars`   | interface | `{ webhookUrl, failureCount, lastError, timeRangeStart, timeRangeEnd }` |
+| `AccountChangeEmailVars`     | interface | `{ oldEmail, newEmail, timestamp, ipAddress? }`                         |
 
 ### Testing helpers (`@pluralscape/email/testing`)
 

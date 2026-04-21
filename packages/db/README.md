@@ -16,10 +16,18 @@ entry point (`@pluralscape/db`) exports the client factory, dialect and deployme
 detection utilities, RLS helpers, shared query helpers, enumeration constants, and view
 types that are dialect-agnostic.
 
-Row-Level Security (RLS) is enforced on the PostgreSQL dialect. Every table is protected
-by tenant-scoped policies keyed on `system_id` and `account_id`. The RLS migration is
-generated from the schema and must be regenerated whenever the schema changes (see
-[Migrations](#migrations)).
+Row-Level Security (RLS) is enforced on the PostgreSQL dialect. Every tenant table is
+protected by policies keyed on `system_id`, `account_id`, or both — including sync
+tables (`sync_docs`, `sync_events`, `sync_cursors`) and bidirectional friend
+connections. The RLS migration is generated from `RLS_TABLE_POLICIES` in
+`src/rls/policies.ts` and must be regenerated whenever tables are added, removed, or
+change scope (see [Migrations](#migrations)).
+
+Several high-volume tables use PostgreSQL range partitioning by timestamp —
+`fronting_sessions` (by `start_time`), `messages` (by `timestamp`), and `audit_log`
+(by `timestamp`). Partition creation and detachment are handled by the helpers in
+`src/queries/partition-maintenance.ts` (`pgEnsureFuturePartitions`,
+`pgDetachOldPartitions`); only `audit_log` partitions may be detached destructively.
 
 ## Key Exports
 
@@ -112,6 +120,13 @@ const rows = await db.drizzle.select().from(members).where(eq(members.systemId, 
 
 Migration files live in `migrations/pg/` and `migrations/sqlite/`.
 
+**Pre-release migration policy:** Pluralscape is pre-production, so generated migration
+files are regularly nuked and regenerated from scratch. The Drizzle schema files under
+`src/schema/pg/` and `src/schema/sqlite/` are the single source of truth for table
+shape — never treat a migration file as authoritative. Changes to column names,
+constraints, or indexes land in the schema files first; migrations are then regenerated
+to reflect them.
+
 Generate the Drizzle schema migration after schema changes:
 
 ```bash
@@ -133,6 +148,12 @@ pnpm --filter @pluralscape/db exec tsx scripts/generate-rls-migration.ts \
 The RLS migration must always be `0001_rls_all_tables.sql` (after the `0000` Drizzle
 schema migration). Update the filename reference in
 `src/__tests__/rls-migrations.integration.test.ts` if the migration file changes.
+
+To apply RLS to a live PostgreSQL database (for example from a deploy script), use:
+
+```bash
+pnpm --filter @pluralscape/db db:apply-rls
+```
 
 ## Testing
 
