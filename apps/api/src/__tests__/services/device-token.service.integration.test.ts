@@ -12,12 +12,10 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  hashDeviceToken,
-  listDeviceTokens,
-  registerDeviceToken,
-  revokeDeviceToken,
-} from "../../services/device-token.service.js";
+import { hashDeviceToken } from "../../services/device-token/internal.js";
+import { listDeviceTokens } from "../../services/device-token/queries.js";
+import { registerDeviceToken } from "../../services/device-token/register.js";
+import { revokeDeviceToken } from "../../services/device-token/revoke.js";
 import {
   assertApiError,
   asDb,

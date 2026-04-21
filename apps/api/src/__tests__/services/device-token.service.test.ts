@@ -101,13 +101,11 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
-const {
-  registerDeviceToken,
-  updateDeviceToken,
-  deleteDeviceToken,
-  revokeDeviceToken,
-  listDeviceTokens,
-} = await import("../../services/device-token.service.js");
+const { registerDeviceToken } = await import("../../services/device-token/register.js");
+const { updateDeviceToken } = await import("../../services/device-token/update.js");
+const { deleteDeviceToken } = await import("../../services/device-token/delete.js");
+const { revokeDeviceToken } = await import("../../services/device-token/revoke.js");
+const { listDeviceTokens } = await import("../../services/device-token/queries.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
