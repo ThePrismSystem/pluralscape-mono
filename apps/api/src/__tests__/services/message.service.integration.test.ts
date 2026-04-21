@@ -9,7 +9,8 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { archiveChannel, createChannel } from "../../services/channel.service.js";
+import { createChannel } from "../../services/channel/create.js";
+import { archiveChannel } from "../../services/channel/lifecycle.js";
 import {
   archiveMessage,
   createMessage,
@@ -31,7 +32,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { ChannelResult } from "../../services/channel.service.js";
+import type { ChannelResult } from "../../services/channel/internal.js";
 import type { AccountId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 

@@ -19,25 +19,31 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/channel.service.js", () => ({
+vi.mock("../../../services/channel/create.js", () => ({
   createChannel: vi.fn(),
+}));
+vi.mock("../../../services/channel/queries.js", () => ({
   getChannel: vi.fn(),
   listChannels: vi.fn(),
+}));
+vi.mock("../../../services/channel/update.js", () => ({
   updateChannel: vi.fn(),
-  archiveChannel: vi.fn(),
-  restoreChannel: vi.fn(),
+}));
+vi.mock("../../../services/channel/delete.js", () => ({
   deleteChannel: vi.fn(),
 }));
+vi.mock("../../../services/channel/lifecycle.js", () => ({
+  archiveChannel: vi.fn(),
+  restoreChannel: vi.fn(),
+}));
 
-const {
-  createChannel,
-  getChannel,
-  listChannels,
-  updateChannel,
-  archiveChannel,
-  restoreChannel,
-  deleteChannel,
-} = await import("../../../services/channel.service.js");
+const { createChannel } = await import("../../../services/channel/create.js");
+const { getChannel, listChannels } = await import("../../../services/channel/queries.js");
+const { updateChannel } = await import("../../../services/channel/update.js");
+const { deleteChannel } = await import("../../../services/channel/delete.js");
+const { archiveChannel, restoreChannel } = await import(
+  "../../../services/channel/lifecycle.js"
+);
 
 const { channelRouter } = await import("../../../trpc/routers/channel.js");
 

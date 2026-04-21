@@ -9,16 +9,24 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ChannelResult } from "../../../services/channel.service.js";
+import type { ChannelResult } from "../../../services/channel/internal.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/channel.service.js", () => ({
+vi.mock("../../../services/channel/create.js", () => ({
   createChannel: vi.fn(),
+}));
+vi.mock("../../../services/channel/queries.js", () => ({
   getChannel: vi.fn(),
   listChannels: vi.fn(),
+}));
+vi.mock("../../../services/channel/update.js", () => ({
   updateChannel: vi.fn(),
+}));
+vi.mock("../../../services/channel/delete.js", () => ({
   deleteChannel: vi.fn(),
+}));
+vi.mock("../../../services/channel/lifecycle.js", () => ({
   archiveChannel: vi.fn(),
   restoreChannel: vi.fn(),
 }));
@@ -30,15 +38,13 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createChannel,
-  getChannel,
-  listChannels,
-  updateChannel,
-  deleteChannel,
-  archiveChannel,
-  restoreChannel,
-} = await import("../../../services/channel.service.js");
+const { createChannel } = await import("../../../services/channel/create.js");
+const { getChannel, listChannels } = await import("../../../services/channel/queries.js");
+const { updateChannel } = await import("../../../services/channel/update.js");
+const { deleteChannel } = await import("../../../services/channel/delete.js");
+const { archiveChannel, restoreChannel } = await import(
+  "../../../services/channel/lifecycle.js"
+);
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

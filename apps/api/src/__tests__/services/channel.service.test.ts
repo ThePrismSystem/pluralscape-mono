@@ -89,15 +89,11 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
 
-const {
-  createChannel,
-  listChannels,
-  getChannel,
-  updateChannel,
-  deleteChannel,
-  archiveChannel,
-  restoreChannel,
-} = await import("../../services/channel.service.js");
+const { createChannel } = await import("../../services/channel/create.js");
+const { listChannels, getChannel } = await import("../../services/channel/queries.js");
+const { updateChannel } = await import("../../services/channel/update.js");
+const { deleteChannel } = await import("../../services/channel/delete.js");
+const { archiveChannel, restoreChannel } = await import("../../services/channel/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

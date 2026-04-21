@@ -1,11 +1,11 @@
 ---
 # api-0ydp
 title: Refactor channel.service.ts (472 LOC) into services/channel/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T22:28:09Z
+updated_at: 2026-04-21T23:07:21Z
 parent: api-6l1q
 ---
 
