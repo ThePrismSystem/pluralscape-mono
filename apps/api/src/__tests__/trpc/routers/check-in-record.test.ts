@@ -19,27 +19,39 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/check-in-record.service.js", () => ({
+vi.mock("../../../services/check-in-record/create.js", () => ({
   createCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/get.js", () => ({
   getCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/list.js", () => ({
   listCheckInRecords: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/respond.js", () => ({
   respondCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/dismiss.js", () => ({
   dismissCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/archive.js", () => ({
   archiveCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/restore.js", () => ({
   restoreCheckInRecord: vi.fn(),
+}));
+vi.mock("../../../services/check-in-record/delete.js", () => ({
   deleteCheckInRecord: vi.fn(),
 }));
 
-const {
-  createCheckInRecord,
-  getCheckInRecord,
-  listCheckInRecords,
-  respondCheckInRecord,
-  dismissCheckInRecord,
-  archiveCheckInRecord,
-  restoreCheckInRecord,
-  deleteCheckInRecord,
-} = await import("../../../services/check-in-record.service.js");
+const { createCheckInRecord } = await import("../../../services/check-in-record/create.js");
+const { getCheckInRecord } = await import("../../../services/check-in-record/get.js");
+const { listCheckInRecords } = await import("../../../services/check-in-record/list.js");
+const { respondCheckInRecord } = await import("../../../services/check-in-record/respond.js");
+const { dismissCheckInRecord } = await import("../../../services/check-in-record/dismiss.js");
+const { archiveCheckInRecord } = await import("../../../services/check-in-record/archive.js");
+const { restoreCheckInRecord } = await import("../../../services/check-in-record/restore.js");
+const { deleteCheckInRecord } = await import("../../../services/check-in-record/delete.js");
 
 const { checkInRecordRouter } = await import("../../../trpc/routers/check-in-record.js");
 

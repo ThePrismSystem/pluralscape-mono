@@ -9,11 +9,9 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  archiveCheckInRecord,
-  createCheckInRecord,
-  deleteCheckInRecord,
-} from "../../services/check-in-record.service.js";
+import { archiveCheckInRecord } from "../../services/check-in-record/archive.js";
+import { createCheckInRecord } from "../../services/check-in-record/create.js";
+import { deleteCheckInRecord } from "../../services/check-in-record/delete.js";
 import {
   archiveTimerConfig,
   createTimerConfig,

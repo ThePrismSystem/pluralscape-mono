@@ -26,16 +26,14 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const {
-  createCheckInRecord,
-  listCheckInRecords,
-  getCheckInRecord,
-  respondCheckInRecord,
-  dismissCheckInRecord,
-  archiveCheckInRecord,
-  deleteCheckInRecord,
-  parseCheckInRecordQuery,
-} = await import("../../services/check-in-record.service.js");
+const { createCheckInRecord } = await import("../../services/check-in-record/create.js");
+const { listCheckInRecords, parseCheckInRecordQuery } =
+  await import("../../services/check-in-record/list.js");
+const { getCheckInRecord } = await import("../../services/check-in-record/get.js");
+const { respondCheckInRecord } = await import("../../services/check-in-record/respond.js");
+const { dismissCheckInRecord } = await import("../../services/check-in-record/dismiss.js");
+const { archiveCheckInRecord } = await import("../../services/check-in-record/archive.js");
+const { deleteCheckInRecord } = await import("../../services/check-in-record/delete.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

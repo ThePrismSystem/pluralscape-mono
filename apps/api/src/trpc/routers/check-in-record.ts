@@ -5,16 +5,14 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import {
-  archiveCheckInRecord,
-  createCheckInRecord,
-  deleteCheckInRecord,
-  dismissCheckInRecord,
-  getCheckInRecord,
-  listCheckInRecords,
-  respondCheckInRecord,
-  restoreCheckInRecord,
-} from "../../services/check-in-record.service.js";
+import { archiveCheckInRecord } from "../../services/check-in-record/archive.js";
+import { createCheckInRecord } from "../../services/check-in-record/create.js";
+import { deleteCheckInRecord } from "../../services/check-in-record/delete.js";
+import { dismissCheckInRecord } from "../../services/check-in-record/dismiss.js";
+import { getCheckInRecord } from "../../services/check-in-record/get.js";
+import { listCheckInRecords } from "../../services/check-in-record/list.js";
+import { respondCheckInRecord } from "../../services/check-in-record/respond.js";
+import { restoreCheckInRecord } from "../../services/check-in-record/restore.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
