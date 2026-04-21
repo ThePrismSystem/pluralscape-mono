@@ -1,10 +1,7 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
-import {
-  ANTI_ENUM_SALT_SECRET_DEFAULT,
-  ANTI_ENUM_SALT_SECRET_MIN_LENGTH,
-} from "./routes/auth/auth.constants.js";
+import { ANTI_ENUM_SALT_SECRET_MIN_LENGTH } from "./routes/auth/auth.constants.js";
 import { DEFAULT_PORT, MAX_PORT } from "./server.constants.js";
 
 const isProduction = process.env["NODE_ENV"] === "production";
@@ -75,7 +72,7 @@ export const env = createEnv({
       .refine((v) => !isProduction || v !== undefined, {
         message: "ANTI_ENUM_SALT_SECRET is required in production",
       })
-      .refine((v) => v !== ANTI_ENUM_SALT_SECRET_DEFAULT || !isProduction, {
+      .refine((v) => !isProduction || !v?.startsWith("pluralscape-dev-"), {
         message: "ANTI_ENUM_SALT_SECRET must not be the development default in production",
       }),
     BLOB_STORAGE_S3_BUCKET: z.string().optional(),

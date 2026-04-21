@@ -13,8 +13,6 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 
-import { ANTI_ENUM_SALT_SECRET_DEFAULT } from "./auth.constants.js";
-
 export const saltRoute = new Hono();
 
 saltRoute.use("*", createCategoryRateLimiter("authHeavy"));
@@ -43,8 +41,22 @@ saltRoute.post("/", async (c) => {
   // env.ANTI_ENUM_SALT_SECRET is validated at boot (required and >=32 chars
   // in production; dev default rejected). Fall through to the dev default
   // only when the env var is unset outside production.
+  //
+  // The dynamic import is only reached when env.ANTI_ENUM_SALT_SECRET is
+  // undefined, which Zod refines in env.ts guarantee cannot happen in
+  // production — so the dev-constants module is dead code in prod bundles.
   const adapter = getSodium();
-  const secret = env.ANTI_ENUM_SALT_SECRET ?? ANTI_ENUM_SALT_SECRET_DEFAULT;
+  let secret: string;
+  if (env.ANTI_ENUM_SALT_SECRET !== undefined) {
+    secret = env.ANTI_ENUM_SALT_SECRET;
+  } else if (process.env["NODE_ENV"] !== "production") {
+    const { ANTI_ENUM_SALT_SECRET_DEFAULT } = await import("../../lib/dev-constants.js");
+    secret = ANTI_ENUM_SALT_SECRET_DEFAULT;
+  } else {
+    // Should never reach here — Zod refines in env.ts guarantee
+    // ANTI_ENUM_SALT_SECRET is set in production.
+    throw new Error("ANTI_ENUM_SALT_SECRET is required in production");
+  }
   const secretBytes = new TextEncoder().encode(secret);
   const emailBytes = new TextEncoder().encode(parsed.email.toLowerCase().trim());
 

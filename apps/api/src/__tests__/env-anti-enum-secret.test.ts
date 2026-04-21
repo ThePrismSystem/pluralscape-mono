@@ -30,9 +30,9 @@ describe("env ANTI_ENUM_SALT_SECRET validation", () => {
     });
   });
 
-  it("rejects production when ANTI_ENUM_SALT_SECRET equals the development default", async () => {
+  it("rejects production when ANTI_ENUM_SALT_SECRET starts with the dev prefix", async () => {
     await withProdEnv(
-      { ANTI_ENUM_SALT_SECRET: "pluralscape-dev-anti-enum-secret-do-not-use-in-prod" },
+      { ANTI_ENUM_SALT_SECRET: "pluralscape-dev-any-suffix-value-here-x" },
       async () => {
         const stderrSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
         await expect(import("../env.js")).rejects.toThrow(/Invalid environment variables/);
