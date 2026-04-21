@@ -67,7 +67,7 @@ describe("scope gate integration", () => {
     const res = await app.request("/systems/sys_123/members", { method: "POST" });
     expect(res.status).toBe(403);
     const body = (await res.json()) as { error?: { code?: string; message?: string } };
-    expect(body.error?.code).toBe("FORBIDDEN");
+    expect(body.error?.code).toBe("SCOPE_INSUFFICIENT");
     expect(body.error?.message).toContain("write:members");
   });
 

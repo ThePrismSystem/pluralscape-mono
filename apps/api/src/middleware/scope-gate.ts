@@ -26,8 +26,10 @@ function getRoutePattern(c: Context): string | null {
  *
  * - Session auth: always passes through.
  * - API key auth: looks up the matched route pattern in SCOPE_REGISTRY.rest.
- *   - Entry found: checks hasScope(auth, entry.scope).
- *   - Entry missing: rejects with 403 (fail-closed).
+ *   - No route pattern or entry missing: 403 `FORBIDDEN` (fail-closed — endpoint
+ *     is not available for API key access).
+ *   - Entry found but `hasScope(auth, entry.scope)` is false: 403
+ *     `SCOPE_INSUFFICIENT` with a message naming the required scope.
  */
 export function scopeGateMiddleware(): MiddlewareHandler<AuthEnv> {
   return async (c, next) => {

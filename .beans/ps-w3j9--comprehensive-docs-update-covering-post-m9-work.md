@@ -27,7 +27,7 @@ Full sweep of repo docs to reflect 80 PRs merged since the last comprehensive do
 - [x] Phase 3b: Package READMEs batch 2 (Task 15, Commit 9 = 80cd9f3f)
 - [x] Phase 3c: Package READMEs batch 3 (Task 16, Commit 10 = 11e3f336)
 - [x] Phase 4: Close beans (Task 17, Commit 11)
-- [ ] Phase 5: Pre-PR verification (Task 18)
+- [x] Phase 5: Pre-PR verification (Task 18)
 
 **Deferred: SCOPE_INSUFFICIENT constant vs handler behavior.** `SCOPE_INSUFFICIENT` is defined in `packages/types/src/api-constants/error-codes.ts` but no handler throws it — handlers use `FORBIDDEN` for scope denials. OpenAPI spec (Task 8) lists it in the ErrorResponse enum. Minor spec-vs-code divergence; follow-up bean to decide: emit `SCOPE_INSUFFICIENT` from scope-gate middleware, or remove from constants + OpenAPI enum.
 
@@ -44,7 +44,7 @@ Completed three-pass accuracy review (claim extraction → ground-truth check �
 ### Planning docs
 
 - milestones.md — ADR count 34→37, M9 scope bullets verified.
-- features.md — REST 304→317, domains 31→32, router count 38 (orphan i18n.ts excluded), dual-source import framing, new i18n/OPFS/zero-knowledge/import-core bullets.
+- features.md — REST 304→317, domains 31→32, 38 top-level routers (i18n.ts is composed into i18nRouter via i18n-composer.ts), dual-source import framing, new i18n/OPFS/zero-knowledge/import-core bullets.
 - api-specification.md — no edits required (reviewed, all accurate).
 
 ### Architecture and schema
@@ -75,20 +75,15 @@ Completed three-pass accuracy review (claim extraction → ground-truth check �
 - i18n, import-core, import-pk, import-sp, queue (batch 2) — OTA proxy, Persister interface, dual source modes, SP auth quirk, Valkey gate.
 - rotation-worker, storage, sync, types, validation (batch 3) — key zeroing, exact-size contract, async SqliteDriver, brandId, schema catalog.
 
-### Deferred follow-up items
+### Follow-ups resolved (same branch)
 
-1. **OpenAPI list-wrapper inconsistency**: 25+ list endpoints use varied response keys (items/members/groups/...) in OpenAPI while handlers return `data` via `buildPaginatedResult`. Needs spec-wide rename or server-side settlement + ADR.
-2. **SCOPE_INSUFFICIENT constant unused**: defined in `error-codes.ts` but no handler emits it; handlers use `FORBIDDEN`. Decide to emit the constant or drop it.
-3. ~~Orphan `apps/api/src/trpc/routers/i18n.ts`~~ — INVALID. `i18n-composer.ts` imports `createI18nRouter` from `i18n.ts` and wires it into root.ts. Both files are live.
-4. **Missing `packages/logger/README.md`**: the package exists but has no README; was out of the 15-README scope.
+All four items originally deferred were resolved before opening the PR:
 
-Milestone 9 (ps-h2gl) marked completed.
-
-## Follow-ups resolved (same branch)
-
-- **#1 OpenAPI list-wrapper rename** → commit `4a5ea65d`: 3 schemas + 38 inline renames across 23 path files, all list wrapper keys normalized to `data` to match `buildPaginatedResult`.
-- **#2 SCOPE_INSUFFICIENT emission** → commit `28566d45`: REST scope-gate middleware distinguishes FORBIDDEN (endpoint not registered) from SCOPE_INSUFFICIENT (scope mismatch). tRPC scope-gate keeps FORBIDDEN (code enum fixed). Docs updated.
-- **#3 Orphan i18n.ts** → INVALID; `i18n-composer.ts` imports `createI18nRouter` from `i18n.ts` and wires it into `root.ts`.
-- **#4 logger README** → commit `50126200`: new README for `@pluralscape/logger` covering mobile logger, default PII redaction, options, testing, design rationale.
+1. **OpenAPI list-wrapper rename** → commit `4a5ea65d`: 3 schemas + 38 inline renames across 23 path files, all list wrapper keys normalized to `data` to match `buildPaginatedResult`.
+2. **SCOPE_INSUFFICIENT emission** → commit `28566d45`: REST scope-gate middleware distinguishes `FORBIDDEN` (endpoint not registered) from `SCOPE_INSUFFICIENT` (scope mismatch). tRPC scope-gate keeps `FORBIDDEN` (code enum fixed). Docs updated.
+3. **Orphan `apps/api/src/trpc/routers/i18n.ts`** → INVALID; `i18n-composer.ts` imports `createI18nRouter` from `i18n.ts` and wires it into `root.ts`. Both files are live.
+4. **Missing `packages/logger/README.md`** → commit `50126200`: new README for `@pluralscape/logger` covering mobile logger, default PII redaction, options, testing, design rationale.
 
 All four items verified: `openapi:check`, `openapi:lint`, `trpc:parity`, scope-gate tests (8/8 pass).
+
+Milestone 9 (ps-h2gl) marked completed.
