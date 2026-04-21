@@ -43,6 +43,8 @@ import {
 } from "../../services/account-pin.service.js";
 import { queryAuditLog } from "../../services/audit-log-query.service.js";
 import { enrollBiometric, verifyBiometric } from "../../services/biometric.service.js";
+import { approveTransfer } from "../../services/device-transfer/approve.js";
+import { completeTransfer } from "../../services/device-transfer/complete.js";
 import {
   KeyDerivationUnavailableError,
   TransferCodeError,
@@ -50,10 +52,8 @@ import {
   TransferNotFoundError,
   TransferSessionMismatchError,
   TransferValidationError,
-  approveTransfer,
-  completeTransfer,
-  initiateTransfer,
-} from "../../services/device-transfer.service.js";
+} from "../../services/device-transfer/errors.js";
+import { initiateTransfer } from "../../services/device-transfer/initiate.js";
 import {
   getRecoveryKeyStatus,
   regenerateRecoveryKeyBackup,
