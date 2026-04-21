@@ -34,6 +34,7 @@ import type {
   MemberId,
   NotificationConfigId,
   SystemId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -79,7 +80,32 @@ function createMockQueue(options?: { failOnNth?: number }): {
       payload: params.payload,
       idempotencyKey: params.idempotencyKey,
     });
-    return Promise.resolve({ id: `job_${crypto.randomUUID()}` as JobId } as JobDefinition);
+    const jobId = brandId<JobId>(`job_${crypto.randomUUID()}`);
+    const now = Date.now() as UnixMillis;
+    // JobDefinition is a distributive union over JobType; the test only
+    // cares about the id/type/payload/idempotencyKey fields, so we fill the
+    // rest with sensible defaults and narrow at the return boundary.
+    const job = {
+      id: jobId,
+      systemId: null,
+      type: params.type,
+      payload: params.payload,
+      status: "pending" as const,
+      attempts: 0,
+      maxAttempts: 3,
+      nextRetryAt: null,
+      error: null,
+      result: null,
+      createdAt: now,
+      startedAt: null,
+      completedAt: null,
+      idempotencyKey: params.idempotencyKey,
+      lastHeartbeatAt: null,
+      timeoutMs: 30_000,
+      scheduledFor: null,
+      priority: 0,
+    };
+    return Promise.resolve(job as JobDefinition);
   };
 
   const queue: JobQueue = {
