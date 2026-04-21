@@ -6,14 +6,12 @@ import {
 import { z } from "zod/v4";
 
 import { getQuotaService, getStorageAdapter } from "../../lib/storage.js";
-import {
-  archiveBlob,
-  confirmUpload,
-  createUploadUrl,
-  getBlob,
-  getDownloadUrl,
-  listBlobs,
-} from "../../services/blob.service.js";
+import { archiveBlob } from "../../services/blob/archive.js";
+import { confirmUpload } from "../../services/blob/confirm-upload.js";
+import { createUploadUrl } from "../../services/blob/create-upload-url.js";
+import { getDownloadUrl } from "../../services/blob/download-url.js";
+import { getBlob } from "../../services/blob/get.js";
+import { listBlobs } from "../../services/blob/list.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

@@ -12,11 +12,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/blob.service.js", () => ({
-  createUploadUrl: vi.fn(),
-  confirmUpload: vi.fn(),
-  getBlob: vi.fn(),
-  getDownloadUrl: vi.fn(),
+vi.mock("../../../services/blob/archive.js", () => ({
   archiveBlob: vi.fn(),
 }));
 
@@ -34,7 +30,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { archiveBlob } = await import("../../../services/blob.service.js");
+const { archiveBlob } = await import("../../../services/blob/archive.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

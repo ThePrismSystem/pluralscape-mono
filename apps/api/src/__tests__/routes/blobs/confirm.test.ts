@@ -8,17 +8,13 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { BlobResult } from "../../../services/blob.service.js";
+import type { BlobResult } from "../../../services/blob/internal.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/blob.service.js", () => ({
-  createUploadUrl: vi.fn(),
+vi.mock("../../../services/blob/confirm-upload.js", () => ({
   confirmUpload: vi.fn(),
-  getBlob: vi.fn(),
-  getDownloadUrl: vi.fn(),
-  archiveBlob: vi.fn(),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -35,7 +31,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { confirmUpload } = await import("../../../services/blob.service.js");
+const { confirmUpload } = await import("../../../services/blob/confirm-upload.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
