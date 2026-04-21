@@ -35,15 +35,12 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const {
-  createMemberPhoto,
-  getMemberPhoto,
-  listMemberPhotos,
-  reorderMemberPhotos,
-  archiveMemberPhoto,
-  restoreMemberPhoto,
-  deleteMemberPhoto,
-} = await import("../../services/member-photo.service.js");
+const { createMemberPhoto } = await import("../../services/member/photos/create.js");
+const { getMemberPhoto, listMemberPhotos } =
+  await import("../../services/member/photos/queries.js");
+const { archiveMemberPhoto, restoreMemberPhoto, deleteMemberPhoto } =
+  await import("../../services/member/photos/lifecycle.js");
+const { reorderMemberPhotos } = await import("../../services/member/photos/update.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

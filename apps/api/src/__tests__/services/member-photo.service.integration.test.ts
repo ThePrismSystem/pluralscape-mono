@@ -13,12 +13,10 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { fromCompositeCursor } from "../../lib/pagination.js";
-import {
-  createMemberPhoto,
-  listMemberPhotos,
-  reorderMemberPhotos,
-  restoreMemberPhoto,
-} from "../../services/member-photo.service.js";
+import { createMemberPhoto } from "../../services/member/photos/create.js";
+import { restoreMemberPhoto } from "../../services/member/photos/lifecycle.js";
+import { listMemberPhotos } from "../../services/member/photos/queries.js";
+import { reorderMemberPhotos } from "../../services/member/photos/update.js";
 import {
   assertApiError,
   asDb,

@@ -22,25 +22,28 @@ vi.mock("../../../lib/pagination.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../services/member-photo.service.js", () => ({
+vi.mock("../../../services/member/photos/create.js", () => ({
   createMemberPhoto: vi.fn(),
+}));
+vi.mock("../../../services/member/photos/queries.js", () => ({
   getMemberPhoto: vi.fn(),
   listMemberPhotos: vi.fn(),
+}));
+vi.mock("../../../services/member/photos/lifecycle.js", () => ({
   archiveMemberPhoto: vi.fn(),
   restoreMemberPhoto: vi.fn(),
   deleteMemberPhoto: vi.fn(),
+}));
+vi.mock("../../../services/member/photos/update.js", () => ({
   reorderMemberPhotos: vi.fn(),
 }));
 
-const {
-  createMemberPhoto,
-  getMemberPhoto,
-  listMemberPhotos,
-  archiveMemberPhoto,
-  restoreMemberPhoto,
-  deleteMemberPhoto,
-  reorderMemberPhotos,
-} = await import("../../../services/member-photo.service.js");
+const { createMemberPhoto } = await import("../../../services/member/photos/create.js");
+const { getMemberPhoto, listMemberPhotos } =
+  await import("../../../services/member/photos/queries.js");
+const { archiveMemberPhoto, restoreMemberPhoto, deleteMemberPhoto } =
+  await import("../../../services/member/photos/lifecycle.js");
+const { reorderMemberPhotos } = await import("../../../services/member/photos/update.js");
 
 const { memberPhotoRouter } = await import("../../../trpc/routers/member-photo.js");
 
