@@ -6,15 +6,14 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createRelationship } from "../../services/relationship/create.js";
 import {
   archiveRelationship,
-  createRelationship,
   deleteRelationship,
-  getRelationship,
-  listRelationships,
   restoreRelationship,
-  updateRelationship,
-} from "../../services/relationship.service.js";
+} from "../../services/relationship/lifecycle.js";
+import { getRelationship, listRelationships } from "../../services/relationship/queries.js";
+import { updateRelationship } from "../../services/relationship/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
