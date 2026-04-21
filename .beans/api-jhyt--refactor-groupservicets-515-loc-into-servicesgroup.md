@@ -1,10 +1,11 @@
 ---
 # api-jhyt
 title: Refactor group.service.ts (515 LOC) into services/group/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:57Z
-updated_at: 2026-04-21T13:56:57Z
+updated_at: 2026-04-21T21:31:52Z
 parent: api-6l1q
 ---
 
@@ -39,3 +40,9 @@ Currently concentrates group CRUD / member assignment / hierarchy in a single fi
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Findings
+
+- apps/api/src/services/group.service.ts:515 — monolithic file with Types/Helpers/shared hierarchy factory + 10 exported funcs; shares one `createHierarchyService` instance used across create/update/list/get/delete/archive/restore — requires factory in internal.ts — low
+- apps/api/src/services/group/create.ts, update.ts, lifecycle.ts, queries.ts — bare re-exports of factory methods (e.g. `export const createGroup = groupHierarchy.create`) inferred to `any` at call sites (likely due to TS generic resolution across re-export) causing @typescript-eslint/no-unsafe-call in callers; added explicit function-type annotations to restore inference — medium
+- apps/api/src/**tests**/routes/groups/list.test.ts:109 — when re-exporting `GroupResult` type through queries.ts the unsafe-argument check triggered until `export type { GroupResult } from "./internal.js"` was added — low

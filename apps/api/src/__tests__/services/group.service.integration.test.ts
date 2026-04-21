@@ -18,23 +18,16 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
   clearWebhookConfigCache: vi.fn(),
 }));
 
+import { createGroup } from "../../services/group/create.js";
+import { archiveGroup, deleteGroup, restoreGroup } from "../../services/group/lifecycle.js";
+import { getGroup, getGroupTree, listGroups } from "../../services/group/queries.js";
+import { moveGroup, reorderGroups } from "../../services/group/structure.js";
+import { updateGroup } from "../../services/group/update.js";
 import {
   addMember,
   listGroupMembers,
   removeMember,
 } from "../../services/group-membership.service.js";
-import {
-  archiveGroup,
-  createGroup,
-  deleteGroup,
-  getGroup,
-  getGroupTree,
-  listGroups,
-  moveGroup,
-  reorderGroups,
-  restoreGroup,
-  updateGroup,
-} from "../../services/group.service.js";
 import {
   assertApiError,
   genGroupId,
