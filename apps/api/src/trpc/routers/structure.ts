@@ -11,21 +11,23 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createStructureEntity } from "../../services/structure/entity-crud/create.js";
+import {
+  archiveStructureEntity,
+  deleteStructureEntity,
+  restoreStructureEntity,
+} from "../../services/structure/entity-crud/lifecycle.js";
+import {
+  getStructureEntity,
+  listStructureEntities,
+} from "../../services/structure/entity-crud/queries.js";
+import { updateStructureEntity } from "../../services/structure/entity-crud/update.js";
 import {
   createEntityAssociation,
   deleteEntityAssociation,
   getEntityHierarchy,
   listEntityAssociations,
 } from "../../services/structure-entity-association.service.js";
-import {
-  archiveStructureEntity,
-  createStructureEntity,
-  deleteStructureEntity,
-  getStructureEntity,
-  listStructureEntities,
-  restoreStructureEntity,
-  updateStructureEntity,
-} from "../../services/structure-entity-crud.service.js";
 import {
   createEntityLink,
   deleteEntityLink,

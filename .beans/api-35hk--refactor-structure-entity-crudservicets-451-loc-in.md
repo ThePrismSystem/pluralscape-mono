@@ -1,11 +1,11 @@
 ---
 # api-35hk
 title: Refactor structure-entity-crud.service.ts (451 LOC) into services/structure/entity-crud/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T22:28:09Z
+updated_at: 2026-04-21T23:08:54Z
 parent: api-6l1q
 ---
 

@@ -28,7 +28,7 @@ import { createBucket } from "../../services/bucket/create.js";
 import { generateFriendCode, redeemFriendCode } from "../../services/friend-code.service.js";
 import { createFrontingSession } from "../../services/fronting-session/create.js";
 import { createMember } from "../../services/member/create.js";
-import { createStructureEntity } from "../../services/structure-entity-crud.service.js";
+import { createStructureEntity } from "../../services/structure/entity-crud/create.js";
 import { createEntityType } from "../../services/structure-entity-type.service.js";
 import { router } from "../../trpc/trpc.js";
 import {
