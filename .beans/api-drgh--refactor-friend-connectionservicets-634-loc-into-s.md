@@ -1,11 +1,11 @@
 ---
 # api-drgh
 title: Refactor friend-connection.service.ts (634 LOC) into services/friend-connection/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:30:48Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -46,3 +46,9 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 - services/friend-connection/transitions.ts:1-374 — status transition helpers (transitionConnectionStatus, updateReverseConnection, cleanupBucketAssignments, terminateConnection) are single-consumer (only used by accept/reject/block/remove); kept module-local per "single-consumer helpers stay module-local" rule — low
 - services/friend-connection/lifecycle.ts — renamed concept: "lifecycle" now covers only archive/restore (account-scoped entity lifecycle). State transitions live in transitions.ts. This matches the split we may want elsewhere — low
 - Types FriendConnectionResult + FriendConnectionWithRotations + toFriendConnectionResult in internal.ts — used by queries/update/transitions/lifecycle (≥4 consumers) — info
+
+## Summary of Changes
+
+friend-connection.service.ts (634 LOC) → services/friend-connection/ (5 files: queries, update, transitions, lifecycle, internal). Max 374 LOC (transitions — within soft-cap; state transitions are cohesive unit). 29 callers updated. No barrel (Option E). Will be relocated under services/account/friends/ in PR 2.
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).

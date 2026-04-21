@@ -1,11 +1,11 @@
 ---
 # api-13d2
 title: Refactor webhook-config.service.ts (728 LOC) into services/webhook-config/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:28:04Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -45,3 +45,9 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 
 - .beans/api-13d2--refactor-webhook-configservicets-728-loc-into-serv.md:21 — bean scope item mentions an "index.ts re-exporter" but the refactor followed Option E (no barrel) per task prompt; callers import from specific verb files — dead-code/TODO
 - apps/api/src/**tests**/helpers/common-route-mocks.ts — the old mockWebhookConfigServiceFactory was replaced with per-verb factories (create/queries/update/lifecycle/test/internal) to match the split service surface — surprising
+
+## Summary of Changes
+
+webhook-config.service.ts (728 LOC) → services/webhook-config/ (6 files: create, queries, update, lifecycle, test, internal). Max 181 LOC. 19 callers updated incl. common-route-mocks.ts factories. No barrel (Option E).
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).

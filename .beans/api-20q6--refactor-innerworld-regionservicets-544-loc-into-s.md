@@ -1,11 +1,11 @@
 ---
 # api-20q6
 title: Refactor innerworld-region.service.ts (544 LOC) into services/innerworld-region/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:24:59Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -47,3 +47,9 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 - apps/api/src/__tests__/trpc/routers/innerworld.test.ts:31 — Single vi.mock on old service path split into four path-specific mocks so each verb file is mockable independently — info
 - apps/api/src/__tests__/services/innerworld-region.service.test.ts:84 — Service test imports now target 4 verb files; tests unmodified in spirit, only import paths updated — info
 - Max LOC after split: lifecycle.ts 257 lines (archive+restore+delete grouped by lifecycle semantics); well under 300 budget — info
+
+## Summary of Changes
+
+innerworld-region.service.ts (544 LOC) → services/innerworld-region/ (5 files: create, queries, update, lifecycle, internal). Max 257 LOC. 17 callers updated. No barrel (Option E). May be relocated under services/innerworld/region/ in PR 2.
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).

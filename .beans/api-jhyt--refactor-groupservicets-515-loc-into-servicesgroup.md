@@ -1,11 +1,11 @@
 ---
 # api-jhyt
 title: Refactor group.service.ts (515 LOC) into services/group/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:57Z
-updated_at: 2026-04-21T21:31:52Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -46,3 +46,9 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 - apps/api/src/services/group.service.ts:515 — monolithic file with Types/Helpers/shared hierarchy factory + 10 exported funcs; shares one `createHierarchyService` instance used across create/update/list/get/delete/archive/restore — requires factory in internal.ts — low
 - apps/api/src/services/group/create.ts, update.ts, lifecycle.ts, queries.ts — bare re-exports of factory methods (e.g. `export const createGroup = groupHierarchy.create`) inferred to `any` at call sites (likely due to TS generic resolution across re-export) causing @typescript-eslint/no-unsafe-call in callers; added explicit function-type annotations to restore inference — medium
 - apps/api/src/**tests**/routes/groups/list.test.ts:109 — when re-exporting `GroupResult` type through queries.ts the unsafe-argument check triggered until `export type { GroupResult } from "./internal.js"` was added — low
+
+## Summary of Changes
+
+group.service.ts (515 LOC) → services/group/ (6 files: create, update, queries, structure, lifecycle, internal). Max 323 LOC (structure — within soft-cap). 30 callers updated. No barrel (Option E). Finding surfaced → api-5psf (factory method re-export TS inference quirk).
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).

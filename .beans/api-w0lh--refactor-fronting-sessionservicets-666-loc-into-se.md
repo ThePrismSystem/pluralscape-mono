@@ -1,11 +1,11 @@
 ---
 # api-w0lh
 title: Refactor fronting-session.service.ts (666 LOC) into services/fronting-session/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:07:24Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -40,3 +40,9 @@ Currently concentrates co-fronting lifecycle / overlap handling / switch trackin
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Summary of Changes
+
+fronting-session.service.ts (666 LOC) → services/fronting-session/ (5 files: create, queries, update, lifecycle, internal). Max 233 LOC. 17 callers updated. No barrel (Option E).
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).

@@ -1,11 +1,11 @@
 ---
 # api-av1h
 title: Refactor check-in-record.service.ts (590 LOC) into services/check-in-record/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:23:44Z
+updated_at: 2026-04-21T22:04:29Z
 parent: api-6l1q
 ---
 
@@ -47,3 +47,9 @@ No cross-blockers with other service refactor beans — safe to run in a worktre
 - shared helpers toCheckInRecordResult (used across create/list/get/respond/dismiss/restore) and fetchPendingCheckIn (used by respond+dismiss) placed in internal.ts — INFO
 - CheckInRecordListOptions, CheckInRecordResult types moved to internal.ts and re-exported from list.ts as types — INFO
 - 8 callers updated (3 tests mocking the service needed vi.mock path fan-out to per-verb files) — INFO
+
+## Summary of Changes
+
+check-in-record.service.ts (590 LOC) → services/check-in-record/ (9 files). Max 140 LOC. 11 caller files (17 import sites). No barrel (Option E).
+
+Merged into feat/api-service-refactor-pr1. Full /verify green (run 30714).
