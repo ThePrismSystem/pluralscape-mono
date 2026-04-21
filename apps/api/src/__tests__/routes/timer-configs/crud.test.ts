@@ -12,15 +12,23 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/timer-config.service.js", () => ({
+vi.mock("../../../services/timer-config/create.js", () => ({
   createTimerConfig: vi.fn(),
+}));
+vi.mock("../../../services/timer-config/queries.js", () => ({
   listTimerConfigs: vi.fn(),
   getTimerConfig: vi.fn(),
+  parseTimerConfigQuery: vi.fn().mockReturnValue({}),
+}));
+vi.mock("../../../services/timer-config/update.js", () => ({
   updateTimerConfig: vi.fn(),
+}));
+vi.mock("../../../services/timer-config/delete.js", () => ({
   deleteTimerConfig: vi.fn(),
+}));
+vi.mock("../../../services/timer-config/lifecycle.js", () => ({
   archiveTimerConfig: vi.fn(),
   restoreTimerConfig: vi.fn(),
-  parseTimerConfigQuery: vi.fn().mockReturnValue({}),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -32,15 +40,15 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createTimerConfig,
-  listTimerConfigs,
-  getTimerConfig,
-  updateTimerConfig,
-  deleteTimerConfig,
-  archiveTimerConfig,
-  restoreTimerConfig,
-} = await import("../../../services/timer-config.service.js");
+const { createTimerConfig } = await import("../../../services/timer-config/create.js");
+const { listTimerConfigs, getTimerConfig } = await import(
+  "../../../services/timer-config/queries.js"
+);
+const { updateTimerConfig } = await import("../../../services/timer-config/update.js");
+const { deleteTimerConfig } = await import("../../../services/timer-config/delete.js");
+const { archiveTimerConfig, restoreTimerConfig } = await import(
+  "../../../services/timer-config/lifecycle.js"
+);
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

@@ -20,7 +20,7 @@ import {
   parseCheckInRecordQuery,
 } from "../../services/check-in-record/list.js";
 import { respondCheckInRecord } from "../../services/check-in-record/respond.js";
-import { createTimerConfig } from "../../services/timer-config.service.js";
+import { createTimerConfig } from "../../services/timer-config/create.js";
 import {
   assertApiError,
   genCheckInRecordId,

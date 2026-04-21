@@ -5,7 +5,7 @@ import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { getTimerConfig } from "../../services/timer-config.service.js";
+import { getTimerConfig } from "../../services/timer-config/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
