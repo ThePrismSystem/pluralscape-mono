@@ -19,23 +19,33 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/timer-config.service.js", () => ({
+vi.mock("../../../services/timer-config/create.js", () => ({
   createTimerConfig: vi.fn(),
+}));
+vi.mock("../../../services/timer-config/queries.js", () => ({
   getTimerConfig: vi.fn(),
   listTimerConfigs: vi.fn(),
+  parseTimerConfigQuery: vi.fn(),
+}));
+vi.mock("../../../services/timer-config/update.js", () => ({
   updateTimerConfig: vi.fn(),
+}));
+vi.mock("../../../services/timer-config/delete.js", () => ({
+  deleteTimerConfig: vi.fn(),
+}));
+vi.mock("../../../services/timer-config/lifecycle.js", () => ({
   archiveTimerConfig: vi.fn(),
   restoreTimerConfig: vi.fn(),
 }));
 
-const {
-  createTimerConfig,
-  getTimerConfig,
-  listTimerConfigs,
-  updateTimerConfig,
-  archiveTimerConfig,
-  restoreTimerConfig,
-} = await import("../../../services/timer-config.service.js");
+const { createTimerConfig } = await import("../../../services/timer-config/create.js");
+const { getTimerConfig, listTimerConfigs } = await import(
+  "../../../services/timer-config/queries.js"
+);
+const { updateTimerConfig } = await import("../../../services/timer-config/update.js");
+const { archiveTimerConfig, restoreTimerConfig } = await import(
+  "../../../services/timer-config/lifecycle.js"
+);
 
 const { timerConfigRouter } = await import("../../../trpc/routers/timer-config.js");
 

@@ -7,7 +7,7 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { updateTimerConfig } from "../../services/timer-config.service.js";
+import { updateTimerConfig } from "../../services/timer-config/update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

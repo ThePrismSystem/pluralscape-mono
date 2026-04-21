@@ -1,0 +1,85 @@
+import { timerConfigs } from "@pluralscape/db/pg";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { CreateTimerConfigBodySchema } from "@pluralscape/validation";
+
+import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { withTenantTransaction } from "../../lib/rls-context.js";
+import { assertSystemOwnership } from "../../lib/system-ownership.js";
+import { tenantCtx } from "../../lib/tenant-context.js";
+import { computeNextCheckInAt } from "../../lib/timer-scheduling.js";
+import { MAX_ENCRYPTED_DATA_BYTES } from "../../service.constants.js";
+
+import { toTimerConfigResult } from "./internal.js";
+
+import type { TimerConfigResult } from "./internal.js";
+import type { AuditWriter } from "../../lib/audit-writer.js";
+import type { AuthContext } from "../../lib/auth-context.js";
+import type { SystemId } from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+export async function createTimerConfig(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<TimerConfigResult> {
+  assertSystemOwnership(systemId, auth);
+
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    CreateTimerConfigBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
+
+  const timerId = createId(ID_PREFIXES.timer);
+  const timestamp = now();
+  const isEnabled = parsed.enabled ?? true;
+  const intervalMinutes = parsed.intervalMinutes ?? null;
+
+  // Compute initial nextCheckInAt if the timer is enabled with a valid interval
+  const nextCheckInAt =
+    isEnabled && intervalMinutes !== null
+      ? computeNextCheckInAt(
+          {
+            intervalMinutes,
+            wakingHoursOnly: parsed.wakingHoursOnly ?? null,
+            wakingStart: parsed.wakingStart ?? null,
+            wakingEnd: parsed.wakingEnd ?? null,
+          },
+          Date.now(),
+        )
+      : null;
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .insert(timerConfigs)
+      .values({
+        id: timerId,
+        systemId,
+        enabled: isEnabled,
+        intervalMinutes,
+        wakingHoursOnly: parsed.wakingHoursOnly ?? null,
+        wakingStart: parsed.wakingStart ?? null,
+        wakingEnd: parsed.wakingEnd ?? null,
+        nextCheckInAt,
+        encryptedData: blob,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      })
+      .returning();
+
+    if (!row) {
+      throw new Error("Failed to create timer config — INSERT returned no rows");
+    }
+
+    await audit(tx, {
+      eventType: "timer-config.created",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Timer config created",
+      systemId,
+    });
+
+    return toTimerConfigResult(row);
+  });
+}

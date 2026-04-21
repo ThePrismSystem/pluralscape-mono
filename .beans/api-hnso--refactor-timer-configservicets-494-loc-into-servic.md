@@ -1,11 +1,11 @@
 ---
 # api-hnso
 title: Refactor timer-config.service.ts (494 LOC) into services/timer-config/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T22:28:09Z
+updated_at: 2026-04-21T23:07:07Z
 parent: api-6l1q
 ---
 
