@@ -4,6 +4,61 @@ All notable changes to this project will be documented in this file.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
 
+## 2026-04-21 — Milestone 9 closeout
+
+### Imports
+
+- Simply Plural import — file and API source modes covering 15 collections with encrypted payload alignment, notes support, and checkpoint-based resume.
+- PluralKit import — member, group, fronting session, and group membership mapping from PK JSON exports, with zero-duration session correction.
+- Import mapped types now flow through shared Zod validation schemas for both SP and PK, eliminating hand-rolled type assertions at trust boundaries.
+- Import security hardening — bounded input parsing, deduplication guarantees, and expanded coverage across real-data edge cases.
+- Queue + import worker audit fixes — tightened job payload validation, safer failure handling, and reduced retry amplification.
+
+### Zero-Knowledge
+
+- Server-side master key operations fully migrated to client, restoring the zero-knowledge server guarantee for account-level key material.
+- Crypto primitives covered by NIST/RFC test vectors across XChaCha20-Poly1305, X25519, Argon2id, and BLAKE2b paths.
+- Constant-time comparison helpers, stricter type guards, and a unified crypto error base class close out the hardening audit.
+- Rotation worker now zeroes key material after use, removing residual plaintext from long-lived worker buffers.
+- Streaming improvements in `packages/crypto` reduce peak memory for large encrypted blob operations.
+
+### i18n / Localization
+
+- Crowdin integration shipped with 12 locales, daily sync workflow, and OTA proxy serving bundles to mobile clients.
+- Automation polish — glossary, pre-translation, and auto-merge on bot PRs reduce translator round-trip time.
+- Full-IETF Crowdin codes mapped to short app locale directories, with `es-419` routed to human-translate only.
+- Locale-parity test reads `languages_mapping` from the nested file entry, catching config drift before release.
+- Crowdin config pipeline hardened — `pipefail` enforcement, author_not_bot rename, and resilient source/context upload.
+- Email templates and i18n defaults aligned so transactional messages respect the recipient's locale.
+
+### Audit Remediation
+
+- `apps/api` hardening — MIME validation, S3 upload size enforcement, session error codes, central scope registry with fail-closed API key enforcement, and Zod validation on deserialized Redis/JSON payloads.
+- `packages/db` RLS hardening across sync, friend-connection, and device-token tables, plus partition sanitation and device-token hashing.
+- `packages/sync` auth key binding, snapshot signature verification, and per-document authorization on CRDT operations.
+- `apps/mobile` SQLite encryption path, hook-ordering fixes, and expanded data-layer support for scoped API keys.
+- Performance — batch reorder queries, materializer query scoping, and base64 encode/decode switched from O(n) string concat to Buffer.
+- Integration coverage added for 15 tRPC routers and E2E specs for analytics and fronting-reports, closing the coverage gap on previously untested services.
+- Branded IDs applied consistently in structure-entity and webhook services, with privacy bucket encrypted fields audited end-to-end.
+
+### CI / Security / Deps
+
+- CodeQL v4 alignment and round-2 triage, including ReDoS fix in the email package and an API-key hashing alert resolution.
+- `hono` bumped to v4.12.14 and `dompurify` pinned to >=3.4.0 to clear upstream advisories.
+- `zod` upgraded to v4 across the monorepo, with Renovate batches consolidating TanStack Query, AWS SDK, BullMQ, Expo, and typescript-eslint updates.
+- pnpm catalog adopted to deduplicate workspace dependency declarations and stabilize lockfile churn.
+- Crowdin GitHub App auto-merge and `setup-pnpm` composite action reduce CI maintenance overhead.
+- `follow-redirects` overridden to >=1.16.0 to mitigate GHSA-r4q5-vmmm-2653.
+
+### Infra
+
+- GCP billing kill-switch Terraform module gives operators a one-knob cost circuit-breaker for the hosted environment.
+- Terraform `google` provider upgraded to v7, unlocking newer resource schemas.
+- OPFS web worker SQLite driver landed (mobile-shr0 phase 2), enabling encrypted local storage on modern browsers.
+- `SqliteDriver` contract is now fully async across sync and mobile, aligning native and web drivers behind one interface.
+- Parameterized queries implemented in the OPFS wa-sqlite driver, closing a SQL-injection footgun on the web path.
+- React Native bumped to 0.85.1 and the Expo monorepo updated in lockstep to keep mobile on the supported SDK line.
+
 ## Milestone 9: Data Import
 
 ### Added
