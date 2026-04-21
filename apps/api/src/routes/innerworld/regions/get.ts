@@ -5,7 +5,7 @@ import { getDb } from "../../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { getRegion } from "../../../services/innerworld-region.service.js";
+import { getRegion } from "../../../services/innerworld-region/queries.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

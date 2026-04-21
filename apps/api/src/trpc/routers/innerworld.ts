@@ -18,15 +18,14 @@ import {
   restoreEntity,
   updateEntity,
 } from "../../services/innerworld-entity.service.js";
+import { createRegion } from "../../services/innerworld-region/create.js";
 import {
   archiveRegion,
-  createRegion,
   deleteRegion,
-  getRegion,
-  listRegions,
   restoreRegion,
-  updateRegion,
-} from "../../services/innerworld-region.service.js";
+} from "../../services/innerworld-region/lifecycle.js";
+import { getRegion, listRegions } from "../../services/innerworld-region/queries.js";
+import { updateRegion } from "../../services/innerworld-region/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

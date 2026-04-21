@@ -1,10 +1,11 @@
 ---
 # api-20q6
 title: Refactor innerworld-region.service.ts (544 LOC) into services/innerworld-region/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T21:08:04Z
 parent: api-6l1q
 ---
 

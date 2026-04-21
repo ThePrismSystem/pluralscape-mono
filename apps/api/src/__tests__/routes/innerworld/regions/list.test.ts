@@ -13,7 +13,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/innerworld-region.service.js", () => ({
+vi.mock("../../../../services/innerworld-region/queries.js", () => ({
   listRegions: vi.fn(),
 }));
 
@@ -26,7 +26,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listRegions } = await import("../../../../services/innerworld-region.service.js");
+const { listRegions } = await import("../../../../services/innerworld-region/queries.js");
 const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
