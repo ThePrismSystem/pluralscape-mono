@@ -11,7 +11,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/analytics.service.js", () => ({
+vi.mock("../../../services/analytics/fronting.js", () => ({
   computeFrontingBreakdown: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { computeFrontingBreakdown } = await import("../../../services/analytics.service.js");
+const { computeFrontingBreakdown } = await import("../../../services/analytics/fronting.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

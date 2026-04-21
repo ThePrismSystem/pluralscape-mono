@@ -18,13 +18,15 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/analytics.service.js", () => ({
+vi.mock("../../../services/analytics/fronting.js", () => ({
   computeFrontingBreakdown: vi.fn(),
+}));
+vi.mock("../../../services/analytics/co-fronting.js", () => ({
   computeCoFrontingBreakdown: vi.fn(),
 }));
 
-const { computeFrontingBreakdown, computeCoFrontingBreakdown } =
-  await import("../../../services/analytics.service.js");
+const { computeFrontingBreakdown } = await import("../../../services/analytics/fronting.js");
+const { computeCoFrontingBreakdown } = await import("../../../services/analytics/co-fronting.js");
 
 const { analyticsRouter } = await import("../../../trpc/routers/analytics.js");
 
