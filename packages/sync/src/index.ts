@@ -65,7 +65,9 @@ export {
   encryptSnapshot,
   decryptSnapshot,
   verifyEnvelopeSignature,
+  verifyKeyBinding,
   SignatureVerificationError,
+  KeyBindingMismatchError,
 } from "./encrypted-sync.js";
 
 // ── Errors ───────────────────────────────────────────────────────────
