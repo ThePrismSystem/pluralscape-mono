@@ -6,7 +6,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { archiveFriendConnection } from "../../../services/friend-connection/lifecycle.js";
+import { archiveFriendConnection } from "../../../services/account/friends/lifecycle.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

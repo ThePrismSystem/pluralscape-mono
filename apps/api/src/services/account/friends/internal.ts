@@ -1,7 +1,7 @@
 import { friendConnections } from "@pluralscape/db/pg";
 import { brandId, toUnixMillis } from "@pluralscape/types";
 
-import { encryptedBlobToBase64OrNull } from "../../lib/encrypted-blob.js";
+import { encryptedBlobToBase64OrNull } from "../../../lib/encrypted-blob.js";
 
 import type {
   AccountId,

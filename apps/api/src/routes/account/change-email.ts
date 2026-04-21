@@ -9,11 +9,9 @@ import { getQueue } from "../../lib/queue.js";
 import { extractIpAddress } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import {
-  ConcurrencyError,
-  changeEmail,
-  enqueueAccountEmailChangedNotification,
-} from "../../services/account.service.js";
+import { ConcurrencyError } from "../../services/account/internal.js";
+import { enqueueAccountEmailChangedNotification } from "../../services/account/notifications.js";
+import { changeEmail } from "../../services/account/update.js";
 import { ValidationError } from "../../services/auth/register.js";
 
 import { EMAIL_CHANGE_FAILED_ERROR } from "./account.constants.js";

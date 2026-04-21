@@ -12,11 +12,14 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/account.service.js", () => ({
-  updateAccountSettings: vi.fn(),
+vi.mock("../../../services/account/internal.js", () => ({
   ConcurrencyError: class ConcurrencyError extends Error {
     override readonly name = "ConcurrencyError" as const;
   },
+}));
+
+vi.mock("../../../services/account/update.js", () => ({
+  updateAccountSettings: vi.fn(),
 }));
 
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -29,8 +32,8 @@ vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
-const { updateAccountSettings, ConcurrencyError } =
-  await import("../../../services/account.service.js");
+const { ConcurrencyError } = await import("../../../services/account/internal.js");
+const { updateAccountSettings } = await import("../../../services/account/update.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

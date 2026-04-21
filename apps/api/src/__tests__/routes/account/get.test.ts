@@ -12,7 +12,7 @@ import type { AccountId, AccountType, ApiErrorResponse, SystemId } from "@plural
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/account.service.js", () => ({
+vi.mock("../../../services/account/queries.js", () => ({
   getAccountInfo: vi.fn(),
 }));
 
@@ -23,7 +23,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getAccountInfo } = await import("../../../services/account.service.js");
+const { getAccountInfo } = await import("../../../services/account/queries.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
