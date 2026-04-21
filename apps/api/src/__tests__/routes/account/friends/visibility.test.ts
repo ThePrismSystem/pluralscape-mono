@@ -16,15 +16,21 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/friend-connection.service.js", () => ({
-  acceptFriendConnection: vi.fn(),
+vi.mock("../../../../services/friend-connection/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
-  blockFriendConnection: vi.fn(),
+  restoreFriendConnection: vi.fn(),
+}));
+vi.mock("../../../../services/friend-connection/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
+}));
+vi.mock("../../../../services/friend-connection/transitions.js", () => ({
+  acceptFriendConnection: vi.fn(),
+  blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
-  restoreFriendConnection: vi.fn(),
+}));
+vi.mock("../../../../services/friend-connection/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 
@@ -37,8 +43,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { updateFriendVisibility } =
-  await import("../../../../services/friend-connection.service.js");
+const { updateFriendVisibility } = await import("../../../../services/friend-connection/update.js");
 const { createAuditWriter } = await import("../../../../lib/audit-writer.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
