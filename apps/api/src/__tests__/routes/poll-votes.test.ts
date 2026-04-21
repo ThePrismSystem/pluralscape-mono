@@ -13,12 +13,24 @@ import type { ApiErrorResponse, MemberId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../services/poll-vote.service.js", () => ({
+vi.mock("../../services/poll-vote/cast.js", () => ({
   castVote: vi.fn(),
+}));
+
+vi.mock("../../services/poll-vote/list.js", () => ({
   listVotes: vi.fn(),
   parsePollVoteQuery: vi.fn().mockReturnValue({ includeArchived: false }),
+}));
+
+vi.mock("../../services/poll-vote/update.js", () => ({
   updatePollVote: vi.fn(),
+}));
+
+vi.mock("../../services/poll-vote/archive.js", () => ({
   deletePollVote: vi.fn(),
+}));
+
+vi.mock("../../services/poll-vote/results.js", () => ({
   getPollResults: vi.fn(),
 }));
 
@@ -31,8 +43,9 @@ vi.mock("../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { updatePollVote, deletePollVote, getPollResults } =
-  await import("../../services/poll-vote.service.js");
+const { updatePollVote } = await import("../../services/poll-vote/update.js");
+const { deletePollVote } = await import("../../services/poll-vote/archive.js");
+const { getPollResults } = await import("../../services/poll-vote/results.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

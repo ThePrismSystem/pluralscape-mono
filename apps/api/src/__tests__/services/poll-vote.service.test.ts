@@ -86,7 +86,8 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
-const { castVote, listVotes } = await import("../../services/poll-vote.service.js");
+const { castVote } = await import("../../services/poll-vote/cast.js");
+const { listVotes } = await import("../../services/poll-vote/list.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

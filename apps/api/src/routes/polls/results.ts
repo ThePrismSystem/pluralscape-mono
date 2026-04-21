@@ -5,7 +5,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { getPollResults } from "../../services/poll-vote.service.js";
+import { getPollResults } from "../../services/poll-vote/results.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
