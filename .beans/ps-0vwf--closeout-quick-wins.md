@@ -3,8 +3,9 @@
 title: Closeout quick wins
 status: in-progress
 type: epic
+priority: normal
 created_at: 2026-04-21T13:54:51Z
-updated_at: 2026-04-21T13:54:51Z
+updated_at: 2026-04-21T17:31:55Z
 parent: ps-cd6x
 ---
 
@@ -24,3 +25,17 @@ Small, tightly-scoped hygiene and regression-prevention tasks that surfaced duri
 ## Spec reference
 
 docs/superpowers/specs/2026-04-21-m9a-closeout-hardening-design.md
+
+## Progress (2026-04-21 PR)
+
+7 of 8 children completed in one PR (branch: chore/m9a-closeout-quick-wins):
+
+- api-e3li — typed JobQueue mock (commit 0643150e)
+- ps-g5dl — local audit archive (commit 403506a3)
+- ps-sg0u — ADR supersession fields + 3 backfills (commit 2520618b)
+- mobile-8ovj — shared mobile test factories (commit 9c8cac99)
+- api-6d0l — dev-only crypto constants module (commit 9a45d316)
+- api-lm4o — Hono AuthEnv audit + CONTRIBUTING doc (commit 1b61f4a2)
+- db-4pir — RLS lint rule + unset-context integration test (commit 63db35fe)
+
+Deferred: ps-lg9y (blocked by api-6l1q service refactor epic; lands after that completes).
