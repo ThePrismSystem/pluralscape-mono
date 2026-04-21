@@ -50,8 +50,8 @@ vi.mock("../../lib/logger.js", () => ({
 // -- Imports after mocks --------------------------------------------------
 
 const { invalidateWebhookConfigCache } = await import("../../services/webhook-dispatcher.js");
-const { rotateWebhookSecret, testWebhookConfig } =
-  await import("../../services/webhook-config.service.js");
+const { rotateWebhookSecret } = await import("../../services/webhook-config/update.js");
+const { testWebhookConfig } = await import("../../services/webhook-config/test.js");
 
 // -- Fixtures -------------------------------------------------------------
 

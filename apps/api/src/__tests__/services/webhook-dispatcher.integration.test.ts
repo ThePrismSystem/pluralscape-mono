@@ -16,7 +16,7 @@ vi.hoisted(() => {
   process.env.WEBHOOK_PAYLOAD_ENCRYPTION_KEY = "ab".repeat(32);
 });
 
-import { createWebhookConfig } from "../../services/webhook-config.service.js";
+import { createWebhookConfig } from "../../services/webhook-config/create.js";
 import {
   clearWebhookConfigCache,
   dispatchWebhookEvent,

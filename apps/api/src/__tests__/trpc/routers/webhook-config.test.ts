@@ -16,35 +16,36 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 // Keep the real `toServerSecret` — it's a pure brand-narrowing helper with no
 // external deps, and importing it from the mocked module avoids duplicating
 // the `as ServerSecret` cast in every test file.
-vi.mock("../../../services/webhook-config.service.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../../services/webhook-config.service.js")>();
-  return {
-    archiveWebhookConfig: vi.fn(),
-    createWebhookConfig: vi.fn(),
-    deleteWebhookConfig: vi.fn(),
-    getWebhookConfig: vi.fn(),
-    listWebhookConfigs: vi.fn(),
-    restoreWebhookConfig: vi.fn(),
-    rotateWebhookSecret: vi.fn(),
-    testWebhookConfig: vi.fn(),
-    updateWebhookConfig: vi.fn(),
-    toServerSecret: actual.toServerSecret,
-  };
-});
+vi.mock("../../../services/webhook-config/create.js", () => ({
+  createWebhookConfig: vi.fn(),
+}));
+vi.mock("../../../services/webhook-config/queries.js", () => ({
+  getWebhookConfig: vi.fn(),
+  listWebhookConfigs: vi.fn(),
+  parseWebhookConfigQuery: vi.fn().mockReturnValue({}),
+}));
+vi.mock("../../../services/webhook-config/update.js", () => ({
+  rotateWebhookSecret: vi.fn(),
+  updateWebhookConfig: vi.fn(),
+}));
+vi.mock("../../../services/webhook-config/lifecycle.js", () => ({
+  archiveWebhookConfig: vi.fn(),
+  deleteWebhookConfig: vi.fn(),
+  restoreWebhookConfig: vi.fn(),
+}));
+vi.mock("../../../services/webhook-config/test.js", () => ({
+  testWebhookConfig: vi.fn(),
+}));
 
-const {
-  archiveWebhookConfig,
-  createWebhookConfig,
-  deleteWebhookConfig,
-  getWebhookConfig,
-  listWebhookConfigs,
-  restoreWebhookConfig,
-  rotateWebhookSecret,
-  testWebhookConfig,
-  toServerSecret,
-  updateWebhookConfig,
-} = await import("../../../services/webhook-config.service.js");
+const { createWebhookConfig } = await import("../../../services/webhook-config/create.js");
+const { getWebhookConfig, listWebhookConfigs } =
+  await import("../../../services/webhook-config/queries.js");
+const { rotateWebhookSecret, updateWebhookConfig } =
+  await import("../../../services/webhook-config/update.js");
+const { archiveWebhookConfig, deleteWebhookConfig, restoreWebhookConfig } =
+  await import("../../../services/webhook-config/lifecycle.js");
+const { testWebhookConfig } = await import("../../../services/webhook-config/test.js");
+const { toServerSecret } = await import("../../../services/webhook-config/internal.js");
 
 const { webhookConfigRouter } = await import("../../../trpc/routers/webhook-config.js");
 
