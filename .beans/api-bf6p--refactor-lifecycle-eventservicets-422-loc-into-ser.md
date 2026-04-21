@@ -1,11 +1,11 @@
 ---
 # api-bf6p
 title: Refactor lifecycle-event.service.ts (422 LOC) into services/lifecycle-event/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:07:38Z
 parent: api-6l1q
 ---
 
