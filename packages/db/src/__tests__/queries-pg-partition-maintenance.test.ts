@@ -28,6 +28,30 @@ describe("formatPartitionName", () => {
   it("handles table names with underscores", () => {
     expect(formatPartitionName("fronting_sessions", 2026, 3)).toBe("fronting_sessions_2026_03");
   });
+
+  it("rejects unknown table names at runtime", () => {
+    // TS narrows `table` to PartitionedTable, but a JS caller or future
+    // refactor could bypass the type system. This identifier flows into
+    // sql.raw — the runtime guard is defense-in-depth.
+    expect(() =>
+      // @ts-expect-error — intentionally passing an invalid table name
+      formatPartitionName("malicious_table", 2026, 3),
+    ).toThrow(/Invalid partitioned table/);
+  });
+
+  it("rejects out-of-range or non-integer years", () => {
+    expect(() => formatPartitionName("audit_log", 1999, 3)).toThrow(/Invalid partition year/);
+    expect(() => formatPartitionName("audit_log", 10_000, 3)).toThrow(/Invalid partition year/);
+    expect(() => formatPartitionName("audit_log", 2026.5, 3)).toThrow(/Invalid partition year/);
+    expect(() => formatPartitionName("audit_log", Number.NaN, 3)).toThrow(/Invalid partition year/);
+  });
+
+  it("rejects out-of-range or non-integer months", () => {
+    expect(() => formatPartitionName("audit_log", 2026, 0)).toThrow(/Invalid partition month/);
+    expect(() => formatPartitionName("audit_log", 2026, 13)).toThrow(/Invalid partition month/);
+    expect(() => formatPartitionName("audit_log", 2026, 3.5)).toThrow(/Invalid partition month/);
+    expect(() => formatPartitionName("audit_log", 2026, -1)).toThrow(/Invalid partition month/);
+  });
 });
 
 describe("parsePartitionDate", () => {
@@ -60,6 +84,27 @@ describe("parsePartitionDate", () => {
         expect(parsePartitionDate(name)).toEqual({ year, month });
       }
     }
+  });
+
+  it("rejects SQL-injection shaped suffixes (defense-in-depth)", () => {
+    // Moved from the integration test: parsePartitionDate is the single gate
+    // between pg_inherits and sql.raw inside pgDetachOldPartitions. Any name
+    // that cannot be decomposed into `<prefix>_YYYY_MM` must be skipped so
+    // the downstream formatPartitionName call never produces a smuggled
+    // identifier. Real pg_inherits cannot produce such a name (identifier
+    // length limits, name-shape rules) — this is defense-in-depth.
+    expect(parsePartitionDate(`audit_log_2020_03"; DROP TABLE audit_log --`)).toBeNull();
+    expect(parsePartitionDate("audit_log_20200_3")).toBeNull();
+    expect(parsePartitionDate("audit_log_2020_3")).toBeNull();
+  });
+
+  it("round-trips sanitized identifiers even when fed malicious pg_inherits rows", () => {
+    // Simulates a pg_inherits stub returning a malicious partition_name.
+    // parsePartitionDate is null, so pgDetachOldPartitions skips the row.
+    // The only path from parse → format goes through numeric components.
+    const smuggled = `audit_log_2020_03"; DROP TABLE x --`;
+    expect(parsePartitionDate(smuggled)).toBeNull();
+    expect(formatPartitionName("audit_log", 2020, 3)).toBe("audit_log_2020_03");
   });
 });
 
