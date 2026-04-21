@@ -24,31 +24,42 @@ vi.mock("../../../lib/entity-pubsub.js", () => ({
   subscribeToEntityChanges: vi.fn().mockResolvedValue(() => undefined),
 }));
 
-vi.mock("../../../services/board-message.service.js", () => ({
+vi.mock("../../../services/board-message/create.js", () => ({
   createBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/queries.js", () => ({
   getBoardMessage: vi.fn(),
   listBoardMessages: vi.fn(),
+  parseBoardMessageQuery: vi.fn(),
+}));
+vi.mock("../../../services/board-message/update.js", () => ({
   updateBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/lifecycle.js", () => ({
   archiveBoardMessage: vi.fn(),
   restoreBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/delete.js", () => ({
   deleteBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/reorder.js", () => ({
   reorderBoardMessages: vi.fn(),
+}));
+vi.mock("../../../services/board-message/pin.js", () => ({
   pinBoardMessage: vi.fn(),
   unpinBoardMessage: vi.fn(),
 }));
 
-const {
-  createBoardMessage,
-  getBoardMessage,
-  listBoardMessages,
-  updateBoardMessage,
-  archiveBoardMessage,
-  restoreBoardMessage,
-  deleteBoardMessage,
-  reorderBoardMessages,
-  pinBoardMessage,
-  unpinBoardMessage,
-} = await import("../../../services/board-message.service.js");
+const { createBoardMessage } = await import("../../../services/board-message/create.js");
+const { getBoardMessage, listBoardMessages } =
+  await import("../../../services/board-message/queries.js");
+const { updateBoardMessage } = await import("../../../services/board-message/update.js");
+const { archiveBoardMessage, restoreBoardMessage } =
+  await import("../../../services/board-message/lifecycle.js");
+const { deleteBoardMessage } = await import("../../../services/board-message/delete.js");
+const { reorderBoardMessages } = await import("../../../services/board-message/reorder.js");
+const { pinBoardMessage, unpinBoardMessage } =
+  await import("../../../services/board-message/pin.js");
 
 const { boardMessageRouter } = await import("../../../trpc/routers/board-message.js");
 

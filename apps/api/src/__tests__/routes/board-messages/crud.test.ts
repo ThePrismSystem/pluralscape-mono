@@ -9,27 +9,39 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { BoardMessageResult } from "../../../services/board-message.service.js";
+import type { BoardMessageResult } from "../../../services/board-message/internal.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/board-message.service.js", async (importOriginal) => {
+vi.mock("../../../services/board-message/create.js", () => ({
+  createBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/queries.js", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("../../../services/board-message.service.js")>();
+    await importOriginal<typeof import("../../../services/board-message/queries.js")>();
   return {
-    createBoardMessage: vi.fn(),
     getBoardMessage: vi.fn(),
     listBoardMessages: vi.fn(),
-    updateBoardMessage: vi.fn(),
-    deleteBoardMessage: vi.fn(),
-    archiveBoardMessage: vi.fn(),
-    restoreBoardMessage: vi.fn(),
-    reorderBoardMessages: vi.fn(),
-    pinBoardMessage: vi.fn(),
-    unpinBoardMessage: vi.fn(),
     parseBoardMessageQuery: original.parseBoardMessageQuery,
   };
 });
+vi.mock("../../../services/board-message/update.js", () => ({
+  updateBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/delete.js", () => ({
+  deleteBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/lifecycle.js", () => ({
+  archiveBoardMessage: vi.fn(),
+  restoreBoardMessage: vi.fn(),
+}));
+vi.mock("../../../services/board-message/reorder.js", () => ({
+  reorderBoardMessages: vi.fn(),
+}));
+vi.mock("../../../services/board-message/pin.js", () => ({
+  pinBoardMessage: vi.fn(),
+  unpinBoardMessage: vi.fn(),
+}));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -38,18 +50,16 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createBoardMessage,
-  getBoardMessage,
-  listBoardMessages,
-  updateBoardMessage,
-  deleteBoardMessage,
-  archiveBoardMessage,
-  restoreBoardMessage,
-  reorderBoardMessages,
-  pinBoardMessage,
-  unpinBoardMessage,
-} = await import("../../../services/board-message.service.js");
+const { createBoardMessage } = await import("../../../services/board-message/create.js");
+const { getBoardMessage, listBoardMessages } =
+  await import("../../../services/board-message/queries.js");
+const { updateBoardMessage } = await import("../../../services/board-message/update.js");
+const { deleteBoardMessage } = await import("../../../services/board-message/delete.js");
+const { archiveBoardMessage, restoreBoardMessage } =
+  await import("../../../services/board-message/lifecycle.js");
+const { reorderBoardMessages } = await import("../../../services/board-message/reorder.js");
+const { pinBoardMessage, unpinBoardMessage } =
+  await import("../../../services/board-message/pin.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

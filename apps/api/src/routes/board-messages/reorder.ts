@@ -7,7 +7,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { reorderBoardMessages } from "../../services/board-message.service.js";
+import { reorderBoardMessages } from "../../services/board-message/reorder.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
