@@ -19,14 +19,22 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/api-key.service.js", () => ({
+vi.mock("../../../services/api-key/create.js", () => ({
   createApiKey: vi.fn(),
+}));
+
+vi.mock("../../../services/api-key/queries.js", () => ({
   listApiKeys: vi.fn(),
+  getApiKey: vi.fn(),
+}));
+
+vi.mock("../../../services/api-key/revoke.js", () => ({
   revokeApiKey: vi.fn(),
 }));
 
-const { createApiKey, listApiKeys, revokeApiKey } =
-  await import("../../../services/api-key.service.js");
+const { createApiKey } = await import("../../../services/api-key/create.js");
+const { listApiKeys } = await import("../../../services/api-key/queries.js");
+const { revokeApiKey } = await import("../../../services/api-key/revoke.js");
 
 const { apiKeyRouter } = await import("../../../trpc/routers/api-key.js");
 
