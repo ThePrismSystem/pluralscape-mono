@@ -6,7 +6,7 @@ import { getDb } from "../../../lib/db.js";
 import { envelope } from "../../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { generateFriendCode } from "../../../services/friend-code.service.js";
+import { generateFriendCode } from "../../../services/account/friend-codes/generate.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

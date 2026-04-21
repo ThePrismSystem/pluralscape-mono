@@ -1,11 +1,11 @@
 ---
 # api-z33q
 title: Refactor friend-code.service.ts (435 LOC) into services/account/friend-codes/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:09:25Z
 parent: api-6l1q
 ---
 
