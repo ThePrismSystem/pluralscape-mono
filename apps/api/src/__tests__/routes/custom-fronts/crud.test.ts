@@ -12,11 +12,17 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/custom-front.service.js", () => ({
+vi.mock("../../../services/custom-front/create.js", () => ({
   createCustomFront: vi.fn(),
+}));
+vi.mock("../../../services/custom-front/queries.js", () => ({
   listCustomFronts: vi.fn(),
   getCustomFront: vi.fn(),
+}));
+vi.mock("../../../services/custom-front/update.js", () => ({
   updateCustomFront: vi.fn(),
+}));
+vi.mock("../../../services/custom-front/delete.js", () => ({
   deleteCustomFront: vi.fn(),
 }));
 
@@ -29,13 +35,12 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createCustomFront,
-  listCustomFronts,
-  getCustomFront,
-  updateCustomFront,
-  deleteCustomFront,
-} = await import("../../../services/custom-front.service.js");
+const { createCustomFront } = await import("../../../services/custom-front/create.js");
+const { listCustomFronts, getCustomFront } = await import(
+  "../../../services/custom-front/queries.js"
+);
+const { updateCustomFront } = await import("../../../services/custom-front/update.js");
+const { deleteCustomFront } = await import("../../../services/custom-front/delete.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
