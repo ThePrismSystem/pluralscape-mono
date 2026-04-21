@@ -19,8 +19,11 @@ vi.mock("../../../lib/request-meta.js", () => ({
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../../services/recovery-key.service.js", () => ({
+vi.mock("../../../services/recovery-key/reset-password.js", () => ({
   resetPasswordWithRecoveryKey: vi.fn(),
+}));
+
+vi.mock("../../../services/recovery-key/internal.js", () => ({
   NoActiveRecoveryKeyError: class extends Error {
     override name = "NoActiveRecoveryKeyError" as const;
   },
@@ -38,8 +41,10 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 }));
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { resetPasswordWithRecoveryKey, NoActiveRecoveryKeyError } =
-  await import("../../../services/recovery-key.service.js");
+const { resetPasswordWithRecoveryKey } = await import(
+  "../../../services/recovery-key/reset-password.js"
+);
+const { NoActiveRecoveryKeyError } = await import("../../../services/recovery-key/internal.js");
 const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
 const { passwordResetRoute } = await import("../../../routes/auth/password-reset.js");
 

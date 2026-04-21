@@ -1,11 +1,11 @@
 ---
 # api-5o0k
 title: Refactor recovery-key.service.ts (300 LOC) into services/recovery-key/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:11Z
-updated_at: 2026-04-21T22:28:11Z
+updated_at: 2026-04-21T23:08:47Z
 parent: api-6l1q
 ---
 

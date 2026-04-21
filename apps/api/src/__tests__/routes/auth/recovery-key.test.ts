@@ -13,9 +13,15 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/recovery-key.service.js", () => ({
+vi.mock("../../../services/recovery-key/status.js", () => ({
   getRecoveryKeyStatus: vi.fn(),
+}));
+
+vi.mock("../../../services/recovery-key/regenerate.js", () => ({
   regenerateRecoveryKeyBackup: vi.fn(),
+}));
+
+vi.mock("../../../services/recovery-key/internal.js", () => ({
   NoActiveRecoveryKeyError: class NoActiveRecoveryKeyError extends Error {
     override readonly name = "NoActiveRecoveryKeyError" as const;
   },
@@ -51,8 +57,11 @@ vi.mock("../../../lib/queue.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
-const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup, NoActiveRecoveryKeyError } =
-  await import("../../../services/recovery-key.service.js");
+const { getRecoveryKeyStatus } = await import("../../../services/recovery-key/status.js");
+const { regenerateRecoveryKeyBackup } = await import(
+  "../../../services/recovery-key/regenerate.js"
+);
+const { NoActiveRecoveryKeyError } = await import("../../../services/recovery-key/internal.js");
 const { ValidationError } = await import("../../../services/auth/register.js");
 const { recoveryKeyRoutes } = await import("../../../routes/auth/recovery-key.js");
 const { authRoutes } = await import("../../../routes/auth/index.js");

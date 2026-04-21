@@ -24,12 +24,10 @@ vi.mock("../../env.js", async () => {
 
 import { hashEmail } from "../../lib/email-hash.js";
 import { toHex } from "../../lib/hex.js";
-import {
-  getRecoveryKeyStatus,
-  NoActiveRecoveryKeyError,
-  regenerateRecoveryKeyBackup,
-  resetPasswordWithRecoveryKey,
-} from "../../services/recovery-key.service.js";
+import { NoActiveRecoveryKeyError } from "../../services/recovery-key/internal.js";
+import { regenerateRecoveryKeyBackup } from "../../services/recovery-key/regenerate.js";
+import { resetPasswordWithRecoveryKey } from "../../services/recovery-key/reset-password.js";
+import { getRecoveryKeyStatus } from "../../services/recovery-key/status.js";
 import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
