@@ -49,9 +49,15 @@ vi.mock("../../../services/field-definition/internal.js", async (importOriginal)
   };
 });
 
-vi.mock("../../../services/field-value.service.js", () => ({
+vi.mock("../../../services/field-value/set.js", () => ({
   setFieldValueForOwner: vi.fn(),
+}));
+
+vi.mock("../../../services/field-value/list.js", () => ({
   listFieldValuesForOwner: vi.fn(),
+}));
+
+vi.mock("../../../services/field-value/delete.js", () => ({
   deleteFieldValueForOwner: vi.fn(),
 }));
 
@@ -69,8 +75,9 @@ const { archiveFieldDefinition } = await import("../../../services/field-definit
 const { restoreFieldDefinition } = await import("../../../services/field-definition/restore.js");
 const { deleteFieldDefinition } = await import("../../../services/field-definition/delete.js");
 
-const { setFieldValueForOwner, listFieldValuesForOwner, deleteFieldValueForOwner } =
-  await import("../../../services/field-value.service.js");
+const { setFieldValueForOwner } = await import("../../../services/field-value/set.js");
+const { listFieldValuesForOwner } = await import("../../../services/field-value/list.js");
+const { deleteFieldValueForOwner } = await import("../../../services/field-value/delete.js");
 
 const { setFieldBucketVisibility, removeFieldBucketVisibility, listFieldBucketVisibility } =
   await import("../../../services/field-bucket-visibility.service.js");

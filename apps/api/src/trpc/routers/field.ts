@@ -18,16 +18,14 @@ import { getFieldDefinition } from "../../services/field-definition/get.js";
 import { listFieldDefinitions } from "../../services/field-definition/list.js";
 import { restoreFieldDefinition } from "../../services/field-definition/restore.js";
 import { updateFieldDefinition } from "../../services/field-definition/update.js";
-import {
-  deleteFieldValueForOwner,
-  listFieldValuesForOwner,
-  setFieldValueForOwner,
-} from "../../services/field-value.service.js";
+import { deleteFieldValueForOwner } from "../../services/field-value/delete.js";
+import { listFieldValuesForOwner } from "../../services/field-value/list.js";
+import { setFieldValueForOwner } from "../../services/field-value/set.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
-import type { FieldValueOwner } from "../../services/field-value.service.js";
+import type { FieldValueOwner } from "../../services/field-value/internal.js";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 const writeLimiter = createTRPCCategoryRateLimiter("write");

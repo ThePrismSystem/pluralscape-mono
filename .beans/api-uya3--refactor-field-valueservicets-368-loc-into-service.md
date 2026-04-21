@@ -1,11 +1,11 @@
 ---
 # api-uya3
 title: Refactor field-value.service.ts (368 LOC) into services/field-value/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:08:21Z
 parent: api-6l1q
 ---
 
