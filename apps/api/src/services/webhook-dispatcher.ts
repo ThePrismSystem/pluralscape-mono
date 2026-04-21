@@ -44,13 +44,13 @@ export function clearWebhookConfigCache(): void {
 // ── Dispatch ────────────────────────────────────────────────────────
 
 /** Runtime check: PgTransaction has rollback(), raw PgDatabase does not. */
-function isTransaction(db: PostgresJsDatabase): boolean {
-  return "rollback" in db;
+function isTransaction(handle: PostgresJsDatabase): boolean {
+  return "rollback" in handle;
 }
 
 /** Core dispatch logic — runs on whatever db/tx handle is passed. */
 async function executeDispatch<K extends WebhookEventType>(
-  db: PostgresJsDatabase,
+  handle: PostgresJsDatabase,
   systemId: SystemId,
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
@@ -62,7 +62,7 @@ async function executeDispatch<K extends WebhookEventType>(
   if (cached !== undefined) {
     configs = cached;
   } else {
-    const rows = await db
+    const rows = await handle
       .select({
         id: webhookConfigs.id,
         eventTypes: webhookConfigs.eventTypes,
@@ -116,7 +116,7 @@ async function executeDispatch<K extends WebhookEventType>(
       };
     });
 
-    await db.insert(webhookDeliveries).values(values);
+    await handle.insert(webhookDeliveries).values(values);
   } finally {
     // Zeros the derived Uint8Array; the hex source in process.env is not erasable.
     getSodium().memzero(encryptionKey);
@@ -141,13 +141,13 @@ async function executeDispatch<K extends WebhookEventType>(
  * 'pending' and can be picked up by a polling worker or future job integration.
  */
 export async function dispatchWebhookEvent<K extends WebhookEventType>(
-  db: PostgresJsDatabase,
+  handle: PostgresJsDatabase,
   systemId: SystemId,
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
 ): Promise<readonly WebhookDeliveryId[]> {
-  if (isTransaction(db)) {
-    return executeDispatch(db, systemId, eventType, payload, true);
+  if (isTransaction(handle)) {
+    return executeDispatch(handle, systemId, eventType, payload, true);
   }
-  return db.transaction((tx) => executeDispatch(tx, systemId, eventType, payload, false));
+  return handle.transaction((tx) => executeDispatch(tx, systemId, eventType, payload, false));
 }
