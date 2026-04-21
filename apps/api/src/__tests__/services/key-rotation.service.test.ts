@@ -19,13 +19,11 @@ vi.mock("../../lib/audit-log.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const {
-  initiateRotation,
-  claimRotationChunk,
-  completeRotationChunk,
-  getRotationProgress,
-  retryRotation,
-} = await import("../../services/key-rotation.service.js");
+const { initiateRotation } = await import("../../services/key-rotation/initiate.js");
+const { claimRotationChunk } = await import("../../services/key-rotation/claim.js");
+const { completeRotationChunk } = await import("../../services/key-rotation/complete.js");
+const { getRotationProgress } = await import("../../services/key-rotation/queries.js");
+const { retryRotation } = await import("../../services/key-rotation/retry.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
