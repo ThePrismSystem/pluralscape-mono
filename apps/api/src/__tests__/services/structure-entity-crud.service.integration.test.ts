@@ -22,10 +22,8 @@ import {
   listStructureEntities,
 } from "../../services/structure/entity-crud/queries.js";
 import { updateStructureEntity } from "../../services/structure/entity-crud/update.js";
-import {
-  createEntityType,
-  deleteEntityType,
-} from "../../services/structure-entity-type.service.js";
+import { createEntityType } from "../../services/structure/entity-type/create.js";
+import { deleteEntityType } from "../../services/structure/entity-type/delete.js";
 import {
   asDb,
   assertApiError,
