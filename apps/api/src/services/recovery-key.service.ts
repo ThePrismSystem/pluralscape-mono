@@ -28,8 +28,8 @@ import { fromHex } from "../lib/hex.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 
+import { ValidationError } from "./auth/register.js";
 import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
-import { ValidationError } from "./auth.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";

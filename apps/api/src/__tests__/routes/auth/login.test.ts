@@ -17,8 +17,8 @@ vi.mock("../../../lib/request-meta.js", () => ({
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../../services/auth.service.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../services/auth.service.js")>();
+vi.mock("../../../services/auth/login.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../services/auth/login.js")>();
   return {
     loginAccount: vi.fn(),
     LoginThrottledError: actual.LoginThrottledError,
@@ -31,7 +31,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
-const { loginAccount } = await import("../../../services/auth.service.js");
+const { loginAccount } = await import("../../../services/auth/login.js");
 const { loginRoute } = await import("../../../routes/auth/login.js");
 const { authRoutes } = await import("../../../routes/auth/index.js");
 
@@ -159,7 +159,7 @@ describe("POST /login", () => {
   });
 
   it("returns 429 LOGIN_THROTTLED with fixed Retry-After when account is throttled", async () => {
-    const { LoginThrottledError } = await import("../../../services/auth.service.js");
+    const { LoginThrottledError } = await import("../../../services/auth/login.js");
     const futureTime = Date.now() + 60_000;
     vi.mocked(loginAccount).mockRejectedValueOnce(new LoginThrottledError(futureTime));
 
@@ -192,7 +192,7 @@ describe("POST /login", () => {
     });
 
     it("sets Cache-Control: no-store on throttled response", async () => {
-      const { LoginThrottledError } = await import("../../../services/auth.service.js");
+      const { LoginThrottledError } = await import("../../../services/auth/login.js");
       vi.mocked(loginAccount).mockRejectedValueOnce(new LoginThrottledError(Date.now() + 60_000));
 
       const app = createAuthApp();

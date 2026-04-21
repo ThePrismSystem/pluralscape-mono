@@ -21,7 +21,7 @@ vi.mock("../../../services/account.service.js", () => ({
   },
 }));
 
-vi.mock("../../../services/auth.service.js", () => ({
+vi.mock("../../../services/auth/register.js", () => ({
   ValidationError: class ValidationError extends Error {
     override readonly name = "ValidationError" as const;
   },
@@ -54,7 +54,7 @@ vi.mock("../../../lib/queue.js", () => ({
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { changeEmail, enqueueAccountEmailChangedNotification, ConcurrencyError } =
   await import("../../../services/account.service.js");
-const { ValidationError } = await import("../../../services/auth.service.js");
+const { ValidationError } = await import("../../../services/auth/register.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

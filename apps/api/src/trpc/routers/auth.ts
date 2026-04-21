@@ -4,16 +4,14 @@ import { z } from "zod/v4";
 
 import { requireSession } from "../../lib/auth-context.js";
 import { logger } from "../../lib/logger.js";
+import { LoginThrottledError, loginAccount } from "../../services/auth/login.js";
+import { commitRegistration, initiateRegistration } from "../../services/auth/register.js";
 import {
-  LoginThrottledError,
-  commitRegistration,
-  initiateRegistration,
   listSessions,
-  loginAccount,
   logoutCurrentSession,
   revokeAllSessions,
   revokeSession,
-} from "../../services/auth.service.js";
+} from "../../services/auth/sessions.js";
 import {
   NoActiveRecoveryKeyError,
   resetPasswordWithRecoveryKey,

@@ -14,11 +14,11 @@ import { brandId } from "@pluralscape/types";
 import { expect } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
-import { commitRegistration, initiateRegistration } from "../../services/auth.service.js";
+import { commitRegistration, initiateRegistration } from "../../services/auth/register.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { RegistrationCommitResult } from "../../services/auth.service.js";
+import type { RegistrationCommitResult } from "../../services/auth/register.js";
 import type { SignSecretKey } from "@pluralscape/crypto";
 import type * as schema from "@pluralscape/db/pg";
 import type {

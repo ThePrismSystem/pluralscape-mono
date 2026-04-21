@@ -29,8 +29,8 @@ import {
 } from "../routes/account/account.constants.js";
 import { EMAIL_SALT_BYTES } from "../routes/auth/auth.constants.js";
 
+import { isDuplicateEmailError, ValidationError } from "./auth/register.js";
 import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
-import { isDuplicateEmailError, ValidationError } from "./auth.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { JobQueue } from "@pluralscape/queue";
