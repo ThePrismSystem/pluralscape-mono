@@ -13,7 +13,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/bucket.service.js", () => ({
+vi.mock("../../../services/bucket/restore.js", () => ({
   restoreBucket: vi.fn(),
 }));
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -23,7 +23,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { restoreBucket } = await import("../../../services/bucket.service.js");
+const { restoreBucket } = await import("../../../services/bucket/restore.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

@@ -40,7 +40,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
 }));
 
-vi.mock("../../services/bucket.service.js", () => ({
+vi.mock("../../services/bucket/internal.js", () => ({
   assertBucketExists: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -82,7 +82,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { assertBucketExists } = await import("../../services/bucket.service.js");
+const { assertBucketExists } = await import("../../services/bucket/internal.js");
 const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher.js");
 
 const { tagContent, untagContent, listTagsByBucket, parseTagQuery } =

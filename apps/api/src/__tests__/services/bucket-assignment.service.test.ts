@@ -13,7 +13,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
 }));
 
-vi.mock("../../services/bucket.service.js", () => ({
+vi.mock("../../services/bucket/internal.js", () => ({
   assertBucketExists: vi.fn(),
 }));
 
@@ -67,7 +67,7 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { assertBucketExists } = await import("../../services/bucket.service.js");
+const { assertBucketExists } = await import("../../services/bucket/internal.js");
 
 const { assignBucketToFriend, unassignBucketFromFriend, listFriendBucketAssignments } =
   await import("../../services/bucket-assignment.service.js");

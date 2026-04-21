@@ -8,7 +8,7 @@ import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
-import { assertBucketExists } from "./bucket.service.js";
+import { assertBucketExists } from "./bucket/internal.js";
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
