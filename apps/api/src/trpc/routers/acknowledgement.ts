@@ -7,15 +7,17 @@ import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
+import { confirmAcknowledgement } from "../../services/acknowledgement/confirm.js";
+import { createAcknowledgement } from "../../services/acknowledgement/create.js";
 import {
   archiveAcknowledgement,
-  confirmAcknowledgement,
-  createAcknowledgement,
   deleteAcknowledgement,
+  restoreAcknowledgement,
+} from "../../services/acknowledgement/lifecycle.js";
+import {
   getAcknowledgement,
   listAcknowledgements,
-  restoreAcknowledgement,
-} from "../../services/acknowledgement.service.js";
+} from "../../services/acknowledgement/queries.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

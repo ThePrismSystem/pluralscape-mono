@@ -9,24 +9,33 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { AcknowledgementResult } from "../../../services/acknowledgement.service.js";
+import type { AcknowledgementResult } from "../../../services/acknowledgement/internal.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/acknowledgement.service.js", async (importOriginal) => {
+vi.mock("../../../services/acknowledgement/create.js", () => ({
+  createAcknowledgement: vi.fn(),
+}));
+
+vi.mock("../../../services/acknowledgement/confirm.js", () => ({
+  confirmAcknowledgement: vi.fn(),
+}));
+
+vi.mock("../../../services/acknowledgement/queries.js", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("../../../services/acknowledgement.service.js")>();
+    await importOriginal<typeof import("../../../services/acknowledgement/queries.js")>();
   return {
-    createAcknowledgement: vi.fn(),
     getAcknowledgement: vi.fn(),
     listAcknowledgements: vi.fn(),
-    deleteAcknowledgement: vi.fn(),
-    confirmAcknowledgement: vi.fn(),
-    archiveAcknowledgement: vi.fn(),
-    restoreAcknowledgement: vi.fn(),
     parseAcknowledgementQuery: original.parseAcknowledgementQuery,
   };
 });
+
+vi.mock("../../../services/acknowledgement/lifecycle.js", () => ({
+  deleteAcknowledgement: vi.fn(),
+  archiveAcknowledgement: vi.fn(),
+  restoreAcknowledgement: vi.fn(),
+}));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -35,15 +44,14 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createAcknowledgement,
-  getAcknowledgement,
-  listAcknowledgements,
-  deleteAcknowledgement,
-  confirmAcknowledgement,
-  archiveAcknowledgement,
-  restoreAcknowledgement,
-} = await import("../../../services/acknowledgement.service.js");
+const { createAcknowledgement } = await import("../../../services/acknowledgement/create.js");
+const { confirmAcknowledgement } = await import("../../../services/acknowledgement/confirm.js");
+const { getAcknowledgement, listAcknowledgements } = await import(
+  "../../../services/acknowledgement/queries.js"
+);
+const { deleteAcknowledgement, archiveAcknowledgement, restoreAcknowledgement } = await import(
+  "../../../services/acknowledgement/lifecycle.js"
+);
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

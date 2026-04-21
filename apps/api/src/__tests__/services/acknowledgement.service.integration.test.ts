@@ -12,15 +12,17 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { confirmAcknowledgement } from "../../services/acknowledgement/confirm.js";
+import { createAcknowledgement } from "../../services/acknowledgement/create.js";
 import {
   archiveAcknowledgement,
-  confirmAcknowledgement,
-  createAcknowledgement,
   deleteAcknowledgement,
+  restoreAcknowledgement,
+} from "../../services/acknowledgement/lifecycle.js";
+import {
   getAcknowledgement,
   listAcknowledgements,
-  restoreAcknowledgement,
-} from "../../services/acknowledgement.service.js";
+} from "../../services/acknowledgement/queries.js";
 import { expectSingleAuditEvent } from "../helpers/audit-assertions.js";
 import {
   assertApiError,

@@ -1,11 +1,11 @@
 ---
 # api-o679
 title: Refactor acknowledgement.service.ts (370 LOC) into services/acknowledgement/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:08:02Z
 parent: api-6l1q
 ---
 
