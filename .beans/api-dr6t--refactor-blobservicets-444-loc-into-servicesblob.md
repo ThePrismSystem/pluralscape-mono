@@ -1,11 +1,11 @@
 ---
 # api-dr6t
 title: Refactor blob.service.ts (444 LOC) into services/blob/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:07:28Z
 parent: api-6l1q
 ---
 

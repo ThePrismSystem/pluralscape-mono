@@ -10,14 +10,12 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import {
-  archiveBlob,
-  confirmUpload,
-  createUploadUrl,
-  getBlob,
-  getDownloadUrl,
-  listBlobs,
-} from "../../services/blob.service.js";
+import { archiveBlob } from "../../services/blob/archive.js";
+import { confirmUpload } from "../../services/blob/confirm-upload.js";
+import { createUploadUrl } from "../../services/blob/create-upload-url.js";
+import { getDownloadUrl } from "../../services/blob/download-url.js";
+import { getBlob } from "../../services/blob/get.js";
+import { listBlobs } from "../../services/blob/list.js";
 import {
   asDb,
   assertApiError,

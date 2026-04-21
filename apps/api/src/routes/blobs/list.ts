@@ -6,7 +6,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { listBlobs } from "../../services/blob.service.js";
+import { listBlobs } from "../../services/blob/list.js";
 
 import { DEFAULT_BLOB_LIMIT, MAX_BLOB_LIMIT } from "./blobs.constants.js";
 

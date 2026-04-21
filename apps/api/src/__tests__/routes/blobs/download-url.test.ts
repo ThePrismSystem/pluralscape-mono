@@ -12,12 +12,8 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/blob.service.js", () => ({
-  createUploadUrl: vi.fn(),
-  confirmUpload: vi.fn(),
-  getBlob: vi.fn(),
+vi.mock("../../../services/blob/download-url.js", () => ({
   getDownloadUrl: vi.fn(),
-  archiveBlob: vi.fn(),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -34,7 +30,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getDownloadUrl } = await import("../../../services/blob.service.js");
+const { getDownloadUrl } = await import("../../../services/blob/download-url.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
