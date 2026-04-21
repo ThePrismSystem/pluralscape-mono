@@ -47,13 +47,16 @@ describe("anti-enum timing (structural verification)", () => {
   });
 });
 
-describe("recovery-key.service uses shared anti-enum timing", () => {
-  const recoveryPath = resolve(import.meta.dirname, "../../services/recovery-key.service.ts");
+describe("recovery-key reset-password uses shared anti-enum timing", () => {
+  const recoveryPath = resolve(
+    import.meta.dirname,
+    "../../services/recovery-key/reset-password.ts",
+  );
   const recoverySource = readFileSync(recoveryPath, "utf8");
 
   it("imports equalizeAntiEnumTiming from shared lib", () => {
     expect(recoverySource).toContain(
-      'import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js"',
+      'import { equalizeAntiEnumTiming } from "../../lib/anti-enum-timing.js"',
     );
   });
 

@@ -14,7 +14,7 @@ import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
-import { getRecoveryKeyStatus } from "./recovery-key.service.js";
+import { getRecoveryKeyStatus } from "./recovery-key/status.js";
 import { toSystemSettingsResult } from "./system-settings.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";

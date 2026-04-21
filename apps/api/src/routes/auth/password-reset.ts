@@ -14,10 +14,8 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { checkRateLimit, createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import {
-  NoActiveRecoveryKeyError,
-  resetPasswordWithRecoveryKey,
-} from "../../services/recovery-key.service.js";
+import { NoActiveRecoveryKeyError } from "../../services/recovery-key/internal.js";
+import { resetPasswordWithRecoveryKey } from "../../services/recovery-key/reset-password.js";
 
 export const passwordResetRoute = new Hono();
 

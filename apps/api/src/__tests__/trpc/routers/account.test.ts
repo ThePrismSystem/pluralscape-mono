@@ -53,8 +53,11 @@ vi.mock("../../../services/biometric.service.js", () => ({
   verifyBiometric: vi.fn(),
 }));
 
-vi.mock("../../../services/recovery-key.service.js", () => ({
+vi.mock("../../../services/recovery-key/status.js", () => ({
   getRecoveryKeyStatus: vi.fn(),
+}));
+
+vi.mock("../../../services/recovery-key/regenerate.js", () => ({
   regenerateRecoveryKeyBackup: vi.fn(),
 }));
 
@@ -86,8 +89,10 @@ const { enqueueAccountEmailChangedNotification } =
 const { setAccountPin, removeAccountPin, verifyAccountPin } =
   await import("../../../services/account-pin.service.js");
 const { enrollBiometric, verifyBiometric } = await import("../../../services/biometric.service.js");
-const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup } =
-  await import("../../../services/recovery-key.service.js");
+const { getRecoveryKeyStatus } = await import("../../../services/recovery-key/status.js");
+const { regenerateRecoveryKeyBackup } = await import(
+  "../../../services/recovery-key/regenerate.js"
+);
 const { queryAuditLog } = await import("../../../services/audit-log-query.service.js");
 const { initiateTransfer } = await import("../../../services/device-transfer/initiate.js");
 const { approveTransfer } = await import("../../../services/device-transfer/approve.js");

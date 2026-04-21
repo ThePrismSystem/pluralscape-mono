@@ -67,7 +67,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
   };
 });
 
-vi.mock("../../services/recovery-key.service.js", () => ({
+vi.mock("../../services/recovery-key/status.js", () => ({
   getRecoveryKeyStatus: vi.fn(),
 }));
 
@@ -76,7 +76,7 @@ vi.mock("../../services/recovery-key.service.js", () => ({
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { SetupCompleteBodySchema, SetupNomenclatureStepBodySchema, SetupProfileStepBodySchema } =
   await import("@pluralscape/validation");
-const { getRecoveryKeyStatus } = await import("../../services/recovery-key.service.js");
+const { getRecoveryKeyStatus } = await import("../../services/recovery-key/status.js");
 const { getSetupStatus, setupNomenclatureStep, setupProfileStep, setupComplete } =
   await import("../../services/setup.service.js");
 

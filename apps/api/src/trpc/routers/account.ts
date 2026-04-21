@@ -54,10 +54,8 @@ import {
   TransferValidationError,
 } from "../../services/device-transfer/errors.js";
 import { initiateTransfer } from "../../services/device-transfer/initiate.js";
-import {
-  getRecoveryKeyStatus,
-  regenerateRecoveryKeyBackup,
-} from "../../services/recovery-key.service.js";
+import { regenerateRecoveryKeyBackup } from "../../services/recovery-key/regenerate.js";
+import { getRecoveryKeyStatus } from "../../services/recovery-key/status.js";
 import { protectedProcedure } from "../middlewares/auth.js";
 import {
   accountKeyExtractor,
