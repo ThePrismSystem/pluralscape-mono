@@ -29,6 +29,8 @@ import type {
   FriendConnectionId,
   FriendNotificationPreferenceId,
   FrontingSessionId,
+  JobDefinition,
+  JobId,
   MemberId,
   NotificationConfigId,
   SystemId,
@@ -52,27 +54,52 @@ interface EnqueuedJob {
   readonly idempotencyKey: string;
 }
 
-/** Minimal mock JobQueue that captures enqueue calls. */
+/** Stub that throws — guards against the dispatcher touching surfaces this test doesn't stub. */
+function notImplemented(method: string): () => never {
+  return () => {
+    throw new Error(`JobQueueMock.${method} was called but no stub was provided`);
+  };
+}
+
+/** Typed mock JobQueue that captures enqueue calls. */
 function createMockQueue(options?: { failOnNth?: number }): {
   queue: JobQueue;
   enqueuedJobs: EnqueuedJob[];
 } {
   const enqueuedJobs: EnqueuedJob[] = [];
   let callCount = 0;
-  const queue = {
-    enqueue: (params: { type: string; payload: unknown; idempotencyKey: string }) => {
-      callCount++;
-      if (options?.failOnNth === callCount) {
-        return Promise.reject(new Error("mock enqueue failure"));
-      }
-      enqueuedJobs.push({
-        type: params.type,
-        payload: params.payload,
-        idempotencyKey: params.idempotencyKey,
-      });
-      return Promise.resolve({ id: `job_${crypto.randomUUID()}` } as never);
-    },
-  } as never;
+
+  const enqueue: JobQueue["enqueue"] = (params) => {
+    callCount++;
+    if (options?.failOnNth === callCount) {
+      return Promise.reject(new Error("mock enqueue failure"));
+    }
+    enqueuedJobs.push({
+      type: params.type,
+      payload: params.payload,
+      idempotencyKey: params.idempotencyKey,
+    });
+    return Promise.resolve({ id: `job_${crypto.randomUUID()}` as JobId } as JobDefinition);
+  };
+
+  const queue: JobQueue = {
+    enqueue,
+    checkIdempotency: notImplemented("checkIdempotency"),
+    dequeue: notImplemented("dequeue"),
+    acknowledge: notImplemented("acknowledge"),
+    fail: notImplemented("fail"),
+    retry: notImplemented("retry"),
+    cancel: notImplemented("cancel"),
+    getJob: notImplemented("getJob"),
+    listJobs: notImplemented("listJobs"),
+    listDeadLettered: notImplemented("listDeadLettered"),
+    heartbeat: notImplemented("heartbeat"),
+    findStalledJobs: notImplemented("findStalledJobs"),
+    countJobs: notImplemented("countJobs"),
+    getRetryPolicy: notImplemented("getRetryPolicy"),
+    setRetryPolicy: notImplemented("setRetryPolicy"),
+    setEventHooks: notImplemented("setEventHooks"),
+  };
   return { queue, enqueuedJobs };
 }
 
