@@ -10,18 +10,13 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { FieldDefinitionResult } from "../../../services/field-definition.service.js";
+import type { FieldDefinitionResult } from "../../../services/field-definition/internal.js";
 import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/field-definition.service.js", () => ({
+vi.mock("../../../services/field-definition/list.js", () => ({
   listFieldDefinitions: vi.fn(),
-  createFieldDefinition: vi.fn(),
-  getFieldDefinition: vi.fn(),
-  updateFieldDefinition: vi.fn(),
-  archiveFieldDefinition: vi.fn(),
-  restoreFieldDefinition: vi.fn(),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -35,7 +30,7 @@ vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listFieldDefinitions } = await import("../../../services/field-definition.service.js");
+const { listFieldDefinitions } = await import("../../../services/field-definition/list.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

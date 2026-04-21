@@ -12,7 +12,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/field-definition.service.js", () => ({
+vi.mock("../../../services/field-definition/delete.js", () => ({
   deleteFieldDefinition: vi.fn(),
 }));
 
@@ -23,7 +23,7 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-const { deleteFieldDefinition } = await import("../../../services/field-definition.service.js");
+const { deleteFieldDefinition } = await import("../../../services/field-definition/delete.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
