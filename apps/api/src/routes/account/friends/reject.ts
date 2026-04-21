@@ -1,4 +1,4 @@
-import { rejectFriendConnection } from "../../../services/friend-connection.service.js";
+import { rejectFriendConnection } from "../../../services/friend-connection/transitions.js";
 
 import { createFriendActionRoute } from "./create-friend-action-route.js";
 

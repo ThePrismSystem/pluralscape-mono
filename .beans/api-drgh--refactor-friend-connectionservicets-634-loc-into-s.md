@@ -1,10 +1,11 @@
 ---
 # api-drgh
 title: Refactor friend-connection.service.ts (634 LOC) into services/friend-connection/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T21:30:48Z
 parent: api-6l1q
 ---
 
@@ -39,3 +40,9 @@ Currently concentrates bilateral connection creation / bucket visibility / statu
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Findings
+
+- services/friend-connection/transitions.ts:1-374 — status transition helpers (transitionConnectionStatus, updateReverseConnection, cleanupBucketAssignments, terminateConnection) are single-consumer (only used by accept/reject/block/remove); kept module-local per "single-consumer helpers stay module-local" rule — low
+- services/friend-connection/lifecycle.ts — renamed concept: "lifecycle" now covers only archive/restore (account-scoped entity lifecycle). State transitions live in transitions.ts. This matches the split we may want elsewhere — low
+- Types FriendConnectionResult + FriendConnectionWithRotations + toFriendConnectionResult in internal.ts — used by queries/update/transitions/lifecycle (≥4 consumers) — info

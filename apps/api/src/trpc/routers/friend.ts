@@ -7,16 +7,20 @@ import {
 import { z } from "zod/v4";
 
 import {
-  acceptFriendConnection,
   archiveFriendConnection,
-  blockFriendConnection,
+  restoreFriendConnection,
+} from "../../services/friend-connection/lifecycle.js";
+import {
   getFriendConnection,
   listFriendConnections,
+} from "../../services/friend-connection/queries.js";
+import {
+  acceptFriendConnection,
+  blockFriendConnection,
   rejectFriendConnection,
   removeFriendConnection,
-  restoreFriendConnection,
-  updateFriendVisibility,
-} from "../../services/friend-connection.service.js";
+} from "../../services/friend-connection/transitions.js";
+import { updateFriendVisibility } from "../../services/friend-connection/update.js";
 import { getFriendDashboardSync } from "../../services/friend-dashboard-sync.service.js";
 import { getFriendDashboard } from "../../services/friend-dashboard.service.js";
 import {
