@@ -27,9 +27,11 @@ erDiagram
         varchar email_hash
         varchar email_salt
         binary encrypted_email "server-side key (ADR 029), nullable"
-        varchar password_hash
+        binary auth_key_hash
         varchar kdf_salt
-        binary encrypted_master_key "two-layer KEK/DEK, nullable"
+        binary encrypted_master_key "two-layer KEK/DEK"
+        binary challenge_nonce "nullable, cleared after two-phase register commit"
+        timestamp challenge_expires_at "nullable, paired with challenge_nonce"
         boolean audit_log_ip_tracking "default false"
     }
 
@@ -55,6 +57,7 @@ erDiagram
         varchar id PK
         varchar account_id FK
         binary encrypted_master_key
+        binary recovery_key_hash "nullable, BLAKE2b of raw recovery key"
         timestamp revoked_at
     }
 
@@ -456,6 +459,7 @@ erDiagram
         boolean waking_hours_only "nullable"
         varchar waking_start "nullable, HH:MM:SS"
         varchar waking_end "nullable, HH:MM:SS"
+        timestamp next_check_in_at "nullable, driven by scheduling worker"
         blob encrypted_data "T1"
     }
 
@@ -851,7 +855,7 @@ erDiagram
         varchar account_id FK
         varchar system_id FK
         varchar platform
-        varchar token
+        varchar token_hash "unique per (token_hash, platform)"
         timestamp last_active_at "nullable"
         timestamp revoked_at
     }
@@ -905,11 +909,12 @@ erDiagram
         varchar source
         varchar status
         integer progress_percent
-        jsonb error_log
+        jsonb error_log "nullable, bounded length"
+        jsonb checkpoint_state "nullable, resumption state"
         integer warning_count
-        integer chunks_total
+        integer chunks_total "nullable"
         integer chunks_completed
-        timestamp completed_at
+        timestamp completed_at "nullable"
     }
 
     import_entity_refs {
