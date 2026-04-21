@@ -10,11 +10,17 @@ import { MOCK_SYSTEM_ID, createRouteApp, postJSON } from "../../../helpers/route
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/import-entity-ref.service.js", () => ({
-  lookupImportEntityRefBatch: vi.fn(),
-  upsertImportEntityRefBatch: vi.fn(),
-  recordImportEntityRef: vi.fn(),
+vi.mock("../../../../services/import-entity-ref/lookup.js", () => ({
   lookupImportEntityRef: vi.fn(),
+  lookupImportEntityRefBatch: vi.fn(),
+}));
+vi.mock("../../../../services/import-entity-ref/upsert-batch.js", () => ({
+  upsertImportEntityRefBatch: vi.fn(),
+}));
+vi.mock("../../../../services/import-entity-ref/record.js", () => ({
+  recordImportEntityRef: vi.fn(),
+}));
+vi.mock("../../../../services/import-entity-ref/list.js", () => ({
   listImportEntityRefs: vi.fn(),
 }));
 
@@ -26,7 +32,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { lookupImportEntityRefBatch } =
-  await import("../../../../services/import-entity-ref.service.js");
+  await import("../../../../services/import-entity-ref/lookup.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
