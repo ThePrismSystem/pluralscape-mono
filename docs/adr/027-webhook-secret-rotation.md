@@ -4,6 +4,10 @@
 
 Accepted
 
+## Supersedes
+
+ADR-025 — the in-place secret overwrite described in ADR-025's mitigation #4 is replaced by the create-then-archive rotation pattern defined here.
+
 ## Context
 
 Webhook signing secrets (HMAC keys) are stored as T3 binary columns in the `webhook_configs` table (see [ADR 025](025-webhook-secret-storage.md)). These secrets need to be rotated periodically or after a suspected compromise.

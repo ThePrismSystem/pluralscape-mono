@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptTimerConfigInput } from "@pluralscape/data/transforms/timer-check-in";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawCheckIn, makeRawTimer } from "../../__tests__/factories.js";
 
-import type { CheckInRecordRaw, TimerConfigRaw } from "@pluralscape/data/transforms/timer-check-in";
-import type { CheckInRecordId, TimerId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { TimerId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -145,42 +141,6 @@ const {
   useMarkCheckInResponded,
   useMarkCheckInDismissed,
 } = await import("../use-timer-check-in.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawTimer(id: string): TimerConfigRaw {
-  const encrypted = encryptTimerConfigInput({ promptText: "How are you?" }, TEST_MASTER_KEY);
-  return {
-    id: brandId<TimerId>(id),
-    systemId: TEST_SYSTEM_ID,
-    enabled: true,
-    intervalMinutes: 60,
-    wakingHoursOnly: false,
-    wakingStart: null,
-    wakingEnd: null,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
-
-function makeRawCheckIn(id: string): CheckInRecordRaw {
-  return {
-    id: brandId<CheckInRecordId>(id),
-    timerConfigId: brandId<TimerId>("tmr-1"),
-    systemId: TEST_SYSTEM_ID,
-    scheduledAt: NOW,
-    respondedByMemberId: null,
-    respondedAt: null,
-    dismissed: false,
-    archived: false,
-    archivedAt: null,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

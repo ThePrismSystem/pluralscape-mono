@@ -4,6 +4,12 @@
 
 Accepted
 
+## Superseded-by
+
+ADR-037 — context-specific Argon2id profiles; the unified `PWHASH_*_UNIFIED` constants are retired.
+
+ADR-014 — lazy key rotation protocol; the O(bucket_size) synchronous rotation stated as a consequence of this ADR is replaced.
+
 ## Context
 
 Pluralscape stores highly sensitive psychiatric data. The encryption architecture must provide:

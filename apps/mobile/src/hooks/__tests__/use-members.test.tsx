@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptMemberInput } from "@pluralscape/data/transforms/member";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawMember } from "../../__tests__/factories.js";
 
-import type { MemberRaw } from "@pluralscape/data/transforms/member";
-import type { MemberId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { MemberId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -119,36 +115,6 @@ const {
   useRestoreMember,
   useDuplicateMember,
 } = await import("../use-members.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawMember(id: string): MemberRaw {
-  const encrypted = encryptMemberInput(
-    {
-      name: `Member ${id}`,
-      pronouns: ["they/them"],
-      description: "A test member",
-      avatarSource: null,
-      colors: [],
-      saturationLevel: { kind: "known", level: "highly-elaborated" },
-      tags: [],
-      suppressFriendFrontNotification: false,
-      boardMessageNotificationOnFront: false,
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<MemberId>(id),
-    systemId: TEST_SYSTEM_ID,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

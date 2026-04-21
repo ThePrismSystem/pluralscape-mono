@@ -43,26 +43,23 @@ export function clearWebhookConfigCache(): void {
 
 // ── Dispatch ────────────────────────────────────────────────────────
 
-/** Runtime check: PgTransaction has rollback(), raw PgDatabase does not. */
-function isTransaction(db: PostgresJsDatabase): boolean {
-  return "rollback" in db;
-}
-
-/** Core dispatch logic — runs on whatever db/tx handle is passed. */
+/** Core dispatch logic — runs on the caller's tx handle. */
 async function executeDispatch<K extends WebhookEventType>(
-  db: PostgresJsDatabase,
+  tx: PostgresJsDatabase,
   systemId: SystemId,
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
-  inTransaction: boolean,
 ): Promise<readonly WebhookDeliveryId[]> {
-  // Check cache first; fall back to DB query on miss
+  // Check cache first; fall back to DB query on miss. Cache is never populated
+  // from inside this function — reads are transaction-scoped and could see
+  // uncommitted state that would become stale on rollback. Cache population
+  // and invalidation are owned by webhook-config.service + invalidateWebhookConfigCache.
   const cached = webhookConfigCache.get(systemId);
   let configs: readonly CachedWebhookConfig[];
   if (cached !== undefined) {
     configs = cached;
   } else {
-    const rows = await db
+    const rows = await tx
       .select({
         id: webhookConfigs.id,
         eventTypes: webhookConfigs.eventTypes,
@@ -76,11 +73,6 @@ async function executeDispatch<K extends WebhookEventType>(
         ),
       );
     configs = rows.map((row) => ({ id: brandId<WebhookId>(row.id), eventTypes: row.eventTypes }));
-    // Only populate cache from committed data — transaction-scoped reads
-    // may see uncommitted state that would become stale on rollback.
-    if (!inTransaction) {
-      webhookConfigCache.set(systemId, configs);
-    }
   }
 
   // Filter configs that subscribe to this specific event type
@@ -116,7 +108,7 @@ async function executeDispatch<K extends WebhookEventType>(
       };
     });
 
-    await db.insert(webhookDeliveries).values(values);
+    await tx.insert(webhookDeliveries).values(values);
   } finally {
     // Zeros the derived Uint8Array; the hex source in process.env is not erasable.
     getSodium().memzero(encryptionKey);
@@ -132,22 +124,20 @@ async function executeDispatch<K extends WebhookEventType>(
  *
  * Returns the IDs of created delivery records (empty if no configs matched).
  *
- * When called with a transaction handle (the normal case from service code),
- * executes directly on that handle. When called with a raw db connection,
- * wraps in a transaction for atomicity between the config SELECT and delivery INSERT.
+ * Must be called from within a transaction that already has RLS tenant context
+ * set — normal service-code pattern is to invoke from inside `withTenantTransaction`.
+ * The caller's transaction guarantees atomicity between the config SELECT and the
+ * delivery INSERT, and the upstream RLS context guards the reads.
  *
  * NOTE: Job enqueueing (BullMQ) is intentionally deferred until the queue
  * infrastructure is wired up. For now, deliveries are created with status
  * 'pending' and can be picked up by a polling worker or future job integration.
  */
 export async function dispatchWebhookEvent<K extends WebhookEventType>(
-  db: PostgresJsDatabase,
+  tx: PostgresJsDatabase,
   systemId: SystemId,
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
 ): Promise<readonly WebhookDeliveryId[]> {
-  if (isTransaction(db)) {
-    return executeDispatch(db, systemId, eventType, payload, true);
-  }
-  return db.transaction((tx) => executeDispatch(tx, systemId, eventType, payload, false));
+  return executeDispatch(tx, systemId, eventType, payload);
 }

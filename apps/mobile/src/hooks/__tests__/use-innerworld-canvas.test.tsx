@@ -1,18 +1,12 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptCanvasUpdate } from "@pluralscape/data/transforms/innerworld-canvas";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawCanvas } from "../../__tests__/factories.js";
 
-import type { CanvasRaw } from "@pluralscape/data/transforms/innerworld-canvas";
-import type { UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -66,29 +60,6 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
 
 // Must import AFTER vi.mock
 const { useCanvas, useUpsertCanvas } = await import("../use-innerworld-canvas.js");
-
-// ── Fixtures ────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawCanvas(): CanvasRaw {
-  const encrypted = encryptCanvasUpdate(
-    {
-      viewportX: 0,
-      viewportY: 0,
-      zoom: 1,
-      dimensions: { width: 1000, height: 800 },
-    },
-    1,
-    TEST_MASTER_KEY,
-  );
-  return {
-    systemId: TEST_SYSTEM_ID,
-    encryptedData: encrypted.encryptedData,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

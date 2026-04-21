@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptInnerWorldRegionInput } from "@pluralscape/data/transforms/innerworld-region";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawInnerworldRegion } from "../../__tests__/factories.js";
 
-import type { InnerWorldRegionRaw } from "@pluralscape/data/transforms/innerworld-region";
-import type { InnerWorldRegionId, UnixMillis, VisualProperties } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { InnerWorldRegionId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -126,45 +122,6 @@ const {
 } = await import("../use-innerworld-regions.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-const DEFAULT_VISUAL: VisualProperties = {
-  color: null,
-  icon: null,
-  size: null,
-  opacity: null,
-  imageSource: null,
-  externalUrl: null,
-};
-
-function makeRawRegion(id: string): InnerWorldRegionRaw {
-  const encrypted = encryptInnerWorldRegionInput(
-    {
-      name: `Region ${id}`,
-      description: "A test region",
-      boundaryData: [
-        { x: 0, y: 0 },
-        { x: 10, y: 10 },
-      ],
-      visual: DEFAULT_VISUAL,
-      gatekeeperMemberIds: [],
-      accessType: "open",
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<InnerWorldRegionId>(id),
-    systemId: TEST_SYSTEM_ID,
-    parentRegionId: null,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
-
 beforeEach(() => {
   fixtures.clear();
   vi.clearAllMocks();
@@ -173,7 +130,7 @@ beforeEach(() => {
 // ── Query tests ─────────────────────────────────────────────────────
 describe("useInnerWorldRegion", () => {
   it("returns decrypted region data", async () => {
-    fixtures.set("innerworld.region.get", makeRawRegion("r-1"));
+    fixtures.set("innerworld.region.get", makeRawInnerworldRegion("r-1"));
     const { result } = renderHookWithProviders(() =>
       useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
     );
@@ -203,7 +160,7 @@ describe("useInnerWorldRegion", () => {
   });
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
-    fixtures.set("innerworld.region.get", makeRawRegion("r-1"));
+    fixtures.set("innerworld.region.get", makeRawInnerworldRegion("r-1"));
     const { result, rerender } = renderHookWithProviders(() =>
       useInnerWorldRegion(brandId<InnerWorldRegionId>("r-1")),
     );
@@ -219,8 +176,8 @@ describe("useInnerWorldRegion", () => {
 
 describe("useInnerWorldRegionsList", () => {
   it("returns decrypted paginated regions", async () => {
-    const raw1 = makeRawRegion("r-1");
-    const raw2 = makeRawRegion("r-2");
+    const raw1 = makeRawInnerworldRegion("r-1");
+    const raw2 = makeRawInnerworldRegion("r-2");
     fixtures.set("innerworld.region.list", { data: [raw1, raw2], nextCursor: null });
 
     const { result } = renderHookWithProviders(() => useInnerWorldRegionsList());
@@ -247,7 +204,7 @@ describe("useInnerWorldRegionsList", () => {
 
   it("select is stable across rerenders", async () => {
     fixtures.set("innerworld.region.list", {
-      data: [makeRawRegion("r-1")],
+      data: [makeRawInnerworldRegion("r-1")],
       nextCursor: null,
     });
     const { result, rerender } = renderHookWithProviders(() => useInnerWorldRegionsList());

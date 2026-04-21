@@ -1,18 +1,14 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptFrontingReportInput } from "@pluralscape/data/transforms/fronting-report";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawFrontingReport } from "../../__tests__/factories.js";
 
-import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
 import type { FrontingReportId, UnixMillis } from "@pluralscape/types";
 
 beforeAll(async () => {
@@ -87,31 +83,8 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
 const { useFrontingReport, useFrontingReportsList, useGenerateReport, useDeleteReport } =
   await import("../use-fronting-reports.js");
 
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
 const START = 1_699_900_000_000 as UnixMillis;
 const END = 1_700_000_000_000 as UnixMillis;
-
-function makeRawReport(id: string): FrontingReportRaw {
-  const encrypted = encryptFrontingReportInput(
-    {
-      dateRange: { start: START, end: END },
-      memberBreakdowns: [],
-      chartData: [],
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<FrontingReportId>(id),
-    systemId: TEST_SYSTEM_ID,
-    format: "html",
-    generatedAt: NOW,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();
@@ -121,7 +94,7 @@ beforeEach(() => {
 // ── Query tests ─────────────────────────────────────────────────────
 describe("useFrontingReport", () => {
   it("returns decrypted fronting report data", async () => {
-    fixtures.set("frontingReport.get", makeRawReport("fr-1"));
+    fixtures.set("frontingReport.get", makeRawFrontingReport("fr-1"));
     const { result } = renderHookWithProviders(() =>
       useFrontingReport(brandId<FrontingReportId>("fr-1")),
     );
@@ -149,7 +122,7 @@ describe("useFrontingReport", () => {
   });
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
-    fixtures.set("frontingReport.get", makeRawReport("fr-1"));
+    fixtures.set("frontingReport.get", makeRawFrontingReport("fr-1"));
     const { result, rerender } = renderHookWithProviders(() =>
       useFrontingReport(brandId<FrontingReportId>("fr-1")),
     );
@@ -165,8 +138,8 @@ describe("useFrontingReport", () => {
 
 describe("useFrontingReportsList", () => {
   it("returns decrypted paginated fronting reports", async () => {
-    const raw1 = makeRawReport("fr-1");
-    const raw2 = makeRawReport("fr-2");
+    const raw1 = makeRawFrontingReport("fr-1");
+    const raw2 = makeRawFrontingReport("fr-2");
     fixtures.set("frontingReport.list", { data: [raw1, raw2], nextCursor: null });
 
     const { result } = renderHookWithProviders(() => useFrontingReportsList());
@@ -191,7 +164,7 @@ describe("useFrontingReportsList", () => {
 
   it("select is stable across rerenders", async () => {
     fixtures.set("frontingReport.list", {
-      data: [makeRawReport("fr-1")],
+      data: [makeRawFrontingReport("fr-1")],
       nextCursor: null,
     });
     const { result, rerender } = renderHookWithProviders(() => useFrontingReportsList());

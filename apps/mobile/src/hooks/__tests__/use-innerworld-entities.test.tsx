@@ -1,27 +1,20 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptInnerWorldEntityInput } from "@pluralscape/data/transforms/innerworld-entity";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawInnerworldEntity } from "../../__tests__/factories.js";
 
-import type {
-  InnerWorldEntityEncryptedPayload,
-  InnerWorldEntityRaw,
-} from "@pluralscape/data/transforms/innerworld-entity";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { InnerWorldEntityEncryptedPayload } from "@pluralscape/data/transforms/innerworld-entity";
 import type {
   InnerWorldEntityId,
   InnerWorldRegionId,
   MemberId,
   SystemStructureEntityId,
-  UnixMillis,
   VisualProperties,
 } from "@pluralscape/types";
 
@@ -136,8 +129,6 @@ const {
 } = await import("../use-innerworld-entities.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
 const DEFAULT_VISUAL: VisualProperties = {
   color: null,
   icon: null,
@@ -146,21 +137,6 @@ const DEFAULT_VISUAL: VisualProperties = {
   imageSource: null,
   externalUrl: null,
 };
-
-function makeRawEntity(id: string, payload: InnerWorldEntityEncryptedPayload): InnerWorldEntityRaw {
-  const encrypted = encryptInnerWorldEntityInput(payload, TEST_MASTER_KEY);
-  return {
-    id: brandId<InnerWorldEntityId>(id),
-    systemId: TEST_SYSTEM_ID,
-    regionId: null,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
 
 function makeMemberPayload(memberId: string): InnerWorldEntityEncryptedPayload {
   return {
@@ -201,7 +177,10 @@ beforeEach(() => {
 // ── Query tests ─────────────────────────────────────────────────────
 describe("useInnerWorldEntity", () => {
   it("decrypts a member entity variant", async () => {
-    fixtures.set("innerworld.entity.get", makeRawEntity("e-1", makeMemberPayload("mem-1")));
+    fixtures.set(
+      "innerworld.entity.get",
+      makeRawInnerworldEntity("e-1", makeMemberPayload("mem-1")),
+    );
     const { result } = renderHookWithProviders(() =>
       useInnerWorldEntity(brandId<InnerWorldEntityId>("e-1")),
     );
@@ -220,7 +199,10 @@ describe("useInnerWorldEntity", () => {
   });
 
   it("decrypts a landmark entity variant", async () => {
-    fixtures.set("innerworld.entity.get", makeRawEntity("e-2", makeLandmarkPayload("The Forest")));
+    fixtures.set(
+      "innerworld.entity.get",
+      makeRawInnerworldEntity("e-2", makeLandmarkPayload("The Forest")),
+    );
     const { result } = renderHookWithProviders(() =>
       useInnerWorldEntity(brandId<InnerWorldEntityId>("e-2")),
     );
@@ -239,7 +221,10 @@ describe("useInnerWorldEntity", () => {
   });
 
   it("decrypts a structure-entity variant", async () => {
-    fixtures.set("innerworld.entity.get", makeRawEntity("e-3", makeStructureEntityPayload("se-1")));
+    fixtures.set(
+      "innerworld.entity.get",
+      makeRawInnerworldEntity("e-3", makeStructureEntityPayload("se-1")),
+    );
     const { result } = renderHookWithProviders(() =>
       useInnerWorldEntity(brandId<InnerWorldEntityId>("e-3")),
     );
@@ -266,7 +251,10 @@ describe("useInnerWorldEntity", () => {
   });
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
-    fixtures.set("innerworld.entity.get", makeRawEntity("e-1", makeMemberPayload("mem-1")));
+    fixtures.set(
+      "innerworld.entity.get",
+      makeRawInnerworldEntity("e-1", makeMemberPayload("mem-1")),
+    );
     const { result, rerender } = renderHookWithProviders(() =>
       useInnerWorldEntity(brandId<InnerWorldEntityId>("e-1")),
     );
@@ -282,8 +270,8 @@ describe("useInnerWorldEntity", () => {
 
 describe("useInnerWorldEntitiesList", () => {
   it("returns decrypted paginated entities", async () => {
-    const raw1 = makeRawEntity("e-1", makeMemberPayload("mem-1"));
-    const raw2 = makeRawEntity("e-2", makeLandmarkPayload("Lake"));
+    const raw1 = makeRawInnerworldEntity("e-1", makeMemberPayload("mem-1"));
+    const raw2 = makeRawInnerworldEntity("e-2", makeLandmarkPayload("Lake"));
     fixtures.set("innerworld.entity.list", { data: [raw1, raw2], nextCursor: null });
 
     const { result } = renderHookWithProviders(() => useInnerWorldEntitiesList());
@@ -310,7 +298,7 @@ describe("useInnerWorldEntitiesList", () => {
 
   it("select is stable across rerenders", async () => {
     fixtures.set("innerworld.entity.list", {
-      data: [makeRawEntity("e-1", makeMemberPayload("mem-1"))],
+      data: [makeRawInnerworldEntity("e-1", makeMemberPayload("mem-1"))],
       nextCursor: null,
     });
     const { result, rerender } = renderHookWithProviders(() => useInnerWorldEntitiesList());

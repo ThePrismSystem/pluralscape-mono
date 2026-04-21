@@ -1,25 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import {
-  encryptNomenclatureUpdate,
-  encryptSystemSettingsUpdate,
-} from "@pluralscape/data/transforms/system-settings";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawNomenclature, makeRawSystemSettings } from "../../__tests__/factories.js";
 
-import type {
-  NomenclatureSettingsRaw,
-  SystemSettingsRaw,
-} from "@pluralscape/data/transforms/system-settings";
-import type { SystemSettingsId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { SystemSettingsId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -123,110 +113,9 @@ const {
   useVerifyPin,
 } = await import("../use-system-settings.js");
 
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
 const SETTINGS_ID = brandId<SystemSettingsId>("ss-1");
 
-function makeSystemSettingsPayload() {
-  return {
-    id: SETTINGS_ID,
-    systemId: TEST_SYSTEM_ID,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    theme: "dark" as const,
-    fontScale: 1.0,
-    locale: null,
-    defaultBucketId: null,
-    appLock: {
-      pinEnabled: false,
-      biometricEnabled: false,
-      lockTimeout: 5,
-      backgroundGraceSeconds: 30,
-    },
-    notifications: {
-      pushEnabled: true,
-      emailEnabled: false,
-      switchReminders: false,
-      checkInReminders: false,
-    },
-    syncPreferences: {
-      syncEnabled: true,
-      syncOnCellular: false,
-    },
-    privacyDefaults: {
-      defaultBucketForNewContent: null,
-      friendRequestPolicy: "open" as const,
-    },
-    littlesSafeMode: {
-      enabled: false,
-      allowedContentIds: [],
-      simplifiedUIFlags: {
-        largeButtons: false,
-        iconDriven: false,
-        noDeletion: false,
-        noSettings: false,
-        noAnalytics: false,
-      },
-    },
-    nomenclature: {
-      collective: "System",
-      individual: "Member",
-      fronting: "Fronting",
-      switching: "Switch",
-      "co-presence": "Co-fronting",
-      "internal-space": "Headspace",
-      "primary-fronter": "Host",
-      structure: "System Structure",
-      dormancy: "Dormancy",
-      body: "Body",
-      amnesia: "Amnesia",
-      saturation: "Saturation",
-    },
-    saturationLevelsEnabled: true,
-    autoCaptureFrontingOnJournal: false,
-    snapshotSchedule: "disabled" as const,
-    onboardingComplete: false,
-  };
-}
-
-function makeRawSystemSettings(): SystemSettingsRaw {
-  const settings = makeSystemSettingsPayload();
-  const encrypted = encryptSystemSettingsUpdate(settings, 1, TEST_MASTER_KEY);
-  return {
-    id: SETTINGS_ID,
-    systemId: TEST_SYSTEM_ID,
-    locale: null,
-    biometricEnabled: false,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
-
-function makeRawNomenclature(): NomenclatureSettingsRaw {
-  const nomenclature = {
-    collective: "System",
-    individual: "Member",
-    fronting: "Fronting",
-    switching: "Switch",
-    "co-presence": "Co-fronting",
-    "internal-space": "Headspace",
-    "primary-fronter": "Host",
-    structure: "System Structure",
-    dormancy: "Dormancy",
-    body: "Body",
-    amnesia: "Amnesia",
-    saturation: "Saturation",
-  };
-  const encrypted = encryptNomenclatureUpdate(nomenclature, 1, TEST_MASTER_KEY);
-  return {
-    systemId: TEST_SYSTEM_ID,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
+const NOW = 1_700_000_000_000;
 
 beforeEach(() => {
   fixtures.clear();

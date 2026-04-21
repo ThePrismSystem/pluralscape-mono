@@ -1,19 +1,16 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptFrontingSessionInput } from "@pluralscape/data/transforms/fronting-session";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawFrontingSession } from "../../__tests__/factories.js";
+
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
 import type { FrontingSessionRaw } from "@pluralscape/data/transforms/fronting-session";
-import type { FrontingSessionId, MemberId, UnixMillis } from "@pluralscape/types";
+import type { FrontingSessionId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -127,36 +124,6 @@ const {
   useUpdateSession,
 } = await import("../use-fronting-sessions.js");
 
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawSession(id: string): FrontingSessionRaw {
-  const encrypted = encryptFrontingSessionInput(
-    {
-      comment: `Session ${id}`,
-      positionality: "close",
-      outtrigger: null,
-      outtriggerSentiment: null,
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<FrontingSessionId>(id),
-    systemId: TEST_SYSTEM_ID,
-    memberId: brandId<MemberId>("m-1"),
-    customFrontId: null,
-    structureEntityId: null,
-    startTime: NOW,
-    endTime: null,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
-
 beforeEach(() => {
   fixtures.clear();
   vi.clearAllMocks();
@@ -169,7 +136,7 @@ beforeEach(() => {
 // ── Query tests ──────────────────────────────────────────────────────
 describe("useFrontingSession", () => {
   it("returns decrypted session data", async () => {
-    fixtures.set("frontingSession.get", makeRawSession("fs-1"));
+    fixtures.set("frontingSession.get", makeRawFrontingSession("fs-1"));
     const { result } = renderHookWithProviders(() =>
       useFrontingSession(brandId<FrontingSessionId>("fs-1")),
     );
@@ -196,7 +163,7 @@ describe("useFrontingSession", () => {
   });
 
   it("select is stable across rerenders (useCallback memoization)", async () => {
-    fixtures.set("frontingSession.get", makeRawSession("fs-1"));
+    fixtures.set("frontingSession.get", makeRawFrontingSession("fs-1"));
     const { result, rerender } = renderHookWithProviders(() =>
       useFrontingSession(brandId<FrontingSessionId>("fs-1")),
     );
@@ -212,8 +179,8 @@ describe("useFrontingSession", () => {
 
 describe("useFrontingSessionsList", () => {
   it("returns decrypted paginated sessions", async () => {
-    const raw1 = makeRawSession("fs-1");
-    const raw2 = makeRawSession("fs-2");
+    const raw1 = makeRawFrontingSession("fs-1");
+    const raw2 = makeRawFrontingSession("fs-2");
     fixtures.set("frontingSession.list", { data: [raw1, raw2], nextCursor: null });
 
     const { result } = renderHookWithProviders(() => useFrontingSessionsList());
@@ -237,7 +204,10 @@ describe("useFrontingSessionsList", () => {
   });
 
   it("select is stable across rerenders", async () => {
-    fixtures.set("frontingSession.list", { data: [makeRawSession("fs-1")], nextCursor: null });
+    fixtures.set("frontingSession.list", {
+      data: [makeRawFrontingSession("fs-1")],
+      nextCursor: null,
+    });
     const { result, rerender } = renderHookWithProviders(() => useFrontingSessionsList());
 
     await waitFor(() => {
@@ -251,7 +221,7 @@ describe("useFrontingSessionsList", () => {
 
 describe("useActiveFronters", () => {
   it("returns decrypted active fronters with composite fields", async () => {
-    const raw1 = makeRawSession("fs-1");
+    const raw1 = makeRawFrontingSession("fs-1");
     fixtures.set("frontingSession.getActive", {
       sessions: [raw1],
       isCofronting: true,
@@ -278,7 +248,7 @@ describe("useActiveFronters", () => {
   });
 
   it("select is stable across rerenders", async () => {
-    const raw1 = makeRawSession("fs-1");
+    const raw1 = makeRawFrontingSession("fs-1");
     fixtures.set("frontingSession.getActive", {
       sessions: [raw1],
       isCofronting: false,
@@ -462,7 +432,7 @@ describe("useEndSession", () => {
   });
 
   it("restores previousSession via setData on error when context has data", async () => {
-    const rawSession = makeRawSession("fs-1");
+    const rawSession = makeRawFrontingSession("fs-1");
     mockUtils.frontingSession.get.getData.mockReturnValue(rawSession);
 
     // We need to make mutateAsync fail to trigger onError

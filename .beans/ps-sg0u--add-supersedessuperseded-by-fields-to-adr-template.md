@@ -1,11 +1,11 @@
 ---
 # ps-sg0u
 title: Add Supersedes/Superseded-by fields to ADR template + backfill
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-21T13:59:06Z
-updated_at: 2026-04-21T13:59:06Z
+updated_at: 2026-04-21T14:42:52Z
 parent: ps-0vwf
 ---
 
@@ -17,10 +17,10 @@ Multiple ADRs build on or replace earlier decisions without explicit markers (e.
 
 ## Scope
 
-- [ ] Update docs/adr/000-template.md: add Status line options (Accepted / Superseded / Deprecated) and two new optional fields — Supersedes: <ADR-###> and Superseded-by: <ADR-###>
-- [ ] Backfill at least ADR-037 (supersedes the unified Argon2 profile; reference the implicit decision in ADR-006)
-- [ ] Scan the ADR list for other obvious chains and backfill — prioritize ADR-023 (Zod-type alignment) which this milestone's types-SoT epic refreshes
-- [ ] Document the convention in docs/architecture.md or the ADR README if one exists
+- [x] Update docs/adr/000-template.md: add Status line options (Accepted / Superseded / Deprecated) and two new optional fields — Supersedes: <ADR-###> and Superseded-by: <ADR-###>
+- [x] Backfill at least ADR-037 (supersedes the unified Argon2 profile; reference the implicit decision in ADR-006)
+- [x] Scan the ADR list for other obvious chains and backfill — prioritize ADR-023 (Zod-type alignment) which this milestone's types-SoT epic refreshes
+- [x] Document the convention in docs/architecture.md or the ADR README if one exists
 
 ## Out of scope
 
@@ -36,3 +36,13 @@ Multiple ADRs build on or replace earlier decisions without explicit markers (e.
 ## Priority
 
 Low — documentation hygiene, no functional impact.
+
+## Summary of Changes
+
+- Added `Supersedes` and `Superseded-by` optional metadata sections to `docs/adr/000-template.md`; expanded Status options to include `Superseded` and `Deprecated`.
+- Backfilled three ADR supersession chains:
+  - ADR-037 supersedes ADR-006 (context-specific Argon2id profiles replace unified PWHASH constants)
+  - ADR-014 supersedes ADR-006 (lazy rotation protocol replaces the O(bucket_size) synchronous rotation stated as a consequence of ADR-006)
+  - ADR-027 supersedes ADR-025 (create-then-archive rotation pattern replaces the in-place secret overwrite described in ADR-025 mitigation #4)
+- ADR-006 kept at status `Accepted` — only specific consequences are superseded, not the overall encryption architecture.
+- pnpm format:fix + pnpm lint: pass.

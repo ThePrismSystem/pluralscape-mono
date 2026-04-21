@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptChannelInput } from "@pluralscape/data/transforms/channel";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawChannel } from "../../__tests__/factories.js";
 
-import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
-import type { ChannelId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { ChannelId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -120,26 +116,6 @@ const {
   useRestoreChannel,
   useDeleteChannel,
 } = await import("../use-channels.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawChannel(id: string): ChannelRaw {
-  const encrypted = encryptChannelInput({ name: "general" }, TEST_MASTER_KEY);
-  return {
-    id: brandId<ChannelId>(id),
-    systemId: TEST_SYSTEM_ID,
-    type: "channel",
-    parentId: null,
-    sortOrder: 0,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

@@ -21,15 +21,6 @@ export type ClientPlatform = (typeof VALID_PLATFORMS)[number];
 export const DEFAULT_PLATFORM = "web" as const satisfies ClientPlatform;
 
 /**
- * Default anti-enumeration secret for development/test.
- *
- * Used as fallback ONLY outside production — the env.ts Zod schema
- * rejects this value when NODE_ENV=production and requires the
- * ANTI_ENUM_SALT_SECRET env var to be set and at least 32 characters.
- */
-export const ANTI_ENUM_SALT_SECRET_DEFAULT = "pluralscape-dev-anti-enum-secret-do-not-use-in-prod";
-
-/**
  * Minimum length required for a production ANTI_ENUM_SALT_SECRET value.
  *
  * 32 bytes of entropy is sufficient collision-resistance for the BLAKE2B

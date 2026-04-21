@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptMessageInput } from "@pluralscape/data/transforms/message";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawMessage } from "../../__tests__/factories.js";
 
-import type { MessageRaw } from "@pluralscape/data/transforms/message";
-import type { ChannelId, MemberId, MessageId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { ChannelId, MessageId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -123,35 +119,7 @@ const {
   useDeleteMessage,
 } = await import("../use-messages.js");
 
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
 const CHANNEL_ID = brandId<ChannelId>("ch-1");
-
-function makeRawMessage(id: string): MessageRaw {
-  const encrypted = encryptMessageInput(
-    {
-      content: "hello",
-      attachments: [],
-      mentions: [],
-      senderId: brandId<MemberId>("m-1"),
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<MessageId>(id),
-    channelId: CHANNEL_ID,
-    systemId: TEST_SYSTEM_ID,
-    replyToId: null,
-    timestamp: NOW,
-    editedAt: null,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

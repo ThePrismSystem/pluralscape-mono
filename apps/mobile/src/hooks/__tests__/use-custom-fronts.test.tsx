@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptCustomFrontInput } from "@pluralscape/data/transforms/custom-front";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawCustomFront } from "../../__tests__/factories.js";
 
-import type { CustomFrontRaw } from "@pluralscape/data/transforms/custom-front";
-import type { CustomFrontId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { CustomFrontId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -100,31 +96,6 @@ const {
   useUpdateCustomFront,
   useDeleteCustomFront,
 } = await import("../use-custom-fronts.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawCustomFront(id: string): CustomFrontRaw {
-  const encrypted = encryptCustomFrontInput(
-    {
-      name: `Front ${id}`,
-      description: "A test front",
-      color: null,
-      emoji: null,
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<CustomFrontId>(id),
-    systemId: TEST_SYSTEM_ID,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

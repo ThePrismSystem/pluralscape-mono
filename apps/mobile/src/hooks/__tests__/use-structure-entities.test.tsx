@@ -1,23 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptStructureEntityInput } from "@pluralscape/data/transforms/structure-entity";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawStructureEntity } from "../../__tests__/factories.js";
 
-import type { StructureEntityRaw } from "@pluralscape/data/transforms/structure-entity";
-import type {
-  SystemStructureEntityId,
-  SystemStructureEntityTypeId,
-  UnixMillis,
-} from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { SystemStructureEntityId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -143,34 +135,6 @@ const {
   useDeleteStructureEntity,
 } = await import("../use-structure-entities.js");
 
-const NOW = 1_700_000_000_000 as UnixMillis;
-const ENTITY_TYPE_ID = brandId<SystemStructureEntityTypeId>("stet_default");
-
-function makeRawEntity(id: string): StructureEntityRaw {
-  const encrypted = encryptStructureEntityInput(
-    {
-      name: `Entity ${id}`,
-      description: "A test entity",
-      emoji: null,
-      color: null,
-      imageSource: null,
-    },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<SystemStructureEntityId>(id),
-    systemId: TEST_SYSTEM_ID,
-    entityTypeId: ENTITY_TYPE_ID,
-    sortOrder: 0,
-    version: 1,
-    createdAt: NOW,
-    updatedAt: NOW,
-    archived: false,
-    archivedAt: null,
-    ...encrypted,
-  };
-}
-
 beforeEach(() => {
   fixtures.clear();
   vi.clearAllMocks();
@@ -180,7 +144,7 @@ beforeEach(() => {
 
 describe("useStructureEntity", () => {
   it("returns decrypted entity data", async () => {
-    fixtures.set("structure.entity.get", makeRawEntity("ste_1"));
+    fixtures.set("structure.entity.get", makeRawStructureEntity("ste_1"));
     const { result } = renderHookWithProviders(() =>
       useStructureEntity(brandId<SystemStructureEntityId>("ste_1")),
     );
@@ -203,7 +167,7 @@ describe("useStructureEntity", () => {
   });
 
   it("select is stable across rerenders", async () => {
-    fixtures.set("structure.entity.get", makeRawEntity("ste_1"));
+    fixtures.set("structure.entity.get", makeRawStructureEntity("ste_1"));
     const { result, rerender } = renderHookWithProviders(() =>
       useStructureEntity(brandId<SystemStructureEntityId>("ste_1")),
     );
@@ -235,7 +199,7 @@ describe("useStructureEntityHierarchy", () => {
 describe("useStructureEntitiesList", () => {
   it("returns decrypted paginated entities", async () => {
     fixtures.set("structure.entity.list", {
-      data: [makeRawEntity("ste_1"), makeRawEntity("ste_2")],
+      data: [makeRawStructureEntity("ste_1"), makeRawStructureEntity("ste_2")],
       nextCursor: null,
     });
     const { result } = renderHookWithProviders(() => useStructureEntitiesList());
@@ -262,7 +226,7 @@ describe("useStructureEntitiesList", () => {
 
   it("select is stable across rerenders", async () => {
     fixtures.set("structure.entity.list", {
-      data: [makeRawEntity("ste_1")],
+      data: [makeRawStructureEntity("ste_1")],
       nextCursor: null,
     });
     const { result, rerender } = renderHookWithProviders(() => useStructureEntitiesList());

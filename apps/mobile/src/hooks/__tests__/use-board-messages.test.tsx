@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptBoardMessageInput } from "@pluralscape/data/transforms/board-message";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawBoardMessage } from "../../__tests__/factories.js";
 
-import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message";
-import type { BoardMessageId, MemberId, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { BoardMessageId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -148,28 +144,6 @@ const {
   useUnpinBoardMessage,
   useReorderBoardMessages,
 } = await import("../use-board-messages.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawBoardMessage(id: string): BoardMessageRaw {
-  const encrypted = encryptBoardMessageInput(
-    { content: "Board post", senderId: brandId<MemberId>("m-1") },
-    TEST_MASTER_KEY,
-  );
-  return {
-    id: brandId<BoardMessageId>(id),
-    systemId: TEST_SYSTEM_ID,
-    pinned: false,
-    sortOrder: 0,
-    version: 1,
-    archived: false,
-    archivedAt: null,
-    createdAt: NOW,
-    updatedAt: NOW,
-    ...encrypted,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();

@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptRelationshipInput } from "@pluralscape/data/transforms/relationship";
 import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  renderHookWithProviders,
-  TEST_MASTER_KEY,
-  TEST_SYSTEM_ID,
-} from "./helpers/render-hook-with-providers.js";
+import { makeRawRelationship } from "../../__tests__/factories.js";
 
-import type { RelationshipRaw } from "@pluralscape/data/transforms/relationship";
-import type { MemberId, RelationshipId, RelationshipType, UnixMillis } from "@pluralscape/types";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
+
+import type { RelationshipId } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -116,31 +112,6 @@ const {
   useRestoreRelationship,
   useDeleteRelationship,
 } = await import("../use-relationships.js");
-
-const NOW = 1_700_000_000_000 as UnixMillis;
-
-function makeRawRelationship(
-  id: string,
-  opts?: { encryptedData?: string | null },
-): RelationshipRaw {
-  const encryptedData =
-    opts?.encryptedData !== undefined
-      ? opts.encryptedData
-      : encryptRelationshipInput({ label: `Label ${id}` }, TEST_MASTER_KEY).encryptedData;
-
-  return {
-    id: brandId<RelationshipId>(id),
-    systemId: TEST_SYSTEM_ID,
-    sourceMemberId: brandId<MemberId>("m-1"),
-    targetMemberId: brandId<MemberId>("m-2"),
-    type: "sibling" as RelationshipType,
-    bidirectional: true,
-    createdAt: NOW,
-    archived: false,
-    archivedAt: null,
-    encryptedData,
-  };
-}
 
 beforeEach(() => {
   fixtures.clear();
