@@ -15,8 +15,8 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { computeFrontingBreakdown, computeCoFrontingBreakdown } =
-  await import("../../services/analytics.service.js");
+const { computeFrontingBreakdown } = await import("../../services/analytics/fronting.js");
+const { computeCoFrontingBreakdown } = await import("../../services/analytics/co-fronting.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
