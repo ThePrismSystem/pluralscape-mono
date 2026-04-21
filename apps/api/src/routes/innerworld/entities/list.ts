@@ -6,7 +6,7 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { listEntities } from "../../../services/innerworld-entity.service.js";
+import { listEntities } from "../../../services/innerworld/entity/queries.js";
 
 import { DEFAULT_ENTITY_LIMIT, MAX_ENTITY_LIMIT } from "./entities.constants.js";
 

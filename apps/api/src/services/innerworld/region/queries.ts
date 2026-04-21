@@ -1,18 +1,18 @@
 import { innerworldRegions } from "@pluralscape/db/pg";
 import { and, eq, gt } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
-import { buildPaginatedResult } from "../../lib/pagination.js";
-import { withTenantRead } from "../../lib/rls-context.js";
-import { assertSystemOwnership } from "../../lib/system-ownership.js";
-import { tenantCtx } from "../../lib/tenant-context.js";
-import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
+import { HTTP_NOT_FOUND } from "../../../http.constants.js";
+import { ApiHttpError } from "../../../lib/api-error.js";
+import { buildPaginatedResult } from "../../../lib/pagination.js";
+import { withTenantRead } from "../../../lib/rls-context.js";
+import { assertSystemOwnership } from "../../../lib/system-ownership.js";
+import { tenantCtx } from "../../../lib/tenant-context.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
 
 import { toRegionResult } from "./internal.js";
 
 import type { RegionResult } from "./internal.js";
-import type { AuthContext } from "../../lib/auth-context.js";
+import type { AuthContext } from "../../../lib/auth-context.js";
 import type { InnerWorldRegionId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

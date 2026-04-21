@@ -7,7 +7,7 @@ import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { getCanvas, upsertCanvas } from "../../../services/innerworld-canvas.service.js";
+import { getCanvas, upsertCanvas } from "../../../services/innerworld/canvas.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 

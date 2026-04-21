@@ -1,11 +1,11 @@
 ---
 # api-l3et
 title: Refactor innerworld-entity.service.ts (443 LOC) into services/innerworld/entity/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:09:30Z
 parent: api-6l1q
 ---
 

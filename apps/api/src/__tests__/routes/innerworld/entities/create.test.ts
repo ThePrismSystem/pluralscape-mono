@@ -10,7 +10,7 @@ import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js"
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/innerworld-entity.service.js", () => ({
+vi.mock("../../../../services/innerworld/entity/create.js", () => ({
   createEntity: vi.fn(),
 }));
 
@@ -23,7 +23,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { createEntity } = await import("../../../../services/innerworld-entity.service.js");
+const { createEntity } = await import("../../../../services/innerworld/entity/create.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

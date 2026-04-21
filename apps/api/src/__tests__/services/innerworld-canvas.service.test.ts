@@ -55,7 +55,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const { getCanvas, upsertCanvas } = await import("../../services/innerworld-canvas.service.js");
+const { getCanvas, upsertCanvas } = await import("../../services/innerworld/canvas.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

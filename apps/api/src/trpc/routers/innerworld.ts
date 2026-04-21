@@ -8,24 +8,23 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import { getCanvas, upsertCanvas } from "../../services/innerworld-canvas.service.js";
+import { getCanvas, upsertCanvas } from "../../services/innerworld/canvas.js";
+import { createEntity } from "../../services/innerworld/entity/create.js";
 import {
   archiveEntity,
-  createEntity,
   deleteEntity,
-  getEntity,
-  listEntities,
   restoreEntity,
-  updateEntity,
-} from "../../services/innerworld-entity.service.js";
-import { createRegion } from "../../services/innerworld-region/create.js";
+} from "../../services/innerworld/entity/lifecycle.js";
+import { getEntity, listEntities } from "../../services/innerworld/entity/queries.js";
+import { updateEntity } from "../../services/innerworld/entity/update.js";
+import { createRegion } from "../../services/innerworld/region/create.js";
 import {
   archiveRegion,
   deleteRegion,
   restoreRegion,
-} from "../../services/innerworld-region/lifecycle.js";
-import { getRegion, listRegions } from "../../services/innerworld-region/queries.js";
-import { updateRegion } from "../../services/innerworld-region/update.js";
+} from "../../services/innerworld/region/lifecycle.js";
+import { getRegion, listRegions } from "../../services/innerworld/region/queries.js";
+import { updateRegion } from "../../services/innerworld/region/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

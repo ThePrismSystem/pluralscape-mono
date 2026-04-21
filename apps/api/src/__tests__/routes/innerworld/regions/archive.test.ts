@@ -12,7 +12,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/innerworld-region/lifecycle.js", () => ({
+vi.mock("../../../../services/innerworld/region/lifecycle.js", () => ({
   archiveRegion: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { archiveRegion } = await import("../../../../services/innerworld-region/lifecycle.js");
+const { archiveRegion } = await import("../../../../services/innerworld/region/lifecycle.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

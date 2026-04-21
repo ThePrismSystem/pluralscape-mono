@@ -6,7 +6,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { archiveEntity } from "../../../services/innerworld-entity.service.js";
+import { archiveEntity } from "../../../services/innerworld/entity/lifecycle.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 
