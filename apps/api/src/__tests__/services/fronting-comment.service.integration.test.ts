@@ -25,10 +25,8 @@ import {
   restoreFrontingComment,
   updateFrontingComment,
 } from "../../services/fronting-comment.service.js";
-import {
-  archiveFrontingSession,
-  createFrontingSession,
-} from "../../services/fronting-session.service.js";
+import { createFrontingSession } from "../../services/fronting-session/create.js";
+import { archiveFrontingSession } from "../../services/fronting-session/lifecycle.js";
 import {
   assertApiError,
   genFrontingCommentId,

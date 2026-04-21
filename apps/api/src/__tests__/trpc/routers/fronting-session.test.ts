@@ -14,29 +14,34 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/fronting-session.service.js", () => ({
+vi.mock("../../../services/fronting-session/create.js", () => ({
   createFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/queries.js", () => ({
   getFrontingSession: vi.fn(),
   listFrontingSessions: vi.fn(),
-  updateFrontingSession: vi.fn(),
-  endFrontingSession: vi.fn(),
-  archiveFrontingSession: vi.fn(),
-  restoreFrontingSession: vi.fn(),
-  deleteFrontingSession: vi.fn(),
   getActiveFronting: vi.fn(),
 }));
 
-const {
-  createFrontingSession,
-  getFrontingSession,
-  listFrontingSessions,
-  updateFrontingSession,
-  endFrontingSession,
-  archiveFrontingSession,
-  restoreFrontingSession,
-  deleteFrontingSession,
-  getActiveFronting,
-} = await import("../../../services/fronting-session.service.js");
+vi.mock("../../../services/fronting-session/update.js", () => ({
+  updateFrontingSession: vi.fn(),
+  endFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/lifecycle.js", () => ({
+  archiveFrontingSession: vi.fn(),
+  restoreFrontingSession: vi.fn(),
+  deleteFrontingSession: vi.fn(),
+}));
+
+const { createFrontingSession } = await import("../../../services/fronting-session/create.js");
+const { getFrontingSession, listFrontingSessions, getActiveFronting } =
+  await import("../../../services/fronting-session/queries.js");
+const { updateFrontingSession, endFrontingSession } =
+  await import("../../../services/fronting-session/update.js");
+const { archiveFrontingSession, restoreFrontingSession, deleteFrontingSession } =
+  await import("../../../services/fronting-session/lifecycle.js");
 
 const { frontingSessionRouter } = await import("../../../trpc/routers/fronting-session.js");
 

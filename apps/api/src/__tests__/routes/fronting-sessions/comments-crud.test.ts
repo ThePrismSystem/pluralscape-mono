@@ -22,16 +22,26 @@ vi.mock("../../../services/fronting-comment.service.js", () => ({
   restoreFrontingComment: vi.fn(),
 }));
 
-vi.mock("../../../services/fronting-session.service.js", () => ({
+vi.mock("../../../services/fronting-session/create.js", () => ({
   createFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/queries.js", () => ({
   listFrontingSessions: vi.fn(),
   getFrontingSession: vi.fn(),
+  getActiveFronting: vi.fn(),
+  parseFrontingSessionQuery: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock("../../../services/fronting-session/update.js", () => ({
   updateFrontingSession: vi.fn(),
   endFrontingSession: vi.fn(),
+}));
+
+vi.mock("../../../services/fronting-session/lifecycle.js", () => ({
   deleteFrontingSession: vi.fn(),
   archiveFrontingSession: vi.fn(),
   restoreFrontingSession: vi.fn(),
-  parseFrontingSessionQuery: vi.fn().mockReturnValue({}),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());

@@ -6,17 +6,21 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createFrontingSession } from "../../services/fronting-session/create.js";
 import {
   archiveFrontingSession,
-  createFrontingSession,
   deleteFrontingSession,
-  endFrontingSession,
+  restoreFrontingSession,
+} from "../../services/fronting-session/lifecycle.js";
+import {
   getActiveFronting,
   getFrontingSession,
   listFrontingSessions,
-  restoreFrontingSession,
+} from "../../services/fronting-session/queries.js";
+import {
+  endFrontingSession,
   updateFrontingSession,
-} from "../../services/fronting-session.service.js";
+} from "../../services/fronting-session/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
