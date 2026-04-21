@@ -6,7 +6,7 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
-import { listPolls, parsePollQuery } from "../../services/poll.service.js";
+import { listPolls, parsePollQuery } from "../../services/poll/list.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
