@@ -10,7 +10,7 @@ import { createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
-vi.mock("../../../services/group.service.js", () => ({
+vi.mock("../../../services/group/lifecycle.js", () => ({
   archiveGroup: vi.fn(),
 }));
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -18,7 +18,7 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-const { archiveGroup } = await import("../../../services/group.service.js");
+const { archiveGroup } = await import("../../../services/group/lifecycle.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);

@@ -8,24 +8,16 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createGroup } from "../../services/group/create.js";
+import { archiveGroup, deleteGroup, restoreGroup } from "../../services/group/lifecycle.js";
+import { getGroup, getGroupTree, listGroups } from "../../services/group/queries.js";
+import { copyGroup, moveGroup, reorderGroups } from "../../services/group/structure.js";
+import { updateGroup } from "../../services/group/update.js";
 import {
   addMember,
   listGroupMembers,
   removeMember,
 } from "../../services/group-membership.service.js";
-import {
-  archiveGroup,
-  copyGroup,
-  createGroup,
-  deleteGroup,
-  getGroup,
-  getGroupTree,
-  listGroups,
-  moveGroup,
-  reorderGroups,
-  restoreGroup,
-  updateGroup,
-} from "../../services/group.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

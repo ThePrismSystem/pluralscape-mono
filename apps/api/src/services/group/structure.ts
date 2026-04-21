@@ -1,173 +1,28 @@
-import { fieldValues, groupMemberships, groups } from "@pluralscape/db/pg";
+import { groupMemberships, groups } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CopyGroupBodySchema,
-  CreateGroupBodySchema,
   MoveGroupBodySchema,
   ReorderGroupsBodySchema,
-  UpdateGroupBodySchema,
 } from "@pluralscape/validation";
 import { and, eq, inArray, max, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
-import { ApiHttpError } from "../lib/api-error.js";
-import { detectAncestorCycle } from "../lib/hierarchy.js";
-import { assertOccUpdated } from "../lib/occ-update.js";
-import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
-import { assertSystemOwnership } from "../lib/system-ownership.js";
-import { tenantCtx } from "../lib/tenant-context.js";
-import { MAX_GROUPS_PER_SYSTEM } from "../quota.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { ApiHttpError } from "../../lib/api-error.js";
+import { detectAncestorCycle } from "../../lib/hierarchy.js";
+import { assertOccUpdated } from "../../lib/occ-update.js";
+import { withTenantTransaction } from "../../lib/rls-context.js";
+import { assertSystemOwnership } from "../../lib/system-ownership.js";
+import { tenantCtx } from "../../lib/tenant-context.js";
+import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
-import { createHierarchyService } from "./hierarchy-service-factory.js";
-import { mapBaseFields } from "./hierarchy-service-helpers.js";
-import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+import { toGroupResult } from "./internal.js";
 
-import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AuthContext } from "../lib/auth-context.js";
-import type {
-  EncryptedBlob,
-  GroupId,
-  PaginatedResult,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { GroupResult } from "./internal.js";
+import type { AuditWriter } from "../../lib/audit-writer.js";
+import type { AuthContext } from "../../lib/auth-context.js";
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Types ───────────────────────────────────────────────────────────
-
-export interface GroupResult {
-  readonly id: GroupId;
-  readonly systemId: SystemId;
-  readonly parentGroupId: GroupId | null;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────
-
-function toGroupResult(row: {
-  id: string;
-  systemId: string;
-  parentGroupId: string | null;
-  sortOrder: number;
-  encryptedData: EncryptedBlob;
-  version: number;
-  createdAt: number;
-  updatedAt: number;
-  archived: boolean;
-  archivedAt: number | null;
-}): GroupResult {
-  return {
-    ...mapBaseFields(row),
-    id: brandId<GroupId>(row.id),
-    parentGroupId: row.parentGroupId ? brandId<GroupId>(row.parentGroupId) : null,
-    sortOrder: row.sortOrder,
-  };
-}
-
-// ── Shared hierarchy service ────────────────────────────────────────
-
-const groupHierarchy = createHierarchyService<
-  {
-    id: string;
-    systemId: string;
-    parentGroupId: string | null;
-    sortOrder: number;
-    encryptedData: EncryptedBlob;
-    version: number;
-    createdAt: number;
-    updatedAt: number;
-    archived: boolean;
-    archivedAt: number | null;
-  },
-  GroupId,
-  GroupResult
->({
-  table: groups,
-  columns: {
-    id: groups.id,
-    systemId: groups.systemId,
-    parentId: groups.parentGroupId,
-    encryptedData: groups.encryptedData,
-    version: groups.version,
-    archived: groups.archived,
-    archivedAt: groups.archivedAt,
-    createdAt: groups.createdAt,
-    updatedAt: groups.updatedAt,
-  },
-  idPrefix: ID_PREFIXES.group,
-  entityName: "Group",
-  maxPerSystem: MAX_GROUPS_PER_SYSTEM,
-  parentFieldName: "parentGroupId",
-  toResult: toGroupResult,
-  createSchema: CreateGroupBodySchema,
-  updateSchema: UpdateGroupBodySchema,
-  createInsertValues: (parsed) => ({
-    sortOrder: parsed.sortOrder,
-  }),
-  updateSetValues: () => ({}),
-  dependentChecks: [
-    {
-      table: groups,
-      entityColumn: groups.parentGroupId,
-      systemColumn: groups.systemId,
-      label: "child group(s)",
-      filterArchived: groups.archived,
-    },
-    {
-      table: groupMemberships,
-      entityColumn: groupMemberships.groupId,
-      systemColumn: groupMemberships.systemId,
-      label: "member(s)",
-    },
-    {
-      table: fieldValues,
-      entityColumn: fieldValues.groupId,
-      systemColumn: fieldValues.systemId,
-      label: "field value(s)",
-    },
-  ],
-  events: {
-    created: "group.created",
-    updated: "group.updated",
-    deleted: "group.deleted",
-    archived: "group.archived",
-    restored: "group.restored",
-  },
-  webhookEvents: {
-    created: "group.created",
-    updated: "group.updated",
-    buildPayload: (entityId: string) => ({ groupId: brandId<GroupId>(entityId) }),
-  },
-});
-
-// ── Delegated CRUD ──────────────────────────────────────────────────
-
-export const createGroup = groupHierarchy.create;
-
-export const listGroups: (
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  auth: AuthContext,
-  cursor?: string,
-  limit?: number,
-  includeArchived?: boolean,
-) => Promise<PaginatedResult<GroupResult>> = groupHierarchy.list;
-
-export const getGroup = groupHierarchy.get;
-
-export const updateGroup = groupHierarchy.update;
-
-export const deleteGroup = groupHierarchy.remove;
-
-export const archiveGroup = groupHierarchy.archive;
-
-export const restoreGroup = groupHierarchy.restore;
 
 // ── MOVE ────────────────────────────────────────────────────────────
 
@@ -400,53 +255,6 @@ export async function copyGroup(
 
     return toGroupResult(row);
   });
-}
-
-// ── TREE ────────────────────────────────────────────────────────────
-
-export interface GroupResultTree extends GroupResult {
-  readonly children: GroupResultTree[];
-}
-
-export async function getGroupTree(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  auth: AuthContext,
-): Promise<GroupResultTree[]> {
-  assertSystemOwnership(systemId, auth);
-
-  const rows = await withTenantRead(db, tenantCtx(systemId, auth), (tx) =>
-    tx
-      .select()
-      .from(groups)
-      .where(and(eq(groups.systemId, systemId), eq(groups.archived, false)))
-      .orderBy(groups.sortOrder),
-  );
-
-  // Build tree in-memory
-  const nodeMap = new Map<string, GroupResultTree>();
-  const roots: GroupResultTree[] = [];
-
-  for (const row of rows) {
-    const node: GroupResultTree = { ...toGroupResult(row), children: [] };
-    nodeMap.set(row.id, node);
-  }
-
-  for (const node of nodeMap.values()) {
-    if (node.parentGroupId !== null) {
-      const parent = nodeMap.get(node.parentGroupId);
-      if (parent) {
-        parent.children.push(node);
-      } else {
-        // Orphaned — treat as root
-        roots.push(node);
-      }
-    } else {
-      roots.push(node);
-    }
-  }
-
-  return roots;
 }
 
 // ── REORDER ─────────────────────────────────────────────────────────

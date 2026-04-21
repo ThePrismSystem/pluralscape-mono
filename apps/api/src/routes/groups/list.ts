@@ -9,10 +9,10 @@ import { parseQuery } from "../../lib/query-parse.js";
 import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
-import { listGroups } from "../../services/group.service.js";
+import { listGroups } from "../../services/group/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { GroupResult } from "../../services/group.service.js";
+import type { GroupResult } from "../../services/group/queries.js";
 
 const GROUP_FIELDS = [
   "id",

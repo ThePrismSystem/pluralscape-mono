@@ -5,7 +5,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { getGroupTree } from "../../services/group.service.js";
+import { getGroupTree } from "../../services/group/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
