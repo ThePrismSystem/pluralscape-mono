@@ -71,7 +71,7 @@ CREATE POLICY api_keys_tenant_isolation ON api_keys USING (account_id = NULLIF(c
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS audit_log_tenant_isolation ON audit_log;
-CREATE POLICY audit_log_tenant_isolation ON audit_log USING (account_id IS NOT NULL AND system_id IS NOT NULL AND account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+CREATE POLICY audit_log_tenant_isolation ON audit_log USING (account_id IS NOT NULL AND system_id IS NOT NULL AND account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (account_id IS NOT NULL AND system_id IS NOT NULL AND account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- device_tokens
 ALTER TABLE device_tokens ENABLE ROW LEVEL SECURITY;

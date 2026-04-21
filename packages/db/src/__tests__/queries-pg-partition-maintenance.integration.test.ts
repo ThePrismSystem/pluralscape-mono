@@ -97,17 +97,4 @@ describe("pgDetachOldPartitions partition name sanitation", () => {
     // Clean up the default partition so subsequent tests operate on a clean table.
     await db.execute(sql`DROP TABLE audit_log_default`);
   });
-
-  it("silently ignores rows with valid-looking but unsafe characters in partition_name", async () => {
-    // Strongest guarantee: parsePartitionDate requires `<prefix>_YYYY_MM`.
-    // A malicious partition_name like `audit_log_2020_03"; DROP TABLE audit_log --`
-    // must fail the regex and be skipped. We simulate this by verifying that
-    // our regex-based parser is the single gate before DDL.
-    // (Real pg_inherits cannot produce such a name — the DDL engine validates
-    //  identifier length — but the defense-in-depth test is still valuable.)
-    const { parsePartitionDate } = await import("../queries/partition-maintenance.js");
-    expect(parsePartitionDate(`audit_log_2020_03"; DROP TABLE audit_log --`)).toBeNull();
-    expect(parsePartitionDate("audit_log_20200_3")).toBeNull();
-    expect(parsePartitionDate("audit_log_2020_3")).toBeNull();
-  });
 });

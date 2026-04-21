@@ -214,6 +214,24 @@ describe("generateRlsStatements", () => {
     expect(stmts[2]).toContain("system_id IS NOT NULL");
   });
 
+  it("audit_log WITH CHECK mirrors USING with symmetric IS NOT NULL guard", () => {
+    const stmts = generateRlsStatements("audit_log");
+    const policy = stmts[2] ?? "";
+
+    const usingIdx = policy.indexOf("USING (");
+    const withCheckIdx = policy.indexOf("WITH CHECK (");
+    expect(usingIdx).toBeGreaterThan(-1);
+    expect(withCheckIdx).toBeGreaterThan(usingIdx);
+
+    const withCheckClause = policy.slice(withCheckIdx);
+    // WITH CHECK must mirror USING — defensive guard against future regressions
+    // that might attempt to write NULL tenant columns through the tenant role.
+    expect(withCheckClause).toContain("account_id IS NOT NULL");
+    expect(withCheckClause).toContain("system_id IS NOT NULL");
+    expect(withCheckClause).toContain("account_id =");
+    expect(withCheckClause).toContain("system_id =");
+  });
+
   it("returns system-fk subquery policy for sync_changes", () => {
     const stmts = generateRlsStatements("sync_changes");
 
@@ -292,7 +310,7 @@ describe("RLS_TABLE_POLICIES", () => {
   it("covers core tables with correct scopes", () => {
     const expected: Array<[string, RlsScopeType]> = [
       ["members", "system"],
-      ["systems", "systems-pk"],
+      ["systems", "systems-pk-with-account"],
       ["accounts", "account-pk"],
       ["sessions", "account"],
       ["channels", "system"],
@@ -302,7 +320,7 @@ describe("RLS_TABLE_POLICIES", () => {
       ["groups", "system"],
       ["journal_entries", "system"],
       ["api_keys", "dual"],
-      ["audit_log", "audit-log-dual"],
+      ["audit_log", "audit-log-null-aware"],
       ["device_tokens", "dual"],
       ["key_grants", "key-grants"],
       ["bucket_content_tags", "system"],
@@ -352,8 +370,8 @@ describe("RLS_TABLE_POLICIES", () => {
       "account-fk",
       "system-fk",
       "account-bidirectional",
-      "systems-pk",
-      "audit-log-dual",
+      "systems-pk-with-account",
+      "audit-log-null-aware",
       "key-grants",
     ]);
 

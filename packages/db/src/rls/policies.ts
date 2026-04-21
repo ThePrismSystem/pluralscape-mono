@@ -18,17 +18,22 @@ export type RlsScopeType =
   /**
    * systems table: combine the PK id check with account_id ownership so a
    * compromised `app.current_system_id` alone cannot unlock another account's
-   * system row. See audit finding db-zy79.
+   * system row. Named `systems-pk-with-account` (not `systems-pk`) to avoid
+   * confusion with the pre-existing generic `system-pk` scope. See audit
+   * finding db-zy79.
    */
-  | "systems-pk"
+  | "systems-pk-with-account"
   /**
-   * audit_log: NULL-aware dual-tenant USING clause. Rows whose accountId or
-   * systemId were nullified by ON DELETE SET NULL (after account/system
-   * deletion) must not be readable through normal tenant context. Regular
-   * tenant rows still match `account_id = current_account_id() AND system_id
-   *  = current_system_id()`. See audit finding db-dpp7.
+   * audit_log: NULL-aware dual-tenant USING + symmetric WITH CHECK. Rows
+   * whose accountId or systemId were nullified by ON DELETE SET NULL (after
+   * account/system deletion) must not be readable through normal tenant
+   * context. Regular tenant rows still match `account_id =
+   * current_account_id() AND system_id = current_system_id()`. WITH CHECK
+   * mirrors USING (plus IS NOT NULL) so any future regression that attempts
+   * to write NULL tenant columns is rejected up-front. See audit finding
+   * db-dpp7.
    */
-  | "audit-log-dual"
+  | "audit-log-null-aware"
   /**
    * key_grants: two read paths. The owning system (which issued the grant)
    * reads via `system_id = current_system_id()`. Friends receiving the grant
@@ -115,15 +120,22 @@ export function systemsPkRlsPolicy(): string {
  * Creates the audit_log dual-tenant policy with NULL-awareness for rows
  * whose account_id or system_id were nullified by ON DELETE SET NULL.
  *
- * Regular tenant rows match when both GUCs equal the stored IDs. Rows whose
- * references were nullified (post account/system purge) are NOT readable
- * through this policy — accessing them requires an admin/forensic path via
- * a privileged database role that bypasses RLS (BYPASSRLS).
+ * USING: regular tenant rows match when both GUCs equal the stored IDs.
+ * Rows whose references were nullified (post account/system purge) are NOT
+ * readable through this policy — accessing them requires an admin/forensic
+ * path via a privileged database role that bypasses RLS (BYPASSRLS).
  *
  * Without the explicit NULL handling, rows with NULL tenant columns become
  * permanently invisible because `NULL = <anything>` evaluates to NULL (not
  * TRUE), which the USING clause filters out. That behavior is correct for
  * normal tenant isolation but the intent deserves an explicit comment.
+ *
+ * WITH CHECK mirrors USING, including the `IS NOT NULL` guard. Application
+ * writes never insert NULL tenant columns — only the ON DELETE SET NULL
+ * cascade produces them — so the guard is defensive. Should a future
+ * regression attempt to write NULL tenant IDs through the tenant role, the
+ * symmetric WITH CHECK will reject it up-front instead of producing a row
+ * that is permanently invisible through tenant context.
  *
  * See audit finding db-dpp7.
  */
@@ -133,7 +145,7 @@ export function auditLogRlsPolicy(): string {
   return (
     `CREATE POLICY audit_log_tenant_isolation ON audit_log ` +
     `USING (account_id IS NOT NULL AND system_id IS NOT NULL AND account_id = ${accountSetting} AND system_id = ${systemSetting}) ` +
-    `WITH CHECK (account_id = ${accountSetting} AND system_id = ${systemSetting})`
+    `WITH CHECK (account_id IS NOT NULL AND system_id IS NOT NULL AND account_id = ${accountSetting} AND system_id = ${systemSetting})`
   );
 }
 
@@ -301,14 +313,14 @@ export const RLS_TABLE_POLICIES = {
 
   // Special PK tables
   accounts: "account-pk",
-  systems: "systems-pk",
+  systems: "systems-pk-with-account",
   nomenclature_settings: "system-pk",
   system_settings: "system-pk",
   innerworld_canvas: "system-pk",
 
   // Dual-column tables (account_id + system_id)
   api_keys: "dual",
-  audit_log: "audit-log-dual",
+  audit_log: "audit-log-null-aware",
   device_tokens: "dual",
 
   // System-scoped (denormalized system_id)
@@ -445,11 +457,11 @@ export function generateRlsStatements(tableName: RlsTableName): string[] {
       statements.push(...policies);
       break;
     }
-    case "systems-pk": {
+    case "systems-pk-with-account": {
       statements.push(systemsPkRlsPolicy());
       break;
     }
-    case "audit-log-dual": {
+    case "audit-log-null-aware": {
       statements.push(auditLogRlsPolicy());
       break;
     }

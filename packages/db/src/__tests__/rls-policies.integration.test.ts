@@ -61,6 +61,46 @@ async function setSessionAccountId(
   await db.execute(sql`SELECT set_config('app.current_account_id', ${accountId}, false)`);
 }
 
+/**
+ * Creates the accounts + systems tables used by the RLS integration suites
+ * added in the PR #530 audit pass. Centralises the two DDL blocks that were
+ * duplicated across the new describe blocks (systems-pk-with-account,
+ * audit_log, key_grants). Pre-existing duplications elsewhere are left
+ * untouched to keep the scope focused on audit-introduced code.
+ */
+async function createAccountsAndSystemsSchema(client: PGliteType): Promise<void> {
+  await client.query(`
+    CREATE TABLE accounts (
+      id VARCHAR(255) PRIMARY KEY,
+      email_hash VARCHAR(255) NOT NULL UNIQUE,
+      email_salt VARCHAR(255) NOT NULL,
+      auth_key_hash BYTEA NOT NULL,
+      kdf_salt VARCHAR(255),
+      encrypted_master_key BYTEA,
+      challenge_nonce BYTEA,
+      challenge_expires_at TIMESTAMPTZ,
+      encrypted_email BYTEA,
+      account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+      audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `);
+  await client.query(`
+    CREATE TABLE systems (
+      id VARCHAR(255) PRIMARY KEY,
+      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      encrypted_data BYTEA,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
+    )
+  `);
+}
+
 // ---------------------------------------------------------------------------
 // 1. RLS policy SQL generation (pure unit tests — no PGlite needed)
 // ---------------------------------------------------------------------------
@@ -839,36 +879,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
     client = await PGlite.create();
     db = drizzle(client);
 
-    await client.query(`
-      CREATE TABLE accounts (
-        id VARCHAR(255) PRIMARY KEY,
-        email_hash VARCHAR(255) NOT NULL UNIQUE,
-        email_salt VARCHAR(255) NOT NULL,
-        auth_key_hash BYTEA NOT NULL,
-        kdf_salt VARCHAR(255),
-        encrypted_master_key BYTEA,
-        challenge_nonce BYTEA,
-        challenge_expires_at TIMESTAMPTZ,
-        encrypted_email BYTEA,
-        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
-        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-    await client.query(`
-      CREATE TABLE systems (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_data BYTEA,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1,
-        archived BOOLEAN NOT NULL DEFAULT false,
-        archived_at TIMESTAMPTZ
-      )
-    `);
+    await createAccountsAndSystemsSchema(client);
     await client.query(`
       CREATE TABLE buckets (
         id VARCHAR(255) PRIMARY KEY,
@@ -1009,7 +1020,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
           new Date().toISOString(),
         ],
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/row-level security|new row violates/i);
   });
 
   it("friend-read cannot bypass write restriction (INSERT blocked without system context)", async () => {
@@ -1032,7 +1043,127 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
           new Date().toISOString(),
         ],
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/row-level security|new row violates/i);
+  });
+
+  it("friend cannot UPDATE grant addressed to them", async () => {
+    // accountIdB is the friend on grantIdB but has no system GUC set. The
+    // owner-path UPDATE USING clause requires system_id = current_system_id()
+    // and the friend-read policy is SELECT-only, so UPDATE affects 0 rows
+    // (RLS silently hides rows whose write policy does not match).
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await setSessionAccountId(db, accountIdB);
+
+    await client.query(`UPDATE key_grants SET revoked_at = $1 WHERE id = $2`, [
+      new Date().toISOString(),
+      grantIdB,
+    ]);
+
+    // Verify nothing was mutated — read back through the owning system.
+    await setSessionSystemId(db, systemIdB);
+    await setSessionAccountId(db, accountIdB);
+    const result = await client.query<{ revoked_at: string | null }>(
+      `SELECT revoked_at FROM key_grants WHERE id = $1`,
+      [grantIdB],
+    );
+    expect(result.rows[0]?.revoked_at).toBeNull();
+  });
+
+  it("friend cannot DELETE grant addressed to them", async () => {
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await setSessionAccountId(db, accountIdB);
+
+    await client.query(`DELETE FROM key_grants WHERE id = $1`, [grantIdB]);
+
+    await setSessionSystemId(db, systemIdB);
+    await setSessionAccountId(db, accountIdB);
+    const result = await client.query<{ id: string }>(`SELECT id FROM key_grants WHERE id = $1`, [
+      grantIdB,
+    ]);
+    expect(result.rows.map((r) => r.id)).toContain(grantIdB);
+  });
+
+  it("cross-tenant UPDATE affects 0 rows", async () => {
+    // systemA context attempts to revoke grantIdB (owned by systemB). Owner-
+    // path USING fails and friend-read is SELECT-only, so the UPDATE is a
+    // no-op (RLS silently filters out rows the caller cannot modify).
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    await client.query(`UPDATE key_grants SET revoked_at = $1 WHERE id = $2`, [
+      new Date().toISOString(),
+      grantIdB,
+    ]);
+
+    await setSessionSystemId(db, systemIdB);
+    await setSessionAccountId(db, accountIdB);
+    const result = await client.query<{ revoked_at: string | null }>(
+      `SELECT revoked_at FROM key_grants WHERE id = $1`,
+      [grantIdB],
+    );
+    expect(result.rows[0]?.revoked_at).toBeNull();
+  });
+
+  it("cross-tenant DELETE affects 0 rows", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    await client.query(`DELETE FROM key_grants WHERE id = $1`, [grantIdB]);
+
+    await setSessionSystemId(db, systemIdB);
+    await setSessionAccountId(db, accountIdB);
+    const result = await client.query<{ id: string }>(`SELECT id FROM key_grants WHERE id = $1`, [
+      grantIdB,
+    ]);
+    expect(result.rows.map((r) => r.id)).toContain(grantIdB);
+  });
+
+  it("owner_read and friend_read are independently scoped across multiple systems for the same account", async () => {
+    // accountIdA owns systemIdA AND a second system (systemIdA2). grantIdA's
+    // friend_account_id is accountIdA, system_id is systemIdA. Test three
+    // contexts to confirm the two read paths are wired independently:
+    //
+    //   1. systemIdA2 GUC + accountIdA GUC:
+    //      - owner_read fails (system_id ≠ current_system_id)
+    //      - friend_read matches (friend_account_id = current_account_id)
+    //      → row visible, exclusively via friend_read.
+    //   2. systemIdA2 GUC, account GUC cleared:
+    //      - owner_read fails, friend_read fails (account unset)
+    //      → row NOT visible, proving owner_read does not leak across
+    //        sibling systems owned by the same account.
+    //   3. systemIdA GUC (owner side), account GUC cleared:
+    //      - owner_read matches, friend_read fails (account unset)
+    //      → row visible, exclusively via owner_read.
+    const systemIdA2 = crypto.randomUUID();
+    const nowIso = new Date().toISOString();
+    // Seed the second system via raw SQL under the owning superuser — the
+    // APP_ROLE lacks GRANT on `systems` in this suite (only buckets and
+    // key_grants are exposed), so pgInsertSystem would fail permission checks.
+    try {
+      await client.query(`RESET ROLE`);
+      await client.query(
+        `INSERT INTO systems (id, account_id, created_at, updated_at) VALUES ($1, $2, $3, $4)`,
+        [systemIdA2, accountIdA, nowIso, nowIso],
+      );
+    } finally {
+      await client.query(`SET ROLE ${APP_ROLE}`);
+    }
+
+    // 1. Sibling-system GUC + friend account → visible only via friend_read.
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA2);
+    const friendOnly = await db.execute(sql`SELECT id FROM key_grants WHERE id = ${grantIdA}`);
+    expect(friendOnly.rows).toHaveLength(1);
+
+    // 2. Sibling-system GUC + account cleared → neither path matches.
+    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    const neither = await db.execute(sql`SELECT id FROM key_grants WHERE id = ${grantIdA}`);
+    expect(neither.rows).toHaveLength(0);
+
+    // 3. Owning-system GUC + account cleared → visible only via owner_read.
+    await setSessionSystemId(db, systemIdA);
+    const ownerOnly = await db.execute(sql`SELECT id FROM key_grants WHERE id = ${grantIdA}`);
+    expect(ownerOnly.rows).toHaveLength(1);
   });
 });
 
@@ -2075,36 +2206,7 @@ describe("RLS cross-tenant isolation — systems PK with account ownership (PGli
     client = await PGlite.create();
     db = drizzle(client);
 
-    await client.query(`
-      CREATE TABLE accounts (
-        id VARCHAR(255) PRIMARY KEY,
-        email_hash VARCHAR(255) NOT NULL UNIQUE,
-        email_salt VARCHAR(255) NOT NULL,
-        auth_key_hash BYTEA NOT NULL,
-        kdf_salt VARCHAR(255),
-        encrypted_master_key BYTEA,
-        challenge_nonce BYTEA,
-        challenge_expires_at TIMESTAMPTZ,
-        encrypted_email BYTEA,
-        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
-        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-    await client.query(`
-      CREATE TABLE systems (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_data BYTEA,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1,
-        archived BOOLEAN NOT NULL DEFAULT false,
-        archived_at TIMESTAMPTZ
-      )
-    `);
+    await createAccountsAndSystemsSchema(client);
 
     await pgInsertAccount(db, accountIdA);
     await pgInsertAccount(db, accountIdB);
@@ -2166,9 +2268,12 @@ describe("RLS cross-tenant isolation — systems PK with account ownership (PGli
     await setSessionSystemId(db, systemIdA);
 
     // Attempt to reparent systemIdA under accountIdB — must fail the WITH CHECK.
+    // Use client.query (not db.execute) so the RLS error surfaces unwrapped;
+    // Drizzle wraps the inner error in a generic "Failed query: ..." message
+    // which would defeat the tightened matcher below.
     await expect(
-      db.execute(sql`UPDATE systems SET account_id = ${accountIdB} WHERE id = ${systemIdA}`),
-    ).rejects.toThrow();
+      client.query(`UPDATE systems SET account_id = $1 WHERE id = $2`, [accountIdB, systemIdA]),
+    ).rejects.toThrow(/row-level security|new row violates/i);
   });
 });
 
@@ -2192,36 +2297,7 @@ describe("RLS audit_log NULL-aware tenant isolation (PGlite)", () => {
     client = await PGlite.create();
     db = drizzle(client);
 
-    await client.query(`
-      CREATE TABLE accounts (
-        id VARCHAR(255) PRIMARY KEY,
-        email_hash VARCHAR(255) NOT NULL UNIQUE,
-        email_salt VARCHAR(255) NOT NULL,
-        auth_key_hash BYTEA NOT NULL,
-        kdf_salt VARCHAR(255),
-        encrypted_master_key BYTEA,
-        challenge_nonce BYTEA,
-        challenge_expires_at TIMESTAMPTZ,
-        encrypted_email BYTEA,
-        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
-        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-    await client.query(`
-      CREATE TABLE systems (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_data BYTEA,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1,
-        archived BOOLEAN NOT NULL DEFAULT false,
-        archived_at TIMESTAMPTZ
-      )
-    `);
+    await createAccountsAndSystemsSchema(client);
     // Minimal audit_log table (matches the ON DELETE SET NULL behavior from
     // the production schema — but no PARTITION clause so PGlite is happy).
     await client.query(`
@@ -2274,6 +2350,13 @@ describe("RLS audit_log NULL-aware tenant isolation (PGlite)", () => {
 
     await client.query(`CREATE ROLE ${APP_ROLE}`);
     await client.query(`GRANT ALL ON audit_log TO ${APP_ROLE}`);
+    // Dedicated forensic role that bypasses RLS. The "rows still present on
+    // disk" test below uses this role in place of implicit superuser reads via
+    // RESET ROLE — future tightening of superuser behavior should not perturb
+    // this assertion, because the operational intent (a privileged read path
+    // for purge forensics) is expressed directly.
+    await client.query(`CREATE ROLE audit_reader BYPASSRLS`);
+    await client.query(`GRANT SELECT ON audit_log TO audit_reader`);
 
     for (const stmt of enableRls("audit_log")) {
       await client.query(stmt);
@@ -2309,16 +2392,16 @@ describe("RLS audit_log NULL-aware tenant isolation (PGlite)", () => {
 
   it("rows with NULL tenant references remain present on disk (not deleted)", async () => {
     // Sanity check: the row still exists; it just cannot be read through the
-    // standard tenant-isolation policy. An admin path that bypasses RLS
-    // (BYPASSRLS role) can retrieve it for forensic/audit purposes. We
-    // simulate that here by dropping the tenant role before querying.
+    // standard tenant-isolation policy. A dedicated forensic role with
+    // BYPASSRLS can retrieve it — we exercise that role explicitly rather
+    // than relying on implicit superuser behavior.
     try {
-      await client.query(`RESET ROLE`);
-      const superuser = await client.query<{ id: string }>(
+      await client.query(`SET ROLE audit_reader`);
+      const forensic = await client.query<{ id: string }>(
         `SELECT id FROM audit_log WHERE id = $1`,
         [nulledEntryId],
       );
-      expect(superuser.rows.map((r) => r.id)).toContain(nulledEntryId);
+      expect(forensic.rows.map((r) => r.id)).toContain(nulledEntryId);
     } finally {
       await client.query(`SET ROLE ${APP_ROLE}`);
     }
@@ -2338,5 +2421,50 @@ describe("RLS audit_log NULL-aware tenant isolation (PGlite)", () => {
 
     const result = await db.execute(sql`SELECT id FROM audit_log`);
     expect(result.rows).toHaveLength(0);
+  });
+
+  it("WITH CHECK blocks cross-tenant INSERT", async () => {
+    // Session context = accountA/systemA; attempt to insert a row attributed
+    // to accountB/systemB. The symmetric WITH CHECK must reject.
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    await expect(
+      client.query(
+        `INSERT INTO audit_log (id, account_id, system_id, event_type, "timestamp", actor)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          crypto.randomUUID(),
+          accountIdB,
+          systemIdB,
+          "auth.login",
+          new Date().toISOString(),
+          `{"kind":"account","id":"${accountIdB}"}`,
+        ],
+      ),
+    ).rejects.toThrow(/row-level security|new row violates/i);
+  });
+
+  it("asymmetric NULL INSERT is blocked by IS NOT NULL WITH CHECK guard", async () => {
+    // Even with full tenant context, a write that sets system_id = NULL must
+    // fail the symmetric WITH CHECK. Application code never writes NULL — only
+    // ON DELETE SET NULL cascades do — so this is the defensive guard
+    // catching any future regression.
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    await expect(
+      client.query(
+        `INSERT INTO audit_log (id, account_id, system_id, event_type, "timestamp", actor)
+         VALUES ($1, $2, NULL, $3, $4, $5)`,
+        [
+          crypto.randomUUID(),
+          accountIdA,
+          "auth.login",
+          new Date().toISOString(),
+          `{"kind":"account","id":"${accountIdA}"}`,
+        ],
+      ),
+    ).rejects.toThrow(/row-level security|new row violates/i);
   });
 });

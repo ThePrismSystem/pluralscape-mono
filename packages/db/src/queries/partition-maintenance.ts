@@ -11,6 +11,11 @@ export const PARTITIONED_TABLES = ["messages", "audit_log", "fronting_sessions"]
 
 export type PartitionedTable = (typeof PARTITIONED_TABLES)[number];
 
+/** Bounds for the year/month runtime guard on formatPartitionName. */
+const MIN_PARTITION_YEAR = 2000;
+const MAX_PARTITION_YEAR = 9999;
+const MAX_PARTITION_MONTH = 12;
+
 /**
  * Only audit_log partitions may be destructively detached.
  * Messages and fronting_sessions are retained until
@@ -22,8 +27,23 @@ export type DetachableTable = "audit_log";
  * Formats a partition table name from its parent table, year, and month.
  *
  * Example: formatPartitionName("audit_log", 2026, 3) → "audit_log_2026_03"
+ *
+ * Validates all three inputs at runtime even though TypeScript narrows
+ * `table` — a JS caller or future refactor could bypass the type system,
+ * and this identifier flows into `sql.raw` downstream. The year/month
+ * bounds also keep the formatted name free of negative numbers, floats,
+ * or other unexpected characters.
  */
 export function formatPartitionName(table: PartitionedTable, year: number, month: number): string {
+  if (!PARTITIONED_TABLES.includes(table)) {
+    throw new Error(`Invalid partitioned table: ${table as string}`);
+  }
+  if (!Number.isInteger(year) || year < MIN_PARTITION_YEAR || year > MAX_PARTITION_YEAR) {
+    throw new Error(`Invalid partition year: ${String(year)}`);
+  }
+  if (!Number.isInteger(month) || month < 1 || month > MAX_PARTITION_MONTH) {
+    throw new Error(`Invalid partition month: ${String(month)}`);
+  }
   return `${table}_${String(year)}_${String(month).padStart(2, "0")}`;
 }
 
