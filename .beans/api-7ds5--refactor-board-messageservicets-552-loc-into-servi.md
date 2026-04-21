@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:08:05Z
+updated_at: 2026-04-21T21:23:18Z
 parent: api-6l1q
 ---
 
@@ -40,3 +40,9 @@ Currently concentrates board thread CRUD / pin/unpin / acknowledgement dispatch 
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Findings
+
+- apps/api/src/services/board-message.service.ts (pre-split) — `board-message.service` module mixed 10 exports across 8 verb categories with inline toBoardMessageResult helper; split into verb files following services/member pattern (Option E, no barrel) — info
+- apps/api/src/__tests__/services/board-message.service.test.ts — unit test uses `await import` after `vi.mock`, forcing tests to mock each verb module path individually after split — info
+- apps/api/src/__tests__/routes/board-messages/crud.test.ts — preserves `parseBoardMessageQuery` via importOriginal on queries.js mock; other service mocks are pure vi.fn() — info

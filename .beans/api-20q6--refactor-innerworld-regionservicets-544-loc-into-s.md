@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:08:04Z
+updated_at: 2026-04-21T21:24:59Z
 parent: api-6l1q
 ---
 
@@ -40,3 +40,10 @@ Currently concentrates region CRUD / canvas relationships / sort ordering in a s
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Findings
+
+- apps/api/src/services/innerworld-region.service.ts:544 — Monolithic service with 7 exports; split cleanly by verb (create/queries/update/lifecycle) + internal for shared RegionResult + toRegionResult — info
+- apps/api/src/__tests__/trpc/routers/innerworld.test.ts:31 — Single vi.mock on old service path split into four path-specific mocks so each verb file is mockable independently — info
+- apps/api/src/__tests__/services/innerworld-region.service.test.ts:84 — Service test imports now target 4 verb files; tests unmodified in spirit, only import paths updated — info
+- Max LOC after split: lifecycle.ts 257 lines (archive+restore+delete grouped by lifecycle semantics); well under 300 budget — info

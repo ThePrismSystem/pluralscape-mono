@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T21:07:38Z
+updated_at: 2026-04-21T21:21:47Z
 parent: api-6l1q
 ---
 
@@ -40,3 +40,9 @@ Currently concentrates rotation state machine / envelope re-wrapping / ledger wr
 ## Parallelization
 
 No cross-blockers with other service refactor beans — safe to run in a worktree agent concurrently with siblings.
+
+## Findings
+
+- apps/api/src/services/key-rotation.service.ts:46-75 — two helpers (toRotationResult shared by 4 verbs, toItemResult used only by claim) — low
+- apps/api/src/services/key-rotation.service.ts — 5 exports mapped 1:1 to verb files (initiate/claim/complete/retry/queries), no artificial grouping needed — low
+- route+test vi.mock paths: splitting one mock into five per test preserved isolation; no shared re-export seam required — low
