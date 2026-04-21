@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T23:09:35Z
+updated_at: 2026-04-21T23:31:13Z
 parent: api-6l1q
 ---
 
@@ -31,3 +31,9 @@ Part of epic api-6l1q PR 2. Refactor `import-job.service.ts` (~445 LOC) into `se
 - `pnpm tsc -p apps/api/tsconfig.json --noEmit` passes
 - `pnpm vitest run --project api` passes
 - Max file LOC ≤300 target (350-400 acceptable if natural split)
+
+## Findings
+
+- apps/api/src/services/system/import-jobs/update.ts:135 — pre-existing cast `parsed.errorLog as readonly ImportError[] | null` preserved from original file; not new code — low
+- No circular imports; single-direction: verbs → internal — info
+- update.ts is the largest split file at 172 LOC (167 after prettier), well under 300 target — info
