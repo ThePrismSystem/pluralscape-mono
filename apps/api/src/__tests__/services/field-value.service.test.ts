@@ -40,12 +40,10 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const {
-  setFieldValueForOwner,
-  listFieldValuesForOwner,
-  updateFieldValueForOwner,
-  deleteFieldValueForOwner,
-} = await import("../../services/field-value.service.js");
+const { setFieldValueForOwner } = await import("../../services/field-value/set.js");
+const { listFieldValuesForOwner } = await import("../../services/field-value/list.js");
+const { updateFieldValueForOwner } = await import("../../services/field-value/update.js");
+const { deleteFieldValueForOwner } = await import("../../services/field-value/delete.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { InvalidInputError } = await import("@pluralscape/crypto");
 

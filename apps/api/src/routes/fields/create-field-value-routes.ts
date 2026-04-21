@@ -8,15 +8,13 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import {
-  deleteFieldValueForOwner,
-  listFieldValuesForOwner,
-  setFieldValueForOwner,
-  updateFieldValueForOwner,
-} from "../../services/field-value.service.js";
+import { deleteFieldValueForOwner } from "../../services/field-value/delete.js";
+import { listFieldValuesForOwner } from "../../services/field-value/list.js";
+import { setFieldValueForOwner } from "../../services/field-value/set.js";
+import { updateFieldValueForOwner } from "../../services/field-value/update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { FieldValueOwner } from "../../services/field-value.service.js";
+import type { FieldValueOwner } from "../../services/field-value/internal.js";
 import type {
   GroupId,
   IdPrefixBrandMap,
