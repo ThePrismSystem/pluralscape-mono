@@ -1,10 +1,11 @@
 ---
 # api-7ds5
 title: Refactor board-message.service.ts (552 LOC) into services/board-message/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:56Z
-updated_at: 2026-04-21T13:56:56Z
+updated_at: 2026-04-21T21:08:05Z
 parent: api-6l1q
 ---
 

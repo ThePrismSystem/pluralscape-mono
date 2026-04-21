@@ -16,18 +16,16 @@ vi.hoisted(() => {
   process.env.WEBHOOK_PAYLOAD_ENCRYPTION_KEY = "ab".repeat(32);
 });
 
+import { createBoardMessage } from "../../services/board-message/create.js";
+import { deleteBoardMessage } from "../../services/board-message/delete.js";
 import {
   archiveBoardMessage,
-  createBoardMessage,
-  deleteBoardMessage,
-  getBoardMessage,
-  listBoardMessages,
-  pinBoardMessage,
-  reorderBoardMessages,
   restoreBoardMessage,
-  unpinBoardMessage,
-  updateBoardMessage,
-} from "../../services/board-message.service.js";
+} from "../../services/board-message/lifecycle.js";
+import { pinBoardMessage, unpinBoardMessage } from "../../services/board-message/pin.js";
+import { getBoardMessage, listBoardMessages } from "../../services/board-message/queries.js";
+import { reorderBoardMessages } from "../../services/board-message/reorder.js";
+import { updateBoardMessage } from "../../services/board-message/update.js";
 import { clearWebhookConfigCache } from "../../services/webhook-dispatcher.js";
 import {
   assertApiError,

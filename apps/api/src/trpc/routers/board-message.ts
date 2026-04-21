@@ -8,18 +8,16 @@ import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
+import { createBoardMessage } from "../../services/board-message/create.js";
+import { deleteBoardMessage } from "../../services/board-message/delete.js";
 import {
   archiveBoardMessage,
-  createBoardMessage,
-  deleteBoardMessage,
-  getBoardMessage,
-  listBoardMessages,
-  pinBoardMessage,
-  reorderBoardMessages,
   restoreBoardMessage,
-  unpinBoardMessage,
-  updateBoardMessage,
-} from "../../services/board-message.service.js";
+} from "../../services/board-message/lifecycle.js";
+import { pinBoardMessage, unpinBoardMessage } from "../../services/board-message/pin.js";
+import { getBoardMessage, listBoardMessages } from "../../services/board-message/queries.js";
+import { reorderBoardMessages } from "../../services/board-message/reorder.js";
+import { updateBoardMessage } from "../../services/board-message/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

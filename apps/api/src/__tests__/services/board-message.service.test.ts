@@ -82,18 +82,15 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, deleteEntity, restoreEntity } =
   await import("../../lib/entity-lifecycle.js");
 
-const {
-  createBoardMessage,
-  listBoardMessages,
-  getBoardMessage,
-  updateBoardMessage,
-  pinBoardMessage,
-  unpinBoardMessage,
-  reorderBoardMessages,
-  deleteBoardMessage,
-  archiveBoardMessage,
-  restoreBoardMessage,
-} = await import("../../services/board-message.service.js");
+const { createBoardMessage } = await import("../../services/board-message/create.js");
+const { listBoardMessages, getBoardMessage } =
+  await import("../../services/board-message/queries.js");
+const { updateBoardMessage } = await import("../../services/board-message/update.js");
+const { pinBoardMessage, unpinBoardMessage } = await import("../../services/board-message/pin.js");
+const { reorderBoardMessages } = await import("../../services/board-message/reorder.js");
+const { deleteBoardMessage } = await import("../../services/board-message/delete.js");
+const { archiveBoardMessage, restoreBoardMessage } =
+  await import("../../services/board-message/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
