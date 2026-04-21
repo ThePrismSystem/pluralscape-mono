@@ -18,6 +18,8 @@ import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createRateLimiter } from "../../middleware/rate-limit.js";
+import { approveTransfer } from "../../services/device-transfer/approve.js";
+import { completeTransfer } from "../../services/device-transfer/complete.js";
 import {
   KeyDerivationUnavailableError,
   TransferCodeError,
@@ -25,10 +27,8 @@ import {
   TransferNotFoundError,
   TransferSessionMismatchError,
   TransferValidationError,
-  approveTransfer,
-  completeTransfer,
-  initiateTransfer,
-} from "../../services/device-transfer.service.js";
+} from "../../services/device-transfer/errors.js";
+import { initiateTransfer } from "../../services/device-transfer/initiate.js";
 
 import {
   MAX_TRANSFER_CODE_ATTEMPTS,

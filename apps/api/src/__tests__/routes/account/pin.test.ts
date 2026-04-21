@@ -100,12 +100,16 @@ vi.mock("../../../services/friend-notification-preference.service.js", () => ({
   upsertFriendNotificationPreference: vi.fn(),
 }));
 
-vi.mock("../../../services/device-transfer.service.js", () => ({
-  initiateDeviceTransfer: vi.fn(),
-  approveDeviceTransfer: vi.fn(),
-  completeDeviceTransfer: vi.fn(),
-  cancelDeviceTransfer: vi.fn(),
-  getDeviceTransferStatus: vi.fn(),
+vi.mock("../../../services/device-transfer/initiate.js", () => ({
+  initiateTransfer: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer/approve.js", () => ({
+  approveTransfer: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer/complete.js", () => ({
+  completeTransfer: vi.fn(),
 }));
 
 vi.mock("../../../services/audit-log.service.js", () => ({

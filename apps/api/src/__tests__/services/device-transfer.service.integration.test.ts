@@ -15,14 +15,14 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { toHex } from "../../lib/hex.js";
+import { approveTransfer } from "../../services/device-transfer/approve.js";
+import { completeTransfer } from "../../services/device-transfer/complete.js";
 import {
   TransferExpiredError,
   TransferNotFoundError,
   TransferValidationError,
-  approveTransfer,
-  completeTransfer,
-  initiateTransfer,
-} from "../../services/device-transfer.service.js";
+} from "../../services/device-transfer/errors.js";
+import { initiateTransfer } from "../../services/device-transfer/initiate.js";
 import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
 import type { AccountId, SessionId } from "@pluralscape/types";

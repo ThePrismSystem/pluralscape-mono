@@ -66,16 +66,16 @@ vi.mock("../../../services/account-deletion.service.js", () => ({
   deleteAccount: vi.fn(),
 }));
 
-vi.mock("../../../services/device-transfer.service.js", () => ({
+vi.mock("../../../services/device-transfer/initiate.js", () => ({
   initiateTransfer: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer/approve.js", () => ({
   approveTransfer: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer/complete.js", () => ({
   completeTransfer: vi.fn(),
-  TransferValidationError: class TransferValidationError extends Error {},
-  TransferNotFoundError: class TransferNotFoundError extends Error {},
-  TransferCodeError: class TransferCodeError extends Error {},
-  TransferExpiredError: class TransferExpiredError extends Error {},
-  KeyDerivationUnavailableError: class KeyDerivationUnavailableError extends Error {},
-  TransferSessionMismatchError: class TransferSessionMismatchError extends Error {},
 }));
 
 const { getAccountInfo } = await import("../../../services/account/queries.js");
@@ -89,17 +89,17 @@ const { enrollBiometric, verifyBiometric } = await import("../../../services/bio
 const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup } =
   await import("../../../services/recovery-key.service.js");
 const { queryAuditLog } = await import("../../../services/audit-log-query.service.js");
+const { initiateTransfer } = await import("../../../services/device-transfer/initiate.js");
+const { approveTransfer } = await import("../../../services/device-transfer/approve.js");
+const { completeTransfer } = await import("../../../services/device-transfer/complete.js");
 const {
-  initiateTransfer,
-  approveTransfer,
-  completeTransfer,
   TransferValidationError,
   TransferNotFoundError,
   TransferCodeError,
   TransferExpiredError,
   KeyDerivationUnavailableError,
   TransferSessionMismatchError,
-} = await import("../../../services/device-transfer.service.js");
+} = await import("../../../services/device-transfer/errors.js");
 
 const { accountRouter } = await import("../../../trpc/routers/account.js");
 

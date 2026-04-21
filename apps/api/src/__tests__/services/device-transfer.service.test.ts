@@ -1,6 +1,8 @@
 import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { approveTransfer } from "../../services/device-transfer/approve.js";
+import { completeTransfer } from "../../services/device-transfer/complete.js";
 import {
   KeyDerivationUnavailableError,
   TransferCodeError,
@@ -8,10 +10,8 @@ import {
   TransferNotFoundError,
   TransferSessionMismatchError,
   TransferValidationError,
-  approveTransfer,
-  completeTransfer,
-  initiateTransfer,
-} from "../../services/device-transfer.service.js";
+} from "../../services/device-transfer/errors.js";
+import { initiateTransfer } from "../../services/device-transfer/initiate.js";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
