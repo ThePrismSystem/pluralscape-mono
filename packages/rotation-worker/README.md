@@ -6,9 +6,16 @@ Client-side incremental re-encryption worker for privacy bucket key rotation.
 
 When a friend is removed from a privacy bucket, Pluralscape immediately revokes their API access and generates a new bucket key. All data previously encrypted under the old key must then be re-encrypted under the new key. This package implements that re-encryption process on the client, following the lazy rotation protocol specified in [ADR 014](../../docs/adr/014-lazy-key-rotation.md).
 
-Re-encryption proceeds in chunks. The worker claims a batch of items from the server-side rotation ledger, fetches each entity blob, decrypts it with the old key, re-encrypts it with the new key, uploads the result, and reports completion. The server never sees key material. Multiple devices owned by the same system can work concurrently — each claims independent chunks, and stale claims are automatically reclaimed after five minutes.
+Re-encryption proceeds in chunks. The worker claims a batch of items from the server-side rotation ledger, fetches each entity blob, decrypts it with the old key, re-encrypts it with the new key, uploads the result, and reports completion. The server never sees key material. Multiple devices owned by the same system can work concurrently — each claims independent chunks, and stale claims are automatically reclaimed after five minutes (`KEY_ROTATION.staleClaimTimeoutMs`).
 
 The worker is resumable across sessions. If the device goes offline mid-rotation, progress is preserved in the server ledger. On the next session the worker picks up from where it left off. A 404 response on the rotation resource (rotation deleted or cancelled) causes the worker to stop gracefully. Per-item 404 (entity deleted) and 409 (version conflict from a concurrent newer write) are treated as successful completion of that item.
+
+### Zero key material after use
+
+Key bytes are wiped as soon as they are no longer needed, so plaintext never lingers in memory beyond the re-encryption that required it:
+
+- **Plaintext** returned by `decryptWithDualKey` is zeroed with `sodium.memzero` in a `finally` block around the re-encrypt + upload step, so it is cleared even if `encrypt` or the upload throws.
+- **Old and new bucket keys** are zeroed in the worker's outer `finally` block when `start()` settles — whether the rotation completed, failed, aborted, or threw. The worker requires a `RotationSodium` adapter (exposing `memzero`) on its config so the caller can inject the platform's libsodium binding.
 
 ## Key Exports
 
@@ -58,24 +65,34 @@ function processChunk(
 
 ### Types
 
-| Type                        | Description                                                                                     |
-| --------------------------- | ----------------------------------------------------------------------------------------------- |
-| `RotationWorkerConfig`      | Worker configuration: bucket ID, rotation ID, old/new keys and versions, chunk size, API client |
-| `RotationApiClient`         | Interface the app must implement to connect the worker to its HTTP layer                        |
-| `RotationProgressCallback`  | `(rotation: BucketKeyRotation) => void` — called after each chunk completes                     |
-| `VersionedEncryptedPayload` | Encrypted blob with its `keyVersion` metadata                                                   |
-| `CompletionItem`            | Per-item result (`completed` or `failed`) reported back to the server                           |
-| `ItemProcessResult`         | Internal per-item result carrying the original `BucketRotationItem`                             |
+| Type                        | Description                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `RotationWorkerConfig`      | Worker configuration: bucket ID, rotation ID, old/new keys and versions, chunk size, API client, sodium adapter |
+| `RotationApiClient`         | Interface the app must implement to connect the worker to its HTTP layer                                        |
+| `RotationSodium`            | Minimal `{ memzero(buf) }` adapter — wraps the platform's libsodium binding for key zeroing                     |
+| `RotationProgressCallback`  | `(rotation: BucketKeyRotation) => void` — called after each chunk completes                                     |
+| `VersionedEncryptedPayload` | Encrypted blob with its `keyVersion` metadata                                                                   |
+| `CompletionItem`            | Per-item result (`completed` or `failed`) reported back to the server                                           |
+| `ItemProcessResult`         | Internal per-item result carrying the original `BucketRotationItem`                                             |
 
 ## Usage
 
 ```ts
 import { RotationWorker } from "@pluralscape/rotation-worker";
-import type { RotationApiClient, RotationWorkerConfig } from "@pluralscape/rotation-worker";
+import type {
+  RotationApiClient,
+  RotationSodium,
+  RotationWorkerConfig,
+} from "@pluralscape/rotation-worker";
 
 // Implement RotationApiClient using your app's HTTP layer
 const apiClient: RotationApiClient = {
   /* ... */
+};
+
+// Provide the platform's libsodium binding for key zeroing
+const sodium: RotationSodium = {
+  memzero: (buf) => platformSodium.memzero(buf),
 };
 
 const config: RotationWorkerConfig = {
@@ -86,6 +103,7 @@ const config: RotationWorkerConfig = {
   oldKeyVersion: 1,
   newKey: fetchedNewKey,
   newKeyVersion: 2,
+  sodium,
   chunkSize: 50, // optional, defaults to KEY_ROTATION.defaultChunkSize
 };
 
@@ -117,4 +135,4 @@ Unit tests only (no integration variant — the worker is a pure client-side sta
 pnpm vitest run --project rotation-worker
 ```
 
-Tests cover: full rotation loop (single and multi-chunk), early exit when chunk is empty or rotation transitions to `completed`/`failed`, graceful stop via `abort`, 404 on the rotation resource, per-item retry with exponential backoff, per-item 404 and 409 short-circuit, dual-key selection by version, unknown key version rejection, and abort mid-chunk.
+Tests cover: full rotation loop (single and multi-chunk), early exit when chunk is empty or rotation transitions to `completed`/`failed`, graceful stop via `abort`, 404 on the rotation resource, per-item retry with exponential backoff, per-item 404 and 409 short-circuit, dual-key selection by version, unknown key version rejection, abort mid-chunk, plaintext zeroing around re-encrypt/upload (including failure paths), and old/new key zeroing on both success and error exits from `start()`.

@@ -38,36 +38,52 @@ See [ADR-006](../../docs/adr/006-encryption.md) for the encryption boundary rati
 - `HexColor`, `SlugHash`, `ChecksumHex`, `StorageKey` — branded scalar types
 - `ID_PREFIXES` — runtime map of entity type to string prefix (e.g. `"sys_"`, `"mbr_"`)
 - `EntityType` — discriminated union of all entity type strings
+- `brandId<B>(value)` (`brand-utils.ts`) — zero-cost cast from a plain string to a branded ID,
+  centralizing the `as XxxId` pattern so branding changes have a single update point
+- `assertBrandedTargetId()`, `InvalidBrandedIdError` (`assert-branded.ts`) — runtime validation
+  that an unknown string matches the expected branded-ID prefix
 
 ### Domain Types by Feature
 
-| Module                 | Types                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `identity.ts`          | `System`, `Member`, `MemberPhoto`, `Tag`, `SaturationLevel`, `CreateMemberBody`, `UpdateMemberBody`                                        |
-| `fronting.ts`          | `ActiveFrontingSession`, `CompletedFrontingSession`, `FrontingSession`, `CustomFront`, `CoFrontState`, `OuttriggerSentiment`               |
-| `privacy.ts`           | `PrivacyBucket`, `BucketVisibilityScope`, `KeyGrant`, `FriendConnection`, `FriendCode`, `BucketAccessCheck`                                |
-| `structure.ts`         | `SystemStructureEntity`, `SystemStructureEntityType`, `Relationship`, `SystemProfile`, `ArchitectureType`                                  |
-| `groups.ts`            | `Group`, `GroupMembership`, `GroupTree`, `GroupMoveOperation`                                                                              |
-| `encryption.ts`        | `Server*` / `Client*` pairs for every encrypted entity, `Encrypted`, `BucketEncrypted`, `ServerSafe`, `DecryptFn`, `EncryptFn`             |
-| `auth.ts`              | `Account`, `AuthKey`, `Session`, `RecoveryKey`, `DeviceTransferRequest`, `LoginCredentials`                                                |
-| `communication.ts`     | `Channel`, `ChatMessage`, `BoardMessage`, `Note`, `Poll`, `PollVote`, `AcknowledgementRequest`                                             |
-| `journal.ts`           | `JournalEntry`, `WikiPage`, `JournalBlock` (paragraph, heading, list, quote, code, image, divider, member/entity link), `FrontingSnapshot` |
-| `lifecycle.ts`         | `LifecycleEvent`, `SplitEvent`, `FusionEvent`, `DiscoveryEvent`, `ArchivalEvent`, and 8 additional event types                             |
-| `custom-fields.ts`     | `FieldDefinition`, `FieldValue`, `FieldType`, `FieldBucketVisibility`                                                                      |
-| `analytics.ts`         | `FrontingAnalytics`, `CoFrontingAnalytics`, `ChartData`, `DateRangeFilter`, `DateRangePreset`                                              |
-| `innerworld.ts`        | `InnerWorldCanvas`, `InnerWorldEntity`, `InnerWorldRegion`                                                                                 |
-| `sync.ts`              | `SyncDocument`, `SyncState`, `SyncIndicator`, `SyncDocumentType`                                                                           |
-| `import-export.ts`     | `ImportJob`, `ImportEntityRef`, `ImportCheckpointState`, `ExportRequest`, `PKImport*`, `AccountPurgeRequest`                               |
-| `pk-bridge.ts`         | `PKBridgeConfig`, `PKEntityMapping`, `PKSyncState`, `PKSyncError`                                                                          |
-| `webhooks.ts`          | `WebhookConfig`, `WebhookDelivery`, `WebhookEventPayloadMap`                                                                               |
-| `notifications.ts`     | `DeviceToken`, `NotificationConfig`, `FriendNotificationPreference`                                                                        |
-| `realtime.ts`          | `WebSocketEvent`, `SSEEvent`, `RealtimeSubscription`, `WebSocketConnectionState`                                                           |
-| `settings.ts`          | `SystemSettings`, `AppLockConfig`, `SyncPreferences`, `PrivacyDefaults`                                                                    |
-| `nomenclature.ts`      | `NomenclatureSettings`, `TermCategory`, `TermPreset`                                                                                       |
-| `littles-safe-mode.ts` | `LittlesSafeModeConfig`, `SafeModeUIFlags`, `SafeModeContentItem`                                                                          |
-| `snapshot.ts`          | `SystemSnapshot` and per-entity snapshot subtypes                                                                                          |
-| `key-rotation.ts`      | `BucketKeyRotation`, `BucketRotationItem`, `RotationState`                                                                                 |
-| `audit-log.ts`         | `AuditLogEntry`, `AuditEventType`, `AuditActor`                                                                                            |
+| Module                   | Types                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `identity.ts`            | `System`, `Member`, `MemberPhoto`, `Tag`, `SaturationLevel`, `CreateMemberBody`, `UpdateMemberBody`                                        |
+| `fronting.ts`            | `ActiveFrontingSession`, `CompletedFrontingSession`, `FrontingSession`, `CustomFront`, `CoFrontState`, `OuttriggerSentiment`               |
+| `privacy.ts`             | `PrivacyBucket`, `BucketVisibilityScope`, `KeyGrant`, `FriendConnection`, `FriendCode`, `BucketAccessCheck`                                |
+| `structure.ts`           | `SystemStructureEntity`, `SystemStructureEntityType`, `Relationship`, `SystemProfile`, `ArchitectureType`                                  |
+| `groups.ts`              | `Group`, `GroupMembership`, `GroupTree`, `GroupMoveOperation`                                                                              |
+| `encryption.ts`          | `Server*` / `Client*` pairs for every encrypted entity, `Encrypted`, `BucketEncrypted`, `ServerSafe`, `DecryptFn`, `EncryptFn`             |
+| `auth.ts`                | `Account`, `AuthKey`, `Session`, `RecoveryKey`, `DeviceTransferRequest`, `LoginCredentials`                                                |
+| `communication.ts`       | `Channel`, `ChatMessage`, `BoardMessage`, `Note`, `Poll`, `PollVote`, `AcknowledgementRequest`                                             |
+| `journal.ts`             | `JournalEntry`, `WikiPage`, `JournalBlock` (paragraph, heading, list, quote, code, image, divider, member/entity link), `FrontingSnapshot` |
+| `lifecycle.ts`           | `LifecycleEvent`, `SplitEvent`, `FusionEvent`, `DiscoveryEvent`, `ArchivalEvent`, and 8 additional event types                             |
+| `custom-fields.ts`       | `FieldDefinition`, `FieldValue`, `FieldType`, `FieldBucketVisibility`                                                                      |
+| `analytics.ts`           | `FrontingAnalytics`, `CoFrontingAnalytics`, `ChartData`, `DateRangeFilter`, `DateRangePreset`                                              |
+| `innerworld.ts`          | `InnerWorldCanvas`, `InnerWorldEntity`, `InnerWorldRegion`                                                                                 |
+| `sync.ts`                | `SyncDocument`, `SyncState`, `SyncIndicator`, `SyncDocumentType`                                                                           |
+| `import-export.ts`       | `ImportJob`, `ImportEntityRef`, `ImportCheckpointState`, `ExportRequest`, `PKImport*`, `AccountPurgeRequest`                               |
+| `pk-bridge.ts`           | `PKBridgeConfig`, `PKEntityMapping`, `PKSyncState`, `PKSyncError`                                                                          |
+| `webhooks.ts`            | `WebhookConfig`, `WebhookDelivery`, `WebhookEventPayloadMap`                                                                               |
+| `notifications.ts`       | `DeviceToken`, `NotificationConfig`, `FriendNotificationPreference`                                                                        |
+| `realtime.ts`            | `WebSocketEvent`, `SSEEvent`, `RealtimeSubscription`, `WebSocketConnectionState`                                                           |
+| `settings.ts`            | `SystemSettings`, `AppLockConfig`, `SyncPreferences`, `PrivacyDefaults`                                                                    |
+| `nomenclature.ts`        | `NomenclatureSettings`, `TermCategory`, `TermPreset`                                                                                       |
+| `littles-safe-mode.ts`   | `LittlesSafeModeConfig`, `SafeModeUIFlags`, `SafeModeContentItem`                                                                          |
+| `snapshot.ts`            | `SystemSnapshot` and per-entity snapshot subtypes                                                                                          |
+| `key-rotation.ts`        | `BucketKeyRotation`, `BucketRotationItem`, `RotationState`                                                                                 |
+| `audit-log.ts`           | `AuditLogEntry`, `AuditEventType`, `AuditActor`, `SetupStepName`                                                                           |
+| `api-keys.ts`            | `ApiKey`, `ApiKeyWithSecret`, `ApiKeyScope`, `ApiKeyToken`, `MetadataApiKey`, `CryptoApiKey`, `API_KEY_TOKEN_PREFIX`                       |
+| `scope-domains.ts`       | `ScopeDomain`, `ScopeTier`, `RequiredScope`, `SCOPE_DOMAINS`, `ALL_API_KEY_SCOPES`                                                         |
+| `jobs.ts`                | `JobType`, `JobStatus`, `JobPayloadMap`, `JobPayload`, `JobDefinition`, `RetryPolicy`, `BackoffStrategy`, `JOB_TYPE_VALUES`                |
+| `blob.ts`                | `BlobMetadata`, `BlobUploadRequest`, `BlobDownloadRef`, `EncryptionTier`, `BlobPurpose`                                                    |
+| `timer.ts`               | `TimerConfig`, `CheckInRecord`, `CheckInRecordStatus`                                                                                      |
+| `reports.ts`             | `ReportType`, `ReportConfig`, `ReportData`, `BucketExportManifestEntry`, `BucketExportPageResponse`, `REPORT_TYPES`                        |
+| `search.ts`              | `SearchIndex`, `SearchQuery`, `SearchResult`, `SearchableEntityType`                                                                       |
+| `friend-dashboard.ts`    | `FriendDashboardResponse`, `FriendAccessContext`, `FriendDashboardSyncResponse`                                                            |
+| `friend-export.ts`       | `FriendExportEntity`, `FriendExportManifestResponse`, `FriendExportPageResponse`, `FRIEND_EXPORT_ENTITY_TYPES`                             |
+| `subscription-events.ts` | `EntityChangeEvent`, `MessageChangeEvent`, `BoardMessageChangeEvent`, `PollChangeEvent`, `AcknowledgementChangeEvent`                      |
+| `crypto-keys.ts`         | `KdfMasterKey`                                                                                                                             |
+| `i18n.ts` / `i18n/`      | `Locale`, `TranslationMap`, `LocaleConfig`, `SUPPORTED_LOCALES`, `I18nManifest`, `I18nNamespaceWithEtag`, `Etag`, `asEtag`                 |
 
 ### Shared Utilities
 
@@ -79,6 +95,7 @@ See [ADR-006](../../docs/adr/006-encryption.md) for the encryption boundary rati
 - `server-safe.ts` — `ServerSafe<T>`, `serverSafe()` branding function
 - `checksum.ts` — `toChecksumHex()`
 - `logger.ts` — `Logger` interface (structural, no concrete implementation)
+- `runtime.ts` — `createId()`, `now()`, `toISO()`, `extractErrorMessage()`
 
 ## Usage
 
@@ -86,15 +103,15 @@ Importing domain types across packages:
 
 ```typescript
 import type { Member, MemberId, FrontingSession } from "@pluralscape/types";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 
 // IDs are nominally typed — MemberId is not assignable from a plain string
 function getFrontingSession(memberId: MemberId): FrontingSession {
   /* ... */
 }
 
-// createId enforces the prefix contract at runtime
-const memberId = createId(ID_PREFIXES.member) as MemberId;
+// createId enforces the prefix contract at runtime; brandId centralizes the cast
+const memberId = brandId<MemberId>(createId(ID_PREFIXES.member));
 ```
 
 Using the server/client encryption boundary:
@@ -129,4 +146,7 @@ pnpm vitest run --project types
 Tests are co-located in `src/__tests__/` with one file per source module. Coverage focuses on
 runtime utilities (`createId`, `now`, `toISO`, `toUnixMillis`, timestamp conversions, checksum
 encoding), discriminated union type guards, and constants. Pure type exports are validated by the
-TypeScript compiler via `pnpm typecheck` rather than runtime assertions.
+TypeScript compiler via `pnpm typecheck`, supplemented by compile-time assertions with Vitest's
+`expectTypeOf`. For entities with matching Zod schemas in `@pluralscape/validation`, contract
+tests pair `expectTypeOf` checks with runtime `safeParse` assertions so drift between the type
+and schema sides is caught immediately.

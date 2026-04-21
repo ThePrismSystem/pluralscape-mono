@@ -49,7 +49,7 @@ import { S3BlobStorageAdapter } from "@pluralscape/storage/s3";
 import type { S3AdapterConfig } from "@pluralscape/storage/s3";
 ```
 
-Works against AWS S3, Cloudflare R2, Backblaze B2, or MinIO. Supports presigned upload and download URLs.
+Works against AWS S3, Cloudflare R2, Backblaze B2, or MinIO. Supports presigned upload and download URLs, configurable `maxSizeBytes` enforcement (throws `BlobTooLargeError` on over-sized `upload()`), and write-once semantics via `If-None-Match: *` baked into both direct PUTs and presigned URLs. Presigned uploads sign `content-length`, `content-type`, and `if-none-match` into the signature so clients cannot override them at upload time — this is required for MinIO and some S3-compatible backends that do not auto-sign those headers.
 
 ### `/filesystem` — Local filesystem adapter
 
@@ -57,7 +57,7 @@ Works against AWS S3, Cloudflare R2, Backblaze B2, or MinIO. Supports presigned 
 import { FilesystemBlobStorageAdapter } from "@pluralscape/storage/filesystem";
 ```
 
-Minimal self-hosted fallback. Stores blobs in a configurable directory. Does not support presigned URLs (`supportsPresignedUrls` is `false`); the API server proxies uploads and downloads directly.
+Minimal self-hosted fallback. Stores blobs in a configurable directory with atomic temp-file + link writes and optional `maxSizeBytes` enforcement. Does not support presigned URLs (`supportsPresignedUrls` is `false`); the API server proxies uploads and downloads directly. Accepts an optional `logger` for structured observability (e.g. sidecar parse failures).
 
 ### `/quota` — Quota and cleanup utilities
 
@@ -68,10 +68,11 @@ import {
   OrphanBlobDetector,
   BlobCleanupHandler,
   DEFAULT_QUOTA_BYTES,
+  DEFAULT_GRACE_PERIOD_MS,
 } from "@pluralscape/storage/quota";
 ```
 
-`BlobQuotaService` checks and records per-system usage before writes. `OrphanBlobDetector` identifies blobs whose metadata records have been deleted (with a configurable grace period). `BlobCleanupHandler` drives the archival and removal job.
+`BlobQuotaService` exposes `getUsage`, `checkQuota`, `assertQuota`, and `reserveQuota` for per-system enforcement before writes. `reserveQuota` is the advisory-lock integration point — it is equivalent to `assertQuota` today and is subject to TOCTOU races until the API layer wraps reserve + upload in a serializable transaction with `pg_advisory_xact_lock`. `OrphanBlobDetector` identifies blobs whose metadata records have been deleted (with a configurable grace period, 24 h by default). `BlobCleanupHandler` drives the archival and removal job; per-key failures are isolated and reported in `CleanupResult.failedKeys` without aborting the run.
 
 ## Usage
 
@@ -89,7 +90,11 @@ const adapter = new S3BlobStorageAdapter({
 
 const storageKey = generateStorageKey(systemId, blobId);
 
-// Generate a presigned URL for the client to upload directly
+// Generate a presigned URL for the client to upload directly.
+// `sizeBytes` MUST be the exact on-the-wire body length — i.e. the
+// ciphertext length, never the plaintext size. The value is signed into
+// the request as a `Content-Length` constraint; a mismatch at upload
+// time yields HTTP 403 `SignatureDoesNotMatch` from S3.
 const result = await adapter.generatePresignedUploadUrl({
   storageKey,
   mimeType: "image/webp",
