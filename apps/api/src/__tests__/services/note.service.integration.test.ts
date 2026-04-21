@@ -9,15 +9,10 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  archiveNote,
-  createNote,
-  deleteNote,
-  getNote,
-  listNotes,
-  restoreNote,
-  updateNote,
-} from "../../services/note.service.js";
+import { createNote } from "../../services/note/create.js";
+import { archiveNote, deleteNote, restoreNote } from "../../services/note/lifecycle.js";
+import { getNote, listNotes } from "../../services/note/queries.js";
+import { updateNote } from "../../services/note/update.js";
 import { expectSingleAuditEvent } from "../helpers/audit-assertions.js";
 import {
   assertApiError,

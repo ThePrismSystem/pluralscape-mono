@@ -19,18 +19,31 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/note.service.js", () => ({
+vi.mock("../../../services/note/create.js", () => ({
   createNote: vi.fn(),
+}));
+
+vi.mock("../../../services/note/queries.js", () => ({
   getNote: vi.fn(),
   listNotes: vi.fn(),
+  parseNoteQuery: vi.fn(),
+}));
+
+vi.mock("../../../services/note/update.js", () => ({
   updateNote: vi.fn(),
+}));
+
+vi.mock("../../../services/note/lifecycle.js", () => ({
   archiveNote: vi.fn(),
   restoreNote: vi.fn(),
   deleteNote: vi.fn(),
 }));
 
-const { createNote, getNote, listNotes, updateNote, archiveNote, restoreNote, deleteNote } =
-  await import("../../../services/note.service.js");
+const { createNote } = await import("../../../services/note/create.js");
+const { getNote, listNotes } = await import("../../../services/note/queries.js");
+const { updateNote } = await import("../../../services/note/update.js");
+const { archiveNote, restoreNote, deleteNote } =
+  await import("../../../services/note/lifecycle.js");
 
 const { noteRouter } = await import("../../../trpc/routers/note.js");
 
