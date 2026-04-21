@@ -1,11 +1,11 @@
 ---
 # api-d7ms
 title: Refactor fronting-report.service.ts (394 LOC) into services/fronting-report/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:07:50Z
 parent: api-6l1q
 ---
 

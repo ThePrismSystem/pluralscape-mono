@@ -5,7 +5,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { getFrontingReport } from "../../services/fronting-report.service.js";
+import { getFrontingReport } from "../../services/fronting-report/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
