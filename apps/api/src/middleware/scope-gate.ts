@@ -57,7 +57,7 @@ export function scopeGateMiddleware(): MiddlewareHandler<AuthEnv> {
     if (!hasScope(auth, entry.scope)) {
       throw new ApiHttpError(
         HTTP_FORBIDDEN,
-        "FORBIDDEN",
+        "SCOPE_INSUFFICIENT",
         `Insufficient scope: requires ${entry.scope}`,
       );
     }

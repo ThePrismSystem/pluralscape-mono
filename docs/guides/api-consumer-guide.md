@@ -660,7 +660,8 @@ The full set of error codes is defined in `@pluralscape/types` (`API_ERROR_CODES
 | `LOGIN_THROTTLED`      | 429    | Too many failed login attempts for this account                                    |
 | `ALREADY_ARCHIVED`     | 409    | Entity is already archived                                                         |
 | `NOT_ARCHIVED`         | 409    | Cannot restore an entity that is not archived                                      |
-| `FORBIDDEN`            | 403    | API key lacks the required scope (message: `Insufficient scope: requires <scope>`) |
+| `SCOPE_INSUFFICIENT`   | 403    | API key lacks the required scope (message: `Insufficient scope: requires <scope>`) |
+| `FORBIDDEN`            | 403    | Endpoint not registered for API key access, or other authorization failure         |
 | `BUCKET_ACCESS_DENIED` | 403    | Friend does not have access to this privacy bucket                                 |
 | `QUOTA_EXCEEDED`       | 413    | Storage quota exceeded                                                             |
 | `PRECONDITION_FAILED`  | 412    | ETag mismatch or other precondition                                                |
@@ -1465,7 +1466,7 @@ POST   /v1/systems/:systemId/api-keys/:apiKeyId/revoke    Revoke key
 
 The `token` field is only returned in the create response -- store it securely. It cannot be retrieved again.
 
-**Scope enforcement:** a global middleware resolves each request against the central scope registry. If the route is not registered for API key access, or the key lacks the required scope, the server returns `403` with error code `FORBIDDEN` and a message of the form `Insufficient scope: requires <scope>`. Session-authenticated requests bypass the registry. API key management endpoints require the `full` scope to prevent privilege escalation.
+**Scope enforcement:** a global middleware resolves each request against the central scope registry. Session-authenticated requests bypass the registry. If the key lacks the required scope, the server returns `403` with error code `SCOPE_INSUFFICIENT` and a message of the form `Insufficient scope: requires <scope>`. If the route is not registered for API key access at all, the server returns `403` with error code `FORBIDDEN`. API key management endpoints require the `full` scope to prevent privilege escalation.
 
 ---
 

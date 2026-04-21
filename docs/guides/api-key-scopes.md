@@ -68,7 +68,7 @@ When an endpoint requires a scope, the server checks in this order:
 3. For each tier at or above the required tier (write, delete):
    - Check if the key has the aggregate scope for that tier (`write-all`, `delete-all`)
    - Check if the key has the per-entity scope for that tier (`write:members`, `delete:members`)
-4. If none match — denied (403 `FORBIDDEN` with message `Insufficient scope: requires <scope>`)
+4. If none match — denied (403 `SCOPE_INSUFFICIENT` with message `Insufficient scope: requires <scope>`). If the endpoint is not registered for API key access at all, the response is 403 `FORBIDDEN` instead.
 
 ## Scope Count
 
