@@ -49,6 +49,17 @@ const result = await runImport({
 All factories return an `ImportDataSource` implementing `iterate(collection)`,
 `listCollections()`, `close()`, and optionally `supplyParentIds()`.
 
+### SP API auth quirk
+
+Simply Plural's API authenticates with the raw API key sent as the
+`Authorization` header value — no `Bearer ` prefix. The api-source issues
+`Authorization: <token>` directly. Using the `Bearer` scheme will get a 401
+rejection.
+
+The api-source also refuses to send a token to a non-HTTPS `baseUrl` unless
+the host is loopback (`localhost`, `127.0.0.1`, `::1`) — last-line protection
+against leaking the token over cleartext.
+
 ---
 
 ## Collection coverage
@@ -151,6 +162,31 @@ the import twice produces identical results — the persister decides `created` 
 
 ---
 
+## Type safety and validation
+
+Mapped entity payloads are strongly typed from `@pluralscape/validation` request
+schemas (e.g. `CreateMemberBodySchema`, `CreateGroupBodySchema`). Mapper return
+types are derived with `z.infer<typeof Schema>` so the Pluralscape side of the
+mapping stays aligned with the public API contract — a schema break is a
+TypeScript break. SP input documents are validated per-document with Zod before
+mapping.
+
+---
+
+## Security bounds
+
+- Per-request timeout: `SP_API_REQUEST_TIMEOUT_MS = 30_000` ms.
+- Retries: `SP_API_MAX_RETRIES = 5` with exponential backoff capped at
+  `SP_API_BACKOFF_MAX_MS = 16_000` ms.
+- Maximum API response body: `SP_API_MAX_RESPONSE_BYTES = 50 MiB`.
+- Maximum file export size: `MAX_IMPORT_FILE_BYTES` (re-exported from
+  `@pluralscape/import-core`).
+- Warning buffer capped at `MAX_WARNING_BUFFER_SIZE` to prevent unbounded
+  growth on pathological inputs.
+- HTTPS enforcement on `createApiImportSource.baseUrl` (loopback exception).
+
+---
+
 ## Fail-closed behavior
 
 - Unknown SP fields are surfaced as `dropped-collection` or `unknown-field`
@@ -225,7 +261,11 @@ source .env.sp-test && SP_TEST_LIVE_API=true pnpm vitest run --project import-sp
 ### Architecture note
 
 This package was originally self-contained. The shared orchestration layer
-(Persister, checkpoint, error classification) was extracted into
-`@pluralscape/import-core` ([ADR 034](../../docs/adr/034-import-core-extraction.md))
-when the PluralKit import engine was built, to avoid duplicating the import
-infrastructure.
+(checkpoint state, advance deltas, warning buffers, file-size and chunk
+constants) was extracted into `@pluralscape/import-core`
+([ADR 034](../../docs/adr/034-import-core-extraction.md)) when the PluralKit
+import engine was built, to avoid duplicating the import infrastructure.
+The SP engine re-exports shared constants from import-core and imports
+`advanceWithinCollection`, `completeCollection`, `emptyCheckpointState`, and
+related checkpoint helpers from it; SP-specific concerns (source factories,
+mappers, dependency order, error classes) stay in this package.
