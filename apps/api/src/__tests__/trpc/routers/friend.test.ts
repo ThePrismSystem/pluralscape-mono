@@ -35,7 +35,7 @@ vi.mock("../../../services/friend-dashboard-sync.service.js", () => ({
   getFriendDashboardSync: vi.fn(),
 }));
 
-vi.mock("../../../services/friend-dashboard.service.js", () => ({
+vi.mock("../../../services/friend-dashboard/get-dashboard.js", () => ({
   getFriendDashboard: vi.fn(),
 }));
 
@@ -66,7 +66,7 @@ const {
 const { updateFriendVisibility } = await import("../../../services/account/friends/update.js");
 const { getFriendDashboardSync } =
   await import("../../../services/friend-dashboard-sync.service.js");
-const { getFriendDashboard } = await import("../../../services/friend-dashboard.service.js");
+const { getFriendDashboard } = await import("../../../services/friend-dashboard/get-dashboard.js");
 const { getFriendExportManifest, getFriendExportPage } =
   await import("../../../services/friend-export.service.js");
 const { getOrCreateFriendNotificationPreference, updateFriendNotificationPreference } =

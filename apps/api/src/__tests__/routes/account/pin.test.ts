@@ -76,7 +76,7 @@ vi.mock("../../../services/friend-request.service.js", () => ({
   rejectFriendRequest: vi.fn(),
 }));
 
-vi.mock("../../../services/friend-dashboard.service.js", () => ({
+vi.mock("../../../services/friend-dashboard/get-dashboard.js", () => ({
   getFriendDashboard: vi.fn(),
 }));
 

@@ -13,7 +13,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { getFriendDashboard } from "../../services/friend-dashboard.service.js";
+import { getFriendDashboard } from "../../services/friend-dashboard/get-dashboard.js";
 import { asDb, assertApiError, makeAuth } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";

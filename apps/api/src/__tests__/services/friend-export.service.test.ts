@@ -72,7 +72,7 @@ vi.mock("../../lib/bucket-access.js", () => ({
   loadBucketTags: vi.fn().mockResolvedValue(new Map()),
 }));
 
-vi.mock("../../services/friend-dashboard.service.js", () => ({
+vi.mock("../../services/friend-dashboard/query-active-key-grants.js", () => ({
   queryActiveKeyGrants: vi.fn().mockResolvedValue(MOCK_KEY_GRANTS),
 }));
 

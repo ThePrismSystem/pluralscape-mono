@@ -13,7 +13,7 @@ import { assertFriendAccess } from "../lib/friend-access.js";
 import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withCrossAccountRead } from "../lib/rls-context.js";
 
-import { queryActiveKeyGrants } from "./friend-dashboard.service.js";
+import { queryActiveKeyGrants } from "./friend-dashboard/query-active-key-grants.js";
 import { EXPORT_TABLE_REGISTRY } from "./friend-export.constants.js";
 
 import type { ExportRow } from "./friend-export.constants.js";
