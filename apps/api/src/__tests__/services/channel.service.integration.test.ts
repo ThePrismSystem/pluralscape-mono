@@ -537,7 +537,7 @@ describe("channel.service (PGlite integration)", () => {
     });
 
     it("returns 409 HAS_DEPENDENTS when channel has messages", async () => {
-      const { createMessage } = await import("../../services/message.service.js");
+      const { createMessage } = await import("../../services/message/create.js");
 
       const channel = await createChannel(
         asDb(db),

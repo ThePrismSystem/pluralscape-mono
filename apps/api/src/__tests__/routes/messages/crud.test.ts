@@ -9,16 +9,24 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { MessageResult } from "../../../services/message.service.js";
+import type { MessageResult } from "../../../services/message/internal.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/message.service.js", () => ({
+vi.mock("../../../services/message/create.js", () => ({
   createMessage: vi.fn(),
+}));
+vi.mock("../../../services/message/queries.js", () => ({
   getMessage: vi.fn(),
   listMessages: vi.fn(),
+}));
+vi.mock("../../../services/message/update.js", () => ({
   updateMessage: vi.fn(),
+}));
+vi.mock("../../../services/message/delete.js", () => ({
   deleteMessage: vi.fn(),
+}));
+vi.mock("../../../services/message/lifecycle.js", () => ({
   archiveMessage: vi.fn(),
   restoreMessage: vi.fn(),
 }));
@@ -30,15 +38,13 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createMessage,
-  getMessage,
-  listMessages,
-  updateMessage,
-  deleteMessage,
-  archiveMessage,
-  restoreMessage,
-} = await import("../../../services/message.service.js");
+const { createMessage } = await import("../../../services/message/create.js");
+const { getMessage, listMessages } = await import("../../../services/message/queries.js");
+const { updateMessage } = await import("../../../services/message/update.js");
+const { deleteMessage } = await import("../../../services/message/delete.js");
+const { archiveMessage, restoreMessage } = await import(
+  "../../../services/message/lifecycle.js"
+);
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

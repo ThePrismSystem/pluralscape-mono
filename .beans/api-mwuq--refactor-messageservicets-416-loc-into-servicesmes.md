@@ -1,11 +1,11 @@
 ---
 # api-mwuq
 title: Refactor message.service.ts (416 LOC) into services/message/
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:28:10Z
+updated_at: 2026-04-21T23:07:39Z
 parent: api-6l1q
 ---
 

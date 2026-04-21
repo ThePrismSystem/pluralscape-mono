@@ -8,15 +8,11 @@ import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
-import {
-  archiveMessage,
-  createMessage,
-  deleteMessage,
-  getMessage,
-  listMessages,
-  restoreMessage,
-  updateMessage,
-} from "../../services/message.service.js";
+import { createMessage } from "../../services/message/create.js";
+import { deleteMessage } from "../../services/message/delete.js";
+import { archiveMessage, restoreMessage } from "../../services/message/lifecycle.js";
+import { getMessage, listMessages } from "../../services/message/queries.js";
+import { updateMessage } from "../../services/message/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
