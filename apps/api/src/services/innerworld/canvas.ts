@@ -3,16 +3,16 @@ import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateCanvasBodySchema } from "@pluralscape/validation";
 import { eq, sql } from "drizzle-orm";
 
-import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
-import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
-import { assertSystemOwnership } from "../lib/system-ownership.js";
-import { tenantCtx } from "../lib/tenant-context.js";
-import { MAX_ENCRYPTED_DATA_BYTES } from "../service.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { ApiHttpError } from "../../lib/api-error.js";
+import { encryptedBlobToBase64, parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { withTenantRead, withTenantTransaction } from "../../lib/rls-context.js";
+import { assertSystemOwnership } from "../../lib/system-ownership.js";
+import { tenantCtx } from "../../lib/tenant-context.js";
+import { MAX_ENCRYPTED_DATA_BYTES } from "../../service.constants.js";
 
-import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AuthContext } from "../lib/auth-context.js";
+import type { AuditWriter } from "../../lib/audit-writer.js";
+import type { AuthContext } from "../../lib/auth-context.js";
 import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

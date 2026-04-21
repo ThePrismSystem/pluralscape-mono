@@ -6,7 +6,7 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { listRegions } from "../../../services/innerworld-region/queries.js";
+import { listRegions } from "../../../services/innerworld/region/queries.js";
 
 import { DEFAULT_REGION_LIMIT, MAX_REGION_LIMIT } from "./regions.constants.js";
 
