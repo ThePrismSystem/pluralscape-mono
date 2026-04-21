@@ -11,7 +11,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/bucket.service.js", () => ({
+vi.mock("../../../services/bucket/list.js", () => ({
   listBuckets: vi.fn(),
   parseBucketQuery: vi.fn().mockImplementation((q: Record<string, string | undefined>) => ({
     includeArchived: q.includeArchived === "true",
@@ -24,7 +24,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listBuckets, parseBucketQuery } = await import("../../../services/bucket.service.js");
+const { listBuckets, parseBucketQuery } = await import("../../../services/bucket/list.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

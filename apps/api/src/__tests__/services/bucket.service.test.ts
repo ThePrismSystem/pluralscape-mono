@@ -157,17 +157,14 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, deleteEntity, restoreEntity } =
   await import("../../lib/entity-lifecycle.js");
 
-const {
-  createBucket,
-  getBucket,
-  listBuckets,
-  updateBucket,
-  deleteBucket,
-  archiveBucket,
-  restoreBucket,
-  assertBucketExists,
-  parseBucketQuery,
-} = await import("../../services/bucket.service.js");
+const { createBucket } = await import("../../services/bucket/create.js");
+const { getBucket } = await import("../../services/bucket/get.js");
+const { listBuckets, parseBucketQuery } = await import("../../services/bucket/list.js");
+const { updateBucket } = await import("../../services/bucket/update.js");
+const { deleteBucket } = await import("../../services/bucket/delete.js");
+const { archiveBucket } = await import("../../services/bucket/archive.js");
+const { restoreBucket } = await import("../../services/bucket/restore.js");
+const { assertBucketExists } = await import("../../services/bucket/internal.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

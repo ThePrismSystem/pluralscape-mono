@@ -13,16 +13,13 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { MAX_BUCKETS_PER_SYSTEM } from "../../quota.constants.js";
-import {
-  archiveBucket,
-  createBucket,
-  deleteBucket,
-  getBucket,
-  listBuckets,
-  parseBucketQuery,
-  restoreBucket,
-  updateBucket,
-} from "../../services/bucket.service.js";
+import { archiveBucket } from "../../services/bucket/archive.js";
+import { createBucket } from "../../services/bucket/create.js";
+import { deleteBucket } from "../../services/bucket/delete.js";
+import { getBucket } from "../../services/bucket/get.js";
+import { listBuckets, parseBucketQuery } from "../../services/bucket/list.js";
+import { restoreBucket } from "../../services/bucket/restore.js";
+import { updateBucket } from "../../services/bucket/update.js";
 import {
   assertApiError,
   asDb,

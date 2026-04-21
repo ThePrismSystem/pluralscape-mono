@@ -12,7 +12,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/bucket.service.js", () => ({
+vi.mock("../../../services/bucket/get.js", () => ({
   getBucket: vi.fn(),
 }));
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -21,7 +21,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getBucket } = await import("../../../services/bucket.service.js");
+const { getBucket } = await import("../../../services/bucket/get.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

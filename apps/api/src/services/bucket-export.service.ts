@@ -16,8 +16,8 @@ import { withTenantRead } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
+import { assertBucketExists } from "./bucket/internal.js";
 import { BUCKET_EXPORT_TABLE_REGISTRY } from "./bucket-export.constants.js";
-import { assertBucketExists } from "./bucket.service.js";
 
 import type { BucketExportRow } from "./bucket-export.constants.js";
 import type { AuthContext } from "../lib/auth-context.js";

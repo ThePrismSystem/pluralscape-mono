@@ -19,13 +19,25 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/bucket.service.js", () => ({
+vi.mock("../../../services/bucket/create.js", () => ({
   createBucket: vi.fn(),
+}));
+vi.mock("../../../services/bucket/get.js", () => ({
   getBucket: vi.fn(),
+}));
+vi.mock("../../../services/bucket/list.js", () => ({
   listBuckets: vi.fn(),
+}));
+vi.mock("../../../services/bucket/update.js", () => ({
   updateBucket: vi.fn(),
+}));
+vi.mock("../../../services/bucket/delete.js", () => ({
   deleteBucket: vi.fn(),
+}));
+vi.mock("../../../services/bucket/archive.js", () => ({
   archiveBucket: vi.fn(),
+}));
+vi.mock("../../../services/bucket/restore.js", () => ({
   restoreBucket: vi.fn(),
 }));
 
@@ -46,15 +58,13 @@ vi.mock("../../../services/bucket-export.service.js", () => ({
   getBucketExportPage: vi.fn(),
 }));
 
-const {
-  createBucket,
-  getBucket,
-  listBuckets,
-  updateBucket,
-  deleteBucket,
-  archiveBucket,
-  restoreBucket,
-} = await import("../../../services/bucket.service.js");
+const { createBucket } = await import("../../../services/bucket/create.js");
+const { getBucket } = await import("../../../services/bucket/get.js");
+const { listBuckets } = await import("../../../services/bucket/list.js");
+const { updateBucket } = await import("../../../services/bucket/update.js");
+const { deleteBucket } = await import("../../../services/bucket/delete.js");
+const { archiveBucket } = await import("../../../services/bucket/archive.js");
+const { restoreBucket } = await import("../../../services/bucket/restore.js");
 
 const { assignBucketToFriend, unassignBucketFromFriend, listFriendBucketAssignments } =
   await import("../../../services/bucket-assignment.service.js");
