@@ -49,7 +49,7 @@ const {
   archiveMember,
   restoreMember,
   deleteMember,
-} = await import("../../services/member.service.js");
+} = await import("../../services/member.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { dispatchWebhookEvent: mockDispatchWebhookEvent } =
   await import("../../services/webhook-dispatcher.js");

@@ -19,7 +19,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/member.service.js", () => ({
+vi.mock("../../../services/member.js", () => ({
   createMember: vi.fn(),
   getMember: vi.fn(),
   listMembers: vi.fn(),
@@ -41,7 +41,7 @@ const {
   restoreMember,
   deleteMember,
   listAllMemberMemberships,
-} = await import("../../../services/member.service.js");
+} = await import("../../../services/member.js");
 
 const { memberRouter } = await import("../../../trpc/routers/member.js");
 

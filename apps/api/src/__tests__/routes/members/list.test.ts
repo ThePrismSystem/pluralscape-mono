@@ -10,12 +10,12 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { MemberResult } from "../../../services/member.service.js";
+import type { MemberResult } from "../../../services/member.js";
 import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/member.service.js", () => ({
+vi.mock("../../../services/member.js", () => ({
   listMembers: vi.fn(),
   createMember: vi.fn(),
   getMember: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listMembers } = await import("../../../services/member.service.js");
+const { listMembers } = await import("../../../services/member.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

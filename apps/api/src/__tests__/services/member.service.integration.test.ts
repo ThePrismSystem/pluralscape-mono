@@ -21,7 +21,7 @@ import {
   listMembers,
   restoreMember,
   updateMember,
-} from "../../services/member.service.js";
+} from "../../services/member.js";
 import {
   assertApiError,
   asDb,

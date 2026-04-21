@@ -16,7 +16,7 @@ import {
   listMembers,
   restoreMember,
   updateMember,
-} from "../../services/member.service.js";
+} from "../../services/member.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

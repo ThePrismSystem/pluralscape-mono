@@ -13,7 +13,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/member.service.js", () => ({
+vi.mock("../../../services/member.js", () => ({
   getMember: vi.fn(),
 }));
 
@@ -28,7 +28,7 @@ vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getMember } = await import("../../../services/member.service.js");
+const { getMember } = await import("../../../services/member.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

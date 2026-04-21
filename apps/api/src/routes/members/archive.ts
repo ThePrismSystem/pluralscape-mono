@@ -6,7 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { archiveMember } from "../../services/member.service.js";
+import { archiveMember } from "../../services/member.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
