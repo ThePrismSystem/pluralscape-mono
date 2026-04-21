@@ -5,15 +5,17 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createLifecycleEvent } from "../../services/lifecycle-event/create.js";
+import { deleteLifecycleEvent } from "../../services/lifecycle-event/delete.js";
 import {
   archiveLifecycleEvent,
-  createLifecycleEvent,
-  deleteLifecycleEvent,
+  restoreLifecycleEvent,
+} from "../../services/lifecycle-event/lifecycle.js";
+import {
   getLifecycleEvent,
   listLifecycleEvents,
-  restoreLifecycleEvent,
-  updateLifecycleEvent,
-} from "../../services/lifecycle-event.service.js";
+} from "../../services/lifecycle-event/queries.js";
+import { updateLifecycleEvent } from "../../services/lifecycle-event/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
