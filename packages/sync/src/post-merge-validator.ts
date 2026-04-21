@@ -119,17 +119,26 @@ const ENTITY_FIELD_MAP: ReadonlyMap<string, string> = new Map(
  * entity that is currently archived. This ensures tombstone wins over concurrent
  * un-archive operations by making the archive the latest CRDT write.
  *
+ * When `dirtyEntityTypes` is provided, only those entity types are scanned —
+ * a member-only change no longer forces a walk of all 20+ entity types.
+ * Omit to scan every lww-map / append-lww entity type (legacy behaviour).
+ *
  * Returns notifications and the correction envelope (if any mutations were applied).
  */
-export function enforceTombstones(session: EncryptedSyncSession<unknown>): {
+export function enforceTombstones(
+  session: EncryptedSyncSession<unknown>,
+  dirtyEntityTypes?: ReadonlySet<string>,
+): {
   notifications: ConflictNotification[];
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
 } {
   const notifications: ConflictNotification[] = [];
   const doc = session.document as DocRecord;
 
-  const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(([, strategy]) => {
-    return strategy.storageType === "lww-map" || strategy.storageType === "append-lww";
+  const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(([entityType, strategy]) => {
+    if (strategy.storageType !== "lww-map" && strategy.storageType !== "append-lww") return false;
+    if (dirtyEntityTypes !== undefined && !dirtyEntityTypes.has(entityType)) return false;
+    return true;
   });
 
   const mutations: Array<{ fieldName: string; entityId: string; entityType: string }> = [];
