@@ -274,9 +274,9 @@ SessionInfo:
 
 SessionListResponse:
   type: object
-  required: [sessions, hasMore]
+  required: [data, hasMore]
   properties:
-    sessions:
+    data:
       type: array
       items:
         $ref: "#/SessionInfo"
@@ -333,11 +333,8 @@ RevokeAllResponse:
   properties:
     data:
       type: object
-      required: [success, revokedCount]
+      required: [revokedCount]
       properties:
-        success:
-          type: boolean
-          const: true
         revokedCount:
           type: integer
           description: Number of sessions revoked

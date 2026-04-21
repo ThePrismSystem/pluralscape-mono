@@ -210,7 +210,7 @@ CreateImportJobBody:
       type: object
       additionalProperties:
         type: boolean
-      description: Map of ImportEntityType → whether to import. At least one must be true.
+      description: Map of ImportCollectionType → whether to import. At least one must be true.
     avatarMode:
       $ref: "#/ImportAvatarMode"
 

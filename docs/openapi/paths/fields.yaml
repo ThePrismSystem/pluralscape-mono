@@ -18,9 +18,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [fields]
+                  required: [data]
                   properties:
-                    fields:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
@@ -234,17 +234,15 @@
               required: [data]
               properties:
                 data:
-                  type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        type: object
-                        required: [bucketId]
-                        properties:
-                          bucketId:
-                            type: string
+                  type: array
+                  items:
+                    type: object
+                    required: [fieldDefinitionId, bucketId]
+                    properties:
+                      fieldDefinitionId:
+                        type: string
+                      bucketId:
+                        type: string
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

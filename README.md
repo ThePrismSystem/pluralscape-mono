@@ -19,7 +19,7 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 **Active development — Milestones 0-9 complete, Milestone 10 (UI/UX Design) next.**
 
-Milestones 0-7 built the full backend: data layer, API, sync, fronting, communication, privacy, and data portability. The REST API covers 304 operations across 31 route domains ([OpenAPI spec](docs/openapi/openapi.yaml)), with a type-safe tRPC layer mirroring the full surface for the Expo mobile client ([ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
+Milestones 0-7 built the full backend: data layer, API, sync, fronting, communication, privacy, and data portability. The REST API covers 317 operations across 32 route domains ([OpenAPI spec](docs/openapi/openapi.yaml)), with a type-safe tRPC layer mirroring the full surface for the Expo mobile client ([ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
 
 Milestone 8 delivered the complete client foundation: Expo app shell with auth-gated routing, a 14-provider initialization tree (platform detection, auth state machine, encryption, sync), offline-first local data layer (SQLite + FTS5 search), 50+ domain data hooks via factory pattern (`useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery`), web platform adapter (OPFS/IndexedDB), and CRDT sync coverage for all entity types.
 
@@ -64,6 +64,7 @@ packages/
   api-client/      tRPC + TanStack Query client bindings
   email/           Transactional email — Resend + SMTP adapters, templates
   i18n/            Internationalization — locale formatting, nomenclature
+  logger/          Structured logger with PII redaction (mobile + shared adapters)
   queue/           Background job queue — SQLite-backed with retry/DLQ
   rotation-worker/ Key rotation worker — processes bucket key rotation chunks
   storage/         Blob storage — S3 + filesystem adapters, quota management
@@ -85,7 +86,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (34 accepted)
+  adr/             Architecture Decision Records (37 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -105,7 +106,7 @@ docs/
 | Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md) |
 | Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)    |
 
-All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [34 ADRs](docs/adr/).
+All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [37 ADRs](docs/adr/).
 
 ## Key Libraries
 
@@ -205,7 +206,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 34 accepted ADRs cover the full stack from licensing through import engine architecture. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 37 accepted ADRs cover the full stack from licensing through import engine architecture. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 

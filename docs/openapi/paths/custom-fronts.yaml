@@ -23,9 +23,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [customFronts]
+                  required: [data]
                   properties:
-                    customFronts:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"

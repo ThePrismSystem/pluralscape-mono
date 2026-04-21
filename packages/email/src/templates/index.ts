@@ -10,4 +10,5 @@ export type {
   PasswordChangedVars,
   TwoFactorChangedVars,
   WebhookFailureDigestVars,
+  AccountChangeEmailVars,
 } from "./types.js";

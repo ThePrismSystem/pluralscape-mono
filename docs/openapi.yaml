@@ -773,7 +773,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/account_PinRequest"
+              $ref: "#/components/schemas/PinRequest-2"
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -802,7 +802,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/account_PinRequest"
+              $ref: "#/components/schemas/PinRequest-2"
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -833,7 +833,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/account_PinRequest"
+              $ref: "#/components/schemas/PinRequest-2"
       responses:
         "200":
           description: PIN verified
@@ -1720,9 +1720,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - systems
+                      - data
                     properties:
-                      systems:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/SystemProfile"
@@ -1939,9 +1939,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/SnapshotResponse"
@@ -2370,9 +2370,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - members
+                      - data
                     properties:
-                      members:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/MemberResponse"
@@ -2631,9 +2631,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - memberships
+                      - data
                     properties:
-                      memberships:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/GroupMembership"
@@ -2896,9 +2896,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - groups
+                      - data
                     properties:
-                      groups:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/GroupResponse"
@@ -3251,9 +3251,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - members
+                      - data
                     properties:
-                      members:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/GroupMembership"
@@ -3353,9 +3353,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - customFronts
+                      - data
                     properties:
-                      customFronts:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/CustomFrontResponse"
@@ -3820,9 +3820,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - fields
+                      - data
                     properties:
-                      fields:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/FieldDefinitionResponse"
@@ -4040,19 +4040,17 @@ paths:
                   - data
                 properties:
                   data:
-                    type: object
-                    required:
-                      - items
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          type: object
-                          required:
-                            - bucketId
-                          properties:
-                            bucketId:
-                              type: string
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - fieldDefinitionId
+                        - bucketId
+                      properties:
+                        fieldDefinitionId:
+                          type: string
+                        bucketId:
+                          type: string
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -4170,9 +4168,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - relationships
+                      - data
                     properties:
-                      relationships:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/RelationshipResponse"
@@ -4410,9 +4408,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - entityTypes
+                      - data
                     properties:
-                      entityTypes:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityTypeResponse"
@@ -4627,9 +4625,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - entities
+                      - data
                     properties:
-                      entities:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityResponse"
@@ -4849,9 +4847,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - links
+                      - data
                     properties:
-                      links:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityLinkResponse"
@@ -4986,9 +4984,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - memberLinks
+                      - data
                     properties:
-                      memberLinks:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityMemberLinkResponse"
@@ -5086,9 +5084,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - associations
+                      - data
                     properties:
-                      associations:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/StructureEntityAssociationResponse"
@@ -5185,9 +5183,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - events
+                      - data
                     properties:
-                      events:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/LifecycleEventResponse"
@@ -5352,9 +5350,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - regions
+                      - data
                     properties:
-                      regions:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/RegionResponse"
@@ -5566,9 +5564,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - entities
+                      - data
                     properties:
-                      entities:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/EntityResponse"
@@ -5836,9 +5834,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - blobs
+                      - data
                     properties:
-                      blobs:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/BlobResponse"
@@ -6046,9 +6044,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/BucketResponse"
@@ -6918,6 +6916,18 @@ paths:
             type: integer
             format: int64
           description: Filter sessions starting at or before this Unix timestamp (ms)
+        - name: endFrom
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Filter sessions ending at or after this Unix timestamp (ms)
+        - name: endUntil
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Filter sessions ending at or before this Unix timestamp (ms)
         - name: activeOnly
           in: query
           schema:
@@ -6943,9 +6953,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/FrontingSessionResponse"
@@ -7277,9 +7287,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/FrontingCommentResponse"
@@ -7929,9 +7939,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/WebhookConfigResponse"
@@ -8254,9 +8264,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/WebhookDeliveryResponse"
@@ -8356,9 +8366,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ApiKeyResponse"
@@ -8518,9 +8528,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ChannelResponse"
@@ -8796,9 +8806,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/MessageResponse"
@@ -9129,9 +9139,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/BoardMessageResponse"
@@ -9501,9 +9511,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/NoteResponse"
@@ -9763,9 +9773,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/PollResponse"
@@ -9997,9 +10007,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/PollVoteResponse"
@@ -10292,9 +10302,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/AcknowledgementResponse"
@@ -10541,9 +10551,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/TimerConfigResponse"
@@ -10770,9 +10780,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/CheckInRecordResponse"
@@ -11112,9 +11122,9 @@ paths:
               schema:
                 type: object
                 required:
-                  - items
+                  - data
                 properties:
-                  items:
+                  data:
                     type: array
                     items:
                       $ref: "#/components/schemas/HierarchyNode"
@@ -11159,9 +11169,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ImportJobResponse"
@@ -11359,9 +11369,9 @@ paths:
                 allOf:
                   - type: object
                     required:
-                      - items
+                      - data
                     properties:
-                      items:
+                      data:
                         type: array
                         items:
                           $ref: "#/components/schemas/ImportEntityRefResponse"
@@ -11650,6 +11660,31 @@ paths:
                     $ref: "#/components/schemas/I18nNamespace"
         "304":
           description: Not modified
+        "404":
+          description: Translation not found for the given locale/namespace
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                      - code
+                      - message
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - NAMESPACE_NOT_FOUND
+                      message:
+                        type: string
+              example:
+                error:
+                  code: NAMESPACE_NOT_FOUND
+                  message: Translation not found
         "429":
           $ref: "#/components/responses/RateLimited"
         "502":
@@ -11731,6 +11766,7 @@ components:
                 - BUCKET_ACCESS_DENIED
                 - NOT_FOUND
                 - CONFLICT
+                - INVALID_STATE
                 - HAS_DEPENDENTS
                 - ROTATION_IN_PROGRESS
                 - FRIEND_CODE_EXPIRED
@@ -12135,10 +12171,10 @@ components:
     SessionListResponse:
       type: object
       required:
-        - sessions
+        - data
         - hasMore
       properties:
-        sessions:
+        data:
           type: array
           items:
             $ref: "#/components/schemas/SessionInfo"
@@ -12186,12 +12222,8 @@ components:
         data:
           type: object
           required:
-            - success
             - revokedCount
           properties:
-            success:
-              type: boolean
-              const: true
             revokedCount:
               type: integer
               description: Number of sessions revoked
@@ -12329,10 +12361,10 @@ components:
     AuditLogResponse:
       type: object
       required:
-        - events
+        - data
         - hasMore
       properties:
-        events:
+        data:
           type: array
           items:
             $ref: "#/components/schemas/AuditLogEntry"
@@ -12573,9 +12605,6 @@ components:
       type: object
       required:
         - encryptedData
-        - copyPhotos
-        - copyFields
-        - copyMemberships
       properties:
         encryptedData:
           type: string
@@ -12585,12 +12614,15 @@ components:
           description: T1-encrypted PlaintextMember for the new duplicate (see ./plaintext.yaml#/PlaintextMember)
         copyPhotos:
           type: boolean
+          default: false
           description: Whether to copy the source member's photos to the duplicate
         copyFields:
           type: boolean
+          default: false
           description: Whether to copy the source member's custom field values to the duplicate
         copyMemberships:
           type: boolean
+          default: false
           description: Whether to copy the source member's group memberships to the duplicate
     CreateMemberPhotoRequest:
       type: object
@@ -16045,7 +16077,7 @@ components:
         notes:
           type: string
           nullable: true
-    account_PinRequest:
+    PinRequest-2:
       type: object
       required:
         - pin
@@ -16153,13 +16185,13 @@ components:
     BucketExportPageResponse:
       type: object
       required:
-        - items
+        - data
         - nextCursor
         - hasMore
         - totalCount
         - etag
       properties:
-        items:
+        data:
           type: array
           items:
             $ref: "#/components/schemas/BucketExportEntity"
@@ -16420,22 +16452,81 @@ components:
       type: string
       enum:
         - read:members
-        - write:members
         - read:fronting
-        - write:fronting
         - read:groups
-        - write:groups
         - read:system
-        - write:system
+        - read:structure
+        - read:reports
         - read:webhooks
-        - write:webhooks
-        - read:audit-log
         - read:blobs
-        - write:blobs
         - read:notifications
+        - read:acknowledgements
+        - read:channels
+        - read:messages
+        - read:notes
+        - read:polls
+        - read:relationships
+        - read:innerworld
+        - read:fields
+        - read:check-ins
+        - read:lifecycle-events
+        - read:timers
+        - read:buckets
+        - write:members
+        - write:fronting
+        - write:groups
+        - write:system
+        - write:structure
+        - write:reports
+        - write:webhooks
+        - write:blobs
         - write:notifications
+        - write:acknowledgements
+        - write:channels
+        - write:messages
+        - write:notes
+        - write:polls
+        - write:relationships
+        - write:innerworld
+        - write:fields
+        - write:check-ins
+        - write:lifecycle-events
+        - write:timers
+        - write:buckets
+        - delete:members
+        - delete:fronting
+        - delete:groups
+        - delete:system
+        - delete:structure
+        - delete:reports
+        - delete:webhooks
+        - delete:blobs
+        - delete:notifications
+        - delete:acknowledgements
+        - delete:channels
+        - delete:messages
+        - delete:notes
+        - delete:polls
+        - delete:relationships
+        - delete:innerworld
+        - delete:fields
+        - delete:check-ins
+        - delete:lifecycle-events
+        - delete:timers
+        - delete:buckets
+        - read:audit-log
+        - read-all
+        - write-all
+        - delete-all
         - full
-      description: Permission scope granted to this API key
+      description: |
+        Permission scope granted to an API key. Scopes follow the
+        `<tier>:<domain>` pattern plus a small set of special values.
+
+        - Tiers: `read` (list/get), `write` (create/update), `delete` (destroy).
+        - Aggregates: `read-all`, `write-all`, `delete-all` grant the tier across every domain.
+        - `read:audit-log` is the only audit-log scope (read-only by design).
+        - `full` grants unrestricted access including audit-log and api-key management endpoints.
     ApiKeyResponse:
       description: |
         An API key. The plaintext `token` is only returned on creation and
@@ -17364,7 +17455,7 @@ components:
           type: object
           additionalProperties:
             type: boolean
-          description: Map of ImportEntityType → whether to import. At least one must be true.
+          description: Map of ImportCollectionType → whether to import. At least one must be true.
         avatarMode:
           $ref: "#/components/schemas/ImportAvatarMode"
     UpdateImportJobBody:

@@ -30,7 +30,7 @@ UpdateMemberRequest:
 
 DuplicateMemberRequest:
   type: object
-  required: [encryptedData, copyPhotos, copyFields, copyMemberships]
+  required: [encryptedData]
   properties:
     encryptedData:
       type: string
@@ -40,10 +40,13 @@ DuplicateMemberRequest:
       description: "T1-encrypted PlaintextMember for the new duplicate (see ./plaintext.yaml#/PlaintextMember)"
     copyPhotos:
       type: boolean
+      default: false
       description: Whether to copy the source member's photos to the duplicate
     copyFields:
       type: boolean
+      default: false
       description: Whether to copy the source member's custom field values to the duplicate
     copyMemberships:
       type: boolean
+      default: false
       description: Whether to copy the source member's group memberships to the duplicate

@@ -18,9 +18,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [regions]
+                  required: [data]
                   properties:
-                    regions:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/innerworld.yaml#/RegionResponse"
@@ -228,9 +228,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [entities]
+                  required: [data]
                   properties:
-                    entities:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/innerworld.yaml#/EntityResponse"

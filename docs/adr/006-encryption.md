@@ -119,15 +119,16 @@ Rationale:
 
 Note: although keypairs are deterministically derivable from the master key, they are also stored server-side as encrypted blobs (`encryptedSigningPrivateKey`, `encryptedEncryptionPrivateKey`). This allows future support for non-deterministic or rotated keypairs without a protocol break.
 
-### Addendum: Unified KDF Profile
+### Addendum: Master-Key KDF Profile
 
-All Argon2id password-to-key derivations use a single profile:
+Password-to-key derivations for account-lifetime secrets use the
+`ARGON2ID_PROFILE_MASTER_KEY` profile:
 
 - Memory: 64 MiB (`memlimit = 67108864`)
 - Iterations: 4 (`opslimit = 4`)
 - Output: 64 bytes (split into `auth_key` || `password_key`)
 
-A single KDF call produces both keys. The profile is stored in `packages/crypto/src/crypto.constants.ts`.
+A single KDF call produces both keys. The profile is stored in `packages/crypto/src/crypto.constants.ts`. Short-lived derivations (device-transfer) use a separate `ARGON2ID_PROFILE_TRANSFER` profile; see ADR 037 for the per-context rationale.
 
 ### License
 

@@ -17,6 +17,7 @@
    - [8.3 Privacy Buckets](#83-privacy-buckets)
    - [8.4 Friend Network](#84-friend-network)
    - [8.5 Push Notifications](#85-push-notifications)
+   - [8.6 Import Jobs](#86-import-jobs)
 9. [API Keys](#9-api-keys)
    - [9.1 Key Types](#91-key-types)
    - [9.2 Scopes](#92-scopes)
@@ -169,7 +170,7 @@ POST /v1/auth/login
 }
 ```
 
-The client derives the `authKey` from the user's password via Argon2id using the stored account `kdfSalt` (obtained from the account lookup on the client side via `GET /v1/auth/account-salt/:email`), splits the 64-byte derivation, and sends only the auth key portion.
+The client derives the `authKey` from the user's password via Argon2id using the stored account `kdfSalt` (obtained by posting the email to `POST /v1/auth/salt` with body `{ "email": "..." }`), splits the 64-byte derivation, and sends only the auth key portion.
 
 **Response (200 OK):**
 
@@ -649,23 +650,24 @@ In production, 5xx errors have their `message` masked to `"Internal Server Error
 
 The full set of error codes is defined in `@pluralscape/types` (`API_ERROR_CODES`). Key domain-specific codes:
 
-| Code                   | Status | When                                                                  |
-| ---------------------- | ------ | --------------------------------------------------------------------- |
-| `HAS_DEPENDENTS`       | 409    | Delete blocked because entity has dependent records                   |
-| `IDEMPOTENCY_CONFLICT` | 409    | A request with the same idempotency key is already in flight          |
-| `ROTATION_IN_PROGRESS` | 409    | Bucket key rotation prevents the operation                            |
-| `KEY_VERSION_STALE`    | 409    | Write rejected because key version is outdated (re-encrypt and retry) |
-| `SESSION_EXPIRED`      | 401    | Session exceeded its absolute TTL or idle timeout                     |
-| `LOGIN_THROTTLED`      | 429    | Too many failed login attempts for this account                       |
-| `ALREADY_ARCHIVED`     | 409    | Entity is already archived                                            |
-| `NOT_ARCHIVED`         | 409    | Cannot restore an entity that is not archived                         |
-| `SCOPE_INSUFFICIENT`   | 403    | API key lacks the required scope                                      |
-| `BUCKET_ACCESS_DENIED` | 403    | Friend does not have access to this privacy bucket                    |
-| `QUOTA_EXCEEDED`       | 413    | Storage quota exceeded                                                |
-| `PRECONDITION_FAILED`  | 412    | ETag mismatch or other precondition                                   |
-| `INVALID_CURSOR`       | 400    | Pagination cursor malformed or expired                                |
-| `CYCLE_DETECTED`       | 409    | Hierarchical operation would create a cycle                           |
-| `MAX_DEPTH_EXCEEDED`   | 409    | Hierarchy depth limit exceeded                                        |
+| Code                   | Status | When                                                                               |
+| ---------------------- | ------ | ---------------------------------------------------------------------------------- |
+| `HAS_DEPENDENTS`       | 409    | Delete blocked because entity has dependent records                                |
+| `IDEMPOTENCY_CONFLICT` | 409    | A request with the same idempotency key is already in flight                       |
+| `ROTATION_IN_PROGRESS` | 409    | Bucket key rotation prevents the operation                                         |
+| `KEY_VERSION_STALE`    | 409    | Write rejected because key version is outdated (re-encrypt and retry)              |
+| `SESSION_EXPIRED`      | 401    | Session exceeded its absolute TTL or idle timeout                                  |
+| `LOGIN_THROTTLED`      | 429    | Too many failed login attempts for this account                                    |
+| `ALREADY_ARCHIVED`     | 409    | Entity is already archived                                                         |
+| `NOT_ARCHIVED`         | 409    | Cannot restore an entity that is not archived                                      |
+| `SCOPE_INSUFFICIENT`   | 403    | API key lacks the required scope (message: `Insufficient scope: requires <scope>`) |
+| `FORBIDDEN`            | 403    | Endpoint not registered for API key access, or other authorization failure         |
+| `BUCKET_ACCESS_DENIED` | 403    | Friend does not have access to this privacy bucket                                 |
+| `QUOTA_EXCEEDED`       | 413    | Storage quota exceeded                                                             |
+| `PRECONDITION_FAILED`  | 412    | ETag mismatch or other precondition                                                |
+| `INVALID_CURSOR`       | 400    | Pagination cursor malformed or expired                                             |
+| `CYCLE_DETECTED`       | 409    | Hierarchical operation would create a cycle                                        |
+| `MAX_DEPTH_EXCEEDED`   | 409    | Hierarchy depth limit exceeded                                                     |
 
 ### 4.4 Idempotency
 
@@ -716,7 +718,7 @@ X-RateLimit-Reset: 1711843260
 
 When the limit is exceeded, the server returns `429` with an additional `Retry-After` header (seconds until the window resets).
 
-**Rate limit categories:** There are 17 categories ranging from `authHeavy` (5 req/min for login, register, password reset) to `readDefault` (60 req/min for standard reads). Sensitive operations use stricter limits (`accountPurge`: 1/day, `dataExport`: 2/hour). See [`docs/api-limits.md`](../api-limits.md#rate-limits) for the complete table with all current values.
+**Rate limit categories:** There are 19 categories ranging from `authHeavy` (5 req/min for login, register, password reset) to `readDefault` (60 req/min for standard reads). Sensitive operations use stricter limits (`accountPurge`: 1/day, `dataExport`/`dataImport`: 2/hour). See [`docs/api-limits.md`](../api-limits.md#rate-limits) for the complete table with all current values.
 
 Values are defined in `@pluralscape/types` (`RATE_LIMITS`).
 
@@ -1388,6 +1390,29 @@ Each config has `enabled` (master toggle) and `pushEnabled` (push-specific toggl
 
 **Trigger flow:** when a fronting session is created, the API dispatches switch alert jobs to the queue. The push worker picks up the job, resolves eligible friends (based on notification preferences and bucket visibility), and delivers the push notification. This is entirely server-side -- the client only needs to register tokens and configure preferences.
 
+### 8.6 Import Jobs
+
+Import jobs drive bulk data import from other plural-tracking systems (Simply Plural, PluralKit) or a previous Pluralscape export. Jobs are system-scoped and follow a status lifecycle rather than the standard archive/restore pattern.
+
+**Endpoints:**
+
+| Method  | Path                        | Purpose                                                                                                        |
+| ------- | --------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `POST`  | `/import-jobs`              | Create a job (uploads source payload, enters `pending`). `write` rate limit, idempotent via `Idempotency-Key`. |
+| `GET`   | `/import-jobs`              | List jobs (paginated; filter by `status` and `source`). `readDefault` rate limit.                              |
+| `GET`   | `/import-jobs/:importJobId` | Get a single job, including progress counters and summary.                                                     |
+| `PATCH` | `/import-jobs/:importJobId` | Update a job (typically to cancel a `pending` job or acknowledge `completed`). `write` rate limit.             |
+
+**Status lifecycle:** `pending → validating → importing → completed` (happy path) or `pending|validating|importing → failed` (terminal). Statuses are a closed enum — see `IMPORT_JOB_STATUSES` in `@pluralscape/types`.
+
+**Sources:** `simply-plural`, `pluralkit`, `pluralscape` — see `IMPORT_SOURCES`. PluralKit and Simply Plural imports consume the vendor export JSON; Pluralscape imports consume the output of the data-export flow.
+
+**Scopes:** all import-job endpoints require the `read:system` (GET) or `write:system` (POST/PATCH) scope when called with an API key.
+
+**Rate limiting:** job creation and update use the `write` category. List/get use `readDefault`. Sustained import throughput is also governed by the `dataImport` category (2/hour) applied at the service layer.
+
+**Result envelope:** create/get/update return `{ data: ImportJob }`; list returns the standard paginated shape (`{ data, nextCursor, hasMore, totalCount }`).
+
 ---
 
 ## 9. API Keys
@@ -1441,7 +1466,7 @@ POST   /v1/systems/:systemId/api-keys/:apiKeyId/revoke    Revoke key
 
 The `token` field is only returned in the create response -- store it securely. It cannot be retrieved again.
 
-**Scope enforcement:** every endpoint checks the requesting key's scopes. If the key lacks the required scope, the server returns `403` with error code `SCOPE_INSUFFICIENT`. API key management endpoints require the `full` scope to prevent privilege escalation.
+**Scope enforcement:** a global middleware resolves each request against the central scope registry. Session-authenticated requests bypass the registry. If the key lacks the required scope, the server returns `403` with error code `SCOPE_INSUFFICIENT` and a message of the form `Insufficient scope: requires <scope>`. If the route is not registered for API key access at all, the server returns `403` with error code `FORBIDDEN`. API key management endpoints require the `full` scope to prevent privilege escalation.
 
 ---
 

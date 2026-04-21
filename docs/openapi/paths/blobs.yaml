@@ -23,9 +23,9 @@
             schema:
               allOf:
                 - type: object
-                  required: [blobs]
+                  required: [data]
                   properties:
-                    blobs:
+                    data:
                       type: array
                       items:
                         $ref: "../schemas/blobs.yaml#/BlobResponse"

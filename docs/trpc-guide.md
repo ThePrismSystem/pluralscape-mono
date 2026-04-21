@@ -19,65 +19,72 @@ import { trpc } from "@pluralscape/api-client/trpc";
 ### Usage with React Query hooks
 
 ```ts
-// Query
-const { data, isLoading } = trpc.member.list.useQuery({ systemId });
+// Query — the active system is resolved from session context, not input
+const { data, isLoading } = trpc.member.list.useQuery({ includeArchived: false });
 
-// Mutation
+// Mutation — member payloads are end-to-end encrypted; pass the sealed blob
 const createMember = trpc.member.create.useMutation();
-createMember.mutate({ systemId, name: "Iris", pronouns: "she/her" });
+createMember.mutate({ encryptedData });
 
 // Invalidate after mutation
 const utils = trpc.useUtils();
-await utils.member.list.invalidate({ systemId });
+await utils.member.list.invalidate();
 ```
 
 React Query handles deduplication and retry. Do not add manual idempotency keys to tRPC calls.
 
 ### Available routers
 
-| Router                | Domain                                    |
-| --------------------- | ----------------------------------------- |
-| `account`             | Account management and deletion           |
-| `acknowledgement`     | Acknowledgement records                   |
-| `analytics`           | System usage analytics                    |
-| `api-key`             | API key issuance and revocation           |
-| `auth`                | Authentication (login, register, session) |
-| `blob`                | Binary asset upload and retrieval         |
-| `board-message`       | Message board posts                       |
-| `bucket`              | Privacy buckets                           |
-| `channel`             | Communication channels                    |
-| `check-in-record`     | Check-in entries                          |
-| `custom-front`        | Custom front states (e.g. "Dissociated")  |
-| `device-token`        | Push notification tokens                  |
-| `field`               | Custom fields                             |
-| `friend-code`         | Friend code generation and redemption     |
-| `friend`              | Friend relationships                      |
-| `fronting-comment`    | Comments on fronting sessions             |
-| `fronting-report`     | Fronting history reports                  |
-| `fronting-session`    | Active and past fronting sessions         |
-| `group`               | Member groups                             |
-| `innerworld`          | Innerworld locations and map data         |
-| `lifecycle-event`     | Member lifecycle events                   |
-| `member-photo`        | Member profile photos                     |
-| `member`              | System members (headmates)                |
-| `message`             | Direct messages                           |
-| `note`                | Notes and journal entries                 |
-| `notification-config` | Notification preferences                  |
-| `poll`                | Polls                                     |
-| `relationship`        | Member-to-member relationships            |
-| `snapshot`            | System snapshots for sync                 |
-| `structure`           | System structure metadata                 |
-| `system-settings`     | System-level settings                     |
-| `system`              | System (account) profile                  |
-| `timer-config`        | Timers                                    |
-| `webhook-config`      | Webhook configuration                     |
-| `webhook-delivery`    | Webhook delivery log                      |
+Router keys match the object composed in `apps/api/src/trpc/root.ts` — use them as-written on the client (`trpc.frontingSession.list.useQuery(...)`).
+
+| Router               | Domain                                    |
+| -------------------- | ----------------------------------------- |
+| `account`            | Account management and deletion           |
+| `acknowledgement`    | Acknowledgement records                   |
+| `analytics`          | System usage analytics                    |
+| `apiKey`             | API key issuance and revocation           |
+| `auth`               | Authentication (login, register, session) |
+| `blob`               | Binary asset upload and retrieval         |
+| `boardMessage`       | Message board posts                       |
+| `bucket`             | Privacy buckets                           |
+| `channel`            | Communication channels                    |
+| `checkInRecord`      | Check-in entries                          |
+| `customFront`        | Custom front states (e.g. "Dissociated")  |
+| `deviceToken`        | Push notification tokens                  |
+| `field`              | Custom fields                             |
+| `friend`             | Friend relationships                      |
+| `friendCode`         | Friend code generation and redemption     |
+| `frontingComment`    | Comments on fronting sessions             |
+| `frontingReport`     | Fronting history reports                  |
+| `frontingSession`    | Active and past fronting sessions         |
+| `group`              | Member groups                             |
+| `i18n`               | Localization manifest and namespace fetch |
+| `importEntityRef`    | Import entity cross-references            |
+| `importJob`          | Import job orchestration and status       |
+| `innerworld`         | Innerworld locations and map data         |
+| `lifecycleEvent`     | Member lifecycle events                   |
+| `member`             | System members (headmates)                |
+| `memberPhoto`        | Member profile photos                     |
+| `message`            | Direct messages                           |
+| `note`               | Notes and journal entries                 |
+| `notificationConfig` | Notification preferences                  |
+| `poll`               | Polls                                     |
+| `relationship`       | Member-to-member relationships            |
+| `snapshot`           | System snapshots for sync                 |
+| `structure`          | System structure metadata                 |
+| `system`             | System (account) profile                  |
+| `systemSettings`     | System-level settings                     |
+| `timerConfig`        | Timers                                    |
+| `webhookConfig`      | Webhook configuration                     |
+| `webhookDelivery`    | Webhook delivery log                      |
 
 ### Auth levels
 
 - **Public** — no session required (e.g. `auth.login`, `auth.register`)
 - **Protected** — valid session required
 - **System-scoped** — session must belong to the system that owns the resource; enforced by middleware on every mutating procedure
+
+API key requests additionally pass through the fail-closed scope gate (`scopeGateMiddleware`), which looks up each procedure path in the shared `SCOPE_REGISTRY.trpc`. Procedures with no registry entry are rejected with `FORBIDDEN` — the same registry powers REST per-endpoint scope enforcement.
 
 ---
 

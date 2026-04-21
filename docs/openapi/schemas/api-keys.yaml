@@ -8,23 +8,86 @@ ApiKeyType:
 ApiKeyScope:
   type: string
   enum:
+    # Per-domain read scopes
     - "read:members"
-    - "write:members"
     - "read:fronting"
-    - "write:fronting"
     - "read:groups"
-    - "write:groups"
     - "read:system"
-    - "write:system"
+    - "read:structure"
+    - "read:reports"
     - "read:webhooks"
-    - "write:webhooks"
-    - "read:audit-log"
     - "read:blobs"
-    - "write:blobs"
     - "read:notifications"
+    - "read:acknowledgements"
+    - "read:channels"
+    - "read:messages"
+    - "read:notes"
+    - "read:polls"
+    - "read:relationships"
+    - "read:innerworld"
+    - "read:fields"
+    - "read:check-ins"
+    - "read:lifecycle-events"
+    - "read:timers"
+    - "read:buckets"
+    # Per-domain write scopes
+    - "write:members"
+    - "write:fronting"
+    - "write:groups"
+    - "write:system"
+    - "write:structure"
+    - "write:reports"
+    - "write:webhooks"
+    - "write:blobs"
     - "write:notifications"
+    - "write:acknowledgements"
+    - "write:channels"
+    - "write:messages"
+    - "write:notes"
+    - "write:polls"
+    - "write:relationships"
+    - "write:innerworld"
+    - "write:fields"
+    - "write:check-ins"
+    - "write:lifecycle-events"
+    - "write:timers"
+    - "write:buckets"
+    # Per-domain delete scopes
+    - "delete:members"
+    - "delete:fronting"
+    - "delete:groups"
+    - "delete:system"
+    - "delete:structure"
+    - "delete:reports"
+    - "delete:webhooks"
+    - "delete:blobs"
+    - "delete:notifications"
+    - "delete:acknowledgements"
+    - "delete:channels"
+    - "delete:messages"
+    - "delete:notes"
+    - "delete:polls"
+    - "delete:relationships"
+    - "delete:innerworld"
+    - "delete:fields"
+    - "delete:check-ins"
+    - "delete:lifecycle-events"
+    - "delete:timers"
+    - "delete:buckets"
+    # Special scopes
+    - "read:audit-log"
+    - "read-all"
+    - "write-all"
+    - "delete-all"
     - "full"
-  description: Permission scope granted to this API key
+  description: |
+    Permission scope granted to an API key. Scopes follow the
+    `<tier>:<domain>` pattern plus a small set of special values.
+
+    - Tiers: `read` (list/get), `write` (create/update), `delete` (destroy).
+    - Aggregates: `read-all`, `write-all`, `delete-all` grant the tier across every domain.
+    - `read:audit-log` is the only audit-log scope (read-only by design).
+    - `full` grants unrestricted access including audit-log and api-key management endpoints.
 
 ApiKeyResponse:
   description: |

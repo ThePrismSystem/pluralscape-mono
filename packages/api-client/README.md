@@ -63,6 +63,12 @@ const { data, error } = await client.GET("/api/v1/systems/{systemId}/members", {
 The `getToken` callback may be synchronous or async and return `string | null`. When
 `null` is returned, the `Authorization` header is omitted entirely.
 
+The REST client installs an `onResponse` middleware that transparently retries a single time
+on `429 Too Many Requests`. The middleware reads the `Retry-After` response header (seconds,
+per RFC 9110), falls back to a 1 s delay when the header is absent or non-numeric, and tags
+the retry with an `X-Retry-Count` header so it cannot loop. If the retry fetch throws, the
+original `429` response is returned unchanged.
+
 ### tRPC client (mobile app)
 
 Set up the tRPC provider once at the app root:
@@ -148,5 +154,8 @@ Unit tests only — no integration variant exists for this package.
 pnpm vitest run --project api-client
 ```
 
-Tests cover `createApiClient` construction, `Authorization` header attachment when a token is
-present, and omission of the header when `getToken` returns `null`.
+Tests cover `createApiClient` construction, `Authorization` header attachment for both
+synchronous and `Promise`-returning `getToken` callbacks, omission of the header when
+`getToken` returns `null`, and the `429` retry middleware (single-retry guarantee,
+`Retry-After` seconds parsing, default-delay fallback, non-`429` pass-through, and original
+response preservation when the retry fetch throws).

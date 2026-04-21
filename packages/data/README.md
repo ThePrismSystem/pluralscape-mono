@@ -38,21 +38,36 @@ import { createCrdtQueryBridge } from "@pluralscape/data";
 
 ### Crypto transforms (per domain)
 
-All transform modules are re-exported from the root entry and also available as granular sub-path imports (e.g. `@pluralscape/data/transforms/member`).
+Every transform module is available as a granular sub-path import (e.g. `@pluralscape/data/transforms/member` — see the `exports` field in `package.json` for the full list). A commonly used subset is also re-exported from the root entry for convenience; transforms not in the root re-export table below must be imported via their sub-path.
 
-| Domain        | Transforms                                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| System        | `decryptSystemSettings`, `encryptSystemSettingsUpdate`, `decryptNomenclature`, `encryptNomenclatureUpdate`             |
-| Members       | `decryptMember`, `decryptMemberPage`, `encryptMemberInput`, `encryptMemberUpdate`                                      |
-| Fronting      | `decryptFrontingSession`, `encryptFrontingSessionInput`, `decryptFrontingComment`, `decryptFrontingReport`, ...        |
-| Custom fronts | `decryptCustomFront`, `encryptCustomFrontInput`, `encryptCustomFrontUpdate`                                            |
-| Custom fields | `decryptFieldDefinition`, `decryptFieldValue`, `encryptFieldValueInput`, ...                                           |
-| Communication | `decryptChannel`, `decryptMessage`, `decryptBoardMessage`, `decryptPoll`, `decryptNote`, `decryptAcknowledgement`, ... |
-| Innerworld    | `decryptInner­worldEntity`, `decryptInner­worldRegion`, `decryptInner­worldCanvas`                                     |
-| Relationships | `decryptRelationship`                                                                                                  |
-| Social        | `decryptFriendConnection`, `decryptFriendCode`, `decryptFriendDashboard`, `decryptPrivacyBucket`                       |
-| Notifications | `decryptNotificationConfig`, `decryptDeviceToken`                                                                      |
-| Blobs         | `decodeAndDecryptT1`, `encryptAndEncodeT1`, `encryptInput`, `encryptUpdate`                                            |
+**Re-exported from `@pluralscape/data`:**
+
+| Domain        | Transforms                                                                                                                                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| System        | `decryptSystemSettings`, `encryptSystemSettingsUpdate`, `decryptNomenclature`, `encryptNomenclatureUpdate`                                                                                                 |
+| Members       | `decryptMember`, `decryptMemberPage`, `encryptMemberInput`, `encryptMemberUpdate`                                                                                                                          |
+| Groups        | `decryptGroup`, `decryptGroupPage`, `encryptGroupInput`, `encryptGroupUpdate`                                                                                                                              |
+| Custom fronts | `decryptCustomFront`, `decryptCustomFrontPage`, `encryptCustomFrontInput`, `encryptCustomFrontUpdate`                                                                                                      |
+| Custom fields | `decryptFieldDefinition`, `decryptFieldDefinitionPage`, `encryptFieldDefinitionInput`, `decryptFieldValue`, `decryptFieldValueList`, `encryptFieldValueInput`                                              |
+| Fronting      | `decryptFrontingSession{,Page}`, `encryptFrontingSessionInput/Update`, `decryptFrontingComment{,Page}`, `encryptFrontingCommentInput/Update`, `decryptFrontingReport{,Page}`, `encryptFrontingReportInput` |
+| Timers        | `decryptTimerConfig{,Page}`, `encryptTimerConfigInput/Update`, `decryptCheckInRecord{,Page}`                                                                                                               |
+| Communication | `decryptChannel`, `decryptMessage`, `decryptBoardMessage`, `decryptPoll`, `decryptPollVote`, `decryptNote`, `decryptAcknowledgement` (each with `*Page` + matching encrypt helpers)                        |
+| Privacy       | `decryptPrivacyBucket`, `decryptPrivacyBucketPage`, `encryptBucketInput`, `encryptBucketUpdate`                                                                                                            |
+| Blobs         | `decodeAndDecryptT1`, `encryptAndEncodeT1`, `encryptInput`, `encryptUpdate`                                                                                                                                |
+
+**Sub-path only** (import from `@pluralscape/data/transforms/<name>`):
+
+| Domain         | Module                                                                                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure      | `structure-entity`, `structure-entity-type`                                                                                                                                   |
+| Relationships  | `relationship`                                                                                                                                                                |
+| Innerworld     | `innerworld-entity`, `innerworld-region`, `innerworld-canvas`                                                                                                                 |
+| Lifecycle      | `lifecycle-event`, `snapshot`                                                                                                                                                 |
+| Social         | `friend-connection`, `friend-code`, `friend-dashboard`                                                                                                                        |
+| Notifications  | `notification-config`, `device-token`                                                                                                                                         |
+| Shared helpers | `decode-blob` (exports `decodeAndDecryptT2`, `encryptAndEncodeT2`, `extractT2BucketId`, `assertObjectBlob`, `assertStringField`, `assertArrayField`, `base64urlToUint8Array`) |
+
+Every `decrypt*` function validates that the decrypted blob matches the expected field shape (not just `name`): missing or wrong-typed fields throw synchronously so ciphertext corruption, key mismatch, or server tampering surfaces as an error rather than silent data loss. Encrypt/decrypt pairs round-trip — e.g. `encryptBucketInput` followed by `decryptPrivacyBucket` reproduces the original plaintext. Base64 encode/decode inside `decode-blob.ts` is backed by Node's `Buffer` API for linear-time conversion.
 
 ## Usage
 
@@ -123,4 +138,4 @@ The test suite covers:
 - `createAppQueryClient` — verifies the configured default options (stale time, GC time, retry counts).
 - `createRestQueryFactory` — covers successful decrypted and plain fetches, missing master key, and API error propagation.
 - `createCrdtQueryBridge` — verifies that `documentQueryOptions` projects snapshots correctly and throws when the document is not loaded.
-- Crypto transforms are exercised indirectly through the factory tests; each transform module is individually importable for targeted testing.
+- Every transform module has a dedicated spec under `src/transforms/__tests__/` that exercises the encrypt → decrypt round-trip, the archived/non-archived branches, pagination, and the field assertions (missing fields, wrong types, non-object blobs).

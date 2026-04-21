@@ -6,9 +6,13 @@ Encrypted offline-first CRDT sync over a zero-knowledge relay using Automerge.
 
 `@pluralscape/sync` implements the sync layer for Pluralscape's offline-first architecture. Local SQLite is the source of truth; this package is responsible for merging local changes with remote ones and propagating them through an encrypted relay. The server is a dumb relay — it stores and forwards opaque ciphertext and never reads or merges document contents.
 
-CRDT documents are managed with [Automerge](https://automerge.org/). Each logical entity (system core, fronting sessions, journal, etc.) maps to a dedicated Automerge document. Changes are encrypted client-side using per-document symmetric keys from `@pluralscape/crypto` before submission. The relay stores envelopes; clients decrypt and apply them locally.
+CRDT documents are managed with [Automerge](https://automerge.org/). Each logical entity (system core, fronting, chat, journal, notes, privacy config, bucket projections) maps to a dedicated Automerge document. The full entity coverage — including webhook configs and friend connections — lives in `ENTITY_CRDT_STRATEGIES`. Changes are encrypted client-side using per-document symmetric keys from `@pluralscape/crypto` before submission. The relay stores envelopes; clients decrypt and apply them locally.
+
+Every envelope (change and snapshot) is Ed25519-signed by the author and the signature is verified before decryption. The envelope's `authorPublicKey` is mixed into the AEAD additional data, cryptographically binding the advertised public key to the ciphertext — swapping the public key after the fact produces `KeyBindingMismatchError` on decrypt. Snapshot envelopes additionally commit to a big-endian `snapshotVersion` to prevent cross-version replay. Document access is authorised via the document key resolver, which maps document IDs to bucket keys and refuses unknown buckets with `BucketKeyNotFoundError`.
 
 Conflict resolution happens entirely on-device: Automerge provides last-writer-wins semantics per field for concurrent edits. Post-merge validation runs after each merge to detect application-level inconsistencies (e.g., overlapping fronting sessions) and surfaces them as `ConflictNotification` events rather than silently discarding data. Documents that exceed size or time thresholds are split or compacted automatically.
+
+Incoming changes are materialised into SQLite through per-document materializers. Each merge carries a `dirtyEntityTypes` hint so only entity types whose CRDT fields actually changed are queried and diffed — clean types issue zero SQL. Hot-path entity writes emit `materialized:entity` events for downstream query invalidation.
 
 ## Key Exports
 
@@ -30,6 +34,7 @@ All imports below are from `@pluralscape/sync` unless noted.
 **Encryption**
 
 - `encryptChange` / `decryptChange`, `encryptSnapshot` / `decryptSnapshot`, `verifyEnvelopeSignature`
+- `SignatureVerificationError`, `KeyBindingMismatchError`, `EncryptionKeyMismatchError` — distinguish signature forgery, author-key binding mismatch, and benign key-desync decrypt failures
 
 **Conflict resolution**
 
@@ -52,12 +57,12 @@ All imports below are from `@pluralscape/sync` unless noted.
 
 **Sub-entry points**
 
-| Import path                      | Contents                                                                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@pluralscape/sync/adapters`     | `SqliteStorageAdapter`, `WsNetworkAdapter`, `SqliteOfflineQueueAdapter`, `createWsClientAdapter`, `createBunSqliteDriver`, adapter interfaces                 |
-| `@pluralscape/sync/schemas`      | Automerge document schema types (`CrdtSystem`, `CrdtMember`, `CrdtFrontingSession`, `SystemCoreDocument`, `FrontingDocument`, etc.)                           |
-| `@pluralscape/sync/protocol`     | Full protocol message taxonomy (`ClientMessage`, `ServerMessage`, `AuthenticateRequest`, `ManifestResponse`, `DocumentUpdate`, `SYNC_PROTOCOL_VERSION`, etc.) |
-| `@pluralscape/sync/materializer` | Entity registry, base materializer, `diffEntities`, `applyDiff`, `generateAllDdl`, `createMaterializer`, `registerMaterializer`                               |
+| Import path                      | Contents                                                                                                                                                                                                 |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pluralscape/sync/adapters`     | `SqliteStorageAdapter`, `WsNetworkAdapter`, `SqliteOfflineQueueAdapter`, `createWsClientAdapter`, `createBunSqliteDriver`, `runAsyncTransaction`, adapter interfaces (`SqliteDriver`, `SqliteStatement`) |
+| `@pluralscape/sync/schemas`      | Automerge document schema types (`CrdtSystem`, `CrdtMember`, `CrdtFrontingSession`, `SystemCoreDocument`, `FrontingDocument`, etc.)                                                                      |
+| `@pluralscape/sync/protocol`     | Full protocol message taxonomy (`ClientMessage`, `ServerMessage`, `AuthenticateRequest`, `ManifestResponse`, `DocumentUpdate`, `SYNC_PROTOCOL_VERSION`, etc.)                                            |
+| `@pluralscape/sync/materializer` | Entity registry, base materializer, `diffEntities`, `applyDiff`, `generateAllDdl`, `createMaterializer`, `registerMaterializer`                                                                          |
 
 ## Usage
 
@@ -101,6 +106,14 @@ const envelope = await encryptChange(change, {
 
 // envelope is an EncryptedChangeEnvelope — safe to relay to the server
 ```
+
+## SQLite drivers
+
+The `SqliteDriver` contract is fully async — every `run` / `all` / `get` / `exec` / `transaction` / `close` returns a `Promise`. Sync-native backends (`bun:sqlite`, `expo-sqlite`, `better-sqlite3-multiple-ciphers`) wrap their synchronous calls with `Promise.resolve`; the overhead is one microtask per call. This contract is required so the web build can talk to an OPFS-backed wa-sqlite driver over `postMessage`, where every call is inherently async.
+
+This package ships `createBunSqliteDriver` (bun:sqlite) and `runAsyncTransaction` (shared `BEGIN`/`COMMIT`/`ROLLBACK` helper with `AggregateError` for rollback-on-rollback). The expo-sqlite driver and the OPFS web-worker driver live in `apps/mobile/src/platform/drivers/` alongside the platform detection that chooses between them.
+
+Nested transactions are rejected synchronously at the driver level — callers must guard their own re-entry.
 
 ## Dependencies
 

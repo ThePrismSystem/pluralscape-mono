@@ -170,7 +170,7 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 
 ## 9. API and Integrations
 
-- **Public REST API** — 31 route domains, 304 operations (ADR 003) [API complete, client pending]
+- **Public REST API** — 32 route domains, 317 operations (ADR 003) [API complete, client pending]
   - API uses canonical terms (`member`, `system`, `fronting`, `switch`) regardless of per-system nomenclature settings
   - Hybrid auth model with two key types (ADR 013):
     - **Metadata keys** — access tier 3 plaintext data only (timestamps, events, connection status). No crypto needed. For simple integrations like Discord bots.
@@ -179,7 +179,7 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
   - Key creation UI uses plain language, visual scope indicators, and confirmation prompts for high-access keys
   - OpenAPI 3.1 specification with automated reconciliation script and CI drift check
 - **tRPC internal API** — end-to-end type-safe API layer for the Expo mobile client (ADR 032) [complete]
-  - 35 routers mirroring the full REST surface; same service layer, same validation, same rate limits
+  - 38 routers mirroring the full REST surface; same service layer, same validation, same rate limits
   - `@pluralscape/api-client` package with TanStack Query integration, React provider, and typed hooks
   - CI-enforced parity script verifying 1:1 REST ↔ tRPC coverage
   - [tRPC consumer guide](../trpc-guide.md) and [API consumer guide](../guides/api-consumer-guide.md)
@@ -192,9 +192,9 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
   - Optional: encrypted tier 1/2 payloads for webhook endpoints with an assigned crypto key
 - **Email notifications** — system-level email delivery for account events (password changes, friend requests, etc.); managed via notification configuration API
 - **Device transfer** — encrypted device-to-device key transfer for multi-device key recovery (ADR 011) [API complete, client pending]
-- **PluralKit bridge** — bidirectional sync via PK token; runs client-side (requires app to be open) since the server cannot decrypt data
+- **PluralKit bridge** — bidirectional sync via PK token; runs client-side (requires app to be open) since the server cannot decrypt data. Built on the same `pkapi.js` client library used by PK import (ADR 033).
 - **Rate limiting** — per-category rate limits (read, write, auth, sensitive) with Valkey-backed distributed store; applied to both REST and tRPC
-- **API documentation** — OpenAPI 3.1 specification (304 operations), API consumer guide, tRPC consumer guide
+- **API documentation** — OpenAPI 3.1 specification (317 operations), API consumer guide, tRPC consumer guide
 - **Integration guides** — step-by-step guides for common languages (Python, JavaScript/TypeScript, Go, Rust, C#) covering authentication, metadata endpoints, and encrypted data decryption
 - **Client SDKs** (future) — official libraries for common languages that handle authentication and libsodium decryption, so third-party developers don't need to implement the crypto stack themselves. See [future feature doc](../future-features/003-client-sdks.md) for detailed design.
 
@@ -202,8 +202,10 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 
 All report generation is client-side (the server cannot read encrypted data).
 
-- **Simply Plural import** — parse SP JSON export (raw MongoDB dump, no schema version): members, fronting history, custom fields, groups, notes, chat messages (decrypted), board messages, polls, timers, privacy buckets, friend data. Avatars imported separately (ZIP with 7-day expiry). IDs are MongoDB ObjectIds; timestamps are epoch milliseconds. Import runs client-side with progress indicator; large imports are chunked to avoid OOM on low-spec devices.
-- **PluralKit import** — parse PK JSON export (schema version 2): members, switches, groups. Uses 5-char human-readable IDs; timestamps are ISO 8601. Note: PK has no custom fields, notes, polls, chat, timers, or privacy buckets.
+All import engines share the orchestration layer in `@pluralscape/import-core` — dependency-ordered collection walks, checkpoint-based resume, error classification, and the `Persister` boundary (ADR 034).
+
+- **Simply Plural import** — two source modes: JSON file (raw MongoDB export, no schema version) or live SP API (`ApiSource`) using the user's SP token. Covers members, fronting history, custom fields, groups, notes, chat messages, board messages, polls, timers, privacy buckets, and friend data. Avatars imported separately (ZIP with 7-day expiry). IDs are MongoDB ObjectIds; timestamps are epoch milliseconds. Import runs client-side with progress indicator; large imports are chunked to avoid OOM on low-spec devices.
+- **PluralKit import** — two source modes: JSON file (schema version 2) or live PK API via the `pkapi.js` client library (ADR 033), which handles PK's per-scope rate limits and `retry_after` backoff. Covers members, switches, and groups. Uses 5-char human-readable IDs; timestamps are ISO 8601. Note: PK has no custom fields, notes, polls, chat, timers, or privacy buckets.
 - **Encrypted blob storage** — upload and download URLs for client-encrypted media via the blobs API; blob confirmation and lifecycle management [API complete, client pending]
 - **JSON/CSV export** — all user data, single-click
 - **Member report** — generated based on a chosen privacy bucket; includes all member data visible within that bucket, formatted for readability even with hundreds of members (HTML or PDF, potentially many pages)
@@ -212,11 +214,13 @@ All report generation is client-side (the server cannot read encrypted data).
 
 ## 11. Internationalization (i18n)
 
-- All UI strings externalized from day one
-- Translation framework integrated into build pipeline
-- RTL language support
+- All UI strings externalized from day one (i18next + `@pluralscape/i18n`)
+- 12 target locales shipping today: ar, de, en, es, es-419, fr, it, ja, ko, nl, pt-BR, ru, zh-Hans (English is the source)
+- Baseline translations bundled per app build via Metro code-splitting (only the active locale parses at runtime)
+- **OTA delivery** via `/v1/i18n/:locale/:namespace` proxy on the Pluralscape API, backed by Crowdin Distribution CDN with 24h Valkey TTL and ETag-gated 304s. Mobile uses `i18next-chained-backend` (bundled → OTA) with AsyncStorage cache; stale/failed fetches fall back to the bundled baseline. End-user IPs never reach Crowdin. (ADR 035)
+- **Crowdin automation pipeline** (ADR 036): config-as-code glossary, dual MT engines (DeepL for 10 languages, Google Cloud Translation for ar and es-419), automatic TM + MT pre-translation on source upload, and guard-chained auto-merge for translation-only PRs. MT output is the shipping translation during the transitional phase; human edits in the Crowdin UI supersede MT on the next daily sync.
+- RTL language support (Arabic today)
 - Date/time/number localization
-- Community translations via Crowdin
 
 ## 12. Configurable Nomenclature
 
@@ -264,6 +268,7 @@ Data is categorized into three tiers based on sensitivity and server visibility:
 - libsodium: XChaCha20-Poly1305 (symmetric), X25519 (key exchange), Argon2id (key derivation) — ADR 006
 - Per-bucket symmetric keys for privacy bucket sharing
 - Client-side encryption/decryption for all tier 1 and tier 2 data
+- **Zero-knowledge master key** — all master-key operations (derivation from password, unwrap of per-bucket keys, recovery-key flows) run exclusively on the client. The server never receives the master key or any long-lived key material; it stores only verifier hashes, wrapped blobs, and public key material. Argon2id runs on-device with context-specific profiles (ADR 037).
 
 ### Key recovery (ADR 011)
 
@@ -286,6 +291,10 @@ Data is categorized into three tiers based on sensitivity and server visibility:
 - Sync protocol co-designed with database schema (not retrofitted)
 - Visual sync indicator (spinning icon during transfer)
 - Queue-based offline writes persisted and replayed on reconnect
+- **Web storage backend** (ADR 031) — tiered with automatic capability detection:
+  - **OPFS + wa-sqlite** (preferred) — WebAssembly SQLite backed by the Origin Private File System, runs in a dedicated Web Worker, reuses the same `SqliteDriver` and adapter layer as mobile
+  - **IndexedDB fallback** — same `SyncStorageAdapter` / `OfflineQueueAdapter` interfaces for browsers without OPFS support
+  - Auth token storage is independent of the CRDT backend so sessions survive refresh on every supported browser
 
 ## 16. Media Storage
 
