@@ -262,3 +262,120 @@ describe("materializeDocument", () => {
     expect(channelInserts.length).toBeGreaterThan(0);
   });
 });
+
+describe("materializeDocument dirtyEntityTypes (sync-f4ma)", () => {
+  it("skips queryAll for entity types not in the dirty set", () => {
+    const { db, queries } = makeDb();
+    const { eventBus } = makeEventBus();
+
+    const doc: Record<string, unknown> = {
+      members: {
+        mem_1: {
+          systemId: "sys_1",
+          name: "Alice",
+          pronouns: "she/her",
+          description: null,
+          avatarSource: null,
+          colors: ["#ff0000"],
+          saturationLevel: "full",
+          tags: [],
+          suppressFriendFrontNotification: false,
+          boardMessageNotificationOnFront: true,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 2000,
+        },
+      },
+      system: {
+        id: "sys_1",
+        name: "System",
+        description: null,
+        avatarSource: null,
+        createdAt: 1000,
+        updatedAt: 2000,
+      },
+    };
+
+    // Mark only members dirty — system should not be queried even though
+    // it is present in the document.
+    const dirty = new Set(["member"]);
+    materializeDocument("system-core", doc, db, eventBus, dirty);
+
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain("members");
+  });
+
+  it("scans all entity types when dirtyEntityTypes is undefined (legacy behaviour)", () => {
+    const { db, queries } = makeDb();
+    const { eventBus } = makeEventBus();
+
+    const doc: Record<string, unknown> = {
+      members: {
+        mem_1: {
+          systemId: "sys_1",
+          name: "Alice",
+          pronouns: "she/her",
+          description: null,
+          avatarSource: null,
+          colors: ["#ff0000"],
+          saturationLevel: "full",
+          tags: [],
+          suppressFriendFrontNotification: false,
+          boardMessageNotificationOnFront: true,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 2000,
+        },
+      },
+    };
+
+    materializeDocument("system-core", doc, db, eventBus);
+
+    // Only members extracted from doc → only members queried.
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain("members");
+  });
+
+  it("issues zero queries when dirty set excludes every present entity type", () => {
+    const { db, queries, calls } = makeDb();
+    const { eventBus } = makeEventBus();
+
+    const doc: Record<string, unknown> = {
+      members: {
+        mem_1: {
+          systemId: "sys_1",
+          name: "Alice",
+          pronouns: "she/her",
+          description: null,
+          avatarSource: null,
+          colors: ["#ff0000"],
+          saturationLevel: "full",
+          tags: [],
+          suppressFriendFrontNotification: false,
+          boardMessageNotificationOnFront: true,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 2000,
+        },
+      },
+    };
+
+    // Dirty set points at an entity type that is not in the document.
+    const dirty = new Set(["group"]);
+    materializeDocument("system-core", doc, db, eventBus, dirty);
+
+    expect(queries).toHaveLength(0);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("still emits materialized:document and search:index-updated events when dirty set is empty", () => {
+    const { db } = makeDb();
+    const { eventBus, emitSpy } = makeEventBus();
+
+    materializeDocument("system-core", {}, db, eventBus, new Set());
+
+    const eventTypes = emitSpy.mock.calls.map((c) => c[0]);
+    expect(eventTypes).toContain("materialized:document");
+    expect(eventTypes).toContain("search:index-updated");
+  });
+});

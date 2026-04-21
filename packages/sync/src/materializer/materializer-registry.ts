@@ -14,12 +14,17 @@ export interface DocumentMaterializer {
   /**
    * Materialize all entity types from the given Automerge document into SQLite.
    *
+   * When `dirtyEntityTypes` is provided, only the listed entity types are
+   * processed; clean types are skipped entirely. Omit to scan all entity
+   * types (legacy behaviour — O(N) SQL scans per merge).
+   *
    * Emits `materialized:document` and `search:index-updated` events when done.
    */
   materialize(
     doc: Record<string, unknown>,
     db: MaterializerDb,
     eventBus: EventBus<DataLayerEventMap>,
+    dirtyEntityTypes?: ReadonlySet<string>,
   ): void;
 }
 
@@ -46,8 +51,9 @@ export function createMaterializer(documentType: SyncDocumentType): DocumentMate
       doc: Record<string, unknown>,
       db: MaterializerDb,
       eventBus: EventBus<DataLayerEventMap>,
+      dirtyEntityTypes?: ReadonlySet<string>,
     ): void {
-      materializeDocument(documentType, doc, db, eventBus);
+      materializeDocument(documentType, doc, db, eventBus, dirtyEntityTypes);
     },
   };
 }
