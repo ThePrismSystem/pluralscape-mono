@@ -35,11 +35,23 @@ vi.mock("../../../services/poll.service.js", () => ({
   deletePoll: vi.fn(),
 }));
 
-vi.mock("../../../services/poll-vote.service.js", () => ({
+vi.mock("../../../services/poll-vote/cast.js", () => ({
   castVote: vi.fn(),
+}));
+
+vi.mock("../../../services/poll-vote/list.js", () => ({
   listVotes: vi.fn(),
+}));
+
+vi.mock("../../../services/poll-vote/update.js", () => ({
   updatePollVote: vi.fn(),
+}));
+
+vi.mock("../../../services/poll-vote/archive.js", () => ({
   deletePollVote: vi.fn(),
+}));
+
+vi.mock("../../../services/poll-vote/results.js", () => ({
   getPollResults: vi.fn(),
 }));
 
@@ -54,8 +66,11 @@ const {
   deletePoll,
 } = await import("../../../services/poll.service.js");
 
-const { castVote, listVotes, updatePollVote, deletePollVote, getPollResults } =
-  await import("../../../services/poll-vote.service.js");
+const { castVote } = await import("../../../services/poll-vote/cast.js");
+const { listVotes } = await import("../../../services/poll-vote/list.js");
+const { updatePollVote } = await import("../../../services/poll-vote/update.js");
+const { deletePollVote } = await import("../../../services/poll-vote/archive.js");
+const { getPollResults } = await import("../../../services/poll-vote/results.js");
 
 const { pollRouter } = await import("../../../trpc/routers/poll.js");
 

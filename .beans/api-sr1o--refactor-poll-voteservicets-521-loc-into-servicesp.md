@@ -1,10 +1,11 @@
 ---
 # api-sr1o
 title: Refactor poll-vote.service.ts (521 LOC) into services/poll-vote/
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:56:57Z
-updated_at: 2026-04-21T13:56:57Z
+updated_at: 2026-04-21T21:08:18Z
 parent: api-6l1q
 ---
 

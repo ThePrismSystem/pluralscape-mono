@@ -9,13 +9,11 @@ import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
-import {
-  castVote,
-  deletePollVote,
-  getPollResults,
-  listVotes,
-  updatePollVote,
-} from "../../services/poll-vote.service.js";
+import { deletePollVote } from "../../services/poll-vote/archive.js";
+import { castVote } from "../../services/poll-vote/cast.js";
+import { listVotes } from "../../services/poll-vote/list.js";
+import { getPollResults } from "../../services/poll-vote/results.js";
+import { updatePollVote } from "../../services/poll-vote/update.js";
 import {
   archivePoll,
   closePoll,

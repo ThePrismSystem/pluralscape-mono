@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { PollVoteResult } from "../../../services/poll-vote.service.js";
+import type { PollVoteResult } from "../../../services/poll-vote/internal.js";
 import type { PollResult } from "../../../services/poll.service.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
@@ -29,10 +29,13 @@ vi.mock("../../../services/poll.service.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../services/poll-vote.service.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../../services/poll-vote.service.js")>();
+vi.mock("../../../services/poll-vote/cast.js", () => ({
+  castVote: vi.fn(),
+}));
+
+vi.mock("../../../services/poll-vote/list.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../services/poll-vote/list.js")>();
   return {
-    castVote: vi.fn(),
     listVotes: vi.fn(),
     parsePollVoteQuery: original.parsePollVoteQuery,
   };
@@ -55,7 +58,8 @@ const {
   archivePoll,
   restorePoll,
 } = await import("../../../services/poll.service.js");
-const { castVote, listVotes } = await import("../../../services/poll-vote.service.js");
+const { castVote } = await import("../../../services/poll-vote/cast.js");
+const { listVotes } = await import("../../../services/poll-vote/list.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
