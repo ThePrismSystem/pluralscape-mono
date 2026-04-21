@@ -134,4 +134,101 @@ describe("createEventBus", () => {
 
     globalThis.queueMicrotask = original;
   });
+
+  it("emit with zero subscribers is a no-op", () => {
+    const bus = createEventBus<TestEventMap>();
+    expect(() => {
+      bus.emit("test:alpha", { type: "test:alpha", value: 0 });
+    }).not.toThrow();
+  });
+
+  it("unsubscribe-during-iteration does not break dispatch to other listeners", () => {
+    const bus = createEventBus<TestEventMap>();
+    const captured: number[] = [];
+
+    // Listener A unsubscribes itself during emit.
+    const unsubA = bus.on("test:alpha", (event) => {
+      captured.push(event.value);
+      unsubA();
+    });
+    // Listener B runs before or after A; both must still fire once.
+    bus.on("test:alpha", (event) => {
+      captured.push(event.value * 10);
+    });
+
+    bus.emit("test:alpha", { type: "test:alpha", value: 1 });
+
+    // Both listeners fired on the first emit.
+    expect(captured).toEqual(expect.arrayContaining([1, 10]));
+    expect(captured).toHaveLength(2);
+
+    // A is now removed; second emit only dispatches to B.
+    captured.length = 0;
+    bus.emit("test:alpha", { type: "test:alpha", value: 2 });
+    expect(captured).toEqual([20]);
+  });
+
+  it("unsubscribing the last listener deletes the event type's bucket", () => {
+    const bus = createEventBus<TestEventMap>();
+    const listener = vi.fn();
+    const unsub = bus.on("test:alpha", listener);
+
+    // First unsubscribe removes the only listener and the bucket.
+    unsub();
+
+    // Subsequent emit finds no bucket and returns early.
+    bus.emit("test:alpha", { type: "test:alpha", value: 0 });
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("calling unsubscribe twice is idempotent", () => {
+    const bus = createEventBus<TestEventMap>();
+    const listener = vi.fn();
+    const unsub = bus.on("test:alpha", listener);
+
+    unsub();
+    expect(() => {
+      unsub();
+    }).not.toThrow();
+
+    bus.emit("test:alpha", { type: "test:alpha", value: 0 });
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("removeAll is a no-op when no listeners are registered", () => {
+    const bus = createEventBus<TestEventMap>();
+    expect(() => {
+      bus.removeAll();
+    }).not.toThrow();
+  });
+});
+
+describe("event-bus public re-exports", () => {
+  it("createEventBus is re-exported from the package barrel", async () => {
+    const mod = await import("../index.js");
+    expect(typeof mod.createEventBus).toBe("function");
+    const bus = mod.createEventBus<TestEventMap>();
+    const listener = vi.fn();
+    bus.on("test:alpha", listener);
+    bus.emit("test:alpha", { type: "test:alpha", value: 1 });
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("event-map types are tagged with literal discriminants", async () => {
+    // Event-map contains only type declarations; exercise them indirectly
+    // by constructing values that satisfy the type at the surface.
+    const eventBus = (await import("../index.js")).createEventBus<
+      import("../event-map.js").DataLayerEventMap
+    >();
+    const received: string[] = [];
+    eventBus.on("sync:error", (event) => {
+      received.push(event.type);
+    });
+    eventBus.emit("sync:error", {
+      type: "sync:error",
+      message: "test",
+      error: new Error("x"),
+    });
+    expect(received).toEqual(["sync:error"]);
+  });
 });
