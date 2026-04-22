@@ -142,6 +142,7 @@ export interface MemberServerMetadata extends AuditMetadata {
   readonly id: MemberId;
   readonly systemId: SystemId;
   readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 }
 
