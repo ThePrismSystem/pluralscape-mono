@@ -41,6 +41,7 @@ import type {
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
+  MemberWire,
   Plaintext,
   ServerAcknowledgementRequest,
   ServerAuditLogEntry,
@@ -91,6 +92,7 @@ import type { LifecycleEvent } from "../lifecycle.js";
 import type { Relationship } from "../structure.js";
 import type { TimerConfig } from "../timer.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 
 describe("Encrypted<T>", () => {
   it("is assignable to plain T (intersection subtype)", () => {
@@ -415,5 +417,21 @@ describe("DecryptFn and EncryptFn", () => {
     expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<Member>();
     expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<KdfMasterKey>();
     expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<MemberServerMetadata>();
+  });
+});
+
+describe("MemberWire", () => {
+  it("equals Serialize<Member>", () => {
+    expectTypeOf<MemberWire>().toEqualTypeOf<Serialize<Member>>();
+  });
+
+  it("has `id` as plain string (brand stripped)", () => {
+    expectTypeOf<MemberWire["id"]>().toEqualTypeOf<string>();
+  });
+
+  it("has audit timestamps serialized to number (UnixMillis → number)", () => {
+    // Domain Member includes audit UnixMillis fields (createdAt, updatedAt);
+    // Wire should have them as plain number after Serialize.
+    expectTypeOf<MemberWire["createdAt"]>().toEqualTypeOf<number>();
   });
 });

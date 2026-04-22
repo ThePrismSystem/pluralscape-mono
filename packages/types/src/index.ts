@@ -275,6 +275,7 @@ export type {
   EncryptedString,
   ServerSecret,
   MemberServerMetadata,
+  MemberWire,
   ServerFrontingSession,
   ClientFrontingSession,
   ServerGroup,

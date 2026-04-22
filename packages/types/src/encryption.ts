@@ -58,6 +58,7 @@ import type {
 } from "./structure.js";
 import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
+import type { Serialize } from "./type-assertions.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";
 
 // ── Tier wrappers ──────────────────────────────────────────────
@@ -740,3 +741,19 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: KdfMaster
 // WebhookDelivery: T1 (encryptedData) | T3 (eventType, httpStatus, attemptCount, lastAttemptAt, nextRetryAt, createdAt)
 // RealtimeSubscription: T3 (all fields — subscription metadata)
 // SearchQuery/SearchResult: client-only types, not persisted server-side
+
+// ── JSON Wire formats ──────────────────────────────────────────────
+//
+// Serialized representations for HTTP boundaries and OpenAPI parity checks.
+// Derived from domain types via Serialize<T>: branded IDs become plain strings,
+// Date/UnixMillis become string/number, Uint8Array becomes base64 string.
+
+/**
+ * JSON-wire representation of a Member. Derived from the domain `Member`
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ *
+ * This is what crosses the HTTP boundary for Member payloads. The OpenAPI
+ * parity gate asserts `components["schemas"]["Member"]` ≡ `MemberWire`.
+ */
+export type MemberWire = Serialize<Member>;
