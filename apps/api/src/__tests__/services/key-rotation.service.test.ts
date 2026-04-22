@@ -595,7 +595,13 @@ describe("key-rotation service", () => {
       expect(chain.for).toHaveBeenCalledWith("update");
       expect(mockAudit).toHaveBeenCalledWith(
         chain,
-        expect.objectContaining({ eventType: "bucket.key_rotation.retried" }),
+        expect.objectContaining({
+          eventType: "bucket.key_rotation.retried",
+          // Detail must spell out both the reset count and the state transition
+          // to disambiguate from a per-item "retry count" interpretation.
+          detail:
+            "Rotation retry: reset 3 failed items to pending (rotation state failed → migrating)",
+        }),
       );
     });
 
