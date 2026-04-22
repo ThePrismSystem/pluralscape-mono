@@ -1,15 +1,15 @@
 import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { mockDb } from "../helpers/mock-db.js";
-import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
-import { makeTestAuth } from "../helpers/test-auth.js";
+import { mockDb } from "../../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
+import { makeTestAuth } from "../../helpers/test-auth.js";
 
 import type { MemberId, SystemId, SystemStructureEntityMemberLinkId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
-vi.mock("../../lib/system-ownership.js", () => ({
+vi.mock("../../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
 }));
 
@@ -55,11 +55,11 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 // ── Imports after mocks ──────────────────────────────────────────────
 
-const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
+const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 const { CreateStructureEntityMemberLinkBodySchema } = await import("@pluralscape/validation");
 
 const { createEntityMemberLink, listEntityMemberLinks, deleteEntityMemberLink } =
-  await import("../../services/structure-entity-member-link.service.js");
+  await import("../../../services/structure/member-link.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

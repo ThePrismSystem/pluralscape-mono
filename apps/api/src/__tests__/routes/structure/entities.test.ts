@@ -10,10 +10,8 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type {
-  HierarchyNode,
-  StructureEntityResult,
-} from "../../../services/structure-entity.service.js";
+import type { HierarchyNode } from "../../../services/structure/association.js";
+import type { StructureEntityResult } from "../../../services/structure/entity-crud/internal.js";
 import type {
   ApiErrorResponse,
   PaginatedResult,
@@ -23,28 +21,23 @@ import type {
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/structure-entity.service.js", () => ({
-  createEntityType: vi.fn(),
-  listEntityTypes: vi.fn(),
-  getEntityType: vi.fn(),
-  updateEntityType: vi.fn(),
-  archiveEntityType: vi.fn(),
-  restoreEntityType: vi.fn(),
-  deleteEntityType: vi.fn(),
+vi.mock("../../../services/structure/entity-crud/create.js", () => ({
   createStructureEntity: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-crud/queries.js", () => ({
   listStructureEntities: vi.fn(),
   getStructureEntity: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-crud/update.js", () => ({
   updateStructureEntity: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-crud/lifecycle.js", () => ({
   archiveStructureEntity: vi.fn(),
   restoreStructureEntity: vi.fn(),
   deleteStructureEntity: vi.fn(),
+}));
+vi.mock("../../../services/structure/association.js", () => ({
   getEntityHierarchy: vi.fn(),
-  createEntityLink: vi.fn(),
-  listEntityLinks: vi.fn(),
-  deleteEntityLink: vi.fn(),
-  createEntityMemberLink: vi.fn(),
-  listEntityMemberLinks: vi.fn(),
-  deleteEntityMemberLink: vi.fn(),
   createEntityAssociation: vi.fn(),
   listEntityAssociations: vi.fn(),
   deleteEntityAssociation: vi.fn(),
@@ -57,16 +50,13 @@ vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createStructureEntity,
-  listStructureEntities,
-  getStructureEntity,
-  updateStructureEntity,
-  archiveStructureEntity,
-  restoreStructureEntity,
-  deleteStructureEntity,
-  getEntityHierarchy,
-} = await import("../../../services/structure-entity.service.js");
+const { createStructureEntity } = await import("../../../services/structure/entity-crud/create.js");
+const { listStructureEntities, getStructureEntity } =
+  await import("../../../services/structure/entity-crud/queries.js");
+const { updateStructureEntity } = await import("../../../services/structure/entity-crud/update.js");
+const { archiveStructureEntity, restoreStructureEntity, deleteStructureEntity } =
+  await import("../../../services/structure/entity-crud/lifecycle.js");
+const { getEntityHierarchy } = await import("../../../services/structure/association.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

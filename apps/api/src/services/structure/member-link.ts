@@ -3,16 +3,16 @@ import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/
 import { CreateStructureEntityMemberLinkBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
-import { ApiHttpError } from "../lib/api-error.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
-import { assertSystemOwnership } from "../lib/system-ownership.js";
-import { tenantCtx } from "../lib/tenant-context.js";
-import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { ApiHttpError } from "../../lib/api-error.js";
+import { buildPaginatedResult } from "../../lib/pagination.js";
+import { withTenantRead, withTenantTransaction } from "../../lib/rls-context.js";
+import { assertSystemOwnership } from "../../lib/system-ownership.js";
+import { tenantCtx } from "../../lib/tenant-context.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 
-import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AuthContext } from "../lib/auth-context.js";
+import type { AuditWriter } from "../../lib/audit-writer.js";
+import type { AuthContext } from "../../lib/auth-context.js";
 import type {
   MemberId,
   PaginatedResult,

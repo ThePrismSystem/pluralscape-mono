@@ -11,6 +11,12 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import {
+  createEntityAssociation,
+  deleteEntityAssociation,
+  getEntityHierarchy,
+  listEntityAssociations,
+} from "../../services/structure/association.js";
 import { createStructureEntity } from "../../services/structure/entity-crud/create.js";
 import {
   archiveStructureEntity,
@@ -30,22 +36,16 @@ import { listEntityTypes } from "../../services/structure/entity-type/list.js";
 import { restoreEntityType } from "../../services/structure/entity-type/restore.js";
 import { updateEntityType } from "../../services/structure/entity-type/update.js";
 import {
-  createEntityAssociation,
-  deleteEntityAssociation,
-  getEntityHierarchy,
-  listEntityAssociations,
-} from "../../services/structure-entity-association.service.js";
-import {
   createEntityLink,
   deleteEntityLink,
   listEntityLinks,
   updateEntityLink,
-} from "../../services/structure-entity-link.service.js";
+} from "../../services/structure/link.js";
 import {
   createEntityMemberLink,
   deleteEntityMemberLink,
   listEntityMemberLinks,
-} from "../../services/structure-entity-member-link.service.js";
+} from "../../services/structure/member-link.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

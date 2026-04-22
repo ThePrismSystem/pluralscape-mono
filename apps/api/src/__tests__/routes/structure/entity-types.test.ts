@@ -10,7 +10,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { EntityTypeResult } from "../../../services/structure-entity.service.js";
+import type { EntityTypeResult } from "../../../services/structure/entity-type/internal.js";
 import type {
   ApiErrorResponse,
   PaginatedResult,
@@ -19,31 +19,26 @@ import type {
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/structure-entity.service.js", () => ({
+vi.mock("../../../services/structure/entity-type/create.js", () => ({
   createEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/list.js", () => ({
   listEntityTypes: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/get.js", () => ({
   getEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/update.js", () => ({
   updateEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/archive.js", () => ({
   archiveEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/restore.js", () => ({
   restoreEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/delete.js", () => ({
   deleteEntityType: vi.fn(),
-  createStructureEntity: vi.fn(),
-  listStructureEntities: vi.fn(),
-  getStructureEntity: vi.fn(),
-  updateStructureEntity: vi.fn(),
-  archiveStructureEntity: vi.fn(),
-  restoreStructureEntity: vi.fn(),
-  deleteStructureEntity: vi.fn(),
-  getEntityHierarchy: vi.fn(),
-  createEntityLink: vi.fn(),
-  listEntityLinks: vi.fn(),
-  deleteEntityLink: vi.fn(),
-  createEntityMemberLink: vi.fn(),
-  listEntityMemberLinks: vi.fn(),
-  deleteEntityMemberLink: vi.fn(),
-  createEntityAssociation: vi.fn(),
-  listEntityAssociations: vi.fn(),
-  deleteEntityAssociation: vi.fn(),
 }));
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -53,15 +48,13 @@ vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createEntityType,
-  listEntityTypes,
-  getEntityType,
-  updateEntityType,
-  archiveEntityType,
-  restoreEntityType,
-  deleteEntityType,
-} = await import("../../../services/structure-entity.service.js");
+const { createEntityType } = await import("../../../services/structure/entity-type/create.js");
+const { listEntityTypes } = await import("../../../services/structure/entity-type/list.js");
+const { getEntityType } = await import("../../../services/structure/entity-type/get.js");
+const { updateEntityType } = await import("../../../services/structure/entity-type/update.js");
+const { archiveEntityType } = await import("../../../services/structure/entity-type/archive.js");
+const { restoreEntityType } = await import("../../../services/structure/entity-type/restore.js");
+const { deleteEntityType } = await import("../../../services/structure/entity-type/delete.js");
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");

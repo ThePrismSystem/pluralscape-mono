@@ -7,7 +7,7 @@ import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
-import { listStructureEntities } from "../../../services/structure-entity.service.js";
+import { listStructureEntities } from "../../../services/structure/entity-crud/queries.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 
