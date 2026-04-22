@@ -1,3 +1,12 @@
+import type { AuditLogEntry } from "./audit-log.js";
+import type {
+  AuditLogEntryServerMetadata,
+  AuditLogEntryWire,
+  MemberServerMetadata,
+  MemberWire,
+} from "./encryption.js";
+import type { Member } from "./identity.js";
+
 /**
  * Registry of every domain entity that participates in the types-as-SoT
  * parity gates. Each entry carries the canonical triple:
@@ -10,7 +19,13 @@
  * every Drizzle table and every Zod schema maps to a manifest entry, so
  * silently dropping an entity during fleet work fails CI.
  *
- * Phase 0: manifest is empty. Pilot (Phase 1) registers Member and
- * AuditLogEntry. Fleet (Phase 2) fills the rest.
+ * Phase 1 (pilot): Member + AuditLogEntry. Fleet (Phase 2) fills the rest.
  */
-export type SotEntityManifest = Record<never, never>;
+export type SotEntityManifest = {
+  Member: { domain: Member; server: MemberServerMetadata; wire: MemberWire };
+  AuditLogEntry: {
+    domain: AuditLogEntry;
+    server: AuditLogEntryServerMetadata;
+    wire: AuditLogEntryWire;
+  };
+};

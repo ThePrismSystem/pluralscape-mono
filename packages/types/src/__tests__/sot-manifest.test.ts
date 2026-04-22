@@ -1,21 +1,41 @@
 import { describe, expectTypeOf, it } from "vitest";
 
 import type { SotEntityManifest } from "../__sot-manifest__.js";
+import type { AuditLogEntry } from "../audit-log.js";
+import type {
+  AuditLogEntryServerMetadata,
+  AuditLogEntryWire,
+  MemberServerMetadata,
+  MemberWire,
+} from "../encryption.js";
+import type { Member } from "../identity.js";
 import type { Equal, Extends } from "../type-assertions.js";
 
 describe("SotEntityManifest", () => {
-  it("is initially empty (no entities registered during Phase 0)", () => {
-    expectTypeOf<Equal<keyof SotEntityManifest, never>>().toEqualTypeOf<true>();
+  it("entries carry a domain/server/wire triple", () => {
+    type Entry = SotEntityManifest[keyof SotEntityManifest];
+    expectTypeOf<
+      Extends<Entry, { domain: unknown; server: unknown; wire: unknown }>
+    >().toEqualTypeOf<true>();
   });
 
-  it("entries carry a domain/server/wire triple (once populated)", () => {
-    // Each manifest entry value must have all three keys. This test validates
-    // the shape constraint on entries. During Phase 0, the manifest is empty,
-    // so we check via a dummy entry type. Once pilot (Phase 1) registers
-    // entries like Member and AuditLogEntry, they must all satisfy this shape.
-    type DummyEntry = { domain: unknown; server: unknown; wire: unknown };
+  it("registers Member with the canonical triple", () => {
+    expectTypeOf<SotEntityManifest["Member"]["domain"]>().toEqualTypeOf<Member>();
+    expectTypeOf<SotEntityManifest["Member"]["server"]>().toEqualTypeOf<MemberServerMetadata>();
+    expectTypeOf<SotEntityManifest["Member"]["wire"]>().toEqualTypeOf<MemberWire>();
+  });
+
+  it("registers AuditLogEntry with the canonical triple", () => {
+    expectTypeOf<SotEntityManifest["AuditLogEntry"]["domain"]>().toEqualTypeOf<AuditLogEntry>();
     expectTypeOf<
-      Extends<DummyEntry, { domain: unknown; server: unknown; wire: unknown }>
+      SotEntityManifest["AuditLogEntry"]["server"]
+    >().toEqualTypeOf<AuditLogEntryServerMetadata>();
+    expectTypeOf<SotEntityManifest["AuditLogEntry"]["wire"]>().toEqualTypeOf<AuditLogEntryWire>();
+  });
+
+  it("contains exactly the pilot entities during Phase 1", () => {
+    expectTypeOf<
+      Equal<keyof SotEntityManifest, "Member" | "AuditLogEntry">
     >().toEqualTypeOf<true>();
   });
 });
