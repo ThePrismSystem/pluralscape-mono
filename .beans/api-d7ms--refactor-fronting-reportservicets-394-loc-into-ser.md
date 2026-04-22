@@ -1,11 +1,11 @@
 ---
 # api-d7ms
 title: Refactor fronting-report.service.ts (394 LOC) into services/fronting-report/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:07:50Z
+updated_at: 2026-04-22T05:58:20Z
 parent: api-6l1q
 ---
 
@@ -29,3 +29,7 @@ Part of epic api-6l1q PR 2. Refactor `fronting-report.service.ts` (~394 LOC) int
 - `pnpm tsc -p apps/api/tsconfig.json --noEmit` passes
 - `pnpm vitest run --project api` passes
 - Max file LOC ≤300 target (350-400 acceptable if natural split)
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

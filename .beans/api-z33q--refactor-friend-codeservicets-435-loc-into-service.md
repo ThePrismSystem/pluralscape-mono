@@ -1,11 +1,11 @@
 ---
 # api-z33q
 title: Refactor friend-code.service.ts (435 LOC) into services/account/friend-codes/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:41:57Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -36,3 +36,7 @@ Part of epic api-6l1q PR 2. Refactor `friend-code.service.ts` (~435 LOC) into `s
 
 - apps/api/src/**tests**/routes/account/pin.test.ts:49 — stale `vi.mock` for friend-code mocked non-existent exports (`createFriendCode`, `revokeFriendCode`); now repointed to new per-verb paths but exports still don't match real module — recommend deleting mock block (consumer doesn't import friend-code) — low
 - apps/api/src/**tests**/services/analytics.service.test.ts:645 — `returns truncated flag` times out at 15s when full api suite runs in parallel (passes in isolation in 5s) — pre-existing flake under load, unrelated to this refactor — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

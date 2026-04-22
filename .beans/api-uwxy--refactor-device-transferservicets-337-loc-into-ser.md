@@ -1,11 +1,11 @@
 ---
 # api-uwxy
 title: Refactor device-transfer.service.ts (337 LOC) into services/device-transfer/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:11Z
-updated_at: 2026-04-21T23:45:01Z
+updated_at: 2026-04-22T05:58:20Z
 parent: api-6l1q
 ---
 
@@ -34,3 +34,7 @@ Part of epic api-6l1q PR 2. Refactor `device-transfer.service.ts` (~337 LOC) int
 
 - apps/api/src/**tests**/services/analytics.service.test.ts — one parallel-run flake ("returns truncated flag" timeout 16s) observed once in full vitest run; passes in isolation and on rerun. Unrelated to refactor — low severity.
 - apps/api/src/**tests**/routes/auth/recovery-key.test.ts:402 — unhandled rejection crashed runner in first full run (exit 144); passes cleanly in isolation and on rerun. Unrelated to refactor — low severity.
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

@@ -1,11 +1,11 @@
 ---
 # api-1i0u
 title: Refactor api-key.service.ts (356 LOC) into services/api-key/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:11Z
-updated_at: 2026-04-21T23:41:59Z
+updated_at: 2026-04-22T05:58:20Z
 parent: api-6l1q
 ---
 
@@ -37,3 +37,7 @@ Part of epic api-6l1q PR 2. Refactor `api-key.service.ts` (~356 LOC) into `servi
 - apps/api/src/**tests**/helpers/common-route-mocks.ts:64-82 — replaced single mockApiKeyServiceFactory with three per-verb factories to match split; only api-keys.test.ts consumed it — info
 
 - apps/api/src/**tests**/services/analytics.service.test.ts:computeCoFrontingBreakdown — flaky timeout under parallel load (15000ms), passes in isolation; unrelated to refactor — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

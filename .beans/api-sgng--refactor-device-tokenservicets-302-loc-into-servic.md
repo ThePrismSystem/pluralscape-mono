@@ -1,11 +1,11 @@
 ---
 # api-sgng
 title: Refactor device-token.service.ts (302 LOC) into services/device-token/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:11Z
-updated_at: 2026-04-21T23:41:08Z
+updated_at: 2026-04-22T05:58:20Z
 parent: api-6l1q
 ---
 
@@ -36,3 +36,7 @@ Part of epic api-6l1q PR 2. Refactor `device-token.service.ts` (~302 LOC) into `
 - apps/api/src/services/device-token.service.ts:33-42 — Audit event constants (`AUDIT_TOKEN_REGISTERED`, `_UPDATED`, `_REVOKED`, `_DELETED`) each had a single consumer; inlined into their respective verb files per Option E single-consumer rule — info
 - apps/api/src/**tests**/routes/device-tokens/{crud,update-delete}.test.ts — `vi.mock` previously targeted the single service module; after split each verb path now has its own `vi.mock` call plus a dedicated dynamic `await import`. Same adjustment applied to `trpc/routers/device-token.test.ts` (which silently relied on the original module mocking `updateDeviceToken` transitively) — info
 - apps/api/src/**tests**/trpc/routers/device-token.test.ts — The original mock did not include `updateDeviceToken` even though the router imports it; added a mock for `device-token/update.js` to preserve hermetic behavior post-split — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

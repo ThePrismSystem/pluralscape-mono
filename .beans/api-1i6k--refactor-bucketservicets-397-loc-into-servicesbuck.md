@@ -1,11 +1,11 @@
 ---
 # api-1i6k
 title: Refactor bucket.service.ts (397 LOC) into services/bucket/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T22:49:00Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -37,3 +37,7 @@ Part of epic api-6l1q PR 2. Refactor `bucket.service.ts` (~397 LOC) into `servic
 - apps/api/src/services/bucket-export.service.ts — single-file constants-only `bucket-export.constants.ts` sibling + `bucket-export.service.ts` (still outside bucket/); leaving flat until future pass decides whether to nest under bucket/exports/ — info
 - apps/api/src/services/bucket/rotations/retry.ts:96 — audit.detail uses `resetResult.length` which is reset count not retry count; pre-existing — info
 - apps/api/src/services/bucket/delete.ts:18-50 — `checkBucketDependents` issues one UNION ALL against 5 dependent tables; single-consumer, kept module-local — info
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

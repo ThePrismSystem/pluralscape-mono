@@ -1,11 +1,11 @@
 ---
 # api-bf6p
 title: Refactor lifecycle-event.service.ts (422 LOC) into services/lifecycle-event/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:41:09Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -35,3 +35,7 @@ Part of epic api-6l1q PR 2. Refactor `lifecycle-event.service.ts` (~422 LOC) int
 - apps/api/src/services/lifecycle-event.service.ts:99-120 — cursor encode/decode only used by list, kept local to queries.ts — low
 - apps/api/src/services/lifecycle-event.service.ts:392-398 — LIFECYCLE_EVENT_LIFECYCLE shared by archive+restore (2 consumers) — moved to internal.ts — low
 - apps/api/src/**tests**/services/analytics.service.test.ts:645 — pre-existing flaky test "returns truncated flag" times out at 15s under full-parallel load; unrelated to this refactor — informational
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

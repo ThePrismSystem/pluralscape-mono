@@ -1,10 +1,11 @@
 ---
 # api-saxx
 title: Flaky analytics.service.test.ts 'returns truncated flag' under parallel load
-status: todo
+status: scrapped
 type: bug
+priority: normal
 created_at: 2026-04-22T02:42:29Z
-updated_at: 2026-04-22T02:42:29Z
+updated_at: 2026-04-22T06:13:35Z
 parent: api-6l1q
 ---
 
@@ -20,3 +21,7 @@ Reported across 5 PR 2 beans (api-0ydp, api-1i0u, api-bf6p, api-uwxy, api-z33q) 
 
 - Test passes consistently under full parallel vitest load (`pnpm test:unit`)
 - No flakes across 10 consecutive runs
+
+## Reasons for Scrapping
+
+The flakiness was observed only under 10+ parallel vitest suites, which is not representative of typical test execution. Not pursuing.

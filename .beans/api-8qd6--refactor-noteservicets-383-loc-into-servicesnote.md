@@ -1,11 +1,11 @@
 ---
 # api-8qd6
 title: Refactor note.service.ts (383 LOC) into services/note/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:20:26Z
+updated_at: 2026-04-22T05:58:20Z
 parent: api-6l1q
 ---
 
@@ -38,3 +38,7 @@ Part of epic api-6l1q PR 2. Refactor `note.service.ts` (~383 LOC) into `services
 - apps/api/src/**tests**/trpc/routers/note.test.ts — same multi-module vi.mock rewrite required for trpc router test — medium
 - apps/api/src/**tests**/services/note.service.test.ts — unit test uses dynamic imports; updated to import from 4 new paths — low
 - ListNoteOpts interface — single consumer (listNotes), stayed local in queries.ts — info
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

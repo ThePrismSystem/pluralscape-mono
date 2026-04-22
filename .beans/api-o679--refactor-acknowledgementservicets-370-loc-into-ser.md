@@ -1,11 +1,11 @@
 ---
 # api-o679
 title: Refactor acknowledgement.service.ts (370 LOC) into services/acknowledgement/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:37:46Z
+updated_at: 2026-04-22T05:58:20Z
 parent: api-6l1q
 ---
 
@@ -35,3 +35,7 @@ Part of epic api-6l1q PR 2. Refactor `acknowledgement.service.ts` (~370 LOC) int
 - apps/api/src/services/acknowledgement.service.ts:1-370 — 370 LOC monolith split into 5 files (internal 45, create 68, confirm 95, queries 109, lifecycle 72) — total 389 LOC, largest 109 — low
 - 7 caller files updated (1 tRPC router + 6 REST routes + 3 test files); all vi.mock paths updated to per-verb modules — low
 - pure code-motion; no behavior changes, no barrel; shared type+helper isolated in internal.ts (used by all 4 verb files) — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

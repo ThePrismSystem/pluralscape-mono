@@ -1,11 +1,11 @@
 ---
 # api-wqlj
 title: Refactor analytics.service.ts (454 LOC) into services/analytics/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T23:18:42Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -35,3 +35,7 @@ Part of epic api-6l1q PR 2. Refactor `analytics.service.ts` (~454 LOC) into `ser
 - apps/api/src/services/analytics.service.ts — split cleanly: 2 public verbs (computeFrontingBreakdown, computeCoFrontingBreakdown) with no shared internal helpers except toOneDecimalPercent — low
 - apps/api/src/services/analytics/internal.ts — only one helper qualifies for shared (toOneDecimalPercent); fetchSessionsInRange, aggregateSubjectBreakdown, brandSubjectId, getClampedBounds, effectiveEndTime each stayed with single consumer — info
 - apps/api/src/routes/analytics/{fronting,co-fronting}.ts and tRPC router now import two separate files — more explicit dependency graph — info
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

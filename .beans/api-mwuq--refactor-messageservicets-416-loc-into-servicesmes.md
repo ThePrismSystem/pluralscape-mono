@@ -1,11 +1,11 @@
 ---
 # api-mwuq
 title: Refactor message.service.ts (416 LOC) into services/message/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:07:39Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -29,3 +29,7 @@ Part of epic api-6l1q PR 2. Refactor `message.service.ts` (~416 LOC) into `servi
 - `pnpm tsc -p apps/api/tsconfig.json --noEmit` passes
 - `pnpm vitest run --project api` passes
 - Max file LOC ≤300 target (350-400 acceptable if natural split)
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

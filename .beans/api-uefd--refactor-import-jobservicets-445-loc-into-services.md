@@ -1,11 +1,11 @@
 ---
 # api-uefd
 title: Refactor import-job.service.ts (445 LOC) into services/system/import-jobs/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T23:31:13Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -37,3 +37,7 @@ Part of epic api-6l1q PR 2. Refactor `import-job.service.ts` (~445 LOC) into `se
 - apps/api/src/services/system/import-jobs/update.ts:135 — pre-existing cast `parsed.errorLog as readonly ImportError[] | null` preserved from original file; not new code — low
 - No circular imports; single-direction: verbs → internal — info
 - update.ts is the largest split file at 172 LOC (167 after prettier), well under 300 target — info
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

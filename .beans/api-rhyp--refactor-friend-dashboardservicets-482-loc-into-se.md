@@ -1,11 +1,11 @@
 ---
 # api-rhyp
 title: Refactor friend-dashboard.service.ts (482 LOC) into services/friend-dashboard/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T23:22:45Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -38,3 +38,7 @@ Part of epic api-6l1q PR 2. Refactor `friend-dashboard.service.ts` (~482 LOC) in
 - 6 test files updated: service unit test (split await-import per verb), integration test (static import), dashboard route test, dashboard-sync route test, pin route test, trpc friend router test, friend-export service test — info
 - ESLint import-x/order forced getFriendDashboard import to sort before friend-dashboard-sync.service in trpc/routers/friend.ts — info
 - Splitting a single await-import destructure across multiple lines caused `@typescript-eslint/no-unsafe-call` false positives in describe/it blocks — kept await-import calls on one line as workaround — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

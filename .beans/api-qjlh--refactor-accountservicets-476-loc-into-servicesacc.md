@@ -1,11 +1,11 @@
 ---
 # api-qjlh
 title: Refactor account.service.ts (476 LOC) into services/account/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T22:44:22Z
+updated_at: 2026-04-22T05:58:18Z
 parent: api-6l1q
 ---
 
@@ -36,3 +36,7 @@ Part of epic api-6l1q PR 2. Refactor `account.service.ts` (~476 LOC) into `servi
 
 - apps/api/src/services/account/update.ts:473 — `ConcurrencyError` extracted to internal.ts; imported by 3 routes + 4 test files + pin.test.ts as shared mutation-retry primitive — low
 - apps/api/src/services/account/friends/\* — PR-1 dir relocated under account/; all `../../lib/`, `../../http.constants.js`, `../../service.constants.js`, `../webhook-dispatcher.js` paths rewritten to `../../../` to account for extra nesting — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

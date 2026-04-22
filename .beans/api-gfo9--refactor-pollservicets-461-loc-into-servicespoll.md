@@ -1,11 +1,11 @@
 ---
 # api-gfo9
 title: Refactor poll.service.ts (461 LOC) into services/poll/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T22:42:14Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -38,3 +38,7 @@ Part of epic api-6l1q PR 2. Refactor `poll.service.ts` (~461 LOC) into `services
 - apps/api/src/services/poll/internal.ts — 108 LOC — largest file post-split; holds PollResult, ListPollOpts, toPollResult, throwPollUpdateError, POLL_LIFECYCLE; all multi-consumer helpers/types — low
 - apps/api/src/services/poll/delete.ts — POLL_DELETE config + checkPollDependents are single-consumer, kept module-local per Option E rules — low
 - PR-1 poll-vote/ moved to poll/votes/ cleanly; 6 files internally needed `../../` → `../../../` depth bumps and `../webhook-dispatcher.js` → `../../webhook-dispatcher.js` — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).
