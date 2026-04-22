@@ -57,4 +57,13 @@ export default [
       "no-restricted-syntax": ["error", ...TS_AS_EXPRESSION_SELECTORS],
     },
   },
+  {
+    // Cap service file length to prevent god-file regression after the api-6l1q
+    // refactor. Target is ≤300 LOC per verb file; 500 is a safety margin that
+    // still catches accidental accumulation.
+    files: ["src/services/**/*.ts"],
+    rules: {
+      "max-lines": ["error", { max: 500, skipBlankLines: true, skipComments: true }],
+    },
+  },
 ];
