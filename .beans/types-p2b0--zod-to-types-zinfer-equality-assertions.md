@@ -1,11 +1,11 @@
 ---
 # types-p2b0
 title: Zod-to-types z.infer equality assertions
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T13:55:46Z
-updated_at: 2026-04-21T13:56:25Z
+updated_at: 2026-04-22T23:06:07Z
 parent: types-ltel
 blocked_by:
   - types-f62m
@@ -45,3 +45,11 @@ For entities where the Zod schema is naturally derivable via drizzle-zod for ser
 ## Blocked-by
 
 types- bean "Publish <Entity> and <Entity>ServerMetadata pairs in packages/types"
+
+## Phase 1 pilot progress (2026-04-22)
+
+Pilot Zod parity delivered: `packages/validation/src/__tests__/type-parity/member.type.test.ts` asserts `z.infer<typeof CreateMemberBodySchema>` equals `CreateMemberBody` (and siblings). AuditLogEntry parity deferred with a `.todo` placeholder (audit logs are server-generated; no input-body schemas to assert against).
+
+Option-B decision in ADR-023: fleet convention is to declare optional input-body fields as `T | undefined` (not `T?`). No `OptionalEqual` helper added since pilot encountered zero mismatches in Member input bodies.
+
+Remaining (fleet, Phase 2): parity tests for the remaining entities' input bodies.

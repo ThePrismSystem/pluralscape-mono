@@ -1,10 +1,11 @@
 ---
 # types-f62m
 title: Publish <Entity> and <Entity>ServerMetadata pairs in packages/types
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-21T13:55:29Z
-updated_at: 2026-04-21T13:55:29Z
+updated_at: 2026-04-22T23:06:07Z
 parent: types-ltel
 ---
 
@@ -36,3 +37,9 @@ The <Entity> type describes the full decrypted domain shape (all fields as they 
 ## Notes
 
 This task is a prerequisite for the Drizzle-parity and Zod-parity tasks. Expect to touch ~20+ entity types.
+
+## Phase 1 pilot progress (2026-04-22)
+
+Pilot-scope delivered: `MemberServerMetadata` + `MemberWire` and `AuditLogEntryServerMetadata` + `AuditLogEntryWire` published in `@pluralscape/types`. `ClientMember` / `ClientAuditLogEntry` aliases removed. `__brand` symbol marked `@internal`; `PendingAccountId` migrated to canonical `Brand<T, B>`.
+
+Remaining (fleet, Phase 2): ~23 entities across the six clusters in the spec. Pattern is established — rename existing `Server<Entity>` to `<Entity>ServerMetadata`, drop `Client<Entity>` aliases, add `<Entity>Wire = Serialize<Entity>`.

@@ -3,8 +3,9 @@
 title: Types single source of truth
 status: in-progress
 type: epic
+priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-21T13:54:18Z
+updated_at: 2026-04-22T23:05:34Z
 parent: ps-cd6x
 ---
 
@@ -37,3 +38,22 @@ Drizzle cannot be the source because the server only sees encrypted blobs plus m
 ## Spec reference
 
 docs/superpowers/specs/2026-04-21-m9a-closeout-hardening-design.md
+
+## Phase 0 progress (2026-04-22)
+
+Foundation landed: `Assert` / `Equal` / `Extends` / `Serialize` helpers (`packages/types/src/type-assertions.ts`), `SotEntityManifest` skeleton (`packages/types/src/__sot-manifest__.ts`), `pnpm types:check-sot` stub (`scripts/check-types-sot.ts`, runs `tsc --noEmit` on `@pluralscape/types`), ADR-023 refreshed. Also migrated `PendingAccountId` in `auth.ts` to the canonical symbol-keyed `Brand<T, B>` helper and marked `__brand` `@internal`. Proceeding to Phase 1 pilot (Member + AuditLogEntry).
+
+## Phase 1 progress (2026-04-22)
+
+Pilot landed. Member and AuditLogEntry through the parity stack:
+
+- `MemberServerMetadata` / `AuditLogEntryServerMetadata` renamed from `Server<Entity>`
+- `ClientMember` / `ClientAuditLogEntry` aliases removed; callers use `Member` / `AuditLogEntry` directly
+- `MemberWire` / `AuditLogEntryWire` added as `Serialize<Entity>`
+- Drizzle parity tests green for both entities (uses `StripBrands<T>` wrapper; brand-drift follow-up tracked as `db-drq1`)
+- Zod parity tests green for Member input bodies; AuditLogEntry deferred (no server-generated input-body schemas exist). Option B decided (no `OptionalEqual` helper; fleet convention is `T | undefined` for optional input-body fields) — recorded in ADR-023.
+- OpenAPI-Wire parity green on `EncryptedEntity` (which guards every T1 response including Member). Direct entity-wire parity deferred to `types-tef0` since OpenAPI exposes encrypted blobs not decrypted shapes.
+- `pnpm types:check-sot` exits 0 on clean main, exits 1 when drift is introduced at any of the four layers (verified Task 18).
+- Manifest completeness gate prevents silent entity drop-off (pilot-scope: Member + AuditLogEntry).
+
+Fleet (Phase 2) next: ~23 remaining Server/Client entity pairs across 6 domain clusters. See follow-up plan for rollout. Follow-up beans: `db-drq1` (Drizzle helper branding), `types-tef0` (OpenAPI enc/dec boundary).

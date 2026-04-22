@@ -1,11 +1,11 @@
 ---
 # types-cfp6
 title: "CI job: pnpm types:check-sot"
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-04-21T13:56:03Z
-updated_at: 2026-04-21T13:56:25Z
+updated_at: 2026-04-22T23:06:07Z
 parent: types-ltel
 blocked_by:
   - types-f62m
@@ -52,3 +52,16 @@ This task ties them into a single gated pipeline so the SoT contract becomes a f
 ## Priority
 
 High — gates the rest of the SoT enforcement.
+
+## Phase 1 pilot progress (2026-04-22)
+
+`pnpm types:check-sot` now runs four sequential steps:
+
+1. typecheck @pluralscape/types
+2. typecheck Drizzle parity tests (@pluralscape/db)
+3. typecheck Zod parity tests (@pluralscape/validation)
+4. typecheck OpenAPI-Wire parity
+
+All four green on clean main; gate bites on each when drift is introduced (verified Task 18). Not yet wired to `.github/workflows/ci.yml` as a required blocking check — Phase 4 (lock-in) flips it to blocking after fleet coverage reaches 100%.
+
+Remaining: Phase 4 CI wiring. No more code changes to the orchestrator expected until fleet completeness drives additions.

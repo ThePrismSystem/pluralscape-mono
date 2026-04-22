@@ -15,8 +15,9 @@ import type { KdfMasterKey } from "./crypto-keys.js";
 import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js";
 import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
-import type { MemberPhoto } from "./identity.js";
+import type { Member, MemberPhoto } from "./identity.js";
 import type {
+  AccountId,
   AcknowledgementId,
   AuditLogEntryId,
   BoardMessageId,
@@ -58,6 +59,7 @@ import type {
 } from "./structure.js";
 import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
+import type { Serialize } from "./type-assertions.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";
 
 // ── Tier wrappers ──────────────────────────────────────────────
@@ -131,20 +133,19 @@ export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 // Only defined for completed domain modules.
 
 /**
- * Server-side member representation.
- * T1 encrypted: name, pronouns, description, tags, colors, avatarSource, saturationLevel,
- *   suppressFriendFrontNotification, boardMessageNotificationOnFront
- * T3 plaintext: archived
+ * Server-visible Member metadata — raw Drizzle row shape.
+ * T1 encrypted (inside `encryptedData`): name, pronouns, description, tags,
+ *   colors, avatarSource, saturationLevel, suppressFriendFrontNotification,
+ *   boardMessageNotificationOnFront
+ * T3 plaintext columns: id, systemId, archived, audit timestamps
  */
-export interface ServerMember extends AuditMetadata {
+export interface MemberServerMetadata extends AuditMetadata {
   readonly id: MemberId;
   readonly systemId: SystemId;
   readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 }
-
-/** Client-side member — flat decrypted fields. Identical to the domain Member type. */
-export type ClientMember = import("./identity.js").Member;
 
 /**
  * Server-side fronting session representation.
@@ -598,21 +599,32 @@ export type ClientTimerConfig = TimerConfig;
 // ── Audit log ──────────────────────────────────────────────────
 
 /**
- * Server-side audit log entry representation.
- * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ * Server-visible audit log entry metadata — raw Drizzle row shape.
+ * Plaintext entity (no encryption); ServerMetadata carries DB-internal
+ * columns (partition key, sequence ID) not exposed on the domain
+ * `AuditLogEntry` type.
  *
- * Unlike other Server* types, this has no `encryptedData` field — all fields are T3
- * (server-readable) because the server needs detail for security monitoring
- * (failed login detection, IP pattern analysis).
+ * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ * (server-readable for security monitoring — failed login detection, IP pattern analysis).
  *
  * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
  * The audit_log table intentionally uses `timestamp` to reflect when the
- * event occurred, not when the row was created. The client-side
- * AuditLogEntry type uses `createdAt` — the mapping layer will handle this rename.
+ * event occurred, not when the row was created. The domain-side
+ * AuditLogEntry type uses `createdAt` — the mapping layer handles this rename.
  */
-export interface ServerAuditLogEntry {
+export interface AuditLogEntryServerMetadata {
   readonly id: AuditLogEntryId;
-  readonly systemId: SystemId;
+  /**
+   * DB-internal denormalized account reference — avoids joining through
+   * `systems` to get the owning account. Nullable because audit logs
+   * survive account deletion with references nullified (ON DELETE SET NULL).
+   */
+  readonly accountId: AccountId | null;
+  /**
+   * Nullable because audit logs survive system deletion with references
+   * nullified (ON DELETE SET NULL) — audit history must be preserved.
+   */
+  readonly systemId: SystemId | null;
   readonly eventType: AuditEventType;
   readonly timestamp: UnixMillis;
   readonly actor: AuditActor;
@@ -621,14 +633,11 @@ export interface ServerAuditLogEntry {
   readonly userAgent: string | null;
 }
 
-/** Client-side audit log entry — flat decrypted fields. */
-export type ClientAuditLogEntry = AuditLogEntry;
-
 // ── Server-safe response unions ────────────────────────────────
 
 /** Union of all server-side types safe to return from API routes. */
 export type ServerResponseData =
-  | ServerMember
+  | MemberServerMetadata
   | ServerFrontingSession
   | ServerFrontingComment
   | ServerGroup
@@ -652,11 +661,11 @@ export type ServerResponseData =
   | ServerPollVote
   | ServerAcknowledgementRequest
   | ServerTimerConfig
-  | ServerAuditLogEntry;
+  | AuditLogEntryServerMetadata;
 
 /** Union of all client-side types that must NEVER appear in API responses. */
 export type ClientResponseData =
-  | ClientMember
+  | Member
   | ClientFrontingSession
   | ClientFrontingComment
   | ClientGroup
@@ -680,7 +689,7 @@ export type ClientResponseData =
   | ClientPollVote
   | ClientAcknowledgementRequest
   | ClientTimerConfig
-  | ClientAuditLogEntry;
+  | AuditLogEntry;
 
 // ── Mapping utility types ──────────────────────────────────────
 
@@ -742,3 +751,26 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: KdfMaster
 // WebhookDelivery: T1 (encryptedData) | T3 (eventType, httpStatus, attemptCount, lastAttemptAt, nextRetryAt, createdAt)
 // RealtimeSubscription: T3 (all fields — subscription metadata)
 // SearchQuery/SearchResult: client-only types, not persisted server-side
+
+// ── JSON Wire formats ──────────────────────────────────────────────
+//
+// Serialized representations for HTTP boundaries and OpenAPI parity checks.
+// Derived from domain types via Serialize<T>: branded IDs become plain strings,
+// Date/UnixMillis become string/number, Uint8Array becomes base64 string.
+
+/**
+ * JSON-wire representation of a Member. Derived from the domain `Member`
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ *
+ * This is what crosses the HTTP boundary for Member payloads. The OpenAPI
+ * parity gate asserts `components["schemas"]["Member"]` ≡ `MemberWire`.
+ */
+export type MemberWire = Serialize<Member>;
+
+/**
+ * JSON-wire representation of an AuditLogEntry. Derived from the domain
+ * `AuditLogEntry` type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`.
+ */
+export type AuditLogEntryWire = Serialize<AuditLogEntry>;

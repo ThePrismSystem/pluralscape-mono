@@ -13,8 +13,8 @@ import type {
 import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
+  AuditLogEntryWire,
   ClientAcknowledgementRequest,
-  ClientAuditLogEntry,
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
@@ -27,7 +27,6 @@ import type {
   ClientInnerWorldRegion,
   ClientJournalEntry,
   ClientLifecycleEvent,
-  ClientMember,
   ClientMemberPhoto,
   ClientNote,
   ClientPoll,
@@ -42,9 +41,10 @@ import type {
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
+  MemberWire,
   Plaintext,
+  AuditLogEntryServerMetadata,
   ServerAcknowledgementRequest,
-  ServerAuditLogEntry,
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
@@ -57,7 +57,7 @@ import type {
   ServerLifecycleEvent,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
-  ServerMember,
+  MemberServerMetadata,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -92,6 +92,7 @@ import type { LifecycleEvent } from "../lifecycle.js";
 import type { Relationship } from "../structure.js";
 import type { TimerConfig } from "../timer.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 
 describe("Encrypted<T>", () => {
   it("is assignable to plain T (intersection subtype)", () => {
@@ -158,27 +159,17 @@ describe("Plaintext<T>", () => {
   });
 });
 
-describe("ServerMember", () => {
+describe("MemberServerMetadata", () => {
   it("has encryptedData field", () => {
-    expectTypeOf<ServerMember["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<MemberServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
   });
 
   it("has T3 plaintext fields", () => {
-    expectTypeOf<ServerMember["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<MemberServerMetadata["archived"]>().toEqualTypeOf<boolean>();
   });
 
   it("has id and systemId", () => {
-    expectTypeOf<ServerMember["id"]>().toEqualTypeOf<MemberId>();
-  });
-});
-
-describe("ClientMember", () => {
-  it("has flat decrypted fields matching Member", () => {
-    expectTypeOf<ClientMember>().toEqualTypeOf<Member>();
-  });
-
-  it("has name as string", () => {
-    expectTypeOf<ClientMember["name"]>().toEqualTypeOf<string>();
+    expectTypeOf<MemberServerMetadata["id"]>().toEqualTypeOf<MemberId>();
   });
 });
 
@@ -273,13 +264,12 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("audit log entry pair", () => {
-    expectTypeOf<ServerAuditLogEntry>().toBeObject();
-    expectTypeOf<ServerAuditLogEntry["detail"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ServerAuditLogEntry["timestamp"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<ServerAuditLogEntry["actor"]>().toEqualTypeOf<AuditActor>();
-    expectTypeOf<ServerAuditLogEntry["ipAddress"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ServerAuditLogEntry["userAgent"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ClientAuditLogEntry>().toEqualTypeOf<AuditLogEntry>();
+    expectTypeOf<AuditLogEntryServerMetadata>().toBeObject();
+    expectTypeOf<AuditLogEntryServerMetadata["detail"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<AuditLogEntryServerMetadata["timestamp"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<AuditLogEntryServerMetadata["actor"]>().toEqualTypeOf<AuditActor>();
+    expectTypeOf<AuditLogEntryServerMetadata["ipAddress"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<AuditLogEntryServerMetadata["userAgent"]>().toEqualTypeOf<string | null>();
   });
 
   it("fronting comment pair", () => {
@@ -413,18 +403,44 @@ describe("T1 encrypted field absence on server types", () => {
 
 describe("DecryptFn and EncryptFn", () => {
   it("DecryptFn maps server to client", () => {
-    type Fn = DecryptFn<ServerMember, ClientMember>;
+    type Fn = DecryptFn<MemberServerMetadata, Member>;
     expectTypeOf<Fn>().toBeFunction();
-    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<ServerMember>();
+    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<MemberServerMetadata>();
     expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<KdfMasterKey>();
-    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<ClientMember>();
+    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<Member>();
   });
 
   it("EncryptFn maps client to server", () => {
-    type Fn = EncryptFn<ClientMember, ServerMember>;
+    type Fn = EncryptFn<Member, MemberServerMetadata>;
     expectTypeOf<Fn>().toBeFunction();
-    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<ClientMember>();
+    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<Member>();
     expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<KdfMasterKey>();
-    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<ServerMember>();
+    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<MemberServerMetadata>();
+  });
+});
+
+describe("MemberWire", () => {
+  it("equals Serialize<Member>", () => {
+    expectTypeOf<MemberWire>().toEqualTypeOf<Serialize<Member>>();
+  });
+
+  it("has `id` as plain string (brand stripped)", () => {
+    expectTypeOf<MemberWire["id"]>().toEqualTypeOf<string>();
+  });
+
+  it("has audit timestamps serialized to number (UnixMillis → number)", () => {
+    // Domain Member includes audit UnixMillis fields (createdAt, updatedAt);
+    // Wire should have them as plain number after Serialize.
+    expectTypeOf<MemberWire["createdAt"]>().toEqualTypeOf<number>();
+  });
+});
+
+describe("AuditLogEntryWire", () => {
+  it("equals Serialize<AuditLogEntry>", () => {
+    expectTypeOf<AuditLogEntryWire>().toEqualTypeOf<Serialize<AuditLogEntry>>();
+  });
+
+  it("has `id` as plain string (brand stripped)", () => {
+    expectTypeOf<AuditLogEntryWire["id"]>().toEqualTypeOf<string>();
   });
 });

@@ -2,9 +2,10 @@ import { describe, expectTypeOf, it, expect } from "vitest";
 
 import { serverSafe } from "../server-safe.js";
 
+import type { AuditLogEntry } from "../audit-log.js";
 import type {
+  AuditLogEntryServerMetadata,
   ClientAcknowledgementRequest,
-  ClientAuditLogEntry,
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
@@ -18,7 +19,6 @@ import type {
   ClientInnerWorldRegion,
   ClientJournalEntry,
   ClientLifecycleEvent,
-  ClientMember,
   ClientMemberPhoto,
   ClientNote,
   ClientPoll,
@@ -30,7 +30,6 @@ import type {
   ClientTimerConfig,
   ClientWikiPage,
   ServerAcknowledgementRequest,
-  ServerAuditLogEntry,
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
@@ -44,7 +43,7 @@ import type {
   ServerInnerWorldRegion,
   ServerJournalEntry,
   ServerLifecycleEvent,
-  ServerMember,
+  MemberServerMetadata,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -56,6 +55,7 @@ import type {
   ServerTimerConfig,
   ServerWikiPage,
 } from "../encryption.js";
+import type { Member } from "../identity.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ServerSafe } from "../server-safe.js";
 
@@ -63,7 +63,7 @@ import type { ServerSafe } from "../server-safe.js";
 // If a new Server* type is added to encryption.ts but not to
 // ServerResponseData, this tuple will have the wrong length.
 type AllServerTypes = [
-  ServerMember,
+  MemberServerMetadata,
   ServerFrontingSession,
   ServerFrontingComment,
   ServerGroup,
@@ -87,7 +87,7 @@ type AllServerTypes = [
   ServerPollVote,
   ServerAcknowledgementRequest,
   ServerTimerConfig,
-  ServerAuditLogEntry,
+  AuditLogEntryServerMetadata,
 ];
 
 describe("serverSafe() — Server* types accepted", () => {
@@ -95,8 +95,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<AllServerTypes["length"]>().toEqualTypeOf<25>();
   });
 
-  it("ServerMember extends ServerResponseData", () => {
-    expectTypeOf<ServerMember>().toExtend<ServerResponseData>();
+  it("MemberServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<MemberServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("ServerFrontingSession extends ServerResponseData", () => {
@@ -191,8 +191,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerTimerConfig>().toExtend<ServerResponseData>();
   });
 
-  it("ServerAuditLogEntry extends ServerResponseData", () => {
-    expectTypeOf<ServerAuditLogEntry>().toExtend<ServerResponseData>();
+  it("AuditLogEntryServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<AuditLogEntryServerMetadata>().toExtend<ServerResponseData>();
   });
 });
 
@@ -200,7 +200,7 @@ describe("serverSafe() — Server* types accepted", () => {
 // If a new Client* type is added to encryption.ts but not to
 // ClientResponseData, this tuple will have the wrong length.
 type AllClientTypes = [
-  ClientMember,
+  Member,
   ClientFrontingSession,
   ClientFrontingComment,
   ClientGroup,
@@ -224,7 +224,7 @@ type AllClientTypes = [
   ClientPollVote,
   ClientAcknowledgementRequest,
   ClientTimerConfig,
-  ClientAuditLogEntry,
+  AuditLogEntry,
 ];
 
 describe("ClientResponseData union completeness", () => {
@@ -232,8 +232,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<AllClientTypes["length"]>().toEqualTypeOf<25>();
   });
 
-  it("ClientMember extends ClientResponseData", () => {
-    expectTypeOf<ClientMember>().toExtend<ClientResponseData>();
+  it("Member extends ClientResponseData", () => {
+    expectTypeOf<Member>().toExtend<ClientResponseData>();
   });
 
   it("ClientFrontingSession extends ClientResponseData", () => {
@@ -328,12 +328,12 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientTimerConfig>().toExtend<ClientResponseData>();
   });
 
-  it("ClientAuditLogEntry extends ClientResponseData", () => {
-    expectTypeOf<ClientAuditLogEntry>().toExtend<ClientResponseData>();
+  it("AuditLogEntry extends ClientResponseData", () => {
+    expectTypeOf<AuditLogEntry>().toExtend<ClientResponseData>();
   });
 
   it("no Server* type extends ClientResponseData", () => {
-    expectTypeOf<ServerMember>().not.toExtend<ClientResponseData>();
+    expectTypeOf<MemberServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerFrontingSession>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerFrontingComment>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerGroup>().not.toExtend<ClientResponseData>();
@@ -357,13 +357,13 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ServerPollVote>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerAcknowledgementRequest>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerTimerConfig>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerAuditLogEntry>().not.toExtend<ClientResponseData>();
+    expectTypeOf<AuditLogEntryServerMetadata>().not.toExtend<ClientResponseData>();
   });
 });
 
 describe("serverSafe() — Client* types rejected", () => {
-  it("ClientMember does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientMember>().not.toExtend<ServerResponseData>();
+  it("Member does NOT extend ServerResponseData", () => {
+    expectTypeOf<Member>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientFrontingSession does NOT extend ServerResponseData", () => {
@@ -458,59 +458,61 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<ClientTimerConfig>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientAuditLogEntry does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientAuditLogEntry>().not.toExtend<ServerResponseData>();
+  it("AuditLogEntry does NOT extend ServerResponseData", () => {
+    expectTypeOf<AuditLogEntry>().not.toExtend<ServerResponseData>();
   });
 });
 
 describe("ServerSafe<T> branding", () => {
   it("ServerSafe<T> is not assignable from unbranded T", () => {
-    expectTypeOf<ServerMember>().not.toExtend<ServerSafe<ServerMember>>();
+    expectTypeOf<MemberServerMetadata>().not.toExtend<ServerSafe<MemberServerMetadata>>();
   });
 
   it("ServerSafe<T> extends T (branded is a subtype)", () => {
-    expectTypeOf<ServerSafe<ServerMember>>().toExtend<ServerMember>();
+    expectTypeOf<ServerSafe<MemberServerMetadata>>().toExtend<MemberServerMetadata>();
   });
 
-  it("serverSafe(ServerMember) returns ServerSafe<ServerMember>", () => {
-    const member = {} as ServerMember;
-    expectTypeOf(serverSafe(member)).toEqualTypeOf<ServerSafe<ServerMember>>();
+  it("serverSafe(MemberServerMetadata) returns ServerSafe<MemberServerMetadata>", () => {
+    const member = {} as MemberServerMetadata;
+    expectTypeOf(serverSafe(member)).toEqualTypeOf<ServerSafe<MemberServerMetadata>>();
   });
 
-  it("serverSafe(ServerMember[]) returns ServerSafe<readonly ServerMember[]>", () => {
-    const members = [] as ServerMember[];
-    expectTypeOf(serverSafe(members)).toEqualTypeOf<ServerSafe<readonly ServerMember[]>>();
+  it("serverSafe(MemberServerMetadata[]) returns ServerSafe<readonly MemberServerMetadata[]>", () => {
+    const members = [] as MemberServerMetadata[];
+    expectTypeOf(serverSafe(members)).toEqualTypeOf<ServerSafe<readonly MemberServerMetadata[]>>();
   });
 
-  it("serverSafe(PaginatedResult<ServerMember>) returns ServerSafe<PaginatedResult<ServerMember>>", () => {
-    const page = {} as PaginatedResult<ServerMember>;
-    expectTypeOf(serverSafe(page)).toEqualTypeOf<ServerSafe<PaginatedResult<ServerMember>>>();
+  it("serverSafe(PaginatedResult<MemberServerMetadata>) returns ServerSafe<PaginatedResult<MemberServerMetadata>>", () => {
+    const page = {} as PaginatedResult<MemberServerMetadata>;
+    expectTypeOf(serverSafe(page)).toEqualTypeOf<
+      ServerSafe<PaginatedResult<MemberServerMetadata>>
+    >();
   });
 });
 
 describe("serverSafe() — @ts-expect-error rejections", () => {
-  it("rejects ClientMember", () => {
-    const client = {} as ClientMember;
-    // @ts-expect-error ClientMember is not assignable to ServerResponseData
+  it("rejects Member", () => {
+    const client = {} as Member;
+    // @ts-expect-error Member is not assignable to ServerResponseData
     serverSafe(client);
   });
 
-  it("rejects ClientMember[]", () => {
-    const clients = [] as ClientMember[];
-    // @ts-expect-error ClientMember[] is not assignable to readonly ServerResponseData[]
+  it("rejects Member[]", () => {
+    const clients = [] as Member[];
+    // @ts-expect-error Member[] is not assignable to readonly ServerResponseData[]
     serverSafe(clients);
   });
 
-  it("rejects PaginatedResult<ClientMember>", () => {
-    const page = {} as PaginatedResult<ClientMember>;
-    // @ts-expect-error PaginatedResult<ClientMember> not assignable
+  it("rejects PaginatedResult<Member>", () => {
+    const page = {} as PaginatedResult<Member>;
+    // @ts-expect-error PaginatedResult<Member> not assignable
     serverSafe(page);
   });
 });
 
 describe("serverSafe() — runtime identity", () => {
   it("is an identity function (returns its argument unchanged)", () => {
-    const member = {} as ServerMember;
+    const member = {} as MemberServerMetadata;
     const result = serverSafe(member);
     expect(result).toBe(member);
   });

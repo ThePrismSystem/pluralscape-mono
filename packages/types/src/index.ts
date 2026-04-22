@@ -88,6 +88,12 @@ export { ID_PREFIXES } from "./ids.js";
 // ── Brand utilities ────────────────────────────────────────────────
 export { brandId } from "./brand-utils.js";
 
+// ── Type-level assertions (SoT parity) ──────────────────────────────
+export type { Assert, Equal, Extends, Serialize } from "./type-assertions.js";
+
+// ── SoT manifest ────────────────────────────────────────────────────
+export type { SotEntityManifest } from "./__sot-manifest__.js";
+
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";
 
@@ -268,8 +274,8 @@ export type {
   T2EncryptedBlob,
   EncryptedString,
   ServerSecret,
-  ServerMember,
-  ClientMember,
+  MemberServerMetadata,
+  MemberWire,
   ServerFrontingSession,
   ClientFrontingSession,
   ServerGroup,
@@ -316,8 +322,8 @@ export type {
   ClientFrontingComment,
   ServerPollVote,
   ClientPollVote,
-  ServerAuditLogEntry,
-  ClientAuditLogEntry,
+  AuditLogEntryServerMetadata,
+  AuditLogEntryWire,
   DecryptFn,
   EncryptFn,
   ServerResponseData,

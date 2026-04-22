@@ -1,11 +1,11 @@
 ---
 # db-j1nv
 title: Drizzle-to-types structural-equality integration tests
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T13:55:39Z
-updated_at: 2026-04-21T13:56:25Z
+updated_at: 2026-04-22T23:06:07Z
 parent: types-ltel
 blocked_by:
   - types-f62m
@@ -49,3 +49,9 @@ types- bean "Publish <Entity> and <Entity>ServerMetadata pairs in packages/types
 ## Notes
 
 These are compile-time assertions, not runtime tests — they live in **tests** directories for convention but never execute at runtime.
+
+## Phase 1 pilot progress (2026-04-22)
+
+Pilot Drizzle parity delivered: `packages/db/src/__tests__/type-parity/member.type.test.ts` and `audit-log-entry.type.test.ts` assert `InferSelectModel<typeof table>` structurally equals `<Entity>ServerMetadata` modulo brand-stripping (see `__helpers__.ts`). Brand-drift follow-up tracked as `db-drq1`. Manifest completeness gate added in `__manifest-completeness__.type.test.ts`.
+
+Remaining (fleet, Phase 2): parity tests for the remaining ~23 entities. Pattern is established — copy the pilot files, rename, point at the target Drizzle table.
