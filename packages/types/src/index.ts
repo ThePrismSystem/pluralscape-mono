@@ -91,6 +91,9 @@ export { brandId } from "./brand-utils.js";
 // ── Type-level assertions (SoT parity) ──────────────────────────────
 export type { Assert, Equal, Extends, Serialize } from "./type-assertions.js";
 
+// ── SoT manifest ────────────────────────────────────────────────────
+export type { SotEntityManifest } from "./__sot-manifest__.js";
+
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";
 
