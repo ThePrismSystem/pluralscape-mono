@@ -597,19 +597,20 @@ export type ClientTimerConfig = TimerConfig;
 // ── Audit log ──────────────────────────────────────────────────
 
 /**
- * Server-side audit log entry representation.
- * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ * Server-visible audit log entry metadata — raw Drizzle row shape.
+ * Plaintext entity (no encryption); ServerMetadata carries DB-internal
+ * columns (partition key, sequence ID) not exposed on the domain
+ * `AuditLogEntry` type.
  *
- * Unlike other Server* types, this has no `encryptedData` field — all fields are T3
- * (server-readable) because the server needs detail for security monitoring
- * (failed login detection, IP pattern analysis).
+ * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ * (server-readable for security monitoring — failed login detection, IP pattern analysis).
  *
  * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
  * The audit_log table intentionally uses `timestamp` to reflect when the
- * event occurred, not when the row was created. The client-side
- * AuditLogEntry type uses `createdAt` — the mapping layer will handle this rename.
+ * event occurred, not when the row was created. The domain-side
+ * AuditLogEntry type uses `createdAt` — the mapping layer handles this rename.
  */
-export interface ServerAuditLogEntry {
+export interface AuditLogEntryServerMetadata {
   readonly id: AuditLogEntryId;
   readonly systemId: SystemId;
   readonly eventType: AuditEventType;
@@ -619,9 +620,6 @@ export interface ServerAuditLogEntry {
   readonly ipAddress: string | null;
   readonly userAgent: string | null;
 }
-
-/** Client-side audit log entry — flat decrypted fields. */
-export type ClientAuditLogEntry = AuditLogEntry;
 
 // ── Server-safe response unions ────────────────────────────────
 
@@ -651,7 +649,7 @@ export type ServerResponseData =
   | ServerPollVote
   | ServerAcknowledgementRequest
   | ServerTimerConfig
-  | ServerAuditLogEntry;
+  | AuditLogEntryServerMetadata;
 
 /** Union of all client-side types that must NEVER appear in API responses. */
 export type ClientResponseData =
@@ -679,7 +677,7 @@ export type ClientResponseData =
   | ClientPollVote
   | ClientAcknowledgementRequest
   | ClientTimerConfig
-  | ClientAuditLogEntry;
+  | AuditLogEntry;
 
 // ── Mapping utility types ──────────────────────────────────────
 
@@ -757,3 +755,10 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: KdfMaster
  * parity gate asserts `components["schemas"]["Member"]` ≡ `MemberWire`.
  */
 export type MemberWire = Serialize<Member>;
+
+/**
+ * JSON-wire representation of an AuditLogEntry. Derived from the domain
+ * `AuditLogEntry` type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`.
+ */
+export type AuditLogEntryWire = Serialize<AuditLogEntry>;

@@ -13,8 +13,8 @@ import type {
 import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
+  AuditLogEntryWire,
   ClientAcknowledgementRequest,
-  ClientAuditLogEntry,
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
@@ -43,8 +43,8 @@ import type {
   EncryptionAlgorithm,
   MemberWire,
   Plaintext,
+  AuditLogEntryServerMetadata,
   ServerAcknowledgementRequest,
-  ServerAuditLogEntry,
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
@@ -264,13 +264,12 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("audit log entry pair", () => {
-    expectTypeOf<ServerAuditLogEntry>().toBeObject();
-    expectTypeOf<ServerAuditLogEntry["detail"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ServerAuditLogEntry["timestamp"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<ServerAuditLogEntry["actor"]>().toEqualTypeOf<AuditActor>();
-    expectTypeOf<ServerAuditLogEntry["ipAddress"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ServerAuditLogEntry["userAgent"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ClientAuditLogEntry>().toEqualTypeOf<AuditLogEntry>();
+    expectTypeOf<AuditLogEntryServerMetadata>().toBeObject();
+    expectTypeOf<AuditLogEntryServerMetadata["detail"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<AuditLogEntryServerMetadata["timestamp"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<AuditLogEntryServerMetadata["actor"]>().toEqualTypeOf<AuditActor>();
+    expectTypeOf<AuditLogEntryServerMetadata["ipAddress"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<AuditLogEntryServerMetadata["userAgent"]>().toEqualTypeOf<string | null>();
   });
 
   it("fronting comment pair", () => {
@@ -433,5 +432,15 @@ describe("MemberWire", () => {
     // Domain Member includes audit UnixMillis fields (createdAt, updatedAt);
     // Wire should have them as plain number after Serialize.
     expectTypeOf<MemberWire["createdAt"]>().toEqualTypeOf<number>();
+  });
+});
+
+describe("AuditLogEntryWire", () => {
+  it("equals Serialize<AuditLogEntry>", () => {
+    expectTypeOf<AuditLogEntryWire>().toEqualTypeOf<Serialize<AuditLogEntry>>();
+  });
+
+  it("has `id` as plain string (brand stripped)", () => {
+    expectTypeOf<AuditLogEntryWire["id"]>().toEqualTypeOf<string>();
   });
 });

@@ -2,9 +2,10 @@ import { describe, expectTypeOf, it, expect } from "vitest";
 
 import { serverSafe } from "../server-safe.js";
 
+import type { AuditLogEntry } from "../audit-log.js";
 import type {
+  AuditLogEntryServerMetadata,
   ClientAcknowledgementRequest,
-  ClientAuditLogEntry,
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
@@ -29,7 +30,6 @@ import type {
   ClientTimerConfig,
   ClientWikiPage,
   ServerAcknowledgementRequest,
-  ServerAuditLogEntry,
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
@@ -87,7 +87,7 @@ type AllServerTypes = [
   ServerPollVote,
   ServerAcknowledgementRequest,
   ServerTimerConfig,
-  ServerAuditLogEntry,
+  AuditLogEntryServerMetadata,
 ];
 
 describe("serverSafe() — Server* types accepted", () => {
@@ -191,8 +191,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerTimerConfig>().toExtend<ServerResponseData>();
   });
 
-  it("ServerAuditLogEntry extends ServerResponseData", () => {
-    expectTypeOf<ServerAuditLogEntry>().toExtend<ServerResponseData>();
+  it("AuditLogEntryServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<AuditLogEntryServerMetadata>().toExtend<ServerResponseData>();
   });
 });
 
@@ -224,7 +224,7 @@ type AllClientTypes = [
   ClientPollVote,
   ClientAcknowledgementRequest,
   ClientTimerConfig,
-  ClientAuditLogEntry,
+  AuditLogEntry,
 ];
 
 describe("ClientResponseData union completeness", () => {
@@ -328,8 +328,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientTimerConfig>().toExtend<ClientResponseData>();
   });
 
-  it("ClientAuditLogEntry extends ClientResponseData", () => {
-    expectTypeOf<ClientAuditLogEntry>().toExtend<ClientResponseData>();
+  it("AuditLogEntry extends ClientResponseData", () => {
+    expectTypeOf<AuditLogEntry>().toExtend<ClientResponseData>();
   });
 
   it("no Server* type extends ClientResponseData", () => {
@@ -357,7 +357,7 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ServerPollVote>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerAcknowledgementRequest>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerTimerConfig>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerAuditLogEntry>().not.toExtend<ClientResponseData>();
+    expectTypeOf<AuditLogEntryServerMetadata>().not.toExtend<ClientResponseData>();
   });
 });
 
@@ -458,8 +458,8 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<ClientTimerConfig>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientAuditLogEntry does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientAuditLogEntry>().not.toExtend<ServerResponseData>();
+  it("AuditLogEntry does NOT extend ServerResponseData", () => {
+    expectTypeOf<AuditLogEntry>().not.toExtend<ServerResponseData>();
   });
 });
 
