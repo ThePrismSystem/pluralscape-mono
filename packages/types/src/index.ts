@@ -88,6 +88,9 @@ export { ID_PREFIXES } from "./ids.js";
 // ── Brand utilities ────────────────────────────────────────────────
 export { brandId } from "./brand-utils.js";
 
+// ── Type-level assertions (SoT parity) ──────────────────────────────
+export type { Assert, Equal, Extends, Serialize } from "./type-assertions.js";
+
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";
 
