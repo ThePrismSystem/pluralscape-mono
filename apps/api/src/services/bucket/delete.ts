@@ -1,8 +1,16 @@
-import { buckets } from "@pluralscape/db/pg";
-import { sql } from "drizzle-orm";
+import {
+  bucketContentTags,
+  bucketKeyRotations,
+  buckets,
+  fieldBucketVisibility,
+  friendBucketAssignments,
+  keyGrants,
+} from "@pluralscape/db/pg";
+import { and, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { deleteEntity } from "../../lib/entity-lifecycle.js";
 import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
@@ -17,27 +25,45 @@ async function checkBucketDependents(
   systemId: SystemId,
   bucketId: BucketId,
 ): Promise<void> {
-  const result = await tx.execute<{ type: string; count: number }>(sql`
-    SELECT 'bucketContentTags' AS type, COUNT(*)::int AS count
-      FROM bucket_content_tags WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
-    UNION ALL
-    SELECT 'keyGrants', COUNT(*)::int
-      FROM key_grants WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
-    UNION ALL
-    SELECT 'friendBucketAssignments', COUNT(*)::int
-      FROM friend_bucket_assignments WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
-    UNION ALL
-    SELECT 'fieldBucketVisibility', COUNT(*)::int
-      FROM field_bucket_visibility WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
-    UNION ALL
-    SELECT 'bucketKeyRotations', COUNT(*)::int
-      FROM bucket_key_rotations WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
-  `);
-
-  const rows = Array.isArray(result)
-    ? result
-    : (result as { rows: { type: string; count: number }[] }).rows;
-  const dependents = rows.filter((r) => r.count > 0).map((r) => ({ type: r.type, count: r.count }));
+  const { dependents } = await checkDependents(tx, [
+    {
+      table: bucketContentTags,
+      predicate: and(
+        eq(bucketContentTags.bucketId, bucketId),
+        eq(bucketContentTags.systemId, systemId),
+      ),
+      typeName: "bucketContentTags",
+    },
+    {
+      table: keyGrants,
+      predicate: and(eq(keyGrants.bucketId, bucketId), eq(keyGrants.systemId, systemId)),
+      typeName: "keyGrants",
+    },
+    {
+      table: friendBucketAssignments,
+      predicate: and(
+        eq(friendBucketAssignments.bucketId, bucketId),
+        eq(friendBucketAssignments.systemId, systemId),
+      ),
+      typeName: "friendBucketAssignments",
+    },
+    {
+      table: fieldBucketVisibility,
+      predicate: and(
+        eq(fieldBucketVisibility.bucketId, bucketId),
+        eq(fieldBucketVisibility.systemId, systemId),
+      ),
+      typeName: "fieldBucketVisibility",
+    },
+    {
+      table: bucketKeyRotations,
+      predicate: and(
+        eq(bucketKeyRotations.bucketId, bucketId),
+        eq(bucketKeyRotations.systemId, systemId),
+      ),
+      typeName: "bucketKeyRotations",
+    },
+  ]);
 
   if (dependents.length > 0) {
     throw new ApiHttpError(

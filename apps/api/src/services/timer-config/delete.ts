@@ -1,8 +1,9 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
-import { and, count, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -39,20 +40,23 @@ export async function deleteTimerConfig(
     }
 
     // Check for non-archived dependent check-in records
-    const [recordCount] = await tx
-      .select({ count: count() })
-      .from(checkInRecords)
-      .where(and(eq(checkInRecords.timerConfigId, timerId), eq(checkInRecords.archived, false)));
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: checkInRecords,
+        predicate: and(
+          eq(checkInRecords.timerConfigId, timerId),
+          eq(checkInRecords.archived, false),
+        ),
+        typeName: "checkInRecords",
+      },
+    ]);
 
-    if (!recordCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    if (recordCount.count > 0) {
+    const recordDep = dependents.find((d) => d.type === "checkInRecords");
+    if (recordDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Timer config has ${String(recordCount.count)} non-archived check-in record(s). Archive or delete records first.`,
+        `Timer config has ${String(recordDep.count)} non-archived check-in record(s). Archive or delete records first.`,
       );
     }
 

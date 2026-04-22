@@ -36,8 +36,8 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
   dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("../../services/hierarchy-service-helpers.js", () => ({
-  checkDependents: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../lib/check-dependents.js", () => ({
+  checkDependents: vi.fn().mockResolvedValue({ dependents: [] }),
 }));
 
 vi.mock("../../lib/occ-update.js", () => ({
@@ -68,7 +68,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity } = await import("../../lib/entity-lifecycle.js");
-const { checkDependents } = await import("../../services/hierarchy-service-helpers.js");
+const { checkDependents } = await import("../../lib/check-dependents.js");
 const { assertOccUpdated } = await import("../../lib/occ-update.js");
 const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher.js");
 const { createHierarchyService } = await import("../../services/hierarchy-service-factory.js");
@@ -523,7 +523,7 @@ describe("hierarchy-service-factory — remove", () => {
       chain,
       expect.objectContaining({ eventType: "entity.deleted" }),
     );
-    expect(checkDependents).toHaveBeenCalledWith(chain, ENTITY_ID, SYSTEM_ID, "Entity", []);
+    expect(checkDependents).toHaveBeenCalledWith(chain, []);
   });
 
   it("throws NOT_FOUND when entity does not exist", async () => {

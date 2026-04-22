@@ -4,6 +4,7 @@ import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
 
@@ -55,20 +56,20 @@ export async function archiveSystem(
     }
 
     // 3. Check for non-archived members
-    const [memberCount] = await tx
-      .select({ count: count() })
-      .from(members)
-      .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: members,
+        predicate: and(eq(members.systemId, systemId), eq(members.archived, false)),
+        typeName: "activeMembers",
+      },
+    ]);
 
-    if (!memberCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    if (memberCount.count > 0) {
+    const memberDep = dependents.find((d) => d.type === "activeMembers");
+    if (memberDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `System has ${String(memberCount.count)} active member(s). Delete all members before deleting the system.`,
+        `System has ${String(memberDep.count)} active member(s). Delete all members before deleting the system.`,
       );
     }
 

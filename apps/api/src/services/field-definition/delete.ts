@@ -4,10 +4,11 @@ import {
   fieldDefinitions,
   fieldValues,
 } from "@pluralscape/db/pg";
-import { and, count, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -47,41 +48,32 @@ export async function deleteFieldDefinition(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
     }
 
-    const [[valueCount], [visibilityCount], [scopeCount]] = await Promise.all([
-      tx
-        .select({ count: count() })
-        .from(fieldValues)
-        .where(and(eq(fieldValues.fieldDefinitionId, fieldId), eq(fieldValues.systemId, systemId))),
-      tx
-        .select({ count: count() })
-        .from(fieldBucketVisibility)
-        .where(
-          and(
-            eq(fieldBucketVisibility.fieldDefinitionId, fieldId),
-            eq(fieldBucketVisibility.systemId, systemId),
-          ),
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: fieldValues,
+        predicate: and(
+          eq(fieldValues.fieldDefinitionId, fieldId),
+          eq(fieldValues.systemId, systemId),
         ),
-      tx
-        .select({ count: count() })
-        .from(fieldDefinitionScopes)
-        .where(
-          and(
-            eq(fieldDefinitionScopes.fieldDefinitionId, fieldId),
-            eq(fieldDefinitionScopes.systemId, systemId),
-          ),
+        typeName: "fieldValues",
+      },
+      {
+        table: fieldBucketVisibility,
+        predicate: and(
+          eq(fieldBucketVisibility.fieldDefinitionId, fieldId),
+          eq(fieldBucketVisibility.systemId, systemId),
         ),
+        typeName: "bucketVisibility",
+      },
+      {
+        table: fieldDefinitionScopes,
+        predicate: and(
+          eq(fieldDefinitionScopes.fieldDefinitionId, fieldId),
+          eq(fieldDefinitionScopes.systemId, systemId),
+        ),
+        typeName: "scopes",
+      },
     ]);
-
-    if (!valueCount || !visibilityCount || !scopeCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    type FieldDefinitionDependentType = "fieldValues" | "bucketVisibility" | "scopes";
-    const dependents: { type: FieldDefinitionDependentType; count: number }[] = [];
-    if (valueCount.count > 0) dependents.push({ type: "fieldValues", count: valueCount.count });
-    if (visibilityCount.count > 0)
-      dependents.push({ type: "bucketVisibility", count: visibilityCount.count });
-    if (scopeCount.count > 0) dependents.push({ type: "scopes", count: scopeCount.count });
 
     if (dependents.length > 0 && !force) {
       throw new ApiHttpError(
@@ -94,15 +86,16 @@ export async function deleteFieldDefinition(
 
     // Cascade-delete dependents when force is enabled
     if (dependents.length > 0) {
+      const hasType = (t: string): boolean => dependents.some((d) => d.type === t);
       await Promise.all([
-        valueCount.count > 0
+        hasType("fieldValues")
           ? tx
               .delete(fieldValues)
               .where(
                 and(eq(fieldValues.fieldDefinitionId, fieldId), eq(fieldValues.systemId, systemId)),
               )
           : Promise.resolve(),
-        visibilityCount.count > 0
+        hasType("bucketVisibility")
           ? tx
               .delete(fieldBucketVisibility)
               .where(
@@ -112,7 +105,7 @@ export async function deleteFieldDefinition(
                 ),
               )
           : Promise.resolve(),
-        scopeCount.count > 0
+        hasType("scopes")
           ? tx
               .delete(fieldDefinitionScopes)
               .where(

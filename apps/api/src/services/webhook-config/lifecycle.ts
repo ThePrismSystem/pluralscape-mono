@@ -3,6 +3,7 @@ import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { archiveEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -47,22 +48,23 @@ export async function deleteWebhookConfig(
     }
 
     // Check for pending deliveries
-    const [pendingCount] = await tx
-      .select({ count: count() })
-      .from(webhookDeliveries)
-      .where(
-        and(eq(webhookDeliveries.webhookId, webhookId), eq(webhookDeliveries.status, "pending")),
-      );
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: webhookDeliveries,
+        predicate: and(
+          eq(webhookDeliveries.webhookId, webhookId),
+          eq(webhookDeliveries.status, "pending"),
+        ),
+        typeName: "pendingDeliveries",
+      },
+    ]);
 
-    if (!pendingCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    if (pendingCount.count > 0) {
+    const pendingDep = dependents.find((d) => d.type === "pendingDeliveries");
+    if (pendingDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Webhook config has ${String(pendingCount.count)} pending delivery(ies). Wait for deliveries to complete or delete them first.`,
+        `Webhook config has ${String(pendingDep.count)} pending delivery(ies). Wait for deliveries to complete or delete them first.`,
       );
     }
 

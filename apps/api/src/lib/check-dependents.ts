@@ -6,7 +6,13 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export interface DependentCheck {
   readonly table: PgTable;
-  readonly predicate: SQL;
+  /**
+   * Drizzle `and()` / `or()` return `SQL | undefined`. We accept that shape
+   * directly so callers can pass `and(...)` without non-null assertions; an
+   * `undefined` predicate means "no filter" and will count every row in the
+   * table (matches `.where(undefined)` semantics in drizzle).
+   */
+  readonly predicate: SQL | undefined;
   readonly typeName: string;
 }
 

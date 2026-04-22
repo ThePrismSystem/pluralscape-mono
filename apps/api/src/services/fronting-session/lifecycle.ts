@@ -1,8 +1,9 @@
 import { frontingComments, frontingSessions } from "@pluralscape/db/pg";
-import { and, count, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { archiveEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -51,25 +52,23 @@ export async function deleteFrontingSession(
     }
 
     // Check for non-archived dependent fronting comments
-    const [commentCount] = await tx
-      .select({ count: count() })
-      .from(frontingComments)
-      .where(
-        and(
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: frontingComments,
+        predicate: and(
           eq(frontingComments.frontingSessionId, sessionId),
           eq(frontingComments.archived, false),
         ),
-      );
+        typeName: "frontingComments",
+      },
+    ]);
 
-    if (!commentCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    if (commentCount.count > 0) {
+    const commentDep = dependents.find((d) => d.type === "frontingComments");
+    if (commentDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Fronting session has ${String(commentCount.count)} non-archived comment(s). Archive or delete comments first.`,
+        `Fronting session has ${String(commentDep.count)} non-archived comment(s). Archive or delete comments first.`,
       );
     }
 

@@ -17,6 +17,7 @@ import { and, count, eq, or } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -161,125 +162,72 @@ export async function deleteMember(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
     }
 
-    const [
-      [photoCount],
-      [fieldValueCount],
-      [membershipCount],
-      [frontingSessionCount],
-      [relationshipCount],
-      [noteCount],
-      [frontingCommentCount],
-      [checkInCount],
-      [pollCount],
-      [ackCount],
-      [entityMemberLinkCount],
-    ] = await Promise.all([
-      tx
-        .select({ count: count() })
-        .from(memberPhotos)
-        .where(and(eq(memberPhotos.memberId, memberId), eq(memberPhotos.systemId, systemId))),
-      tx
-        .select({ count: count() })
-        .from(fieldValues)
-        .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId))),
-      tx
-        .select({ count: count() })
-        .from(groupMemberships)
-        .where(
-          and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId)),
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: memberPhotos,
+        predicate: and(eq(memberPhotos.memberId, memberId), eq(memberPhotos.systemId, systemId)),
+        typeName: "photos",
+      },
+      {
+        table: fieldValues,
+        predicate: and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)),
+        typeName: "fieldValues",
+      },
+      {
+        table: groupMemberships,
+        predicate: and(
+          eq(groupMemberships.memberId, memberId),
+          eq(groupMemberships.systemId, systemId),
         ),
-      tx
-        .select({ count: count() })
-        .from(frontingSessions)
-        .where(eq(frontingSessions.memberId, memberId)),
-      tx
-        .select({ count: count() })
-        .from(relationships)
-        .where(
-          or(
-            eq(relationships.sourceMemberId, memberId),
-            eq(relationships.targetMemberId, memberId),
-          ),
+        typeName: "groupMemberships",
+      },
+      {
+        table: frontingSessions,
+        predicate: eq(frontingSessions.memberId, memberId),
+        typeName: "frontingSessions",
+      },
+      {
+        table: relationships,
+        predicate: or(
+          eq(relationships.sourceMemberId, memberId),
+          eq(relationships.targetMemberId, memberId),
         ),
-      tx
-        .select({ count: count() })
-        .from(notes)
-        .where(and(eq(notes.authorEntityType, "member"), eq(notes.authorEntityId, memberId))),
-      tx
-        .select({ count: count() })
-        .from(frontingComments)
-        .where(eq(frontingComments.memberId, memberId)),
-      tx
-        .select({ count: count() })
-        .from(checkInRecords)
-        .where(eq(checkInRecords.respondedByMemberId, memberId)),
-      tx.select({ count: count() }).from(polls).where(eq(polls.createdByMemberId, memberId)),
-      tx
-        .select({ count: count() })
-        .from(acknowledgements)
-        .where(eq(acknowledgements.createdByMemberId, memberId)),
-      tx
-        .select({ count: count() })
-        .from(systemStructureEntityMemberLinks)
-        .where(
-          and(
-            eq(systemStructureEntityMemberLinks.memberId, memberId),
-            eq(systemStructureEntityMemberLinks.systemId, systemId),
-          ),
+        typeName: "relationships",
+      },
+      {
+        table: notes,
+        predicate: and(eq(notes.authorEntityType, "member"), eq(notes.authorEntityId, memberId)),
+        typeName: "notes",
+      },
+      {
+        table: frontingComments,
+        predicate: eq(frontingComments.memberId, memberId),
+        typeName: "frontingComments",
+      },
+      {
+        table: checkInRecords,
+        predicate: eq(checkInRecords.respondedByMemberId, memberId),
+        typeName: "checkInRecords",
+      },
+      {
+        table: polls,
+        predicate: eq(polls.createdByMemberId, memberId),
+        typeName: "polls",
+      },
+      {
+        table: acknowledgements,
+        predicate: eq(acknowledgements.createdByMemberId, memberId),
+        typeName: "acknowledgements",
+      },
+      {
+        table: systemStructureEntityMemberLinks,
+        predicate: and(
+          eq(systemStructureEntityMemberLinks.memberId, memberId),
+          eq(systemStructureEntityMemberLinks.systemId, systemId),
         ),
+        typeName: "structureEntityMemberLinks",
+      },
     ]);
-
-    if (
-      !photoCount ||
-      !fieldValueCount ||
-      !membershipCount ||
-      !frontingSessionCount ||
-      !relationshipCount ||
-      !noteCount ||
-      !frontingCommentCount ||
-      !checkInCount ||
-      !pollCount ||
-      !ackCount ||
-      !entityMemberLinkCount
-    ) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    type MemberDependentType =
-      | "photos"
-      | "fieldValues"
-      | "groupMemberships"
-      | "frontingSessions"
-      | "relationships"
-      | "notes"
-      | "frontingComments"
-      | "checkInRecords"
-      | "polls"
-      | "acknowledgements"
-      | "structureEntityMemberLinks";
-
-    const dependents: { type: MemberDependentType; count: number }[] = [];
-    if (photoCount.count > 0) dependents.push({ type: "photos", count: photoCount.count });
-    if (fieldValueCount.count > 0)
-      dependents.push({ type: "fieldValues", count: fieldValueCount.count });
-    if (membershipCount.count > 0)
-      dependents.push({ type: "groupMemberships", count: membershipCount.count });
-    if (frontingSessionCount.count > 0)
-      dependents.push({ type: "frontingSessions", count: frontingSessionCount.count });
-    if (relationshipCount.count > 0)
-      dependents.push({ type: "relationships", count: relationshipCount.count });
-    if (noteCount.count > 0) dependents.push({ type: "notes", count: noteCount.count });
-    if (frontingCommentCount.count > 0)
-      dependents.push({ type: "frontingComments", count: frontingCommentCount.count });
-    if (checkInCount.count > 0)
-      dependents.push({ type: "checkInRecords", count: checkInCount.count });
-    if (pollCount.count > 0) dependents.push({ type: "polls", count: pollCount.count });
-    if (ackCount.count > 0) dependents.push({ type: "acknowledgements", count: ackCount.count });
-    if (entityMemberLinkCount.count > 0)
-      dependents.push({
-        type: "structureEntityMemberLinks",
-        count: entityMemberLinkCount.count,
-      });
 
     if (dependents.length > 0) {
       throw new ApiHttpError(
