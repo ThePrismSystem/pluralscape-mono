@@ -33,7 +33,9 @@ Pluralscape's canonical brand is symbol-keyed: `type Brand<T, B> = T & { readonl
 
 ### Optional-vs-`| undefined` semantics
 
-`packages/types` uses `?:` (key may be missing) for optional fields. Zod's `.optional()` infers `T | undefined` (key present, value undefined). Pilot-decided approach: [FILL IN AFTER PILOT] — either (a) add `OptionalEqual<A, B>` helper that treats `T?` and `T | undefined` as equivalent, or (b) normalize `packages/types` to `T | undefined` for optional entity fields. Fleet PRs follow whichever the pilot chose.
+`packages/types` uses `?:` (key may be missing) for optional fields. Zod's `.optional()` infers `T | undefined` (key present, value undefined).
+
+**Pilot decision (2026-04-22):** Option B — normalize `packages/types` input-body optional fields to `T | undefined`. The Member pilot (`packages/validation/src/__tests__/type-parity/member.type.test.ts`) surfaced **0 optional-vs-undefined mismatches** across `CreateMemberBody` / `UpdateMemberBody` / `DuplicateMemberBody`, because those bodies happen to contain only required fields. Zero is well below the `≥ 10` threshold at which a helper would pay off, so the fleet convention is: when a future input-body type introduces an optional field that pairs with a `.optional()` Zod schema, declare it as `readonly field: T | undefined` (not `readonly field?: T`) so `Equal<z.infer<...>, Body>` remains green. Full-entity types (`<Entity>`) keep `?:` optional markers — only input-body types on the API boundary convergence to Zod's inference shape. `Equal` remains the default parity helper; no `OptionalEqual` sibling is introduced.
 
 ### Enforcement — `pnpm types:check-sot`
 
