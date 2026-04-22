@@ -8,6 +8,7 @@
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
     "typecheck": "turbo typecheck",
+    "types:check-sot": "tsx scripts/check-types-sot.ts",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "test": "vitest run",
