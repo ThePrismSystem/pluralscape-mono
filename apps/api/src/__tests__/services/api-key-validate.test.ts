@@ -62,7 +62,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 // ── Import under test ───────────────────────────────────────────────
 
-const { validateApiKey } = await import("../../services/api-key.service.js");
+const { validateApiKey } = await import("../../services/api-key/validate.js");
 
 // ── Fixtures ────────────────────────────────────────────────────────
 

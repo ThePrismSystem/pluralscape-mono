@@ -34,15 +34,13 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const {
-  createFrontingReport,
-  updateFrontingReport,
-  listFrontingReports,
-  getFrontingReport,
-  deleteFrontingReport,
-  archiveFrontingReport,
-  restoreFrontingReport,
-} = await import("../../services/fronting-report.service.js");
+const { createFrontingReport } = await import("../../services/fronting-report/create.js");
+const { updateFrontingReport } = await import("../../services/fronting-report/update.js");
+const { listFrontingReports, getFrontingReport } =
+  await import("../../services/fronting-report/queries.js");
+const { deleteFrontingReport } = await import("../../services/fronting-report/delete.js");
+const { archiveFrontingReport, restoreFrontingReport } =
+  await import("../../services/fronting-report/lifecycle.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

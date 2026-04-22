@@ -11,21 +11,30 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createStructureEntity } from "../../services/structure/entity-crud/create.js";
+import {
+  archiveStructureEntity,
+  deleteStructureEntity,
+  restoreStructureEntity,
+} from "../../services/structure/entity-crud/lifecycle.js";
+import {
+  getStructureEntity,
+  listStructureEntities,
+} from "../../services/structure/entity-crud/queries.js";
+import { updateStructureEntity } from "../../services/structure/entity-crud/update.js";
+import { archiveEntityType } from "../../services/structure/entity-type/archive.js";
+import { createEntityType } from "../../services/structure/entity-type/create.js";
+import { deleteEntityType } from "../../services/structure/entity-type/delete.js";
+import { getEntityType } from "../../services/structure/entity-type/get.js";
+import { listEntityTypes } from "../../services/structure/entity-type/list.js";
+import { restoreEntityType } from "../../services/structure/entity-type/restore.js";
+import { updateEntityType } from "../../services/structure/entity-type/update.js";
 import {
   createEntityAssociation,
   deleteEntityAssociation,
   getEntityHierarchy,
   listEntityAssociations,
 } from "../../services/structure-entity-association.service.js";
-import {
-  archiveStructureEntity,
-  createStructureEntity,
-  deleteStructureEntity,
-  getStructureEntity,
-  listStructureEntities,
-  restoreStructureEntity,
-  updateStructureEntity,
-} from "../../services/structure-entity-crud.service.js";
 import {
   createEntityLink,
   deleteEntityLink,
@@ -37,15 +46,6 @@ import {
   deleteEntityMemberLink,
   listEntityMemberLinks,
 } from "../../services/structure-entity-member-link.service.js";
-import {
-  archiveEntityType,
-  createEntityType,
-  deleteEntityType,
-  getEntityType,
-  listEntityTypes,
-  restoreEntityType,
-  updateEntityType,
-} from "../../services/structure-entity-type.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

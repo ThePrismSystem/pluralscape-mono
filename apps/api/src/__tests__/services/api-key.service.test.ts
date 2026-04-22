@@ -90,8 +90,9 @@ vi.mock("@pluralscape/db/pg", () => ({
 
 // ── Imports after mocks ───────────────────────────────────────────
 
-const { createApiKey, listApiKeys, getApiKey, revokeApiKey } =
-  await import("../../services/api-key.service.js");
+const { createApiKey } = await import("../../services/api-key/create.js");
+const { listApiKeys, getApiKey } = await import("../../services/api-key/queries.js");
+const { revokeApiKey } = await import("../../services/api-key/revoke.js");
 
 // ── Fixtures ──────────────────────────────────────────────────────
 

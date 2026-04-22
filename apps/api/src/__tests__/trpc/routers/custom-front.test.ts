@@ -19,25 +19,31 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/custom-front.service.js", () => ({
+vi.mock("../../../services/custom-front/create.js", () => ({
   createCustomFront: vi.fn(),
+}));
+vi.mock("../../../services/custom-front/queries.js", () => ({
   getCustomFront: vi.fn(),
   listCustomFronts: vi.fn(),
+}));
+vi.mock("../../../services/custom-front/update.js", () => ({
   updateCustomFront: vi.fn(),
+}));
+vi.mock("../../../services/custom-front/lifecycle.js", () => ({
   archiveCustomFront: vi.fn(),
   restoreCustomFront: vi.fn(),
+}));
+vi.mock("../../../services/custom-front/delete.js", () => ({
   deleteCustomFront: vi.fn(),
 }));
 
-const {
-  createCustomFront,
-  getCustomFront,
-  listCustomFronts,
-  updateCustomFront,
-  archiveCustomFront,
-  restoreCustomFront,
-  deleteCustomFront,
-} = await import("../../../services/custom-front.service.js");
+const { createCustomFront } = await import("../../../services/custom-front/create.js");
+const { getCustomFront, listCustomFronts } =
+  await import("../../../services/custom-front/queries.js");
+const { updateCustomFront } = await import("../../../services/custom-front/update.js");
+const { archiveCustomFront, restoreCustomFront } =
+  await import("../../../services/custom-front/lifecycle.js");
+const { deleteCustomFront } = await import("../../../services/custom-front/delete.js");
 
 const { customFrontRouter } = await import("../../../trpc/routers/custom-front.js");
 

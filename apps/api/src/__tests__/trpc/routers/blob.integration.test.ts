@@ -47,7 +47,8 @@ vi.mock("../../../lib/storage.js", async (): Promise<typeof import("../../../lib
   };
 });
 
-import { confirmUpload, createUploadUrl } from "../../../services/blob.service.js";
+import { confirmUpload } from "../../../services/blob/confirm-upload.js";
+import { createUploadUrl } from "../../../services/blob/create-upload-url.js";
 import { blobRouter } from "../../../trpc/routers/blob.js";
 import { noopAudit } from "../../helpers/integration-setup.js";
 import { createMockBlobQuota, createMockBlobStorage } from "../../helpers/mock-blob-storage.js";

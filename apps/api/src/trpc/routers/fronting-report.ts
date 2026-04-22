@@ -5,15 +5,14 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { createFrontingReport } from "../../services/fronting-report/create.js";
+import { deleteFrontingReport } from "../../services/fronting-report/delete.js";
 import {
   archiveFrontingReport,
-  createFrontingReport,
-  deleteFrontingReport,
-  getFrontingReport,
-  listFrontingReports,
   restoreFrontingReport,
-  updateFrontingReport,
-} from "../../services/fronting-report.service.js";
+} from "../../services/fronting-report/lifecycle.js";
+import { getFrontingReport, listFrontingReports } from "../../services/fronting-report/queries.js";
+import { updateFrontingReport } from "../../services/fronting-report/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

@@ -9,21 +9,19 @@ import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
 import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
+import { archivePoll } from "../../services/poll/archive.js";
+import { closePoll } from "../../services/poll/close.js";
+import { createPoll } from "../../services/poll/create.js";
+import { deletePoll } from "../../services/poll/delete.js";
+import { getPoll } from "../../services/poll/get.js";
+import { listPolls } from "../../services/poll/list.js";
+import { restorePoll } from "../../services/poll/restore.js";
+import { updatePoll } from "../../services/poll/update.js";
 import { deletePollVote } from "../../services/poll-vote/archive.js";
 import { castVote } from "../../services/poll-vote/cast.js";
 import { listVotes } from "../../services/poll-vote/list.js";
 import { getPollResults } from "../../services/poll-vote/results.js";
 import { updatePollVote } from "../../services/poll-vote/update.js";
-import {
-  archivePoll,
-  closePoll,
-  createPoll,
-  deletePoll,
-  getPoll,
-  listPolls,
-  restorePoll,
-  updatePoll,
-} from "../../services/poll.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

@@ -7,7 +7,7 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
-import { listLifecycleEvents } from "../../services/lifecycle-event.service.js";
+import { listLifecycleEvents } from "../../services/lifecycle-event/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

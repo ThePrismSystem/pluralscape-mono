@@ -19,23 +19,30 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/fronting-report.service.js", () => ({
+vi.mock("../../../services/fronting-report/create.js", () => ({
   createFrontingReport: vi.fn(),
+}));
+vi.mock("../../../services/fronting-report/queries.js", () => ({
   getFrontingReport: vi.fn(),
   listFrontingReports: vi.fn(),
+}));
+vi.mock("../../../services/fronting-report/update.js", () => ({
   updateFrontingReport: vi.fn(),
+}));
+vi.mock("../../../services/fronting-report/delete.js", () => ({
+  deleteFrontingReport: vi.fn(),
+}));
+vi.mock("../../../services/fronting-report/lifecycle.js", () => ({
   archiveFrontingReport: vi.fn(),
   restoreFrontingReport: vi.fn(),
 }));
 
-const {
-  createFrontingReport,
-  getFrontingReport,
-  listFrontingReports,
-  updateFrontingReport,
-  archiveFrontingReport,
-  restoreFrontingReport,
-} = await import("../../../services/fronting-report.service.js");
+const { createFrontingReport } = await import("../../../services/fronting-report/create.js");
+const { getFrontingReport, listFrontingReports } =
+  await import("../../../services/fronting-report/queries.js");
+const { updateFrontingReport } = await import("../../../services/fronting-report/update.js");
+const { archiveFrontingReport, restoreFrontingReport } =
+  await import("../../../services/fronting-report/lifecycle.js");
 
 const { frontingReportRouter } = await import("../../../trpc/routers/fronting-report.js");
 

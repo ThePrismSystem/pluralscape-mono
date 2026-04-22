@@ -9,7 +9,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   listAcknowledgements,
   parseAcknowledgementQuery,
-} from "../../services/acknowledgement.service.js";
+} from "../../services/acknowledgement/queries.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

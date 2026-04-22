@@ -10,12 +10,10 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  createImportJob,
-  getImportJob,
-  listImportJobs,
-  updateImportJob,
-} from "../../services/import-job.service.js";
+import { createImportJob } from "../../services/system/import-jobs/create.js";
+import { getImportJob } from "../../services/system/import-jobs/get.js";
+import { listImportJobs } from "../../services/system/import-jobs/list.js";
+import { updateImportJob } from "../../services/system/import-jobs/update.js";
 import { spyAudit } from "../helpers/audit-assertions.js";
 import { asDb, assertApiError, makeAuth, noopAudit } from "../helpers/integration-setup.js";
 

@@ -10,9 +10,10 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { archivePoll } from "../../services/poll/archive.js";
+import { createPoll } from "../../services/poll/create.js";
 import { castVote } from "../../services/poll-vote/cast.js";
 import { listVotes } from "../../services/poll-vote/list.js";
-import { archivePoll, createPoll } from "../../services/poll.service.js";
 import {
   assertApiError,
   asDb,
@@ -24,7 +25,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PollResult } from "../../services/poll.service.js";
+import type { PollResult } from "../../services/poll/internal.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -244,7 +245,7 @@ describe("poll-vote.service (PGlite integration)", () => {
     });
 
     it("rejects vote on closed poll (POLL_CLOSED, 409)", async () => {
-      const { closePoll } = await import("../../services/poll.service.js");
+      const { closePoll } = await import("../../services/poll/close.js");
       const poll = await createTestPoll();
       await closePoll(asDb(db), systemId, poll.id, auth, noopAudit);
 

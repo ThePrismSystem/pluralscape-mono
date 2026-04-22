@@ -82,15 +82,12 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, deleteEntity, restoreEntity } =
   await import("../../lib/entity-lifecycle.js");
 
-const {
-  createAcknowledgement,
-  confirmAcknowledgement,
-  getAcknowledgement,
-  listAcknowledgements,
-  deleteAcknowledgement,
-  archiveAcknowledgement,
-  restoreAcknowledgement,
-} = await import("../../services/acknowledgement.service.js");
+const { createAcknowledgement } = await import("../../services/acknowledgement/create.js");
+const { confirmAcknowledgement } = await import("../../services/acknowledgement/confirm.js");
+const { getAcknowledgement, listAcknowledgements } =
+  await import("../../services/acknowledgement/queries.js");
+const { deleteAcknowledgement, archiveAcknowledgement, restoreAcknowledgement } =
+  await import("../../services/acknowledgement/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

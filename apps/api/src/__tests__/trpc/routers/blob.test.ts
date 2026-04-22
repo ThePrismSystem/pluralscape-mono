@@ -19,13 +19,28 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/blob.service.js", () => ({
-  createUploadUrl: vi.fn(),
-  confirmUpload: vi.fn(),
-  getBlob: vi.fn(),
-  listBlobs: vi.fn(),
-  getDownloadUrl: vi.fn(),
+vi.mock("../../../services/blob/archive.js", () => ({
   archiveBlob: vi.fn(),
+}));
+
+vi.mock("../../../services/blob/confirm-upload.js", () => ({
+  confirmUpload: vi.fn(),
+}));
+
+vi.mock("../../../services/blob/create-upload-url.js", () => ({
+  createUploadUrl: vi.fn(),
+}));
+
+vi.mock("../../../services/blob/download-url.js", () => ({
+  getDownloadUrl: vi.fn(),
+}));
+
+vi.mock("../../../services/blob/get.js", () => ({
+  getBlob: vi.fn(),
+}));
+
+vi.mock("../../../services/blob/list.js", () => ({
+  listBlobs: vi.fn(),
 }));
 
 vi.mock("../../../lib/storage.js", () => ({
@@ -33,8 +48,12 @@ vi.mock("../../../lib/storage.js", () => ({
   getQuotaService: vi.fn(() => ({})),
 }));
 
-const { createUploadUrl, confirmUpload, getBlob, listBlobs, getDownloadUrl, archiveBlob } =
-  await import("../../../services/blob.service.js");
+const { archiveBlob } = await import("../../../services/blob/archive.js");
+const { confirmUpload } = await import("../../../services/blob/confirm-upload.js");
+const { createUploadUrl } = await import("../../../services/blob/create-upload-url.js");
+const { getDownloadUrl } = await import("../../../services/blob/download-url.js");
+const { getBlob } = await import("../../../services/blob/get.js");
+const { listBlobs } = await import("../../../services/blob/list.js");
 
 const { blobRouter } = await import("../../../trpc/routers/blob.js");
 

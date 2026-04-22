@@ -7,7 +7,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { getDb } from "../lib/db.js";
 import { getContextLogger } from "../lib/logger.js";
 import { validateSession } from "../lib/session-auth.js";
-import { validateApiKey } from "../services/api-key.service.js";
+import { validateApiKey } from "../services/api-key/validate.js";
 
 import { API_KEY_TOKEN_PATTERN, SESSION_TOKEN_PATTERN } from "./middleware.constants.js";
 

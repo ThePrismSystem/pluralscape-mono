@@ -18,16 +18,13 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/recovery-key.service.js", () => ({
+vi.mock("../../../services/recovery-key/reset-password.js", () => ({
   resetPasswordWithRecoveryKey: vi.fn(),
+}));
+
+vi.mock("../../../services/recovery-key/internal.js", () => ({
   NoActiveRecoveryKeyError: class NoActiveRecoveryKeyError extends Error {
     override readonly name = "NoActiveRecoveryKeyError" as const;
-  },
-  DecryptionFailedError: class DecryptionFailedError extends Error {
-    override readonly name = "DecryptionFailedError" as const;
-  },
-  InvalidInputError: class InvalidInputError extends Error {
-    override readonly name = "InvalidInputError" as const;
   },
 }));
 
@@ -64,8 +61,9 @@ const { loginAccount, LoginThrottledError } = await import("../../../services/au
 const { logoutCurrentSession, listSessions, revokeSession, revokeAllSessions } =
   await import("../../../services/auth/sessions.js");
 
-const { resetPasswordWithRecoveryKey, NoActiveRecoveryKeyError } =
-  await import("../../../services/recovery-key.service.js");
+const { resetPasswordWithRecoveryKey } =
+  await import("../../../services/recovery-key/reset-password.js");
+const { NoActiveRecoveryKeyError } = await import("../../../services/recovery-key/internal.js");
 
 const { authRouter } = await import("../../../trpc/routers/auth.js");
 

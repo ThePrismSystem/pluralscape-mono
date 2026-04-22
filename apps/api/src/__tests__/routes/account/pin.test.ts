@@ -27,12 +27,18 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // Also mock services used by other account routes to prevent import errors
-vi.mock("../../../services/account.service.js", () => ({
+vi.mock("../../../services/account/internal.js", () => ({
+  ConcurrencyError: class ConcurrencyError extends Error {},
+}));
+
+vi.mock("../../../services/account/queries.js", () => ({
   getAccountInfo: vi.fn(),
+}));
+
+vi.mock("../../../services/account/update.js", () => ({
   changeEmail: vi.fn(),
   changePassword: vi.fn(),
   updateAccountSettings: vi.fn(),
-  ConcurrencyError: class ConcurrencyError extends Error {},
 }));
 
 vi.mock("../../../services/account-delete.service.js", () => ({
@@ -40,28 +46,21 @@ vi.mock("../../../services/account-delete.service.js", () => ({
   purgeAccount: vi.fn(),
 }));
 
-vi.mock("../../../services/friend-code.service.js", () => ({
-  createFriendCode: vi.fn(),
-  listFriendCodes: vi.fn(),
-  redeemFriendCode: vi.fn(),
-  revokeFriendCode: vi.fn(),
-}));
-
-vi.mock("../../../services/friend-connection/lifecycle.js", () => ({
+vi.mock("../../../services/account/friends/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/queries.js", () => ({
+vi.mock("../../../services/account/friends/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/transitions.js", () => ({
+vi.mock("../../../services/account/friends/transitions.js", () => ({
   acceptFriendConnection: vi.fn(),
   blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/update.js", () => ({
+vi.mock("../../../services/account/friends/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 
@@ -70,7 +69,7 @@ vi.mock("../../../services/friend-request.service.js", () => ({
   rejectFriendRequest: vi.fn(),
 }));
 
-vi.mock("../../../services/friend-dashboard.service.js", () => ({
+vi.mock("../../../services/friend-dashboard/get-dashboard.js", () => ({
   getFriendDashboard: vi.fn(),
 }));
 
@@ -88,12 +87,16 @@ vi.mock("../../../services/friend-notification-preference.service.js", () => ({
   upsertFriendNotificationPreference: vi.fn(),
 }));
 
-vi.mock("../../../services/device-transfer.service.js", () => ({
-  initiateDeviceTransfer: vi.fn(),
-  approveDeviceTransfer: vi.fn(),
-  completeDeviceTransfer: vi.fn(),
-  cancelDeviceTransfer: vi.fn(),
-  getDeviceTransferStatus: vi.fn(),
+vi.mock("../../../services/device-transfer/initiate.js", () => ({
+  initiateTransfer: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer/approve.js", () => ({
+  approveTransfer: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer/complete.js", () => ({
+  completeTransfer: vi.fn(),
 }));
 
 vi.mock("../../../services/audit-log.service.js", () => ({

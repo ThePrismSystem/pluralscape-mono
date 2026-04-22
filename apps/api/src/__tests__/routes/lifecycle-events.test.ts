@@ -12,11 +12,20 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../services/lifecycle-event.service.js", () => ({
+vi.mock("../../services/lifecycle-event/create.js", () => ({
   createLifecycleEvent: vi.fn(),
+}));
+
+vi.mock("../../services/lifecycle-event/queries.js", () => ({
   listLifecycleEvents: vi.fn(),
   getLifecycleEvent: vi.fn(),
+}));
+
+vi.mock("../../services/lifecycle-event/delete.js", () => ({
   deleteLifecycleEvent: vi.fn(),
+}));
+
+vi.mock("../../services/lifecycle-event/lifecycle.js", () => ({
   archiveLifecycleEvent: vi.fn(),
   restoreLifecycleEvent: vi.fn(),
 }));
@@ -30,14 +39,12 @@ vi.mock("../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createLifecycleEvent,
-  listLifecycleEvents,
-  getLifecycleEvent,
-  deleteLifecycleEvent,
-  archiveLifecycleEvent,
-  restoreLifecycleEvent,
-} = await import("../../services/lifecycle-event.service.js");
+const { createLifecycleEvent } = await import("../../services/lifecycle-event/create.js");
+const { listLifecycleEvents, getLifecycleEvent } =
+  await import("../../services/lifecycle-event/queries.js");
+const { deleteLifecycleEvent } = await import("../../services/lifecycle-event/delete.js");
+const { archiveLifecycleEvent, restoreLifecycleEvent } =
+  await import("../../services/lifecycle-event/lifecycle.js");
 const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 

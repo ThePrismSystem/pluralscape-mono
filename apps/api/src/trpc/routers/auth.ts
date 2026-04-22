@@ -12,10 +12,8 @@ import {
   revokeAllSessions,
   revokeSession,
 } from "../../services/auth/sessions.js";
-import {
-  NoActiveRecoveryKeyError,
-  resetPasswordWithRecoveryKey,
-} from "../../services/recovery-key.service.js";
+import { NoActiveRecoveryKeyError } from "../../services/recovery-key/internal.js";
+import { resetPasswordWithRecoveryKey } from "../../services/recovery-key/reset-password.js";
 import { errorMapProcedure } from "../error-mapper.js";
 import { protectedProcedure } from "../middlewares/auth.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";

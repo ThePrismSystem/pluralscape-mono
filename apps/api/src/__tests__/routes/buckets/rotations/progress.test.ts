@@ -12,16 +12,16 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/key-rotation/initiate.js", () => ({
+vi.mock("../../../../services/bucket/rotations/initiate.js", () => ({
   initiateRotation: vi.fn(),
 }));
-vi.mock("../../../../services/key-rotation/claim.js", () => ({
+vi.mock("../../../../services/bucket/rotations/claim.js", () => ({
   claimRotationChunk: vi.fn(),
 }));
-vi.mock("../../../../services/key-rotation/complete.js", () => ({
+vi.mock("../../../../services/bucket/rotations/complete.js", () => ({
   completeRotationChunk: vi.fn(),
 }));
-vi.mock("../../../../services/key-rotation/queries.js", () => ({
+vi.mock("../../../../services/bucket/rotations/queries.js", () => ({
   getRotationProgress: vi.fn(),
 }));
 
@@ -34,7 +34,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getRotationProgress } = await import("../../../../services/key-rotation/queries.js");
+const { getRotationProgress } = await import("../../../../services/bucket/rotations/queries.js");
 const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 

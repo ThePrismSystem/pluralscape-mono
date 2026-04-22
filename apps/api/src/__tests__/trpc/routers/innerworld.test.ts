@@ -19,49 +19,62 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/innerworld-entity.service.js", () => ({
+vi.mock("../../../services/innerworld/entity/create.js", () => ({
   createEntity: vi.fn(),
-  getEntity: vi.fn(),
-  listEntities: vi.fn(),
-  updateEntity: vi.fn(),
-  archiveEntity: vi.fn(),
-  restoreEntity: vi.fn(),
 }));
 
-vi.mock("../../../services/innerworld-region/create.js", () => ({
+vi.mock("../../../services/innerworld/entity/queries.js", () => ({
+  getEntity: vi.fn(),
+  listEntities: vi.fn(),
+}));
+
+vi.mock("../../../services/innerworld/entity/update.js", () => ({
+  updateEntity: vi.fn(),
+}));
+
+vi.mock("../../../services/innerworld/entity/lifecycle.js", () => ({
+  archiveEntity: vi.fn(),
+  restoreEntity: vi.fn(),
+  deleteEntity: vi.fn(),
+}));
+
+vi.mock("../../../services/innerworld/region/create.js", () => ({
   createRegion: vi.fn(),
 }));
 
-vi.mock("../../../services/innerworld-region/queries.js", () => ({
+vi.mock("../../../services/innerworld/region/queries.js", () => ({
   getRegion: vi.fn(),
   listRegions: vi.fn(),
 }));
 
-vi.mock("../../../services/innerworld-region/update.js", () => ({
+vi.mock("../../../services/innerworld/region/update.js", () => ({
   updateRegion: vi.fn(),
 }));
 
-vi.mock("../../../services/innerworld-region/lifecycle.js", () => ({
+vi.mock("../../../services/innerworld/region/lifecycle.js", () => ({
   archiveRegion: vi.fn(),
   restoreRegion: vi.fn(),
   deleteRegion: vi.fn(),
 }));
 
-vi.mock("../../../services/innerworld-canvas.service.js", () => ({
+vi.mock("../../../services/innerworld/canvas.js", () => ({
   getCanvas: vi.fn(),
   upsertCanvas: vi.fn(),
 }));
 
-const { createEntity, getEntity, listEntities, updateEntity, archiveEntity, restoreEntity } =
-  await import("../../../services/innerworld-entity.service.js");
+const { createEntity } = await import("../../../services/innerworld/entity/create.js");
+const { getEntity, listEntities } = await import("../../../services/innerworld/entity/queries.js");
+const { updateEntity } = await import("../../../services/innerworld/entity/update.js");
+const { archiveEntity, restoreEntity } =
+  await import("../../../services/innerworld/entity/lifecycle.js");
 
-const { createRegion } = await import("../../../services/innerworld-region/create.js");
-const { getRegion, listRegions } = await import("../../../services/innerworld-region/queries.js");
-const { updateRegion } = await import("../../../services/innerworld-region/update.js");
+const { createRegion } = await import("../../../services/innerworld/region/create.js");
+const { getRegion, listRegions } = await import("../../../services/innerworld/region/queries.js");
+const { updateRegion } = await import("../../../services/innerworld/region/update.js");
 const { archiveRegion, restoreRegion } =
-  await import("../../../services/innerworld-region/lifecycle.js");
+  await import("../../../services/innerworld/region/lifecycle.js");
 
-const { getCanvas, upsertCanvas } = await import("../../../services/innerworld-canvas.service.js");
+const { getCanvas, upsertCanvas } = await import("../../../services/innerworld/canvas.js");
 
 const { innerworldRouter } = await import("../../../trpc/routers/innerworld.js");
 

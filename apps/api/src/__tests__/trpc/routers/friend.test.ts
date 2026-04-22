@@ -13,21 +13,21 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/friend-connection/lifecycle.js", () => ({
+vi.mock("../../../services/account/friends/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/queries.js", () => ({
+vi.mock("../../../services/account/friends/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/transitions.js", () => ({
+vi.mock("../../../services/account/friends/transitions.js", () => ({
   acceptFriendConnection: vi.fn(),
   blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
 }));
-vi.mock("../../../services/friend-connection/update.js", () => ({
+vi.mock("../../../services/account/friends/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 
@@ -35,7 +35,7 @@ vi.mock("../../../services/friend-dashboard-sync.service.js", () => ({
   getFriendDashboardSync: vi.fn(),
 }));
 
-vi.mock("../../../services/friend-dashboard.service.js", () => ({
+vi.mock("../../../services/friend-dashboard/get-dashboard.js", () => ({
   getFriendDashboard: vi.fn(),
 }));
 
@@ -54,19 +54,19 @@ vi.mock("../../../services/key-grant.service.js", () => ({
 }));
 
 const { archiveFriendConnection, restoreFriendConnection } =
-  await import("../../../services/friend-connection/lifecycle.js");
+  await import("../../../services/account/friends/lifecycle.js");
 const { getFriendConnection, listFriendConnections } =
-  await import("../../../services/friend-connection/queries.js");
+  await import("../../../services/account/friends/queries.js");
 const {
   acceptFriendConnection,
   blockFriendConnection,
   rejectFriendConnection,
   removeFriendConnection,
-} = await import("../../../services/friend-connection/transitions.js");
-const { updateFriendVisibility } = await import("../../../services/friend-connection/update.js");
+} = await import("../../../services/account/friends/transitions.js");
+const { updateFriendVisibility } = await import("../../../services/account/friends/update.js");
 const { getFriendDashboardSync } =
   await import("../../../services/friend-dashboard-sync.service.js");
-const { getFriendDashboard } = await import("../../../services/friend-dashboard.service.js");
+const { getFriendDashboard } = await import("../../../services/friend-dashboard/get-dashboard.js");
 const { getFriendExportManifest, getFriendExportPage } =
   await import("../../../services/friend-export.service.js");
 const { getOrCreateFriendNotificationPreference, updateFriendNotificationPreference } =

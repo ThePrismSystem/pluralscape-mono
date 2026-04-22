@@ -20,13 +20,11 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/system.service.js", () => ({
-  createSystem: vi.fn(),
-  getSystemProfile: vi.fn(),
-  listSystems: vi.fn(),
-  updateSystemProfile: vi.fn(),
-  archiveSystem: vi.fn(),
-}));
+vi.mock("../../../services/system/create.js", () => ({ createSystem: vi.fn() }));
+vi.mock("../../../services/system/get.js", () => ({ getSystemProfile: vi.fn() }));
+vi.mock("../../../services/system/list.js", () => ({ listSystems: vi.fn() }));
+vi.mock("../../../services/system/update.js", () => ({ updateSystemProfile: vi.fn() }));
+vi.mock("../../../services/system/archive.js", () => ({ archiveSystem: vi.fn() }));
 
 vi.mock("../../../services/system-duplicate.service.js", () => ({
   duplicateSystem: vi.fn(),
@@ -36,8 +34,11 @@ vi.mock("../../../services/system-purge.service.js", () => ({
   purgeSystem: vi.fn(),
 }));
 
-const { createSystem, getSystemProfile, listSystems, updateSystemProfile, archiveSystem } =
-  await import("../../../services/system.service.js");
+const { createSystem } = await import("../../../services/system/create.js");
+const { getSystemProfile } = await import("../../../services/system/get.js");
+const { listSystems } = await import("../../../services/system/list.js");
+const { updateSystemProfile } = await import("../../../services/system/update.js");
+const { archiveSystem } = await import("../../../services/system/archive.js");
 
 const { duplicateSystem } = await import("../../../services/system-duplicate.service.js");
 const { purgeSystem } = await import("../../../services/system-purge.service.js");

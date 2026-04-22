@@ -16,16 +16,16 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   archiveFriendConnection,
   restoreFriendConnection,
-} from "../../services/friend-connection/lifecycle.js";
+} from "../../services/account/friends/lifecycle.js";
 import {
   getFriendConnection,
   listFriendConnections,
-} from "../../services/friend-connection/queries.js";
+} from "../../services/account/friends/queries.js";
 import {
   blockFriendConnection,
   removeFriendConnection,
-} from "../../services/friend-connection/transitions.js";
-import { updateFriendVisibility } from "../../services/friend-connection/update.js";
+} from "../../services/account/friends/transitions.js";
+import { updateFriendVisibility } from "../../services/account/friends/update.js";
 import {
   assertApiError,
   asDb,

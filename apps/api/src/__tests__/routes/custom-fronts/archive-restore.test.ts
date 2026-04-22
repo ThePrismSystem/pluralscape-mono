@@ -10,7 +10,7 @@ import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
-vi.mock("../../../services/custom-front.service.js", () => ({
+vi.mock("../../../services/custom-front/lifecycle.js", () => ({
   archiveCustomFront: vi.fn(),
   restoreCustomFront: vi.fn(),
 }));
@@ -20,7 +20,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 const { archiveCustomFront, restoreCustomFront } =
-  await import("../../../services/custom-front.service.js");
+  await import("../../../services/custom-front/lifecycle.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);

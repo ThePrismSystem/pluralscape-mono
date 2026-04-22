@@ -12,11 +12,9 @@ import { authMiddleware } from "../../middleware/auth.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError } from "../../services/auth/register.js";
-import {
-  NoActiveRecoveryKeyError,
-  getRecoveryKeyStatus,
-  regenerateRecoveryKeyBackup,
-} from "../../services/recovery-key.service.js";
+import { NoActiveRecoveryKeyError } from "../../services/recovery-key/internal.js";
+import { regenerateRecoveryKeyBackup } from "../../services/recovery-key/regenerate.js";
+import { getRecoveryKeyStatus } from "../../services/recovery-key/status.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

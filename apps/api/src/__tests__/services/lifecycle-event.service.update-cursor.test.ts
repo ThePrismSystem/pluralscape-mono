@@ -40,8 +40,10 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { updateLifecycleEvent, createLifecycleEvent, listLifecycleEvents, getLifecycleEvent } =
-  await import("../../services/lifecycle-event.service.js");
+const { updateLifecycleEvent } = await import("../../services/lifecycle-event/update.js");
+const { createLifecycleEvent } = await import("../../services/lifecycle-event/create.js");
+const { listLifecycleEvents, getLifecycleEvent } =
+  await import("../../services/lifecycle-event/queries.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

@@ -9,25 +9,25 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
+import type { PollResult } from "../../../services/poll/internal.js";
 import type { PollVoteResult } from "../../../services/poll-vote/internal.js";
-import type { PollResult } from "../../../services/poll.service.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/poll.service.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../../../services/poll.service.js")>();
+vi.mock("../../../services/poll/create.js", () => ({ createPoll: vi.fn() }));
+vi.mock("../../../services/poll/get.js", () => ({ getPoll: vi.fn() }));
+vi.mock("../../../services/poll/list.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../services/poll/list.js")>();
   return {
-    createPoll: vi.fn(),
-    getPoll: vi.fn(),
     listPolls: vi.fn(),
-    updatePoll: vi.fn(),
-    deletePoll: vi.fn(),
-    closePoll: vi.fn(),
-    archivePoll: vi.fn(),
-    restorePoll: vi.fn(),
     parsePollQuery: original.parsePollQuery,
   };
 });
+vi.mock("../../../services/poll/update.js", () => ({ updatePoll: vi.fn() }));
+vi.mock("../../../services/poll/delete.js", () => ({ deletePoll: vi.fn() }));
+vi.mock("../../../services/poll/close.js", () => ({ closePoll: vi.fn() }));
+vi.mock("../../../services/poll/archive.js", () => ({ archivePoll: vi.fn() }));
+vi.mock("../../../services/poll/restore.js", () => ({ restorePoll: vi.fn() }));
 
 vi.mock("../../../services/poll-vote/cast.js", () => ({
   castVote: vi.fn(),
@@ -48,16 +48,14 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createPoll,
-  getPoll,
-  listPolls,
-  updatePoll,
-  deletePoll,
-  closePoll,
-  archivePoll,
-  restorePoll,
-} = await import("../../../services/poll.service.js");
+const { createPoll } = await import("../../../services/poll/create.js");
+const { getPoll } = await import("../../../services/poll/get.js");
+const { listPolls } = await import("../../../services/poll/list.js");
+const { updatePoll } = await import("../../../services/poll/update.js");
+const { deletePoll } = await import("../../../services/poll/delete.js");
+const { closePoll } = await import("../../../services/poll/close.js");
+const { archivePoll } = await import("../../../services/poll/archive.js");
+const { restorePoll } = await import("../../../services/poll/restore.js");
 const { castVote } = await import("../../../services/poll-vote/cast.js");
 const { listVotes } = await import("../../../services/poll-vote/list.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");

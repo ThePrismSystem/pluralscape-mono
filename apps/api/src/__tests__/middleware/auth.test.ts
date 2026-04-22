@@ -7,7 +7,7 @@ import { requestIdMiddleware } from "../../middleware/request-id.js";
 
 import type { AuthContext, AuthEnv, SessionAuthContext } from "../../lib/auth-context.js";
 import type { ValidateSessionResult } from "../../lib/session-auth.js";
-import type { ValidateApiKeyResult } from "../../services/api-key.service.js";
+import type { ValidateApiKeyResult } from "../../services/api-key/validate.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ vi.mock("../../lib/session-auth.js", () => ({
   validateSession: (): Promise<ValidateSessionResult> => mockValidateSession(),
 }));
 
-vi.mock("../../services/api-key.service.js", () => ({
+vi.mock("../../services/api-key/validate.js", () => ({
   validateApiKey: (): Promise<ValidateApiKeyResult | null> => mockValidateApiKey(),
 }));
 

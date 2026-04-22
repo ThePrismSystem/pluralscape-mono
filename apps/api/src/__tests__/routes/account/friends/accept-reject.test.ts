@@ -12,21 +12,21 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/friend-connection/lifecycle.js", () => ({
+vi.mock("../../../../services/account/friends/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/queries.js", () => ({
+vi.mock("../../../../services/account/friends/queries.js", () => ({
   getFriendConnection: vi.fn(),
   listFriendConnections: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/transitions.js", () => ({
+vi.mock("../../../../services/account/friends/transitions.js", () => ({
   acceptFriendConnection: vi.fn(),
   blockFriendConnection: vi.fn(),
   rejectFriendConnection: vi.fn(),
   removeFriendConnection: vi.fn(),
 }));
-vi.mock("../../../../services/friend-connection/update.js", () => ({
+vi.mock("../../../../services/account/friends/update.js", () => ({
   updateFriendVisibility: vi.fn(),
 }));
 
@@ -40,7 +40,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { acceptFriendConnection, rejectFriendConnection } =
-  await import("../../../../services/friend-connection/transitions.js");
+  await import("../../../../services/account/friends/transitions.js");
 const { createAuditWriter } = await import("../../../../lib/audit-writer.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 

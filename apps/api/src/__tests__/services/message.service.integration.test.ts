@@ -9,16 +9,13 @@ import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { archiveChannel, createChannel } from "../../services/channel.service.js";
-import {
-  archiveMessage,
-  createMessage,
-  deleteMessage,
-  getMessage,
-  listMessages,
-  restoreMessage,
-  updateMessage,
-} from "../../services/message.service.js";
+import { createChannel } from "../../services/channel/create.js";
+import { archiveChannel } from "../../services/channel/lifecycle.js";
+import { createMessage } from "../../services/message/create.js";
+import { deleteMessage } from "../../services/message/delete.js";
+import { archiveMessage, restoreMessage } from "../../services/message/lifecycle.js";
+import { getMessage, listMessages } from "../../services/message/queries.js";
+import { updateMessage } from "../../services/message/update.js";
 import {
   assertApiError,
   asDb,
@@ -31,7 +28,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { ChannelResult } from "../../services/channel.service.js";
+import type { ChannelResult } from "../../services/channel/internal.js";
 import type { AccountId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 

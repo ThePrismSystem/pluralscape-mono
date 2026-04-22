@@ -5,15 +5,11 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import {
-  archiveChannel,
-  createChannel,
-  deleteChannel,
-  getChannel,
-  listChannels,
-  restoreChannel,
-  updateChannel,
-} from "../../services/channel.service.js";
+import { createChannel } from "../../services/channel/create.js";
+import { deleteChannel } from "../../services/channel/delete.js";
+import { archiveChannel, restoreChannel } from "../../services/channel/lifecycle.js";
+import { getChannel, listChannels } from "../../services/channel/queries.js";
+import { updateChannel } from "../../services/channel/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

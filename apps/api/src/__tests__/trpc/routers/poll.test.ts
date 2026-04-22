@@ -24,16 +24,14 @@ vi.mock("../../../lib/entity-pubsub.js", () => ({
   subscribeToEntityChanges: vi.fn().mockResolvedValue(() => undefined),
 }));
 
-vi.mock("../../../services/poll.service.js", () => ({
-  createPoll: vi.fn(),
-  getPoll: vi.fn(),
-  listPolls: vi.fn(),
-  updatePoll: vi.fn(),
-  closePoll: vi.fn(),
-  archivePoll: vi.fn(),
-  restorePoll: vi.fn(),
-  deletePoll: vi.fn(),
-}));
+vi.mock("../../../services/poll/create.js", () => ({ createPoll: vi.fn() }));
+vi.mock("../../../services/poll/get.js", () => ({ getPoll: vi.fn() }));
+vi.mock("../../../services/poll/list.js", () => ({ listPolls: vi.fn() }));
+vi.mock("../../../services/poll/update.js", () => ({ updatePoll: vi.fn() }));
+vi.mock("../../../services/poll/close.js", () => ({ closePoll: vi.fn() }));
+vi.mock("../../../services/poll/archive.js", () => ({ archivePoll: vi.fn() }));
+vi.mock("../../../services/poll/restore.js", () => ({ restorePoll: vi.fn() }));
+vi.mock("../../../services/poll/delete.js", () => ({ deletePoll: vi.fn() }));
 
 vi.mock("../../../services/poll-vote/cast.js", () => ({
   castVote: vi.fn(),
@@ -55,16 +53,14 @@ vi.mock("../../../services/poll-vote/results.js", () => ({
   getPollResults: vi.fn(),
 }));
 
-const {
-  createPoll,
-  getPoll,
-  listPolls,
-  updatePoll,
-  closePoll,
-  archivePoll,
-  restorePoll,
-  deletePoll,
-} = await import("../../../services/poll.service.js");
+const { createPoll } = await import("../../../services/poll/create.js");
+const { getPoll } = await import("../../../services/poll/get.js");
+const { listPolls } = await import("../../../services/poll/list.js");
+const { updatePoll } = await import("../../../services/poll/update.js");
+const { closePoll } = await import("../../../services/poll/close.js");
+const { archivePoll } = await import("../../../services/poll/archive.js");
+const { restorePoll } = await import("../../../services/poll/restore.js");
+const { deletePoll } = await import("../../../services/poll/delete.js");
 
 const { castVote } = await import("../../../services/poll-vote/cast.js");
 const { listVotes } = await import("../../../services/poll-vote/list.js");

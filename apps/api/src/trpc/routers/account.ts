@@ -28,21 +28,23 @@ import {
   MAX_TRANSFER_CODE_ATTEMPTS,
   TRANSFER_INITIATION_LIMIT,
 } from "../../routes/account/device-transfer.constants.js";
+import { enqueueAccountEmailChangedNotification } from "../../services/account/notifications.js";
+import { getAccountInfo } from "../../services/account/queries.js";
+import {
+  changeEmail,
+  changePassword,
+  updateAccountSettings,
+} from "../../services/account/update.js";
 import { deleteAccount } from "../../services/account-deletion.service.js";
 import {
   removeAccountPin,
   setAccountPin,
   verifyAccountPin,
 } from "../../services/account-pin.service.js";
-import {
-  changeEmail,
-  changePassword,
-  enqueueAccountEmailChangedNotification,
-  getAccountInfo,
-  updateAccountSettings,
-} from "../../services/account.service.js";
 import { queryAuditLog } from "../../services/audit-log-query.service.js";
 import { enrollBiometric, verifyBiometric } from "../../services/biometric.service.js";
+import { approveTransfer } from "../../services/device-transfer/approve.js";
+import { completeTransfer } from "../../services/device-transfer/complete.js";
 import {
   KeyDerivationUnavailableError,
   TransferCodeError,
@@ -50,14 +52,10 @@ import {
   TransferNotFoundError,
   TransferSessionMismatchError,
   TransferValidationError,
-  approveTransfer,
-  completeTransfer,
-  initiateTransfer,
-} from "../../services/device-transfer.service.js";
-import {
-  getRecoveryKeyStatus,
-  regenerateRecoveryKeyBackup,
-} from "../../services/recovery-key.service.js";
+} from "../../services/device-transfer/errors.js";
+import { initiateTransfer } from "../../services/device-transfer/initiate.js";
+import { regenerateRecoveryKeyBackup } from "../../services/recovery-key/regenerate.js";
+import { getRecoveryKeyStatus } from "../../services/recovery-key/status.js";
 import { protectedProcedure } from "../middlewares/auth.js";
 import {
   accountKeyExtractor,

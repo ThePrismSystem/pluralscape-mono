@@ -27,22 +27,45 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/structure-entity-type.service.js", () => ({
+vi.mock("../../../services/structure/entity-type/create.js", () => ({
   createEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/get.js", () => ({
   getEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/list.js", () => ({
   listEntityTypes: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/update.js", () => ({
   updateEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/archive.js", () => ({
   archiveEntityType: vi.fn(),
+}));
+vi.mock("../../../services/structure/entity-type/restore.js", () => ({
   restoreEntityType: vi.fn(),
 }));
+vi.mock("../../../services/structure/entity-type/delete.js", () => ({
+  deleteEntityType: vi.fn(),
+}));
 
-vi.mock("../../../services/structure-entity-crud.service.js", () => ({
+vi.mock("../../../services/structure/entity-crud/create.js", () => ({
   createStructureEntity: vi.fn(),
+}));
+
+vi.mock("../../../services/structure/entity-crud/queries.js", () => ({
   getStructureEntity: vi.fn(),
   listStructureEntities: vi.fn(),
+}));
+
+vi.mock("../../../services/structure/entity-crud/update.js", () => ({
   updateStructureEntity: vi.fn(),
+}));
+
+vi.mock("../../../services/structure/entity-crud/lifecycle.js", () => ({
   archiveStructureEntity: vi.fn(),
   restoreStructureEntity: vi.fn(),
+  deleteStructureEntity: vi.fn(),
 }));
 
 vi.mock("../../../services/structure-entity-link.service.js", () => ({
@@ -64,23 +87,19 @@ vi.mock("../../../services/structure-entity-association.service.js", () => ({
   deleteEntityAssociation: vi.fn(),
 }));
 
-const {
-  createEntityType,
-  getEntityType,
-  listEntityTypes,
-  updateEntityType,
-  archiveEntityType,
-  restoreEntityType,
-} = await import("../../../services/structure-entity-type.service.js");
+const { createEntityType } = await import("../../../services/structure/entity-type/create.js");
+const { getEntityType } = await import("../../../services/structure/entity-type/get.js");
+const { listEntityTypes } = await import("../../../services/structure/entity-type/list.js");
+const { updateEntityType } = await import("../../../services/structure/entity-type/update.js");
+const { archiveEntityType } = await import("../../../services/structure/entity-type/archive.js");
+const { restoreEntityType } = await import("../../../services/structure/entity-type/restore.js");
 
-const {
-  createStructureEntity,
-  getStructureEntity,
-  listStructureEntities,
-  updateStructureEntity,
-  archiveStructureEntity,
-  restoreStructureEntity,
-} = await import("../../../services/structure-entity-crud.service.js");
+const { createStructureEntity } = await import("../../../services/structure/entity-crud/create.js");
+const { getStructureEntity, listStructureEntities } =
+  await import("../../../services/structure/entity-crud/queries.js");
+const { updateStructureEntity } = await import("../../../services/structure/entity-crud/update.js");
+const { archiveStructureEntity, restoreStructureEntity } =
+  await import("../../../services/structure/entity-crud/lifecycle.js");
 
 const { createEntityLink, listEntityLinks, updateEntityLink, deleteEntityLink } =
   await import("../../../services/structure-entity-link.service.js");

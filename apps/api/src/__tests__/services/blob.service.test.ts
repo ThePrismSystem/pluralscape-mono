@@ -6,7 +6,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { BlobResult } from "../../services/blob.service.js";
+import type { BlobResult } from "../../services/blob/internal.js";
 import type { BlobId, PaginatedResult, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -28,8 +28,12 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { createUploadUrl, confirmUpload, getBlob, getDownloadUrl, archiveBlob, listBlobs } =
-  await import("../../services/blob.service.js");
+const { archiveBlob } = await import("../../services/blob/archive.js");
+const { confirmUpload } = await import("../../services/blob/confirm-upload.js");
+const { createUploadUrl } = await import("../../services/blob/create-upload-url.js");
+const { getDownloadUrl } = await import("../../services/blob/download-url.js");
+const { getBlob } = await import("../../services/blob/get.js");
+const { listBlobs } = await import("../../services/blob/list.js");
 
 const { QuotaExceededError } = await import("@pluralscape/storage");
 

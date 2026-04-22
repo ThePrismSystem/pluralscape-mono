@@ -24,25 +24,31 @@ vi.mock("../../../lib/entity-pubsub.js", () => ({
   subscribeToEntityChanges: vi.fn().mockResolvedValue(() => undefined),
 }));
 
-vi.mock("../../../services/acknowledgement.service.js", () => ({
+vi.mock("../../../services/acknowledgement/create.js", () => ({
   createAcknowledgement: vi.fn(),
+}));
+
+vi.mock("../../../services/acknowledgement/confirm.js", () => ({
+  confirmAcknowledgement: vi.fn(),
+}));
+
+vi.mock("../../../services/acknowledgement/queries.js", () => ({
   getAcknowledgement: vi.fn(),
   listAcknowledgements: vi.fn(),
-  confirmAcknowledgement: vi.fn(),
+}));
+
+vi.mock("../../../services/acknowledgement/lifecycle.js", () => ({
   archiveAcknowledgement: vi.fn(),
   restoreAcknowledgement: vi.fn(),
   deleteAcknowledgement: vi.fn(),
 }));
 
-const {
-  createAcknowledgement,
-  getAcknowledgement,
-  listAcknowledgements,
-  confirmAcknowledgement,
-  archiveAcknowledgement,
-  restoreAcknowledgement,
-  deleteAcknowledgement,
-} = await import("../../../services/acknowledgement.service.js");
+const { createAcknowledgement } = await import("../../../services/acknowledgement/create.js");
+const { confirmAcknowledgement } = await import("../../../services/acknowledgement/confirm.js");
+const { getAcknowledgement, listAcknowledgements } =
+  await import("../../../services/acknowledgement/queries.js");
+const { archiveAcknowledgement, restoreAcknowledgement, deleteAcknowledgement } =
+  await import("../../../services/acknowledgement/lifecycle.js");
 
 const { acknowledgementRouter } = await import("../../../trpc/routers/acknowledgement.js");
 

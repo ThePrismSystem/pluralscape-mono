@@ -12,11 +12,20 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../services/relationship.service.js", () => ({
+vi.mock("../../services/relationship/create.js", () => ({
   createRelationship: vi.fn(),
+}));
+
+vi.mock("../../services/relationship/queries.js", () => ({
   listRelationships: vi.fn(),
   getRelationship: vi.fn(),
+}));
+
+vi.mock("../../services/relationship/update.js", () => ({
   updateRelationship: vi.fn(),
+}));
+
+vi.mock("../../services/relationship/lifecycle.js", () => ({
   deleteRelationship: vi.fn(),
   archiveRelationship: vi.fn(),
   restoreRelationship: vi.fn(),
@@ -31,15 +40,12 @@ vi.mock("../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const {
-  createRelationship,
-  listRelationships,
-  getRelationship,
-  updateRelationship,
-  deleteRelationship,
-  archiveRelationship,
-  restoreRelationship,
-} = await import("../../services/relationship.service.js");
+const { createRelationship } = await import("../../services/relationship/create.js");
+const { listRelationships, getRelationship } =
+  await import("../../services/relationship/queries.js");
+const { updateRelationship } = await import("../../services/relationship/update.js");
+const { deleteRelationship, archiveRelationship, restoreRelationship } =
+  await import("../../services/relationship/lifecycle.js");
 const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 

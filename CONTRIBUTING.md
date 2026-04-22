@@ -182,6 +182,16 @@ If the new endpoint is REST-only by design (SSE, infrastructure), add an entry t
 
 Rate limit categories are defined in `@pluralscape/types`. Use the exact same category on the REST route and the tRPC procedure — the parity check flags mismatches.
 
+### Service file structure and size
+
+Services live in `apps/api/src/services/` and follow a per-verb-file layout — no barrel. Callers import from the specific verb file (e.g., `services/member/create.js`), not from a package index or sibling re-export.
+
+- **Nest to match routes**: a service nests under a parent iff the routes tree does. Mirror `apps/api/src/routes/`.
+- **Verb-split at 300 LOC**: any service ≥300 LOC must be split into `services/<domain>/<verb>.ts` files (create, queries, update, lifecycle, delete, etc.). Single-file peer modules are fine below that threshold.
+- **Shared helpers**: put shared types/helpers in `services/<domain>/internal.ts` **only if consumed by ≥2 verb files**. Single-consumer helpers stay local to the verb file.
+- **No barrels**: do not create `services/<domain>/index.ts` or a sibling `services/<domain>.ts` re-export. The `moduleResolution: "Bundler"` setting does not resolve `./foo.js` → `./foo/index.ts` by design, and barrels defeat the tree-shaking and static analysis benefits of explicit imports.
+- **Hard cap**: ESLint enforces `max-lines: 500` on `src/services/**/*.ts` (skipping blanks/comments). If you hit it, split the file — do not add an override comment.
+
 ### Typed auth context
 
 Every protected route group must type its Hono instance with `AuthEnv`:

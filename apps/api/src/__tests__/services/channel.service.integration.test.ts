@@ -10,15 +10,11 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { parseCursor } from "../../lib/pagination.js";
-import {
-  archiveChannel,
-  createChannel,
-  deleteChannel,
-  getChannel,
-  listChannels,
-  restoreChannel,
-  updateChannel,
-} from "../../services/channel.service.js";
+import { createChannel } from "../../services/channel/create.js";
+import { deleteChannel } from "../../services/channel/delete.js";
+import { archiveChannel, restoreChannel } from "../../services/channel/lifecycle.js";
+import { getChannel, listChannels } from "../../services/channel/queries.js";
+import { updateChannel } from "../../services/channel/update.js";
 import {
   assertApiError,
   asDb,
@@ -541,7 +537,7 @@ describe("channel.service (PGlite integration)", () => {
     });
 
     it("returns 409 HAS_DEPENDENTS when channel has messages", async () => {
-      const { createMessage } = await import("../../services/message.service.js");
+      const { createMessage } = await import("../../services/message/create.js");
 
       const channel = await createChannel(
         asDb(db),

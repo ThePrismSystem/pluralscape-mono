@@ -12,7 +12,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/system.service.js", () => ({
+vi.mock("../../../services/system/archive.js", () => ({
   archiveSystem: vi.fn(),
 }));
 
@@ -26,7 +26,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
-const { archiveSystem } = await import("../../../services/system.service.js");
+const { archiveSystem } = await import("../../../services/system/archive.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

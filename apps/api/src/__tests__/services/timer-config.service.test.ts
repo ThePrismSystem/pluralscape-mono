@@ -27,16 +27,13 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const {
-  createTimerConfig,
-  listTimerConfigs,
-  getTimerConfig,
-  updateTimerConfig,
-  deleteTimerConfig,
-  archiveTimerConfig,
-  restoreTimerConfig,
-  parseTimerConfigQuery,
-} = await import("../../services/timer-config.service.js");
+const { createTimerConfig } = await import("../../services/timer-config/create.js");
+const { listTimerConfigs, getTimerConfig, parseTimerConfigQuery } =
+  await import("../../services/timer-config/queries.js");
+const { updateTimerConfig } = await import("../../services/timer-config/update.js");
+const { deleteTimerConfig } = await import("../../services/timer-config/delete.js");
+const { archiveTimerConfig, restoreTimerConfig } =
+  await import("../../services/timer-config/lifecycle.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

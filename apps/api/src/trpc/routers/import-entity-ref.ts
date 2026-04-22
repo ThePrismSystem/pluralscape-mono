@@ -2,12 +2,12 @@ import { IMPORT_ENTITY_TYPES, IMPORT_SOURCES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import { MAX_PAGE_LIMIT } from "../../service.constants.js";
-import { listImportEntityRefs } from "../../services/import-entity-ref/list.js";
+import { listImportEntityRefs } from "../../services/system/import-entity-refs/list.js";
 import {
   lookupImportEntityRef,
   lookupImportEntityRefBatch,
-} from "../../services/import-entity-ref/lookup.js";
-import { upsertImportEntityRefBatch } from "../../services/import-entity-ref/upsert-batch.js";
+} from "../../services/system/import-entity-refs/lookup.js";
+import { upsertImportEntityRefBatch } from "../../services/system/import-entity-refs/upsert-batch.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

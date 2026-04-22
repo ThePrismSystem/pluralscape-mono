@@ -12,7 +12,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-import { createImportJob } from "../../../services/import-job.service.js";
+import { createImportJob } from "../../../services/system/import-jobs/create.js";
 import { importJobRouter } from "../../../trpc/routers/import-job.js";
 import { noopAudit } from "../../helpers/integration-setup.js";
 import {

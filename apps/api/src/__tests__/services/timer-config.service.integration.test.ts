@@ -12,16 +12,15 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { archiveCheckInRecord } from "../../services/check-in-record/archive.js";
 import { createCheckInRecord } from "../../services/check-in-record/create.js";
 import { deleteCheckInRecord } from "../../services/check-in-record/delete.js";
+import { createTimerConfig } from "../../services/timer-config/create.js";
+import { deleteTimerConfig } from "../../services/timer-config/delete.js";
+import { archiveTimerConfig, restoreTimerConfig } from "../../services/timer-config/lifecycle.js";
 import {
-  archiveTimerConfig,
-  createTimerConfig,
-  deleteTimerConfig,
   getTimerConfig,
   listTimerConfigs,
   parseTimerConfigQuery,
-  restoreTimerConfig,
-  updateTimerConfig,
-} from "../../services/timer-config.service.js";
+} from "../../services/timer-config/queries.js";
+import { updateTimerConfig } from "../../services/timer-config/update.js";
 import {
   assertApiError,
   genTimerId,

@@ -28,25 +28,29 @@ vi.mock("../../../lib/entity-pubsub.js", () => ({
   subscribeToEntityChanges: vi.fn().mockResolvedValue(vi.fn().mockResolvedValue(undefined)),
 }));
 
-vi.mock("../../../services/message.service.js", () => ({
+vi.mock("../../../services/message/create.js", () => ({
   createMessage: vi.fn(),
+}));
+vi.mock("../../../services/message/queries.js", () => ({
   getMessage: vi.fn(),
   listMessages: vi.fn(),
+}));
+vi.mock("../../../services/message/update.js", () => ({
   updateMessage: vi.fn(),
+}));
+vi.mock("../../../services/message/lifecycle.js", () => ({
   archiveMessage: vi.fn(),
   restoreMessage: vi.fn(),
+}));
+vi.mock("../../../services/message/delete.js", () => ({
   deleteMessage: vi.fn(),
 }));
 
-const {
-  createMessage,
-  getMessage,
-  listMessages,
-  updateMessage,
-  archiveMessage,
-  restoreMessage,
-  deleteMessage,
-} = await import("../../../services/message.service.js");
+const { createMessage } = await import("../../../services/message/create.js");
+const { getMessage, listMessages } = await import("../../../services/message/queries.js");
+const { updateMessage } = await import("../../../services/message/update.js");
+const { archiveMessage, restoreMessage } = await import("../../../services/message/lifecycle.js");
+const { deleteMessage } = await import("../../../services/message/delete.js");
 
 const { subscribeToEntityChanges } = await import("../../../lib/entity-pubsub.js");
 

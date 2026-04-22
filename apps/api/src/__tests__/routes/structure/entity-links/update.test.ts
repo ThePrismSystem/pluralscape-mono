@@ -18,19 +18,35 @@ vi.mock("../../../../services/structure-entity-link.service.js", () => ({
   deleteEntityLink: vi.fn(),
   listEntityLinks: vi.fn(),
 }));
-vi.mock("../../../../services/structure-entity-type.service.js", () => ({
+vi.mock("../../../../services/structure/entity-type/create.js", () => ({
   createEntityType: vi.fn(),
+}));
+vi.mock("../../../../services/structure/entity-type/list.js", () => ({
   listEntityTypes: vi.fn(),
+}));
+vi.mock("../../../../services/structure/entity-type/get.js", () => ({
   getEntityType: vi.fn(),
+}));
+vi.mock("../../../../services/structure/entity-type/update.js", () => ({
   updateEntityType: vi.fn(),
+}));
+vi.mock("../../../../services/structure/entity-type/delete.js", () => ({
   deleteEntityType: vi.fn(),
 }));
-vi.mock("../../../../services/structure-entity-crud.service.js", () => ({
-  createEntity: vi.fn(),
-  listEntities: vi.fn(),
-  getEntity: vi.fn(),
-  updateEntity: vi.fn(),
-  deleteEntity: vi.fn(),
+vi.mock("../../../../services/structure/entity-crud/create.js", () => ({
+  createStructureEntity: vi.fn(),
+}));
+vi.mock("../../../../services/structure/entity-crud/queries.js", () => ({
+  listStructureEntities: vi.fn(),
+  getStructureEntity: vi.fn(),
+}));
+vi.mock("../../../../services/structure/entity-crud/update.js", () => ({
+  updateStructureEntity: vi.fn(),
+}));
+vi.mock("../../../../services/structure/entity-crud/lifecycle.js", () => ({
+  archiveStructureEntity: vi.fn(),
+  restoreStructureEntity: vi.fn(),
+  deleteStructureEntity: vi.fn(),
 }));
 vi.mock("../../../../services/structure-entity-member-link.service.js", () => ({
   createEntityMemberLink: vi.fn(),

@@ -17,12 +17,10 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 }));
 
 import { MAX_FRIEND_CODES_PER_ACCOUNT } from "../../quota.constants.js";
-import {
-  archiveFriendCode,
-  generateFriendCode,
-  listFriendCodes,
-  redeemFriendCode,
-} from "../../services/friend-code.service.js";
+import { archiveFriendCode } from "../../services/account/friend-codes/archive.js";
+import { generateFriendCode } from "../../services/account/friend-codes/generate.js";
+import { listFriendCodes } from "../../services/account/friend-codes/list.js";
+import { redeemFriendCode } from "../../services/account/friend-codes/redeem.js";
 import { assertApiError, asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";

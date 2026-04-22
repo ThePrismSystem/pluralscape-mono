@@ -5,7 +5,7 @@ import { getDb } from "../../../lib/db.js";
 import { parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
-import { listFriendConnections } from "../../../services/friend-connection/queries.js";
+import { listFriendConnections } from "../../../services/account/friends/queries.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 import type { FriendConnectionStatus } from "@pluralscape/types";

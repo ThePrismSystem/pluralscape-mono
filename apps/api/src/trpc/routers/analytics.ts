@@ -3,10 +3,8 @@ import { MAX_ANALYTICS_CUSTOM_RANGE_MS } from "@pluralscape/validation";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
-import {
-  computeCoFrontingBreakdown,
-  computeFrontingBreakdown,
-} from "../../services/analytics.service.js";
+import { computeCoFrontingBreakdown } from "../../services/analytics/co-fronting.js";
+import { computeFrontingBreakdown } from "../../services/analytics/fronting.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

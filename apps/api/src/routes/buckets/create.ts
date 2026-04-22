@@ -9,7 +9,7 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { createBucket } from "../../services/bucket.service.js";
+import { createBucket } from "../../services/bucket/create.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

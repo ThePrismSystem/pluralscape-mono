@@ -5,15 +5,13 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { archiveSystem } from "../../services/system/archive.js";
+import { createSystem } from "../../services/system/create.js";
+import { getSystemProfile } from "../../services/system/get.js";
+import { listSystems } from "../../services/system/list.js";
+import { updateSystemProfile } from "../../services/system/update.js";
 import { duplicateSystem } from "../../services/system-duplicate.service.js";
 import { purgeSystem } from "../../services/system-purge.service.js";
-import {
-  archiveSystem,
-  createSystem,
-  getSystemProfile,
-  listSystems,
-  updateSystemProfile,
-} from "../../services/system.service.js";
 import { protectedProcedure } from "../middlewares/auth.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";

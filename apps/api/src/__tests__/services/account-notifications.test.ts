@@ -2,7 +2,7 @@ import { brandId } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { buildAccountEmailChangeIdempotencyKey } from "../../routes/account/account.constants.js";
-import { enqueueAccountEmailChangedNotification } from "../../services/account.service.js";
+import { enqueueAccountEmailChangedNotification } from "../../services/account/notifications.js";
 
 import type { AuditWriteParams, AuditWriter } from "../../lib/audit-writer.js";
 import type { JobEnqueueParams, JobQueue } from "@pluralscape/queue";

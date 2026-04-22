@@ -12,10 +12,8 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { MAX_ANALYTICS_SESSIONS } from "../../quota.constants.js";
-import {
-  computeCoFrontingBreakdown,
-  computeFrontingBreakdown,
-} from "../../services/analytics.service.js";
+import { computeCoFrontingBreakdown } from "../../services/analytics/co-fronting.js";
+import { computeFrontingBreakdown } from "../../services/analytics/fronting.js";
 import { asDb, genFrontingSessionId, makeAuth } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";

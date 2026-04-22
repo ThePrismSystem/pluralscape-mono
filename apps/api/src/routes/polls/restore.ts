@@ -6,7 +6,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { restorePoll } from "../../services/poll.service.js";
+import { restorePoll } from "../../services/poll/restore.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

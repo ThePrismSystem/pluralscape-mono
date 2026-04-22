@@ -11,6 +11,18 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { archiveBucket } from "../../services/bucket/archive.js";
+import { createBucket } from "../../services/bucket/create.js";
+import { deleteBucket } from "../../services/bucket/delete.js";
+import { getBucket } from "../../services/bucket/get.js";
+import { listBuckets } from "../../services/bucket/list.js";
+import { restoreBucket } from "../../services/bucket/restore.js";
+import { claimRotationChunk } from "../../services/bucket/rotations/claim.js";
+import { completeRotationChunk } from "../../services/bucket/rotations/complete.js";
+import { initiateRotation } from "../../services/bucket/rotations/initiate.js";
+import { getRotationProgress } from "../../services/bucket/rotations/queries.js";
+import { retryRotation } from "../../services/bucket/rotations/retry.js";
+import { updateBucket } from "../../services/bucket/update.js";
 import {
   assignBucketToFriend,
   listFriendBucketAssignments,
@@ -25,20 +37,6 @@ import {
   getBucketExportManifest,
   getBucketExportPage,
 } from "../../services/bucket-export.service.js";
-import {
-  archiveBucket,
-  createBucket,
-  deleteBucket,
-  getBucket,
-  listBuckets,
-  restoreBucket,
-  updateBucket,
-} from "../../services/bucket.service.js";
-import { claimRotationChunk } from "../../services/key-rotation/claim.js";
-import { completeRotationChunk } from "../../services/key-rotation/complete.js";
-import { initiateRotation } from "../../services/key-rotation/initiate.js";
-import { getRotationProgress } from "../../services/key-rotation/queries.js";
-import { retryRotation } from "../../services/key-rotation/retry.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";

@@ -55,8 +55,10 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getAccountInfo, changeEmail, changePassword, updateAccountSettings, ConcurrencyError } =
-  await import("../../services/account.service.js");
+const { ConcurrencyError } = await import("../../services/account/internal.js");
+const { getAccountInfo } = await import("../../services/account/queries.js");
+const { changeEmail, changePassword, updateAccountSettings } =
+  await import("../../services/account/update.js");
 const { verify: mockVerify } = await import("@pluralscape/crypto");
 
 // ── Helpers ──────────────────────────────────────────────────────────

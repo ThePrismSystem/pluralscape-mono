@@ -19,25 +19,35 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
-vi.mock("../../../services/lifecycle-event.service.js", () => ({
+vi.mock("../../../services/lifecycle-event/create.js", () => ({
   createLifecycleEvent: vi.fn(),
+}));
+
+vi.mock("../../../services/lifecycle-event/queries.js", () => ({
   getLifecycleEvent: vi.fn(),
   listLifecycleEvents: vi.fn(),
+}));
+
+vi.mock("../../../services/lifecycle-event/update.js", () => ({
   updateLifecycleEvent: vi.fn(),
-  archiveLifecycleEvent: vi.fn(),
-  restoreLifecycleEvent: vi.fn(),
+}));
+
+vi.mock("../../../services/lifecycle-event/delete.js", () => ({
   deleteLifecycleEvent: vi.fn(),
 }));
 
-const {
-  createLifecycleEvent,
-  getLifecycleEvent,
-  listLifecycleEvents,
-  updateLifecycleEvent,
-  archiveLifecycleEvent,
-  restoreLifecycleEvent,
-  deleteLifecycleEvent,
-} = await import("../../../services/lifecycle-event.service.js");
+vi.mock("../../../services/lifecycle-event/lifecycle.js", () => ({
+  archiveLifecycleEvent: vi.fn(),
+  restoreLifecycleEvent: vi.fn(),
+}));
+
+const { createLifecycleEvent } = await import("../../../services/lifecycle-event/create.js");
+const { getLifecycleEvent, listLifecycleEvents } =
+  await import("../../../services/lifecycle-event/queries.js");
+const { updateLifecycleEvent } = await import("../../../services/lifecycle-event/update.js");
+const { deleteLifecycleEvent } = await import("../../../services/lifecycle-event/delete.js");
+const { archiveLifecycleEvent, restoreLifecycleEvent } =
+  await import("../../../services/lifecycle-event/lifecycle.js");
 
 const { lifecycleEventRouter } = await import("../../../trpc/routers/lifecycle-event.js");
 

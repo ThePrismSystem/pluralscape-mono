@@ -2,7 +2,9 @@ import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  mockApiKeyServiceFactory,
+  mockApiKeyCreateFactory,
+  mockApiKeyQueriesFactory,
+  mockApiKeyRevokeFactory,
   mockAuditWriterFactory,
   mockAuthFactory,
   mockDbFactory,
@@ -10,12 +12,15 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiKeyCreateResult, ApiKeyResult } from "../../../services/api-key.service.js";
+import type { ApiKeyCreateResult } from "../../../services/api-key/create.js";
+import type { ApiKeyResult } from "../../../services/api-key/internal.js";
 import type { PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/api-key.service.js", () => mockApiKeyServiceFactory());
+vi.mock("../../../services/api-key/create.js", () => mockApiKeyCreateFactory());
+vi.mock("../../../services/api-key/queries.js", () => mockApiKeyQueriesFactory());
+vi.mock("../../../services/api-key/revoke.js", () => mockApiKeyRevokeFactory());
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
@@ -23,8 +28,9 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { createApiKey, listApiKeys, getApiKey, revokeApiKey } =
-  await import("../../../services/api-key.service.js");
+const { createApiKey } = await import("../../../services/api-key/create.js");
+const { listApiKeys, getApiKey } = await import("../../../services/api-key/queries.js");
+const { revokeApiKey } = await import("../../../services/api-key/revoke.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

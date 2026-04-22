@@ -88,16 +88,16 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { archiveFriendConnection, restoreFriendConnection } =
-  await import("../../services/friend-connection/lifecycle.js");
+  await import("../../services/account/friends/lifecycle.js");
 const { listFriendConnections, getFriendConnection } =
-  await import("../../services/friend-connection/queries.js");
+  await import("../../services/account/friends/queries.js");
 const {
   acceptFriendConnection,
   rejectFriendConnection,
   blockFriendConnection,
   removeFriendConnection,
-} = await import("../../services/friend-connection/transitions.js");
-const { updateFriendVisibility } = await import("../../services/friend-connection/update.js");
+} = await import("../../services/account/friends/transitions.js");
+const { updateFriendVisibility } = await import("../../services/account/friends/update.js");
 
 const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher.js");
 

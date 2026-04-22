@@ -1,10 +1,11 @@
 ---
 # ps-lg9y
 title: CI/pre-commit LOC cap on apps/api/src/services/**/*.ts
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-21T13:59:06Z
-updated_at: 2026-04-21T13:59:06Z
+updated_at: 2026-04-22T02:59:03Z
 parent: ps-0vwf
 ---
 
@@ -35,3 +36,10 @@ The service refactor epic (api-6l1q) splits 15 existing god-files into per-verb 
 ## Blocks
 
 This task must land AFTER the 15 service refactor beans (api-trlq + siblings) complete, otherwise it would block itself on existing files. Add a soft dependency hint in the bean body so it's scheduled last.
+
+## Summary of Changes
+
+- Added ESLint `max-lines` rule in `apps/api/eslint.config.js` capping `src/services/**/*.ts` at 500 lines (skipBlankLines + skipComments).
+- Documented the service file structure conventions (Option E no-barrel, verb split at 300 LOC, internal.ts only for ≥2 consumers, hard cap at 500) in CLAUDE.md under a new 'Service file structure and size' section.
+- Verified cap triggers on a synthetic 600-line file and that the existing refactored tree passes cleanly.
+- Largest service file after the api-6l1q refactor: `hierarchy-service-factory.ts` at 473 LOC — well under the 500 cap.

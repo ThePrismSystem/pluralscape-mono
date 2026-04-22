@@ -28,11 +28,17 @@ vi.mock("../../../trpc/middlewares/rate-limit.js", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../services/account.service.js", () => ({
+vi.mock("../../../services/account/queries.js", () => ({
   getAccountInfo: vi.fn(),
+}));
+
+vi.mock("../../../services/account/update.js", () => ({
   changeEmail: vi.fn(),
   changePassword: vi.fn(),
   updateAccountSettings: vi.fn(),
+}));
+
+vi.mock("../../../services/account/notifications.js", () => ({
   enqueueAccountEmailChangedNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -47,8 +53,11 @@ vi.mock("../../../services/biometric.service.js", () => ({
   verifyBiometric: vi.fn(),
 }));
 
-vi.mock("../../../services/recovery-key.service.js", () => ({
+vi.mock("../../../services/recovery-key/status.js", () => ({
   getRecoveryKeyStatus: vi.fn(),
+}));
+
+vi.mock("../../../services/recovery-key/regenerate.js", () => ({
   regenerateRecoveryKeyBackup: vi.fn(),
 }));
 
@@ -60,42 +69,41 @@ vi.mock("../../../services/account-deletion.service.js", () => ({
   deleteAccount: vi.fn(),
 }));
 
-vi.mock("../../../services/device-transfer.service.js", () => ({
+vi.mock("../../../services/device-transfer/initiate.js", () => ({
   initiateTransfer: vi.fn(),
-  approveTransfer: vi.fn(),
-  completeTransfer: vi.fn(),
-  TransferValidationError: class TransferValidationError extends Error {},
-  TransferNotFoundError: class TransferNotFoundError extends Error {},
-  TransferCodeError: class TransferCodeError extends Error {},
-  TransferExpiredError: class TransferExpiredError extends Error {},
-  KeyDerivationUnavailableError: class KeyDerivationUnavailableError extends Error {},
-  TransferSessionMismatchError: class TransferSessionMismatchError extends Error {},
 }));
 
-const {
-  getAccountInfo,
-  changeEmail,
-  changePassword,
-  updateAccountSettings,
-  enqueueAccountEmailChangedNotification,
-} = await import("../../../services/account.service.js");
+vi.mock("../../../services/device-transfer/approve.js", () => ({
+  approveTransfer: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer/complete.js", () => ({
+  completeTransfer: vi.fn(),
+}));
+
+const { getAccountInfo } = await import("../../../services/account/queries.js");
+const { changeEmail, changePassword, updateAccountSettings } =
+  await import("../../../services/account/update.js");
+const { enqueueAccountEmailChangedNotification } =
+  await import("../../../services/account/notifications.js");
 const { setAccountPin, removeAccountPin, verifyAccountPin } =
   await import("../../../services/account-pin.service.js");
 const { enrollBiometric, verifyBiometric } = await import("../../../services/biometric.service.js");
-const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup } =
-  await import("../../../services/recovery-key.service.js");
+const { getRecoveryKeyStatus } = await import("../../../services/recovery-key/status.js");
+const { regenerateRecoveryKeyBackup } =
+  await import("../../../services/recovery-key/regenerate.js");
 const { queryAuditLog } = await import("../../../services/audit-log-query.service.js");
+const { initiateTransfer } = await import("../../../services/device-transfer/initiate.js");
+const { approveTransfer } = await import("../../../services/device-transfer/approve.js");
+const { completeTransfer } = await import("../../../services/device-transfer/complete.js");
 const {
-  initiateTransfer,
-  approveTransfer,
-  completeTransfer,
   TransferValidationError,
   TransferNotFoundError,
   TransferCodeError,
   TransferExpiredError,
   KeyDerivationUnavailableError,
   TransferSessionMismatchError,
-} = await import("../../../services/device-transfer.service.js");
+} = await import("../../../services/device-transfer/errors.js");
 
 const { accountRouter } = await import("../../../trpc/routers/account.js");
 
