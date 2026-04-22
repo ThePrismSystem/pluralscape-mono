@@ -3,8 +3,9 @@
 title: Types single source of truth
 status: in-progress
 type: epic
+priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-21T13:54:18Z
+updated_at: 2026-04-22T22:12:31Z
 parent: ps-cd6x
 ---
 
@@ -37,3 +38,7 @@ Drizzle cannot be the source because the server only sees encrypted blobs plus m
 ## Spec reference
 
 docs/superpowers/specs/2026-04-21-m9a-closeout-hardening-design.md
+
+## Phase 0 progress (2026-04-22)
+
+Foundation landed: `Assert` / `Equal` / `Extends` / `Serialize` helpers (`packages/types/src/type-assertions.ts`), `SotEntityManifest` skeleton (`packages/types/src/__sot-manifest__.ts`), `pnpm types:check-sot` stub (`scripts/check-types-sot.ts`, runs `tsc --noEmit` on `@pluralscape/types`), ADR-023 refreshed. Also migrated `PendingAccountId` in `auth.ts` to the canonical symbol-keyed `Brand<T, B>` helper and marked `__brand` `@internal`. Proceeding to Phase 1 pilot (Member + AuditLogEntry).

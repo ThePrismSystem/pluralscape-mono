@@ -1,10 +1,11 @@
 ---
 # types-0pz6
 title: Refresh ADR-023 with types-as-SoT convention
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-21T13:55:18Z
-updated_at: 2026-04-21T13:55:18Z
+updated_at: 2026-04-22T22:12:21Z
 parent: types-ltel
 ---
 
@@ -38,3 +39,9 @@ ADR-023 currently covers Zod-type alignment at a tactical level. The 2026-04-21 
 ## Notes
 
 Pairs with the quick-wins bean that adds Supersedes/Superseded-by template fields; if that lands first, this refresh can use the new fields directly.
+
+## Summary of Changes
+
+- ADR-023 refreshed with the types-as-SoT triple convention: `<Entity>`, `<Entity>ServerMetadata`, `<Entity>Wire`
+- Documented three parity gates (Drizzle / Zod / OpenAPI) and the `pnpm types:check-sot` enforcement vector
+- `OptionalEqual` resolution deferred to pilot PR (task 16 updates the ADR once pilot lands)
