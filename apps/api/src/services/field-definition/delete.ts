@@ -84,38 +84,47 @@ export async function deleteFieldDefinition(
       );
     }
 
-    // Cascade-delete dependents when force is enabled
+    // Cascade-delete present dependents in parallel when force is enabled.
+    // `dep.type` is narrowed to the literal union of typeNames above via the
+    // const-generic `checkDependents`, so the switch is exhaustively checked.
     if (dependents.length > 0) {
-      const hasType = (t: string): boolean => dependents.some((d) => d.type === t);
-      await Promise.all([
-        hasType("fieldValues")
-          ? tx
-              .delete(fieldValues)
-              .where(
-                and(eq(fieldValues.fieldDefinitionId, fieldId), eq(fieldValues.systemId, systemId)),
-              )
-          : Promise.resolve(),
-        hasType("bucketVisibility")
-          ? tx
-              .delete(fieldBucketVisibility)
-              .where(
-                and(
-                  eq(fieldBucketVisibility.fieldDefinitionId, fieldId),
-                  eq(fieldBucketVisibility.systemId, systemId),
-                ),
-              )
-          : Promise.resolve(),
-        hasType("scopes")
-          ? tx
-              .delete(fieldDefinitionScopes)
-              .where(
-                and(
-                  eq(fieldDefinitionScopes.fieldDefinitionId, fieldId),
-                  eq(fieldDefinitionScopes.systemId, systemId),
-                ),
-              )
-          : Promise.resolve(),
-      ]);
+      await Promise.all(
+        dependents.map((dep) => {
+          switch (dep.type) {
+            case "fieldValues":
+              return tx
+                .delete(fieldValues)
+                .where(
+                  and(
+                    eq(fieldValues.fieldDefinitionId, fieldId),
+                    eq(fieldValues.systemId, systemId),
+                  ),
+                );
+            case "bucketVisibility":
+              return tx
+                .delete(fieldBucketVisibility)
+                .where(
+                  and(
+                    eq(fieldBucketVisibility.fieldDefinitionId, fieldId),
+                    eq(fieldBucketVisibility.systemId, systemId),
+                  ),
+                );
+            case "scopes":
+              return tx
+                .delete(fieldDefinitionScopes)
+                .where(
+                  and(
+                    eq(fieldDefinitionScopes.fieldDefinitionId, fieldId),
+                    eq(fieldDefinitionScopes.systemId, systemId),
+                  ),
+                );
+            default: {
+              const _exhaustive: never = dep.type;
+              throw new Error(`Unknown dependent type: ${String(_exhaustive)}`);
+            }
+          }
+        }),
+      );
     }
 
     const detail =

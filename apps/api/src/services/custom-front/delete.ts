@@ -48,7 +48,7 @@ export async function deleteCustomFront(
       },
     ]);
 
-    const sessionDep = dependents.find((d) => d.type === "frontingSessions");
+    const [sessionDep] = dependents;
     if (sessionDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,

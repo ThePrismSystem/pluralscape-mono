@@ -52,13 +52,13 @@ export async function deleteEntityType(
       },
     ]);
 
-    const entityDep = dependents.find((d) => d.type === "structureEntities");
+    const [entityDep] = dependents;
     if (entityDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
         `Structure entity type has ${String(entityDep.count)} entity(s). Remove all entities before deleting.`,
-        { dependents: [{ type: "structureEntities", count: entityDep.count }] },
+        { dependents: [entityDep] },
       );
     }
 

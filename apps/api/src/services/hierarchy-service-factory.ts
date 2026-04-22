@@ -348,9 +348,11 @@ export function createHierarchyService<
         throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
       }
 
-      // Check dependents — translate the factory's narrow shape into the
-      // shared helper's generic predicate form, then render the factory's
-      // narrative error format (no structured details payload).
+      // Translate the factory's narrow shape (entityColumn + systemColumn
+      // + optional archived filter) into the shared helper's generic
+      // predicate form. Error payload matches other services: narrative
+      // message plus a structured `{ dependents }` detail for clients that
+      // want to render per-type counts.
       const checks = dependentChecks.map((dep) => {
         const conditions = [eq(dep.entityColumn, entityId), eq(dep.systemColumn, systemId)];
         if (dep.filterArchived) {
@@ -371,6 +373,7 @@ export function createHierarchyService<
           HTTP_CONFLICT,
           "HAS_DEPENDENTS",
           `${entityName} has ${parts.join(" and ")}. Remove all dependents before deleting.`,
+          { dependents },
         );
       }
 

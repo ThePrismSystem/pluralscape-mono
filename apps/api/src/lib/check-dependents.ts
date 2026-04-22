@@ -4,7 +4,7 @@ import type { SQL } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-export interface DependentCheck {
+export interface DependentCheck<T extends string = string> {
   readonly table: PgTable;
   /**
    * Drizzle `and()` / `or()` return `SQL | undefined`. We accept that shape
@@ -13,31 +13,37 @@ export interface DependentCheck {
    * table (matches `.where(undefined)` semantics in drizzle).
    */
   readonly predicate: SQL | undefined;
-  readonly typeName: string;
+  readonly typeName: T;
 }
 
-export interface DependentResult {
-  readonly type: string;
+export interface DependentResult<T extends string = string> {
+  readonly type: T;
   readonly count: number;
 }
 
-export interface CheckDependentsResult {
-  readonly dependents: DependentResult[];
+export interface CheckDependentsResult<T extends string = string> {
+  readonly dependents: DependentResult<T>[];
 }
 
 /**
  * Run parallel count queries against FK dependent tables and return non-zero
  * counts keyed by the caller-supplied type name.
  *
+ * The `const T` type parameter captures the caller's `typeName` string
+ * literals, so the returned `dependents[].type` is a narrow union rather than
+ * `string`. This restores the compile-time safety the per-service union types
+ * used to provide before this helper was extracted — callers and downstream
+ * `switch`/`.find()` code get literal-type narrowing automatically.
+ *
  * Callers decide the failure semantics: throw `ApiHttpError(HTTP_CONFLICT,
  * "HAS_DEPENDENTS", ...)` with the returned `dependents` array as the error
  * details, or use the counts in any other way (e.g. force-delete with
  * cascade). The helper itself is predicate-agnostic.
  */
-export async function checkDependents(
+export async function checkDependents<const T extends string>(
   tx: PostgresJsDatabase,
-  checks: readonly DependentCheck[],
-): Promise<CheckDependentsResult> {
+  checks: readonly DependentCheck<T>[],
+): Promise<CheckDependentsResult<T>> {
   if (checks.length === 0) {
     return { dependents: [] };
   }
@@ -46,11 +52,10 @@ export async function checkDependents(
     checks.map((check) => tx.select({ count: count() }).from(check.table).where(check.predicate)),
   );
 
-  const dependents: DependentResult[] = [];
-  rows.forEach((result, i) => {
-    const [row] = result;
-    const check = checks[i];
-    if (!row || !check) {
+  const dependents: DependentResult<T>[] = [];
+  checks.forEach((check, i) => {
+    const row = rows[i]?.[0];
+    if (!row) {
       throw new Error("Unexpected: count query returned no rows");
     }
     if (row.count > 0) {

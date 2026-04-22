@@ -14,8 +14,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export type { GroupResult } from "./internal.js";
 
-// Factory method re-exports — TS inference propagates cleanly now.
-// Previously needed explicit type annotations (see api-5psf).
+// Re-exports; TS infers cleanly now (api-5psf).
 export const listGroups = groupHierarchy.list;
 export const getGroup = groupHierarchy.get;
 

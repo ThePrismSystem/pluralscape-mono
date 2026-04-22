@@ -63,7 +63,7 @@ export async function deleteFrontingSession(
       },
     ]);
 
-    const commentDep = dependents.find((d) => d.type === "frontingComments");
+    const [commentDep] = dependents;
     if (commentDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,

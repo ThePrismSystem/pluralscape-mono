@@ -310,6 +310,20 @@ describe("frontingComment router", () => {
       ).rejects.toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
     });
 
+    it("surfaces ApiHttpError(409) as CONFLICT", async () => {
+      vi.mocked(deleteFrontingComment).mockRejectedValue(
+        new ApiHttpError(409, "CONFLICT", "Comment cannot be deleted"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.frontingComment.delete({
+          systemId: MOCK_SYSTEM_ID,
+          sessionId: SESSION_ID,
+          commentId: COMMENT_ID,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
+    });
+
     it("applies rate limiting", async () => {
       const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
       vi.mocked(deleteFrontingComment).mockResolvedValue(undefined);

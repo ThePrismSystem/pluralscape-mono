@@ -51,7 +51,7 @@ export async function deleteTimerConfig(
       },
     ]);
 
-    const recordDep = dependents.find((d) => d.type === "checkInRecords");
+    const [recordDep] = dependents;
     if (recordDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,

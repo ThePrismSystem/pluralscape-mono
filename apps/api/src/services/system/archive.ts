@@ -64,7 +64,7 @@ export async function archiveSystem(
       },
     ]);
 
-    const memberDep = dependents.find((d) => d.type === "activeMembers");
+    const [memberDep] = dependents;
     if (memberDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,

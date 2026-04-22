@@ -190,7 +190,7 @@ Services live in `apps/api/src/services/` and follow a per-verb-file layout — 
 - **Verb-split at 300 LOC**: any service ≥300 LOC must be split into `services/<domain>/<verb>.ts` files (create, queries, update, lifecycle, delete, etc.). Single-file peer modules are fine below that threshold.
 - **Shared helpers**: put shared types/helpers in `services/<domain>/internal.ts` **only if consumed by ≥2 verb files**. Single-consumer helpers stay local to the verb file.
 - **No barrels**: do not create `services/<domain>/index.ts` or a sibling `services/<domain>.ts` re-export. The `moduleResolution: "Bundler"` setting does not resolve `./foo.js` → `./foo/index.ts` by design, and barrels defeat the tree-shaking and static analysis benefits of explicit imports.
-- **Hard cap**: ESLint enforces `max-lines: 450` on `src/services/**/*.ts` (skipping blanks/comments). The cap was tightened from 500 to 450 after the api-6l1q closeout, when files settled at 408 LOC max. If you hit it, split the file — do not add an override comment.
+- **Hard cap**: ESLint enforces `max-lines: 450` on `src/services/**/*.ts` (skipping blanks/comments). If you hit it, split the file — do not raise the cap or add an override comment.
 
 ### Typed auth context
 

@@ -172,4 +172,102 @@ describe("checkDependents (PGlite integration)", () => {
 
     expect(result).toEqual({ dependents: [{ type: "member", count: 2 }] });
   });
+
+  it("treats an `undefined` predicate as 'count every row' (matches drizzle .where(undefined))", async () => {
+    // The JSDoc on DependentCheck.predicate documents that undefined === no
+    // filter. Prove it: insert rows in two systems, pass predicate: undefined,
+    // and confirm the count spans the whole table (not just the current tenant).
+    await insertMember("mem_undef_1");
+    await insertMember("mem_undef_2");
+    await insertNote("note_undef_1");
+
+    const result = await checkDependents(asDb(db), [
+      {
+        table: members,
+        predicate: undefined,
+        typeName: "allMembers",
+      },
+      {
+        table: notes,
+        predicate: undefined,
+        typeName: "allNotes",
+      },
+    ]);
+
+    expect(result.dependents).toEqual([
+      { type: "allMembers", count: 2 },
+      { type: "allNotes", count: 1 },
+    ]);
+  });
+
+  it("throws 'Unexpected: count query returned no rows' when a select returns an empty array", async () => {
+    // Guards against a drizzle contract break where count() ever returns [].
+    // Unreachable against a real DB; we bridge a structural stub through
+    // `asDb` since both share the "same query surface, different result HKT"
+    // escape hatch the helper already documents.
+    await expect(
+      checkDependents(stubDb({ rows: [] }), [
+        {
+          table: members,
+          predicate: eq(members.systemId, systemId),
+          typeName: "member",
+        },
+      ]),
+    ).rejects.toThrow("Unexpected: count query returned no rows");
+  });
+
+  it("runs count queries in parallel, not sequentially", async () => {
+    // Verify Promise.all semantics: total wall-clock should be close to the
+    // slowest single query, not the sum of all queries. The stub injects a
+    // fixed delay per query so the assertion is deterministic.
+    const QUERY_DELAY_MS = 80;
+
+    const started = performance.now();
+    const result = await checkDependents(
+      stubDb({ rows: [{ count: 1 }], delayMs: QUERY_DELAY_MS }),
+      [
+        { table: members, predicate: eq(members.systemId, systemId), typeName: "a" },
+        { table: notes, predicate: eq(notes.systemId, systemId), typeName: "b" },
+        { table: members, predicate: eq(members.systemId, systemId), typeName: "c" },
+      ],
+    );
+    const elapsed = performance.now() - started;
+
+    // Sequential execution would take ≥ 3 × QUERY_DELAY_MS. Parallel should
+    // finish well under that floor (~1 delay + scheduling overhead).
+    const SEQUENTIAL_FLOOR = 3 * QUERY_DELAY_MS;
+    expect(elapsed).toBeLessThan(SEQUENTIAL_FLOOR);
+    expect(result.dependents).toEqual([
+      { type: "a", count: 1 },
+      { type: "b", count: 1 },
+      { type: "c", count: 1 },
+    ]);
+  });
 });
+
+/**
+ * Test-only bridge: builds a minimal structural mock of a drizzle tx that
+ * supports the `select().from().where()` chain `checkDependents` consumes,
+ * with a configurable rows result and optional per-query delay. Mirrors the
+ * `asDb` pattern (`as never as PostgresJsDatabase`) — a function boundary
+ * makes the escape hatch lint-clean.
+ */
+function stubDb(opts: {
+  rows: { count: number }[];
+  delayMs?: number;
+}): import("drizzle-orm/postgres-js").PostgresJsDatabase {
+  const whereFn = async (): Promise<{ count: number }[]> => {
+    if (opts.delayMs !== undefined) {
+      await new Promise((resolve) => setTimeout(resolve, opts.delayMs));
+    }
+    return opts.rows;
+  };
+  const stub = {
+    select: () => ({
+      from: () => ({
+        where: whereFn,
+      }),
+    }),
+  };
+  return stub as never as import("drizzle-orm/postgres-js").PostgresJsDatabase;
+}

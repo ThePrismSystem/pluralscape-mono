@@ -59,7 +59,7 @@ export async function deleteWebhookConfig(
       },
     ]);
 
-    const pendingDep = dependents.find((d) => d.type === "pendingDeliveries");
+    const [pendingDep] = dependents;
     if (pendingDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,

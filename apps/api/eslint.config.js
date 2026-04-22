@@ -58,9 +58,8 @@ export default [
     },
   },
   {
-    // Cap service file length. After api-6l1q closeout, files settled at 408 LOC
-    // max (hierarchy-service-factory.ts, a legacy factory). This cap is tightened
-    // from the initial 500 to catch accumulation past the current baseline.
+    // Cap service file length. Tightened from 500 to 450 after the api-6l1q
+    // closeout. If you hit the cap, split the file — do not raise it.
     files: ["src/services/**/*.ts"],
     rules: {
       "max-lines": ["error", { max: 450, skipBlankLines: true, skipComments: true }],

@@ -752,6 +752,54 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
       expect(entry?.systemId).toBe(systemId);
     });
+
+    it("is idempotent when zero items are in failed status — audit detail reports 0 reset", async () => {
+      // A rotation can legally be in `failed` state with 0 failed items (e.g.
+      // after a prior retry that was interrupted before the rotation-state
+      // transition committed). Retry should succeed, transition the state,
+      // and lock in the zero-count audit phrasing so reviewers can tell this
+      // case apart from the usual non-zero reset.
+      const bucketId = await insertBucket();
+      const rotationId = brandId<BucketKeyRotationId>(`bkr_${crypto.randomUUID()}`);
+
+      await db.insert(bucketKeyRotations).values({
+        id: rotationId,
+        bucketId,
+        systemId,
+        fromKeyVersion: 1,
+        toKeyVersion: 2,
+        state: ROTATION_STATES.failed,
+        initiatedAt: Date.now(),
+        totalItems: 2,
+        completedItems: 2,
+        failedItems: 0,
+      });
+
+      // Only completed items — nothing to reset.
+      await db.insert(bucketRotationItems).values({
+        id: `bri_${crypto.randomUUID()}`,
+        systemId,
+        rotationId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        status: ROTATION_ITEM_STATUSES.completed,
+        claimedBy: null,
+        claimedAt: null,
+        completedAt: Date.now(),
+        attempts: 1,
+      });
+
+      const audit = spyAudit();
+      const result = await retryRotation(asDb(db), systemId, bucketId, rotationId, auth, audit);
+
+      expect(result.state).toBe(ROTATION_STATES.migrating);
+      expect(result.failedItems).toBe(0);
+
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.detail).toBe(
+        "Rotation retry: reset 0 failed items to pending (rotation state failed → migrating)",
+      );
+    });
   });
 
   // ── Full lifecycle ────────────────────────────────────────────────
