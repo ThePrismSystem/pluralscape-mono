@@ -1,4 +1,5 @@
-declare const __brand: unique symbol;
+/** @internal Implementation detail — do not construct branded IDs via this symbol; use `brandId()`. */
+export declare const __brand: unique symbol;
 
 /**
  * Branded type — makes `T` nominally distinct via a phantom brand tag.

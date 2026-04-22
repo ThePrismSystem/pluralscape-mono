@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { Assert, Equal } from "../type-assertions.js";
+import type { MemberId } from "../ids.js";
+import type { Assert, Equal, Serialize } from "../type-assertions.js";
 
 describe("Equal<A, B>", () => {
   it("returns true for structurally identical types", () => {
@@ -40,5 +41,59 @@ describe("Assert<T>", () => {
     // @ts-expect-error — Assert rejects `boolean`
     type _BadBoolean = Assert<boolean>;
     expectTypeOf<[_BadFalse, _BadBoolean]>();
+  });
+});
+
+describe("Serialize<T>", () => {
+  it("converts Date to ISO string", () => {
+    type Input = { createdAt: Date };
+    type Output = Serialize<Input>;
+    expectTypeOf<Output>().toEqualTypeOf<{ createdAt: string }>();
+  });
+
+  it("converts Uint8Array to base64 string", () => {
+    type Input = { encryptedData: Uint8Array };
+    type Output = Serialize<Input>;
+    expectTypeOf<Output>().toEqualTypeOf<{ encryptedData: string }>();
+  });
+
+  it("strips branded IDs to plain string", () => {
+    type Input = { id: MemberId };
+    type Output = Serialize<Input>;
+    expectTypeOf<Output>().toEqualTypeOf<{ id: string }>();
+  });
+
+  it("recurses into nested objects", () => {
+    type Input = { outer: { inner: Date } };
+    type Output = Serialize<Input>;
+    expectTypeOf<Output>().toEqualTypeOf<{ outer: { inner: string } }>();
+  });
+
+  it("recurses into arrays", () => {
+    type Input = { items: Date[] };
+    type Output = Serialize<Input>;
+    expectTypeOf<Output>().toEqualTypeOf<{ items: string[] }>();
+  });
+
+  it("preserves primitives", () => {
+    type Input = { a: string; b: number; c: boolean; d: null };
+    expectTypeOf<Serialize<Input>>().toEqualTypeOf<Input>();
+  });
+
+  it("preserves optional markers", () => {
+    type Input = { a?: Date };
+    type Output = Serialize<Input>;
+    expectTypeOf<Output>().toEqualTypeOf<{ a?: string }>();
+  });
+
+  it("preserves union branches and serializes each", () => {
+    type Input = { a: Date | null };
+    type Output = Serialize<Input>;
+    expectTypeOf<Output>().toEqualTypeOf<{ a: string | null }>();
+  });
+
+  it("strips branded strings declared via the canonical Brand<T, B> helper", () => {
+    type Input = { pending: import("../auth.js").PendingAccountId };
+    expectTypeOf<Serialize<Input>>().toEqualTypeOf<{ pending: string }>();
   });
 });
