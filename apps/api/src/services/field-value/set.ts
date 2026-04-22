@@ -12,7 +12,6 @@ import { tenantCtx } from "../../lib/tenant-context.js";
 
 import {
   assertOwnerActiveAndGetColumns,
-  ownerLabel,
   ownerWhereColumn,
   parseAndValidateValueBlob,
   toFieldValueResult,
@@ -23,6 +22,21 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+function ownerLabel(owner: FieldValueOwner): string {
+  switch (owner.kind) {
+    case "member":
+      return "member";
+    case "group":
+      return "group";
+    case "structureEntity":
+      return "structure entity";
+    default: {
+      const _exhaustive: never = owner;
+      throw new Error(`Unknown owner kind: ${(_exhaustive as FieldValueOwner).kind}`);
+    }
+  }
+}
 
 export async function setFieldValueForOwner(
   db: PostgresJsDatabase,

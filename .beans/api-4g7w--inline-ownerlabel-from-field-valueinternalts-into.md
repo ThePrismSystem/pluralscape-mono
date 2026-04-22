@@ -1,10 +1,11 @@
 ---
 # api-4g7w
 title: Inline ownerLabel from field-value/internal.ts into set.ts (single-consumer)
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-22T02:43:26Z
-updated_at: 2026-04-22T02:43:26Z
+updated_at: 2026-04-22T07:10:48Z
 parent: api-6l1q
 ---
 
@@ -25,3 +26,7 @@ Discovered during api-6l1q PR 2 findings spot-audit (api-uya3 had no recorded fi
 - `ownerLabel` not exported from internal.ts
 - `set.ts` works unchanged
 - Verify suite passes
+
+## Summary of Changes
+
+Moved `ownerLabel` from `field-value/internal.ts` into `field-value/set.ts` as a module-local function (single-consumer rule per Option E). Removed the export and import.

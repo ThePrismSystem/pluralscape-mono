@@ -140,18 +140,3 @@ export function ownerWhereColumn(owner: FieldValueOwner): SQL {
     }
   }
 }
-
-export function ownerLabel(owner: FieldValueOwner): string {
-  switch (owner.kind) {
-    case "member":
-      return "member";
-    case "group":
-      return "group";
-    case "structureEntity":
-      return "structure entity";
-    default: {
-      const _exhaustive: never = owner;
-      throw new Error(`Unknown owner kind: ${(_exhaustive as FieldValueOwner).kind}`);
-    }
-  }
-}
