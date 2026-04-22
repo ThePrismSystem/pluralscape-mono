@@ -1,8 +1,9 @@
 import { systemStructureEntities, systemStructureEntityTypes } from "@pluralscape/db/pg";
-import { and, count, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
+import { checkDependents } from "../../../lib/check-dependents.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
 import { tenantCtx } from "../../../lib/tenant-context.js";
@@ -40,26 +41,24 @@ export async function deleteEntityType(
     }
 
     // Check for entities referencing this type
-    const [entityCount] = await tx
-      .select({ count: count() })
-      .from(systemStructureEntities)
-      .where(
-        and(
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: systemStructureEntities,
+        predicate: and(
           eq(systemStructureEntities.entityTypeId, entityTypeId),
           eq(systemStructureEntities.systemId, systemId),
         ),
-      );
+        typeName: "structureEntities",
+      },
+    ]);
 
-    if (!entityCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    if (entityCount.count > 0) {
+    const [entityDep] = dependents;
+    if (entityDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Structure entity type has ${String(entityCount.count)} entity(s). Remove all entities before deleting.`,
-        { dependents: [{ type: "structureEntities", count: entityCount.count }] },
+        `Structure entity type has ${String(entityDep.count)} entity(s). Remove all entities before deleting.`,
+        { dependents: [entityDep] },
       );
     }
 

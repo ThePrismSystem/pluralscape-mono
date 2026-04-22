@@ -1,11 +1,11 @@
 ---
 # api-3vsr
 title: Add test coverage for fronting-comment.delete tRPC procedure
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T21:56:12Z
-updated_at: 2026-04-21T21:56:12Z
+updated_at: 2026-04-22T08:01:46Z
 parent: api-6l1q
 ---
 
@@ -29,3 +29,7 @@ This was preserved during the refactor (lifecycle mock still omits deleteFrontin
 - `frontingComment.delete` has at least one passing unit test
 - Integration test exercises delete at least once
 - Coverage report shows the delete path covered
+
+## Summary of Changes
+
+Added `deleteFrontingComment` to the lifecycle vi.mock block + import destructure in fronting-comment.test.ts. Added 4 unit tests for the frontingComment.delete tRPC procedure (happy path, NOT_FOUND, FORBIDDEN, rate limit). Integration: confirmed existing integration coverage in fronting-comment.integration.test.ts (frontingComment.delete describe block, line 172).

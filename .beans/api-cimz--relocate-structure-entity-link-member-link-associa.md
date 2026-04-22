@@ -1,10 +1,11 @@
 ---
 # api-cimz
 title: Relocate structure-entity-link/-member-link/-association into services/structure/
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-22T02:42:52Z
-updated_at: 2026-04-22T02:42:52Z
+updated_at: 2026-04-22T07:29:21Z
 parent: api-6l1q
 ---
 
@@ -31,3 +32,7 @@ These were kept flat during PR 2 to tighten the diff. Per the api-6l1q nesting r
 - No imports reference `services/structure-entity-{link,member-link,association}.service.js`
 - Routes under `routes/structure/` continue to work
 - Verify suite passes
+
+## Summary of Changes
+
+Moved structure-entity-link/-member-link/-association service files into services/structure/{link,member-link,association}.ts as flat peer modules. Deleted the legacy services/structure-entity.service.ts barrel. Rewrote imports in 25 route files + tRPC structure router + 4 route/test call sites to import directly from the per-file verbs (Option E). Renamed the 3 associated service test files to match the new locations. Preserved entity-crud unit coverage by extracting the entity-crud describe blocks from the deleted barrel test into a new **tests**/services/structure/entity-crud.test.ts; entity-type/link/member-link/association blocks were duplicative of existing per-service test files.

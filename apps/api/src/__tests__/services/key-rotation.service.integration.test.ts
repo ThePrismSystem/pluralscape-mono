@@ -17,6 +17,7 @@ import { claimRotationChunk } from "../../services/bucket/rotations/claim.js";
 import { completeRotationChunk } from "../../services/bucket/rotations/complete.js";
 import { initiateRotation } from "../../services/bucket/rotations/initiate.js";
 import { getRotationProgress } from "../../services/bucket/rotations/queries.js";
+import { retryRotation } from "../../services/bucket/rotations/retry.js";
 import {
   assertApiError,
   genBucketId,
@@ -655,6 +656,148 @@ describe("key-rotation.service (PGlite integration)", () => {
         getRotationProgress(asDb(db), systemId, bucketId, fakeRotationId, auth),
         "NOT_FOUND",
         404,
+      );
+    });
+  });
+
+  // ── retryRotation ─────────────────────────────────────────────────
+
+  describe("retryRotation", () => {
+    it("resets only failed items and emits disambiguated audit detail", async () => {
+      // Seed a rotation in `failed` state with a mix of statuses so the
+      // reset count is strictly smaller than the total item count — this
+      // makes the audit detail meaningful (a bare "N retries" number would
+      // be ambiguous without the "N failed items → pending" framing).
+      const bucketId = await insertBucket();
+      const rotationId = brandId<BucketKeyRotationId>(`bkr_${crypto.randomUUID()}`);
+
+      await db.insert(bucketKeyRotations).values({
+        id: rotationId,
+        bucketId,
+        systemId,
+        fromKeyVersion: 1,
+        toKeyVersion: 2,
+        state: ROTATION_STATES.failed,
+        initiatedAt: Date.now(),
+        totalItems: 5,
+        completedItems: 2,
+        failedItems: 3,
+      });
+
+      // 2 completed + 3 failed + 0 pending/claimed. Only the 3 failed items
+      // should be reset; the 2 completed items must stay untouched.
+      const seedItem = async (
+        status:
+          | (typeof ROTATION_ITEM_STATUSES)["completed"]
+          | (typeof ROTATION_ITEM_STATUSES)["failed"],
+        completedAt: number | null,
+      ): Promise<string> => {
+        const itemId = `bri_${crypto.randomUUID()}`;
+        await db.insert(bucketRotationItems).values({
+          id: itemId,
+          systemId,
+          rotationId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          status,
+          claimedBy: status === ROTATION_ITEM_STATUSES.failed ? "sess_prior-claim" : null,
+          claimedAt: status === ROTATION_ITEM_STATUSES.failed ? Date.now() : null,
+          completedAt,
+          attempts: status === ROTATION_ITEM_STATUSES.failed ? 3 : 1,
+        });
+        return itemId;
+      };
+
+      const completedIds = [
+        await seedItem(ROTATION_ITEM_STATUSES.completed, Date.now()),
+        await seedItem(ROTATION_ITEM_STATUSES.completed, Date.now()),
+      ];
+      const failedIds = [
+        await seedItem(ROTATION_ITEM_STATUSES.failed, null),
+        await seedItem(ROTATION_ITEM_STATUSES.failed, null),
+        await seedItem(ROTATION_ITEM_STATUSES.failed, null),
+      ];
+
+      const audit = spyAudit();
+      const result = await retryRotation(asDb(db), systemId, bucketId, rotationId, auth, audit);
+
+      // Rotation transitioned failed → migrating, failedItems counter reset.
+      expect(result.state).toBe(ROTATION_STATES.migrating);
+      expect(result.failedItems).toBe(0);
+
+      // Exactly the 3 failed items were reset to pending with claim cleared.
+      const failedRowsAfter = await db
+        .select()
+        .from(bucketRotationItems)
+        .where(eq(bucketRotationItems.rotationId, rotationId));
+      const byId = new Map(failedRowsAfter.map((row) => [row.id, row]));
+      for (const id of failedIds) {
+        const row = byId.get(id);
+        expect(row?.status).toBe(ROTATION_ITEM_STATUSES.pending);
+        expect(row?.claimedBy).toBeNull();
+        expect(row?.claimedAt).toBeNull();
+      }
+      for (const id of completedIds) {
+        const row = byId.get(id);
+        expect(row?.status).toBe(ROTATION_ITEM_STATUSES.completed);
+      }
+
+      // Audit event records the reset count AND the state transition so it
+      // cannot be misread as "N retries issued" against a larger item set.
+      expect(audit.calls).toHaveLength(1);
+      const entry = audit.calls[0];
+      expect(entry?.eventType).toBe("bucket.key_rotation.retried");
+      expect(entry?.detail).toBe(
+        "Rotation retry: reset 3 failed items to pending (rotation state failed → migrating)",
+      );
+      expect(entry?.systemId).toBe(systemId);
+    });
+
+    it("is idempotent when zero items are in failed status — audit detail reports 0 reset", async () => {
+      // A rotation can legally be in `failed` state with 0 failed items (e.g.
+      // after a prior retry that was interrupted before the rotation-state
+      // transition committed). Retry should succeed, transition the state,
+      // and lock in the zero-count audit phrasing so reviewers can tell this
+      // case apart from the usual non-zero reset.
+      const bucketId = await insertBucket();
+      const rotationId = brandId<BucketKeyRotationId>(`bkr_${crypto.randomUUID()}`);
+
+      await db.insert(bucketKeyRotations).values({
+        id: rotationId,
+        bucketId,
+        systemId,
+        fromKeyVersion: 1,
+        toKeyVersion: 2,
+        state: ROTATION_STATES.failed,
+        initiatedAt: Date.now(),
+        totalItems: 2,
+        completedItems: 2,
+        failedItems: 0,
+      });
+
+      // Only completed items — nothing to reset.
+      await db.insert(bucketRotationItems).values({
+        id: `bri_${crypto.randomUUID()}`,
+        systemId,
+        rotationId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        status: ROTATION_ITEM_STATUSES.completed,
+        claimedBy: null,
+        claimedAt: null,
+        completedAt: Date.now(),
+        attempts: 1,
+      });
+
+      const audit = spyAudit();
+      const result = await retryRotation(asDb(db), systemId, bucketId, rotationId, auth, audit);
+
+      expect(result.state).toBe(ROTATION_STATES.migrating);
+      expect(result.failedItems).toBe(0);
+
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.detail).toBe(
+        "Rotation retry: reset 0 failed items to pending (rotation state failed → migrating)",
       );
     });
   });

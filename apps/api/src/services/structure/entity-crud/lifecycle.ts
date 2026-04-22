@@ -5,10 +5,11 @@ import {
   systemStructureEntityLinks,
   systemStructureEntityMemberLinks,
 } from "@pluralscape/db/pg";
-import { and, count, eq, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
+import { checkDependents } from "../../../lib/check-dependents.js";
 import { archiveEntity, restoreEntity } from "../../../lib/entity-lifecycle.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
@@ -72,64 +73,47 @@ export async function deleteStructureEntity(
     }
 
     // Check for dependents across all junction tables and notes
-    const [[linkCount], [memberLinkCount], [assocCount], [noteCount]] = await Promise.all([
-      tx
-        .select({ count: count() })
-        .from(systemStructureEntityLinks)
-        .where(
-          and(
-            eq(systemStructureEntityLinks.systemId, systemId),
-            or(
-              eq(systemStructureEntityLinks.entityId, entityId),
-              eq(systemStructureEntityLinks.parentEntityId, entityId),
-            ),
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: systemStructureEntityLinks,
+        predicate: and(
+          eq(systemStructureEntityLinks.systemId, systemId),
+          or(
+            eq(systemStructureEntityLinks.entityId, entityId),
+            eq(systemStructureEntityLinks.parentEntityId, entityId),
           ),
         ),
-      tx
-        .select({ count: count() })
-        .from(systemStructureEntityMemberLinks)
-        .where(
-          and(
-            eq(systemStructureEntityMemberLinks.systemId, systemId),
-            eq(systemStructureEntityMemberLinks.parentEntityId, entityId),
+        typeName: "entityLinks",
+      },
+      {
+        table: systemStructureEntityMemberLinks,
+        predicate: and(
+          eq(systemStructureEntityMemberLinks.systemId, systemId),
+          eq(systemStructureEntityMemberLinks.parentEntityId, entityId),
+        ),
+        typeName: "entityMemberLinks",
+      },
+      {
+        table: systemStructureEntityAssociations,
+        predicate: and(
+          eq(systemStructureEntityAssociations.systemId, systemId),
+          or(
+            eq(systemStructureEntityAssociations.sourceEntityId, entityId),
+            eq(systemStructureEntityAssociations.targetEntityId, entityId),
           ),
         ),
-      tx
-        .select({ count: count() })
-        .from(systemStructureEntityAssociations)
-        .where(
-          and(
-            eq(systemStructureEntityAssociations.systemId, systemId),
-            or(
-              eq(systemStructureEntityAssociations.sourceEntityId, entityId),
-              eq(systemStructureEntityAssociations.targetEntityId, entityId),
-            ),
-          ),
+        typeName: "entityAssociations",
+      },
+      {
+        table: notes,
+        predicate: and(
+          eq(notes.systemId, systemId),
+          eq(notes.authorEntityType, "structure-entity"),
+          eq(notes.authorEntityId, entityId),
         ),
-      tx
-        .select({ count: count() })
-        .from(notes)
-        .where(
-          and(
-            eq(notes.systemId, systemId),
-            eq(notes.authorEntityType, "structure-entity"),
-            eq(notes.authorEntityId, entityId),
-          ),
-        ),
+        typeName: "notes",
+      },
     ]);
-
-    if (!linkCount || !memberLinkCount || !assocCount || !noteCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    type EntityDependentType = "entityLinks" | "entityMemberLinks" | "entityAssociations" | "notes";
-    const dependents: { type: EntityDependentType; count: number }[] = [];
-    if (linkCount.count > 0) dependents.push({ type: "entityLinks", count: linkCount.count });
-    if (memberLinkCount.count > 0)
-      dependents.push({ type: "entityMemberLinks", count: memberLinkCount.count });
-    if (assocCount.count > 0)
-      dependents.push({ type: "entityAssociations", count: assocCount.count });
-    if (noteCount.count > 0) dependents.push({ type: "notes", count: noteCount.count });
 
     if (dependents.length > 0) {
       throw new ApiHttpError(

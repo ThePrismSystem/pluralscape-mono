@@ -40,10 +40,9 @@ export async function updateFieldDefinition(
   const blob = parseAndValidateFieldBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  const setClause: Record<string, unknown> = {
+  const setClause: Partial<typeof fieldDefinitions.$inferInsert> = {
     encryptedData: blob,
     updatedAt: timestamp,
-    version: sql`${fieldDefinitions.version} + 1`,
   };
 
   if (parsed.data.required !== undefined) {
@@ -56,7 +55,10 @@ export async function updateFieldDefinition(
   const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(fieldDefinitions)
-      .set(setClause)
+      .set({
+        ...setClause,
+        version: sql`${fieldDefinitions.version} + 1`,
+      })
       .where(
         and(
           eq(fieldDefinitions.id, fieldId),

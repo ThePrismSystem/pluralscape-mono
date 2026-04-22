@@ -35,6 +35,7 @@ vi.mock("../../../services/fronting-session/comments/update.js", () => ({
 vi.mock("../../../services/fronting-session/comments/lifecycle.js", () => ({
   archiveFrontingComment: vi.fn(),
   restoreFrontingComment: vi.fn(),
+  deleteFrontingComment: vi.fn(),
 }));
 
 const { createFrontingComment } =
@@ -43,7 +44,7 @@ const { getFrontingComment, listFrontingComments } =
   await import("../../../services/fronting-session/comments/queries.js");
 const { updateFrontingComment } =
   await import("../../../services/fronting-session/comments/update.js");
-const { archiveFrontingComment, restoreFrontingComment } =
+const { archiveFrontingComment, restoreFrontingComment, deleteFrontingComment } =
   await import("../../../services/fronting-session/comments/lifecycle.js");
 
 const { frontingCommentRouter } = await import("../../../trpc/routers/fronting-comment.js");
@@ -259,6 +260,84 @@ describe("frontingComment router", () => {
 
       expect(vi.mocked(restoreFrontingComment)).toHaveBeenCalledOnce();
       expect(result).toEqual(MOCK_COMMENT_RESULT);
+    });
+  });
+
+  // ── delete ────────────────────────────────────────────────────────
+
+  describe("frontingComment.delete", () => {
+    it("calls deleteFrontingComment and returns success", async () => {
+      vi.mocked(deleteFrontingComment).mockResolvedValue(undefined);
+      const caller = createCaller();
+      const result = await caller.frontingComment.delete({
+        systemId: MOCK_SYSTEM_ID,
+        sessionId: SESSION_ID,
+        commentId: COMMENT_ID,
+      });
+
+      expect(vi.mocked(deleteFrontingComment)).toHaveBeenCalledOnce();
+      expect(vi.mocked(deleteFrontingComment).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
+      expect(vi.mocked(deleteFrontingComment).mock.calls[0]?.[2]).toBe(SESSION_ID);
+      expect(vi.mocked(deleteFrontingComment).mock.calls[0]?.[3]).toBe(COMMENT_ID);
+      expect(result).toEqual({ success: true });
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(deleteFrontingComment).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Comment not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.frontingComment.delete({
+          systemId: MOCK_SYSTEM_ID,
+          sessionId: SESSION_ID,
+          commentId: COMMENT_ID,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+
+    it("surfaces ApiHttpError(403) as FORBIDDEN", async () => {
+      vi.mocked(deleteFrontingComment).mockRejectedValue(
+        new ApiHttpError(403, "FORBIDDEN", "Access denied"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.frontingComment.delete({
+          systemId: MOCK_SYSTEM_ID,
+          sessionId: SESSION_ID,
+          commentId: COMMENT_ID,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
+    });
+
+    it("surfaces ApiHttpError(409) as CONFLICT", async () => {
+      vi.mocked(deleteFrontingComment).mockRejectedValue(
+        new ApiHttpError(409, "CONFLICT", "Comment cannot be deleted"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.frontingComment.delete({
+          systemId: MOCK_SYSTEM_ID,
+          sessionId: SESSION_ID,
+          commentId: COMMENT_ID,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
+    });
+
+    it("applies rate limiting", async () => {
+      const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+      vi.mocked(deleteFrontingComment).mockResolvedValue(undefined);
+      const caller = createCaller();
+      await assertProcedureRateLimited(
+        vi.mocked(checkRateLimit),
+        () =>
+          caller.frontingComment.delete({
+            systemId: MOCK_SYSTEM_ID,
+            sessionId: SESSION_ID,
+            commentId: COMMENT_ID,
+          }),
+        "write",
+      );
     });
   });
 

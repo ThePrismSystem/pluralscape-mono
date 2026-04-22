@@ -12,7 +12,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/structure-entity-link.service.js", () => ({
+vi.mock("../../../../services/structure/link.js", () => ({
   updateEntityLink: vi.fn(),
   createEntityLink: vi.fn(),
   deleteEntityLink: vi.fn(),
@@ -48,15 +48,16 @@ vi.mock("../../../../services/structure/entity-crud/lifecycle.js", () => ({
   restoreStructureEntity: vi.fn(),
   deleteStructureEntity: vi.fn(),
 }));
-vi.mock("../../../../services/structure-entity-member-link.service.js", () => ({
+vi.mock("../../../../services/structure/member-link.js", () => ({
   createEntityMemberLink: vi.fn(),
   deleteEntityMemberLink: vi.fn(),
   listEntityMemberLinks: vi.fn(),
 }));
-vi.mock("../../../../services/structure-entity-association.service.js", () => ({
+vi.mock("../../../../services/structure/association.js", () => ({
   createEntityAssociation: vi.fn(),
   deleteEntityAssociation: vi.fn(),
   listEntityAssociations: vi.fn(),
+  getEntityHierarchy: vi.fn(),
 }));
 vi.mock("../../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../../lib/db.js", () => mockDbFactory());
@@ -64,7 +65,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { updateEntityLink } = await import("../../../../services/structure-entity-link.service.js");
+const { updateEntityLink } = await import("../../../../services/structure/link.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

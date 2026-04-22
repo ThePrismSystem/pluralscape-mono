@@ -1,11 +1,11 @@
 ---
 # api-voa8
 title: Replace Record<string, unknown> setClauses with drizzle $inferInsert in service update paths
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-21T21:55:51Z
-updated_at: 2026-04-21T21:55:51Z
+updated_at: 2026-04-22T07:37:53Z
 parent: api-6l1q
 ---
 
@@ -27,3 +27,7 @@ Likely pattern exists in other update paths across services. A sweep would upgra
 - Zero `Record<string, unknown>` setClause patterns in services/
 - All update paths use drizzle-inferred types
 - Typecheck + unit + integration tests green
+
+## Summary of Changes
+
+Replaced the last `Record<string, unknown>` setClause pattern in `services/` (field-definition/update.ts:43) with `Partial<typeof fieldDefinitions.$inferInsert>`, matching the established pattern in notification-config and timer-config. The `version: sql`...``OCC increment was moved inline into the`.set()`call (where drizzle accepts`PgUpdateSetSource`with`SQL` values), mirroring field-value/update.ts.

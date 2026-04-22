@@ -2,8 +2,9 @@ import { systems } from "@pluralscape/db/pg";
 import { createId, now } from "@pluralscape/types";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { checkDependents } from "../lib/check-dependents.js";
 import { parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
@@ -17,7 +18,6 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
-import { checkDependents } from "./hierarchy-service-helpers.js";
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { HierarchyService, HierarchyServiceConfig } from "./hierarchy-service-types.js";
@@ -348,8 +348,34 @@ export function createHierarchyService<
         throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
       }
 
-      // Check dependents
-      await checkDependents(tx, entityId, systemId, entityName, dependentChecks);
+      // Translate the factory's narrow shape (entityColumn + systemColumn
+      // + optional archived filter) into the shared helper's generic
+      // predicate form. Error payload matches other services: narrative
+      // message plus a structured `{ dependents }` detail for clients that
+      // want to render per-type counts.
+      const checks = dependentChecks.map((dep) => {
+        const conditions = [eq(dep.entityColumn, entityId), eq(dep.systemColumn, systemId)];
+        if (dep.filterArchived) {
+          conditions.push(eq(dep.filterArchived, false));
+        }
+        return {
+          table: dep.table,
+          predicate: and(...conditions),
+          typeName: dep.label,
+        };
+      });
+
+      const { dependents } = await checkDependents(tx, checks);
+
+      if (dependents.length > 0) {
+        const parts = dependents.map((d) => `${String(d.count)} ${d.type}`);
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "HAS_DEPENDENTS",
+          `${entityName} has ${parts.join(" and ")}. Remove all dependents before deleting.`,
+          { dependents },
+        );
+      }
 
       // Audit before delete (FK satisfied since entity still exists)
       await audit(tx, {

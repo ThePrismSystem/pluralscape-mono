@@ -91,10 +91,15 @@ export async function retryRotation(
       throw new Error("Rotation record disappeared during retry transaction");
     }
 
+    // Resetting failed items to `pending` IS the whole retry step — there is no
+    // separate enqueue. Clients pick these up by polling `claimRotationChunk`,
+    // which selects rotation items in `pending` status. The detail below spells
+    // out both the reset count and the rotation state transition so the audit
+    // entry is unambiguous (no "X retries issued" interpretation).
     await audit(tx, {
       eventType: "bucket.key_rotation.retried",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Rotation retried: ${String(resetResult.length)} failed items reset to pending`,
+      detail: `Rotation retry: reset ${String(resetResult.length)} failed items to pending (rotation state failed → migrating)`,
       systemId,
     });
 

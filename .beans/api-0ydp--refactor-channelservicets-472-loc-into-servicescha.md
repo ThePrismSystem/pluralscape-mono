@@ -1,11 +1,11 @@
 ---
 # api-0ydp
 title: Refactor channel.service.ts (472 LOC) into services/channel/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T23:41:42Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -35,3 +35,7 @@ Part of epic api-6l1q PR 2. Refactor `channel.service.ts` (~472 LOC) into `servi
 - apps/api/src/services/channel.service.ts:438 — CHANNEL_LIFECYCLE config shared by archive + restore; moved to internal.ts per >=2 verbs rule — low
 - apps/api/src/**tests**/services/analytics.service.test.ts:645 — flaky timeout (15s) under concurrent vitest runs; unrelated to channel refactor — medium
 - Test vi.mock call sites (crud.test.ts, trpc router test) previously mocked the old barrel path — rewritten into per-verb vi.mock blocks in the same test files — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

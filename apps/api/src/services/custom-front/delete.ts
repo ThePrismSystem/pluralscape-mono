@@ -1,8 +1,9 @@
 import { customFronts, frontingSessions } from "@pluralscape/db/pg";
-import { and, count, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { checkDependents } from "../../lib/check-dependents.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -39,20 +40,20 @@ export async function deleteCustomFront(
     }
 
     // Check for fronting sessions referencing this custom front
-    const [sessionCount] = await tx
-      .select({ count: count() })
-      .from(frontingSessions)
-      .where(eq(frontingSessions.customFrontId, customFrontId));
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: frontingSessions,
+        predicate: eq(frontingSessions.customFrontId, customFrontId),
+        typeName: "frontingSessions",
+      },
+    ]);
 
-    if (!sessionCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    if (sessionCount.count > 0) {
+    const [sessionDep] = dependents;
+    if (sessionDep) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Custom front has ${String(sessionCount.count)} fronting session(s). Archive instead of deleting.`,
+        `Custom front has ${String(sessionDep.count)} fronting session(s). Archive instead of deleting.`,
       );
     }
 

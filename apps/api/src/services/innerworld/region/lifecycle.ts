@@ -1,9 +1,10 @@
 import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
 import { brandId, now } from "@pluralscape/types";
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
+import { checkDependents } from "../../../lib/check-dependents.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
 import { tenantCtx } from "../../../lib/tenant-context.js";
@@ -202,38 +203,31 @@ export async function deleteRegion(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Region not found");
     }
 
-    // Check for non-archived child regions
-    const [childCount] = await tx
-      .select({ count: count() })
-      .from(innerworldRegions)
-      .where(
-        and(
+    // Check for non-archived child regions + non-archived entities
+    const { dependents } = await checkDependents(tx, [
+      {
+        table: innerworldRegions,
+        predicate: and(
           eq(innerworldRegions.parentRegionId, regionId),
           eq(innerworldRegions.systemId, systemId),
           eq(innerworldRegions.archived, false),
         ),
-      );
-
-    // Check for non-archived entities
-    const [entityCount] = await tx
-      .select({ count: count() })
-      .from(innerworldEntities)
-      .where(
-        and(
+        typeName: "childRegions",
+      },
+      {
+        table: innerworldEntities,
+        predicate: and(
           eq(innerworldEntities.regionId, regionId),
           eq(innerworldEntities.systemId, systemId),
           eq(innerworldEntities.archived, false),
         ),
-      );
+        typeName: "entities",
+      },
+    ]);
 
-    if (!childCount || !entityCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    const children = childCount.count;
-    const entities = entityCount.count;
-
-    if (children > 0 || entities > 0) {
+    if (dependents.length > 0) {
+      const children = dependents.find((d) => d.type === "childRegions")?.count ?? 0;
+      const entities = dependents.find((d) => d.type === "entities")?.count ?? 0;
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",

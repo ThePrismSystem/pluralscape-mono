@@ -1,11 +1,11 @@
 ---
 # api-35hk
 title: Refactor structure-entity-crud.service.ts (451 LOC) into services/structure/entity-crud/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:09Z
-updated_at: 2026-04-21T23:38:18Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -37,3 +37,7 @@ Part of epic api-6l1q PR 2. Refactor `structure-entity-crud.service.ts` (~451 LO
 - apps/api/src/services/structure-entity.service.ts:1 — pre-existing barrel re-exports all structure-_.service.ts; updated to re-export from services/structure/entity-crud/_ so 29 route/test files continue to work without touching scope-explosion — low
 - apps/api/src/**tests**/routes/structure/entity-links/update.test.ts:28 — pre-existing mock used phantom export names (createEntity, listEntities, etc.) that never matched real exports; replaced with accurate per-verb module mocks — low
 - Did not relocate sibling files (link/member-link/association) to services/structure/ to keep diff tight; safe to do in a later pass — info
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

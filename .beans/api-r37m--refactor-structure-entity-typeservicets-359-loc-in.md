@@ -1,11 +1,11 @@
 ---
 # api-r37m
 title: Refactor structure-entity-type.service.ts (359 LOC) into services/structure/entity-type/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:29:49Z
+updated_at: 2026-04-22T05:58:20Z
 parent: api-6l1q
 ---
 
@@ -37,3 +37,7 @@ Part of epic api-6l1q PR 2. Refactor `structure-entity-type.service.ts` (~359 LO
 - apps/api/src/services/structure-entity.service.ts:1 — legacy barrel re-exports all structure service files; updated to re-export from new verb files so routes under /routes/structure/entity-types/\* keep working without per-route churn — low
 - apps/api/src/**tests**/routes/structure/entity-links/update.test.ts:21 — had a vi.mock of structure-entity-type.service.js that was never actually imported/used in assertions; removed rather than redirecting — low
 - apps/api/src/**tests**/trpc/routers/structure.test.ts — deleteEntityType was missing from pre-existing vi.mock block; added it along with per-verb mock modules — low
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

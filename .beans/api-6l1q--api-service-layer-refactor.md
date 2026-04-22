@@ -1,10 +1,11 @@
 ---
 # api-6l1q
 title: API service layer refactor
-status: in-progress
+status: completed
 type: epic
+priority: normal
 created_at: 2026-04-21T13:54:28Z
-updated_at: 2026-04-21T13:54:28Z
+updated_at: 2026-04-22T09:21:23Z
 parent: ps-cd6x
 ---
 
@@ -41,3 +42,7 @@ A separate closeout-quick-wins bean adds a CI/pre-commit cap of 500 LOC on apps/
 ## Spec reference
 
 docs/superpowers/specs/2026-04-21-m9a-closeout-hardening-design.md
+
+## Summary of Changes
+
+All 8 remaining follow-up beans closed in this closeout PR. Epic complete: 41 service files refactored across 3 PRs (#535 — 15 files ≥500 LOC; #536 — 26 files 300-500 LOC; this PR — 7 follow-up cleanups + shared checkDependents helper migrating 13 consumers). API service layer now fully per-verb (Option E, no barrels). ESLint max-lines cap on services/\*\* tightened from 500 → 450 (observed post-refactor max: 408 in hierarchy-service-factory.ts).

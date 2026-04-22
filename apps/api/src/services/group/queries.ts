@@ -9,26 +9,14 @@ import { groupHierarchy, toGroupResult } from "./internal.js";
 
 import type { GroupResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { GroupId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export type { GroupResult } from "./internal.js";
 
-export const listGroups: (
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  auth: AuthContext,
-  cursor?: string,
-  limit?: number,
-  includeArchived?: boolean,
-) => Promise<PaginatedResult<GroupResult>> = groupHierarchy.list;
-
-export const getGroup: (
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  entityId: GroupId,
-  auth: AuthContext,
-) => Promise<GroupResult> = groupHierarchy.get;
+// Re-exports; TS infers cleanly now (api-5psf).
+export const listGroups = groupHierarchy.list;
+export const getGroup = groupHierarchy.get;
 
 // ── TREE ────────────────────────────────────────────────────────────
 

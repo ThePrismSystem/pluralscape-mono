@@ -1,11 +1,11 @@
 ---
 # api-l3et
 title: Refactor innerworld-entity.service.ts (443 LOC) into services/innerworld/entity/
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T22:28:10Z
-updated_at: 2026-04-21T23:43:25Z
+updated_at: 2026-04-22T05:58:19Z
 parent: api-6l1q
 ---
 
@@ -39,3 +39,7 @@ Part of epic api-6l1q PR 2. Refactor `innerworld-entity.service.ts` (~443 LOC) i
 - services/innerworld-canvas.service.ts (155 LOC) moved as single-file peer services/innerworld/canvas.ts (Part C done) — info
 - Prior commit 81d48af3 on branch landed Parts A/B/C but left 10 region+canvas test files with stale import paths; follow-up commit 7f25b3a7 fixed those — low
 - Entity lifecycle (archive/restore/delete) grouped into lifecycle.ts mirrors region/ pattern; queries.ts groups list+get (2 read verbs) — info
+
+## Summary of Changes
+
+Shipped in PR #536 (refactor(api-6l1q): pr 2 — split 26 services into per-verb files).

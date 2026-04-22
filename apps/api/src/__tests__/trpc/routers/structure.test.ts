@@ -68,23 +68,24 @@ vi.mock("../../../services/structure/entity-crud/lifecycle.js", () => ({
   deleteStructureEntity: vi.fn(),
 }));
 
-vi.mock("../../../services/structure-entity-link.service.js", () => ({
+vi.mock("../../../services/structure/link.js", () => ({
   createEntityLink: vi.fn(),
   listEntityLinks: vi.fn(),
   updateEntityLink: vi.fn(),
   deleteEntityLink: vi.fn(),
 }));
 
-vi.mock("../../../services/structure-entity-member-link.service.js", () => ({
+vi.mock("../../../services/structure/member-link.js", () => ({
   createEntityMemberLink: vi.fn(),
   listEntityMemberLinks: vi.fn(),
   deleteEntityMemberLink: vi.fn(),
 }));
 
-vi.mock("../../../services/structure-entity-association.service.js", () => ({
+vi.mock("../../../services/structure/association.js", () => ({
   createEntityAssociation: vi.fn(),
   listEntityAssociations: vi.fn(),
   deleteEntityAssociation: vi.fn(),
+  getEntityHierarchy: vi.fn(),
 }));
 
 const { createEntityType } = await import("../../../services/structure/entity-type/create.js");
@@ -102,13 +103,13 @@ const { archiveStructureEntity, restoreStructureEntity } =
   await import("../../../services/structure/entity-crud/lifecycle.js");
 
 const { createEntityLink, listEntityLinks, updateEntityLink, deleteEntityLink } =
-  await import("../../../services/structure-entity-link.service.js");
+  await import("../../../services/structure/link.js");
 
 const { createEntityMemberLink, listEntityMemberLinks, deleteEntityMemberLink } =
-  await import("../../../services/structure-entity-member-link.service.js");
+  await import("../../../services/structure/member-link.js");
 
 const { createEntityAssociation, listEntityAssociations, deleteEntityAssociation } =
-  await import("../../../services/structure-entity-association.service.js");
+  await import("../../../services/structure/association.js");
 
 const { structureRouter } = await import("../../../trpc/routers/structure.js");
 

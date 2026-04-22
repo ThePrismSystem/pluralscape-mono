@@ -1,11 +1,11 @@
 ---
 # api-5psf
 title: Investigate createHierarchyService factory re-export TS inference quirk
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-21T21:56:01Z
-updated_at: 2026-04-21T21:56:01Z
+updated_at: 2026-04-22T07:45:46Z
 parent: api-6l1q
 ---
 
@@ -32,3 +32,7 @@ Known instances:
 - Sweep complete
 - Either all factory-method re-exports follow a consistent pattern, or a decision recorded not to use factories this way
 - No `no-unsafe-call` regressions introduced
+
+## Summary of Changes
+
+Re-evaluated createHierarchyService factory method re-export inference in group verb files. Outcome A: TS inference now propagates cleanly through bare factory re-exports — typecheck + lint both pass without explicit function-type annotations. Simplified all 7 re-exports across create.ts, update.ts, lifecycle.ts, queries.ts to bare assignments (e.g. `export const createGroup = groupHierarchy.create`). Net -56 LOC. Documented inline in each of the 4 verb files with a 2-line comment referencing api-5psf. No FactoryMethodType helper added (single consumer — not warranted).
