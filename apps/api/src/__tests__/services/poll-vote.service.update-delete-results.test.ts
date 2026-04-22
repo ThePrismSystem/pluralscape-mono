@@ -87,11 +87,11 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { castVote } = await import("../../services/poll/votes/cast.js");
-const { listVotes, parsePollVoteQuery } = await import("../../services/poll/votes/list.js");
-const { updatePollVote } = await import("../../services/poll/votes/update.js");
-const { deletePollVote } = await import("../../services/poll/votes/archive.js");
-const { getPollResults } = await import("../../services/poll/votes/results.js");
+const { castVote } = await import("../../services/poll-vote/cast.js");
+const { listVotes, parsePollVoteQuery } = await import("../../services/poll-vote/list.js");
+const { updatePollVote } = await import("../../services/poll-vote/update.js");
+const { deletePollVote } = await import("../../services/poll-vote/archive.js");
+const { getPollResults } = await import("../../services/poll-vote/results.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

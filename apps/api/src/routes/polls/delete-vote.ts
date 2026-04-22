@@ -6,7 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { deletePollVote } from "../../services/poll/votes/archive.js";
+import { deletePollVote } from "../../services/poll-vote/archive.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

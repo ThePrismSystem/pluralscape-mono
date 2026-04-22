@@ -1,7 +1,7 @@
 import { pollVotes } from "@pluralscape/db/pg";
 import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
-import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
+import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
 import type {
   EntityReference,

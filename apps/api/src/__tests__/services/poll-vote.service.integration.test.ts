@@ -12,8 +12,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { archivePoll } from "../../services/poll/archive.js";
 import { createPoll } from "../../services/poll/create.js";
-import { castVote } from "../../services/poll/votes/cast.js";
-import { listVotes } from "../../services/poll/votes/list.js";
+import { castVote } from "../../services/poll-vote/cast.js";
+import { listVotes } from "../../services/poll-vote/list.js";
 import {
   assertApiError,
   asDb,

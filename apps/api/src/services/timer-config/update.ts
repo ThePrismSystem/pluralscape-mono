@@ -100,14 +100,12 @@ export async function updateTimerConfig(
       }
     }
 
-    // The `.set()` object uses `as Record<string, unknown>` to satisfy Drizzle's
-    // generic table types when mixing typed columns with sql`...` expressions.
     const updated = await tx
       .update(timerConfigs)
       .set({
         ...setClause,
-        version: sql`${timerConfigs.version} + 1`,
-      } as Record<string, unknown>)
+        version: sql<number>`${timerConfigs.version} + 1`,
+      })
       .where(
         and(
           eq(timerConfigs.id, timerId),

@@ -1,10 +1,11 @@
 ---
 # api-p6uu
 title: Review timer-config/update.ts read-before-write and Record<string,unknown> cast
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-22T02:43:04Z
-updated_at: 2026-04-22T02:43:04Z
+updated_at: 2026-04-22T03:32:29Z
 parent: api-6l1q
 ---
 
@@ -32,3 +33,14 @@ Flagged by api-hnso during the api-6l1q refactor.
 - Fewer SQL roundtrips on the non-scheduling update path
 - No type cast on the .set() call
 - No regressions
+
+## Summary of Changes
+
+Addressed **item #2 (Drizzle type-cast on .set())** only.
+
+- Removed `as Record<string, unknown>` cast at `apps/api/src/services/timer-config/update.ts:110`.
+- Annotated the `sql` expression as `sql<number>` to satisfy Drizzle's `PgUpdateSetSource<...>` (which accepts `GetColumnData<...> | SQL | PgColumn`). Same pattern used in `bucket/rotations/complete.ts:100`.
+- Deleted the now-inaccurate 2-line comment above the `.set()` call that justified the cast.
+- Lint + typecheck + full api unit suite (5331 tests) all green.
+
+**Item #1 (read-before-write perf concern)** deferred to follow-up bean **api-xol4** pending load measurement.

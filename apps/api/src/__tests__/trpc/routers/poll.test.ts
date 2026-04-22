@@ -33,23 +33,23 @@ vi.mock("../../../services/poll/archive.js", () => ({ archivePoll: vi.fn() }));
 vi.mock("../../../services/poll/restore.js", () => ({ restorePoll: vi.fn() }));
 vi.mock("../../../services/poll/delete.js", () => ({ deletePoll: vi.fn() }));
 
-vi.mock("../../../services/poll/votes/cast.js", () => ({
+vi.mock("../../../services/poll-vote/cast.js", () => ({
   castVote: vi.fn(),
 }));
 
-vi.mock("../../../services/poll/votes/list.js", () => ({
+vi.mock("../../../services/poll-vote/list.js", () => ({
   listVotes: vi.fn(),
 }));
 
-vi.mock("../../../services/poll/votes/update.js", () => ({
+vi.mock("../../../services/poll-vote/update.js", () => ({
   updatePollVote: vi.fn(),
 }));
 
-vi.mock("../../../services/poll/votes/archive.js", () => ({
+vi.mock("../../../services/poll-vote/archive.js", () => ({
   deletePollVote: vi.fn(),
 }));
 
-vi.mock("../../../services/poll/votes/results.js", () => ({
+vi.mock("../../../services/poll-vote/results.js", () => ({
   getPollResults: vi.fn(),
 }));
 
@@ -62,11 +62,11 @@ const { archivePoll } = await import("../../../services/poll/archive.js");
 const { restorePoll } = await import("../../../services/poll/restore.js");
 const { deletePoll } = await import("../../../services/poll/delete.js");
 
-const { castVote } = await import("../../../services/poll/votes/cast.js");
-const { listVotes } = await import("../../../services/poll/votes/list.js");
-const { updatePollVote } = await import("../../../services/poll/votes/update.js");
-const { deletePollVote } = await import("../../../services/poll/votes/archive.js");
-const { getPollResults } = await import("../../../services/poll/votes/results.js");
+const { castVote } = await import("../../../services/poll-vote/cast.js");
+const { listVotes } = await import("../../../services/poll-vote/list.js");
+const { updatePollVote } = await import("../../../services/poll-vote/update.js");
+const { deletePollVote } = await import("../../../services/poll-vote/archive.js");
+const { getPollResults } = await import("../../../services/poll-vote/results.js");
 
 const { pollRouter } = await import("../../../trpc/routers/poll.js");
 

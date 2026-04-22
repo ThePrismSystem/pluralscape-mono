@@ -7,7 +7,7 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { updatePollVote } from "../../services/poll/votes/update.js";
+import { updatePollVote } from "../../services/poll-vote/update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

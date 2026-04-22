@@ -46,19 +46,6 @@ vi.mock("../../../services/account-delete.service.js", () => ({
   purgeAccount: vi.fn(),
 }));
 
-vi.mock("../../../services/account/friend-codes/generate.js", () => ({
-  generateFriendCode: vi.fn(),
-}));
-vi.mock("../../../services/account/friend-codes/list.js", () => ({
-  listFriendCodes: vi.fn(),
-}));
-vi.mock("../../../services/account/friend-codes/redeem.js", () => ({
-  redeemFriendCode: vi.fn(),
-}));
-vi.mock("../../../services/account/friend-codes/archive.js", () => ({
-  archiveFriendCode: vi.fn(),
-}));
-
 vi.mock("../../../services/account/friends/lifecycle.js", () => ({
   archiveFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),

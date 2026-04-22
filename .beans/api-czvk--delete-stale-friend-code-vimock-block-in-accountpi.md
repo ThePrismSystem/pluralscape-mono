@@ -1,10 +1,11 @@
 ---
 # api-czvk
 title: Delete stale friend-code vi.mock block in account/pin.test.ts
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-22T02:42:42Z
-updated_at: 2026-04-22T02:42:42Z
+updated_at: 2026-04-22T03:32:03Z
 parent: api-6l1q
 ---
 
@@ -23,3 +24,9 @@ Flagged by api-z33q during the api-6l1q refactor.
 
 - Dead mock removed
 - Test continues to pass
+
+## Summary of Changes
+
+Deleted the four `vi.mock()` blocks for `services/account/friend-codes/{generate,list,redeem,archive}.js` from `apps/api/src/__tests__/routes/account/pin.test.ts`.
+
+pin.test.ts never imports friend-code services directly; they were only loaded transitively via `accountRoutes`. Removing the mocks lets the real verb-file bodies enter the module graph without executing them (no top-level side effects). The pin.test.ts suite continues to pass.

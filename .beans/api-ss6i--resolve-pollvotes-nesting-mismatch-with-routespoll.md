@@ -1,10 +1,11 @@
 ---
 # api-ss6i
 title: Resolve poll/votes nesting mismatch with routes/polls flat vote files
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-22T02:43:15Z
-updated_at: 2026-04-22T02:43:15Z
+updated_at: 2026-04-22T03:31:57Z
 parent: api-6l1q
 ---
 
@@ -38,3 +39,15 @@ C. **Accept the mismatch and amend the rule** — document that votes are semant
 
 - Nesting rule parity restored OR documented exception
 - Verify suite passes
+
+## Summary of Changes
+
+Applied **Option A**: denested `services/poll/votes/` back to `services/poll-vote/`.
+
+- `git mv apps/api/src/services/poll/votes/ apps/api/src/services/poll-vote/` (6 files: archive, cast, internal, list, results, update)
+- Adjusted relative imports inside the 6 moved files (`../../../` -> `../../`, `../../webhook-dispatcher.js` -> `../webhook-dispatcher.js`)
+- Updated 5 route imports (`routes/polls/{cast-vote,delete-vote,list-votes,update-vote,results}.ts`)
+- Updated tRPC router (`trpc/routers/poll.ts`, 5 imports)
+- Updated 7 test files (44 occurrences)
+
+Nesting rule parity restored. Lint + typecheck + full api unit suite (5331 tests) all green.
