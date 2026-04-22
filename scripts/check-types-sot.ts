@@ -35,15 +35,28 @@ export async function runChecks(steps: CheckStep[]): Promise<number> {
   return 0;
 }
 
-const PHASE_0_STEPS: CheckStep[] = [
+const PHASE_1_STEPS: CheckStep[] = [
   {
     name: "typecheck @pluralscape/types",
     run: () => runShell("pnpm", ["--filter", "@pluralscape/types", "typecheck"]),
+  },
+  {
+    name: "typecheck Drizzle parity tests (@pluralscape/db)",
+    run: () => runShell("pnpm", ["--filter", "@pluralscape/db", "typecheck"]),
+  },
+  {
+    name: "typecheck Zod parity tests (@pluralscape/validation)",
+    run: () => runShell("pnpm", ["--filter", "@pluralscape/validation", "typecheck"]),
+  },
+  {
+    name: "typecheck OpenAPI-Wire parity",
+    run: () =>
+      runShell("pnpm", ["exec", "tsc", "--noEmit", "scripts/openapi-wire-parity.type-test.ts"]),
   },
 ];
 
 /* c8 ignore start */
 if (import.meta.url === `file://${process.argv[1]}`) {
-  void runChecks(PHASE_0_STEPS).then((code) => process.exit(code));
+  void runChecks(PHASE_1_STEPS).then((code) => process.exit(code));
 }
 /* c8 ignore stop */
