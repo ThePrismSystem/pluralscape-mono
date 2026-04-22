@@ -17,6 +17,7 @@ import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.j
 import type { Group } from "./groups.js";
 import type { Member, MemberPhoto } from "./identity.js";
 import type {
+  AccountId,
   AcknowledgementId,
   AuditLogEntryId,
   BoardMessageId,
@@ -613,7 +614,17 @@ export type ClientTimerConfig = TimerConfig;
  */
 export interface AuditLogEntryServerMetadata {
   readonly id: AuditLogEntryId;
-  readonly systemId: SystemId;
+  /**
+   * DB-internal denormalized account reference — avoids joining through
+   * `systems` to get the owning account. Nullable because audit logs
+   * survive account deletion with references nullified (ON DELETE SET NULL).
+   */
+  readonly accountId: AccountId | null;
+  /**
+   * Nullable because audit logs survive system deletion with references
+   * nullified (ON DELETE SET NULL) — audit history must be preserved.
+   */
+  readonly systemId: SystemId | null;
   readonly eventType: AuditEventType;
   readonly timestamp: UnixMillis;
   readonly actor: AuditActor;

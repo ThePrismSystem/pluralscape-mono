@@ -23,27 +23,9 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { members } from "../../schema/pg/members.js";
 
+import type { StripBrands } from "./__helpers__.js";
 import type { Equal, MemberServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
-
-/** Strip brand markers from primitives and recurse through objects/arrays. */
-type StripBrands<T> = T extends string
-  ? string
-  : T extends number
-    ? number
-    : T extends boolean
-      ? boolean
-      : T extends bigint
-        ? bigint
-        : T extends Uint8Array
-          ? Uint8Array
-          : T extends Date
-            ? Date
-            : T extends ReadonlyArray<infer U>
-              ? StripBrands<U>[]
-              : T extends object
-                ? { -readonly [K in keyof T]: StripBrands<T[K]> }
-                : T;
 
 describe("Member Drizzle parity", () => {
   it("members Drizzle row has the same property keys as MemberServerMetadata", () => {
