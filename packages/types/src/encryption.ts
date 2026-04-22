@@ -15,7 +15,7 @@ import type { KdfMasterKey } from "./crypto-keys.js";
 import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js";
 import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
-import type { MemberPhoto } from "./identity.js";
+import type { Member, MemberPhoto } from "./identity.js";
 import type {
   AcknowledgementId,
   AuditLogEntryId,
@@ -131,20 +131,18 @@ export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 // Only defined for completed domain modules.
 
 /**
- * Server-side member representation.
- * T1 encrypted: name, pronouns, description, tags, colors, avatarSource, saturationLevel,
- *   suppressFriendFrontNotification, boardMessageNotificationOnFront
- * T3 plaintext: archived
+ * Server-visible Member metadata — raw Drizzle row shape.
+ * T1 encrypted (inside `encryptedData`): name, pronouns, description, tags,
+ *   colors, avatarSource, saturationLevel, suppressFriendFrontNotification,
+ *   boardMessageNotificationOnFront
+ * T3 plaintext columns: id, systemId, archived, audit timestamps
  */
-export interface ServerMember extends AuditMetadata {
+export interface MemberServerMetadata extends AuditMetadata {
   readonly id: MemberId;
   readonly systemId: SystemId;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
 }
-
-/** Client-side member — flat decrypted fields. Identical to the domain Member type. */
-export type ClientMember = import("./identity.js").Member;
 
 /**
  * Server-side fronting session representation.
@@ -628,7 +626,7 @@ export type ClientAuditLogEntry = AuditLogEntry;
 
 /** Union of all server-side types safe to return from API routes. */
 export type ServerResponseData =
-  | ServerMember
+  | MemberServerMetadata
   | ServerFrontingSession
   | ServerFrontingComment
   | ServerGroup
@@ -656,7 +654,7 @@ export type ServerResponseData =
 
 /** Union of all client-side types that must NEVER appear in API responses. */
 export type ClientResponseData =
-  | ClientMember
+  | Member
   | ClientFrontingSession
   | ClientFrontingComment
   | ClientGroup

@@ -43,7 +43,7 @@ function makeEncryptedFields(): MemberEncryptedFields {
   };
 }
 
-/** Build a minimal ServerMember wire object from encrypted fields. */
+/** Build a minimal MemberServerMetadata wire object from encrypted fields. */
 function makeServerMember(
   fields: MemberEncryptedFields = makeEncryptedFields(),
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,

@@ -27,7 +27,6 @@ import type {
   ClientInnerWorldRegion,
   ClientJournalEntry,
   ClientLifecycleEvent,
-  ClientMember,
   ClientMemberPhoto,
   ClientNote,
   ClientPoll,
@@ -57,7 +56,7 @@ import type {
   ServerLifecycleEvent,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
-  ServerMember,
+  MemberServerMetadata,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -158,27 +157,17 @@ describe("Plaintext<T>", () => {
   });
 });
 
-describe("ServerMember", () => {
+describe("MemberServerMetadata", () => {
   it("has encryptedData field", () => {
-    expectTypeOf<ServerMember["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<MemberServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
   });
 
   it("has T3 plaintext fields", () => {
-    expectTypeOf<ServerMember["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<MemberServerMetadata["archived"]>().toEqualTypeOf<boolean>();
   });
 
   it("has id and systemId", () => {
-    expectTypeOf<ServerMember["id"]>().toEqualTypeOf<MemberId>();
-  });
-});
-
-describe("ClientMember", () => {
-  it("has flat decrypted fields matching Member", () => {
-    expectTypeOf<ClientMember>().toEqualTypeOf<Member>();
-  });
-
-  it("has name as string", () => {
-    expectTypeOf<ClientMember["name"]>().toEqualTypeOf<string>();
+    expectTypeOf<MemberServerMetadata["id"]>().toEqualTypeOf<MemberId>();
   });
 });
 
@@ -413,18 +402,18 @@ describe("T1 encrypted field absence on server types", () => {
 
 describe("DecryptFn and EncryptFn", () => {
   it("DecryptFn maps server to client", () => {
-    type Fn = DecryptFn<ServerMember, ClientMember>;
+    type Fn = DecryptFn<MemberServerMetadata, Member>;
     expectTypeOf<Fn>().toBeFunction();
-    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<ServerMember>();
+    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<MemberServerMetadata>();
     expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<KdfMasterKey>();
-    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<ClientMember>();
+    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<Member>();
   });
 
   it("EncryptFn maps client to server", () => {
-    type Fn = EncryptFn<ClientMember, ServerMember>;
+    type Fn = EncryptFn<Member, MemberServerMetadata>;
     expectTypeOf<Fn>().toBeFunction();
-    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<ClientMember>();
+    expectTypeOf<Parameters<Fn>[0]>().toEqualTypeOf<Member>();
     expectTypeOf<Parameters<Fn>[1]>().toEqualTypeOf<KdfMasterKey>();
-    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<ServerMember>();
+    expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<MemberServerMetadata>();
   });
 });
