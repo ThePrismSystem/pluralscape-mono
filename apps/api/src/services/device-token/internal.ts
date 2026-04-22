@@ -2,12 +2,7 @@ import { brandId } from "@pluralscape/types";
 
 import { hashSessionToken } from "../../lib/session-token.js";
 
-import type {
-  DeviceTokenId,
-  DeviceTokenPlatform,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { DeviceTokenId, DeviceTokenPlatform, SystemId, UnixMillis } from "@pluralscape/types";
 
 export interface DeviceTokenResult {
   readonly id: DeviceTokenId;

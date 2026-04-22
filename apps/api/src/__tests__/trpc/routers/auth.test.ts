@@ -61,9 +61,8 @@ const { loginAccount, LoginThrottledError } = await import("../../../services/au
 const { logoutCurrentSession, listSessions, revokeSession, revokeAllSessions } =
   await import("../../../services/auth/sessions.js");
 
-const { resetPasswordWithRecoveryKey } = await import(
-  "../../../services/recovery-key/reset-password.js"
-);
+const { resetPasswordWithRecoveryKey } =
+  await import("../../../services/recovery-key/reset-password.js");
 const { NoActiveRecoveryKeyError } = await import("../../../services/recovery-key/internal.js");
 
 const { authRouter } = await import("../../../trpc/routers/auth.js");

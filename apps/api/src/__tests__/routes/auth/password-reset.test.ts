@@ -41,9 +41,8 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 }));
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { resetPasswordWithRecoveryKey } = await import(
-  "../../../services/recovery-key/reset-password.js"
-);
+const { resetPasswordWithRecoveryKey } =
+  await import("../../../services/recovery-key/reset-password.js");
 const { NoActiveRecoveryKeyError } = await import("../../../services/recovery-key/internal.js");
 const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
 const { passwordResetRoute } = await import("../../../routes/auth/password-reset.js");

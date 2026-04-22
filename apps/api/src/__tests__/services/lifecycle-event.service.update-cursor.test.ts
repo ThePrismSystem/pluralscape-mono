@@ -42,9 +42,8 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { updateLifecycleEvent } = await import("../../services/lifecycle-event/update.js");
 const { createLifecycleEvent } = await import("../../services/lifecycle-event/create.js");
-const { listLifecycleEvents, getLifecycleEvent } = await import(
-  "../../services/lifecycle-event/queries.js"
-);
+const { listLifecycleEvents, getLifecycleEvent } =
+  await import("../../services/lifecycle-event/queries.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

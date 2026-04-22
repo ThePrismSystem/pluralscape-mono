@@ -65,27 +65,18 @@ vi.mock("@pluralscape/db/pg", () => ({
 
 const { assertFriendAccess } = await import("../../lib/friend-access.js");
 const { filterVisibleEntities } = await import("../../lib/bucket-access.js");
-const { getFriendDashboard } = await import(
-  "../../services/friend-dashboard/get-dashboard.js"
-);
-const { queryVisibleActiveFronting } = await import(
-  "../../services/friend-dashboard/query-active-fronting.js"
-);
-const { queryVisibleMembers } = await import(
-  "../../services/friend-dashboard/query-visible-members.js"
-);
-const { queryVisibleCustomFronts } = await import(
-  "../../services/friend-dashboard/query-visible-custom-fronts.js"
-);
-const { queryVisibleStructureEntities } = await import(
-  "../../services/friend-dashboard/query-visible-structure-entities.js"
-);
-const { queryMemberCount } = await import(
-  "../../services/friend-dashboard/query-member-count.js"
-);
-const { queryActiveKeyGrants } = await import(
-  "../../services/friend-dashboard/query-active-key-grants.js"
-);
+const { getFriendDashboard } = await import("../../services/friend-dashboard/get-dashboard.js");
+const { queryVisibleActiveFronting } =
+  await import("../../services/friend-dashboard/query-active-fronting.js");
+const { queryVisibleMembers } =
+  await import("../../services/friend-dashboard/query-visible-members.js");
+const { queryVisibleCustomFronts } =
+  await import("../../services/friend-dashboard/query-visible-custom-fronts.js");
+const { queryVisibleStructureEntities } =
+  await import("../../services/friend-dashboard/query-visible-structure-entities.js");
+const { queryMemberCount } = await import("../../services/friend-dashboard/query-member-count.js");
+const { queryActiveKeyGrants } =
+  await import("../../services/friend-dashboard/query-active-key-grants.js");
 const { cachedLoadBucketTags } = await import("../../services/friend-dashboard/internal.js");
 const { loadBucketTags } = await import("../../lib/bucket-access.js");
 

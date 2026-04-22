@@ -34,9 +34,7 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { archiveFriendCode } = await import(
-  "../../../../services/account/friend-codes/archive.js"
-);
+const { archiveFriendCode } = await import("../../../../services/account/friend-codes/archive.js");
 const { createAuditWriter } = await import("../../../../lib/audit-writer.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 

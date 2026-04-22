@@ -90,9 +90,8 @@ const { setAccountPin, removeAccountPin, verifyAccountPin } =
   await import("../../../services/account-pin.service.js");
 const { enrollBiometric, verifyBiometric } = await import("../../../services/biometric.service.js");
 const { getRecoveryKeyStatus } = await import("../../../services/recovery-key/status.js");
-const { regenerateRecoveryKeyBackup } = await import(
-  "../../../services/recovery-key/regenerate.js"
-);
+const { regenerateRecoveryKeyBackup } =
+  await import("../../../services/recovery-key/regenerate.js");
 const { queryAuditLog } = await import("../../../services/audit-log-query.service.js");
 const { initiateTransfer } = await import("../../../services/device-transfer/initiate.js");
 const { approveTransfer } = await import("../../../services/device-transfer/approve.js");

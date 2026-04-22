@@ -14,6 +14,7 @@ parent: api-6l1q
 Part of epic api-6l1q PR 2. Refactor `lifecycle-event.service.ts` (~422 LOC) into `services/lifecycle-event/` with verb files — Option E pattern (no barrel, callers import from specific verb files). Reference: services/member/ from PR 1.
 
 ## Scope
+
 - [ ] Read target file end-to-end; map exports to verb buckets
 - [ ] Create `services/lifecycle-event/` with verb files (create, queries, update, lifecycle, etc. as fits)
 - [ ] Shared helpers/types in `internal.ts` ONLY if used by ≥2 verb files
@@ -24,6 +25,7 @@ Part of epic api-6l1q PR 2. Refactor `lifecycle-event.service.ts` (~422 LOC) int
 - [ ] Capture findings under `## Findings` (do not fix inline)
 
 ## Acceptance
+
 - `pnpm tsc -p apps/api/tsconfig.json --noEmit` passes
 - `pnpm vitest run --project api` passes
 - Max file LOC ≤300 target (350-400 acceptable if natural split)
@@ -32,4 +34,4 @@ Part of epic api-6l1q PR 2. Refactor `lifecycle-event.service.ts` (~422 LOC) int
 
 - apps/api/src/services/lifecycle-event.service.ts:99-120 — cursor encode/decode only used by list, kept local to queries.ts — low
 - apps/api/src/services/lifecycle-event.service.ts:392-398 — LIFECYCLE_EVENT_LIFECYCLE shared by archive+restore (2 consumers) — moved to internal.ts — low
-- apps/api/src/__tests__/services/analytics.service.test.ts:645 — pre-existing flaky test "returns truncated flag" times out at 15s under full-parallel load; unrelated to this refactor — informational
+- apps/api/src/**tests**/services/analytics.service.test.ts:645 — pre-existing flaky test "returns truncated flag" times out at 15s under full-parallel load; unrelated to this refactor — informational

@@ -41,9 +41,7 @@ const { createChannel } = await import("../../../services/channel/create.js");
 const { getChannel, listChannels } = await import("../../../services/channel/queries.js");
 const { updateChannel } = await import("../../../services/channel/update.js");
 const { deleteChannel } = await import("../../../services/channel/delete.js");
-const { archiveChannel, restoreChannel } = await import(
-  "../../../services/channel/lifecycle.js"
-);
+const { archiveChannel, restoreChannel } = await import("../../../services/channel/lifecycle.js");
 
 const { channelRouter } = await import("../../../trpc/routers/channel.js");
 

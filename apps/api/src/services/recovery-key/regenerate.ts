@@ -1,8 +1,4 @@
-import {
-  assertAuthKey,
-  assertAuthKeyHash,
-  verifyAuthKey,
-} from "@pluralscape/crypto";
+import { assertAuthKey, assertAuthKeyHash, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, recoveryKeys } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { RegenerateRecoveryKeySchema } from "@pluralscape/validation";

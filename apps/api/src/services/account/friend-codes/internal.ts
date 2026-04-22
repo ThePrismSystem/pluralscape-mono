@@ -1,6 +1,5 @@
-import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-
 import { friendCodes } from "@pluralscape/db/pg";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import type { AccountId, FriendCodeId, UnixMillis } from "@pluralscape/types";
 

@@ -36,9 +36,8 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createCustomFront } = await import("../../../services/custom-front/create.js");
-const { listCustomFronts, getCustomFront } = await import(
-  "../../../services/custom-front/queries.js"
-);
+const { listCustomFronts, getCustomFront } =
+  await import("../../../services/custom-front/queries.js");
 const { updateCustomFront } = await import("../../../services/custom-front/update.js");
 const { deleteCustomFront } = await import("../../../services/custom-front/delete.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");

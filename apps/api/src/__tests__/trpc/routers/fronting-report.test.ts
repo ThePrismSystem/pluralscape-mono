@@ -38,13 +38,11 @@ vi.mock("../../../services/fronting-report/lifecycle.js", () => ({
 }));
 
 const { createFrontingReport } = await import("../../../services/fronting-report/create.js");
-const { getFrontingReport, listFrontingReports } = await import(
-  "../../../services/fronting-report/queries.js"
-);
+const { getFrontingReport, listFrontingReports } =
+  await import("../../../services/fronting-report/queries.js");
 const { updateFrontingReport } = await import("../../../services/fronting-report/update.js");
-const { archiveFrontingReport, restoreFrontingReport } = await import(
-  "../../../services/fronting-report/lifecycle.js"
-);
+const { archiveFrontingReport, restoreFrontingReport } =
+  await import("../../../services/fronting-report/lifecycle.js");
 
 const { frontingReportRouter } = await import("../../../trpc/routers/fronting-report.js");
 

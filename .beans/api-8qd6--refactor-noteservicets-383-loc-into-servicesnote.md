@@ -34,7 +34,7 @@ Part of epic api-6l1q PR 2. Refactor `note.service.ts` (~383 LOC) into `services
 
 - apps/api/src/services/note.service.ts:383 — flat 383-LOC service split cleanly on verb boundaries (create/queries/update/lifecycle) — low
 - apps/api/src/services/note/internal.ts — NoteResult + toNoteResult shared across create, queries, update, lifecycle (4 consumers) — info
-- apps/api/src/__tests__/routes/notes/crud.test.ts — route test relied on single vi.mock of note.service.js; rewrote to 4 separate vi.mock blocks (create/queries/update/lifecycle) since route now imports 4 modules — medium
-- apps/api/src/__tests__/trpc/routers/note.test.ts — same multi-module vi.mock rewrite required for trpc router test — medium
-- apps/api/src/__tests__/services/note.service.test.ts — unit test uses dynamic imports; updated to import from 4 new paths — low
+- apps/api/src/**tests**/routes/notes/crud.test.ts — route test relied on single vi.mock of note.service.js; rewrote to 4 separate vi.mock blocks (create/queries/update/lifecycle) since route now imports 4 modules — medium
+- apps/api/src/**tests**/trpc/routers/note.test.ts — same multi-module vi.mock rewrite required for trpc router test — medium
+- apps/api/src/**tests**/services/note.service.test.ts — unit test uses dynamic imports; updated to import from 4 new paths — low
 - ListNoteOpts interface — single consumer (listNotes), stayed local in queries.ts — info

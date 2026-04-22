@@ -2,15 +2,11 @@ import { members } from "@pluralscape/db/pg";
 import { brandId } from "@pluralscape/types";
 
 import { MAX_MEMBERS_PER_SYSTEM } from "../../quota.constants.js";
+
 import { queryVisibleEntities } from "./internal.js";
 
 import type { DashboardTableRef } from "./internal.js";
-import type {
-  BucketId,
-  FriendDashboardResponse,
-  MemberId,
-  SystemId,
-} from "@pluralscape/types";
+import type { BucketId, FriendDashboardResponse, MemberId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 const MEMBER_REF: DashboardTableRef = {

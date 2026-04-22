@@ -39,13 +39,11 @@ vi.mock("../../../services/timer-config/lifecycle.js", () => ({
 }));
 
 const { createTimerConfig } = await import("../../../services/timer-config/create.js");
-const { getTimerConfig, listTimerConfigs } = await import(
-  "../../../services/timer-config/queries.js"
-);
+const { getTimerConfig, listTimerConfigs } =
+  await import("../../../services/timer-config/queries.js");
 const { updateTimerConfig } = await import("../../../services/timer-config/update.js");
-const { archiveTimerConfig, restoreTimerConfig } = await import(
-  "../../../services/timer-config/lifecycle.js"
-);
+const { archiveTimerConfig, restoreTimerConfig } =
+  await import("../../../services/timer-config/lifecycle.js");
 
 const { timerConfigRouter } = await import("../../../trpc/routers/timer-config.js");
 

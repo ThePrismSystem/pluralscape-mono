@@ -1,12 +1,6 @@
 import { brandId, toChecksumHex, toUnixMillis } from "@pluralscape/types";
 
-import type {
-  BlobId,
-  BlobPurpose,
-  ChecksumHex,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { BlobId, BlobPurpose, ChecksumHex, SystemId, UnixMillis } from "@pluralscape/types";
 
 export interface BlobResult {
   readonly id: BlobId;

@@ -1,7 +1,7 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { fieldValues } from "@pluralscape/db/pg";
 import { brandId, toUnixMillis } from "@pluralscape/types";
-import { eq } from "drizzle-orm";
+import { eq, type SQL } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -126,7 +126,7 @@ export async function assertOwnerActiveAndGetColumns(
 }
 
 /** Build the where-clause column condition for an owner. */
-export function ownerWhereColumn(owner: FieldValueOwner) {
+export function ownerWhereColumn(owner: FieldValueOwner): SQL {
   switch (owner.kind) {
     case "member":
       return eq(fieldValues.memberId, owner.id);

@@ -45,12 +45,10 @@ vi.mock("../../../services/acknowledgement/lifecycle.js", () => ({
 
 const { createAcknowledgement } = await import("../../../services/acknowledgement/create.js");
 const { confirmAcknowledgement } = await import("../../../services/acknowledgement/confirm.js");
-const { getAcknowledgement, listAcknowledgements } = await import(
-  "../../../services/acknowledgement/queries.js"
-);
-const { archiveAcknowledgement, restoreAcknowledgement, deleteAcknowledgement } = await import(
-  "../../../services/acknowledgement/lifecycle.js"
-);
+const { getAcknowledgement, listAcknowledgements } =
+  await import("../../../services/acknowledgement/queries.js");
+const { archiveAcknowledgement, restoreAcknowledgement, deleteAcknowledgement } =
+  await import("../../../services/acknowledgement/lifecycle.js");
 
 const { acknowledgementRouter } = await import("../../../trpc/routers/acknowledgement.js");
 

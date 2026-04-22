@@ -1,15 +1,10 @@
 import { messages } from "@pluralscape/db/pg";
 import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-import { eq } from "drizzle-orm";
+import { eq, type SQL } from "drizzle-orm";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type {
-  ChannelId,
-  MessageId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { ChannelId, MessageId, SystemId, UnixMillis } from "@pluralscape/types";
 
 export interface MessageResult {
   readonly id: MessageId;
@@ -52,7 +47,7 @@ export function messageIdConditions(
   messageId: MessageId,
   systemId: SystemId,
   hint?: TimestampHint,
-) {
+): SQL[] {
   const conditions = [eq(messages.id, messageId), eq(messages.systemId, systemId)];
   if (hint?.timestamp !== undefined) {
     conditions.push(eq(messages.timestamp, hint.timestamp));

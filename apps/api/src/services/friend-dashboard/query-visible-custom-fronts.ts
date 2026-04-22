@@ -2,6 +2,7 @@ import { customFronts } from "@pluralscape/db/pg";
 import { brandId } from "@pluralscape/types";
 
 import { MAX_CUSTOM_FRONTS_PER_SYSTEM } from "../../quota.constants.js";
+
 import { queryVisibleEntities } from "./internal.js";
 
 import type { DashboardTableRef } from "./internal.js";

@@ -11,10 +11,7 @@ import {
   archiveLifecycleEvent,
   restoreLifecycleEvent,
 } from "../../services/lifecycle-event/lifecycle.js";
-import {
-  getLifecycleEvent,
-  listLifecycleEvents,
-} from "../../services/lifecycle-event/queries.js";
+import { getLifecycleEvent, listLifecycleEvents } from "../../services/lifecycle-event/queries.js";
 import { updateLifecycleEvent } from "../../services/lifecycle-event/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";

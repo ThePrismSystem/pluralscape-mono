@@ -1,14 +1,15 @@
 import { assertFriendAccess } from "../../lib/friend-access.js";
 import { withCrossAccountRead } from "../../lib/rls-context.js";
-import { queryActiveKeyGrants } from "./query-active-key-grants.js";
+
 import { queryVisibleActiveFronting } from "./query-active-fronting.js";
+import { queryActiveKeyGrants } from "./query-active-key-grants.js";
 import { queryMemberCount } from "./query-member-count.js";
 import { queryVisibleCustomFronts } from "./query-visible-custom-fronts.js";
 import { queryVisibleMembers } from "./query-visible-members.js";
 import { queryVisibleStructureEntities } from "./query-visible-structure-entities.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { BucketTagCache } from "./internal.js";
+import type { AuthContext } from "../../lib/auth-context.js";
 import type { FriendConnectionId, FriendDashboardResponse } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

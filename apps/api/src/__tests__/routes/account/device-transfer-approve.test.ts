@@ -34,9 +34,8 @@ vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { approveTransfer } = await import("../../../services/device-transfer/approve.js");
-const { TransferNotFoundError, TransferSessionMismatchError } = await import(
-  "../../../services/device-transfer/errors.js"
-);
+const { TransferNotFoundError, TransferSessionMismatchError } =
+  await import("../../../services/device-transfer/errors.js");
 
 const { accountRoutes } = await import("../../../routes/account/index.js");
 

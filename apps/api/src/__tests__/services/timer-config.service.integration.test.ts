@@ -14,10 +14,7 @@ import { createCheckInRecord } from "../../services/check-in-record/create.js";
 import { deleteCheckInRecord } from "../../services/check-in-record/delete.js";
 import { createTimerConfig } from "../../services/timer-config/create.js";
 import { deleteTimerConfig } from "../../services/timer-config/delete.js";
-import {
-  archiveTimerConfig,
-  restoreTimerConfig,
-} from "../../services/timer-config/lifecycle.js";
+import { archiveTimerConfig, restoreTimerConfig } from "../../services/timer-config/lifecycle.js";
 import {
   getTimerConfig,
   listTimerConfigs,

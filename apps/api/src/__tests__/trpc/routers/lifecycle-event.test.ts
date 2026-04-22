@@ -42,14 +42,12 @@ vi.mock("../../../services/lifecycle-event/lifecycle.js", () => ({
 }));
 
 const { createLifecycleEvent } = await import("../../../services/lifecycle-event/create.js");
-const { getLifecycleEvent, listLifecycleEvents } = await import(
-  "../../../services/lifecycle-event/queries.js"
-);
+const { getLifecycleEvent, listLifecycleEvents } =
+  await import("../../../services/lifecycle-event/queries.js");
 const { updateLifecycleEvent } = await import("../../../services/lifecycle-event/update.js");
 const { deleteLifecycleEvent } = await import("../../../services/lifecycle-event/delete.js");
-const { archiveLifecycleEvent, restoreLifecycleEvent } = await import(
-  "../../../services/lifecycle-event/lifecycle.js"
-);
+const { archiveLifecycleEvent, restoreLifecycleEvent } =
+  await import("../../../services/lifecycle-event/lifecycle.js");
 
 const { lifecycleEventRouter } = await import("../../../trpc/routers/lifecycle-event.js");
 

@@ -46,12 +46,10 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 const { createAcknowledgement } = await import("../../../services/acknowledgement/create.js");
 const { confirmAcknowledgement } = await import("../../../services/acknowledgement/confirm.js");
-const { getAcknowledgement, listAcknowledgements } = await import(
-  "../../../services/acknowledgement/queries.js"
-);
-const { deleteAcknowledgement, archiveAcknowledgement, restoreAcknowledgement } = await import(
-  "../../../services/acknowledgement/lifecycle.js"
-);
+const { getAcknowledgement, listAcknowledgements } =
+  await import("../../../services/acknowledgement/queries.js");
+const { deleteAcknowledgement, archiveAcknowledgement, restoreAcknowledgement } =
+  await import("../../../services/acknowledgement/lifecycle.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

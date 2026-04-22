@@ -2,6 +2,7 @@ import { systemStructureEntities } from "@pluralscape/db/pg";
 import { brandId } from "@pluralscape/types";
 
 import { MAX_INNERWORLD_ENTITIES_PER_SYSTEM } from "../../quota.constants.js";
+
 import { queryVisibleEntities } from "./internal.js";
 
 import type { DashboardTableRef } from "./internal.js";

@@ -46,12 +46,10 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 
 const { createLifecycleEvent } = await import("../../services/lifecycle-event/create.js");
 const { deleteLifecycleEvent } = await import("../../services/lifecycle-event/delete.js");
-const { archiveLifecycleEvent, restoreLifecycleEvent } = await import(
-  "../../services/lifecycle-event/lifecycle.js"
-);
-const { listLifecycleEvents, getLifecycleEvent } = await import(
-  "../../services/lifecycle-event/queries.js"
-);
+const { archiveLifecycleEvent, restoreLifecycleEvent } =
+  await import("../../services/lifecycle-event/lifecycle.js");
+const { listLifecycleEvents, getLifecycleEvent } =
+  await import("../../services/lifecycle-event/queries.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
 

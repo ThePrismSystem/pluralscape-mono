@@ -63,20 +63,16 @@ vi.mock("../../../services/innerworld/canvas.js", () => ({
 }));
 
 const { createEntity } = await import("../../../services/innerworld/entity/create.js");
-const { getEntity, listEntities } = await import(
-  "../../../services/innerworld/entity/queries.js"
-);
+const { getEntity, listEntities } = await import("../../../services/innerworld/entity/queries.js");
 const { updateEntity } = await import("../../../services/innerworld/entity/update.js");
-const { archiveEntity, restoreEntity } = await import(
-  "../../../services/innerworld/entity/lifecycle.js"
-);
+const { archiveEntity, restoreEntity } =
+  await import("../../../services/innerworld/entity/lifecycle.js");
 
 const { createRegion } = await import("../../../services/innerworld/region/create.js");
 const { getRegion, listRegions } = await import("../../../services/innerworld/region/queries.js");
 const { updateRegion } = await import("../../../services/innerworld/region/update.js");
-const { archiveRegion, restoreRegion } = await import(
-  "../../../services/innerworld/region/lifecycle.js"
-);
+const { archiveRegion, restoreRegion } =
+  await import("../../../services/innerworld/region/lifecycle.js");
 
 const { getCanvas, upsertCanvas } = await import("../../../services/innerworld/canvas.js");
 

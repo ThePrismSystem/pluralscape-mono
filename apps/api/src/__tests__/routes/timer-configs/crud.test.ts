@@ -41,14 +41,12 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createTimerConfig } = await import("../../../services/timer-config/create.js");
-const { listTimerConfigs, getTimerConfig } = await import(
-  "../../../services/timer-config/queries.js"
-);
+const { listTimerConfigs, getTimerConfig } =
+  await import("../../../services/timer-config/queries.js");
 const { updateTimerConfig } = await import("../../../services/timer-config/update.js");
 const { deleteTimerConfig } = await import("../../../services/timer-config/delete.js");
-const { archiveTimerConfig, restoreTimerConfig } = await import(
-  "../../../services/timer-config/lifecycle.js"
-);
+const { archiveTimerConfig, restoreTimerConfig } =
+  await import("../../../services/timer-config/lifecycle.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

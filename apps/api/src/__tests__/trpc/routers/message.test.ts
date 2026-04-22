@@ -49,9 +49,7 @@ vi.mock("../../../services/message/delete.js", () => ({
 const { createMessage } = await import("../../../services/message/create.js");
 const { getMessage, listMessages } = await import("../../../services/message/queries.js");
 const { updateMessage } = await import("../../../services/message/update.js");
-const { archiveMessage, restoreMessage } = await import(
-  "../../../services/message/lifecycle.js"
-);
+const { archiveMessage, restoreMessage } = await import("../../../services/message/lifecycle.js");
 const { deleteMessage } = await import("../../../services/message/delete.js");
 
 const { subscribeToEntityChanges } = await import("../../../lib/entity-pubsub.js");

@@ -9,8 +9,8 @@ import { tenantCtx } from "../../lib/tenant-context.js";
 
 import { toBlobResult } from "./internal.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobResult } from "./internal.js";
+import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

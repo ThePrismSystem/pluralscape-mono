@@ -38,13 +38,11 @@ vi.mock("../../../services/custom-front/delete.js", () => ({
 }));
 
 const { createCustomFront } = await import("../../../services/custom-front/create.js");
-const { getCustomFront, listCustomFronts } = await import(
-  "../../../services/custom-front/queries.js"
-);
+const { getCustomFront, listCustomFronts } =
+  await import("../../../services/custom-front/queries.js");
 const { updateCustomFront } = await import("../../../services/custom-front/update.js");
-const { archiveCustomFront, restoreCustomFront } = await import(
-  "../../../services/custom-front/lifecycle.js"
-);
+const { archiveCustomFront, restoreCustomFront } =
+  await import("../../../services/custom-front/lifecycle.js");
 const { deleteCustomFront } = await import("../../../services/custom-front/delete.js");
 
 const { customFrontRouter } = await import("../../../trpc/routers/custom-front.js");

@@ -58,9 +58,8 @@ vi.mock("../../../lib/queue.js", () => ({
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { getRecoveryKeyStatus } = await import("../../../services/recovery-key/status.js");
-const { regenerateRecoveryKeyBackup } = await import(
-  "../../../services/recovery-key/regenerate.js"
-);
+const { regenerateRecoveryKeyBackup } =
+  await import("../../../services/recovery-key/regenerate.js");
 const { NoActiveRecoveryKeyError } = await import("../../../services/recovery-key/internal.js");
 const { ValidationError } = await import("../../../services/auth/register.js");
 const { recoveryKeyRoutes } = await import("../../../routes/auth/recovery-key.js");

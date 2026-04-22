@@ -19,9 +19,8 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-const { archiveCustomFront, restoreCustomFront } = await import(
-  "../../../services/custom-front/lifecycle.js"
-);
+const { archiveCustomFront, restoreCustomFront } =
+  await import("../../../services/custom-front/lifecycle.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);

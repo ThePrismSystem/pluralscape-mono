@@ -11,10 +11,7 @@ import {
   archiveFrontingReport,
   restoreFrontingReport,
 } from "../../services/fronting-report/lifecycle.js";
-import {
-  getFrontingReport,
-  listFrontingReports,
-} from "../../services/fronting-report/queries.js";
+import { getFrontingReport, listFrontingReports } from "../../services/fronting-report/queries.js";
 import { updateFrontingReport } from "../../services/fronting-report/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";

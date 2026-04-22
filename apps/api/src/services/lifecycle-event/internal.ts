@@ -4,7 +4,6 @@ import { brandId, toUnixMillis } from "@pluralscape/types";
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type { PlaintextMetadata } from "@pluralscape/validation";
 import type {
   EncryptedBlob,
   LifecycleEventId,
@@ -12,6 +11,7 @@ import type {
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { PlaintextMetadata } from "@pluralscape/validation";
 
 export interface LifecycleEventResult {
   readonly id: LifecycleEventId;

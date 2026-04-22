@@ -74,9 +74,8 @@ const { InvalidInputError } = await import("@pluralscape/crypto");
 const { createEntity } = await import("../../services/innerworld/entity/create.js");
 const { listEntities, getEntity } = await import("../../services/innerworld/entity/queries.js");
 const { updateEntity } = await import("../../services/innerworld/entity/update.js");
-const { archiveEntity, restoreEntity, deleteEntity } = await import(
-  "../../services/innerworld/entity/lifecycle.js"
-);
+const { archiveEntity, restoreEntity, deleteEntity } =
+  await import("../../services/innerworld/entity/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

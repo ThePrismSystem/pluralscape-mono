@@ -69,12 +69,9 @@ vi.mock("../../lib/anti-enum-timing.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { getRecoveryKeyStatus } = await import("../../services/recovery-key/status.js");
-const { regenerateRecoveryKeyBackup } = await import(
-  "../../services/recovery-key/regenerate.js"
-);
-const { resetPasswordWithRecoveryKey } = await import(
-  "../../services/recovery-key/reset-password.js"
-);
+const { regenerateRecoveryKeyBackup } = await import("../../services/recovery-key/regenerate.js");
+const { resetPasswordWithRecoveryKey } =
+  await import("../../services/recovery-key/reset-password.js");
 const { NoActiveRecoveryKeyError } = await import("../../services/recovery-key/internal.js");
 
 // ── Tests ────────────────────────────────────────────────────────────

@@ -5,13 +5,7 @@ import {
   verifyRecoveryKey,
 } from "@pluralscape/crypto";
 import { accounts, recoveryKeys, sessions } from "@pluralscape/db/pg";
-import {
-  brandId,
-  ID_PREFIXES,
-  SESSION_TIMEOUTS,
-  createId,
-  now,
-} from "@pluralscape/types";
+import { brandId, ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types";
 import { PasswordResetViaRecoveryKeySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 

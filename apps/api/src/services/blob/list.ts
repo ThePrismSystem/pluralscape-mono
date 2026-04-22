@@ -9,8 +9,8 @@ import { DEFAULT_BLOB_LIMIT, MAX_BLOB_LIMIT } from "../../routes/blobs/blobs.con
 
 import { toBlobResult } from "./internal.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobResult } from "./internal.js";
+import type { AuthContext } from "../../lib/auth-context.js";
 import type { PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

@@ -2,12 +2,7 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type {
-  EncryptedBlob,
-  SystemId,
-  TimerId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { EncryptedBlob, SystemId, TimerId, UnixMillis } from "@pluralscape/types";
 
 // ── Types ───────────────────────────────────────────────────────
 

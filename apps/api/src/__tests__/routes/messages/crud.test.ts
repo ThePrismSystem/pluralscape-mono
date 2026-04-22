@@ -42,9 +42,7 @@ const { createMessage } = await import("../../../services/message/create.js");
 const { getMessage, listMessages } = await import("../../../services/message/queries.js");
 const { updateMessage } = await import("../../../services/message/update.js");
 const { deleteMessage } = await import("../../../services/message/delete.js");
-const { archiveMessage, restoreMessage } = await import(
-  "../../../services/message/lifecycle.js"
-);
+const { archiveMessage, restoreMessage } = await import("../../../services/message/lifecycle.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

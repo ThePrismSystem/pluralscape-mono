@@ -7,10 +7,7 @@ import { z } from "zod/v4";
 
 import { createTimerConfig } from "../../services/timer-config/create.js";
 import { deleteTimerConfig } from "../../services/timer-config/delete.js";
-import {
-  archiveTimerConfig,
-  restoreTimerConfig,
-} from "../../services/timer-config/lifecycle.js";
+import { archiveTimerConfig, restoreTimerConfig } from "../../services/timer-config/lifecycle.js";
 import { getTimerConfig, listTimerConfigs } from "../../services/timer-config/queries.js";
 import { updateTimerConfig } from "../../services/timer-config/update.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";

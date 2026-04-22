@@ -26,14 +26,10 @@ vi.mock("../../../services/account/friend-codes/archive.js", () => ({
   archiveFriendCode: vi.fn(),
 }));
 
-const { generateFriendCode } = await import(
-  "../../../services/account/friend-codes/generate.js"
-);
+const { generateFriendCode } = await import("../../../services/account/friend-codes/generate.js");
 const { listFriendCodes } = await import("../../../services/account/friend-codes/list.js");
 const { redeemFriendCode } = await import("../../../services/account/friend-codes/redeem.js");
-const { archiveFriendCode } = await import(
-  "../../../services/account/friend-codes/archive.js"
-);
+const { archiveFriendCode } = await import("../../../services/account/friend-codes/archive.js");
 
 const { friendCodeRouter } = await import("../../../trpc/routers/friend-code.js");
 

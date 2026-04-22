@@ -42,9 +42,7 @@ const { createChannel } = await import("../../../services/channel/create.js");
 const { getChannel, listChannels } = await import("../../../services/channel/queries.js");
 const { updateChannel } = await import("../../../services/channel/update.js");
 const { deleteChannel } = await import("../../../services/channel/delete.js");
-const { archiveChannel, restoreChannel } = await import(
-  "../../../services/channel/lifecycle.js"
-);
+const { archiveChannel, restoreChannel } = await import("../../../services/channel/lifecycle.js");
 const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 

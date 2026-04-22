@@ -41,14 +41,11 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
 const { createCustomFront } = await import("../../services/custom-front/create.js");
-const { listCustomFronts, getCustomFront } = await import(
-  "../../services/custom-front/queries.js"
-);
+const { listCustomFronts, getCustomFront } = await import("../../services/custom-front/queries.js");
 const { updateCustomFront } = await import("../../services/custom-front/update.js");
 const { deleteCustomFront } = await import("../../services/custom-front/delete.js");
-const { archiveCustomFront, restoreCustomFront } = await import(
-  "../../services/custom-front/lifecycle.js"
-);
+const { archiveCustomFront, restoreCustomFront } =
+  await import("../../services/custom-front/lifecycle.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

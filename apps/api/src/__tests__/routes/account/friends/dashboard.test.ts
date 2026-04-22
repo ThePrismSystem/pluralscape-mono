@@ -47,7 +47,8 @@ vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getFriendDashboard } = await import("../../../../services/friend-dashboard/get-dashboard.js");
+const { getFriendDashboard } =
+  await import("../../../../services/friend-dashboard/get-dashboard.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────

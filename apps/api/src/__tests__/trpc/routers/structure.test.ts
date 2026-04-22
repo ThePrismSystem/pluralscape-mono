@@ -94,18 +94,12 @@ const { updateEntityType } = await import("../../../services/structure/entity-ty
 const { archiveEntityType } = await import("../../../services/structure/entity-type/archive.js");
 const { restoreEntityType } = await import("../../../services/structure/entity-type/restore.js");
 
-const { createStructureEntity } = await import(
-  "../../../services/structure/entity-crud/create.js"
-);
-const { getStructureEntity, listStructureEntities } = await import(
-  "../../../services/structure/entity-crud/queries.js"
-);
-const { updateStructureEntity } = await import(
-  "../../../services/structure/entity-crud/update.js"
-);
-const { archiveStructureEntity, restoreStructureEntity } = await import(
-  "../../../services/structure/entity-crud/lifecycle.js"
-);
+const { createStructureEntity } = await import("../../../services/structure/entity-crud/create.js");
+const { getStructureEntity, listStructureEntities } =
+  await import("../../../services/structure/entity-crud/queries.js");
+const { updateStructureEntity } = await import("../../../services/structure/entity-crud/update.js");
+const { archiveStructureEntity, restoreStructureEntity } =
+  await import("../../../services/structure/entity-crud/lifecycle.js");
 
 const { createEntityLink, listEntityLinks, updateEntityLink, deleteEntityLink } =
   await import("../../../services/structure-entity-link.service.js");
