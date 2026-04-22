@@ -3,8 +3,10 @@
 title: OpenAPI-Wire parity for Member and AuditLogEntry - resolve enc/dec boundary
 status: todo
 type: task
+priority: normal
 created_at: 2026-04-22T22:58:41Z
-updated_at: 2026-04-22T22:58:41Z
+updated_at: 2026-04-22T23:03:08Z
+parent: types-ltel
 ---
 
 ## Context
