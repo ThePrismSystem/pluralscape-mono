@@ -1,10 +1,4 @@
-import type {
-  HexColor,
-  MemberId,
-  PollId,
-  PollOptionId,
-  SystemId,
-} from "../ids.js";
+import type { HexColor, MemberId, PollId, PollOptionId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 

@@ -1,10 +1,4 @@
-import type {
-  BlobId,
-  ChannelId,
-  MemberId,
-  MessageId,
-  SystemId,
-} from "../ids.js";
+import type { BlobId, ChannelId, MemberId, MessageId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
