@@ -70,7 +70,7 @@ export async function initiateRegistration(
   try {
     await withAccountTransaction(db, brandId<AccountId>(accountId), async (tx) => {
       await tx.insert(accounts).values({
-        id: accountId,
+        id: brandId<AccountId>(accountId),
         accountType,
         emailHash,
         emailSalt,
@@ -153,7 +153,7 @@ export async function commitRegistration(
   const [account] = await db
     .select()
     .from(accounts)
-    .where(eq(accounts.id, parsed.accountId))
+    .where(eq(accounts.id, brandId<AccountId>(parsed.accountId)))
     .limit(1);
 
   if (!account) {

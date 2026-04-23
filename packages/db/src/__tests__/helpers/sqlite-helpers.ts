@@ -11,7 +11,7 @@ import { channels, polls } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
 
-import type { BucketId, EncryptedBlob } from "@pluralscape/types";
+import type { AccountId, BucketId, EncryptedBlob } from "@pluralscape/types";
 import type Database from "better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -1465,8 +1465,8 @@ function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
 export function sqliteInsertAccount(
   db: BetterSQLite3Database<Record<string, unknown>>,
   id?: string,
-): string {
-  const resolvedId = id ?? crypto.randomUUID();
+): AccountId {
+  const resolvedId = brandId<AccountId>(id ?? crypto.randomUUID());
   const now = Date.now();
   db.insert(accounts)
     .values({
@@ -1493,7 +1493,7 @@ export function sqliteInsertSystem(
   db.insert(systems)
     .values({
       id: resolvedId,
-      accountId,
+      accountId: brandId<AccountId>(accountId),
       createdAt: now,
       updatedAt: now,
     })

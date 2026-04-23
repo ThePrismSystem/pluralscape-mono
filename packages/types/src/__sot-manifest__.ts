@@ -1,3 +1,4 @@
+import type { Account, AccountServerMetadata, AccountWire } from "./entities/account.js";
 import type {
   AuditLogEntry,
   AuditLogEntryServerMetadata,
@@ -85,6 +86,13 @@ export type SotEntityManifest = {
     server: AuditLogEntryServerMetadata;
     wire: AuditLogEntryWire;
     // Plaintext wire — no encrypted fields.
+    encryptedFields: never;
+  };
+  Account: {
+    domain: Account;
+    server: AccountServerMetadata;
+    wire: AccountWire;
+    // Plaintext entity — no encrypted fields.
     encryptedFields: never;
   };
   System: {

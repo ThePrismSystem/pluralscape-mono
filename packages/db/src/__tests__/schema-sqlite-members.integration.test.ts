@@ -22,7 +22,7 @@ describe("SQLite members schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string): string =>
     sqliteInsertSystem(db, accountId, id);
 

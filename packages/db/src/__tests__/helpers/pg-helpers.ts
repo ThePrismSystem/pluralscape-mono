@@ -88,7 +88,7 @@ import { webhookConfigs, webhookDeliveries } from "../../schema/pg/webhooks.js";
 import { pgTableToCreateDDL, pgTableToIndexDDL } from "./schema-to-ddl.js";
 
 import type { PGlite } from "@electric-sql/pglite";
-import type { BucketId, EncryptedBlob } from "@pluralscape/types";
+import type { AccountId, BucketId, EncryptedBlob } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT, PgTable } from "drizzle-orm/pg-core";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -347,8 +347,8 @@ async function createPgBaseTables(client: PGlite): Promise<void> {
 export async function pgInsertAccount(
   db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>,
   id?: string,
-): Promise<string> {
-  const resolvedId = id ?? crypto.randomUUID();
+): Promise<AccountId> {
+  const resolvedId = brandId<AccountId>(id ?? crypto.randomUUID());
   const now = Date.now();
   await db.insert(accounts).values({
     id: resolvedId,
@@ -372,7 +372,7 @@ export async function pgInsertSystem(
   const now = Date.now();
   await db.insert(systems).values({
     id: resolvedId,
-    accountId,
+    accountId: brandId<AccountId>(accountId),
     createdAt: now,
     updatedAt: now,
   });

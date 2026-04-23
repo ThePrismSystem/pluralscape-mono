@@ -12,6 +12,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { AccountId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems };
@@ -20,7 +21,7 @@ describe("SQLite systems schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertAccount = (id?: string): AccountId => sqliteInsertAccount(db, id);
 
   beforeAll(() => {
     client = new Database(":memory:");

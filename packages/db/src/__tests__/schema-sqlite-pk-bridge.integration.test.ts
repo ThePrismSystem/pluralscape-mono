@@ -22,7 +22,7 @@ describe("SQLite PK Bridge Schema", () => {
   let client: InstanceType<typeof DatabaseConstructor>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
 
   beforeAll(() => {
     client = new Database(":memory:");

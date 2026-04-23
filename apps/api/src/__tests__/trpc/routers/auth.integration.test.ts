@@ -121,7 +121,7 @@ async function insertAccountWithKnownRecoveryKey(db: PostgresJsDatabase): Promis
   const timestamp = Date.now();
 
   await db.insert(accounts).values({
-    id: accountId,
+    id: brandId<AccountId>(accountId),
     accountType: "system",
     emailHash: hashEmail(email),
     emailSalt: toHex(new Uint8Array(randomBytes(16))),
@@ -134,7 +134,7 @@ async function insertAccountWithKnownRecoveryKey(db: PostgresJsDatabase): Promis
 
   await db.insert(recoveryKeys).values({
     id: recoveryKeyId,
-    accountId,
+    accountId: brandId<AccountId>(accountId),
     encryptedMasterKey: new Uint8Array(randomBytes(MASTER_KEY_BLOB_BYTES)),
     recoveryKeyHash,
     createdAt: timestamp,
