@@ -7794,13 +7794,13 @@ export interface components {
     /** @description Visual styling for innerworld entities. */
     PlaintextVisualProperties: {
       /** @description Hex color string (e.g., #FF00AA) */
-      color?: string | null;
-      icon?: string | null;
-      size?: number | null;
-      opacity?: number | null;
-      imageSource?: components["schemas"]["PlaintextImageSource"] | null;
+      color: string | null;
+      icon: string | null;
+      size: number | null;
+      opacity: number | null;
+      imageSource: components["schemas"]["PlaintextImageSource"] | null;
       /** Format: uri */
-      externalUrl?: string | null;
+      externalUrl: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on `POST /systems`, `PUT /systems/:id`
@@ -7960,10 +7960,10 @@ export interface components {
      */
     PlaintextStructureEntityType: {
       name: string;
-      description?: string | null;
-      color?: string | null;
-      imageSource?: components["schemas"]["PlaintextImageSource"] | null;
-      emoji?: string | null;
+      description: string | null;
+      color: string | null;
+      imageSource: components["schemas"]["PlaintextImageSource"] | null;
+      emoji: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on structure entity create/update endpoints.
@@ -7972,10 +7972,10 @@ export interface components {
      */
     PlaintextStructureEntity: {
       name: string;
-      description?: string | null;
-      color?: string | null;
-      imageSource?: components["schemas"]["PlaintextImageSource"] | null;
-      emoji?: string | null;
+      description: string | null;
+      color: string | null;
+      imageSource: components["schemas"]["PlaintextImageSource"] | null;
+      emoji: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on fronting session create/update endpoints.
@@ -7986,16 +7986,16 @@ export interface components {
      */
     PlaintextFrontingSession: {
       /** @description Free-text status comment on the session (max 50 characters, runtime enforced) */
-      comment?: string | null;
+      comment: string | null;
       /** @description Free-text description of fronting positionality (e.g. close vs far, height) */
-      positionality?: string | null;
+      positionality: string | null;
       /** @description Free-text reason describing what caused the fronting change */
-      outtrigger?: string | null;
+      outtrigger: string | null;
       /**
        * @description Sentiment classification for the outtrigger reason
        * @enum {string|null}
        */
-      outtriggerSentiment?: "negative" | "neutral" | "positive" | null;
+      outtriggerSentiment: "negative" | "neutral" | "positive" | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on lifecycle event create endpoint.
@@ -8006,7 +8006,7 @@ export interface components {
      *     and relationship tracking. Encryption tier: **T1**.
      */
     PlaintextLifecycleEvent: {
-      notes?: string | null;
+      notes: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on innerworld region create/update endpoints.
@@ -8015,16 +8015,16 @@ export interface components {
      */
     PlaintextInnerworldRegion: {
       name: string;
-      description?: string | null;
-      visual?: components["schemas"]["PlaintextVisualProperties"];
+      description: string | null;
+      visual: components["schemas"]["PlaintextVisualProperties"];
       /** @description Polygon boundary points for the region on the canvas */
-      boundaryData?: {
+      boundaryData: {
         x: number;
         y: number;
       }[];
       /** @enum {string} */
-      accessType?: "open" | "gatekept";
-      gatekeeperMemberIds?: string[];
+      accessType: "open" | "gatekept";
+      gatekeeperMemberIds: string[];
     };
     /**
      * @description **Encrypted into**: `encryptedData` on innerworld entity create/update endpoints.
@@ -8061,54 +8061,54 @@ export interface components {
      */
     PlaintextSystemSettings: {
       /** @enum {string} */
-      theme?: "light" | "dark" | "high-contrast" | "system";
-      fontScale?: number;
-      appLock?: {
-        pinEnabled?: boolean;
-        biometricEnabled?: boolean;
+      theme: "light" | "dark" | "high-contrast" | "system";
+      fontScale: number;
+      appLock: {
+        pinEnabled: boolean;
+        biometricEnabled: boolean;
         /** @description Lock timeout in minutes (1-30) */
-        lockTimeout?: number;
+        lockTimeout: number;
         /** @description Seconds to keep keys in memory after app backgrounds (0-300) */
-        backgroundGraceSeconds?: number;
+        backgroundGraceSeconds: number;
       };
-      notifications?: {
-        pushEnabled?: boolean;
-        emailEnabled?: boolean;
-        switchReminders?: boolean;
-        checkInReminders?: boolean;
+      notifications: {
+        pushEnabled: boolean;
+        emailEnabled: boolean;
+        switchReminders: boolean;
+        checkInReminders: boolean;
       };
-      syncPreferences?: {
-        syncEnabled?: boolean;
-        syncOnCellular?: boolean;
+      syncPreferences: {
+        syncEnabled: boolean;
+        syncOnCellular: boolean;
       };
-      privacyDefaults?: {
+      privacyDefaults: {
         /** @description BucketId */
-        defaultBucketForNewContent?: string | null;
+        defaultBucketForNewContent: string | null;
         /** @enum {string} */
-        friendRequestPolicy?: "open" | "code-only";
+        friendRequestPolicy: "open" | "code-only";
       };
       /** @description Simplified UI configuration for littles */
-      littlesSafeMode?: {
-        enabled?: boolean;
-        allowedContentIds?: string[];
-        simplifiedUIFlags?: {
-          largeButtons?: boolean;
-          iconDriven?: boolean;
-          noDeletion?: boolean;
-          noSettings?: boolean;
-          noAnalytics?: boolean;
+      littlesSafeMode: {
+        enabled: boolean;
+        allowedContentIds: string[];
+        simplifiedUIFlags: {
+          largeButtons: boolean;
+          iconDriven: boolean;
+          noDeletion: boolean;
+          noSettings: boolean;
+          noAnalytics: boolean;
         };
       };
-      saturationLevelsEnabled?: boolean;
+      saturationLevelsEnabled: boolean;
       /** @description Auto-capture fronting snapshot when creating a journal entry */
-      autoCaptureFrontingOnJournal?: boolean;
+      autoCaptureFrontingOnJournal: boolean;
       /**
        * @description Automatic snapshot schedule. Client-triggered — the client reads
        *     this value and fires snapshots locally, preserving zero-knowledge.
        * @enum {string}
        */
-      snapshotSchedule?: "daily" | "weekly" | "disabled";
-      onboardingComplete?: boolean;
+      snapshotSchedule: "daily" | "weekly" | "disabled";
+      onboardingComplete: boolean;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on nomenclature update and setup endpoints.

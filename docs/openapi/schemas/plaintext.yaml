@@ -97,6 +97,7 @@ PlaintextTag:
 PlaintextVisualProperties:
   description: Visual styling for innerworld entities.
   type: object
+  required: [color, icon, size, opacity, imageSource, externalUrl]
   properties:
     color:
       type: string
@@ -390,7 +391,7 @@ PlaintextStructureEntityType:
     A user-defined structure entity type within the system (e.g., "Subsystem",
     "Side System", "Layer"). Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, color, imageSource, emoji]
   properties:
     name:
       type: string
@@ -414,7 +415,7 @@ PlaintextStructureEntity:
 
     An instance of a user-defined structure entity type. Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, color, imageSource, emoji]
   properties:
     name:
       type: string
@@ -440,6 +441,7 @@ PlaintextFrontingSession:
     `structureEntityId`, `startTime`, and `endTime` are sent as separate plaintext
     fields. Encryption tier: **T1**.
   type: object
+  required: [comment, positionality, outtrigger, outtriggerSentiment]
   properties:
     comment:
       type: string
@@ -468,6 +470,7 @@ PlaintextLifecycleEvent:
     as separate plaintext fields because the server needs them for querying
     and relationship tracking. Encryption tier: **T1**.
   type: object
+  required: [notes]
   properties:
     notes:
       type: string
@@ -479,7 +482,13 @@ PlaintextInnerworldRegion:
 
     A region within the system's innerworld. Encryption tier: **T1**.
   type: object
-  required: [name]
+  required:
+    - name
+    - description
+    - visual
+    - boundaryData
+    - accessType
+    - gatekeeperMemberIds
   properties:
     name:
       type: string
@@ -614,6 +623,18 @@ PlaintextSystemSettings:
     them for locale-aware operations and biometric state tracking.
     Encryption tier: **T1**.
   type: object
+  required:
+    - theme
+    - fontScale
+    - appLock
+    - notifications
+    - syncPreferences
+    - privacyDefaults
+    - littlesSafeMode
+    - saturationLevelsEnabled
+    - autoCaptureFrontingOnJournal
+    - snapshotSchedule
+    - onboardingComplete
   properties:
     theme:
       type: string
@@ -622,6 +643,7 @@ PlaintextSystemSettings:
       type: number
     appLock:
       type: object
+      required: [pinEnabled, biometricEnabled, lockTimeout, backgroundGraceSeconds]
       properties:
         pinEnabled:
           type: boolean
@@ -635,6 +657,7 @@ PlaintextSystemSettings:
           description: Seconds to keep keys in memory after app backgrounds (0-300)
     notifications:
       type: object
+      required: [pushEnabled, emailEnabled, switchReminders, checkInReminders]
       properties:
         pushEnabled:
           type: boolean
@@ -646,6 +669,7 @@ PlaintextSystemSettings:
           type: boolean
     syncPreferences:
       type: object
+      required: [syncEnabled, syncOnCellular]
       properties:
         syncEnabled:
           type: boolean
@@ -653,6 +677,7 @@ PlaintextSystemSettings:
           type: boolean
     privacyDefaults:
       type: object
+      required: [defaultBucketForNewContent, friendRequestPolicy]
       properties:
         defaultBucketForNewContent:
           type: string
@@ -664,6 +689,7 @@ PlaintextSystemSettings:
     littlesSafeMode:
       type: object
       description: Simplified UI configuration for littles
+      required: [enabled, allowedContentIds, simplifiedUIFlags]
       properties:
         enabled:
           type: boolean
@@ -673,6 +699,7 @@ PlaintextSystemSettings:
             type: string
         simplifiedUIFlags:
           type: object
+          required: [largeButtons, iconDriven, noDeletion, noSettings, noAnalytics]
           properties:
             largeButtons:
               type: boolean

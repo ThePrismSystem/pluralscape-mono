@@ -15701,6 +15701,13 @@ components:
     PlaintextVisualProperties:
       description: Visual styling for innerworld entities.
       type: object
+      required:
+        - color
+        - icon
+        - size
+        - opacity
+        - imageSource
+        - externalUrl
       properties:
         color:
           type: string
@@ -16022,6 +16029,10 @@ components:
       type: object
       required:
         - name
+        - description
+        - color
+        - imageSource
+        - emoji
       properties:
         name:
           type: string
@@ -16046,6 +16057,10 @@ components:
       type: object
       required:
         - name
+        - description
+        - color
+        - imageSource
+        - emoji
       properties:
         name:
           type: string
@@ -16070,6 +16085,11 @@ components:
         `structureEntityId`, `startTime`, and `endTime` are sent as separate plaintext
         fields. Encryption tier: **T1**.
       type: object
+      required:
+        - comment
+        - positionality
+        - outtrigger
+        - outtriggerSentiment
       properties:
         comment:
           type: string
@@ -16100,6 +16120,8 @@ components:
         as separate plaintext fields because the server needs them for querying
         and relationship tracking. Encryption tier: **T1**.
       type: object
+      required:
+        - notes
       properties:
         notes:
           type: string
@@ -16112,6 +16134,11 @@ components:
       type: object
       required:
         - name
+        - description
+        - visual
+        - boundaryData
+        - accessType
+        - gatekeeperMemberIds
       properties:
         name:
           type: string
@@ -16196,6 +16223,18 @@ components:
         them for locale-aware operations and biometric state tracking.
         Encryption tier: **T1**.
       type: object
+      required:
+        - theme
+        - fontScale
+        - appLock
+        - notifications
+        - syncPreferences
+        - privacyDefaults
+        - littlesSafeMode
+        - saturationLevelsEnabled
+        - autoCaptureFrontingOnJournal
+        - snapshotSchedule
+        - onboardingComplete
       properties:
         theme:
           type: string
@@ -16208,6 +16247,11 @@ components:
           type: number
         appLock:
           type: object
+          required:
+            - pinEnabled
+            - biometricEnabled
+            - lockTimeout
+            - backgroundGraceSeconds
           properties:
             pinEnabled:
               type: boolean
@@ -16221,6 +16265,11 @@ components:
               description: Seconds to keep keys in memory after app backgrounds (0-300)
         notifications:
           type: object
+          required:
+            - pushEnabled
+            - emailEnabled
+            - switchReminders
+            - checkInReminders
           properties:
             pushEnabled:
               type: boolean
@@ -16232,6 +16281,9 @@ components:
               type: boolean
         syncPreferences:
           type: object
+          required:
+            - syncEnabled
+            - syncOnCellular
           properties:
             syncEnabled:
               type: boolean
@@ -16239,6 +16291,9 @@ components:
               type: boolean
         privacyDefaults:
           type: object
+          required:
+            - defaultBucketForNewContent
+            - friendRequestPolicy
           properties:
             defaultBucketForNewContent:
               type: string
@@ -16252,6 +16307,10 @@ components:
         littlesSafeMode:
           type: object
           description: Simplified UI configuration for littles
+          required:
+            - enabled
+            - allowedContentIds
+            - simplifiedUIFlags
           properties:
             enabled:
               type: boolean
@@ -16261,6 +16320,12 @@ components:
                 type: string
             simplifiedUIFlags:
               type: object
+              required:
+                - largeButtons
+                - iconDriven
+                - noDeletion
+                - noSettings
+                - noAnalytics
               properties:
                 largeButtons:
                   type: boolean
