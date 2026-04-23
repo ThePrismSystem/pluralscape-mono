@@ -19,6 +19,7 @@ import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
 import type { RelationshipType, Relationship } from "./entities/relationship.js";
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
+import type { TimerConfig } from "./entities/timer-config.js";
 import type { Group } from "./groups.js";
 import type {
   AccountId,
@@ -54,7 +55,6 @@ import type {
 } from "./ids.js";
 import type { JournalEntry, WikiPage } from "./journal.js";
 import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
-import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Serialize } from "./type-assertions.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";

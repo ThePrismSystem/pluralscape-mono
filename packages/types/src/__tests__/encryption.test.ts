@@ -77,6 +77,7 @@ import type { Note } from "../entities/note.js";
 import type { PollVote } from "../entities/poll-vote.js";
 import type { Poll } from "../entities/poll.js";
 import type { Relationship } from "../entities/relationship.js";
+import type { TimerConfig } from "../entities/timer-config.js";
 import type { Group } from "../groups.js";
 import type {
   BucketId,
@@ -91,7 +92,6 @@ import type {
 } from "../ids.js";
 import type { JournalEntry, WikiPage } from "../journal.js";
 import type { LifecycleEvent } from "../lifecycle.js";
-import type { TimerConfig } from "../timer.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 

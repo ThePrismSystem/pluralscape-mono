@@ -587,13 +587,12 @@ export type {
 } from "./journal.js";
 
 // ── Timer ─────────────────────────────────────────────────────────
+export type { TimerConfig, ArchivedTimerConfig } from "./entities/timer-config.js";
 export type {
-  TimerConfig,
-  ArchivedTimerConfig,
   CheckInRecord,
   ArchivedCheckInRecord,
   CheckInRecordStatus,
-} from "./timer.js";
+} from "./entities/check-in-record.js";
 
 // ── Key Rotation ─────────────────────────────────────────────────
 export type {
