@@ -6,26 +6,40 @@ import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { withAccountRead } from "../lib/rls-context.js";
 
+import type { DbAuditActor } from "@pluralscape/db/pg";
 import type {
   AccountId,
+  ApiKeyId,
+  AuditActor,
   AuditEventType,
   AuditLogEntryId,
   PaginatedResult,
+  SystemId,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
+/**
+ * Shape returned by `queryAuditLog`. Mirrors the domain `AuditLogEntry`
+ * (and the OpenAPI `AuditLogEntry` schema) so the route response conforms
+ * to the plaintext-wire parity contract enforced in
+ * `scripts/openapi-wire-parity.type-test.ts`.
+ *
+ * Note: the DB column is `timestamp` (event-occurred time); the domain /
+ * wire field is `createdAt`. The mapping in `toEntryResult` handles the
+ * rename.
+ */
 export interface AuditLogEntryResult {
   readonly id: AuditLogEntryId;
-  readonly eventType: string;
-  readonly timestamp: UnixMillis;
-  readonly actor: unknown;
+  readonly systemId: SystemId;
+  readonly eventType: AuditEventType;
+  readonly createdAt: UnixMillis;
+  readonly actor: AuditActor;
   readonly detail: string | null;
   readonly ipAddress: string | null;
   readonly userAgent: string | null;
-  readonly systemId: string | null;
 }
 
 export interface AuditLogQueryParams {
@@ -71,16 +85,31 @@ function decodeCursor(cursor: string): CursorData {
 
 // ── Query ──────────────────────────────────────────────────────────
 
+function brandDbActor(actor: DbAuditActor): AuditActor {
+  switch (actor.kind) {
+    case "account":
+      return { kind: "account", id: brandId<AccountId>(actor.id) };
+    case "api-key":
+      return { kind: "api-key", id: brandId<ApiKeyId>(actor.id) };
+    case "system":
+      return { kind: "system", id: brandId<SystemId>(actor.id) };
+  }
+}
+
 function toEntryResult(row: typeof auditLog.$inferSelect): AuditLogEntryResult {
   return {
     id: brandId<AuditLogEntryId>(row.id),
+    // systemId is nullable in the DB (audit rows survive system deletion
+    // via ON DELETE SET NULL). Rows returned to a signed-in account have
+    // a concrete systemId; the `??` brand cast keeps the type contract
+    // honest without forcing an extra filter in the SQL layer.
+    systemId: brandId<SystemId>(row.systemId ?? ""),
     eventType: row.eventType,
-    timestamp: toUnixMillis(row.timestamp),
-    actor: row.actor,
+    createdAt: toUnixMillis(row.timestamp),
+    actor: brandDbActor(row.actor),
     detail: row.detail,
     ipAddress: row.ipAddress,
     userAgent: row.userAgent,
-    systemId: row.systemId,
   };
 }
 

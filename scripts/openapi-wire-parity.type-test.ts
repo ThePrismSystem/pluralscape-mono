@@ -18,12 +18,10 @@
  * shared `EncryptedEntity` envelope parity below is the real tripwire
  * for the wire shape every encrypted response rides on.
  *
- * `AuditLogEntry` diverges from the domain on field names
- * (`timestamp` vs `createdAt`), extra fields (`resourceType`,
- * `resourceId`), and actor shape (`string | null` vs the
- * `AuditActor` tagged union). Aligning these requires either updating
- * the OpenAPI spec or restructuring the domain type — out of scope
- * for the types-tef0 Member pilot.
+ * `AuditLogEntry` is plaintext on the wire (not encrypted), so the
+ * OpenAPI schema structurally matches the domain type directly and a
+ * real `Equal<components["schemas"]["AuditLogEntry"],
+ * Serialize<AuditLogEntry>>` compile-time check is enforced below.
  *
  * What this file enforces right now:
  *  - `MemberWire ≡ Serialize<Member>` (self-consistency of the helper).
@@ -35,6 +33,8 @@
  *  - `components["schemas"]["PlaintextMember"]` structurally equals
  *    `Serialize<Pick<Member, MemberEncryptedFields>>` — the pre-encryption
  *    contract derived directly from the domain.
+ *  - `components["schemas"]["AuditLogEntry"]` structurally equals
+ *    `Serialize<AuditLogEntry>` — plaintext-wire parity for the audit log.
  *
  * Adding a bogus field on either side of any assertion will fail the gate
  * — see `pnpm types:check-sot`.
@@ -96,4 +96,13 @@ expectTypeOf<
 
 expectTypeOf<
   Equal<components["schemas"]["PlaintextMember"], Serialize<Pick<Member, MemberEncryptedFields>>>
+>().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
+//
+// AuditLogEntry is plaintext on the wire (not encrypted), so the OpenAPI
+// schema structurally matches the domain type directly.
+
+expectTypeOf<
+  Equal<components["schemas"]["AuditLogEntry"], Serialize<AuditLogEntry>>
 >().toEqualTypeOf<true>();

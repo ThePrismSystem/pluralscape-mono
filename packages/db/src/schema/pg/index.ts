@@ -156,7 +156,7 @@ export type { SystemSettingsRow, NewSystemSettings } from "./system-settings.js"
 export type { ApiKeyRow, NewApiKey } from "./api-keys.js";
 
 // Audit & Lifecycle
-export type { AuditLogRow, NewAuditLog } from "./audit-log.js";
+export type { AuditLogRow, DbAuditActor, NewAuditLog } from "./audit-log.js";
 export type { LifecycleEventRow, NewLifecycleEvent } from "./lifecycle-events.js";
 
 // Safe Mode

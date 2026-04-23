@@ -5853,26 +5853,275 @@ export interface components {
       /** @default 25 */
       limit: number;
     };
+    /**
+     * @description Append-only audit log entry. Plaintext on the wire (not encrypted);
+     *     the server intentionally reads these for security monitoring
+     *     (failed-login detection, IP-pattern analysis).
+     */
     AuditLogEntry: {
       /** @description Unique audit log entry identifier */
       id: string;
-      /** @description Type of event (e.g., login, member.create, settings.update) */
-      eventType: string;
+      /** @description System the event is scoped to */
+      systemId: string;
+      /**
+       * @description Category of audit event.
+       * @enum {string}
+       */
+      eventType:
+        | "auth.register"
+        | "auth.login"
+        | "auth.login-failed"
+        | "auth.logout"
+        | "auth.password-changed"
+        | "auth.recovery-key-used"
+        | "auth.key-created"
+        | "auth.key-revoked"
+        | "data.export"
+        | "data.import"
+        | "data.purge"
+        | "settings.changed"
+        | "member.created"
+        | "member.archived"
+        | "sharing.granted"
+        | "sharing.revoked"
+        | "bucket.key_rotation.initiated"
+        | "bucket.key_rotation.chunk_completed"
+        | "bucket.key_rotation.completed"
+        | "bucket.key_rotation.failed"
+        | "bucket.key_rotation.retried"
+        | "device.security.jailbreak_warning_shown"
+        | "auth.password-reset-via-recovery"
+        | "auth.recovery-key-regenerated"
+        | "auth.device-transfer-initiated"
+        | "auth.device-transfer-approved"
+        | "auth.device-transfer-completed"
+        | "auth.email-changed"
+        | "auth.email-change-notification-enqueue-failed"
+        | "system.created"
+        | "system.profile-updated"
+        | "system.deleted"
+        | "system.purged"
+        | "system.duplicated"
+        | "snapshot.created"
+        | "snapshot.deleted"
+        | "group.created"
+        | "group.updated"
+        | "group.archived"
+        | "group.restored"
+        | "group.moved"
+        | "group-membership.added"
+        | "group-membership.removed"
+        | "custom-front.created"
+        | "custom-front.updated"
+        | "custom-front.archived"
+        | "custom-front.restored"
+        | "group.deleted"
+        | "custom-front.deleted"
+        | "auth.biometric-enrolled"
+        | "auth.biometric-verified"
+        | "auth.biometric-failed"
+        | "settings.pin-set"
+        | "settings.pin-removed"
+        | "settings.pin-verified"
+        | "settings.nomenclature-updated"
+        | "setup.step-completed"
+        | "setup.completed"
+        | "member.updated"
+        | "member.duplicated"
+        | "member.restored"
+        | "member-photo.created"
+        | "member-photo.archived"
+        | "member-photo.restored"
+        | "member-photo.reordered"
+        | "field-definition.created"
+        | "field-definition.updated"
+        | "field-definition.archived"
+        | "field-definition.restored"
+        | "field-value.set"
+        | "field-value.updated"
+        | "field-value.deleted"
+        | "structure-entity-type.created"
+        | "structure-entity-type.updated"
+        | "structure-entity-type.archived"
+        | "structure-entity-type.restored"
+        | "structure-entity-type.deleted"
+        | "structure-entity.created"
+        | "structure-entity.updated"
+        | "structure-entity.archived"
+        | "structure-entity.restored"
+        | "structure-entity.deleted"
+        | "relationship.created"
+        | "relationship.updated"
+        | "relationship.archived"
+        | "relationship.restored"
+        | "relationship.deleted"
+        | "lifecycle-event.created"
+        | "lifecycle-event.updated"
+        | "lifecycle-event.archived"
+        | "lifecycle-event.restored"
+        | "lifecycle-event.deleted"
+        | "structure-entity-link.created"
+        | "structure-entity-link.updated"
+        | "structure-entity-link.deleted"
+        | "structure-entity-member-link.added"
+        | "structure-entity-member-link.removed"
+        | "structure-entity-association.created"
+        | "structure-entity-association.deleted"
+        | "innerworld-region.created"
+        | "innerworld-region.updated"
+        | "innerworld-region.archived"
+        | "innerworld-region.restored"
+        | "innerworld-region.deleted"
+        | "innerworld-entity.created"
+        | "innerworld-entity.updated"
+        | "innerworld-entity.archived"
+        | "innerworld-entity.restored"
+        | "innerworld-entity.deleted"
+        | "innerworld-canvas.created"
+        | "innerworld-canvas.updated"
+        | "blob.upload-requested"
+        | "blob.confirmed"
+        | "blob.archived"
+        | "member.deleted"
+        | "member-photo.deleted"
+        | "field-definition.deleted"
+        | "fronting-session.created"
+        | "fronting-session.updated"
+        | "fronting-session.ended"
+        | "fronting-session.archived"
+        | "fronting-session.restored"
+        | "fronting-session.deleted"
+        | "fronting-comment.created"
+        | "fronting-comment.updated"
+        | "fronting-comment.archived"
+        | "fronting-comment.restored"
+        | "fronting-comment.deleted"
+        | "fronting-report.created"
+        | "fronting-report.updated"
+        | "fronting-report.archived"
+        | "fronting-report.restored"
+        | "fronting-report.deleted"
+        | "timer-config.created"
+        | "timer-config.updated"
+        | "timer-config.archived"
+        | "timer-config.restored"
+        | "timer-config.deleted"
+        | "check-in-record.created"
+        | "check-in-record.responded"
+        | "check-in-record.dismissed"
+        | "check-in-record.archived"
+        | "check-in-record.restored"
+        | "check-in-record.deleted"
+        | "webhook-config.created"
+        | "webhook-config.updated"
+        | "webhook-config.archived"
+        | "webhook-config.restored"
+        | "webhook-config.secret-rotated"
+        | "webhook-config.deleted"
+        | "webhook-delivery.deleted"
+        | "channel.created"
+        | "channel.updated"
+        | "channel.archived"
+        | "channel.restored"
+        | "channel.deleted"
+        | "message.created"
+        | "message.updated"
+        | "message.archived"
+        | "message.restored"
+        | "message.deleted"
+        | "board-message.created"
+        | "board-message.updated"
+        | "board-message.pinned"
+        | "board-message.unpinned"
+        | "board-message.reordered"
+        | "board-message.archived"
+        | "board-message.restored"
+        | "board-message.deleted"
+        | "note.created"
+        | "note.updated"
+        | "note.archived"
+        | "note.restored"
+        | "note.deleted"
+        | "poll.created"
+        | "poll.updated"
+        | "poll.closed"
+        | "poll.archived"
+        | "poll.restored"
+        | "poll.deleted"
+        | "poll-vote.cast"
+        | "poll-vote.vetoed"
+        | "poll-vote.updated"
+        | "poll-vote.archived"
+        | "acknowledgement.created"
+        | "acknowledgement.confirmed"
+        | "acknowledgement.archived"
+        | "acknowledgement.restored"
+        | "acknowledgement.deleted"
+        | "bucket.created"
+        | "bucket.updated"
+        | "bucket.archived"
+        | "bucket.restored"
+        | "bucket.deleted"
+        | "bucket-content-tag.tagged"
+        | "bucket-content-tag.untagged"
+        | "field-bucket-visibility.set"
+        | "field-bucket-visibility.removed"
+        | "friend-code.generated"
+        | "friend-code.redeemed"
+        | "friend-code.archived"
+        | "friend-connection.created"
+        | "friend-connection.accepted"
+        | "friend-connection.rejected"
+        | "friend-connection.blocked"
+        | "friend-connection.removed"
+        | "friend-connection.archived"
+        | "friend-connection.restored"
+        | "friend-visibility.updated"
+        | "friend-bucket-assignment.assigned"
+        | "friend-bucket-assignment.unassigned"
+        | "device-token.registered"
+        | "device-token.updated"
+        | "device-token.revoked"
+        | "device-token.deleted"
+        | "notification-config.updated"
+        | "friend-notification-preference.updated"
+        | "api-key.created"
+        | "api-key.revoked"
+        | "import-job.created"
+        | "import-job.updated"
+        | "import-job.completed"
+        | "import-job.failed";
       /**
        * Format: int64
-       * @description Unix timestamp in milliseconds when the event occurred
+       * @description Unix milliseconds when the event occurred
        */
-      timestamp: number;
-      /** @description Type of resource affected (e.g., member, group, session) */
-      resourceType: string;
-      /** @description ID of the affected resource */
-      resourceId?: string | null;
-      /** @description Account ID of the actor */
-      actor?: string | null;
+      createdAt: number;
+      /** @description The actor who performed the action. */
+      actor:
+        | {
+            /** @constant */
+            kind: "account";
+            /** @description Account ID */
+            id: string;
+          }
+        | {
+            /** @constant */
+            kind: "api-key";
+            /** @description API key ID */
+            id: string;
+          }
+        | {
+            /** @constant */
+            kind: "system";
+            /** @description System ID */
+            id: string;
+          };
+      /** @description Free-form plaintext payload with event-specific metadata. */
+      detail: string | null;
       /** @description IP address of the request */
-      ipAddress?: string | null;
+      ipAddress: string | null;
       /** @description User-Agent header from the request */
-      userAgent?: string | null;
+      userAgent: string | null;
     };
     AuditLogResponse: {
       data: components["schemas"]["AuditLogEntry"][];
