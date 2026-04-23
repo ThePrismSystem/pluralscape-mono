@@ -357,7 +357,7 @@ export type {
   GroupMembership,
   GroupTree,
   GroupMoveOperation,
-} from "./groups.js";
+} from "./entities/group.js";
 
 // ── PK Bridge ────────────────────────────────────────────────────
 export type {

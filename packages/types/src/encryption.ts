@@ -8,6 +8,7 @@ import type { FieldDefinition, FieldType } from "./entities/field-definition.js"
 import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
+import type { Group } from "./entities/group.js";
 import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
 import type { InnerWorldRegion } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
@@ -23,7 +24,6 @@ import type { SystemStructureEntityType } from "./entities/structure-entity-type
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
 import type { WikiPage } from "./entities/wiki-page.js";
-import type { Group } from "./groups.js";
 import type {
   AccountId,
   AcknowledgementId,

@@ -1,6 +1,6 @@
-import type { GroupId, HexColor, MemberId, SystemId } from "./ids.js";
-import type { ImageSource } from "./image-source.js";
-import type { Archived, AuditMetadata } from "./utility.js";
+import type { GroupId, HexColor, MemberId, SystemId } from "../ids.js";
+import type { ImageSource } from "../image-source.js";
+import type { Archived, AuditMetadata } from "../utility.js";
 
 /** A user-defined group (folder) for organizing members. */
 export interface Group extends AuditMetadata {
