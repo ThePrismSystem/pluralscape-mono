@@ -32,13 +32,13 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 type PgDb = PgDatabase<PgQueryResultHKT>;
 
 /** Get currently fronting members (end_time IS NULL). */
-export async function getCurrentFronters(db: PgDb, systemId: string): Promise<CurrentFronter[]> {
+export async function getCurrentFronters(db: PgDb, systemId: SystemId): Promise<CurrentFronter[]> {
   return db
     .select({
       id: frontingSessions.id,
@@ -52,7 +52,7 @@ export async function getCurrentFronters(db: PgDb, systemId: string): Promise<Cu
 /** Get currently fronting members with computed duration in milliseconds. */
 export async function getCurrentFrontersWithDuration(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<CurrentFronterWithDuration[]> {
   return db
     .select({

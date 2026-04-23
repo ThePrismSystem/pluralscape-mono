@@ -242,7 +242,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     memberId: MemberId | null,
     customFrontId: CustomFrontId | null = null,
   ): Promise<FrontingSessionId> {
-    const id = createId(ID_PREFIXES.frontingSession);
+    const id = brandId<FrontingSessionId>(createId(ID_PREFIXES.frontingSession));
     const ts = now();
     await db.insert(frontingSessions).values({
       id,
@@ -256,7 +256,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<FrontingSessionId>(id);
+    return id;
   }
 
   // ── Tests ───────────────────────────────────────────────────────────

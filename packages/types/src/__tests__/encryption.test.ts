@@ -10,7 +10,6 @@ import type {
   ClientCustomFront,
   ClientFieldDefinition,
   ClientFieldValue,
-  ClientFrontingSession,
   ClientGroup,
   ClientJournalEntry,
   ClientLifecycleEvent,
@@ -36,7 +35,6 @@ import type {
   ServerCustomFront,
   ServerFieldDefinition,
   ServerFieldValue,
-  ServerFrontingSession,
   ServerGroup,
   ServerJournalEntry,
   ServerLifecycleEvent,
@@ -66,7 +64,7 @@ import type { BoardMessage } from "../entities/board-message.js";
 import type { Channel } from "../entities/channel.js";
 import type { CustomFront } from "../entities/custom-front.js";
 import type { FrontingComment } from "../entities/fronting-comment.js";
-import type { FrontingSession } from "../entities/fronting-session.js";
+import type { FrontingSessionServerMetadata } from "../entities/fronting-session.js";
 import type { Group } from "../entities/group.js";
 import type {
   InnerWorldEntity,
@@ -182,8 +180,8 @@ describe("MemberServerMetadata", () => {
 
 describe("Server/Client pairs exist for completed domains", () => {
   it("fronting pair", () => {
-    expectTypeOf<ServerFrontingSession>().toBeObject();
-    expectTypeOf<ClientFrontingSession>().toEqualTypeOf<FrontingSession>();
+    expectTypeOf<FrontingSessionServerMetadata>().toBeObject();
+    expectTypeOf<FrontingSessionServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
   });
 
   it("group pair", () => {

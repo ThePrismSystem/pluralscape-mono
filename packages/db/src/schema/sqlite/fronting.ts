@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -15,6 +15,7 @@ import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
 import { systems } from "./systems.js";
 
+import type { FrontingSessionId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = sqliteTable(
@@ -42,8 +43,8 @@ export const customFronts = sqliteTable(
 export const frontingSessions = sqliteTable(
   "fronting_sessions",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<FrontingSessionId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: sqliteTimestamp("start_time").notNull(),

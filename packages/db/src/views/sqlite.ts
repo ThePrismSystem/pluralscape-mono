@@ -26,11 +26,14 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 /** Get currently fronting members (end_time IS NULL). */
-export function getCurrentFronters(db: BetterSQLite3Database, systemId: string): CurrentFronter[] {
+export function getCurrentFronters(
+  db: BetterSQLite3Database,
+  systemId: SystemId,
+): CurrentFronter[] {
   return db
     .select({
       id: frontingSessions.id,
@@ -50,7 +53,7 @@ export function getCurrentFronters(db: BetterSQLite3Database, systemId: string):
  */
 export function getCurrentFrontersWithDuration(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): CurrentFronterWithDuration[] {
   return db
     .select({

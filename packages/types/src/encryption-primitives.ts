@@ -6,7 +6,6 @@ import type { CustomFront } from "./entities/custom-front.js";
 import type { FieldDefinition, FieldType } from "./entities/field-definition.js";
 import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
-import type { FrontingSession } from "./entities/fronting-session.js";
 import type { Group } from "./entities/group.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
@@ -122,26 +121,6 @@ export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 // Only defined for completed domain modules.
 // MemberServerMetadata / MemberWire live in entities/member.ts.
 // AuditLogEntryServerMetadata / AuditLogEntryWire live in entities/audit-log-entry.ts.
-
-/**
- * Server-side fronting session representation.
- * T1 encrypted: comment, positionality, outtrigger, outtriggerSentiment
- * T3 plaintext: timestamps, memberId, customFrontId, structureEntityId, archived
- */
-export interface ServerFrontingSession extends AuditMetadata {
-  readonly id: FrontingSessionId;
-  readonly systemId: SystemId;
-  readonly memberId: MemberId | null;
-  readonly startTime: UnixMillis;
-  readonly endTime: UnixMillis | null;
-  readonly customFrontId: CustomFrontId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side fronting session — flat decrypted fields. */
-export type ClientFrontingSession = FrontingSession;
 
 /**
  * Server-side fronting comment representation.

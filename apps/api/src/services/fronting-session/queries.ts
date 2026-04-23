@@ -1,4 +1,5 @@
 import { frontingSessions, systemStructureEntityMemberLinks } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { FrontingSessionQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte } from "drizzle-orm";
 
@@ -109,7 +110,7 @@ export async function listFrontingSessions(
     }
 
     if (opts.cursor) {
-      conditions.push(lt(frontingSessions.id, opts.cursor));
+      conditions.push(lt(frontingSessions.id, brandId<FrontingSessionId>(opts.cursor)));
     }
 
     const rows = await tx

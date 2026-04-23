@@ -39,7 +39,7 @@ export async function createFrontingSession(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "endTime must be after startTime");
   }
 
-  const fsId = createId(ID_PREFIXES.frontingSession);
+  const fsId = brandId<FrontingSessionId>(createId(ID_PREFIXES.frontingSession));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

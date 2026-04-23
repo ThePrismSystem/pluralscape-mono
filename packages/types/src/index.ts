@@ -121,8 +121,6 @@ export type {
   ServerSecret,
   DecryptFn,
   EncryptFn,
-  ServerFrontingSession,
-  ClientFrontingSession,
   ServerFrontingComment,
   ClientFrontingComment,
   ServerGroup,

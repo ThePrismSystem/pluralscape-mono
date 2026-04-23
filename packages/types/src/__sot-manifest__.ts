@@ -30,6 +30,8 @@ import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-val
 import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
+  FrontingSessionServerMetadata,
+  FrontingSessionWire,
 } from "./entities/fronting-session.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
 import type {
@@ -184,6 +186,8 @@ export type SotEntityManifest = {
   };
   FrontingSession: {
     domain: FrontingSession;
+    server: FrontingSessionServerMetadata;
+    wire: FrontingSessionWire;
     encryptedFields: FrontingSessionEncryptedFields;
   };
   LifecycleEvent: {

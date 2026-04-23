@@ -11,7 +11,6 @@ import type {
   ServerFieldDefinition,
   ServerFieldValue,
   ServerFrontingComment,
-  ServerFrontingSession,
   ServerGroup,
   ServerJournalEntry,
   ServerLifecycleEvent,
@@ -33,7 +32,7 @@ import type { CustomFront } from "./entities/custom-front.js";
 import type { FieldDefinition } from "./entities/field-definition.js";
 import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
-import type { FrontingSession } from "./entities/fronting-session.js";
+import type { FrontingSession, FrontingSessionServerMetadata } from "./entities/fronting-session.js";
 import type { Group } from "./entities/group.js";
 import type {
   InnerWorldEntity,
@@ -60,7 +59,7 @@ import type { WikiPage } from "./entities/wiki-page.js";
 /** Union of all server-side types safe to return from API routes. */
 export type ServerResponseData =
   | MemberServerMetadata
-  | ServerFrontingSession
+  | FrontingSessionServerMetadata
   | ServerFrontingComment
   | ServerGroup
   | ServerStructureEntityType

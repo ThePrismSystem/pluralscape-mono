@@ -27,7 +27,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, FrontingSessionId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const {
@@ -506,7 +506,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(frontingSessions).values({
-        id: `fs_${crypto.randomUUID()}`,
+        id: brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`),
         systemId,
         memberId: created.id,
         startTime: now - 3_600_000,
