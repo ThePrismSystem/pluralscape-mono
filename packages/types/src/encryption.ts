@@ -4,19 +4,19 @@ import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js"
 import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
+import type { CustomFront } from "./entities/custom-front.js";
+import type { FrontingComment } from "./entities/fronting-comment.js";
+import type { FrontingSession } from "./entities/fronting-session.js";
+import type { MemberPhoto } from "./entities/member-photo.js";
+import type { Member } from "./entities/member.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
-import type {
-  RelationshipType,
-  Relationship,
-} from "./entities/relationship.js";
+import type { RelationshipType, Relationship } from "./entities/relationship.js";
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
-import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
-import type { Member, MemberPhoto } from "./identity.js";
 import type {
   AccountId,
   AcknowledgementId,

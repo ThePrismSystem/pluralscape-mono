@@ -131,22 +131,23 @@ export type { ImageSource } from "./image-source.js";
 
 // ── Identity ────────────────────────────────────────────────────────
 export type {
-  System,
   Member,
   KnownSaturationLevel,
   SaturationLevel,
   KnownTag,
   Tag,
-  MemberPhoto,
   ArchivedMember,
-  ArchivedMemberPhoto,
   MemberListItem,
-  SystemListItem,
   CreateMemberBody,
   UpdateMemberBody,
-  CreateMemberPhotoBody,
   DuplicateMemberBody,
-} from "./identity.js";
+} from "./entities/member.js";
+export type {
+  MemberPhoto,
+  ArchivedMemberPhoto,
+  CreateMemberPhotoBody,
+} from "./entities/member-photo.js";
+export type { System, SystemListItem } from "./entities/system.js";
 
 // ── Fronting ────────────────────────────────────────────────────────
 export type {
@@ -155,12 +156,10 @@ export type {
   CompletedFrontingSession,
   FrontingSession,
   ArchivedFrontingSession,
-  FrontingComment,
-  ArchivedFrontingComment,
-  CustomFront,
-  ArchivedCustomFront,
   CoFrontState,
-} from "./fronting.js";
+} from "./entities/fronting-session.js";
+export type { FrontingComment, ArchivedFrontingComment } from "./entities/fronting-comment.js";
+export type { CustomFront, ArchivedCustomFront } from "./entities/custom-front.js";
 
 // ── Privacy ────────────────────────────────────────────────────────
 export type {
