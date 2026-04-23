@@ -8151,16 +8151,13 @@ export interface components {
      */
     PlaintextStructureEntityMemberLink: Record<string, never>;
     /**
-     * @description **Encrypted into**: `encryptedData` (optional) on structure entity association
-     *     create endpoints.
-     *
-     *     Encrypted metadata for a directed cross-reference between structure entities.
-     *     The `sourceEntityId` and `targetEntityId` are sent as separate plaintext
-     *     fields. Encryption tier: **T1**.
+     * @description Structure entity associations carry no encrypted payload today — every
+     *     field (`sourceEntityId`, `targetEntityId`) is plaintext at the API
+     *     layer. The schema is retained as an empty object so future encrypted
+     *     additions plug in without a breaking rename; the current parity gate
+     *     asserts the empty projection.
      */
-    PlaintextStructureEntityAssociation: {
-      notes?: string | null;
-    };
+    PlaintextStructureEntityAssociation: Record<string, never>;
     "PinRequest-2": {
       /** @description 4-6 digit PIN */
       pin: string;

@@ -76,6 +76,8 @@ import type {
   SystemSettings,
   SystemSettingsEncryptedFields,
   SystemStructureEntity,
+  SystemStructureEntityAssociation,
+  SystemStructureEntityAssociationEncryptedFields,
   SystemStructureEntityEncryptedFields,
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
@@ -270,6 +272,16 @@ expectTypeOf<
     EmptyEncryptedProjection<
       SystemStructureEntityMemberLink,
       SystemStructureEntityMemberLinkEncryptedFields
+    >
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextStructureEntityAssociation"],
+    EmptyEncryptedProjection<
+      SystemStructureEntityAssociation,
+      SystemStructureEntityAssociationEncryptedFields
     >
   >
 >().toEqualTypeOf<true>();
