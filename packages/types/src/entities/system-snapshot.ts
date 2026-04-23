@@ -1,9 +1,3 @@
-import type { InnerWorldEntityType } from "./entities/innerworld-entity.js";
-import type { Tag, SaturationLevel } from "./entities/member.js";
-import type { RelationshipType } from "./entities/relationship.js";
-import type { SystemStructureEntityAssociation } from "./entities/structure-entity-association.js";
-import type { SystemStructureEntityLink } from "./entities/structure-entity-link.js";
-import type { SystemStructureEntityMemberLink } from "./entities/structure-entity-member-link.js";
 import type {
   GroupId,
   InnerWorldEntityId,
@@ -13,8 +7,14 @@ import type {
   SystemSnapshotId,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
-} from "./ids.js";
-import type { UnixMillis } from "./timestamps.js";
+} from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { InnerWorldEntityType } from "./innerworld-entity.js";
+import type { Tag, SaturationLevel } from "./member.js";
+import type { RelationshipType } from "./relationship.js";
+import type { SystemStructureEntityAssociation } from "./structure-entity-association.js";
+import type { SystemStructureEntityLink } from "./structure-entity-link.js";
+import type { SystemStructureEntityMemberLink } from "./structure-entity-member-link.js";
 
 // ── Snapshot metadata ─────────────────────────────────────────────
 

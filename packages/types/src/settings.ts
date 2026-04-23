@@ -1,8 +1,8 @@
+import type { SnapshotSchedule } from "./entities/system-snapshot.js";
 import type { Locale } from "./i18n.js";
 import type { BucketId, SystemSettingsId, SystemId } from "./ids.js";
 import type { LittlesSafeModeConfig } from "./littles-safe-mode.js";
 import type { NomenclatureSettings } from "./nomenclature.js";
-import type { SnapshotSchedule } from "./snapshot.js";
 import type { AuditMetadata } from "./utility.js";
 
 /** User preference for the application theme. */

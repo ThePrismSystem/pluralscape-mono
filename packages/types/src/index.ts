@@ -702,7 +702,7 @@ export type {
   SnapshotInnerworldRegion,
   SnapshotInnerworldEntity,
   SnapshotContent,
-} from "./snapshot.js";
+} from "./entities/system-snapshot.js";
 
 // ── API constants ─────────────────────────────────────────────────────
 export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants/index.js";
