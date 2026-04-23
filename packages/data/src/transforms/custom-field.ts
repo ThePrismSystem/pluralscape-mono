@@ -1,9 +1,17 @@
+import {
+  FieldDefinitionEncryptedInputSchema,
+  FieldValueEncryptedInputSchema,
+} from "@pluralscape/validation";
+
 import { decodeAndDecryptT1, encryptInput } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  FieldDefinition,
+  FieldDefinitionEncryptedFields,
   FieldDefinitionId,
   FieldType,
+  FieldValueEncryptedFields,
   FieldValueId,
   FieldValueUnion,
   GroupId,
@@ -16,15 +24,19 @@ import type {
 // ── Encrypted payload types ───────────────────────────────────────────
 
 /**
- * The plaintext fields encrypted inside a field definition blob.
- * Pass this to `encryptFieldDefinitionInput` when creating or updating a definition.
+ * The plaintext fields encrypted inside a field definition blob. Derived
+ * from the `FieldDefinition` domain type by picking the encrypted-field
+ * keys — single source of truth lives in `@pluralscape/types`.
  */
-export interface FieldDefinitionEncryptedFields {
-  readonly name: string;
-  readonly description: string | null;
-  /** Valid options for select / multi-select fields. Null for other types. */
-  readonly options: readonly string[] | null;
-}
+export type FieldDefinitionEncryptedInput = Pick<FieldDefinition, FieldDefinitionEncryptedFields>;
+
+/**
+ * The plaintext payload encrypted inside a field value blob — the
+ * discriminated `FieldValueUnion` travels whole (both `fieldType` and
+ * `value`), distinct from the `FieldValueEncryptedFields = "value"`
+ * union which only captures the outer key on the domain type.
+ */
+export type FieldValueEncryptedInput = FieldValueUnion;
 
 // ── Decrypted output types ────────────────────────────────────────────
 
@@ -44,15 +56,6 @@ export interface FieldDefinitionDecrypted {
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
 }
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertFieldDefinitionFieldsSubset =
-  FieldDefinitionEncryptedFields extends Pick<
-    FieldDefinitionDecrypted,
-    keyof FieldDefinitionEncryptedFields
-  >
-    ? true
-    : never;
 
 /**
  * A fully decrypted field value, combining wire metadata with the decrypted value union.
@@ -75,7 +78,7 @@ export type FieldValueDecrypted = {
 /** Wire shape returned by `field.definition.get` — derived from `FieldDefinitionDecrypted`. */
 export type FieldDefinitionRaw = Omit<
   FieldDefinitionDecrypted,
-  keyof FieldDefinitionEncryptedFields
+  keyof Pick<FieldDefinition, FieldDefinitionEncryptedFields>
 > & {
   readonly encryptedData: string;
 };
@@ -87,62 +90,9 @@ export interface FieldDefinitionPage {
 }
 
 /** Wire shape returned by `field.value.list` — derived from `FieldValueDecrypted`. */
-export type FieldValueRaw = Omit<FieldValueDecrypted, keyof FieldValueUnion> & {
+export type FieldValueRaw = Omit<FieldValueDecrypted, keyof FieldValueUnion | FieldValueEncryptedFields> & {
   readonly encryptedData: string;
 };
-
-// ── Validators ────────────────────────────────────────────────────────
-
-const VALID_FIELD_TYPES = new Set<string>([
-  "text",
-  "number",
-  "boolean",
-  "date",
-  "color",
-  "select",
-  "multi-select",
-  "url",
-]);
-
-function assertFieldDefinitionEncryptedFields(
-  raw: unknown,
-): asserts raw is FieldDefinitionEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted field definition blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["name"] !== "string") {
-    throw new Error("Decrypted field definition blob missing required string field: name");
-  }
-  if (obj["description"] !== null && typeof obj["description"] !== "string") {
-    throw new Error("Decrypted field definition blob: description must be string or null");
-  }
-  if (obj["options"] !== null) {
-    if (!Array.isArray(obj["options"])) {
-      throw new Error("Decrypted field definition blob: options must be string[] or null");
-    }
-    for (const opt of obj["options"] as unknown[]) {
-      if (typeof opt !== "string") {
-        throw new Error("Decrypted field definition blob: each option must be a string");
-      }
-    }
-  }
-}
-
-function assertFieldValueUnion(raw: unknown): asserts raw is FieldValueUnion {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted field value blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["fieldType"] !== "string" || !VALID_FIELD_TYPES.has(obj["fieldType"])) {
-    throw new Error(
-      `Decrypted field value blob has invalid fieldType: ${String(obj["fieldType"])}`,
-    );
-  }
-  if (!("value" in obj)) {
-    throw new Error("Decrypted field value blob missing required field: value");
-  }
-}
 
 // ── Field Definition transforms ───────────────────────────────────────
 
@@ -157,14 +107,14 @@ export function decryptFieldDefinition(
   masterKey: KdfMasterKey,
 ): FieldDefinitionDecrypted {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertFieldDefinitionEncryptedFields(plaintext);
+  const validated = FieldDefinitionEncryptedInputSchema.parse(plaintext);
   return {
     id: raw.id,
     systemId: raw.systemId,
-    name: plaintext.name,
-    description: plaintext.description,
+    name: validated.name,
+    description: validated.description,
     fieldType: raw.fieldType,
-    options: plaintext.options,
+    options: validated.options,
     required: raw.required,
     sortOrder: raw.sortOrder,
     archived: raw.archived,
@@ -195,7 +145,7 @@ export function decryptFieldDefinitionPage(
  * `CreateFieldDefinitionBodySchema` or `UpdateFieldDefinitionBodySchema`.
  */
 export function encryptFieldDefinitionInput(
-  data: FieldDefinitionEncryptedFields,
+  data: FieldDefinitionEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
@@ -214,7 +164,7 @@ export function decryptFieldValue(
   masterKey: KdfMasterKey,
 ): FieldValueDecrypted {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertFieldValueUnion(plaintext);
+  const validated = FieldValueEncryptedInputSchema.parse(plaintext);
   return {
     id: raw.id,
     fieldDefinitionId: raw.fieldDefinitionId,
@@ -225,8 +175,7 @@ export function decryptFieldValue(
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
-    fieldType: plaintext.fieldType,
-    value: plaintext.value,
+    ...validated,
   } as FieldValueDecrypted;
 }
 
@@ -249,7 +198,7 @@ export function decryptFieldValueList(
  * `SetFieldValueBodySchema` or `UpdateFieldValueBodySchema`.
  */
 export function encryptFieldValueInput(
-  data: FieldValueUnion,
+  data: FieldValueEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);

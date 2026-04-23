@@ -23,10 +23,22 @@ import type {
   DeviceTransferRequestWire,
 } from "./entities/device-transfer-request.js";
 import type {
+  FieldDefinitionScope,
+  FieldDefinitionScopeServerMetadata,
+  FieldDefinitionScopeWire,
+} from "./entities/field-definition-scope.js";
+import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
+  FieldDefinitionServerMetadata,
+  FieldDefinitionWire,
 } from "./entities/field-definition.js";
-import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
+import type {
+  FieldValue,
+  FieldValueEncryptedFields,
+  FieldValueServerMetadata,
+  FieldValueWire,
+} from "./entities/field-value.js";
 import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
@@ -164,10 +176,21 @@ export type SotEntityManifest = {
   };
   FieldDefinition: {
     domain: FieldDefinition;
+    server: FieldDefinitionServerMetadata;
+    wire: FieldDefinitionWire;
     encryptedFields: FieldDefinitionEncryptedFields;
+  };
+  FieldDefinitionScope: {
+    domain: FieldDefinitionScope;
+    server: FieldDefinitionScopeServerMetadata;
+    wire: FieldDefinitionScopeWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
   };
   FieldValue: {
     domain: FieldValue;
+    server: FieldValueServerMetadata;
+    wire: FieldValueWire;
     encryptedFields: FieldValueEncryptedFields;
   };
   Relationship: {

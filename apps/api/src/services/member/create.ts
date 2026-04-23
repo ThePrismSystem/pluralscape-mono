@@ -18,7 +18,7 @@ import { toMemberResult } from "./internal.js";
 import type { MemberResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { MemberId, SystemId } from "@pluralscape/types";
+import type { FieldValueId, MemberId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createMember(
@@ -186,9 +186,9 @@ export async function duplicateMember(
 
       if (values.length > 0) {
         const fieldRows = values.map((fv) => ({
-          id: createId(ID_PREFIXES.fieldValue),
+          id: brandId<FieldValueId>(createId(ID_PREFIXES.fieldValue)),
           fieldDefinitionId: fv.fieldDefinitionId,
-          memberId: newMemberId,
+          memberId: brandId<MemberId>(newMemberId),
           systemId,
           encryptedData: fv.encryptedData,
           createdAt: timestamp,

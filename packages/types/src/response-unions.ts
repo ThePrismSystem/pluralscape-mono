@@ -8,8 +8,6 @@ import type {
   ServerChannel,
   ServerChatMessage,
   ServerCustomFront,
-  ServerFieldDefinition,
-  ServerFieldValue,
   ServerFrontingComment,
   ServerFrontingSession,
   ServerGroup,
@@ -30,8 +28,8 @@ import type { AuditLogEntry, AuditLogEntryServerMetadata } from "./entities/audi
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
 import type { CustomFront } from "./entities/custom-front.js";
-import type { FieldDefinition } from "./entities/field-definition.js";
-import type { FieldValue } from "./entities/field-value.js";
+import type { FieldDefinition, FieldDefinitionServerMetadata } from "./entities/field-definition.js";
+import type { FieldValue, FieldValueServerMetadata } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
 import type { Group } from "./entities/group.js";
@@ -70,8 +68,8 @@ export type ServerResponseData =
   | ServerChatMessage
   | ServerBoardMessage
   | ServerNote
-  | ServerFieldDefinition
-  | ServerFieldValue
+  | FieldDefinitionServerMetadata
+  | FieldValueServerMetadata
   | InnerWorldEntityServerMetadata
   | InnerWorldRegionServerMetadata
   | ServerLifecycleEvent

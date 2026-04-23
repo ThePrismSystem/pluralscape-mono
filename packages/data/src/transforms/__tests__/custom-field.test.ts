@@ -14,7 +14,7 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { FieldDefinitionEncryptedFields, FieldValueDecrypted } from "../custom-field.js";
+import type { FieldDefinitionEncryptedInput, FieldValueDecrypted } from "../custom-field.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { FieldDefinitionId, FieldValueId, SystemId } from "@pluralscape/types";
 
@@ -57,7 +57,7 @@ const BASE_VALUE_RESULT = {
 
 describe("decryptFieldDefinition", () => {
   it("decrypts name, description, and options from the encrypted blob", () => {
-    const encrypted: FieldDefinitionEncryptedFields = {
+    const encrypted: FieldDefinitionEncryptedInput = {
       name: "Pronoun",
       description: "Preferred pronoun",
       options: null,
@@ -81,7 +81,7 @@ describe("decryptFieldDefinition", () => {
   });
 
   it("decrypts select field with options array", () => {
-    const encrypted: FieldDefinitionEncryptedFields = {
+    const encrypted: FieldDefinitionEncryptedInput = {
       name: "Role",
       description: null,
       options: ["host", "protector", "gatekeeper"],
@@ -106,7 +106,7 @@ describe("decryptFieldDefinition", () => {
 
   it("throws when blob was encrypted with a different key", () => {
     const otherKey = generateMasterKey();
-    const encrypted: FieldDefinitionEncryptedFields = {
+    const encrypted: FieldDefinitionEncryptedInput = {
       name: "X",
       description: null,
       options: null,
@@ -120,7 +120,7 @@ describe("decryptFieldDefinition", () => {
 
 describe("decryptFieldDefinitionPage", () => {
   it("decrypts all items and passes through nextCursor", () => {
-    const encrypted: FieldDefinitionEncryptedFields = {
+    const encrypted: FieldDefinitionEncryptedInput = {
       name: "Field A",
       description: null,
       options: null,
@@ -148,12 +148,12 @@ describe("decryptFieldDefinitionPage", () => {
   });
 
   it("decrypts multiple items", () => {
-    const enc1: FieldDefinitionEncryptedFields = {
+    const enc1: FieldDefinitionEncryptedInput = {
       name: "Alpha",
       description: "First",
       options: null,
     };
-    const enc2: FieldDefinitionEncryptedFields = {
+    const enc2: FieldDefinitionEncryptedInput = {
       name: "Beta",
       description: null,
       options: ["a", "b"],
@@ -188,7 +188,7 @@ describe("decryptFieldDefinitionPage", () => {
 
 describe("encryptFieldDefinitionInput", () => {
   it("returns an object with encryptedData string", () => {
-    const data: FieldDefinitionEncryptedFields = {
+    const data: FieldDefinitionEncryptedInput = {
       name: "Height",
       description: "Member height",
       options: null,
@@ -201,7 +201,7 @@ describe("encryptFieldDefinitionInput", () => {
   });
 
   it("round-trips: decryptFieldDefinition recovers original fields", () => {
-    const data: FieldDefinitionEncryptedFields = {
+    const data: FieldDefinitionEncryptedInput = {
       name: "Mood",
       description: null,
       options: ["happy", "calm", "anxious"],
@@ -351,7 +351,7 @@ describe("encryptFieldValueInput", () => {
 
 // ── Validation branches for encrypted blob assertions ─────────────────
 
-describe("assertFieldDefinitionEncryptedFields branches (via decryptFieldDefinition)", () => {
+describe("assertFieldDefinitionEncryptedInput branches (via decryptFieldDefinition)", () => {
   it("throws when decrypted blob is null", () => {
     const raw = { ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(null, masterKey) };
     expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(/not an object/i);

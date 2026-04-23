@@ -1,5 +1,5 @@
 import { fieldValues } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { SetFieldValueBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -20,7 +20,7 @@ import {
 import type { FieldValueOwner, FieldValueResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
+import type { FieldDefinitionId, FieldValueId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 function ownerLabel(owner: FieldValueOwner): string {
@@ -55,7 +55,7 @@ export async function setFieldValueForOwner(
   }
 
   const blob = parseAndValidateValueBlob(parsed.data.encryptedData);
-  const valueId = createId(ID_PREFIXES.fieldValue);
+  const valueId = brandId<FieldValueId>(createId(ID_PREFIXES.fieldValue));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

@@ -1,4 +1,7 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BucketId, FieldDefinitionId, SystemId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** The supported field types for custom fields (single source of truth). */
@@ -40,12 +43,38 @@ export interface FieldDefinition extends AuditMetadata {
  * sees them. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextFieldDefinition parity)
- * - Plan 2 fleet will consume when deriving `FieldDefinitionServerMetadata`.
+ * - `FieldDefinitionServerMetadata` (derived via `Omit`)
+ * - `FieldDefinitionEncryptedInput` in `packages/data` (derived via `Pick`)
  */
 export type FieldDefinitionEncryptedFields = "name" | "description" | "options";
 
 /** An archived field definition. */
 export type ArchivedFieldDefinition = Archived<FieldDefinition>;
+
+/**
+ * Server-visible FieldDefinition metadata — raw Drizzle row shape.
+ *
+ * Derived from `FieldDefinition` by stripping the encrypted field keys
+ * (bundled inside `encryptedData`) and `archived` (the server tracks a
+ * mutable boolean with a companion `archivedAt` timestamp, while the domain
+ * uses a `false` literal that toggles to `true` via the `Archived<T>`
+ * helper).
+ */
+export type FieldDefinitionServerMetadata = Omit<
+  FieldDefinition,
+  FieldDefinitionEncryptedFields | "archived"
+> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of a FieldDefinition. Derived from the domain
+ * `FieldDefinition` type via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`.
+ */
+export type FieldDefinitionWire = Serialize<FieldDefinition>;
 
 // ── Request body types ──────────────────────────────────────────
 

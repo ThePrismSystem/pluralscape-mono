@@ -50,6 +50,8 @@ export {
 } from "./plaintext-shared.js";
 export {
   CreateFieldDefinitionBodySchema,
+  FieldDefinitionEncryptedInputSchema,
+  FieldValueEncryptedInputSchema,
   UpdateFieldDefinitionBodySchema,
   SetFieldValueBodySchema,
   UpdateFieldValueBodySchema,
