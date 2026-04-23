@@ -1,5 +1,5 @@
-import type { SystemId } from "./ids.js";
-import type { UnixMillis } from "./timestamps.js";
+import type { SystemId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
 
 /** Sync document types matching the document topology spec. */
 export type SyncDocumentType =

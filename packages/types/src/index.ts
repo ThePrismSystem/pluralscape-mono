@@ -348,7 +348,7 @@ export type {
   SyncDocument,
   SyncState,
   SyncIndicator,
-} from "./sync.js";
+} from "./entities/sync-document.js";
 
 // ── Groups ─────────────────────────────────────────────────────────
 export type {
