@@ -5,12 +5,22 @@ import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
-/** Well-known saturation levels describing how elaborated a member is within the system. */
-export type KnownSaturationLevel =
-  | "fragment"
-  | "functional-fragment"
-  | "partially-elaborated"
-  | "highly-elaborated";
+/**
+ * Well-known saturation levels describing how elaborated a member is within the system.
+ *
+ * Exported as an `as const` tuple so runtime validators (Zod enums) can derive
+ * their allowed values from the same source as the TS union. This prevents
+ * enum drift: adding a new literal here automatically propagates to every
+ * consumer deriving from `KNOWN_SATURATION_LEVELS`.
+ */
+export const KNOWN_SATURATION_LEVELS = [
+  "fragment",
+  "functional-fragment",
+  "partially-elaborated",
+  "highly-elaborated",
+] as const;
+
+export type KnownSaturationLevel = (typeof KNOWN_SATURATION_LEVELS)[number];
 
 /** How elaborated a member is — either a well-known level or a user-defined custom level. */
 export type SaturationLevel =
@@ -20,25 +30,32 @@ export type SaturationLevel =
 /**
  * Well-known tags recognized by the application.
  * These have special semantics (e.g. "little" triggers Littles Safe Mode).
+ *
+ * Exported as an `as const` tuple so runtime validators (Zod enums) can derive
+ * their allowed values from the same source as the TS union — see the note on
+ * `KNOWN_SATURATION_LEVELS`.
  */
-export type KnownTag =
-  | "protector"
-  | "gatekeeper"
-  | "caretaker"
-  | "little"
-  | "age-slider"
-  | "trauma-holder"
-  | "host"
-  | "persecutor"
-  | "mediator"
-  | "anp"
-  | "memory-holder"
-  | "symptom-holder"
-  | "middle"
-  | "introject"
-  | "fictive"
-  | "factive"
-  | "non-human";
+export const KNOWN_TAGS = [
+  "protector",
+  "gatekeeper",
+  "caretaker",
+  "little",
+  "age-slider",
+  "trauma-holder",
+  "host",
+  "persecutor",
+  "mediator",
+  "anp",
+  "memory-holder",
+  "symptom-holder",
+  "middle",
+  "introject",
+  "fictive",
+  "factive",
+  "non-human",
+] as const;
+
+export type KnownTag = (typeof KNOWN_TAGS)[number];
 
 /** A tag — either a well-known tag or a user-defined custom tag. */
 export type Tag =

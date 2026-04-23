@@ -2,6 +2,7 @@ import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/cry
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
+import { z } from "zod/v4";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
 import {
@@ -41,6 +42,28 @@ function makeEncryptedFields(): MemberEncryptedInput {
     suppressFriendFrontNotification: false,
     boardMessageNotificationOnFront: true,
   };
+}
+
+/**
+ * Assert that `fn` throws a `z.ZodError` whose issues include one matching
+ * `code` at exactly `path`. Used to replace regex-on-message assertions so
+ * failing tests distinguish missing vs wrong-type vs other Zod errors.
+ */
+function expectZodIssue(
+  fn: () => unknown,
+  { code, path }: { code: string; path: ReadonlyArray<string | number> },
+): void {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (err) {
+    caught = err;
+  }
+  expect(caught).toBeInstanceOf(z.ZodError);
+  const issues = (caught as z.ZodError).issues;
+  expect(issues).toEqual(
+    expect.arrayContaining([expect.objectContaining({ code, path: [...path] })]),
+  );
 }
 
 /** Build a minimal MemberServerMetadata wire object from encrypted fields. */
@@ -164,7 +187,10 @@ describe("MemberEncryptedInputSchema validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("suppressFriendFrontNotification");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["suppressFriendFrontNotification"],
+    });
   });
 
   it("throws when boardMessageNotificationOnFront is missing", () => {
@@ -194,7 +220,10 @@ describe("MemberEncryptedInputSchema validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("boardMessageNotificationOnFront");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["boardMessageNotificationOnFront"],
+    });
   });
 
   it("throws when avatarSource is missing (undefined)", () => {
@@ -224,7 +253,11 @@ describe("MemberEncryptedInputSchema validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("avatarSource");
+    // `avatarSource` is a nullable discriminated union; a missing-field
+    // could legitimately be reported as invalid_type, invalid_union, or
+    // another code depending on Zod's error preference. Keep the message
+    // regex to stay tolerant.
+    expect(() => decryptMember(raw, masterKey)).toThrow(/avatarSource/);
   });
 
   it("throws when colors is missing (undefined)", () => {
@@ -254,7 +287,10 @@ describe("MemberEncryptedInputSchema validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("colors");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["colors"],
+    });
   });
 
   it("throws when saturationLevel is missing (undefined)", () => {
@@ -284,13 +320,18 @@ describe("MemberEncryptedInputSchema validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("saturationLevel");
+    // `saturationLevel` is a discriminated union; missing vs wrong-discriminator
+    // could surface with distinct codes. Keep regex to stay tolerant.
+    expect(() => decryptMember(raw, masterKey)).toThrow(/saturationLevel/);
   });
 
   it("throws when tags is not an array", () => {
     const fields = { ...makeEncryptedFields(), tags: "not-an-array" };
     const raw = { ...makeServerMember(), encryptedData: encryptAndEncodeT1(fields, masterKey) };
-    expect(() => decryptMember(raw, masterKey)).toThrow("tags");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["tags"],
+    });
   });
 });
 
