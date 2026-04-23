@@ -44,6 +44,8 @@ import type { components } from "../packages/api-client/src/generated/api-types.
 import type {
   AuditLogEntry,
   AuditLogEntryWire,
+  CustomFront,
+  CustomFrontEncryptedFields,
   Equal,
   Group,
   GroupEncryptedFields,
@@ -119,6 +121,13 @@ expectTypeOf<
 // structurally equals `Serialize<Pick<<Entity>, <Entity>EncryptedFields>>`
 // — the single source of truth for the client-encrypted payload contract.
 // Sorted alphabetically by entity.
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextCustomFront"],
+    Serialize<Pick<CustomFront, CustomFrontEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
 
 expectTypeOf<
   Equal<components["schemas"]["PlaintextGroup"], Serialize<Pick<Group, GroupEncryptedFields>>>

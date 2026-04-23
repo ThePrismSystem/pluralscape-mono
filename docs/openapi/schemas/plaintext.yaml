@@ -246,7 +246,7 @@ PlaintextCustomFront:
     An abstract cognitive state logged like a member (e.g., "Dissociated", "Blurry").
     Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, color, emoji]
   properties:
     name:
       type: string

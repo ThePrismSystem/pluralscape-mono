@@ -3,6 +3,7 @@ import type {
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
+import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
@@ -56,5 +57,9 @@ export type SotEntityManifest = {
   Group: {
     domain: Group;
     encryptedFields: GroupEncryptedFields;
+  };
+  CustomFront: {
+    domain: CustomFront;
+    encryptedFields: CustomFrontEncryptedFields;
   };
 };

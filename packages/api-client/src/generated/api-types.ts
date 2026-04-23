@@ -7867,10 +7867,10 @@ export interface components {
      */
     PlaintextCustomFront: {
       name: string;
-      description?: string | null;
+      description: string | null;
       /** @description Hex color */
-      color?: string | null;
-      emoji?: string | null;
+      color: string | null;
+      emoji: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on field definition create/update endpoints.
