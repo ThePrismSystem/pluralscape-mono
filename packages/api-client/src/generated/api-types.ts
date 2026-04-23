@@ -7950,7 +7950,7 @@ export interface components {
      */
     PlaintextRelationship: {
       /** @description User-defined label (meaningful when type is "custom") */
-      label?: string | null;
+      label: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on structure entity type create/update endpoints.

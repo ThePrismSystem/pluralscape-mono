@@ -17,6 +17,7 @@ import type {
   MemberServerMetadata,
   MemberWire,
 } from "./entities/member.js";
+import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
 import type { System, SystemEncryptedFields } from "./entities/system.js";
 
 /**
@@ -74,5 +75,9 @@ export type SotEntityManifest = {
   FieldValue: {
     domain: FieldValue;
     encryptedFields: FieldValueEncryptedFields;
+  };
+  Relationship: {
+    domain: Relationship;
+    encryptedFields: RelationshipEncryptedFields;
   };
 };

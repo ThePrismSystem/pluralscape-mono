@@ -16006,6 +16006,8 @@ components:
         The `encryptedData` contains only the user-visible label and any
         additional notes. Encryption tier: **T1**.
       type: object
+      required:
+        - label
       properties:
         label:
           type: string

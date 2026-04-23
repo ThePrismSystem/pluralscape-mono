@@ -58,6 +58,8 @@ import type {
   MemberPhoto,
   MemberPhotoEncryptedFields,
   MemberWire,
+  Relationship,
+  RelationshipEncryptedFields,
   Serialize,
   System,
   SystemEncryptedFields,
@@ -155,6 +157,13 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextMemberPhoto"],
     Serialize<Pick<MemberPhoto, MemberPhotoEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextRelationship"],
+    Serialize<Pick<Relationship, RelationshipEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
 
