@@ -47,6 +47,8 @@ import type {
   CustomFront,
   CustomFrontEncryptedFields,
   Equal,
+  FieldDefinition,
+  FieldDefinitionEncryptedFields,
   Group,
   GroupEncryptedFields,
   Member,
@@ -126,6 +128,13 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextCustomFront"],
     Serialize<Pick<CustomFront, CustomFrontEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextFieldDefinition"],
+    Serialize<Pick<FieldDefinition, FieldDefinitionEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
 

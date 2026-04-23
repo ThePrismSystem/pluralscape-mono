@@ -15882,6 +15882,8 @@ components:
       type: object
       required:
         - name
+        - description
+        - options
       properties:
         name:
           type: string

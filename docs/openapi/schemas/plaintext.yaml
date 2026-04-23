@@ -268,7 +268,7 @@ PlaintextFieldDefinition:
     A user-defined custom field definition (name, description, options for
     select/multi-select types). Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, options]
   properties:
     name:
       type: string

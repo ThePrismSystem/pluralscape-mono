@@ -7880,9 +7880,9 @@ export interface components {
      */
     PlaintextFieldDefinition: {
       name: string;
-      description?: string | null;
+      description: string | null;
       /** @description Valid options for select/multi-select field types. Null for other types. */
-      options?: string[] | null;
+      options: string[] | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on field value set/update endpoints.
