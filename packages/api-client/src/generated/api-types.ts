@@ -8113,34 +8113,38 @@ export interface components {
     /**
      * @description **Encrypted into**: `encryptedData` on nomenclature update and setup endpoints.
      *
-     *     Per-system terminology preferences — map of TermCategory to selected display term.
+     *     Per-system terminology preferences — map of `TermCategory` to selected
+     *     display term. Keys mirror the `TermCategory` union in
+     *     `@pluralscape/types` (kebab-case) so the parity gate can project
+     *     `Pick<NomenclatureSettings, NomenclatureEncryptedFields>` onto this
+     *     schema directly.
      *     Encryption tier: **T1**.
      */
     PlaintextNomenclature: {
       /** @description Term for the collective (default: 'System'). Presets: System, Collective, Household, Crew, Group */
-      collective?: string;
+      collective: string;
       /** @description Term for individuals (default: 'Member'). Presets: Member, Alter, Headmate, Part, Insider, Facet, Aspect */
-      individual?: string;
+      individual: string;
       /** @description Term for fronting (default: 'Fronting'). Presets: Fronting, In front, Driving, Piloting */
-      fronting?: string;
+      fronting: string;
       /** @description Term for switching (default: 'Switch'). Presets: Switch, Shift */
-      switching?: string;
+      switching: string;
       /** @description Term for co-fronting (default: 'Co-fronting'). Presets: Co-fronting, Co-conscious, Co-driving */
-      coPresence?: string;
+      "co-presence": string;
       /** @description Term for the internal space (default: 'Headspace'). Presets: Headspace, Innerworld */
-      internalSpace?: string;
+      "internal-space": string;
       /** @description Term for the host (default: 'Host'). Presets: Host, Primary fronter, Main fronter */
-      primaryFronter?: string;
+      "primary-fronter": string;
       /** @description Term for system structure (default: 'System Structure'). Presets: System Structure, Topology, Map */
-      structure?: string;
+      structure: string;
       /** @description Term for dormancy (default: 'Dormancy'). Presets: Dormancy, Resting, Inactive */
-      dormancy?: string;
+      dormancy: string;
       /** @description Term for the body (default: 'Body'). Presets: Body, Physical form, Vessel */
-      body?: string;
+      body: string;
       /** @description Term for amnesia (default: 'Amnesia'). Presets: Amnesia, Memory gap, Blackout */
-      amnesia?: string;
+      amnesia: string;
       /** @description Term for saturation level (default: 'Saturation'). Presets: Saturation, Elaboration, Completeness */
-      saturation?: string;
+      saturation: string;
     };
     /**
      * @description Structure entity member links carry no encrypted payload today — every

@@ -16357,9 +16357,26 @@ components:
       description: |
         **Encrypted into**: `encryptedData` on nomenclature update and setup endpoints.
 
-        Per-system terminology preferences — map of TermCategory to selected display term.
+        Per-system terminology preferences — map of `TermCategory` to selected
+        display term. Keys mirror the `TermCategory` union in
+        `@pluralscape/types` (kebab-case) so the parity gate can project
+        `Pick<NomenclatureSettings, NomenclatureEncryptedFields>` onto this
+        schema directly.
         Encryption tier: **T1**.
       type: object
+      required:
+        - collective
+        - individual
+        - fronting
+        - switching
+        - co-presence
+        - internal-space
+        - primary-fronter
+        - structure
+        - dormancy
+        - body
+        - amnesia
+        - saturation
       properties:
         collective:
           type: string
@@ -16373,13 +16390,13 @@ components:
         switching:
           type: string
           description: "Term for switching (default: 'Switch'). Presets: Switch, Shift"
-        coPresence:
+        co-presence:
           type: string
           description: "Term for co-fronting (default: 'Co-fronting'). Presets: Co-fronting, Co-conscious, Co-driving"
-        internalSpace:
+        internal-space:
           type: string
           description: "Term for the internal space (default: 'Headspace'). Presets: Headspace, Innerworld"
-        primaryFronter:
+        primary-fronter:
           type: string
           description: "Term for the host (default: 'Host'). Presets: Host, Primary fronter, Main fronter"
         structure:

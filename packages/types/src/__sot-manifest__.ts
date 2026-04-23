@@ -53,6 +53,7 @@ import type {
 } from "./entities/structure-entity.js";
 import type { SystemSettings, SystemSettingsEncryptedFields } from "./entities/system-settings.js";
 import type { System, SystemEncryptedFields } from "./entities/system.js";
+import type { NomenclatureEncryptedFields, NomenclatureSettings } from "./nomenclature.js";
 
 /**
  * Registry of every domain entity that participates in the types-as-SoT
@@ -153,5 +154,9 @@ export type SotEntityManifest = {
   StructureEntityAssociation: {
     domain: SystemStructureEntityAssociation;
     encryptedFields: SystemStructureEntityAssociationEncryptedFields;
+  };
+  Nomenclature: {
+    domain: NomenclatureSettings;
+    encryptedFields: NomenclatureEncryptedFields;
   };
 };

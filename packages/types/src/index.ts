@@ -351,6 +351,7 @@ export type {
   TermCategory,
   CanonicalTerm,
   NomenclatureSettings,
+  NomenclatureEncryptedFields,
   TermPreset,
 } from "./nomenclature.js";
 export { DEFAULT_TERM_PRESETS, createDefaultNomenclatureSettings } from "./nomenclature.js";

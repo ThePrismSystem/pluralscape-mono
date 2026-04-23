@@ -68,6 +68,8 @@ import type {
   MemberPhoto,
   MemberPhotoEncryptedFields,
   MemberWire,
+  NomenclatureEncryptedFields,
+  NomenclatureSettings,
   Relationship,
   RelationshipEncryptedFields,
   Serialize,
@@ -216,6 +218,13 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextLifecycleEvent"],
     Serialize<Pick<LifecycleEvent, LifecycleEventEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextNomenclature"],
+    Serialize<Pick<NomenclatureSettings, NomenclatureEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
 
