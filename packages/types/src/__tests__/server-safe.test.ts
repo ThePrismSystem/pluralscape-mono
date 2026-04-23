@@ -2,9 +2,7 @@ import { describe, expectTypeOf, it, expect } from "vitest";
 
 import { serverSafe } from "../server-safe.js";
 
-import type { AuditLogEntry } from "../audit-log.js";
 import type {
-  AuditLogEntryServerMetadata,
   ClientAcknowledgementRequest,
   ClientBoardMessage,
   ClientChannel,
@@ -24,7 +22,6 @@ import type {
   ClientPoll,
   ClientPollVote,
   ClientRelationship,
-  ClientResponseData,
   ClientStructureEntity,
   ClientStructureEntityType,
   ClientTimerConfig,
@@ -43,20 +40,20 @@ import type {
   ServerInnerWorldRegion,
   ServerJournalEntry,
   ServerLifecycleEvent,
-  MemberServerMetadata,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
   ServerPollVote,
   ServerRelationship,
-  ServerResponseData,
   ServerStructureEntity,
   ServerStructureEntityType,
   ServerTimerConfig,
   ServerWikiPage,
-} from "../encryption.js";
-import type { Member } from "../identity.js";
+} from "../encryption-primitives.js";
+import type { AuditLogEntry, AuditLogEntryServerMetadata } from "../entities/audit-log-entry.js";
+import type { Member, MemberServerMetadata } from "../entities/member.js";
 import type { PaginatedResult } from "../pagination.js";
+import type { ClientResponseData, ServerResponseData } from "../response-unions.js";
 import type { ServerSafe } from "../server-safe.js";
 
 // ── Count assertion ────────────────────────────────────────────────

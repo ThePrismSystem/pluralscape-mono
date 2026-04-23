@@ -1,4 +1,5 @@
-import type { ImportEntityTargetIdMap, ImportEntityType } from "./import-export.js";
+import type { ImportEntityTargetIdMap } from "./entities/import-entity-ref.js";
+import type { ImportEntityType } from "./entities/import-job.js";
 
 /**
  * Thrown when `assertBrandedTargetId` receives a value that cannot plausibly

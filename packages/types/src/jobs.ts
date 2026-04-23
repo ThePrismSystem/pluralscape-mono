@@ -1,3 +1,4 @@
+import type { DeviceTokenPlatform } from "./entities/device-token.js";
 import type {
   AccountId,
   DeviceTokenId,
@@ -6,7 +7,6 @@ import type {
   SystemId,
   WebhookDeliveryId,
 } from "./ids.js";
-import type { DeviceTokenPlatform } from "./notifications.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** Template names supported by the email system (mirrors @pluralscape/email). */

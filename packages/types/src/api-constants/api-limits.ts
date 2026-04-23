@@ -17,8 +17,9 @@ import {
   TWENTY_FIVE_MiB,
 } from "./time-constants.js";
 
-import type { BlobPurpose } from "../blob.js";
-import type { RotationItemStatus, RotationState } from "../key-rotation.js";
+import type { BlobPurpose } from "../entities/blob.js";
+import type { RotationState } from "../entities/bucket-key-rotation.js";
+import type { RotationItemStatus } from "../entities/bucket-rotation-item.js";
 
 // ── Pagination ───────────────────────────────────────────────────────
 

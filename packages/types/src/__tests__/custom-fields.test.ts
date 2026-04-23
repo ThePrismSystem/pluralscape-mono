@@ -5,9 +5,8 @@ import type {
   FieldBucketVisibility,
   FieldDefinition,
   FieldType,
-  FieldValue,
-  FieldValueUnion,
-} from "../custom-fields.js";
+} from "../entities/field-definition.js";
+import type { FieldValue, FieldValueUnion } from "../entities/field-value.js";
 import type { BucketId, FieldDefinitionId, FieldValueId, MemberId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";

@@ -1,0 +1,298 @@
+import type { Plaintext } from "../encryption-primitives.js";
+import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
+
+/** Step names used in setup wizard audit events. */
+export type SetupStepName = "nomenclature" | "profile";
+
+/** The category of audit event. */
+export type AuditEventType =
+  | "auth.register"
+  | "auth.login"
+  | "auth.login-failed"
+  | "auth.logout"
+  | "auth.password-changed"
+  | "auth.recovery-key-used"
+  | "auth.key-created"
+  | "auth.key-revoked"
+  | "data.export"
+  | "data.import"
+  | "data.purge"
+  | "settings.changed"
+  | "member.created"
+  | "member.archived"
+  | "sharing.granted"
+  | "sharing.revoked"
+  | "bucket.key_rotation.initiated"
+  | "bucket.key_rotation.chunk_completed"
+  | "bucket.key_rotation.completed"
+  | "bucket.key_rotation.failed"
+  | "bucket.key_rotation.retried"
+  | "device.security.jailbreak_warning_shown"
+  | "auth.password-reset-via-recovery"
+  | "auth.recovery-key-regenerated"
+  | "auth.device-transfer-initiated"
+  | "auth.device-transfer-approved"
+  | "auth.device-transfer-completed"
+  | "auth.email-changed"
+  | "auth.email-change-notification-enqueue-failed"
+  | "system.created"
+  | "system.profile-updated"
+  | "system.deleted"
+  | "system.purged"
+  | "system.duplicated"
+  | "snapshot.created"
+  | "snapshot.deleted"
+  | "group.created"
+  | "group.updated"
+  | "group.archived"
+  | "group.restored"
+  | "group.moved"
+  | "group-membership.added"
+  | "group-membership.removed"
+  | "custom-front.created"
+  | "custom-front.updated"
+  | "custom-front.archived"
+  | "custom-front.restored"
+  | "group.deleted"
+  | "custom-front.deleted"
+  | "auth.biometric-enrolled"
+  | "auth.biometric-verified"
+  | "auth.biometric-failed"
+  | "settings.pin-set"
+  | "settings.pin-removed"
+  | "settings.pin-verified"
+  | "settings.nomenclature-updated"
+  | "setup.step-completed"
+  | "setup.completed"
+  | "member.updated"
+  | "member.duplicated"
+  | "member.restored"
+  | "member-photo.created"
+  | "member-photo.archived"
+  | "member-photo.restored"
+  | "member-photo.reordered"
+  | "field-definition.created"
+  | "field-definition.updated"
+  | "field-definition.archived"
+  | "field-definition.restored"
+  | "field-value.set"
+  | "field-value.updated"
+  | "field-value.deleted"
+  | "structure-entity-type.created"
+  | "structure-entity-type.updated"
+  | "structure-entity-type.archived"
+  | "structure-entity-type.restored"
+  | "structure-entity-type.deleted"
+  | "structure-entity.created"
+  | "structure-entity.updated"
+  | "structure-entity.archived"
+  | "structure-entity.restored"
+  | "structure-entity.deleted"
+  | "relationship.created"
+  | "relationship.updated"
+  | "relationship.archived"
+  | "relationship.restored"
+  | "relationship.deleted"
+  | "lifecycle-event.created"
+  | "lifecycle-event.updated"
+  | "lifecycle-event.archived"
+  | "lifecycle-event.restored"
+  | "lifecycle-event.deleted"
+  | "structure-entity-link.created"
+  | "structure-entity-link.updated"
+  | "structure-entity-link.deleted"
+  | "structure-entity-member-link.added"
+  | "structure-entity-member-link.removed"
+  | "structure-entity-association.created"
+  | "structure-entity-association.deleted"
+  | "innerworld-region.created"
+  | "innerworld-region.updated"
+  | "innerworld-region.archived"
+  | "innerworld-region.restored"
+  | "innerworld-region.deleted"
+  | "innerworld-entity.created"
+  | "innerworld-entity.updated"
+  | "innerworld-entity.archived"
+  | "innerworld-entity.restored"
+  | "innerworld-entity.deleted"
+  | "innerworld-canvas.created"
+  | "innerworld-canvas.updated"
+  | "blob.upload-requested"
+  | "blob.confirmed"
+  | "blob.archived"
+  | "member.deleted"
+  | "member-photo.deleted"
+  | "field-definition.deleted"
+  | "fronting-session.created"
+  | "fronting-session.updated"
+  | "fronting-session.ended"
+  | "fronting-session.archived"
+  | "fronting-session.restored"
+  | "fronting-session.deleted"
+  | "fronting-comment.created"
+  | "fronting-comment.updated"
+  | "fronting-comment.archived"
+  | "fronting-comment.restored"
+  | "fronting-comment.deleted"
+  | "fronting-report.created"
+  | "fronting-report.updated"
+  | "fronting-report.archived"
+  | "fronting-report.restored"
+  | "fronting-report.deleted"
+  | "timer-config.created"
+  | "timer-config.updated"
+  | "timer-config.archived"
+  | "timer-config.restored"
+  | "timer-config.deleted"
+  | "check-in-record.created"
+  | "check-in-record.responded"
+  | "check-in-record.dismissed"
+  | "check-in-record.archived"
+  | "check-in-record.restored"
+  | "check-in-record.deleted"
+  | "webhook-config.created"
+  | "webhook-config.updated"
+  | "webhook-config.archived"
+  | "webhook-config.restored"
+  | "webhook-config.secret-rotated"
+  | "webhook-config.deleted"
+  | "webhook-delivery.deleted"
+  | "channel.created"
+  | "channel.updated"
+  | "channel.archived"
+  | "channel.restored"
+  | "channel.deleted"
+  | "message.created"
+  | "message.updated"
+  | "message.archived"
+  | "message.restored"
+  | "message.deleted"
+  | "board-message.created"
+  | "board-message.updated"
+  | "board-message.pinned"
+  | "board-message.unpinned"
+  | "board-message.reordered"
+  | "board-message.archived"
+  | "board-message.restored"
+  | "board-message.deleted"
+  | "note.created"
+  | "note.updated"
+  | "note.archived"
+  | "note.restored"
+  | "note.deleted"
+  | "poll.created"
+  | "poll.updated"
+  | "poll.closed"
+  | "poll.archived"
+  | "poll.restored"
+  | "poll.deleted"
+  | "poll-vote.cast"
+  | "poll-vote.vetoed"
+  | "poll-vote.updated"
+  | "poll-vote.archived"
+  | "acknowledgement.created"
+  | "acknowledgement.confirmed"
+  | "acknowledgement.archived"
+  | "acknowledgement.restored"
+  | "acknowledgement.deleted"
+  // ── Privacy: buckets ──
+  | "bucket.created"
+  | "bucket.updated"
+  | "bucket.archived"
+  | "bucket.restored"
+  | "bucket.deleted"
+  | "bucket-content-tag.tagged"
+  | "bucket-content-tag.untagged"
+  | "field-bucket-visibility.set"
+  | "field-bucket-visibility.removed"
+  // ── Privacy: friends ──
+  | "friend-code.generated"
+  | "friend-code.redeemed"
+  | "friend-code.archived"
+  | "friend-connection.created"
+  | "friend-connection.accepted"
+  | "friend-connection.rejected"
+  | "friend-connection.blocked"
+  | "friend-connection.removed"
+  | "friend-connection.archived"
+  | "friend-connection.restored"
+  | "friend-visibility.updated"
+  | "friend-bucket-assignment.assigned"
+  | "friend-bucket-assignment.unassigned"
+  // ── Notifications ──
+  | "device-token.registered"
+  | "device-token.updated"
+  | "device-token.revoked"
+  | "device-token.deleted"
+  | "notification-config.updated"
+  | "friend-notification-preference.updated"
+  // ── API Keys ──
+  | "api-key.created"
+  | "api-key.revoked"
+  // ── Import ──
+  | "import-job.created"
+  | "import-job.updated"
+  | "import-job.completed"
+  | "import-job.failed";
+
+/** The actor who performed an audit-logged action. */
+export type AuditActor =
+  | { readonly kind: "account"; readonly id: AccountId }
+  | { readonly kind: "api-key"; readonly id: ApiKeyId }
+  | { readonly kind: "system"; readonly id: SystemId };
+
+/** An append-only audit log entry. */
+export interface AuditLogEntry {
+  readonly id: AuditLogEntryId;
+  readonly systemId: SystemId;
+  readonly eventType: AuditEventType;
+  readonly createdAt: UnixMillis;
+  readonly actor: AuditActor;
+  readonly detail: Plaintext<string> | null;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+}
+
+/**
+ * Server-visible audit log entry metadata — raw Drizzle row shape.
+ * Plaintext entity (no encryption); ServerMetadata carries DB-internal
+ * columns (partition key, sequence ID) not exposed on the domain
+ * `AuditLogEntry` type.
+ *
+ * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ * (server-readable for security monitoring — failed login detection, IP pattern analysis).
+ *
+ * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
+ * The audit_log table intentionally uses `timestamp` to reflect when the
+ * event occurred, not when the row was created. The domain-side
+ * AuditLogEntry type uses `createdAt` — the mapping layer handles this rename.
+ */
+export interface AuditLogEntryServerMetadata {
+  readonly id: AuditLogEntryId;
+  /**
+   * DB-internal denormalized account reference — avoids joining through
+   * `systems` to get the owning account. Nullable because audit logs
+   * survive account deletion with references nullified (ON DELETE SET NULL).
+   */
+  readonly accountId: AccountId | null;
+  /**
+   * Nullable because audit logs survive system deletion with references
+   * nullified (ON DELETE SET NULL) — audit history must be preserved.
+   */
+  readonly systemId: SystemId | null;
+  readonly eventType: AuditEventType;
+  readonly timestamp: UnixMillis;
+  readonly actor: AuditActor;
+  readonly detail: string | null;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+}
+
+/**
+ * JSON-wire representation of an AuditLogEntry. Derived from the domain
+ * `AuditLogEntry` type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`.
+ */
+export type AuditLogEntryWire = Serialize<AuditLogEntry>;

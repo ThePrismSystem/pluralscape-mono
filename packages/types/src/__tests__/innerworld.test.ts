@@ -1,5 +1,15 @@
 import { describe, expectTypeOf, it } from "vitest";
 
+import type { InnerWorldCanvas } from "../entities/innerworld-canvas.js";
+import type {
+  ArchivedInnerWorldEntity,
+  InnerWorldEntity,
+  LandmarkEntity,
+  MemberEntity,
+  StructureEntityEntity,
+  VisualProperties,
+} from "../entities/innerworld-entity.js";
+import type { ArchivedInnerWorldRegion, InnerWorldRegion } from "../entities/innerworld-region.js";
 import type {
   HexColor,
   InnerWorldEntityId,
@@ -9,17 +19,6 @@ import type {
   SystemStructureEntityId,
 } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
-import type {
-  ArchivedInnerWorldEntity,
-  ArchivedInnerWorldRegion,
-  InnerWorldCanvas,
-  InnerWorldEntity,
-  InnerWorldRegion,
-  LandmarkEntity,
-  MemberEntity,
-  StructureEntityEntity,
-  VisualProperties,
-} from "../innerworld.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 describe("VisualProperties", () => {

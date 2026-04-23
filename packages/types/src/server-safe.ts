@@ -1,5 +1,5 @@
-import type { ServerResponseData } from "./encryption.js";
 import type { PaginatedResult } from "./pagination.js";
+import type { ServerResponseData } from "./response-unions.js";
 
 declare const __serverSafe: unique symbol;
 

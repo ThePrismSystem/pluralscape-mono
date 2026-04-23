@@ -1,5 +1,17 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { DeviceToken } from "../entities/device-token.js";
+import type {
+  ArchivedFriendNotificationPreference,
+  FriendNotificationEventType,
+  FriendNotificationPreference,
+} from "../entities/friend-notification-preference.js";
+import type {
+  ArchivedNotificationConfig,
+  NotificationConfig,
+  NotificationEventType,
+  NotificationPayload,
+} from "../entities/notification-config.js";
 import type {
   AccountId,
   DeviceTokenId,
@@ -8,16 +20,6 @@ import type {
   NotificationConfigId,
   SystemId,
 } from "../ids.js";
-import type {
-  ArchivedFriendNotificationPreference,
-  ArchivedNotificationConfig,
-  DeviceToken,
-  FriendNotificationEventType,
-  FriendNotificationPreference,
-  NotificationConfig,
-  NotificationEventType,
-  NotificationPayload,
-} from "../notifications.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 

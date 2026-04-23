@@ -1,12 +1,8 @@
 import { describe, expectTypeOf, it } from "vitest";
 
+import type { ArchivedCheckInRecord, CheckInRecord } from "../entities/check-in-record.js";
+import type { ArchivedTimerConfig, TimerConfig } from "../entities/timer-config.js";
 import type { CheckInRecordId, MemberId, SystemId, TimerId } from "../ids.js";
-import type {
-  ArchivedCheckInRecord,
-  ArchivedTimerConfig,
-  CheckInRecord,
-  TimerConfig,
-} from "../timer.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 

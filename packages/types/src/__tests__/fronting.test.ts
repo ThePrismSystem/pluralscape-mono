@@ -1,17 +1,15 @@
 import { describe, expectTypeOf, it } from "vitest";
 
+import type { ArchivedCustomFront, CustomFront } from "../entities/custom-front.js";
+import type { ArchivedFrontingComment, FrontingComment } from "../entities/fronting-comment.js";
 import type {
   ActiveFrontingSession,
-  ArchivedCustomFront,
-  ArchivedFrontingComment,
   ArchivedFrontingSession,
   CoFrontState,
   CompletedFrontingSession,
-  CustomFront,
-  FrontingComment,
   FrontingSession,
   OuttriggerSentiment,
-} from "../fronting.js";
+} from "../entities/fronting-session.js";
 import type {
   CustomFrontId,
   FrontingCommentId,

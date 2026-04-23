@@ -1,19 +1,8 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { AuditActor, AuditLogEntry } from "../audit-log.js";
-import type {
-  AcknowledgementRequest,
-  BoardMessage,
-  Channel,
-  ChatMessage,
-  Note,
-  Poll,
-  PollVote,
-} from "../communication.js";
 import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
-  AuditLogEntryWire,
   ClientAcknowledgementRequest,
   ClientBoardMessage,
   ClientChannel,
@@ -41,9 +30,7 @@ import type {
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
-  MemberWire,
   Plaintext,
-  AuditLogEntryServerMetadata,
   ServerAcknowledgementRequest,
   ServerBoardMessage,
   ServerChannel,
@@ -57,7 +44,6 @@ import type {
   ServerLifecycleEvent,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
-  MemberServerMetadata,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -72,10 +58,31 @@ import type {
   ServerWikiPage,
   T1EncryptedBlob,
   T2EncryptedBlob,
-} from "../encryption.js";
-import type { CustomFront, FrontingComment, FrontingSession } from "../fronting.js";
-import type { Group } from "../groups.js";
-import type { Member, MemberPhoto } from "../identity.js";
+} from "../encryption-primitives.js";
+import type { AcknowledgementRequest } from "../entities/acknowledgement.js";
+import type {
+  AuditActor,
+  AuditLogEntry,
+  AuditLogEntryServerMetadata,
+  AuditLogEntryWire,
+} from "../entities/audit-log-entry.js";
+import type { BoardMessage } from "../entities/board-message.js";
+import type { Channel } from "../entities/channel.js";
+import type { CustomFront } from "../entities/custom-front.js";
+import type { FrontingComment } from "../entities/fronting-comment.js";
+import type { FrontingSession } from "../entities/fronting-session.js";
+import type { Group } from "../entities/group.js";
+import type { JournalEntry } from "../entities/journal-entry.js";
+import type { LifecycleEvent } from "../entities/lifecycle-event.js";
+import type { MemberPhoto } from "../entities/member-photo.js";
+import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
+import type { ChatMessage } from "../entities/message.js";
+import type { Note } from "../entities/note.js";
+import type { PollVote } from "../entities/poll-vote.js";
+import type { Poll } from "../entities/poll.js";
+import type { Relationship } from "../entities/relationship.js";
+import type { TimerConfig } from "../entities/timer-config.js";
+import type { WikiPage } from "../entities/wiki-page.js";
 import type {
   BucketId,
   FrontingCommentId,
@@ -87,10 +94,6 @@ import type {
   SlugHash,
   SystemId,
 } from "../ids.js";
-import type { JournalEntry, WikiPage } from "../journal.js";
-import type { LifecycleEvent } from "../lifecycle.js";
-import type { Relationship } from "../structure.js";
-import type { TimerConfig } from "../timer.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-04-22T22:58:41Z
-updated_at: 2026-04-22T23:03:08Z
+updated_at: 2026-04-22T23:56:42Z
 parent: types-ltel
 ---
 
@@ -56,3 +56,33 @@ OpenAPI schema fields vs domain type fields:
   that matches the spec).
 - Deferrals in `scripts/openapi-wire-parity.type-test.ts` are replaced with real
   `Equal<...>` checks.
+
+## Decision (2026-04-22): Option 2 chosen
+
+Publish the plaintext contract as a first-class OpenAPI surface, gated by CI parity.
+
+### Why Option 2
+
+- Catches a drift class Options 1 and 3 miss: the encryption contract itself (server encrypts {a,b,c} while client expects {a,b,d} would silently break without this).
+- Symmetric with the epic's types-as-SoT philosophy — every layer a client interacts with has a declared contract.
+- Enables integrator/SDK ecosystem work (AGPL, open-source, anti-gatekeeping stated values).
+
+### Key existing-state finding
+
+`docs/openapi/schemas/plaintext.yaml` already publishes 24 `Plaintext<Entity>` schemas and the openapi-typescript codegen produces `components["schemas"]["PlaintextMember"]` etc. The infrastructure is 100% in place — Option 2 becomes 'wire a parity assertion between PlaintextX and the domain Entity (minus server-only fields)' rather than 'invent a new convention.'
+
+### Parity-assertion shape
+
+Per-entity `<Entity>EncryptedFields` union identifies which fields get encrypted; parity assertion is:
+
+```ts
+Assert<
+  Equal<components["schemas"]["PlaintextMember"], Serialize<Pick<Member, MemberEncryptedFields>>>
+>;
+```
+
+Explicit, catches 'field added to Member but not encrypted' as a compile error.
+
+### Prerequisite
+
+Blocked-by `types-reorg` (per-entity file consolidation). Once every entity has its own file, `<Entity>EncryptedFields` has a natural home alongside `<Entity>`, `<Entity>ServerMetadata`, `<Entity>Wire`.

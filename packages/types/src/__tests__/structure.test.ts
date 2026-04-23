@@ -1,6 +1,28 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
+  ArchivedRelationship,
+  Relationship,
+  RelationshipType,
+} from "../entities/relationship.js";
+import type { SystemStructureEntityAssociation } from "../entities/structure-entity-association.js";
+import type { SystemStructureEntityLink } from "../entities/structure-entity-link.js";
+import type { SystemStructureEntityMemberLink } from "../entities/structure-entity-member-link.js";
+import type {
+  ArchitectureType,
+  ArchivedSystemStructureEntityType,
+  KnownArchitectureType,
+  SystemStructureEntityType,
+} from "../entities/structure-entity-type.js";
+import type {
+  ArchivedSystemStructureEntity,
+  DiscoveryStatus,
+  OriginType,
+  StructureVisualProps,
+  SystemProfile,
+  SystemStructureEntity,
+} from "../entities/structure-entity.js";
+import type {
   HexColor,
   MemberId,
   RelationshipId,
@@ -12,24 +34,6 @@ import type {
   SystemStructureEntityTypeId,
 } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
-import type {
-  ArchitectureType,
-  ArchivedRelationship,
-  ArchivedSystemStructureEntity,
-  ArchivedSystemStructureEntityType,
-  DiscoveryStatus,
-  KnownArchitectureType,
-  OriginType,
-  Relationship,
-  RelationshipType,
-  StructureVisualProps,
-  SystemProfile,
-  SystemStructureEntity,
-  SystemStructureEntityAssociation,
-  SystemStructureEntityLink,
-  SystemStructureEntityMemberLink,
-  SystemStructureEntityType,
-} from "../structure.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 

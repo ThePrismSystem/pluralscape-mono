@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { Member, MemberListItem, System } from "../identity.js";
+import type { Member, MemberListItem } from "../entities/member.js";
+import type { System } from "../entities/system.js";
 import type { MemberId, SystemSettingsId } from "../ids.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ApiError, Result } from "../results.js";

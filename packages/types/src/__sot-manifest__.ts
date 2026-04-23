@@ -1,11 +1,9 @@
-import type { AuditLogEntry } from "./audit-log.js";
 import type {
+  AuditLogEntry,
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
-  MemberServerMetadata,
-  MemberWire,
-} from "./encryption.js";
-import type { Member } from "./identity.js";
+} from "./entities/audit-log-entry.js";
+import type { Member, MemberServerMetadata, MemberWire } from "./entities/member.js";
 
 /**
  * Registry of every domain entity that participates in the types-as-SoT

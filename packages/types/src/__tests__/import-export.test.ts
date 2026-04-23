@@ -2,6 +2,34 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import { brandId } from "../brand-utils.js";
 
+import type { AccountPurgeRequest, AccountPurgeStatus } from "../entities/account-purge-request.js";
+import type {
+  DownloadableReport,
+  ExportFormat,
+  ExportManifest,
+  ExportSection,
+  MemberReport,
+  ReportFormat,
+  SystemOverviewReport,
+} from "../entities/export-request.js";
+import type { ImportEntityRef } from "../entities/import-entity-ref.js";
+import type {
+  ImportAvatarMode,
+  ImportCheckpointState,
+  ImportCollectionTotals,
+  ImportCollectionType,
+  ImportEntityType,
+  ImportError,
+  ImportJob,
+  ImportJobStatus,
+  ImportProgress,
+  ImportSourceFormat,
+  PKImportGroup,
+  PKImportMember,
+  PKImportPayload,
+  PKImportSwitch,
+  PKProxyTag,
+} from "../entities/import-job.js";
 import type {
   AccountId,
   AccountPurgeRequestId,
@@ -11,33 +39,6 @@ import type {
   MemberId,
   SystemId,
 } from "../ids.js";
-import type {
-  AccountPurgeRequest,
-  AccountPurgeStatus,
-  DownloadableReport,
-  ExportFormat,
-  ExportManifest,
-  ExportSection,
-  ImportAvatarMode,
-  ImportCheckpointState,
-  ImportCollectionTotals,
-  ImportCollectionType,
-  ImportEntityRef,
-  ImportEntityType,
-  ImportError,
-  ImportJob,
-  ImportJobStatus,
-  ImportProgress,
-  ImportSourceFormat,
-  MemberReport,
-  SystemOverviewReport,
-  PKImportGroup,
-  PKImportMember,
-  PKImportPayload,
-  PKImportSwitch,
-  PKProxyTag,
-  ReportFormat,
-} from "../import-export.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("PKImportPayload", () => {

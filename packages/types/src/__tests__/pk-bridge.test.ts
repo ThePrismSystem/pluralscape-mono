@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { EncryptedBlob } from "../encryption.js";
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { GroupId, MemberId, PKBridgeConfigId, SystemId } from "../ids.js";
 import type {
   PKBridgeConfig,

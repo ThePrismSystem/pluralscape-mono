@@ -6,7 +6,7 @@ import type {
   GroupMembership,
   GroupMoveOperation,
   GroupTree,
-} from "../groups.js";
+} from "../entities/group.js";
 import type { GroupId, HexColor, MemberId, SystemId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
 import type { UnixMillis } from "../timestamps.js";

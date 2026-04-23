@@ -1,8 +1,8 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { DeviceTokenPlatform } from "../entities/device-token.js";
 import type { DeviceTokenId, JobId, SystemId } from "../ids.js";
 import type { JobDefinition, JobPayloadMap, JobResult, JobStatus, JobType } from "../jobs.js";
-import type { DeviceTokenPlatform } from "../notifications.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("JobId", () => {

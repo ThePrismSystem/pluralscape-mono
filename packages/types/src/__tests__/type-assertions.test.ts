@@ -93,7 +93,7 @@ describe("Serialize<T>", () => {
   });
 
   it("strips branded strings declared via the canonical Brand<T, B> helper", () => {
-    type Input = { pending: import("../auth.js").PendingAccountId };
+    type Input = { pending: import("../entities/account.js").PendingAccountId };
     expectTypeOf<Serialize<Input>>().toEqualTypeOf<{ pending: string }>();
   });
 });
