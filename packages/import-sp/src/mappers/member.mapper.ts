@@ -4,7 +4,7 @@
  * Translates an {@link SPMember} into three coupled outputs the engine
  * persists atomically:
  *
- * 1. An `encrypted` blob matching {@link MemberEncryptedFields}.
+ * 1. An `encrypted` blob matching {@link MemberEncryptedInput}.
  * 2. An array of {@link ExtractedFieldValue} rows sourced from SP's `info`
  *    map — SP stores custom-field values inline on the member document, but
  *    Pluralscape persists them separately.
@@ -28,12 +28,12 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPMember } from "../sources/sp-types.js";
-import type { MemberEncryptedFields } from "@pluralscape/data";
+import type { MemberEncryptedInput } from "@pluralscape/data";
 import type { CreateMemberBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 export type MappedMember = Omit<z.infer<typeof CreateMemberBodySchema>, "encryptedData"> & {
-  readonly encrypted: MemberEncryptedFields;
+  readonly encrypted: MemberEncryptedInput;
   readonly archived: boolean;
   readonly fieldValues: readonly ExtractedFieldValue[];
   /**
@@ -133,7 +133,7 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
     });
   }
 
-  const encrypted: MemberEncryptedFields = {
+  const encrypted: MemberEncryptedInput = {
     name: sp.name,
     description: sp.desc ?? null,
     pronouns: sp.pronouns ? [sp.pronouns] : [],

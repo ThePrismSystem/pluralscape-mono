@@ -39,8 +39,15 @@ export {
   CreateMemberBodySchema,
   UpdateMemberBodySchema,
   DuplicateMemberBodySchema,
+  MemberEncryptedInputSchema,
   MemberListQuerySchema,
 } from "./member.js";
+export {
+  HexColorSchema,
+  PlaintextImageSourceSchema,
+  PlaintextSaturationLevelSchema,
+  PlaintextTagSchema,
+} from "./plaintext-shared.js";
 export {
   CreateFieldDefinitionBodySchema,
   UpdateFieldDefinitionBodySchema,

@@ -44,6 +44,22 @@ export interface CompletedFrontingSession extends FrontingSessionBase {
 /** A fronting session — discriminated on `endTime` (null = active). */
 export type FrontingSession = ActiveFrontingSession | CompletedFrontingSession;
 
+/**
+ * Keys of `FrontingSession` that are encrypted client-side before the
+ * server sees them. Plaintext siblings (`memberId`, `customFrontId`,
+ * `structureEntityId`, `startTime`, `endTime`) travel as separate request
+ * fields and are intentionally excluded. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextFrontingSession parity)
+ * - Plan 2 fleet will consume when deriving
+ *   `FrontingSessionServerMetadata`.
+ */
+export type FrontingSessionEncryptedFields =
+  | "comment"
+  | "positionality"
+  | "outtrigger"
+  | "outtriggerSentiment";
+
 /** An archived fronting session. */
 export type ArchivedFrontingSession = Archived<FrontingSession>;
 

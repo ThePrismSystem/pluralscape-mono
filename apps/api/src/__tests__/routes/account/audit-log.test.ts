@@ -34,13 +34,13 @@ const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: nul
 
 const MOCK_ENTRY = {
   id: "al_550e8400-e29b-41d4-a716-446655440000" as never,
-  eventType: "member.created",
-  timestamp: 1000 as never,
-  actor: { kind: "account", id: "acct_test" },
+  systemId: "sys_test" as never,
+  eventType: "member.created" as const,
+  createdAt: 1000 as never,
+  actor: { kind: "account" as const, id: "acct_test" as never },
   detail: "Created member",
   ipAddress: "127.0.0.1",
   userAgent: "test",
-  systemId: "sys_test",
 };
 
 // ── Tests ────────────────────────────────────────────────────────

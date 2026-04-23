@@ -80,7 +80,7 @@ describe("queryAuditLog", () => {
     expect(item).toMatchObject({
       id: "al_mapped",
       eventType: "system.login",
-      timestamp: 7_000_000,
+      createdAt: 7_000_000,
       ipAddress: "10.0.0.1",
       userAgent: "Mozilla/5.0",
       detail: "some detail",

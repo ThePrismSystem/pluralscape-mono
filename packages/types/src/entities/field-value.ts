@@ -28,6 +28,17 @@ export interface FieldValue extends AuditMetadata {
   readonly value: FieldValueUnion;
 }
 
+/**
+ * Keys of `FieldValue` that are encrypted client-side before the server sees
+ * them. The encrypted payload carries the `value` discriminated union
+ * (`FieldValueUnion` — `{fieldType, value}`), so only `value` rides encrypted.
+ * Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextFieldValue parity)
+ * - Plan 2 fleet will consume when deriving `FieldValueServerMetadata`.
+ */
+export type FieldValueEncryptedFields = "value";
+
 /** Request body for setting a field value. */
 export interface SetFieldValueBody {
   readonly encryptedData: string;

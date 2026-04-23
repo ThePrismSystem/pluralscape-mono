@@ -67,3 +67,28 @@ export interface SystemSettings extends AuditMetadata {
   readonly snapshotSchedule: SnapshotSchedule;
   readonly onboardingComplete: boolean;
 }
+
+/**
+ * Keys of `SystemSettings` that are encrypted client-side before the
+ * server sees them. `locale`, `defaultBucketId`, and `nomenclature` are
+ * excluded: `locale` travels as a separate plaintext field (server needs
+ * it for locale-aware operations), `defaultBucketId` is a bucket FK that
+ * the server references, and `nomenclature` has its own
+ * `PlaintextNomenclature` schema on dedicated endpoints. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextSystemSettings parity)
+ * - Plan 2 fleet will consume when deriving
+ *   `SystemSettingsServerMetadata`.
+ */
+export type SystemSettingsEncryptedFields =
+  | "theme"
+  | "fontScale"
+  | "appLock"
+  | "notifications"
+  | "syncPreferences"
+  | "privacyDefaults"
+  | "littlesSafeMode"
+  | "saturationLevelsEnabled"
+  | "autoCaptureFrontingOnJournal"
+  | "snapshotSchedule"
+  | "onboardingComplete";

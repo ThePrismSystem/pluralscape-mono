@@ -7,13 +7,16 @@ import type {
   AuditLogEntryWire,
 } from "../entities/audit-log-entry.js";
 import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
-import type { Equal, Extends } from "../type-assertions.js";
+import type { Extends } from "../type-assertions.js";
 
 describe("SotEntityManifest", () => {
-  it("entries carry a domain/server/wire triple", () => {
+  it("entries carry at minimum a domain + encryptedFields pair", () => {
     type Entry = SotEntityManifest[keyof SotEntityManifest];
+    // Phase 2 fleet entries have the partial shape (domain + encryptedFields
+    // only). Pilot entries (Member, AuditLogEntry) additionally carry
+    // `server` and `wire` — asserted individually below.
     expectTypeOf<
-      Extends<Entry, { domain: unknown; server: unknown; wire: unknown }>
+      Extends<Entry, { domain: unknown; encryptedFields: unknown }>
     >().toEqualTypeOf<true>();
   });
 
@@ -31,9 +34,9 @@ describe("SotEntityManifest", () => {
     expectTypeOf<SotEntityManifest["AuditLogEntry"]["wire"]>().toEqualTypeOf<AuditLogEntryWire>();
   });
 
-  it("contains exactly the pilot entities during Phase 1", () => {
+  it("includes the pilot entities", () => {
     expectTypeOf<
-      Equal<keyof SotEntityManifest, "Member" | "AuditLogEntry">
+      Extends<"Member" | "AuditLogEntry", keyof SotEntityManifest>
     >().toEqualTypeOf<true>();
   });
 });

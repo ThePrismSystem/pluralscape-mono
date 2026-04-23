@@ -510,6 +510,9 @@ importers:
       '@pluralscape/types':
         specifier: workspace:*
         version: link:../types
+      '@pluralscape/validation':
+        specifier: workspace:*
+        version: link:../validation
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.99.2(react@19.2.5)

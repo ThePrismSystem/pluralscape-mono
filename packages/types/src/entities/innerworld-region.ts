@@ -16,5 +16,22 @@ export interface InnerWorldRegion extends AuditMetadata {
   readonly archived: false;
 }
 
+/**
+ * Keys of `InnerWorldRegion` that are encrypted client-side before the
+ * server sees them. `parentRegionId` is a plaintext sibling (server needs
+ * it for hierarchy queries) and is intentionally excluded. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextInnerworldRegion parity)
+ * - Plan 2 fleet will consume when deriving
+ *   `InnerWorldRegionServerMetadata`.
+ */
+export type InnerWorldRegionEncryptedFields =
+  | "name"
+  | "description"
+  | "visual"
+  | "boundaryData"
+  | "accessType"
+  | "gatekeeperMemberIds";
+
 /** An archived innerworld region. */
 export type ArchivedInnerWorldRegion = Archived<InnerWorldRegion>;

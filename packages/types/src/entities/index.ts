@@ -37,7 +37,7 @@ export type * from "./journal-entry.js";
 export type * from "./key-grant.js";
 export type * from "./lifecycle-event.js";
 export type * from "./member-photo.js";
-export type * from "./member.js";
+export * from "./member.js";
 export type * from "./message.js";
 export * from "./note.js";
 export type * from "./notification-config.js";

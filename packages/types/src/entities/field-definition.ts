@@ -35,6 +35,15 @@ export interface FieldDefinition extends AuditMetadata {
   readonly archived: false;
 }
 
+/**
+ * Keys of `FieldDefinition` that are encrypted client-side before the server
+ * sees them. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextFieldDefinition parity)
+ * - Plan 2 fleet will consume when deriving `FieldDefinitionServerMetadata`.
+ */
+export type FieldDefinitionEncryptedFields = "name" | "description" | "options";
+
 /** An archived field definition. */
 export type ArchivedFieldDefinition = Archived<FieldDefinition>;
 

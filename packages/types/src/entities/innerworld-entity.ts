@@ -59,3 +59,26 @@ export type ArchivedInnerWorldEntity = Archived<InnerWorldEntity>;
 
 /** The set of valid innerworld entity type strings. */
 export type InnerWorldEntityType = InnerWorldEntity["entityType"];
+
+/**
+ * Keys of `InnerWorldEntity` (across all variants) that are encrypted
+ * client-side before the server sees them. `regionId` is a plaintext
+ * sibling (server needs it for hierarchy queries) and is intentionally
+ * excluded. Because `InnerWorldEntity` is a discriminated union, callers
+ * must use a distributive pick (e.g.
+ * `T extends unknown ? Pick<T, K & keyof T> : never`) when deriving the
+ * plaintext projection. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextInnerworldEntity parity)
+ * - Plan 2 fleet will consume when deriving
+ *   `InnerWorldEntityServerMetadata`.
+ */
+export type InnerWorldEntityEncryptedFields =
+  | "entityType"
+  | "positionX"
+  | "positionY"
+  | "visual"
+  | "name"
+  | "description"
+  | "linkedMemberId"
+  | "linkedStructureEntityId";

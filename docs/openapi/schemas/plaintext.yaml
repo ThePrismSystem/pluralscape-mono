@@ -97,6 +97,7 @@ PlaintextTag:
 PlaintextVisualProperties:
   description: Visual styling for innerworld entities.
   type: object
+  required: [color, icon, size, opacity, imageSource, externalUrl]
   properties:
     color:
       type: string
@@ -131,7 +132,7 @@ PlaintextSystem:
     The system profile visible after client-side decryption.
     Encryption tier: **T1** (master-key encrypted).
   type: object
-  required: [name]
+  required: [name, displayName, description, avatarSource]
   properties:
     name:
       type: string
@@ -154,7 +155,16 @@ PlaintextMember:
 
     A member (headmate) profile. Encryption tier: **T1** (master-key encrypted).
   type: object
-  required: [name, pronouns, colors, tags]
+  required:
+    - name
+    - pronouns
+    - description
+    - avatarSource
+    - colors
+    - saturationLevel
+    - tags
+    - suppressFriendFrontNotification
+    - boardMessageNotificationOnFront
   properties:
     name:
       type: string
@@ -195,12 +205,12 @@ PlaintextMemberPhoto:
 
     A photo entry in a member's gallery. Encryption tier: **T1**.
   type: object
-  required: [imageSource]
+  required: [imageSource, sortOrder, caption]
   properties:
     imageSource:
       $ref: "#/PlaintextImageSource"
     sortOrder:
-      type: integer
+      type: number
     caption:
       type: string
       nullable: true
@@ -211,7 +221,7 @@ PlaintextGroup:
 
     A user-defined group for organizing members. Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, imageSource, color, emoji]
   properties:
     name:
       type: string
@@ -237,7 +247,7 @@ PlaintextCustomFront:
     An abstract cognitive state logged like a member (e.g., "Dissociated", "Blurry").
     Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, color, emoji]
   properties:
     name:
       type: string
@@ -259,7 +269,7 @@ PlaintextFieldDefinition:
     A user-defined custom field definition (name, description, options for
     select/multi-select types). Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, options]
   properties:
     name:
       type: string
@@ -277,78 +287,84 @@ PlaintextFieldValue:
   description: |
     **Encrypted into**: `encryptedData` on field value set/update endpoints.
 
-    A typed value for a custom field on a member. The `fieldType` discriminant
-    determines the shape of `value`. Encryption tier: **T1**.
-  oneOf:
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: text
-        value:
-          type: string
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: number
-        value:
-          type: number
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: boolean
-        value:
-          type: boolean
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: date
-        value:
-          type: string
-          description: ISO 8601 date string
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: color
-        value:
-          type: string
-          description: "Hex color (e.g., #FF00AA)"
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: select
-        value:
-          type: string
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: multi-select
-        value:
-          type: array
-          items:
-            type: string
-    - type: object
-      required: [fieldType, value]
-      properties:
-        fieldType:
-          type: string
-          const: url
-        value:
-          type: string
-          format: uri
+    A typed value for a custom field on a member. Wraps the
+    discriminated `value` (keyed by `fieldType`) so the encrypted
+    payload parity matches the domain projection
+    `Pick<FieldValue, "value">`. Encryption tier: **T1**.
+  type: object
+  required: [value]
+  properties:
+    value:
+      oneOf:
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: text
+            value:
+              type: string
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: number
+            value:
+              type: number
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: boolean
+            value:
+              type: boolean
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: date
+            value:
+              type: string
+              description: ISO 8601 date string
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: color
+            value:
+              type: string
+              description: "Hex color (e.g., #FF00AA)"
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: select
+            value:
+              type: string
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: multi-select
+            value:
+              type: array
+              items:
+                type: string
+        - type: object
+          required: [fieldType, value]
+          properties:
+            fieldType:
+              type: string
+              const: url
+            value:
+              type: string
+              format: uri
 
 PlaintextRelationship:
   description: |
@@ -361,6 +377,7 @@ PlaintextRelationship:
     The `encryptedData` contains only the user-visible label and any
     additional notes. Encryption tier: **T1**.
   type: object
+  required: [label]
   properties:
     label:
       type: string
@@ -374,7 +391,7 @@ PlaintextStructureEntityType:
     A user-defined structure entity type within the system (e.g., "Subsystem",
     "Side System", "Layer"). Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, color, imageSource, emoji]
   properties:
     name:
       type: string
@@ -398,7 +415,7 @@ PlaintextStructureEntity:
 
     An instance of a user-defined structure entity type. Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, color, imageSource, emoji]
   properties:
     name:
       type: string
@@ -424,10 +441,25 @@ PlaintextFrontingSession:
     `structureEntityId`, `startTime`, and `endTime` are sent as separate plaintext
     fields. Encryption tier: **T1**.
   type: object
+  required: [comment, positionality, outtrigger, outtriggerSentiment]
   properties:
-    notes:
+    comment:
       type: string
       nullable: true
+      description: Free-text status comment on the session (max 50 characters, runtime enforced)
+    positionality:
+      type: string
+      nullable: true
+      description: Free-text description of fronting positionality (e.g. close vs far, height)
+    outtrigger:
+      type: string
+      nullable: true
+      description: Free-text reason describing what caused the fronting change
+    outtriggerSentiment:
+      type: string
+      enum: [negative, neutral, positive]
+      nullable: true
+      description: Sentiment classification for the outtrigger reason
 
 PlaintextLifecycleEvent:
   description: |
@@ -438,13 +470,8 @@ PlaintextLifecycleEvent:
     as separate plaintext fields because the server needs them for querying
     and relationship tracking. Encryption tier: **T1**.
   type: object
+  required: [notes]
   properties:
-    title:
-      type: string
-      nullable: true
-    description:
-      type: string
-      nullable: true
     notes:
       type: string
       nullable: true
@@ -455,7 +482,13 @@ PlaintextInnerworldRegion:
 
     A region within the system's innerworld. Encryption tier: **T1**.
   type: object
-  required: [name]
+  required:
+    - name
+    - description
+    - visual
+    - boundaryData
+    - accessType
+    - gatekeeperMemberIds
   properties:
     name:
       type: string
@@ -488,34 +521,75 @@ PlaintextInnerworldEntity:
     **Encrypted into**: `encryptedData` on innerworld entity create/update endpoints.
 
     An entity placed on the innerworld canvas. Discriminated on `entityType`.
-    Encryption tier: **T1**.
+    `regionId` is a plaintext sibling (server needs it for queries) and is
+    therefore not present here. Encryption tier: **T1**.
+  oneOf:
+    - $ref: "#/PlaintextInnerworldMemberEntity"
+    - $ref: "#/PlaintextInnerworldLandmarkEntity"
+    - $ref: "#/PlaintextInnerworldStructureEntity"
+  discriminator:
+    propertyName: entityType
+    mapping:
+      member: "#/PlaintextInnerworldMemberEntity"
+      landmark: "#/PlaintextInnerworldLandmarkEntity"
+      structure-entity: "#/PlaintextInnerworldStructureEntity"
+
+PlaintextInnerworldMemberEntity:
+  description: Member-linked innerworld entity variant.
   type: object
-  required: [entityType, positionX, positionY]
+  required: [entityType, positionX, positionY, visual, linkedMemberId]
   properties:
     entityType:
       type: string
-      enum: [member, landmark, structure-entity]
+      enum: [member]
     positionX:
       type: number
-      description: X coordinate on the canvas
     positionY:
       type: number
-      description: Y coordinate on the canvas
+    visual:
+      $ref: "#/PlaintextVisualProperties"
+    linkedMemberId:
+      type: string
+      description: Member ID (mem_ prefix)
+
+PlaintextInnerworldLandmarkEntity:
+  description: Landmark innerworld entity variant.
+  type: object
+  required: [entityType, positionX, positionY, visual, name, description]
+  properties:
+    entityType:
+      type: string
+      enum: [landmark]
+    positionX:
+      type: number
+    positionY:
+      type: number
     visual:
       $ref: "#/PlaintextVisualProperties"
     name:
       type: string
-      description: Display name (required for landmark entities)
+      description: Display name for the landmark
     description:
       type: string
       nullable: true
-      description: Description (landmark entities only)
-    linkedMemberId:
+
+PlaintextInnerworldStructureEntity:
+  description: Structure-entity-linked innerworld entity variant.
+  type: object
+  required: [entityType, positionX, positionY, visual, linkedStructureEntityId]
+  properties:
+    entityType:
       type: string
-      description: Member ID (member entities only)
+      enum: [structure-entity]
+    positionX:
+      type: number
+    positionY:
+      type: number
+    visual:
+      $ref: "#/PlaintextVisualProperties"
     linkedStructureEntityId:
       type: string
-      description: Structure entity ID (structure-entity entities only)
+      description: Structure entity ID (ste_ prefix)
 
 PlaintextInnerworldCanvas:
   description: |
@@ -549,6 +623,18 @@ PlaintextSystemSettings:
     them for locale-aware operations and biometric state tracking.
     Encryption tier: **T1**.
   type: object
+  required:
+    - theme
+    - fontScale
+    - appLock
+    - notifications
+    - syncPreferences
+    - privacyDefaults
+    - littlesSafeMode
+    - saturationLevelsEnabled
+    - autoCaptureFrontingOnJournal
+    - snapshotSchedule
+    - onboardingComplete
   properties:
     theme:
       type: string
@@ -557,6 +643,7 @@ PlaintextSystemSettings:
       type: number
     appLock:
       type: object
+      required: [pinEnabled, biometricEnabled, lockTimeout, backgroundGraceSeconds]
       properties:
         pinEnabled:
           type: boolean
@@ -570,6 +657,7 @@ PlaintextSystemSettings:
           description: Seconds to keep keys in memory after app backgrounds (0-300)
     notifications:
       type: object
+      required: [pushEnabled, emailEnabled, switchReminders, checkInReminders]
       properties:
         pushEnabled:
           type: boolean
@@ -581,6 +669,7 @@ PlaintextSystemSettings:
           type: boolean
     syncPreferences:
       type: object
+      required: [syncEnabled, syncOnCellular]
       properties:
         syncEnabled:
           type: boolean
@@ -588,6 +677,7 @@ PlaintextSystemSettings:
           type: boolean
     privacyDefaults:
       type: object
+      required: [defaultBucketForNewContent, friendRequestPolicy]
       properties:
         defaultBucketForNewContent:
           type: string
@@ -599,6 +689,7 @@ PlaintextSystemSettings:
     littlesSafeMode:
       type: object
       description: Simplified UI configuration for littles
+      required: [enabled, allowedContentIds, simplifiedUIFlags]
       properties:
         enabled:
           type: boolean
@@ -608,6 +699,7 @@ PlaintextSystemSettings:
             type: string
         simplifiedUIFlags:
           type: object
+          required: [largeButtons, iconDriven, noDeletion, noSettings, noAnalytics]
           properties:
             largeButtons:
               type: boolean
@@ -637,9 +729,26 @@ PlaintextNomenclature:
   description: |
     **Encrypted into**: `encryptedData` on nomenclature update and setup endpoints.
 
-    Per-system terminology preferences — map of TermCategory to selected display term.
+    Per-system terminology preferences — map of `TermCategory` to selected
+    display term. Keys mirror the `TermCategory` union in
+    `@pluralscape/types` (kebab-case) so the parity gate can project
+    `Pick<NomenclatureSettings, NomenclatureEncryptedFields>` onto this
+    schema directly.
     Encryption tier: **T1**.
   type: object
+  required:
+    - collective
+    - individual
+    - fronting
+    - switching
+    - co-presence
+    - internal-space
+    - primary-fronter
+    - structure
+    - dormancy
+    - body
+    - amnesia
+    - saturation
   properties:
     collective:
       type: string
@@ -653,13 +762,13 @@ PlaintextNomenclature:
     switching:
       type: string
       description: "Term for switching (default: 'Switch'). Presets: Switch, Shift"
-    coPresence:
+    co-presence:
       type: string
       description: "Term for co-fronting (default: 'Co-fronting'). Presets: Co-fronting, Co-conscious, Co-driving"
-    internalSpace:
+    internal-space:
       type: string
       description: "Term for the internal space (default: 'Headspace'). Presets: Headspace, Innerworld"
-    primaryFronter:
+    primary-fronter:
       type: string
       description: "Term for the host (default: 'Host'). Presets: Host, Primary fronter, Main fronter"
     structure:
@@ -680,28 +789,22 @@ PlaintextNomenclature:
 
 PlaintextStructureEntityMemberLink:
   description: |
-    **Encrypted into**: `encryptedData` on structure entity member link endpoints.
-
-    Encrypted metadata for a member's assignment to a structure entity.
-    The `memberId` and `parentEntityId` are sent as separate plaintext fields.
-    Encryption tier: **T1**.
+    Structure entity member links carry no encrypted payload today — every
+    field (`memberId`, `parentEntityId`, `sortOrder`) is plaintext at the
+    API layer. The schema is retained as an empty object so future encrypted
+    additions plug in without a breaking rename; the current parity gate
+    asserts the empty projection via the distributive-pick helper.
   type: object
-  properties:
-    notes:
-      type: string
-      nullable: true
-      description: Optional notes about this membership
+  additionalProperties: false
+  properties: {}
 
 PlaintextStructureEntityAssociation:
   description: |
-    **Encrypted into**: `encryptedData` (optional) on structure entity association
-    create endpoints.
-
-    Encrypted metadata for a directed cross-reference between structure entities.
-    The `sourceEntityId` and `targetEntityId` are sent as separate plaintext
-    fields. Encryption tier: **T1**.
+    Structure entity associations carry no encrypted payload today — every
+    field (`sourceEntityId`, `targetEntityId`) is plaintext at the API
+    layer. The schema is retained as an empty object so future encrypted
+    additions plug in without a breaking rename; the current parity gate
+    asserts the empty projection.
   type: object
-  properties:
-    notes:
-      type: string
-      nullable: true
+  additionalProperties: false
+  properties: {}

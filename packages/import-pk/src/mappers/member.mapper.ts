@@ -15,13 +15,13 @@ import {
 import { normalisePkColor } from "./pk-mapper-helpers.js";
 
 import type { PKMember } from "../validators/pk-payload.js";
-import type { MemberEncryptedFields } from "@pluralscape/data";
+import type { MemberEncryptedInput } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
 import type { CreateMemberBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 export type PkMappedMember = Omit<z.infer<typeof CreateMemberBodySchema>, "encryptedData"> & {
-  readonly encrypted: MemberEncryptedFields;
+  readonly encrypted: MemberEncryptedInput;
   readonly archived: false;
   readonly fieldValues: readonly [];
   readonly bucketIds: readonly string[];
@@ -37,7 +37,7 @@ export function mapPkMember(pk: PKMember, ctx: MappingContext): MapperResult<PkM
     return skipped({ kind: "empty-name", reason: `member "${pk.id}" has empty name` });
   }
 
-  let colors: MemberEncryptedFields["colors"] = [];
+  let colors: MemberEncryptedInput["colors"] = [];
   if (pk.color) {
     const normalised = normalisePkColor(pk.color);
     const parsed = parseHexColor(normalised);
@@ -52,7 +52,7 @@ export function mapPkMember(pk: PKMember, ctx: MappingContext): MapperResult<PkM
     }
   }
 
-  const encrypted: MemberEncryptedFields = {
+  const encrypted: MemberEncryptedInput = {
     name: pk.name,
     description: pk.description ?? null,
     pronouns: pk.pronouns ? [pk.pronouns] : [],

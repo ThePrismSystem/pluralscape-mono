@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-22T23:05:34Z
+updated_at: 2026-04-23T07:03:00Z
 parent: ps-cd6x
 ---
 
@@ -57,3 +57,67 @@ Pilot landed. Member and AuditLogEntry through the parity stack:
 - Manifest completeness gate prevents silent entity drop-off (pilot-scope: Member + AuditLogEntry).
 
 Fleet (Phase 2) next: ~23 remaining Server/Client entity pairs across 6 domain clusters. See follow-up plan for rollout. Follow-up beans: `db-drq1` (Drizzle helper branding), `types-tef0` (OpenAPI enc/dec boundary).
+
+## Plan 2 fleet preconditions (documented by types-tef0)
+
+Each per-entity fleet PR must include these substeps in addition to renaming the Server<X>:
+
+**Types package** (`packages/types/src/entities/<x>.ts`):
+
+1. Rename `Server<X>` → `<X>ServerMetadata`; move declaration from `encryption-primitives.ts` to the entity file.
+2. Refactor as `<X>ServerMetadata = Omit<<X>, <X>EncryptedFields> & { encryptedData: EncryptedBlob }` (consumes the `<X>EncryptedFields` union already in place from types-tef0). Note Member also required omitting `"archived"` due to literal-type mismatch — check each entity for similar.
+3. Add `<X>Wire = Serialize<<X>>`.
+4. Delete old `Server<X>` / `Client<X>` declarations from `encryption-primitives.ts`.
+
+**Drizzle schema parity** (`packages/db/src/__tests__/type-parity/<x>.type.test.ts`): 5. Create a new parity test file asserting the Drizzle row shape structurally matches `<X>ServerMetadata`:
+
+```ts
+import { describe, expectTypeOf, it } from "vitest";
+import { <tableName> } from "../../schema/pg/<table-file>.js";
+import type { StripBrands } from "./__helpers__.js";
+import type { Equal, <X>ServerMetadata } from "@pluralscape/types";
+import type { InferSelectModel } from "drizzle-orm";
+
+describe("<X> Drizzle parity", () => {
+  it("row has the same property keys as <X>ServerMetadata", () => {
+    type Row = InferSelectModel<typeof <tableName>>;
+    expectTypeOf<keyof Row>().toEqualTypeOf<keyof <X>ServerMetadata>();
+  });
+
+  it("row equals <X>ServerMetadata modulo brands and readonly", () => {
+    type Row = InferSelectModel<typeof <tableName>>;
+    expectTypeOf<
+      Equal<StripBrands<Row>, StripBrands<<X>ServerMetadata>>
+    >().toEqualTypeOf<true>();
+  });
+});
+```
+
+Uses the existing `StripBrands<T>` wrapper because shared column helpers (`timestamps()`, `versioned()`, `archivable()`) return unbranded columns. `db-drq1` tracks lifting brands into the helpers so the wrapper can be removed and brand-level drift becomes caught too.
+
+**Parity test** (`scripts/openapi-wire-parity.type-test.ts`): 6. Add split-form encrypted-wire parity for the entity:
+
+```ts
+type <X>ResponseOpenApi = components["schemas"]["<X>Response"];
+
+expectTypeOf<
+  Equal<
+    Omit<<X>ResponseOpenApi, "encryptedData">,
+    Omit<Serialize<<X>ServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<<X>ResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+```
+
+The Omit excludes the one structurally-impossible field (`encryptedData` is opaque `string` on wire but structured `EncryptedBlob` in domain). All plaintext columns (ids, timestamps, version, archived flags, and per-entity denormalized plaintext additions like `FrontingSessionResponse.structureEntityId`) are asserted.
+
+**Data package** (`packages/data/src/transforms/<x>.ts`): 7. Rename hand-written `<X>EncryptedFields` interface → `<X>EncryptedInput = Pick<<X>, <X>EncryptedFields>` (consumes types-package keys-union). 8. Delete local `AssertXFieldsSubset` type (redundant — `Pick` enforces the constraint). 9. Delete hand-written `assertXEncryptedFields` runtime validator. 10. Update `encryptXInput(data: <X>EncryptedInput, masterKey)` signature.
+
+**Validation package** (`packages/validation/src/<x>.ts`): 11. Add `<X>EncryptedInputSchema` Zod schema (every field of `<X>EncryptedInput`; nested types from shared `plaintext-shared.ts`). 12. Add Zod parity test: `Equal<z.infer<typeof <X>EncryptedInputSchema>, Pick<<X>, <X>EncryptedFields>>` (assert against `Pick` directly to avoid data → validation cycle). 13. Replace `assertXEncryptedFields` call sites (typically inside `decryptX`) with `<X>EncryptedInputSchema.parse()`.
+
+**Consumer packages**: 14. `packages/import-sp/src/mappers/<x>.mapper.ts` + `packages/import-pk/src/mappers/<x>.mapper.ts`: rename imports `<X>EncryptedFields` → `<X>EncryptedInput`.
+
+**Sot manifest** — already done by types-tef0 (all 20 entries include `encryptedFields`). Fleet only needs to upgrade the partial entries (`{ domain, encryptedFields }`) to full entries (`{ domain, server, wire, encryptedFields }`) as it lands `<X>ServerMetadata` and `<X>Wire`.
+
+Pilot (Member) landed in types-tef0 as a reference implementation. The 18 non-pilot entities + Nomenclature are fleet scope.

@@ -72,7 +72,7 @@ EncryptedEntity:
     encrypting before write and decrypting after read using the appropriate
     key (master key for T1, bucket key for T2). The `version` field is used
     for optimistic concurrency control — updates must include the current version.
-  required: [id, systemId, encryptedData, version, createdAt, updatedAt]
+  required: [id, systemId, encryptedData, version, createdAt, updatedAt, archived, archivedAt]
   properties:
     id:
       type: string

@@ -27,4 +27,19 @@ export interface SystemStructureEntityType extends AuditMetadata, StructureVisua
   readonly archived: false;
 }
 
+/**
+ * Keys of `SystemStructureEntityType` that are encrypted client-side before
+ * the server sees them. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextStructureEntityType parity)
+ * - Plan 2 fleet will consume when deriving
+ *   `SystemStructureEntityTypeServerMetadata`.
+ */
+export type SystemStructureEntityTypeEncryptedFields =
+  | "name"
+  | "description"
+  | "color"
+  | "imageSource"
+  | "emoji";
+
 export type ArchivedSystemStructureEntityType = Archived<SystemStructureEntityType>;

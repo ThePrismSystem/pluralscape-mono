@@ -23,6 +23,16 @@ export interface CanonicalTerm {
 /** Per-system nomenclature settings — one selected term per category. */
 export type NomenclatureSettings = Readonly<Record<TermCategory, string>>;
 
+/**
+ * Keys of `NomenclatureSettings` that are encrypted client-side before the
+ * server sees them. Every term category is T1-encrypted — the union is
+ * therefore identical to `TermCategory`. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextNomenclature parity)
+ * - Plan 2 fleet for ServerMetadata derivation.
+ */
+export type NomenclatureEncryptedFields = TermCategory;
+
 /** A set of preset options for a single term category. */
 export interface TermPreset {
   readonly category: TermCategory;

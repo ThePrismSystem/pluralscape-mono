@@ -11825,6 +11825,8 @@ components:
         - version
         - createdAt
         - updatedAt
+        - archived
+        - archivedAt
       properties:
         id:
           type: string
@@ -12323,33 +12325,297 @@ components:
           default: 25
     AuditLogEntry:
       type: object
+      description: |
+        Append-only audit log entry. Plaintext on the wire (not encrypted);
+        the server intentionally reads these for security monitoring
+        (failed-login detection, IP-pattern analysis).
       required:
         - id
+        - systemId
         - eventType
-        - timestamp
-        - resourceType
+        - createdAt
+        - actor
+        - detail
+        - ipAddress
+        - userAgent
       properties:
         id:
           type: string
           description: Unique audit log entry identifier
+        systemId:
+          type: string
+          description: System the event is scoped to
         eventType:
           type: string
-          description: Type of event (e.g., login, member.create, settings.update)
-        timestamp:
+          description: Category of audit event.
+          enum:
+            - auth.register
+            - auth.login
+            - auth.login-failed
+            - auth.logout
+            - auth.password-changed
+            - auth.recovery-key-used
+            - auth.key-created
+            - auth.key-revoked
+            - data.export
+            - data.import
+            - data.purge
+            - settings.changed
+            - member.created
+            - member.archived
+            - sharing.granted
+            - sharing.revoked
+            - bucket.key_rotation.initiated
+            - bucket.key_rotation.chunk_completed
+            - bucket.key_rotation.completed
+            - bucket.key_rotation.failed
+            - bucket.key_rotation.retried
+            - device.security.jailbreak_warning_shown
+            - auth.password-reset-via-recovery
+            - auth.recovery-key-regenerated
+            - auth.device-transfer-initiated
+            - auth.device-transfer-approved
+            - auth.device-transfer-completed
+            - auth.email-changed
+            - auth.email-change-notification-enqueue-failed
+            - system.created
+            - system.profile-updated
+            - system.deleted
+            - system.purged
+            - system.duplicated
+            - snapshot.created
+            - snapshot.deleted
+            - group.created
+            - group.updated
+            - group.archived
+            - group.restored
+            - group.moved
+            - group-membership.added
+            - group-membership.removed
+            - custom-front.created
+            - custom-front.updated
+            - custom-front.archived
+            - custom-front.restored
+            - group.deleted
+            - custom-front.deleted
+            - auth.biometric-enrolled
+            - auth.biometric-verified
+            - auth.biometric-failed
+            - settings.pin-set
+            - settings.pin-removed
+            - settings.pin-verified
+            - settings.nomenclature-updated
+            - setup.step-completed
+            - setup.completed
+            - member.updated
+            - member.duplicated
+            - member.restored
+            - member-photo.created
+            - member-photo.archived
+            - member-photo.restored
+            - member-photo.reordered
+            - field-definition.created
+            - field-definition.updated
+            - field-definition.archived
+            - field-definition.restored
+            - field-value.set
+            - field-value.updated
+            - field-value.deleted
+            - structure-entity-type.created
+            - structure-entity-type.updated
+            - structure-entity-type.archived
+            - structure-entity-type.restored
+            - structure-entity-type.deleted
+            - structure-entity.created
+            - structure-entity.updated
+            - structure-entity.archived
+            - structure-entity.restored
+            - structure-entity.deleted
+            - relationship.created
+            - relationship.updated
+            - relationship.archived
+            - relationship.restored
+            - relationship.deleted
+            - lifecycle-event.created
+            - lifecycle-event.updated
+            - lifecycle-event.archived
+            - lifecycle-event.restored
+            - lifecycle-event.deleted
+            - structure-entity-link.created
+            - structure-entity-link.updated
+            - structure-entity-link.deleted
+            - structure-entity-member-link.added
+            - structure-entity-member-link.removed
+            - structure-entity-association.created
+            - structure-entity-association.deleted
+            - innerworld-region.created
+            - innerworld-region.updated
+            - innerworld-region.archived
+            - innerworld-region.restored
+            - innerworld-region.deleted
+            - innerworld-entity.created
+            - innerworld-entity.updated
+            - innerworld-entity.archived
+            - innerworld-entity.restored
+            - innerworld-entity.deleted
+            - innerworld-canvas.created
+            - innerworld-canvas.updated
+            - blob.upload-requested
+            - blob.confirmed
+            - blob.archived
+            - member.deleted
+            - member-photo.deleted
+            - field-definition.deleted
+            - fronting-session.created
+            - fronting-session.updated
+            - fronting-session.ended
+            - fronting-session.archived
+            - fronting-session.restored
+            - fronting-session.deleted
+            - fronting-comment.created
+            - fronting-comment.updated
+            - fronting-comment.archived
+            - fronting-comment.restored
+            - fronting-comment.deleted
+            - fronting-report.created
+            - fronting-report.updated
+            - fronting-report.archived
+            - fronting-report.restored
+            - fronting-report.deleted
+            - timer-config.created
+            - timer-config.updated
+            - timer-config.archived
+            - timer-config.restored
+            - timer-config.deleted
+            - check-in-record.created
+            - check-in-record.responded
+            - check-in-record.dismissed
+            - check-in-record.archived
+            - check-in-record.restored
+            - check-in-record.deleted
+            - webhook-config.created
+            - webhook-config.updated
+            - webhook-config.archived
+            - webhook-config.restored
+            - webhook-config.secret-rotated
+            - webhook-config.deleted
+            - webhook-delivery.deleted
+            - channel.created
+            - channel.updated
+            - channel.archived
+            - channel.restored
+            - channel.deleted
+            - message.created
+            - message.updated
+            - message.archived
+            - message.restored
+            - message.deleted
+            - board-message.created
+            - board-message.updated
+            - board-message.pinned
+            - board-message.unpinned
+            - board-message.reordered
+            - board-message.archived
+            - board-message.restored
+            - board-message.deleted
+            - note.created
+            - note.updated
+            - note.archived
+            - note.restored
+            - note.deleted
+            - poll.created
+            - poll.updated
+            - poll.closed
+            - poll.archived
+            - poll.restored
+            - poll.deleted
+            - poll-vote.cast
+            - poll-vote.vetoed
+            - poll-vote.updated
+            - poll-vote.archived
+            - acknowledgement.created
+            - acknowledgement.confirmed
+            - acknowledgement.archived
+            - acknowledgement.restored
+            - acknowledgement.deleted
+            - bucket.created
+            - bucket.updated
+            - bucket.archived
+            - bucket.restored
+            - bucket.deleted
+            - bucket-content-tag.tagged
+            - bucket-content-tag.untagged
+            - field-bucket-visibility.set
+            - field-bucket-visibility.removed
+            - friend-code.generated
+            - friend-code.redeemed
+            - friend-code.archived
+            - friend-connection.created
+            - friend-connection.accepted
+            - friend-connection.rejected
+            - friend-connection.blocked
+            - friend-connection.removed
+            - friend-connection.archived
+            - friend-connection.restored
+            - friend-visibility.updated
+            - friend-bucket-assignment.assigned
+            - friend-bucket-assignment.unassigned
+            - device-token.registered
+            - device-token.updated
+            - device-token.revoked
+            - device-token.deleted
+            - notification-config.updated
+            - friend-notification-preference.updated
+            - api-key.created
+            - api-key.revoked
+            - import-job.created
+            - import-job.updated
+            - import-job.completed
+            - import-job.failed
+        createdAt:
           type: integer
           format: int64
-          description: Unix timestamp in milliseconds when the event occurred
-        resourceType:
-          type: string
-          description: Type of resource affected (e.g., member, group, session)
-        resourceId:
-          type: string
-          nullable: true
-          description: ID of the affected resource
+          description: Unix milliseconds when the event occurred
         actor:
+          description: The actor who performed the action.
+          oneOf:
+            - type: object
+              required:
+                - kind
+                - id
+              properties:
+                kind:
+                  type: string
+                  const: account
+                id:
+                  type: string
+                  description: Account ID
+            - type: object
+              required:
+                - kind
+                - id
+              properties:
+                kind:
+                  type: string
+                  const: api-key
+                id:
+                  type: string
+                  description: API key ID
+            - type: object
+              required:
+                - kind
+                - id
+              properties:
+                kind:
+                  type: string
+                  const: system
+                id:
+                  type: string
+                  description: System ID
+        detail:
           type: string
           nullable: true
-          description: Account ID of the actor
+          description: Free-form plaintext payload with event-specific metadata.
         ipAddress:
           type: string
           nullable: true
@@ -15437,6 +15703,13 @@ components:
     PlaintextVisualProperties:
       description: Visual styling for innerworld entities.
       type: object
+      required:
+        - color
+        - icon
+        - size
+        - opacity
+        - imageSource
+        - externalUrl
       properties:
         color:
           type: string
@@ -15470,6 +15743,9 @@ components:
       type: object
       required:
         - name
+        - displayName
+        - description
+        - avatarSource
       properties:
         name:
           type: string
@@ -15494,8 +15770,13 @@ components:
       required:
         - name
         - pronouns
+        - description
+        - avatarSource
         - colors
+        - saturationLevel
         - tags
+        - suppressFriendFrontNotification
+        - boardMessageNotificationOnFront
       properties:
         name:
           type: string
@@ -15537,11 +15818,13 @@ components:
       type: object
       required:
         - imageSource
+        - sortOrder
+        - caption
       properties:
         imageSource:
           $ref: "#/components/schemas/PlaintextImageSource"
         sortOrder:
-          type: integer
+          type: number
         caption:
           type: string
           nullable: true
@@ -15553,6 +15836,10 @@ components:
       type: object
       required:
         - name
+        - description
+        - imageSource
+        - color
+        - emoji
       properties:
         name:
           type: string
@@ -15579,6 +15866,9 @@ components:
       type: object
       required:
         - name
+        - description
+        - color
+        - emoji
       properties:
         name:
           type: string
@@ -15601,6 +15891,8 @@ components:
       type: object
       required:
         - name
+        - description
+        - options
       properties:
         name:
           type: string
@@ -15617,94 +15909,101 @@ components:
       description: |
         **Encrypted into**: `encryptedData` on field value set/update endpoints.
 
-        A typed value for a custom field on a member. The `fieldType` discriminant
-        determines the shape of `value`. Encryption tier: **T1**.
-      oneOf:
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: text
-            value:
-              type: string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: number
-            value:
-              type: number
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: boolean
-            value:
-              type: boolean
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: date
-            value:
-              type: string
-              description: ISO 8601 date string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: color
-            value:
-              type: string
-              description: "Hex color (e.g., #FF00AA)"
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: select
-            value:
-              type: string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: multi-select
-            value:
-              type: array
-              items:
-                type: string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: url
-            value:
-              type: string
-              format: uri
+        A typed value for a custom field on a member. Wraps the
+        discriminated `value` (keyed by `fieldType`) so the encrypted
+        payload parity matches the domain projection
+        `Pick<FieldValue, "value">`. Encryption tier: **T1**.
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          oneOf:
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: text
+                value:
+                  type: string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: number
+                value:
+                  type: number
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: boolean
+                value:
+                  type: boolean
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: date
+                value:
+                  type: string
+                  description: ISO 8601 date string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: color
+                value:
+                  type: string
+                  description: "Hex color (e.g., #FF00AA)"
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: select
+                value:
+                  type: string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: multi-select
+                value:
+                  type: array
+                  items:
+                    type: string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: url
+                value:
+                  type: string
+                  format: uri
     PlaintextRelationship:
       description: |
         **Encrypted into**: `encryptedData` on relationship create/update endpoints.
@@ -15716,6 +16015,8 @@ components:
         The `encryptedData` contains only the user-visible label and any
         additional notes. Encryption tier: **T1**.
       type: object
+      required:
+        - label
       properties:
         label:
           type: string
@@ -15730,6 +16031,10 @@ components:
       type: object
       required:
         - name
+        - description
+        - color
+        - imageSource
+        - emoji
       properties:
         name:
           type: string
@@ -15754,6 +16059,10 @@ components:
       type: object
       required:
         - name
+        - description
+        - color
+        - imageSource
+        - emoji
       properties:
         name:
           type: string
@@ -15778,10 +16087,32 @@ components:
         `structureEntityId`, `startTime`, and `endTime` are sent as separate plaintext
         fields. Encryption tier: **T1**.
       type: object
+      required:
+        - comment
+        - positionality
+        - outtrigger
+        - outtriggerSentiment
       properties:
-        notes:
+        comment:
           type: string
           nullable: true
+          description: Free-text status comment on the session (max 50 characters, runtime enforced)
+        positionality:
+          type: string
+          nullable: true
+          description: Free-text description of fronting positionality (e.g. close vs far, height)
+        outtrigger:
+          type: string
+          nullable: true
+          description: Free-text reason describing what caused the fronting change
+        outtriggerSentiment:
+          type: string
+          enum:
+            - negative
+            - neutral
+            - positive
+          nullable: true
+          description: Sentiment classification for the outtrigger reason
     PlaintextLifecycleEvent:
       description: |
         **Encrypted into**: `encryptedData` on lifecycle event create endpoint.
@@ -15791,13 +16122,9 @@ components:
         as separate plaintext fields because the server needs them for querying
         and relationship tracking. Encryption tier: **T1**.
       type: object
+      required:
+        - notes
       properties:
-        title:
-          type: string
-          nullable: true
-        description:
-          type: string
-          nullable: true
         notes:
           type: string
           nullable: true
@@ -15809,6 +16136,11 @@ components:
       type: object
       required:
         - name
+        - description
+        - visual
+        - boundaryData
+        - accessType
+        - gatekeeperMemberIds
       properties:
         name:
           type: string
@@ -15844,40 +16176,18 @@ components:
         **Encrypted into**: `encryptedData` on innerworld entity create/update endpoints.
 
         An entity placed on the innerworld canvas. Discriminated on `entityType`.
-        Encryption tier: **T1**.
-      type: object
-      required:
-        - entityType
-        - positionX
-        - positionY
-      properties:
-        entityType:
-          type: string
-          enum:
-            - member
-            - landmark
-            - structure-entity
-        positionX:
-          type: number
-          description: X coordinate on the canvas
-        positionY:
-          type: number
-          description: Y coordinate on the canvas
-        visual:
-          $ref: "#/components/schemas/PlaintextVisualProperties"
-        name:
-          type: string
-          description: Display name (required for landmark entities)
-        description:
-          type: string
-          nullable: true
-          description: Description (landmark entities only)
-        linkedMemberId:
-          type: string
-          description: Member ID (member entities only)
-        linkedStructureEntityId:
-          type: string
-          description: Structure entity ID (structure-entity entities only)
+        `regionId` is a plaintext sibling (server needs it for queries) and is
+        therefore not present here. Encryption tier: **T1**.
+      oneOf:
+        - $ref: "#/components/schemas/PlaintextInnerworldMemberEntity"
+        - $ref: "#/components/schemas/PlaintextInnerworldLandmarkEntity"
+        - $ref: "#/components/schemas/PlaintextInnerworldStructureEntity"
+      discriminator:
+        propertyName: entityType
+        mapping:
+          member: "#/components/schemas/PlaintextInnerworldMemberEntity"
+          landmark: "#/components/schemas/PlaintextInnerworldLandmarkEntity"
+          structure-entity: "#/components/schemas/PlaintextInnerworldStructureEntity"
     PlaintextInnerworldCanvas:
       description: |
         **Encrypted into**: `encryptedData` on `PUT /systems/:systemId/innerworld/canvas`.
@@ -15915,6 +16225,18 @@ components:
         them for locale-aware operations and biometric state tracking.
         Encryption tier: **T1**.
       type: object
+      required:
+        - theme
+        - fontScale
+        - appLock
+        - notifications
+        - syncPreferences
+        - privacyDefaults
+        - littlesSafeMode
+        - saturationLevelsEnabled
+        - autoCaptureFrontingOnJournal
+        - snapshotSchedule
+        - onboardingComplete
       properties:
         theme:
           type: string
@@ -15927,6 +16249,11 @@ components:
           type: number
         appLock:
           type: object
+          required:
+            - pinEnabled
+            - biometricEnabled
+            - lockTimeout
+            - backgroundGraceSeconds
           properties:
             pinEnabled:
               type: boolean
@@ -15940,6 +16267,11 @@ components:
               description: Seconds to keep keys in memory after app backgrounds (0-300)
         notifications:
           type: object
+          required:
+            - pushEnabled
+            - emailEnabled
+            - switchReminders
+            - checkInReminders
           properties:
             pushEnabled:
               type: boolean
@@ -15951,6 +16283,9 @@ components:
               type: boolean
         syncPreferences:
           type: object
+          required:
+            - syncEnabled
+            - syncOnCellular
           properties:
             syncEnabled:
               type: boolean
@@ -15958,6 +16293,9 @@ components:
               type: boolean
         privacyDefaults:
           type: object
+          required:
+            - defaultBucketForNewContent
+            - friendRequestPolicy
           properties:
             defaultBucketForNewContent:
               type: string
@@ -15971,6 +16309,10 @@ components:
         littlesSafeMode:
           type: object
           description: Simplified UI configuration for littles
+          required:
+            - enabled
+            - allowedContentIds
+            - simplifiedUIFlags
           properties:
             enabled:
               type: boolean
@@ -15980,6 +16322,12 @@ components:
                 type: string
             simplifiedUIFlags:
               type: object
+              required:
+                - largeButtons
+                - iconDriven
+                - noDeletion
+                - noSettings
+                - noAnalytics
               properties:
                 largeButtons:
                   type: boolean
@@ -16011,9 +16359,26 @@ components:
       description: |
         **Encrypted into**: `encryptedData` on nomenclature update and setup endpoints.
 
-        Per-system terminology preferences — map of TermCategory to selected display term.
+        Per-system terminology preferences — map of `TermCategory` to selected
+        display term. Keys mirror the `TermCategory` union in
+        `@pluralscape/types` (kebab-case) so the parity gate can project
+        `Pick<NomenclatureSettings, NomenclatureEncryptedFields>` onto this
+        schema directly.
         Encryption tier: **T1**.
       type: object
+      required:
+        - collective
+        - individual
+        - fronting
+        - switching
+        - co-presence
+        - internal-space
+        - primary-fronter
+        - structure
+        - dormancy
+        - body
+        - amnesia
+        - saturation
       properties:
         collective:
           type: string
@@ -16027,13 +16392,13 @@ components:
         switching:
           type: string
           description: "Term for switching (default: 'Switch'). Presets: Switch, Shift"
-        coPresence:
+        co-presence:
           type: string
           description: "Term for co-fronting (default: 'Co-fronting'). Presets: Co-fronting, Co-conscious, Co-driving"
-        internalSpace:
+        internal-space:
           type: string
           description: "Term for the internal space (default: 'Headspace'). Presets: Headspace, Innerworld"
-        primaryFronter:
+        primary-fronter:
           type: string
           description: "Term for the host (default: 'Host'). Presets: Host, Primary fronter, Main fronter"
         structure:
@@ -16053,30 +16418,24 @@ components:
           description: "Term for saturation level (default: 'Saturation'). Presets: Saturation, Elaboration, Completeness"
     PlaintextStructureEntityMemberLink:
       description: |
-        **Encrypted into**: `encryptedData` on structure entity member link endpoints.
-
-        Encrypted metadata for a member's assignment to a structure entity.
-        The `memberId` and `parentEntityId` are sent as separate plaintext fields.
-        Encryption tier: **T1**.
+        Structure entity member links carry no encrypted payload today — every
+        field (`memberId`, `parentEntityId`, `sortOrder`) is plaintext at the
+        API layer. The schema is retained as an empty object so future encrypted
+        additions plug in without a breaking rename; the current parity gate
+        asserts the empty projection via the distributive-pick helper.
       type: object
-      properties:
-        notes:
-          type: string
-          nullable: true
-          description: Optional notes about this membership
+      additionalProperties: false
+      properties: {}
     PlaintextStructureEntityAssociation:
       description: |
-        **Encrypted into**: `encryptedData` (optional) on structure entity association
-        create endpoints.
-
-        Encrypted metadata for a directed cross-reference between structure entities.
-        The `sourceEntityId` and `targetEntityId` are sent as separate plaintext
-        fields. Encryption tier: **T1**.
+        Structure entity associations carry no encrypted payload today — every
+        field (`sourceEntityId`, `targetEntityId`) is plaintext at the API
+        layer. The schema is retained as an empty object so future encrypted
+        additions plug in without a breaking rename; the current parity gate
+        asserts the empty projection.
       type: object
-      properties:
-        notes:
-          type: string
-          nullable: true
+      additionalProperties: false
+      properties: {}
     PinRequest-2:
       type: object
       required:
@@ -17563,6 +17922,79 @@ components:
           type: object
           additionalProperties:
             type: string
+    PlaintextInnerworldMemberEntity:
+      description: Member-linked innerworld entity variant.
+      type: object
+      required:
+        - entityType
+        - positionX
+        - positionY
+        - visual
+        - linkedMemberId
+      properties:
+        entityType:
+          type: string
+          enum:
+            - member
+        positionX:
+          type: number
+        positionY:
+          type: number
+        visual:
+          $ref: "#/components/schemas/PlaintextVisualProperties"
+        linkedMemberId:
+          type: string
+          description: Member ID (mem_ prefix)
+    PlaintextInnerworldLandmarkEntity:
+      description: Landmark innerworld entity variant.
+      type: object
+      required:
+        - entityType
+        - positionX
+        - positionY
+        - visual
+        - name
+        - description
+      properties:
+        entityType:
+          type: string
+          enum:
+            - landmark
+        positionX:
+          type: number
+        positionY:
+          type: number
+        visual:
+          $ref: "#/components/schemas/PlaintextVisualProperties"
+        name:
+          type: string
+          description: Display name for the landmark
+        description:
+          type: string
+          nullable: true
+    PlaintextInnerworldStructureEntity:
+      description: Structure-entity-linked innerworld entity variant.
+      type: object
+      required:
+        - entityType
+        - positionX
+        - positionY
+        - visual
+        - linkedStructureEntityId
+      properties:
+        entityType:
+          type: string
+          enum:
+            - structure-entity
+        positionX:
+          type: number
+        positionY:
+          type: number
+        visual:
+          $ref: "#/components/schemas/PlaintextVisualProperties"
+        linkedStructureEntityId:
+          type: string
+          description: Structure entity ID (ste_ prefix)
   responses:
     NoContent:
       description: Success with no response body

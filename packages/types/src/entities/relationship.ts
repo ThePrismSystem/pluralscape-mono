@@ -29,4 +29,14 @@ export interface Relationship {
   readonly archived: false;
 }
 
+/**
+ * Keys of `Relationship` that are encrypted client-side before the server sees
+ * them. `sourceMemberId`, `targetMemberId`, `type`, and `bidirectional` are
+ * sent plaintext because the server needs them for querying. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextRelationship parity)
+ * - Plan 2 fleet will consume when deriving `RelationshipServerMetadata`.
+ */
+export type RelationshipEncryptedFields = "label";
+
 export type ArchivedRelationship = Archived<Relationship>;

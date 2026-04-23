@@ -2,6 +2,7 @@ import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/cry
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { toUnixMillis, brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
+import { z } from "zod/v4";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
 import {
@@ -13,7 +14,7 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { MemberEncryptedFields } from "../member.js";
+import type { MemberEncryptedInput } from "../member.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { HexColor, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
 
@@ -26,7 +27,7 @@ beforeAll(async () => {
 });
 
 /** Minimal encrypted fields fixture for a fully-populated member. */
-function makeEncryptedFields(): MemberEncryptedFields {
+function makeEncryptedFields(): MemberEncryptedInput {
   return {
     name: "River",
     pronouns: ["they/them", "xe/xem"],
@@ -43,9 +44,31 @@ function makeEncryptedFields(): MemberEncryptedFields {
   };
 }
 
+/**
+ * Assert that `fn` throws a `z.ZodError` whose issues include one matching
+ * `code` at exactly `path`. Used to replace regex-on-message assertions so
+ * failing tests distinguish missing vs wrong-type vs other Zod errors.
+ */
+function expectZodIssue(
+  fn: () => unknown,
+  { code, path }: { code: string; path: ReadonlyArray<string | number> },
+): void {
+  let caught: unknown;
+  try {
+    fn();
+  } catch (err) {
+    caught = err;
+  }
+  expect(caught).toBeInstanceOf(z.ZodError);
+  const issues = (caught as z.ZodError).issues;
+  expect(issues).toEqual(
+    expect.arrayContaining([expect.objectContaining({ code, path: [...path] })]),
+  );
+}
+
 /** Build a minimal MemberServerMetadata wire object from encrypted fields. */
 function makeServerMember(
-  fields: MemberEncryptedFields = makeEncryptedFields(),
+  fields: MemberEncryptedInput = makeEncryptedFields(),
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
@@ -88,7 +111,7 @@ describe("decryptMember", () => {
   });
 
   it("handles null optional fields correctly", () => {
-    const fields: MemberEncryptedFields = {
+    const fields: MemberEncryptedInput = {
       name: "Ghost",
       pronouns: [],
       description: null,
@@ -130,11 +153,11 @@ describe("decryptMember", () => {
   });
 });
 
-describe("assertMemberEncryptedFields validation", () => {
+describe("MemberEncryptedInputSchema validation", () => {
   it("throws when description is a number instead of string or null", () => {
     const fields = { ...makeEncryptedFields(), description: 42 };
     const raw = { ...makeServerMember(), encryptedData: encryptAndEncodeT1(fields, masterKey) };
-    expect(() => decryptMember(raw, masterKey)).toThrow("description must be string or null");
+    expect(() => decryptMember(raw, masterKey)).toThrow(/description/);
   });
 
   it("throws when suppressFriendFrontNotification is missing", () => {
@@ -164,7 +187,10 @@ describe("assertMemberEncryptedFields validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("suppressFriendFrontNotification");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["suppressFriendFrontNotification"],
+    });
   });
 
   it("throws when boardMessageNotificationOnFront is missing", () => {
@@ -194,7 +220,10 @@ describe("assertMemberEncryptedFields validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("boardMessageNotificationOnFront");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["boardMessageNotificationOnFront"],
+    });
   });
 
   it("throws when avatarSource is missing (undefined)", () => {
@@ -224,7 +253,11 @@ describe("assertMemberEncryptedFields validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("avatarSource");
+    // `avatarSource` is a nullable discriminated union; a missing-field
+    // could legitimately be reported as invalid_type, invalid_union, or
+    // another code depending on Zod's error preference. Keep the message
+    // regex to stay tolerant.
+    expect(() => decryptMember(raw, masterKey)).toThrow(/avatarSource/);
   });
 
   it("throws when colors is missing (undefined)", () => {
@@ -254,7 +287,10 @@ describe("assertMemberEncryptedFields validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("colors");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["colors"],
+    });
   });
 
   it("throws when saturationLevel is missing (undefined)", () => {
@@ -284,13 +320,18 @@ describe("assertMemberEncryptedFields validation", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("saturationLevel");
+    // `saturationLevel` is a discriminated union; missing vs wrong-discriminator
+    // could surface with distinct codes. Keep regex to stay tolerant.
+    expect(() => decryptMember(raw, masterKey)).toThrow(/saturationLevel/);
   });
 
   it("throws when tags is not an array", () => {
     const fields = { ...makeEncryptedFields(), tags: "not-an-array" };
     const raw = { ...makeServerMember(), encryptedData: encryptAndEncodeT1(fields, masterKey) };
-    expect(() => decryptMember(raw, masterKey)).toThrow("tags");
+    expectZodIssue(() => decryptMember(raw, masterKey), {
+      code: "invalid_type",
+      path: ["tags"],
+    });
   });
 });
 
@@ -362,9 +403,7 @@ describe("decryptMemberPage", () => {
       ],
       nextCursor: null,
     };
-    expect(() => decryptMemberPage(page, masterKey)).toThrow(
-      "missing required array field: pronouns",
-    );
+    expect(() => decryptMemberPage(page, masterKey)).toThrow(/pronouns/);
   });
 });
 
@@ -418,13 +457,13 @@ describe("encryptMemberUpdate", () => {
 
 // ── Assertion guard tests ────────────────────────────────────────────
 
-describe("assertMemberEncryptedFields", () => {
+describe("MemberEncryptedInputSchema guard", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = {
       ...makeServerMember(),
       encryptedData: makeBase64Blob("not-an-object", masterKey),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptMember(raw, masterKey)).toThrow(/expected object/);
   });
 
   it("throws when blob is missing name field", () => {
@@ -432,7 +471,7 @@ describe("assertMemberEncryptedFields", () => {
       ...makeServerMember(),
       encryptedData: makeBase64Blob({ pronouns: [] }, masterKey),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("missing required string field: name");
+    expect(() => decryptMember(raw, masterKey)).toThrow(/name/);
   });
 
   it("throws when blob is missing pronouns array", () => {
@@ -440,7 +479,7 @@ describe("assertMemberEncryptedFields", () => {
       ...makeServerMember(),
       encryptedData: makeBase64Blob({ name: "Test" }, masterKey),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("missing required array field: pronouns");
+    expect(() => decryptMember(raw, masterKey)).toThrow(/pronouns/);
   });
 
   it("throws when pronouns is not an array", () => {
@@ -448,6 +487,6 @@ describe("assertMemberEncryptedFields", () => {
       ...makeServerMember(),
       encryptedData: makeBase64Blob({ name: "Test", pronouns: "not-array" }, masterKey),
     };
-    expect(() => decryptMember(raw, masterKey)).toThrow("missing required array field: pronouns");
+    expect(() => decryptMember(raw, masterKey)).toThrow(/pronouns/);
   });
 });

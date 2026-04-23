@@ -12,6 +12,15 @@ export interface MemberPhoto {
   readonly archived: false;
 }
 
+/**
+ * Keys of `MemberPhoto` that are encrypted client-side before the server
+ * sees them. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextMemberPhoto parity)
+ * - Plan 2 fleet will consume when deriving `MemberPhotoServerMetadata`.
+ */
+export type MemberPhotoEncryptedFields = "imageSource" | "sortOrder" | "caption";
+
 /** An archived member photo — preserves all data with archive metadata. */
 export type ArchivedMemberPhoto = Archived<MemberPhoto>;
 

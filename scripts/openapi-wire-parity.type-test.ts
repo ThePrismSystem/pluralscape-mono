@@ -7,47 +7,96 @@
  *
  * Typechecked via `pnpm types:check-sot`.
  *
- * ── Scope and deferrals ──────────────────────────────────────────────
+ * ── Scope ────────────────────────────────────────────────────────────
  *
- * Two parity gaps were identified during Task 17 and deferred to
- * follow-up bean `types-tef0`:
+ * Every `<X>Response` has two parts:
+ *  1. The opaque `encryptedData` field — `string` on the wire but a
+ *     structured `EncryptedBlob` discriminated union in the domain. The
+ *     asymmetry is at an encode/decode boundary that cannot be
+ *     structurally equated.
+ *  2. Every OTHER field (plaintext columns the server sees) — ids,
+ *     timestamps, `version`, `archived`/`archivedAt`, plus per-entity
+ *     denormalized additions (e.g. `FrontingSessionResponse.structureEntityId`).
+ *     These ARE fully structurally assertable.
  *
- * 1. `Member`: the OpenAPI spec exposes the on-the-wire *encrypted* entity
- *    (`MemberResponse = EncryptedEntity`). The domain `Member` type is the
- *    post-decryption client-side shape, so `Serialize<Member>` (a.k.a.
- *    `MemberWire`) lives at a different layer than what HTTP carries. A
- *    direct `Equal<components["schemas"]["MemberResponse"], MemberWire>`
- *    would fail by design. Resolving this requires either a distinct
- *    `MemberEncryptedWire` aliased to `EncryptedEntity`, or wiring plaintext
- *    (T1) shapes into the OpenAPI spec — outside pilot scope.
+ * Per-entity plaintext-column parity therefore takes a split form — see
+ * the Member block below. This is the canonical fleet pattern: every
+ * renamed entity replicates the split (`Omit<..., "encryptedData">`
+ * equality + `<X>Response["encryptedData"] extends string`).
  *
- * 2. `AuditLogEntry`: the OpenAPI shape diverges from the domain on field
- *    names (`timestamp` vs `createdAt`), extra fields (`resourceType`,
- *    `resourceId`), and actor shape (`string | null` vs the
- *    `AuditActor` tagged union). Aligning these requires either updating
- *    the OpenAPI spec or restructuring the domain type — both are
- *    structural changes beyond Task 17 scope.
+ * The shared `EncryptedEntity` envelope parity serves as the canonical
+ * tripwire for the envelope shape itself (the set of plaintext columns
+ * every T1 response rides on). If the envelope drifts, every per-entity
+ * assertion will also trip — the envelope check localizes the diagnosis.
  *
- * What this file *does* enforce right now:
+ * `AuditLogEntry` is plaintext on the wire (not encrypted), so the
+ * OpenAPI schema structurally matches the domain type directly via
+ * `Equal<components["schemas"]["AuditLogEntry"], Serialize<AuditLogEntry>>`.
+ *
+ * What this file enforces:
  *  - `MemberWire ≡ Serialize<Member>` (self-consistency of the helper).
  *  - `AuditLogEntryWire ≡ Serialize<AuditLogEntry>` (same).
- *  - `components["schemas"]["EncryptedEntity"]` is structurally equal to the
- *    hand-authored `EncryptedEntityWire` mirror below — a real OpenAPI→
- *    domain parity tripwire for the shared envelope that every T1 response
- *    (including Member) rides on.
+ *  - `components["schemas"]["EncryptedEntity"]` structurally equals the
+ *    hand-authored `EncryptedEntityWire` mirror below — canonical envelope
+ *    tripwire.
+ *  - `MemberResponse` plaintext columns (split parity, see Member block).
+ *  - `components["schemas"]["PlaintextMember"]` structurally equals
+ *    `Serialize<Pick<Member, MemberEncryptedFields>>` — the pre-encryption
+ *    contract derived directly from the domain.
+ *  - `components["schemas"]["AuditLogEntry"]` structurally equals
+ *    `Serialize<AuditLogEntry>` — plaintext-wire parity for the audit log.
+ *  - `PlaintextX` parity for every fleet-renamed entity.
  *
- * Adding a bogus field on either side of the `EncryptedEntity` assertion
- * will fail the gate — see `pnpm types:check-sot`.
+ * Adding a bogus field on either side of any assertion will fail the gate
+ * — see `pnpm types:check-sot`.
  */
 
 import type { components } from "../packages/api-client/src/generated/api-types.js";
 import type {
   AuditLogEntry,
   AuditLogEntryWire,
+  CustomFront,
+  CustomFrontEncryptedFields,
   Equal,
+  FieldDefinition,
+  FieldDefinitionEncryptedFields,
+  FieldValue,
+  FieldValueEncryptedFields,
+  FrontingSession,
+  FrontingSessionEncryptedFields,
+  Group,
+  GroupEncryptedFields,
+  InnerWorldCanvas,
+  InnerWorldCanvasEncryptedFields,
+  InnerWorldEntity,
+  InnerWorldEntityEncryptedFields,
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields,
+  LifecycleEvent,
+  LifecycleEventEncryptedFields,
   Member,
+  MemberEncryptedFields,
+  MemberPhoto,
+  MemberPhotoEncryptedFields,
+  MemberServerMetadata,
   MemberWire,
+  NomenclatureEncryptedFields,
+  NomenclatureSettings,
+  Relationship,
+  RelationshipEncryptedFields,
   Serialize,
+  System,
+  SystemEncryptedFields,
+  SystemSettings,
+  SystemSettingsEncryptedFields,
+  SystemStructureEntity,
+  SystemStructureEntityAssociation,
+  SystemStructureEntityAssociationEncryptedFields,
+  SystemStructureEntityEncryptedFields,
+  SystemStructureEntityMemberLink,
+  SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityType,
+  SystemStructureEntityTypeEncryptedFields,
 } from "../packages/types/src/index.js";
 import { expectTypeOf } from "vitest";
 
@@ -68,8 +117,7 @@ expectTypeOf<Equal<AuditLogEntryWire, Serialize<AuditLogEntry>>>().toEqualTypeOf
 //
 // The mirror is kept local to this file rather than exported from
 // `@pluralscape/types` because the envelope is an API-layer concern,
-// not a domain concept. Promoting it (and aliasing `MemberResponse`
-// to it) is tracked in `types-tef0`.
+// not a domain concept.
 
 interface EncryptedEntityWire {
   id: string;
@@ -79,29 +127,208 @@ interface EncryptedEntityWire {
   createdAt: number;
   updatedAt: number;
   archived: boolean;
-  archivedAt?: number | null;
+  archivedAt: number | null;
 }
 
 expectTypeOf<
   Equal<components["schemas"]["EncryptedEntity"], EncryptedEntityWire>
 >().toEqualTypeOf<true>();
 
-// ── Deferred: direct Member parity ──────────────────────────────────
+// ── OpenAPI ↔ domain parity: PlaintextMember ────────────────────────
 //
-// `components["schemas"]["MemberResponse"]` is `allOf: [EncryptedEntity]`
-// (see `docs/openapi.yaml`). It represents the encrypted wire entity,
-// not the decrypted domain `Member`. Tracking: bean `types-tef0`.
-//
-// Once a `MemberEncryptedWire` (aliased to `EncryptedEntity`) is
-// introduced, replace with:
-//
-//   expectTypeOf<
-//     Equal<components["schemas"]["MemberResponse"], MemberEncryptedWire>
-//   >().toEqualTypeOf<true>();
+// `components["schemas"]["PlaintextMember"]` is the client-enforced
+// pre-encryption contract. It must structurally equal the domain's
+// encrypted-field projection. `MemberEncryptedFields` (keys union) +
+// `Pick<Member, ...>` is the single source of truth; `Serialize<...>`
+// strips brands and converts timestamps so the result matches JSON.
 
-// ── Deferred: direct AuditLogEntry parity ───────────────────────────
+expectTypeOf<
+  Equal<components["schemas"]["PlaintextMember"], Serialize<Pick<Member, MemberEncryptedFields>>>
+>().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: MemberResponse plaintext columns ──────
 //
-// OpenAPI shape uses `timestamp`/`resourceType`/`resourceId`/
-// `actor: string`, whereas domain uses `createdAt`/(no resourceType)/
-// `actor: AuditActor` (tagged union). Resolving requires spec and/or
-// domain-type restructuring — tracked in bean `types-tef0`.
+// Every <X>Response has two parts: the opaque `encryptedData` field
+// (string on wire, structured EncryptedBlob in domain — the asymmetry
+// is at an encode/decode boundary that can't be structurally equated),
+// and every other field (plaintext columns the server sees). The
+// plaintext columns ARE assertable, so we split the parity:
+//
+// Piece 1: plaintext columns on both sides, minus `encryptedData`.
+// Piece 2: `encryptedData` on the wire is opaque `string`.
+//
+// This catches per-entity plaintext column drift (e.g., `archived`
+// rename, new denormalized column added to a response). Fleet must
+// replicate this split for every renamed entity.
+
+type MemberResponseOpenApi = components["schemas"]["MemberResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<MemberResponseOpenApi, "encryptedData">,
+    Omit<Serialize<MemberServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<MemberResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
+//
+// AuditLogEntry is plaintext on the wire (not encrypted), so the OpenAPI
+// schema structurally matches the domain type directly.
+
+expectTypeOf<
+  Equal<components["schemas"]["AuditLogEntry"], Serialize<AuditLogEntry>>
+>().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: PlaintextX (fleet, Phase 2) ────────────
+//
+// For each non-pilot entity, assert that the OpenAPI `PlaintextX` schema
+// structurally equals `Serialize<Pick<<Entity>, <Entity>EncryptedFields>>`
+// — the single source of truth for the client-encrypted payload contract.
+// Sorted alphabetically by entity.
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextCustomFront"],
+    Serialize<Pick<CustomFront, CustomFrontEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextFieldDefinition"],
+    Serialize<Pick<FieldDefinition, FieldDefinitionEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextFieldValue"],
+    Serialize<Pick<FieldValue, FieldValueEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["PlaintextGroup"], Serialize<Pick<Group, GroupEncryptedFields>>>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextMemberPhoto"],
+    Serialize<Pick<MemberPhoto, MemberPhotoEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextRelationship"],
+    Serialize<Pick<Relationship, RelationshipEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["PlaintextSystem"], Serialize<Pick<System, SystemEncryptedFields>>>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextStructureEntityType"],
+    Serialize<Pick<SystemStructureEntityType, SystemStructureEntityTypeEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextStructureEntity"],
+    Serialize<Pick<SystemStructureEntity, SystemStructureEntityEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextFrontingSession"],
+    Serialize<Pick<FrontingSession, FrontingSessionEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextLifecycleEvent"],
+    Serialize<Pick<LifecycleEvent, LifecycleEventEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextNomenclature"],
+    Serialize<Pick<NomenclatureSettings, NomenclatureEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextInnerworldRegion"],
+    Serialize<Pick<InnerWorldRegion, InnerWorldRegionEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+// `InnerWorldEntity` is a discriminated union whose variants carry
+// different encrypted keys — a plain `Pick<Union, K>` would only accept
+// keys present on *every* variant. `DistributivePick` distributes the
+// pick over each member, intersecting the requested key-set with that
+// member's own keys, so each variant contributes only the fields it
+// actually owns.
+type DistributivePick<T, K extends PropertyKey> = T extends unknown
+  ? Pick<T, Extract<keyof T, K>>
+  : never;
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextInnerworldEntity"],
+    Serialize<DistributivePick<InnerWorldEntity, InnerWorldEntityEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextInnerworldCanvas"],
+    Serialize<Pick<InnerWorldCanvas, InnerWorldCanvasEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextSystemSettings"],
+    Serialize<Pick<SystemSettings, SystemSettingsEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+// `SystemStructureEntityMemberLink` carries no encrypted fields today —
+// its encrypted-fields union is `never`, so the projection is the empty
+// object. openapi-typescript emits `Record<string, never>` for a schema
+// with `properties: {}`, which is semantically "no fields" and matches
+// `Pick<T, never>` once we collapse both to that canonical empty shape.
+type EmptyEncryptedProjection<T, K extends keyof T> = [K] extends [never]
+  ? Record<string, never>
+  : Serialize<Pick<T, K>>;
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextStructureEntityMemberLink"],
+    EmptyEncryptedProjection<
+      SystemStructureEntityMemberLink,
+      SystemStructureEntityMemberLinkEncryptedFields
+    >
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextStructureEntityAssociation"],
+    EmptyEncryptedProjection<
+      SystemStructureEntityAssociation,
+      SystemStructureEntityAssociationEncryptedFields
+    >
+  >
+>().toEqualTypeOf<true>();
