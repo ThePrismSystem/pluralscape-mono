@@ -8,6 +8,12 @@ import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
+import type {
+  RelationshipType,
+  Relationship,
+} from "./entities/relationship.js";
+import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
+import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
 import type { Member, MemberPhoto } from "./identity.js";
@@ -46,12 +52,6 @@ import type {
 import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
 import type { JournalEntry, WikiPage } from "./journal.js";
 import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
-import type {
-  RelationshipType,
-  Relationship,
-} from "./entities/relationship.js";
-import type { SystemStructureEntity } from "./entities/structure-entity.js";
-import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Serialize } from "./type-assertions.js";

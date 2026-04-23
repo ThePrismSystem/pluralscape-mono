@@ -1,4 +1,8 @@
 import type { Tag, SaturationLevel } from "./entities/member.js";
+import type { RelationshipType } from "./entities/relationship.js";
+import type { SystemStructureEntityAssociation } from "./entities/structure-entity-association.js";
+import type { SystemStructureEntityLink } from "./entities/structure-entity-link.js";
+import type { SystemStructureEntityMemberLink } from "./entities/structure-entity-member-link.js";
 import type {
   GroupId,
   InnerWorldEntityId,
@@ -10,12 +14,6 @@ import type {
   SystemStructureEntityTypeId,
 } from "./ids.js";
 import type { InnerWorldEntityType } from "./innerworld.js";
-import type {
-  RelationshipType,
-  SystemStructureEntityAssociation,
-  SystemStructureEntityLink,
-  SystemStructureEntityMemberLink,
-} from "./structure.js";
 import type { UnixMillis } from "./timestamps.js";
 
 // ── Snapshot metadata ─────────────────────────────────────────────
