@@ -148,7 +148,11 @@ jobs:
       - uses: ./.github/actions/setup-pnpm
 
       - name: Audit dependencies
-        run: pnpm audit --audit-level=moderate --ignore-registry-errors
+        # GHSA-gh4j-gqv2-49f6: fast-xml-parser XMLBuilder CDATA bug. Scoped to
+        # @aws-sdk/xml-builder@5.5.8 only (AWS SDK uses XMLParser, not XMLBuilder,
+        # so the injection path is unreachable). Pinned at 5.5.8 because 5.7.x
+        # rejects `&#xD;` numeric char refs that MinIO sends in error responses.
+        run: pnpm audit --audit-level=moderate --ignore-registry-errors --ignore GHSA-gh4j-gqv2-49f6
 
   openapi:
     name: OpenAPI Spec Reconciliation

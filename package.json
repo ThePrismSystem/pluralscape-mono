@@ -78,6 +78,7 @@
       "ioredis": "5.10.1",
       "esbuild": ">=0.25.0",
       "fast-xml-parser": ">=5.7.0",
+      "@aws-sdk/xml-builder>fast-xml-parser": "5.5.8",
       "flatted": ">=3.4.2",
       "brace-expansion": ">=5.0.5",
       "picomatch": ">=4.0.4",
@@ -98,7 +99,12 @@
       "esbuild",
       "msgpackr-extract",
       "unrs-resolver"
-    ]
+    ],
+    "auditConfig": {
+      "ignoreCves": [
+        "GHSA-gh4j-gqv2-49f6"
+      ]
+    }
   },
   "prettier": "@pluralscape/prettier-config",
   "packageManager": "pnpm@10.33.0"
