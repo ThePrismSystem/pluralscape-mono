@@ -1,9 +1,20 @@
 // @pluralscape/types — shared TypeScript domain types
 
-// ── Crypto key brands ────────────────────────────────────────────────
+// ── Domain entities ──────────────────────────────────────────────
+// Full inventory in ./entities/index.ts. New entities add a file there
+// and a line in its barrel; no edits needed here.
+export * from "./entities/index.js";
+
+// ── Type-level assertions (SoT parity) ───────────────────────────
+export type { Assert, Equal, Extends, Serialize } from "./type-assertions.js";
+
+// ── SoT manifest ─────────────────────────────────────────────────
+export type { SotEntityManifest } from "./__sot-manifest__.js";
+
+// ── Crypto key brands ────────────────────────────────────────────
 export type { KdfMasterKey } from "./crypto-keys.js";
 
-// ── IDs ─────────────────────────────────────────────────────────────
+// ── IDs ──────────────────────────────────────────────────────────
 export type {
   Brand,
   IdPrefixBrandMap,
@@ -85,191 +96,17 @@ export type {
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
 
-// ── Brand utilities ────────────────────────────────────────────────
+// ── Brand utilities ──────────────────────────────────────────────
 export { brandId } from "./brand-utils.js";
-
-// ── Type-level assertions (SoT parity) ──────────────────────────────
-export type { Assert, Equal, Extends, Serialize } from "./type-assertions.js";
-
-// ── SoT manifest ────────────────────────────────────────────────────
-export type { SotEntityManifest } from "./__sot-manifest__.js";
+export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.js";
 
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";
 
-// ── Timestamps ──────────────────────────────────────────────────────
-export type { UnixMillis, ISOTimestamp } from "./timestamps.js";
-export { toUnixMillis, toUnixMillisOrNull } from "./timestamps.js";
-
-// ── Pagination ──────────────────────────────────────────────────────
-export type { PaginationCursor, PaginatedResult, OffsetPaginationParams } from "./pagination.js";
-export { CursorInvalidError } from "./pagination.js";
-
-// ── Results ─────────────────────────────────────────────────────────
-export type {
-  Result,
-  ApiError,
-  ApiErrorResponse,
-  ApiResponse,
-  ValidationError,
-} from "./results.js";
-
-// ── Utility types ───────────────────────────────────────────────────
-export type {
-  CreateInput,
-  UpdateInput,
-  DeepReadonly,
-  DateRange,
-  AuditMetadata,
-  Archived,
-  SortDirection,
-  EntityReference,
-} from "./utility.js";
-
-// ── Image source ────────────────────────────────────────────────────
-export type { ImageSource } from "./image-source.js";
-
-// ── Identity ────────────────────────────────────────────────────────
-export type {
-  Member,
-  KnownSaturationLevel,
-  SaturationLevel,
-  KnownTag,
-  Tag,
-  ArchivedMember,
-  MemberListItem,
-  CreateMemberBody,
-  UpdateMemberBody,
-  DuplicateMemberBody,
-} from "./entities/member.js";
-export type {
-  MemberPhoto,
-  ArchivedMemberPhoto,
-  CreateMemberPhotoBody,
-} from "./entities/member-photo.js";
-export type { System, SystemListItem } from "./entities/system.js";
-
-// ── Fronting ────────────────────────────────────────────────────────
-export type {
-  OuttriggerSentiment,
-  ActiveFrontingSession,
-  CompletedFrontingSession,
-  FrontingSession,
-  ArchivedFrontingSession,
-  CoFrontState,
-} from "./entities/fronting-session.js";
-export type { FrontingComment, ArchivedFrontingComment } from "./entities/fronting-comment.js";
-export type { CustomFront, ArchivedCustomFront } from "./entities/custom-front.js";
-
-// ── Privacy ────────────────────────────────────────────────────────
-export type {
-  PrivacyBucket,
-  ArchivedPrivacyBucket,
-  BucketContentEntityType,
-  BucketContentTag,
-  BucketVisibilityScope,
-  BucketAccessCheck,
-} from "./entities/bucket.js";
-export { BUCKET_CONTENT_ENTITY_TYPES, isBucketContentEntityType } from "./entities/bucket.js";
-export type {
-  FriendConnectionStatus,
-  FriendVisibilitySettings,
-  FriendConnection,
-  ArchivedFriendConnection,
-  FriendBucketAssignment,
-} from "./entities/friend-connection.js";
-export type { FriendCode, ArchivedFriendCode } from "./entities/friend-code.js";
-export type {
-  KeyGrant,
-  ReceivedKeyGrant,
-  ReceivedKeyGrantsResponse,
-} from "./entities/key-grant.js";
-
-// ── Friend Dashboard ──────────────────────────────────────────────
-export type {
-  FriendDashboardFrontingSession,
-  FriendDashboardMember,
-  FriendDashboardCustomFront,
-  FriendDashboardStructureEntity,
-  FriendDashboardKeyGrant,
-  FriendDashboardResponse,
-  FriendAccessContext,
-  FriendDashboardEntityType,
-  FriendDashboardSyncEntry,
-  FriendDashboardSyncResponse,
-} from "./friend-dashboard.js";
-
-// ── Friend Export ────────────────────────────────────────────────────
-export type {
-  FriendExportEntityType,
-  FriendExportEntity,
-  FriendExportPageResponse,
-  FriendExportManifestEntry,
-  FriendExportManifestResponse,
-} from "./friend-export.js";
-export { FRIEND_EXPORT_ENTITY_TYPES, isFriendExportEntityType } from "./friend-export.js";
-
-// ── Reports ────────────────────────────────────────────────────────
-export type {
-  ReportType,
-  ExportEntityId,
-  MemberByBucketReportConfig,
-  MeetOurSystemReportConfig,
-  ReportConfig,
-  ReportEntitySet,
-  MemberByBucketReportData,
-  MeetOurSystemReportData,
-  ReportData,
-  BucketExportManifestEntry,
-  BucketExportManifestResponse,
-  BucketExportEntity,
-  BucketExportPageResponse,
-} from "./reports.js";
-export { REPORT_TYPES, isReportType } from "./reports.js";
-
-// ── Structure ──────────────────────────────────────────────────────
-export type {
-  RelationshipType,
-  Relationship,
-  ArchivedRelationship,
-} from "./entities/relationship.js";
-export type {
-  KnownArchitectureType,
-  ArchitectureType,
-  SystemStructureEntityType,
-  ArchivedSystemStructureEntityType,
-} from "./entities/structure-entity-type.js";
-export type {
-  StructureVisualProps,
-  OriginType,
-  DiscoveryStatus,
-  SystemProfile,
-  SystemStructureEntity,
-  ArchivedSystemStructureEntity,
-} from "./entities/structure-entity.js";
-export type { SystemStructureEntityLink } from "./entities/structure-entity-link.js";
-export type { SystemStructureEntityMemberLink } from "./entities/structure-entity-member-link.js";
-export type { SystemStructureEntityAssociation } from "./entities/structure-entity-association.js";
-
-// ── Auth ──────────────────────────────────────────────────────
-export type {
-  Account,
-  AccountType,
-  LoginCredentials,
-  PendingAccountId,
-  RegistrationCommitInput,
-  RegistrationInitiateInput,
-} from "./entities/account.js";
-export type { AuthKey, AuthKeyType } from "./entities/auth-key.js";
-export type {
-  DeviceTransferPayload,
-  DeviceTransferRequest,
-  DeviceTransferStatus,
-} from "./entities/device-transfer-request.js";
-export type { RecoveryKey } from "./entities/recovery-key.js";
-export type { DeviceInfo, Session } from "./entities/session.js";
-
-// ── Encryption ────────────────────────────────────────────────
+// ── Encryption primitives ────────────────────────────────────────
+// NOTE: ./encryption.js until Task 26 renames it to ./encryption-primitives.js.
+// Server*/Client* wrappers and *ServerMetadata/*Wire stay here until Task 26
+// relocates them to their per-entity files + response-unions.ts.
 export type {
   Encrypted,
   BucketEncrypted,
@@ -280,10 +117,16 @@ export type {
   T2EncryptedBlob,
   EncryptedString,
   ServerSecret,
+  DecryptFn,
+  EncryptFn,
+  ServerResponseData,
+  ClientResponseData,
   MemberServerMetadata,
   MemberWire,
   ServerFrontingSession,
   ClientFrontingSession,
+  ServerFrontingComment,
+  ClientFrontingComment,
   ServerGroup,
   ClientGroup,
   ServerStructureEntityType,
@@ -320,44 +163,51 @@ export type {
   ClientMemberPhoto,
   ServerPoll,
   ClientPoll,
+  ServerPollVote,
+  ClientPollVote,
   ServerAcknowledgementRequest,
   ClientAcknowledgementRequest,
   ServerTimerConfig,
   ClientTimerConfig,
-  ServerFrontingComment,
-  ClientFrontingComment,
-  ServerPollVote,
-  ClientPollVote,
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
-  DecryptFn,
-  EncryptFn,
-  ServerResponseData,
-  ClientResponseData,
 } from "./encryption.js";
 
-// ── Server-safe enforcement ────────────────────────────────────────
+// ── Timestamps ───────────────────────────────────────────────────
+export type { UnixMillis, ISOTimestamp } from "./timestamps.js";
+export { toUnixMillis, toUnixMillisOrNull } from "./timestamps.js";
+
+// ── Pagination ───────────────────────────────────────────────────
+export type { PaginationCursor, PaginatedResult, OffsetPaginationParams } from "./pagination.js";
+export { CursorInvalidError } from "./pagination.js";
+
+// ── Results ──────────────────────────────────────────────────────
+export type {
+  Result,
+  ApiError,
+  ApiErrorResponse,
+  ApiResponse,
+  ValidationError,
+} from "./results.js";
+
+// ── Utility types ────────────────────────────────────────────────
+export type {
+  CreateInput,
+  UpdateInput,
+  DeepReadonly,
+  DateRange,
+  AuditMetadata,
+  Archived,
+  SortDirection,
+  EntityReference,
+} from "./utility.js";
+
+// ── Image source ─────────────────────────────────────────────────
+export type { ImageSource } from "./image-source.js";
+
+// ── Server-safe enforcement ──────────────────────────────────────
 export type { ServerSafe } from "./server-safe.js";
 export { serverSafe } from "./server-safe.js";
-
-// ── Sync ──────────────────────────────────────────────────────
-export type {
-  SyncDocumentType,
-  DocumentKeyType,
-  SyncIndicatorStatus,
-  SyncDocument,
-  SyncState,
-  SyncIndicator,
-} from "./entities/sync-document.js";
-
-// ── Groups ─────────────────────────────────────────────────────────
-export type {
-  Group,
-  ArchivedGroup,
-  GroupMembership,
-  GroupTree,
-  GroupMoveOperation,
-} from "./entities/group.js";
 
 // ── PK Bridge ────────────────────────────────────────────────────
 export type {
@@ -373,66 +223,11 @@ export type {
   PKSyncError,
 } from "./pk-bridge.js";
 
-// ── Import/Export ────────────────────────────────────────────────
-export type {
-  PKProxyTag,
-  PKImportMember,
-  PKImportGroup,
-  PKImportSwitch,
-  PKImportPayload,
-  ImportFailureKind,
-  ImportSourceFormat,
-  ImportEntityType,
-  ImportCollectionType,
-  ImportJobStatus,
-  ImportProgress,
-  ImportError,
-  ImportJob,
-  ImportCheckpointSchemaVersion,
-  ImportAvatarMode,
-  ImportCollectionTotals,
-  ImportCheckpointState,
-  ImportCheckpointStateV2,
-} from "./entities/import-job.js";
-export {
-  IMPORT_SOURCES,
-  IMPORT_JOB_STATUSES,
-  IMPORT_ENTITY_TYPES,
-  IMPORT_COLLECTION_TYPES,
-  IMPORT_AVATAR_MODES,
-  IMPORT_CHECKPOINT_SCHEMA_VERSION,
-} from "./entities/import-job.js";
-export type { ImportEntityRef, ImportEntityTargetIdMap } from "./entities/import-entity-ref.js";
-export type {
-  ExportFormat,
-  ExportRequestStatus,
-  ExportSection,
-  DownloadableReport,
-  ExportManifest,
-  ExportRequest,
-  ReportFormat,
-  MemberReport,
-  SystemOverviewReport,
-} from "./entities/export-request.js";
-export type { AccountPurgeStatus, AccountPurgeRequest } from "./entities/account-purge-request.js";
-export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.js";
-
-// ── Scope domains ────────────────────────────────────────────
+// ── Scope domains ────────────────────────────────────────────────
 export type { ScopeDomain, ScopeTier, RequiredScope } from "./scope-domains.js";
 export { SCOPE_DOMAINS, ALL_API_KEY_SCOPES } from "./scope-domains.js";
 
-// ── API keys ──────────────────────────────────────────────────
-export type {
-  ApiKeyToken,
-  ApiKeyScope,
-  MetadataApiKey,
-  CryptoApiKey,
-  ApiKey,
-  ApiKeyWithSecret,
-} from "./entities/api-key.js";
-export { API_KEY_TOKEN_PREFIX } from "./entities/api-key.js";
-
-// ── Jobs ──────────────────────────────────────────────────────
+// ── Jobs ─────────────────────────────────────────────────────────
 export type {
   BackoffStrategy,
   EmailTemplateName,
@@ -447,48 +242,7 @@ export type {
 } from "./jobs.js";
 export { JOB_TYPE_VALUES, JOB_STATUS_VALUES } from "./jobs.js";
 
-// ── Blob ──────────────────────────────────────────────────────
-export type {
-  EncryptionTier,
-  BlobPurpose,
-  BlobMetadata,
-  ArchivedBlobMetadata,
-  BlobUploadRequest,
-  BlobDownloadRef,
-} from "./entities/blob.js";
-
-// ── Audit log ─────────────────────────────────────────────────
-export type {
-  AuditEventType,
-  AuditActor,
-  AuditLogEntry,
-  SetupStepName,
-} from "./entities/audit-log-entry.js";
-
-// ── Webhooks ──────────────────────────────────────────────────
-export type {
-  WebhookEventType,
-  WebhookConfig,
-  ArchivedWebhookConfig,
-  WebhookEventPayloadMap,
-} from "./entities/webhook-config.js";
-export type { WebhookDeliveryStatus, WebhookDelivery } from "./entities/webhook-delivery.js";
-
-// ── Notifications ─────────────────────────────────────────────
-export type { DeviceTokenPlatform, DeviceToken } from "./entities/device-token.js";
-export type {
-  NotificationEventType,
-  NotificationConfig,
-  ArchivedNotificationConfig,
-  NotificationPayload,
-} from "./entities/notification-config.js";
-export type {
-  FriendNotificationEventType,
-  FriendNotificationPreference,
-  ArchivedFriendNotificationPreference,
-} from "./entities/friend-notification-preference.js";
-
-// ── Realtime ──────────────────────────────────────────────────
+// ── Realtime ─────────────────────────────────────────────────────
 export type {
   FrontingChangedEvent,
   MemberUpdatedEvent,
@@ -503,7 +257,20 @@ export type {
   WebSocketConnectionState,
 } from "./realtime.js";
 
-// ── Search ────────────────────────────────────────────────────
+// ── Subscription events ──────────────────────────────────────────
+export type {
+  MessageChangeEvent,
+  MessageChangeType,
+  BoardMessageChangeEvent,
+  BoardMessageChangeType,
+  PollChangeEvent,
+  PollChangeType,
+  AcknowledgementChangeEvent,
+  AcknowledgementChangeType,
+  EntityChangeEvent,
+} from "./subscription-events.js";
+
+// ── Search ───────────────────────────────────────────────────────
 export type {
   SearchIndex,
   SearchableEntityType,
@@ -512,105 +279,7 @@ export type {
   SearchResult,
 } from "./search.js";
 
-// ── Communication ─────────────────────────────────────────────────
-export type {
-  AcknowledgementRequest,
-  ArchivedAcknowledgementRequest,
-} from "./entities/acknowledgement.js";
-export type { BoardMessage, ArchivedBoardMessage } from "./entities/board-message.js";
-export type { Channel, ArchivedChannel } from "./entities/channel.js";
-export type { ChatMessage, ArchivedChatMessage } from "./entities/message.js";
-export type { Note, ArchivedNote, NoteAuthorEntityType } from "./entities/note.js";
-export { NOTE_AUTHOR_ENTITY_TYPES } from "./entities/note.js";
-export type { PollVote, ArchivedPollVote } from "./entities/poll-vote.js";
-export type { Poll, ArchivedPoll, PollOption, PollKind, PollStatus } from "./entities/poll.js";
-export { POLL_KINDS, POLL_STATUSES } from "./entities/poll.js";
-
-// ── Lifecycle ─────────────────────────────────────────────────────
-export type {
-  SplitEvent,
-  FusionEvent,
-  MergeEvent,
-  UnmergeEvent,
-  DormancyStartEvent,
-  DormancyEndEvent,
-  DiscoveryEvent,
-  ArchivalEvent,
-  StructureEntityFormationEvent,
-  FormChangeEvent,
-  NameChangeEvent,
-  StructureMoveEvent,
-  InnerworldMoveEvent,
-  LifecycleEvent,
-  LifecycleEventType,
-} from "./entities/lifecycle-event.js";
-
-// ── Custom fields ─────────────────────────────────────────────────
-export { FIELD_TYPES } from "./entities/field-definition.js";
-export type {
-  FieldType,
-  FieldBucketVisibility,
-  FieldDefinition,
-  ArchivedFieldDefinition,
-  CreateFieldDefinitionBody,
-  UpdateFieldDefinitionBody,
-} from "./entities/field-definition.js";
-export type {
-  FieldDefinitionScopeType,
-  FieldDefinitionScope,
-} from "./entities/field-definition-scope.js";
-export type {
-  FieldValue,
-  FieldValueUnion,
-  SetFieldValueBody,
-  UpdateFieldValueBody,
-} from "./entities/field-value.js";
-
-// ── Journal ───────────────────────────────────────────────────────
-export type {
-  HeadingLevel,
-  JournalBlockType,
-  JournalBlock,
-  ParagraphBlock,
-  HeadingBlock,
-  ListBlock,
-  QuoteBlock,
-  CodeBlock,
-  ImageBlock,
-  DividerBlock,
-  MemberLinkBlock,
-  EntityLinkBlock,
-  EntityLink,
-  MemberFrontingSnapshotEntry,
-  CustomFrontFrontingSnapshotEntry,
-  FrontingSnapshotEntry,
-  FrontingSnapshot,
-  JournalEntry,
-  ArchivedJournalEntry,
-} from "./entities/journal-entry.js";
-export type { WikiPage, ArchivedWikiPage } from "./entities/wiki-page.js";
-
-// ── Timer ─────────────────────────────────────────────────────────
-export type { TimerConfig, ArchivedTimerConfig } from "./entities/timer-config.js";
-export type {
-  CheckInRecord,
-  ArchivedCheckInRecord,
-  CheckInRecordStatus,
-} from "./entities/check-in-record.js";
-
-// ── Key Rotation ─────────────────────────────────────────────────
-export type {
-  RotationState,
-  BucketKeyRotation,
-  ChunkCompletionResponse,
-} from "./entities/bucket-key-rotation.js";
-export type {
-  RotationItemStatus,
-  BucketRotationItem,
-  ChunkClaimResponse,
-} from "./entities/bucket-rotation-item.js";
-
-// ── Analytics ─────────────────────────────────────────────────────
+// ── Analytics ────────────────────────────────────────────────────
 export { DATE_RANGE_PRESETS, toDuration } from "./analytics.js";
 export type {
   Duration,
@@ -627,27 +296,56 @@ export type {
   CoFrontingAnalytics,
 } from "./analytics.js";
 
-// ── Innerworld ────────────────────────────────────────────────────
+// ── Friend Dashboard ─────────────────────────────────────────────
 export type {
-  VisualProperties,
-  MemberEntity,
-  LandmarkEntity,
-  StructureEntityEntity,
-  InnerWorldEntity,
-  ArchivedInnerWorldEntity,
-  InnerWorldEntityType,
-} from "./entities/innerworld-entity.js";
-export type { InnerWorldRegion, ArchivedInnerWorldRegion } from "./entities/innerworld-region.js";
-export type { InnerWorldCanvas } from "./entities/innerworld-canvas.js";
+  FriendDashboardFrontingSession,
+  FriendDashboardMember,
+  FriendDashboardCustomFront,
+  FriendDashboardStructureEntity,
+  FriendDashboardKeyGrant,
+  FriendDashboardResponse,
+  FriendAccessContext,
+  FriendDashboardEntityType,
+  FriendDashboardSyncEntry,
+  FriendDashboardSyncResponse,
+} from "./friend-dashboard.js";
 
-// ── Littles Safe Mode ─────────────────────────────────────────────
+// ── Friend Export ────────────────────────────────────────────────
+export type {
+  FriendExportEntityType,
+  FriendExportEntity,
+  FriendExportPageResponse,
+  FriendExportManifestEntry,
+  FriendExportManifestResponse,
+} from "./friend-export.js";
+export { FRIEND_EXPORT_ENTITY_TYPES, isFriendExportEntityType } from "./friend-export.js";
+
+// ── Reports ──────────────────────────────────────────────────────
+export type {
+  ReportType,
+  ExportEntityId,
+  MemberByBucketReportConfig,
+  MeetOurSystemReportConfig,
+  ReportConfig,
+  ReportEntitySet,
+  MemberByBucketReportData,
+  MeetOurSystemReportData,
+  ReportData,
+  BucketExportManifestEntry,
+  BucketExportManifestResponse,
+  BucketExportEntity,
+  BucketExportPageResponse,
+} from "./reports.js";
+export { REPORT_TYPES, isReportType } from "./reports.js";
+
+// ── Littles Safe Mode ────────────────────────────────────────────
 export type {
   SafeModeUIFlags,
   SafeModeContentItem,
   LittlesSafeModeConfig,
 } from "./littles-safe-mode.js";
 
-// ── Nomenclature ──────────────────────────────────────────────────
+// ── Nomenclature ─────────────────────────────────────────────────
 export type {
   TermCategory,
   CanonicalTerm,
@@ -656,7 +354,7 @@ export type {
 } from "./nomenclature.js";
 export { DEFAULT_TERM_PRESETS, createDefaultNomenclatureSettings } from "./nomenclature.js";
 
-// ── i18n ──────────────────────────────────────────────────────────
+// ── i18n ─────────────────────────────────────────────────────────
 export type {
   Locale,
   TranslationKey,
@@ -680,33 +378,7 @@ export {
   type I18nNamespaceWithEtag,
 } from "./i18n/index.js";
 
-// ── Settings ──────────────────────────────────────────────────────
-export type {
-  ThemePreference,
-  AppLockConfig,
-  NotificationPreferences,
-  SyncPreferences,
-  FriendRequestPolicy,
-  PrivacyDefaults,
-  SystemSettings,
-} from "./entities/system-settings.js";
-
-// ── Snapshot ─────────────────────────────────────────────────────
-export type {
-  SnapshotTrigger,
-  SnapshotSchedule,
-  SystemSnapshot,
-  SnapshotMember,
-  SnapshotStructureEntityType,
-  SnapshotStructureEntity,
-  SnapshotRelationship,
-  SnapshotGroup,
-  SnapshotInnerworldRegion,
-  SnapshotInnerworldEntity,
-  SnapshotContent,
-} from "./entities/system-snapshot.js";
-
-// ── API constants ─────────────────────────────────────────────────────
+// ── API constants ────────────────────────────────────────────────
 export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants/index.js";
 export {
   MS_PER_SECOND,
@@ -727,21 +399,8 @@ export {
   ROTATION_ITEM_STATUSES,
 } from "./api-constants/index.js";
 
-// ── Logger ─────────────────────────────────────────────────────────
+// ── Logger ───────────────────────────────────────────────────────
 export type { Logger } from "./logger.js";
 
-// ── Runtime utilities ──────────────────────────────────────────────
+// ── Runtime utilities ────────────────────────────────────────────
 export { createId, now, toISO, extractErrorMessage } from "./runtime.js";
-
-// ── Subscription events ────────────────────────────────────────────
-export type {
-  MessageChangeEvent,
-  MessageChangeType,
-  BoardMessageChangeEvent,
-  BoardMessageChangeType,
-  PollChangeEvent,
-  PollChangeType,
-  AcknowledgementChangeEvent,
-  AcknowledgementChangeType,
-  EntityChangeEvent,
-} from "./subscription-events.js";
