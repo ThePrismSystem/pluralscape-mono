@@ -1,7 +1,9 @@
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "@pluralscape/crypto";
-import { customType } from "drizzle-orm/pg-core";
+import { customType, varchar } from "drizzle-orm/pg-core";
 
-import type { EncryptedBlob } from "@pluralscape/types";
+import { ID_MAX_LENGTH } from "../helpers/db.constants.js";
+
+import type { AnyBrandedId, EncryptedBlob } from "@pluralscape/types";
 
 const JSON_PREVIEW_LENGTH = 100;
 
@@ -106,3 +108,25 @@ export const pgJsonb = customType<{ data: unknown; driverData: string }>({
   toDriver: jsonToDriver,
   fromDriver: jsonFromDriver,
 });
+
+/**
+ * Internal factory — returns a Drizzle varchar column builder with
+ * `.$type<B>()` applied. Exists to let `brandedId` express its return
+ * type as `ReturnType<typeof brandedIdImpl<B>>` without writing out the
+ * full Drizzle builder shape (which drifts across drizzle-orm versions).
+ */
+function brandedIdImpl<B extends AnyBrandedId>(name: string) {
+  return varchar(name, { length: ID_MAX_LENGTH }).$type<B>();
+}
+
+/**
+ * PG varchar column for a branded entity ID. Wraps the standard
+ * `varchar(name, { length: ID_MAX_LENGTH })` with a `.$type<B>()` so
+ * `InferSelectModel` / `InferInsertModel` return the branded type.
+ * Chainable with `.primaryKey()`, `.notNull()`, `.references()`, etc.
+ */
+export function brandedId<B extends AnyBrandedId>(
+  name: string,
+): ReturnType<typeof brandedIdImpl<B>> {
+  return brandedIdImpl<B>(name);
+}
