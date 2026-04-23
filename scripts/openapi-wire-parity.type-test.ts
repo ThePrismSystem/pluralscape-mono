@@ -55,6 +55,8 @@ import type {
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
+  InnerWorldCanvas,
+  InnerWorldCanvasEncryptedFields,
   InnerWorldEntity,
   InnerWorldEntityEncryptedFields,
   InnerWorldRegion,
@@ -232,5 +234,12 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextInnerworldEntity"],
     Serialize<DistributivePick<InnerWorldEntity, InnerWorldEntityEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextInnerworldCanvas"],
+    Serialize<Pick<InnerWorldCanvas, InnerWorldCanvasEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
