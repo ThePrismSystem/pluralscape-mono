@@ -471,17 +471,18 @@ export type {
 } from "./webhooks.js";
 
 // ── Notifications ─────────────────────────────────────────────
+export type { DeviceTokenPlatform, DeviceToken } from "./entities/device-token.js";
 export type {
-  DeviceTokenPlatform,
-  DeviceToken,
   NotificationEventType,
   NotificationConfig,
   ArchivedNotificationConfig,
   NotificationPayload,
+} from "./entities/notification-config.js";
+export type {
   FriendNotificationEventType,
   FriendNotificationPreference,
   ArchivedFriendNotificationPreference,
-} from "./notifications.js";
+} from "./entities/friend-notification-preference.js";
 
 // ── Realtime ──────────────────────────────────────────────────
 export type {
