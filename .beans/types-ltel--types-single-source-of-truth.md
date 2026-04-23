@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-23T07:03:00Z
+updated_at: 2026-04-23T12:00:30Z
 parent: ps-cd6x
 ---
 
@@ -69,12 +69,34 @@ Each per-entity fleet PR must include these substeps in addition to renaming the
 3. Add `<X>Wire = Serialize<<X>>`.
 4. Delete old `Server<X>` / `Client<X>` declarations from `encryption-primitives.ts`.
 
-**Drizzle schema parity** (`packages/db/src/__tests__/type-parity/<x>.type.test.ts`): 5. Create a new parity test file asserting the Drizzle row shape structurally matches `<X>ServerMetadata`:
+**Drizzle schema conversion + parity** (`packages/db/src/schema/pg/<table>.ts` + `sqlite/<table>.ts` + `packages/db/src/__tests__/type-parity/<x>.type.test.ts`):
+
+5. **Convert the entity's Drizzle table** (both PG + SQLite dialects) to use `brandedId<B>()` for ID columns. Wrap this entity's fixture + service ID/timestamp literals with `brandId<XId>()` / `toUnixMillis()` from `@pluralscape/types`.
+
+```ts
+// packages/db/src/schema/pg/<table>.ts
+import type { <X>Id, SystemId } from "@pluralscape/types";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
+
+export const <tableName> = pgTable("<table>", {
+  id: brandedId<<X>Id>("id").primaryKey(),
+  systemId: brandedId<SystemId>("system_id").notNull().references(() => systems.id, { onDelete: "cascade" }),
+  // non-ID columns unchanged
+  ...
+});
+```
+
+Note: `db-drq1` landed only the `brandedId<B>()` helper + `AnyBrandedId` union — not the table conversions themselves. Each fleet PR converts its own table.
+
+**Ordering**: convert `systems` (first fleet PR) and `accounts` (second) before leaf entities. They're FK ancestors of nearly every other table's fixtures, so leaf PRs can then rely on branded helpers without scope creep.
+
+**Timestamp lift**: `pgTimestamp` / `sqliteTimestamp` customType generics are still `{ data: number }`. Your fleet PR can either (a) wrap the timestamp literals in its own fixtures with `toUnixMillis()` (matches `brandedId` pattern, sets up future lift), or (b) leave them as plain numbers. Fleet eventually flips the generics to `{ data: UnixMillis }` — last fleet PR to complete, or a dedicated cleanup PR.
+
+6. Create a new parity test file asserting the Drizzle row shape structurally equals `<X>ServerMetadata`:
 
 ```ts
 import { describe, expectTypeOf, it } from "vitest";
 import { <tableName> } from "../../schema/pg/<table-file>.js";
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, <X>ServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -84,16 +106,14 @@ describe("<X> Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof <X>ServerMetadata>();
   });
 
-  it("row equals <X>ServerMetadata modulo brands and readonly", () => {
+  it("row equals <X>ServerMetadata", () => {
     type Row = InferSelectModel<typeof <tableName>>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<<X>ServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, <X>ServerMetadata>>().toEqualTypeOf<true>();
   });
 });
 ```
 
-Uses the existing `StripBrands<T>` wrapper because shared column helpers (`timestamps()`, `versioned()`, `archivable()`) return unbranded columns. `db-drq1` tracks lifting brands into the helpers so the wrapper can be removed and brand-level drift becomes caught too.
+After `db-drq1`, Drizzle column helpers return branded types directly — no `StripBrands<>` wrapper needed. Brand drift between Drizzle and domain is caught at compile time. The `StripBrands<T>` helper in `__helpers__.js` can be deleted once all fleet entities have converted and all parity tests are strict.
 
 **Parity test** (`scripts/openapi-wire-parity.type-test.ts`): 6. Add split-form encrypted-wire parity for the entity:
 

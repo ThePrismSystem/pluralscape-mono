@@ -1,7 +1,7 @@
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "@pluralscape/crypto";
-import { customType } from "drizzle-orm/sqlite-core";
+import { customType, text } from "drizzle-orm/sqlite-core";
 
-import type { EncryptedBlob } from "@pluralscape/types";
+import type { AnyBrandedId, EncryptedBlob } from "@pluralscape/types";
 
 const JSON_PREVIEW_LENGTH = 100;
 
@@ -95,3 +95,24 @@ export const sqliteJson = customType<{ data: unknown; driverData: string }>({
   toDriver: jsonToDriver,
   fromDriver: jsonFromDriver,
 });
+
+/**
+ * Internal factory — returns a Drizzle text column builder with
+ * `.$type<B>()` applied. Exists to let `brandedId` express its return
+ * type as `ReturnType<typeof brandedIdImpl<B>>` without writing out the
+ * full Drizzle builder shape (which drifts across drizzle-orm versions).
+ */
+function brandedIdImpl<B extends AnyBrandedId>(name: string) {
+  return text(name).$type<B>();
+}
+
+/**
+ * SQLite text column for a branded entity ID. Wraps `text(name)` with
+ * `.$type<B>()` so `InferSelectModel` / `InferInsertModel` return the
+ * branded type. Chainable with `.primaryKey()`, `.notNull()`, `.references()`, etc.
+ */
+export function brandedId<B extends AnyBrandedId>(
+  name: string,
+): ReturnType<typeof brandedIdImpl<B>> {
+  return brandedIdImpl<B>(name);
+}

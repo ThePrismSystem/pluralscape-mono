@@ -93,6 +93,7 @@ export type {
   EntityTypeIdMap,
   AssertAllPrefixesMapped,
   AssertAllEntityTypesMapped,
+  AnyBrandedId,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
 
