@@ -1,4 +1,4 @@
-import type { Tag, SaturationLevel } from "./identity.js";
+import type { Tag, SaturationLevel } from "./entities/member.js";
 import type {
   GroupId,
   InnerWorldEntityId,

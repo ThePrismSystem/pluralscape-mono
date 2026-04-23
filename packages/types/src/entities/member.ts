@@ -1,16 +1,6 @@
-import type { HexColor, MemberId, MemberPhotoId, SystemId, SystemSettingsId } from "./ids.js";
-import type { ImageSource } from "./image-source.js";
-import type { Archived, AuditMetadata } from "./utility.js";
-
-/** A plural system — the top-level account entity. */
-export interface System extends AuditMetadata {
-  readonly id: SystemId;
-  readonly name: string;
-  readonly displayName: string | null;
-  readonly description: string | null;
-  readonly avatarSource: ImageSource | null;
-  readonly settingsId: SystemSettingsId;
-}
+import type { HexColor, MemberId, SystemId } from "../ids.js";
+import type { ImageSource } from "../image-source.js";
+import type { Archived, AuditMetadata } from "../utility.js";
 
 /** Well-known saturation levels describing how elaborated a member is within the system. */
 export type KnownSaturationLevel =
@@ -70,19 +60,6 @@ export interface Member extends AuditMetadata {
   readonly archived: false;
 }
 
-/** A photo in a member's multi-photo gallery. */
-export interface MemberPhoto {
-  readonly id: MemberPhotoId;
-  readonly memberId: MemberId;
-  readonly imageSource: ImageSource;
-  readonly sortOrder: number;
-  readonly caption: string | null;
-  readonly archived: false;
-}
-
-/** An archived member photo — preserves all data with archive metadata. */
-export type ArchivedMemberPhoto = Archived<MemberPhoto>;
-
 /** An archived member — preserves all data with archive metadata. */
 export type ArchivedMember = Archived<Member>;
 
@@ -93,13 +70,6 @@ export interface MemberListItem {
   readonly avatarSource: ImageSource | null;
   readonly colors: readonly HexColor[];
   readonly archived: boolean;
-}
-
-/** @future Multi-system switcher list item — not yet implemented. */
-export interface SystemListItem {
-  readonly id: SystemId;
-  readonly name: string;
-  readonly avatarSource: ImageSource | null;
 }
 
 // ── Request body types ──────────────────────────────────────────
@@ -113,12 +83,6 @@ export interface CreateMemberBody {
 export interface UpdateMemberBody {
   readonly encryptedData: string;
   readonly version: number;
-}
-
-/** Request body for creating a member photo. */
-export interface CreateMemberPhotoBody {
-  readonly encryptedData: string;
-  readonly sortOrder?: number;
 }
 
 /** Request body for duplicating a member. */

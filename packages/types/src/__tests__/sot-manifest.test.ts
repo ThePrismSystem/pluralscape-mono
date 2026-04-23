@@ -8,7 +8,7 @@ import type {
   MemberServerMetadata,
   MemberWire,
 } from "../encryption.js";
-import type { Member } from "../identity.js";
+import type { Member } from "../entities/member.js";
 import type { Equal, Extends } from "../type-assertions.js";
 
 describe("SotEntityManifest", () => {
