@@ -51,6 +51,8 @@ import type {
   FieldDefinitionEncryptedFields,
   FieldValue,
   FieldValueEncryptedFields,
+  FrontingSession,
+  FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
   Member,
@@ -186,5 +188,12 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextStructureEntity"],
     Serialize<Pick<SystemStructureEntity, SystemStructureEntityEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextFrontingSession"],
+    Serialize<Pick<FrontingSession, FrontingSessionEncryptedFields>>
   >
 >().toEqualTypeOf<true>();

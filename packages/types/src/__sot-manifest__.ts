@@ -9,6 +9,10 @@ import type {
   FieldDefinitionEncryptedFields,
 } from "./entities/field-definition.js";
 import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
+import type {
+  FrontingSession,
+  FrontingSessionEncryptedFields,
+} from "./entities/fronting-session.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
@@ -95,5 +99,9 @@ export type SotEntityManifest = {
   StructureEntity: {
     domain: SystemStructureEntity;
     encryptedFields: SystemStructureEntityEncryptedFields;
+  };
+  FrontingSession: {
+    domain: FrontingSession;
+    encryptedFields: FrontingSessionEncryptedFields;
   };
 };

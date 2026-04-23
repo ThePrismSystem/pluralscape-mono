@@ -16071,9 +16071,26 @@ components:
         fields. Encryption tier: **T1**.
       type: object
       properties:
-        notes:
+        comment:
           type: string
           nullable: true
+          description: Free-text status comment on the session (max 50 characters, runtime enforced)
+        positionality:
+          type: string
+          nullable: true
+          description: Free-text description of fronting positionality (e.g. close vs far, height)
+        outtrigger:
+          type: string
+          nullable: true
+          description: Free-text reason describing what caused the fronting change
+        outtriggerSentiment:
+          type: string
+          enum:
+            - negative
+            - neutral
+            - positive
+          nullable: true
+          description: Sentiment classification for the outtrigger reason
     PlaintextLifecycleEvent:
       description: |
         **Encrypted into**: `encryptedData` on lifecycle event create endpoint.

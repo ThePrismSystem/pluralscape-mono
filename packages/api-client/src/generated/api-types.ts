@@ -7985,7 +7985,17 @@ export interface components {
      *     fields. Encryption tier: **T1**.
      */
     PlaintextFrontingSession: {
-      notes?: string | null;
+      /** @description Free-text status comment on the session (max 50 characters, runtime enforced) */
+      comment?: string | null;
+      /** @description Free-text description of fronting positionality (e.g. close vs far, height) */
+      positionality?: string | null;
+      /** @description Free-text reason describing what caused the fronting change */
+      outtrigger?: string | null;
+      /**
+       * @description Sentiment classification for the outtrigger reason
+       * @enum {string|null}
+       */
+      outtriggerSentiment?: "negative" | "neutral" | "positive" | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on lifecycle event create endpoint.
