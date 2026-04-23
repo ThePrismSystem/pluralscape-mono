@@ -11,7 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgBinary, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -26,22 +26,29 @@ import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/en
 import { apiKeys } from "./api-keys.js";
 import { systems } from "./systems.js";
 
-import type { WebhookDeliveryStatus, WebhookEventType } from "@pluralscape/types";
+import type {
+  ApiKeyId,
+  ServerSecret,
+  SystemId,
+  WebhookDeliveryStatus,
+  WebhookEventType,
+  WebhookId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const webhookConfigs = pgTable(
   "webhook_configs",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<WebhookId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     url: varchar("url", { length: URL_MAX_LENGTH }).notNull(),
     /** T3 (server-readable): raw HMAC signing key the server uses to sign outbound webhook payloads. Intentionally not E2E encrypted — server must read it to produce signatures at delivery time. */
-    secret: pgBinary("secret").notNull(),
+    secret: pgBinary("secret").notNull().$type<ServerSecret>(),
     eventTypes: jsonb("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: boolean("enabled").notNull().default(true),
-    cryptoKeyId: varchar("crypto_key_id", { length: ID_MAX_LENGTH }).references(() => apiKeys.id, {
+    cryptoKeyId: brandedId<ApiKeyId>("crypto_key_id").references(() => apiKeys.id, {
       onDelete: "restrict",
     }),
     ...timestamps(),

@@ -61,7 +61,7 @@ export function releaseHostSlot(hostname: string): void {
  * Compute HMAC-SHA256 signature for a webhook payload using the config's secret.
  */
 export function computeWebhookSignature(
-  secret: Buffer,
+  secret: Uint8Array,
   timestamp: number,
   payload: string,
 ): string {

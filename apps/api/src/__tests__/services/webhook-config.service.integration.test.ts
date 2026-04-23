@@ -41,7 +41,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { webhookConfigs, webhookDeliveries } = schema;
@@ -159,10 +159,10 @@ describe("webhook-config.service (PGlite integration)", () => {
       const QUOTA_LIMIT = 25;
       // Bulk-insert configs to fill the quota
       const values = Array.from({ length: QUOTA_LIMIT }, (_, i) => ({
-        id: `wh_quota-${String(i).padStart(3, "0")}-${crypto.randomUUID()}`,
+        id: brandId<WebhookId>(`wh_quota-${String(i).padStart(3, "0")}-${crypto.randomUUID()}`),
         systemId,
         url: `https://example.com/hook-${String(i)}`,
-        secret: Buffer.from("test-secret-key-pad-to-32-bytes!"),
+        secret: new Uint8Array(Buffer.from("test-secret-key-pad-to-32-bytes!")) as ServerSecret,
         eventTypes: ["fronting.started" as const],
         enabled: true,
         createdAt: Date.now(),
@@ -360,10 +360,12 @@ describe("webhook-config.service (PGlite integration)", () => {
 
       // Fill the quota with new active configs
       const values = Array.from({ length: QUOTA_LIMIT }, (_, i) => ({
-        id: `wh_rq-${String(i).padStart(3, "0")}-${crypto.randomUUID().slice(0, 8)}`,
+        id: brandId<WebhookId>(
+          `wh_rq-${String(i).padStart(3, "0")}-${crypto.randomUUID().slice(0, 8)}`,
+        ),
         systemId,
         url: `https://example.com/restore-hook-${String(i)}`,
-        secret: Buffer.from("test-secret-key-pad-to-32-bytes!"),
+        secret: new Uint8Array(Buffer.from("test-secret-key-pad-to-32-bytes!")) as ServerSecret,
         eventTypes: ["fronting.started" as const],
         enabled: true,
         createdAt: Date.now(),

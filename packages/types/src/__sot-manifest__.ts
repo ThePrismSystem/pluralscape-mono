@@ -75,6 +75,11 @@ import type {
   SystemWire,
 } from "./entities/system.js";
 import type {
+  WebhookConfig,
+  WebhookConfigServerMetadata,
+  WebhookConfigWire,
+} from "./entities/webhook-config.js";
+import type {
   NomenclatureEncryptedFields,
   NomenclatureServerMetadata,
   NomenclatureSettings,
@@ -214,5 +219,13 @@ export type SotEntityManifest = {
     server: NomenclatureServerMetadata;
     wire: NomenclatureWire;
     encryptedFields: NomenclatureEncryptedFields;
+  };
+  WebhookConfig: {
+    domain: WebhookConfig;
+    server: WebhookConfigServerMetadata;
+    wire: WebhookConfigWire;
+    // Plaintext entity — the T3 HMAC `secret` is readable by the server
+    // but is not E2E encrypted user data. No encryptedFields union.
+    encryptedFields: never;
   };
 };

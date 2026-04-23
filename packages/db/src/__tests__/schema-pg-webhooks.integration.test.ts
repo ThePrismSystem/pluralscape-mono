@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -17,9 +18,14 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { ApiKeyId, ServerSecret, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
+
+function secret(bytes: readonly number[]): ServerSecret {
+  return new Uint8Array(bytes) as ServerSecret;
+}
 
 describe("PG webhooks schema", () => {
   let client: PGlite;
@@ -47,15 +53,15 @@ describe("PG webhooks schema", () => {
     it("round-trips all fields", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
-      const secret = new Uint8Array([1, 2, 3]);
+      const s = secret([1, 2, 3]);
 
       await db.insert(webhookConfigs).values({
         id,
         systemId,
         url: "https://example.com/webhook",
-        secret,
+        secret: s,
         eventTypes: ["member.created", "fronting.started"],
         enabled: true,
         createdAt: now,
@@ -65,7 +71,7 @@ describe("PG webhooks schema", () => {
       const rows = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.url).toBe("https://example.com/webhook");
-      expect(rows[0]?.secret).toEqual(secret);
+      expect(rows[0]?.secret).toEqual(s);
       expect(rows[0]?.eventTypes).toEqual(["member.created", "fronting.started"]);
       expect(rows[0]?.enabled).toBe(true);
       expect(rows[0]?.cryptoKeyId).toBeNull();
@@ -74,14 +80,14 @@ describe("PG webhooks schema", () => {
     it("defaults enabled to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([4, 5]),
+        secret: secret([4, 5]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -94,14 +100,14 @@ describe("PG webhooks schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id,
         systemId,
         url: "https://example.com/del",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -115,7 +121,7 @@ describe("PG webhooks schema", () => {
     it("restricts api_key deletion when referenced by webhook config", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const keyId = crypto.randomUUID();
+      const keyId = brandId<ApiKeyId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(apiKeys).values({
@@ -130,10 +136,10 @@ describe("PG webhooks schema", () => {
       });
 
       await db.insert(webhookConfigs).values({
-        id: crypto.randomUUID(),
+        id: brandId<WebhookId>(crypto.randomUUID()),
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         cryptoKeyId: keyId,
         createdAt: now,
@@ -146,14 +152,14 @@ describe("PG webhooks schema", () => {
     it("stores enabled as false correctly", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         enabled: false,
         createdAt: now,
@@ -167,14 +173,14 @@ describe("PG webhooks schema", () => {
     it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -188,14 +194,14 @@ describe("PG webhooks schema", () => {
     it("round-trips archived: true with archivedAt timestamp", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         archived: true,
         archivedAt: now,
@@ -211,14 +217,14 @@ describe("PG webhooks schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -265,7 +271,7 @@ describe("PG webhooks schema", () => {
     it("round-trips with defaults", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -273,7 +279,7 @@ describe("PG webhooks schema", () => {
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: ["member.created"],
         createdAt: now,
         updatedAt: now,
@@ -298,14 +304,14 @@ describe("PG webhooks schema", () => {
     it("rejects invalid event type", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -326,14 +332,14 @@ describe("PG webhooks schema", () => {
     it("rejects negative attempt count", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -355,14 +361,14 @@ describe("PG webhooks schema", () => {
     it("rejects invalid HTTP status", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -384,7 +390,7 @@ describe("PG webhooks schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -392,7 +398,7 @@ describe("PG webhooks schema", () => {
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -415,14 +421,14 @@ describe("PG webhooks schema", () => {
     it("rejects invalid status", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -444,7 +450,7 @@ describe("PG webhooks schema", () => {
     it("supports TTL cleanup query on terminal states", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
       const thirtyOneDaysAgo = now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY;
 
@@ -452,7 +458,7 @@ describe("PG webhooks schema", () => {
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -509,14 +515,14 @@ describe("PG webhooks schema", () => {
     it("restricts webhook config deletion when referenced by delivery", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,
@@ -537,7 +543,7 @@ describe("PG webhooks schema", () => {
     it("queries retryable deliveries by system_id", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
       const retryAt = now + 60_000;
 
@@ -545,7 +551,7 @@ describe("PG webhooks schema", () => {
         id: whId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1]),
+        secret: secret([1]),
         eventTypes: [],
         createdAt: now,
         updatedAt: now,

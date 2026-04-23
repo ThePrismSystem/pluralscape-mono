@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -17,10 +18,14 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { SystemId } from "@pluralscape/types";
+import type { ApiKeyId, ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
+
+function secret(bytes: readonly number[]): ServerSecret {
+  return new Uint8Array(bytes) as ServerSecret;
+}
 
 describe("SQLite webhooks schema", () => {
   let client: InstanceType<typeof Database>;
@@ -49,16 +54,16 @@ describe("SQLite webhooks schema", () => {
     it("round-trips all fields", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
-      const secret = new Uint8Array([1, 2, 3]);
+      const s = secret([1, 2, 3]);
 
       db.insert(webhookConfigs)
         .values({
           id,
           systemId,
           url: "https://example.com/webhook",
-          secret,
+          secret: s,
           eventTypes: ["member.created", "fronting.started"],
           enabled: true,
           createdAt: now,
@@ -69,7 +74,7 @@ describe("SQLite webhooks schema", () => {
       const rows = db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.url).toBe("https://example.com/webhook");
-      expect(rows[0]?.secret).toEqual(secret);
+      expect(rows[0]?.secret).toEqual(s);
       expect(rows[0]?.eventTypes).toEqual(["member.created", "fronting.started"]);
       expect(rows[0]?.enabled).toBe(true);
       expect(rows[0]?.cryptoKeyId).toBeNull();
@@ -78,7 +83,7 @@ describe("SQLite webhooks schema", () => {
     it("defaults enabled to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookConfigs)
@@ -86,7 +91,7 @@ describe("SQLite webhooks schema", () => {
           id,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([4, 5]),
+          secret: secret([4, 5]),
           eventTypes: [],
           createdAt: now,
           updatedAt: now,
@@ -100,7 +105,7 @@ describe("SQLite webhooks schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookConfigs)
@@ -108,7 +113,7 @@ describe("SQLite webhooks schema", () => {
           id,
           systemId,
           url: "https://example.com/del",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: [],
           createdAt: now,
           updatedAt: now,
@@ -123,7 +128,7 @@ describe("SQLite webhooks schema", () => {
     it("restricts api_key deletion when referenced by webhook config", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const keyId = crypto.randomUUID();
+      const keyId = brandId<ApiKeyId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(apiKeys)
@@ -141,10 +146,10 @@ describe("SQLite webhooks schema", () => {
 
       db.insert(webhookConfigs)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookId>(crypto.randomUUID()),
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: [],
           cryptoKeyId: keyId,
           createdAt: now,
@@ -160,7 +165,7 @@ describe("SQLite webhooks schema", () => {
     it("stores enabled as false correctly", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookConfigs)
@@ -168,7 +173,7 @@ describe("SQLite webhooks schema", () => {
           id,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: [],
           enabled: false,
           createdAt: now,
@@ -183,7 +188,7 @@ describe("SQLite webhooks schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookConfigs)
@@ -191,7 +196,7 @@ describe("SQLite webhooks schema", () => {
           id,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: [],
           createdAt: now,
           updatedAt: now,
@@ -206,7 +211,7 @@ describe("SQLite webhooks schema", () => {
     it("round-trips archived: true with archivedAt timestamp", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookConfigs)
@@ -214,7 +219,7 @@ describe("SQLite webhooks schema", () => {
           id,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: [],
           archived: true,
           archivedAt: now,
@@ -259,7 +264,7 @@ describe("SQLite webhooks schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookConfigs)
@@ -267,7 +272,7 @@ describe("SQLite webhooks schema", () => {
           id,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: [],
           createdAt: now,
           updatedAt: now,
@@ -287,12 +292,12 @@ describe("SQLite webhooks schema", () => {
 
   describe("webhook_deliveries", () => {
     let deliverySystemId: SystemId;
-    let deliveryWhId: string;
+    let deliveryWhId: WebhookId;
 
     beforeEach(() => {
       const accountId = insertAccount();
       deliverySystemId = insertSystem(accountId);
-      deliveryWhId = crypto.randomUUID();
+      deliveryWhId = brandId<WebhookId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookConfigs)
@@ -300,7 +305,7 @@ describe("SQLite webhooks schema", () => {
           id: deliveryWhId,
           systemId: deliverySystemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: ["member.created"],
           createdAt: now,
           updatedAt: now,
@@ -421,14 +426,14 @@ describe("SQLite webhooks schema", () => {
     it("supports TTL cleanup query on terminal states", () => {
       const now = Date.now();
       const thirtyOneDaysAgo = now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY;
-      const whId = crypto.randomUUID();
+      const whId = brandId<WebhookId>(crypto.randomUUID());
 
       db.insert(webhookConfigs)
         .values({
           id: whId,
           systemId: deliverySystemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
+          secret: secret([1]),
           eventTypes: [],
           createdAt: now,
           updatedAt: now,

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -40,6 +41,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 describe("PG views / query helpers", () => {
@@ -50,7 +52,7 @@ describe("PG views / query helpers", () => {
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
   let accountId: string;
-  let systemId: string;
+  let systemId: SystemId;
   let memberId: string;
 
   beforeAll(async () => {
@@ -295,14 +297,14 @@ describe("PG views / query helpers", () => {
   describe("getPendingWebhookRetries", () => {
     it("respects max_attempts parameter", async () => {
       const now = Date.now();
-      const webhookId = crypto.randomUUID();
+      const webhookId = brandId<WebhookId>(crypto.randomUUID());
       const maxAttempts = 3;
 
       await db.insert(webhookConfigs).values({
         id: webhookId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1, 2, 3]),
+        secret: new Uint8Array([1, 2, 3]) as ServerSecret,
         eventTypes: ["member.created"],
         createdAt: now,
         updatedAt: now,

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -39,6 +40,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 describe("SQLite views / query helpers", () => {
@@ -47,6 +49,8 @@ describe("SQLite views / query helpers", () => {
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const brandedWebhookId = (): WebhookId => brandId<WebhookId>(crypto.randomUUID());
+  const webhookSecret = (): ServerSecret => new Uint8Array([1, 2, 3]) as ServerSecret;
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -99,7 +103,7 @@ describe("SQLite views / query helpers", () => {
   });
 
   let accountId: string;
-  let systemId: string;
+  let systemId: SystemId;
   let memberId: string;
 
   beforeEach(() => {
@@ -284,14 +288,14 @@ describe("SQLite views / query helpers", () => {
 
     it("returns failed deliveries under max attempts and respects limit", () => {
       const now = Date.now();
-      const webhookId = crypto.randomUUID();
+      const webhookId = brandedWebhookId();
       const maxAttempts = 3;
       db.insert(webhookConfigs)
         .values({
           id: webhookId,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1, 2, 3]),
+          secret: webhookSecret(),
           eventTypes: ["member.created"],
           createdAt: now,
           updatedAt: now,
