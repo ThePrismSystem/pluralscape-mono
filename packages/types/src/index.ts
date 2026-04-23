@@ -541,21 +541,25 @@ export type {
 } from "./lifecycle.js";
 
 // ── Custom fields ─────────────────────────────────────────────────
-export { FIELD_TYPES } from "./custom-fields.js";
+export { FIELD_TYPES } from "./entities/field-definition.js";
 export type {
   FieldType,
   FieldBucketVisibility,
-  FieldDefinitionScopeType,
-  FieldDefinitionScope,
   FieldDefinition,
   ArchivedFieldDefinition,
-  FieldValue,
-  FieldValueUnion,
   CreateFieldDefinitionBody,
   UpdateFieldDefinitionBody,
+} from "./entities/field-definition.js";
+export type {
+  FieldDefinitionScopeType,
+  FieldDefinitionScope,
+} from "./entities/field-definition-scope.js";
+export type {
+  FieldValue,
+  FieldValueUnion,
   SetFieldValueBody,
   UpdateFieldValueBody,
-} from "./custom-fields.js";
+} from "./entities/field-value.js";
 
 // ── Journal ───────────────────────────────────────────────────────
 export type {
