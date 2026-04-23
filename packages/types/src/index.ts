@@ -601,12 +601,14 @@ export type {
 // ── Key Rotation ─────────────────────────────────────────────────
 export type {
   RotationState,
-  RotationItemStatus,
   BucketKeyRotation,
+  ChunkCompletionResponse,
+} from "./entities/bucket-key-rotation.js";
+export type {
+  RotationItemStatus,
   BucketRotationItem,
   ChunkClaimResponse,
-  ChunkCompletionResponse,
-} from "./key-rotation.js";
+} from "./entities/bucket-rotation-item.js";
 
 // ── Analytics ─────────────────────────────────────────────────────
 export { DATE_RANGE_PRESETS, toDuration } from "./analytics.js";
