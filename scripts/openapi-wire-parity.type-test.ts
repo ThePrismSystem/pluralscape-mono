@@ -55,6 +55,8 @@ import type {
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
+  InnerWorldEntity,
+  InnerWorldEntityEncryptedFields,
   InnerWorldRegion,
   InnerWorldRegionEncryptedFields,
   LifecycleEvent,
@@ -213,5 +215,22 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextInnerworldRegion"],
     Serialize<Pick<InnerWorldRegion, InnerWorldRegionEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+// `InnerWorldEntity` is a discriminated union whose variants carry
+// different encrypted keys — a plain `Pick<Union, K>` would only accept
+// keys present on *every* variant. `DistributivePick` distributes the
+// pick over each member, intersecting the requested key-set with that
+// member's own keys, so each variant contributes only the fields it
+// actually owns.
+type DistributivePick<T, K extends PropertyKey> = T extends unknown
+  ? Pick<T, Extract<keyof T, K>>
+  : never;
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextInnerworldEntity"],
+    Serialize<DistributivePick<InnerWorldEntity, InnerWorldEntityEncryptedFields>>
   >
 >().toEqualTypeOf<true>();

@@ -16147,40 +16147,18 @@ components:
         **Encrypted into**: `encryptedData` on innerworld entity create/update endpoints.
 
         An entity placed on the innerworld canvas. Discriminated on `entityType`.
-        Encryption tier: **T1**.
-      type: object
-      required:
-        - entityType
-        - positionX
-        - positionY
-      properties:
-        entityType:
-          type: string
-          enum:
-            - member
-            - landmark
-            - structure-entity
-        positionX:
-          type: number
-          description: X coordinate on the canvas
-        positionY:
-          type: number
-          description: Y coordinate on the canvas
-        visual:
-          $ref: "#/components/schemas/PlaintextVisualProperties"
-        name:
-          type: string
-          description: Display name (required for landmark entities)
-        description:
-          type: string
-          nullable: true
-          description: Description (landmark entities only)
-        linkedMemberId:
-          type: string
-          description: Member ID (member entities only)
-        linkedStructureEntityId:
-          type: string
-          description: Structure entity ID (structure-entity entities only)
+        `regionId` is a plaintext sibling (server needs it for queries) and is
+        therefore not present here. Encryption tier: **T1**.
+      oneOf:
+        - $ref: "#/components/schemas/PlaintextInnerworldMemberEntity"
+        - $ref: "#/components/schemas/PlaintextInnerworldLandmarkEntity"
+        - $ref: "#/components/schemas/PlaintextInnerworldStructureEntity"
+      discriminator:
+        propertyName: entityType
+        mapping:
+          member: "#/components/schemas/PlaintextInnerworldMemberEntity"
+          landmark: "#/components/schemas/PlaintextInnerworldLandmarkEntity"
+          structure-entity: "#/components/schemas/PlaintextInnerworldStructureEntity"
     PlaintextInnerworldCanvas:
       description: |
         **Encrypted into**: `encryptedData` on `PUT /systems/:systemId/innerworld/canvas`.
@@ -17866,6 +17844,79 @@ components:
           type: object
           additionalProperties:
             type: string
+    PlaintextInnerworldMemberEntity:
+      description: Member-linked innerworld entity variant.
+      type: object
+      required:
+        - entityType
+        - positionX
+        - positionY
+        - visual
+        - linkedMemberId
+      properties:
+        entityType:
+          type: string
+          enum:
+            - member
+        positionX:
+          type: number
+        positionY:
+          type: number
+        visual:
+          $ref: "#/components/schemas/PlaintextVisualProperties"
+        linkedMemberId:
+          type: string
+          description: Member ID (mem_ prefix)
+    PlaintextInnerworldLandmarkEntity:
+      description: Landmark innerworld entity variant.
+      type: object
+      required:
+        - entityType
+        - positionX
+        - positionY
+        - visual
+        - name
+        - description
+      properties:
+        entityType:
+          type: string
+          enum:
+            - landmark
+        positionX:
+          type: number
+        positionY:
+          type: number
+        visual:
+          $ref: "#/components/schemas/PlaintextVisualProperties"
+        name:
+          type: string
+          description: Display name for the landmark
+        description:
+          type: string
+          nullable: true
+    PlaintextInnerworldStructureEntity:
+      description: Structure-entity-linked innerworld entity variant.
+      type: object
+      required:
+        - entityType
+        - positionX
+        - positionY
+        - visual
+        - linkedStructureEntityId
+      properties:
+        entityType:
+          type: string
+          enum:
+            - structure-entity
+        positionX:
+          type: number
+        positionY:
+          type: number
+        visual:
+          $ref: "#/components/schemas/PlaintextVisualProperties"
+        linkedStructureEntityId:
+          type: string
+          description: Structure entity ID (ste_ prefix)
   responses:
     NoContent:
       description: Success with no response body

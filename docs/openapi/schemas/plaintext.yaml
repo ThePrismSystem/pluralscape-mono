@@ -512,34 +512,75 @@ PlaintextInnerworldEntity:
     **Encrypted into**: `encryptedData` on innerworld entity create/update endpoints.
 
     An entity placed on the innerworld canvas. Discriminated on `entityType`.
-    Encryption tier: **T1**.
+    `regionId` is a plaintext sibling (server needs it for queries) and is
+    therefore not present here. Encryption tier: **T1**.
+  oneOf:
+    - $ref: "#/PlaintextInnerworldMemberEntity"
+    - $ref: "#/PlaintextInnerworldLandmarkEntity"
+    - $ref: "#/PlaintextInnerworldStructureEntity"
+  discriminator:
+    propertyName: entityType
+    mapping:
+      member: "#/PlaintextInnerworldMemberEntity"
+      landmark: "#/PlaintextInnerworldLandmarkEntity"
+      structure-entity: "#/PlaintextInnerworldStructureEntity"
+
+PlaintextInnerworldMemberEntity:
+  description: Member-linked innerworld entity variant.
   type: object
-  required: [entityType, positionX, positionY]
+  required: [entityType, positionX, positionY, visual, linkedMemberId]
   properties:
     entityType:
       type: string
-      enum: [member, landmark, structure-entity]
+      enum: [member]
     positionX:
       type: number
-      description: X coordinate on the canvas
     positionY:
       type: number
-      description: Y coordinate on the canvas
+    visual:
+      $ref: "#/PlaintextVisualProperties"
+    linkedMemberId:
+      type: string
+      description: Member ID (mem_ prefix)
+
+PlaintextInnerworldLandmarkEntity:
+  description: Landmark innerworld entity variant.
+  type: object
+  required: [entityType, positionX, positionY, visual, name, description]
+  properties:
+    entityType:
+      type: string
+      enum: [landmark]
+    positionX:
+      type: number
+    positionY:
+      type: number
     visual:
       $ref: "#/PlaintextVisualProperties"
     name:
       type: string
-      description: Display name (required for landmark entities)
+      description: Display name for the landmark
     description:
       type: string
       nullable: true
-      description: Description (landmark entities only)
-    linkedMemberId:
+
+PlaintextInnerworldStructureEntity:
+  description: Structure-entity-linked innerworld entity variant.
+  type: object
+  required: [entityType, positionX, positionY, visual, linkedStructureEntityId]
+  properties:
+    entityType:
       type: string
-      description: Member ID (member entities only)
+      enum: [structure-entity]
+    positionX:
+      type: number
+    positionY:
+      type: number
+    visual:
+      $ref: "#/PlaintextVisualProperties"
     linkedStructureEntityId:
       type: string
-      description: Structure entity ID (structure-entity entities only)
+      description: Structure entity ID (ste_ prefix)
 
 PlaintextInnerworldCanvas:
   description: |

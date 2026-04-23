@@ -8030,25 +8030,13 @@ export interface components {
      * @description **Encrypted into**: `encryptedData` on innerworld entity create/update endpoints.
      *
      *     An entity placed on the innerworld canvas. Discriminated on `entityType`.
-     *     Encryption tier: **T1**.
+     *     `regionId` is a plaintext sibling (server needs it for queries) and is
+     *     therefore not present here. Encryption tier: **T1**.
      */
-    PlaintextInnerworldEntity: {
-      /** @enum {string} */
-      entityType: "member" | "landmark" | "structure-entity";
-      /** @description X coordinate on the canvas */
-      positionX: number;
-      /** @description Y coordinate on the canvas */
-      positionY: number;
-      visual?: components["schemas"]["PlaintextVisualProperties"];
-      /** @description Display name (required for landmark entities) */
-      name?: string;
-      /** @description Description (landmark entities only) */
-      description?: string | null;
-      /** @description Member ID (member entities only) */
-      linkedMemberId?: string;
-      /** @description Structure entity ID (structure-entity entities only) */
-      linkedStructureEntityId?: string;
-    };
+    PlaintextInnerworldEntity:
+      | components["schemas"]["PlaintextInnerworldMemberEntity"]
+      | components["schemas"]["PlaintextInnerworldLandmarkEntity"]
+      | components["schemas"]["PlaintextInnerworldStructureEntity"];
     /**
      * @description **Encrypted into**: `encryptedData` on `PUT /systems/:systemId/innerworld/canvas`.
      *
@@ -8990,6 +8978,46 @@ export interface components {
       translations: {
         [key: string]: string;
       };
+    };
+    /** @description Member-linked innerworld entity variant. */
+    PlaintextInnerworldMemberEntity: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      entityType: "member";
+      positionX: number;
+      positionY: number;
+      visual: components["schemas"]["PlaintextVisualProperties"];
+      /** @description Member ID (mem_ prefix) */
+      linkedMemberId: string;
+    };
+    /** @description Landmark innerworld entity variant. */
+    PlaintextInnerworldLandmarkEntity: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      entityType: "landmark";
+      positionX: number;
+      positionY: number;
+      visual: components["schemas"]["PlaintextVisualProperties"];
+      /** @description Display name for the landmark */
+      name: string;
+      description: string | null;
+    };
+    /** @description Structure-entity-linked innerworld entity variant. */
+    PlaintextInnerworldStructureEntity: {
+      /**
+       * @description discriminator enum property added by openapi-typescript
+       * @enum {string}
+       */
+      entityType: "structure-entity";
+      positionX: number;
+      positionY: number;
+      visual: components["schemas"]["PlaintextVisualProperties"];
+      /** @description Structure entity ID (ste_ prefix) */
+      linkedStructureEntityId: string;
     };
   };
   responses: {

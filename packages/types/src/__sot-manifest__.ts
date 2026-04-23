@@ -15,6 +15,10 @@ import type {
 } from "./entities/fronting-session.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
 import type {
+  InnerWorldEntity,
+  InnerWorldEntityEncryptedFields,
+} from "./entities/innerworld-entity.js";
+import type {
   InnerWorldRegion,
   InnerWorldRegionEncryptedFields,
 } from "./entities/innerworld-region.js";
@@ -116,5 +120,9 @@ export type SotEntityManifest = {
   InnerworldRegion: {
     domain: InnerWorldRegion;
     encryptedFields: InnerWorldRegionEncryptedFields;
+  };
+  InnerworldEntity: {
+    domain: InnerWorldEntity;
+    encryptedFields: InnerWorldEntityEncryptedFields;
   };
 };
