@@ -55,6 +55,8 @@ import type {
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields,
   LifecycleEvent,
   LifecycleEventEncryptedFields,
   Member,
@@ -204,5 +206,12 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextLifecycleEvent"],
     Serialize<Pick<LifecycleEvent, LifecycleEventEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextInnerworldRegion"],
+    Serialize<Pick<InnerWorldRegion, InnerWorldRegionEncryptedFields>>
   >
 >().toEqualTypeOf<true>();

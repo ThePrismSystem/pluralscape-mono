@@ -14,6 +14,10 @@ import type {
   FrontingSessionEncryptedFields,
 } from "./entities/fronting-session.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
+import type {
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields,
+} from "./entities/innerworld-region.js";
 import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
@@ -108,5 +112,9 @@ export type SotEntityManifest = {
   LifecycleEvent: {
     domain: LifecycleEvent;
     encryptedFields: LifecycleEventEncryptedFields;
+  };
+  InnerworldRegion: {
+    domain: InnerWorldRegion;
+    encryptedFields: InnerWorldRegionEncryptedFields;
   };
 };
