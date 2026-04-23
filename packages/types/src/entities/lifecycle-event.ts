@@ -134,3 +134,16 @@ export type LifecycleEvent =
 
 /** The set of valid lifecycle event type strings. */
 export type LifecycleEventType = LifecycleEvent["eventType"];
+
+/**
+ * Keys of `LifecycleEvent` that are encrypted client-side before the
+ * server sees them. Plaintext siblings (`eventType`, `occurredAt`, and
+ * the event-specific `plaintextMetadata` — member/structure/entity/region
+ * IDs) travel as separate request fields and are intentionally excluded.
+ * Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextLifecycleEvent parity)
+ * - Plan 2 fleet will consume when deriving
+ *   `LifecycleEventServerMetadata`.
+ */
+export type LifecycleEventEncryptedFields = "notes";

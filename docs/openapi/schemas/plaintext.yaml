@@ -469,12 +469,6 @@ PlaintextLifecycleEvent:
     and relationship tracking. Encryption tier: **T1**.
   type: object
   properties:
-    title:
-      type: string
-      nullable: true
-    description:
-      type: string
-      nullable: true
     notes:
       type: string
       nullable: true

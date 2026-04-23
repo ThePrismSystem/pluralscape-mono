@@ -14,6 +14,7 @@ import type {
   FrontingSessionEncryptedFields,
 } from "./entities/fronting-session.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
+import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
   Member,
@@ -103,5 +104,9 @@ export type SotEntityManifest = {
   FrontingSession: {
     domain: FrontingSession;
     encryptedFields: FrontingSessionEncryptedFields;
+  };
+  LifecycleEvent: {
+    domain: LifecycleEvent;
+    encryptedFields: LifecycleEventEncryptedFields;
   };
 };

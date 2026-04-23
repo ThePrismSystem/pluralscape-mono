@@ -8006,8 +8006,6 @@ export interface components {
      *     and relationship tracking. Encryption tier: **T1**.
      */
     PlaintextLifecycleEvent: {
-      title?: string | null;
-      description?: string | null;
       notes?: string | null;
     };
     /**

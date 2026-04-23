@@ -55,6 +55,8 @@ import type {
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
+  LifecycleEvent,
+  LifecycleEventEncryptedFields,
   Member,
   MemberEncryptedFields,
   MemberPhoto,
@@ -195,5 +197,12 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextFrontingSession"],
     Serialize<Pick<FrontingSession, FrontingSessionEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextLifecycleEvent"],
+    Serialize<Pick<LifecycleEvent, LifecycleEventEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
