@@ -675,12 +675,12 @@ describe("Type-level assertions", () => {
 
   // Fix 6 — systemSettings has both id and systemId as branded IDs
   // (was `string` before fleet Cluster 1 applied `brandedId<>` to the ID columns).
-  it("PG systemSettings.id infers as SystemSettingsId", () => {
+  it("PG systemSettings.id is branded (SystemSettingsId)", () => {
     type Row = InferSelectModel<typeof pg.systemSettings>;
     expectTypeOf<Row["id"]>().toEqualTypeOf<SystemSettingsId>();
   });
 
-  it("PG systemSettings.systemId infers as SystemId", () => {
+  it("PG systemSettings.systemId is branded (SystemId)", () => {
     type Row = InferSelectModel<typeof pg.systemSettings>;
     expectTypeOf<Row["systemId"]>().toEqualTypeOf<SystemId>();
   });

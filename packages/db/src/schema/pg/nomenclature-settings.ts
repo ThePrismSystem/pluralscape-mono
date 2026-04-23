@@ -1,17 +1,17 @@
-import { pgTable, varchar } from "drizzle-orm/pg-core";
+import { pgTable } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { systems } from "./systems.js";
 
+import type { SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const nomenclatureSettings = pgTable(
   "nomenclature_settings",
   {
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .primaryKey()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

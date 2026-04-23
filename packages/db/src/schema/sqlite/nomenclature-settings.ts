@@ -1,16 +1,17 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
 
+import type { SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const nomenclatureSettings = sqliteTable(
   "nomenclature_settings",
   {
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .primaryKey()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),

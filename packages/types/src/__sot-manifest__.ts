@@ -69,7 +69,12 @@ import type {
   SystemServerMetadata,
   SystemWire,
 } from "./entities/system.js";
-import type { NomenclatureEncryptedFields, NomenclatureSettings } from "./nomenclature.js";
+import type {
+  NomenclatureEncryptedFields,
+  NomenclatureServerMetadata,
+  NomenclatureSettings,
+  NomenclatureWire,
+} from "./nomenclature.js";
 
 /**
  * Registry of every domain entity that participates in the types-as-SoT
@@ -193,6 +198,8 @@ export type SotEntityManifest = {
   };
   Nomenclature: {
     domain: NomenclatureSettings;
+    server: NomenclatureServerMetadata;
+    wire: NomenclatureWire;
     encryptedFields: NomenclatureEncryptedFields;
   };
 };

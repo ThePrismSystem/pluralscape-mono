@@ -1,3 +1,8 @@
+import type { EncryptedBlob } from "./encryption-primitives.js";
+import type { SystemId } from "./ids.js";
+import type { UnixMillis } from "./timestamps.js";
+import type { Serialize } from "./type-assertions.js";
+
 /** Categories of terminology that can be customized. */
 export type TermCategory =
   | "collective"
@@ -29,9 +34,35 @@ export type NomenclatureSettings = Readonly<Record<TermCategory, string>>;
  * therefore identical to `TermCategory`. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextNomenclature parity)
- * - Plan 2 fleet for ServerMetadata derivation.
+ * - `NomenclatureServerMetadata` (derived via `Omit`)
  */
 export type NomenclatureEncryptedFields = TermCategory;
+
+/**
+ * Server-visible Nomenclature metadata — raw Drizzle row shape for the
+ * `nomenclature_settings` table.
+ *
+ * Nomenclature is a T1-encrypted entity stored in its own table keyed
+ * on `systemId` (no separate `id` column — `systemId` is the primary
+ * key). The decrypted shape `NomenclatureSettings` is a `Record` whose
+ * keys match `NomenclatureEncryptedFields` (= every `TermCategory`),
+ * so there is no unencrypted subset to preserve on the server — only
+ * audit metadata and the opaque blob.
+ */
+export interface NomenclatureServerMetadata {
+  readonly systemId: SystemId;
+  readonly encryptedData: EncryptedBlob;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+  readonly version: number;
+}
+
+/**
+ * JSON-wire representation of NomenclatureSettings. Each category's
+ * selected term is a plain string on the wire (the blob's decrypted
+ * content, not the Drizzle row).
+ */
+export type NomenclatureWire = Serialize<NomenclatureSettings>;
 
 /** A set of preset options for a single term category. */
 export interface TermPreset {
