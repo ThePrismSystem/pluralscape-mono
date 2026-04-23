@@ -1,5 +1,8 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { HexColor, MemberId, SystemId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** Well-known saturation levels describing how elaborated a member is within the system. */
@@ -92,3 +95,28 @@ export interface DuplicateMemberBody {
   readonly copyFields: boolean;
   readonly copyMemberships: boolean;
 }
+
+/**
+ * Server-visible Member metadata — raw Drizzle row shape.
+ * T1 encrypted (inside `encryptedData`): name, pronouns, description, tags,
+ *   colors, avatarSource, saturationLevel, suppressFriendFrontNotification,
+ *   boardMessageNotificationOnFront
+ * T3 plaintext columns: id, systemId, archived, audit timestamps
+ */
+export interface MemberServerMetadata extends AuditMetadata {
+  readonly id: MemberId;
+  readonly systemId: SystemId;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/**
+ * JSON-wire representation of a Member. Derived from the domain `Member`
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ *
+ * This is what crosses the HTTP boundary for Member payloads. The OpenAPI
+ * parity gate asserts `components["schemas"]["Member"]` ≡ `MemberWire`.
+ */
+export type MemberWire = Serialize<Member>;

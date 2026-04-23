@@ -104,9 +104,10 @@ export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.j
 export { toChecksumHex } from "./checksum.js";
 
 // ── Encryption primitives ────────────────────────────────────────
-// NOTE: ./encryption.js until Task 26 renames it to ./encryption-primitives.js.
-// Server*/Client* wrappers and *ServerMetadata/*Wire stay here until Task 26
-// relocates them to their per-entity files + response-unions.ts.
+// Server*/Client* wrappers for non-pilot entities live alongside the
+// primitives until Plan 2 renames each to <Entity>ServerMetadata per
+// entity file. MemberServerMetadata/MemberWire and AuditLogEntry*
+// already live in their entity files.
 export type {
   Encrypted,
   BucketEncrypted,
@@ -119,10 +120,6 @@ export type {
   ServerSecret,
   DecryptFn,
   EncryptFn,
-  ServerResponseData,
-  ClientResponseData,
-  MemberServerMetadata,
-  MemberWire,
   ServerFrontingSession,
   ClientFrontingSession,
   ServerFrontingComment,
@@ -169,9 +166,13 @@ export type {
   ClientAcknowledgementRequest,
   ServerTimerConfig,
   ClientTimerConfig,
-  AuditLogEntryServerMetadata,
-  AuditLogEntryWire,
-} from "./encryption.js";
+} from "./encryption-primitives.js";
+
+// ── Response unions ──────────────────────────────────────────────
+export type { ServerResponseData, ClientResponseData } from "./response-unions.js";
+
+// Member{ServerMetadata,Wire} and AuditLogEntry{ServerMetadata,Wire}
+// are re-exported through the entities/ barrel.
 
 // ── Timestamps ───────────────────────────────────────────────────
 export type { UnixMillis, ISOTimestamp } from "./timestamps.js";

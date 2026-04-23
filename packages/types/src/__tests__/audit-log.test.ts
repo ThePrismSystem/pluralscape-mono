@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { Plaintext } from "../encryption.js";
+import type { Plaintext } from "../encryption-primitives.js";
 import type { AuditEventType, AuditLogEntry } from "../entities/audit-log-entry.js";
 import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";

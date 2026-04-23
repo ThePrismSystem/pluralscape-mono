@@ -1,6 +1,5 @@
 import type { KdfMasterKey } from "./crypto-keys.js";
 import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
-import type { AuditEventType, AuditActor, AuditLogEntry } from "./entities/audit-log-entry.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
 import type { CustomFront } from "./entities/custom-front.js";
@@ -14,7 +13,6 @@ import type { InnerWorldRegion } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
-import type { Member } from "./entities/member.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
@@ -25,9 +23,7 @@ import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
 import type { WikiPage } from "./entities/wiki-page.js";
 import type {
-  AccountId,
   AcknowledgementId,
-  AuditLogEntryId,
   BoardMessageId,
   BucketId,
   ChannelId,
@@ -57,7 +53,6 @@ import type {
   WikiPageId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { Serialize } from "./type-assertions.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";
 
 // ── Tier wrappers ──────────────────────────────────────────────
@@ -129,21 +124,8 @@ export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 // ── Server/Client variant pattern ──────────────────────────────
 // Server types carry EncryptedBlob; Client types have flat decrypted fields.
 // Only defined for completed domain modules.
-
-/**
- * Server-visible Member metadata — raw Drizzle row shape.
- * T1 encrypted (inside `encryptedData`): name, pronouns, description, tags,
- *   colors, avatarSource, saturationLevel, suppressFriendFrontNotification,
- *   boardMessageNotificationOnFront
- * T3 plaintext columns: id, systemId, archived, audit timestamps
- */
-export interface MemberServerMetadata extends AuditMetadata {
-  readonly id: MemberId;
-  readonly systemId: SystemId;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly encryptedData: EncryptedBlob;
-}
+// MemberServerMetadata / MemberWire live in entities/member.ts.
+// AuditLogEntryServerMetadata / AuditLogEntryWire live in entities/audit-log-entry.ts.
 
 /**
  * Server-side fronting session representation.
@@ -242,10 +224,6 @@ export type ClientStructureEntity = SystemStructureEntity;
  * Server-side relationship representation.
  * T1 encrypted: label
  * T3 plaintext: type, sourceMemberId, targetMemberId, bidirectional, archived
- *
- * ServerRelationship exposes only createdAt; the DB stores updatedAt and
- * version via timestamps()/versioned() but they are not included in the
- * server-side projection.
  */
 export interface ServerRelationship {
   readonly id: RelationshipId;
@@ -470,10 +448,6 @@ export type ClientJournalEntry = JournalEntry;
  * Server-side wiki page representation.
  * T1 encrypted: title, slug, blocks, tags, linkedEntities, linkedFromPages
  * T3 plaintext: archived, slugHash
- *
- * slugHash is a keyed hash (hex-encoded, 64 chars) of the plaintext slug.
- * The plaintext slug lives inside encryptedData. Client hashes slug locally
- * and queries by (systemId, slugHash). Hash algorithm TBD — see crypto package.
  */
 export interface ServerWikiPage extends AuditMetadata {
   readonly id: WikiPageId;
@@ -494,7 +468,6 @@ export type ClientWikiPage = WikiPage;
  * T3 plaintext: memberId, sortOrder, archived
  *
  * Intentionally omits AuditMetadata — photos are append-only gallery items.
- * The domain MemberPhoto type also omits it.
  */
 export interface ServerMemberPhoto {
   readonly id: MemberPhotoId;
@@ -512,8 +485,6 @@ export type ClientMemberPhoto = MemberPhoto;
 /**
  * Server-side poll representation.
  * T1 encrypted: title, options, description
- * T3 plaintext: createdByMemberId, kind, status, closedAt, endsAt,
- *   allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto, archived
  */
 export interface ServerPoll extends AuditMetadata {
   readonly id: PollId;
@@ -594,101 +565,6 @@ export interface ServerTimerConfig extends AuditMetadata {
 /** Client-side timer config — flat decrypted fields. */
 export type ClientTimerConfig = TimerConfig;
 
-// ── Audit log ──────────────────────────────────────────────────
-
-/**
- * Server-visible audit log entry metadata — raw Drizzle row shape.
- * Plaintext entity (no encryption); ServerMetadata carries DB-internal
- * columns (partition key, sequence ID) not exposed on the domain
- * `AuditLogEntry` type.
- *
- * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
- * (server-readable for security monitoring — failed login detection, IP pattern analysis).
- *
- * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
- * The audit_log table intentionally uses `timestamp` to reflect when the
- * event occurred, not when the row was created. The domain-side
- * AuditLogEntry type uses `createdAt` — the mapping layer handles this rename.
- */
-export interface AuditLogEntryServerMetadata {
-  readonly id: AuditLogEntryId;
-  /**
-   * DB-internal denormalized account reference — avoids joining through
-   * `systems` to get the owning account. Nullable because audit logs
-   * survive account deletion with references nullified (ON DELETE SET NULL).
-   */
-  readonly accountId: AccountId | null;
-  /**
-   * Nullable because audit logs survive system deletion with references
-   * nullified (ON DELETE SET NULL) — audit history must be preserved.
-   */
-  readonly systemId: SystemId | null;
-  readonly eventType: AuditEventType;
-  readonly timestamp: UnixMillis;
-  readonly actor: AuditActor;
-  readonly detail: string | null;
-  readonly ipAddress: string | null;
-  readonly userAgent: string | null;
-}
-
-// ── Server-safe response unions ────────────────────────────────
-
-/** Union of all server-side types safe to return from API routes. */
-export type ServerResponseData =
-  | MemberServerMetadata
-  | ServerFrontingSession
-  | ServerFrontingComment
-  | ServerGroup
-  | ServerStructureEntityType
-  | ServerStructureEntity
-  | ServerRelationship
-  | ServerChannel
-  | ServerChatMessage
-  | ServerBoardMessage
-  | ServerNote
-  | ServerFieldDefinition
-  | ServerFieldValue
-  | ServerInnerWorldEntity
-  | ServerInnerWorldRegion
-  | ServerLifecycleEvent
-  | ServerCustomFront
-  | ServerJournalEntry
-  | ServerWikiPage
-  | ServerMemberPhoto
-  | ServerPoll
-  | ServerPollVote
-  | ServerAcknowledgementRequest
-  | ServerTimerConfig
-  | AuditLogEntryServerMetadata;
-
-/** Union of all client-side types that must NEVER appear in API responses. */
-export type ClientResponseData =
-  | Member
-  | ClientFrontingSession
-  | ClientFrontingComment
-  | ClientGroup
-  | ClientStructureEntityType
-  | ClientStructureEntity
-  | ClientRelationship
-  | ClientChannel
-  | ClientChatMessage
-  | ClientBoardMessage
-  | ClientNote
-  | ClientFieldDefinition
-  | ClientFieldValue
-  | ClientInnerWorldEntity
-  | ClientInnerWorldRegion
-  | ClientLifecycleEvent
-  | ClientCustomFront
-  | ClientJournalEntry
-  | ClientWikiPage
-  | ClientMemberPhoto
-  | ClientPoll
-  | ClientPollVote
-  | ClientAcknowledgementRequest
-  | ClientTimerConfig
-  | AuditLogEntry;
-
 // ── Mapping utility types ──────────────────────────────────────
 
 /** Maps a server type to its client-side equivalent via decryption. */
@@ -696,79 +572,3 @@ export type DecryptFn<ServerT, ClientT> = (server: ServerT, masterKey: KdfMaster
 
 /** Maps a client type to its server-side equivalent via encryption. */
 export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: KdfMasterKey) => ServerT;
-
-// ── Tier map ───────────────────────────────────────────────────
-//
-// Member: T1 (name, pronouns, description, tags, colors, avatarSource, saturationLevel, suppressFriendFrontNotification, boardMessageNotificationOnFront) | T3 (archived)
-// FrontingSession: T1 (comment, positionality, outtrigger, outtriggerSentiment) | T3 (timestamps, memberId, customFrontId, structureEntityId, linkedStructure, archived)
-// FrontingComment: T1 (content) | T3 (frontingSessionId, memberId, archived) — extends AuditMetadata
-// Group: T1 (name, description, imageSource, color, emoji) | T3 (sortOrder, archived, parentGroupId)
-// StructureEntityType: T1 (name, description, emoji, color, imageSource) | T3 (sortOrder, archived)
-// StructureEntity: T1 (name, description, emoji, color, imageSource) | T3 (entityTypeId, sortOrder, archived)
-// Relationship: T1 (label) | T3 (type, sourceMemberId, targetMemberId, bidirectional, archived)
-// Channel: T1 (name) | T3 (type, parentId, sortOrder, archived)
-// ChatMessage: T1 (content, attachments, senderId) | T3 (channelId, replyToId, timestamp, editedAt, archived)
-// BoardMessage: T1 (content, senderId) | T3 (pinned, sortOrder, archived)
-// Note: T1 (title, content, backgroundColor) | T3 (authorEntityType, authorEntityId, archived)
-// FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder, archived)
-// FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId, structureEntityId, groupId)
-// InnerWorldEntity: T1 (linked entity refs, description, visual, entityType, positionX, positionY) | T3 (regionId, archived)
-// InnerWorldRegion: T1 (name, description, boundaryData, visual, gatekeeperMemberIds, accessType) | T3 (parentRegionId, archived)
-// LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
-// CustomFront: T1 (name, description, color, emoji) | T3 (archived)
-// JournalEntry: T1 (title, blocks, tags, linkedEntities, author) | T3 (frontingSessionId, archived)
-// WikiPage: T1 (title, slug, blocks, tags, linkedEntities, linkedFromPages) | T3 (archived, slugHash)
-// MemberPhoto: T1 (imageSource, caption) | T3 (memberId, sortOrder, archived)
-// Poll: T1 (title, options, description) | T3 (createdByMemberId, kind, status, closedAt, endsAt, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto, archived)
-// PollVote: T1 (comment) | T3 (pollId, optionId, voter, isVeto, votedAt, archived)
-// AcknowledgementRequest: T1 (message, targetMemberId, confirmedAt) | T3 (createdByMemberId, confirmed, archived)
-// TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled, archived)
-// AuditLogEntry: T3 (all fields — detail, eventType, actor, ipAddress, userAgent, timestamp; server-readable for security monitoring)
-//
-// SystemSnapshot: T1 (name, description, SnapshotContent — all inside encryptedData) | T3 (trigger, createdAt)
-//
-// FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
-//
-// Session: T1 (deviceInfo inside encryptedData) | T3 (accountId, revoked, timestamps, expiresAt)
-// ApiKey: T1 (name, inside encryptedData) | T3 (scopes — server enforces authorization; scopedBucketIds — server enforces bucket-scoped auth; keyType, tokenHash, timestamps, encryptedKeyMaterial)
-// BlobMetadata: T3 (mimeType — server must set Content-Type headers and validate uploads;
-//   purpose — server enforces per-purpose quota limits; sizeBytes — server enforces quota
-//   and validates uploads; all remaining fields are operational metadata. Encrypting any of
-//   these would require trusting client-reported values, which is a security hole. This matches
-//   how all E2E encrypted storage systems handle blob metadata.)
-// JobDefinition: T3 (all fields — server-internal job metadata)
-// ImportJob: T3 (source — server must know source format to select the correct import parser;
-//   status, errorMessage, stats — operational metadata for transient job records. The revealed
-//   info (prior app choice) is extremely low sensitivity. Moving parsing client-side would be
-//   a major architecture change disproportionate to the risk.)
-// DeviceToken: T3 (token, platform, lastActiveAt — server must read push tokens to deliver notifications)
-// NotificationConfig: T3 (all fields — user preferences, no sensitive content)
-// NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
-// WebhookConfig: T1 (secret via EncryptedString) | T3 (url — server must read to deliver webhooks;
-//   eventTypes — server must read to route/filter events; enabled, cryptoKeyId)
-// WebhookDelivery: T1 (encryptedData) | T3 (eventType, httpStatus, attemptCount, lastAttemptAt, nextRetryAt, createdAt)
-// RealtimeSubscription: T3 (all fields — subscription metadata)
-// SearchQuery/SearchResult: client-only types, not persisted server-side
-
-// ── JSON Wire formats ──────────────────────────────────────────────
-//
-// Serialized representations for HTTP boundaries and OpenAPI parity checks.
-// Derived from domain types via Serialize<T>: branded IDs become plain strings,
-// Date/UnixMillis become string/number, Uint8Array becomes base64 string.
-
-/**
- * JSON-wire representation of a Member. Derived from the domain `Member`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- *
- * This is what crosses the HTTP boundary for Member payloads. The OpenAPI
- * parity gate asserts `components["schemas"]["Member"]` ≡ `MemberWire`.
- */
-export type MemberWire = Serialize<Member>;
-
-/**
- * JSON-wire representation of an AuditLogEntry. Derived from the domain
- * `AuditLogEntry` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
- */
-export type AuditLogEntryWire = Serialize<AuditLogEntry>;

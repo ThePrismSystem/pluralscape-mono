@@ -1,4 +1,4 @@
-import type { EncryptedBlob } from "./encryption.js";
+import type { EncryptedBlob } from "./encryption-primitives.js";
 import type { GroupId, MemberId, PKBridgeConfigId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";

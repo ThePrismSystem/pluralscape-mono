@@ -1,6 +1,7 @@
-import type { Plaintext } from "../encryption.js";
+import type { Plaintext } from "../encryption-primitives.js";
 import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 
 /** Step names used in setup wizard audit events. */
 export type SetupStepName = "nomenclature" | "profile";
@@ -253,3 +254,45 @@ export interface AuditLogEntry {
   readonly ipAddress: string | null;
   readonly userAgent: string | null;
 }
+
+/**
+ * Server-visible audit log entry metadata — raw Drizzle row shape.
+ * Plaintext entity (no encryption); ServerMetadata carries DB-internal
+ * columns (partition key, sequence ID) not exposed on the domain
+ * `AuditLogEntry` type.
+ *
+ * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ * (server-readable for security monitoring — failed login detection, IP pattern analysis).
+ *
+ * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
+ * The audit_log table intentionally uses `timestamp` to reflect when the
+ * event occurred, not when the row was created. The domain-side
+ * AuditLogEntry type uses `createdAt` — the mapping layer handles this rename.
+ */
+export interface AuditLogEntryServerMetadata {
+  readonly id: AuditLogEntryId;
+  /**
+   * DB-internal denormalized account reference — avoids joining through
+   * `systems` to get the owning account. Nullable because audit logs
+   * survive account deletion with references nullified (ON DELETE SET NULL).
+   */
+  readonly accountId: AccountId | null;
+  /**
+   * Nullable because audit logs survive system deletion with references
+   * nullified (ON DELETE SET NULL) — audit history must be preserved.
+   */
+  readonly systemId: SystemId | null;
+  readonly eventType: AuditEventType;
+  readonly timestamp: UnixMillis;
+  readonly actor: AuditActor;
+  readonly detail: string | null;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+}
+
+/**
+ * JSON-wire representation of an AuditLogEntry. Derived from the domain
+ * `AuditLogEntry` type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`.
+ */
+export type AuditLogEntryWire = Serialize<AuditLogEntry>;

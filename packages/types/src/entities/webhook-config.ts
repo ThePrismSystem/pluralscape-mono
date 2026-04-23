@@ -1,4 +1,4 @@
-import type { ServerSecret } from "../encryption.js";
+import type { ServerSecret } from "../encryption-primitives.js";
 import type {
   AccountId,
   AcknowledgementId,

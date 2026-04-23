@@ -3,7 +3,6 @@ import { describe, expectTypeOf, it } from "vitest";
 import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
-  AuditLogEntryWire,
   ClientAcknowledgementRequest,
   ClientBoardMessage,
   ClientChannel,
@@ -31,9 +30,7 @@ import type {
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
-  MemberWire,
   Plaintext,
-  AuditLogEntryServerMetadata,
   ServerAcknowledgementRequest,
   ServerBoardMessage,
   ServerChannel,
@@ -47,7 +44,6 @@ import type {
   ServerLifecycleEvent,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
-  MemberServerMetadata,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -62,9 +58,14 @@ import type {
   ServerWikiPage,
   T1EncryptedBlob,
   T2EncryptedBlob,
-} from "../encryption.js";
+} from "../encryption-primitives.js";
 import type { AcknowledgementRequest } from "../entities/acknowledgement.js";
-import type { AuditActor, AuditLogEntry } from "../entities/audit-log-entry.js";
+import type {
+  AuditActor,
+  AuditLogEntry,
+  AuditLogEntryServerMetadata,
+  AuditLogEntryWire,
+} from "../entities/audit-log-entry.js";
 import type { BoardMessage } from "../entities/board-message.js";
 import type { Channel } from "../entities/channel.js";
 import type { CustomFront } from "../entities/custom-front.js";
@@ -74,7 +75,7 @@ import type { Group } from "../entities/group.js";
 import type { JournalEntry } from "../entities/journal-entry.js";
 import type { LifecycleEvent } from "../entities/lifecycle-event.js";
 import type { MemberPhoto } from "../entities/member-photo.js";
-import type { Member } from "../entities/member.js";
+import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
 import type { ChatMessage } from "../entities/message.js";
 import type { Note } from "../entities/note.js";
 import type { PollVote } from "../entities/poll-vote.js";

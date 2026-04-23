@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { ServerSecret } from "../encryption.js";
+import type { ServerSecret } from "../encryption-primitives.js";
 import type {
   ArchivedWebhookConfig,
   WebhookConfig,
