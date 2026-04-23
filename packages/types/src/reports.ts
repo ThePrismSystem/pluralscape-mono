@@ -1,6 +1,6 @@
+import type { BucketContentEntityType } from "./entities/bucket.js";
 import type { Brand, BucketId, SystemId } from "./ids.js";
 import type { PaginatedResult } from "./pagination.js";
-import type { BucketContentEntityType } from "./privacy.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** Branded string identifying an entity within a bucket export page. */

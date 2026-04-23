@@ -1,4 +1,5 @@
 import type { ServerSecret } from "./encryption.js";
+import type { BucketContentEntityType } from "./entities/bucket.js";
 import type {
   AccountId,
   AcknowledgementId,
@@ -21,7 +22,6 @@ import type {
   WebhookDeliveryId,
   WebhookId,
 } from "./ids.js";
-import type { BucketContentEntityType } from "./privacy.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Archived, AuditMetadata } from "./utility.js";
 

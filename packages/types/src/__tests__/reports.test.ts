@@ -2,9 +2,9 @@ import { assertType, describe, expect, expectTypeOf, it } from "vitest";
 
 import { isReportType, REPORT_TYPES } from "../reports.js";
 
+import type { BucketContentEntityType } from "../entities/bucket.js";
 import type { BucketId, SystemId } from "../ids.js";
 import type { PaginationCursor } from "../pagination.js";
-import type { BucketContentEntityType } from "../privacy.js";
 import type {
   BucketExportEntity,
   BucketExportManifestEntry,

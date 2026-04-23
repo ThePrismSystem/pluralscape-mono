@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { FRIEND_EXPORT_ENTITY_TYPES, isFriendExportEntityType } from "../friend-export.js";
 
+import type { BucketContentEntityType } from "../entities/bucket.js";
 import type { FriendDashboardKeyGrant } from "../friend-dashboard.js";
 import type {
   FriendExportEntity,
@@ -12,7 +13,6 @@ import type {
 } from "../friend-export.js";
 import type { SystemId } from "../ids.js";
 import type { PaginationCursor } from "../pagination.js";
-import type { BucketContentEntityType } from "../privacy.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("FriendExportEntityType", () => {

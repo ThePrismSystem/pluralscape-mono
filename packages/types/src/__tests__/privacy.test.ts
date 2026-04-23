@@ -1,6 +1,23 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
+  ArchivedPrivacyBucket,
+  BucketAccessCheck,
+  BucketContentEntityType,
+  BucketContentTag,
+  BucketVisibilityScope,
+  PrivacyBucket,
+} from "../entities/bucket.js";
+import type { ArchivedFriendCode, FriendCode } from "../entities/friend-code.js";
+import type {
+  ArchivedFriendConnection,
+  FriendBucketAssignment,
+  FriendConnection,
+  FriendConnectionStatus,
+  FriendVisibilitySettings,
+} from "../entities/friend-connection.js";
+import type { KeyGrant } from "../entities/key-grant.js";
+import type {
   AccountId,
   BucketId,
   FriendCodeId,
@@ -8,22 +25,6 @@ import type {
   KeyGrantId,
   SystemId,
 } from "../ids.js";
-import type {
-  ArchivedFriendCode,
-  ArchivedFriendConnection,
-  ArchivedPrivacyBucket,
-  BucketAccessCheck,
-  BucketContentEntityType,
-  BucketContentTag,
-  BucketVisibilityScope,
-  FriendBucketAssignment,
-  FriendCode,
-  FriendConnection,
-  FriendConnectionStatus,
-  FriendVisibilitySettings,
-  KeyGrant,
-  PrivacyBucket,
-} from "../privacy.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 

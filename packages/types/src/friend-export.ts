@@ -1,7 +1,7 @@
+import type { BucketContentEntityType } from "./entities/bucket.js";
 import type { FriendDashboardKeyGrant } from "./friend-dashboard.js";
 import type { SystemId } from "./ids.js";
 import type { PaginatedResult } from "./pagination.js";
-import type { BucketContentEntityType } from "./privacy.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /**

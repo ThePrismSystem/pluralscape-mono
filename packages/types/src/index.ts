@@ -168,19 +168,22 @@ export type {
   BucketContentEntityType,
   BucketContentTag,
   BucketVisibilityScope,
-  KeyGrant,
+  BucketAccessCheck,
+} from "./entities/bucket.js";
+export { BUCKET_CONTENT_ENTITY_TYPES, isBucketContentEntityType } from "./entities/bucket.js";
+export type {
   FriendConnectionStatus,
   FriendVisibilitySettings,
   FriendConnection,
   ArchivedFriendConnection,
-  FriendCode,
-  ArchivedFriendCode,
-  BucketAccessCheck,
   FriendBucketAssignment,
+} from "./entities/friend-connection.js";
+export type { FriendCode, ArchivedFriendCode } from "./entities/friend-code.js";
+export type {
+  KeyGrant,
   ReceivedKeyGrant,
   ReceivedKeyGrantsResponse,
-} from "./privacy.js";
-export { BUCKET_CONTENT_ENTITY_TYPES, isBucketContentEntityType } from "./privacy.js";
+} from "./entities/key-grant.js";
 
 // ── Friend Dashboard ──────────────────────────────────────────────
 export type {

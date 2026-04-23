@@ -1,13 +1,5 @@
-import type {
-  AccountId,
-  BucketId,
-  FriendCodeId,
-  FriendConnectionId,
-  KeyGrantId,
-  SystemId,
-} from "./ids.js";
-import type { UnixMillis } from "./timestamps.js";
-import type { Archived, AuditMetadata } from "./utility.js";
+import type { BucketId, SystemId } from "../ids.js";
+import type { Archived, AuditMetadata } from "../utility.js";
 
 /** A privacy bucket — a named container for access-controlled content. */
 export interface PrivacyBucket extends AuditMetadata {
@@ -108,81 +100,6 @@ export type BucketVisibilityScope =
   | "journal-entries"
   | "member-photos"
   | "groups";
-
-/**
- * An immutable grant of a bucket's encryption key to a friend.
- * Created when granting access, optionally revoked. Never updated.
- */
-export interface KeyGrant {
-  readonly id: KeyGrantId;
-  readonly bucketId: BucketId;
-  readonly friendAccountId: AccountId;
-  /** Encrypted symmetric key for the bucket. Serialized to base64 at API transport boundaries. */
-  readonly encryptedBucketKey: Uint8Array;
-  readonly keyVersion: number;
-  readonly createdAt: UnixMillis;
-  readonly revokedAt: UnixMillis | null;
-}
-
-/** An active key grant as seen by the recipient account (across all friends). */
-export interface ReceivedKeyGrant {
-  readonly id: KeyGrantId;
-  readonly bucketId: BucketId;
-  readonly encryptedKey: string;
-  readonly keyVersion: number;
-  readonly grantorSystemId: SystemId;
-  /** Base64url-encoded box public key of the grantor account (needed for decryption). */
-  readonly senderBoxPublicKey: string;
-}
-
-/** Response from the bulk listReceivedKeyGrants endpoint. */
-export interface ReceivedKeyGrantsResponse {
-  readonly grants: readonly ReceivedKeyGrant[];
-}
-
-/** Status of a friend connection between two systems. */
-export type FriendConnectionStatus = "pending" | "accepted" | "blocked" | "removed";
-
-/** Per-friend visibility toggles — controls what a friend can see beyond bucket access. */
-export interface FriendVisibilitySettings {
-  readonly showMembers: boolean;
-  readonly showGroups: boolean;
-  readonly showStructure: boolean;
-  readonly allowFrontingNotifications: boolean;
-}
-
-/** A mutable friend connection between two accounts. */
-export interface FriendConnection extends AuditMetadata {
-  readonly id: FriendConnectionId;
-  readonly accountId: AccountId;
-  readonly friendAccountId: AccountId;
-  readonly status: FriendConnectionStatus;
-  readonly assignedBucketIds: readonly BucketId[];
-  readonly visibility: FriendVisibilitySettings;
-  readonly archived: false;
-}
-
-/** An archived friend connection. */
-export type ArchivedFriendConnection = Archived<FriendConnection>;
-
-/** An immutable, optionally expiring friend code used to initiate connections. */
-export interface FriendCode {
-  readonly id: FriendCodeId;
-  readonly accountId: AccountId;
-  readonly code: string;
-  readonly createdAt: UnixMillis;
-  readonly expiresAt: UnixMillis | null;
-  readonly archived: false;
-}
-
-/** An archived friend code. */
-export type ArchivedFriendCode = Archived<FriendCode>;
-
-/** A junction mapping a friend connection to a privacy bucket. */
-export interface FriendBucketAssignment {
-  readonly friendConnectionId: FriendConnectionId;
-  readonly bucketId: BucketId;
-}
 
 /**
  * Parameters for checking whether a friend can access specific content.
