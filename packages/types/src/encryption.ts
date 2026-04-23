@@ -10,6 +10,7 @@ import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
 import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
 import type { InnerWorldRegion } from "./entities/innerworld-region.js";
+import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
 import type { Member } from "./entities/member.js";
@@ -21,6 +22,7 @@ import type { RelationshipType, Relationship } from "./entities/relationship.js"
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
+import type { WikiPage } from "./entities/wiki-page.js";
 import type { Group } from "./groups.js";
 import type {
   AccountId,
@@ -54,7 +56,6 @@ import type {
   SlugHash,
   WikiPageId,
 } from "./ids.js";
-import type { JournalEntry, WikiPage } from "./journal.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Serialize } from "./type-assertions.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";

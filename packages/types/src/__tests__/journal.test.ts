@@ -1,17 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
-  BlobId,
-  EntityType,
-  FrontingSessionId,
-  JournalEntryId,
-  MemberId,
-  SystemId,
-  WikiPageId,
-} from "../ids.js";
-import type {
   ArchivedJournalEntry,
-  ArchivedWikiPage,
   CodeBlock,
   DividerBlock,
   EntityLink,
@@ -26,8 +16,17 @@ import type {
   MemberLinkBlock,
   ParagraphBlock,
   QuoteBlock,
-  WikiPage,
-} from "../journal.js";
+} from "../entities/journal-entry.js";
+import type { ArchivedWikiPage, WikiPage } from "../entities/wiki-page.js";
+import type {
+  BlobId,
+  EntityType,
+  FrontingSessionId,
+  JournalEntryId,
+  MemberId,
+  SystemId,
+  WikiPageId,
+} from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata, EntityReference } from "../utility.js";
 

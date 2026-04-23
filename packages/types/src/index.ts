@@ -582,9 +582,8 @@ export type {
   FrontingSnapshot,
   JournalEntry,
   ArchivedJournalEntry,
-  WikiPage,
-  ArchivedWikiPage,
-} from "./journal.js";
+} from "./entities/journal-entry.js";
+export type { WikiPage, ArchivedWikiPage } from "./entities/wiki-page.js";
 
 // ── Timer ─────────────────────────────────────────────────────────
 export type { TimerConfig, ArchivedTimerConfig } from "./entities/timer-config.js";

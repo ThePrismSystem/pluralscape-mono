@@ -7,10 +7,9 @@ import type {
   MemberId,
   SystemId,
   SystemStructureEntityId,
-  WikiPageId,
-} from "./ids.js";
-import type { UnixMillis } from "./timestamps.js";
-import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
+} from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Archived, AuditMetadata, EntityReference } from "../utility.js";
 
 // ── Journal Block types (discriminated union) ──────────────────────
 
@@ -156,21 +155,3 @@ export interface JournalEntry extends AuditMetadata {
 
 /** An archived journal entry. */
 export type ArchivedJournalEntry = Archived<JournalEntry>;
-
-// ── Wiki pages ─────────────────────────────────────────────────────
-
-/** A wiki page for persistent system documentation. */
-export interface WikiPage extends AuditMetadata {
-  readonly id: WikiPageId;
-  readonly systemId: SystemId;
-  readonly title: string;
-  readonly slug: string;
-  readonly blocks: readonly JournalBlock[];
-  readonly linkedFromPages: readonly WikiPageId[];
-  readonly tags: readonly string[];
-  readonly linkedEntities: readonly EntityLink[];
-  readonly archived: false;
-}
-
-/** An archived wiki page. */
-export type ArchivedWikiPage = Archived<WikiPage>;
