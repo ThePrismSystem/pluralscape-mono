@@ -85,6 +85,83 @@ export type StorageKey = Brand<string, "StorageKey">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
 
+/**
+ * Union of every branded string ID type published by this module. Consumed by
+ * `packages/db/src/columns/pg.ts`'s `brandedId<B>()` helper to constrain the
+ * generic parameter to a known brand, so authors can't accidentally brand a
+ * column with a non-ID type.
+ *
+ * Includes every `<X>Id` brand declared above. Excludes compound/value brands
+ * (`GroupMembershipKey`, `StorageKey`, `HexColor`, `SlugHash`,
+ * `RecoveryKeyDisplay`, `ChecksumHex`) — those are not entity primary-key IDs.
+ */
+export type AnyBrandedId =
+  | SystemId
+  | MemberId
+  | GroupId
+  | BucketId
+  | ChannelId
+  | MessageId
+  | NoteId
+  | PollId
+  | RelationshipId
+  | SystemStructureEntityTypeId
+  | SystemStructureEntityId
+  | SystemStructureEntityLinkId
+  | SystemStructureEntityMemberLinkId
+  | SystemStructureEntityAssociationId
+  | FieldDefinitionId
+  | FieldDefinitionScopeId
+  | FieldValueId
+  | SessionId
+  | LifecycleEventId
+  | AccountId
+  | BlobId
+  | ApiKeyId
+  | WebhookId
+  | TimerId
+  | JournalEntryId
+  | WikiPageId
+  | InnerWorldEntityId
+  | InnerWorldRegionId
+  | InnerWorldCanvasId
+  | AuditLogEntryId
+  | BoardMessageId
+  | AcknowledgementId
+  | CheckInRecordId
+  | FriendConnectionId
+  | KeyGrantId
+  | FrontingSessionId
+  | CustomFrontId
+  | FriendCodeId
+  | PollVoteId
+  | DeviceTokenId
+  | NotificationConfigId
+  | SystemSettingsId
+  | PollOptionId
+  | MemberPhotoId
+  | AuthKeyId
+  | RecoveryKeyId
+  | DeviceTransferRequestId
+  | SyncDocumentId
+  | SyncChangeId
+  | SyncSnapshotId
+  | ImportJobId
+  | ImportEntityRefId
+  | PKBridgeConfigId
+  | AccountPurgeRequestId
+  | ExportRequestId
+  | JobId
+  | SubscriptionId
+  | WebhookDeliveryId
+  | FrontingReportId
+  | FriendNotificationPreferenceId
+  | FrontingCommentId
+  | BucketKeyRotationId
+  | BucketRotationItemId
+  | SystemSnapshotId
+  | BiometricTokenId;
+
 // ── Branded value types (not entity IDs) ────────────────────────────
 
 /** Human-readable recovery key display string (e.g. ABCD-EFGH-...). */
