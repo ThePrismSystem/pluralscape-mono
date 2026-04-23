@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -13,6 +14,7 @@ import {
 
 import { createSqliteAuthTables, testBlob } from "./helpers/sqlite-helpers.js";
 
+import type { AccountId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const ONE_DAY_MS = 86_400_000;
@@ -37,7 +39,7 @@ describe("SQLite auth schema", () => {
       updatedAt: number;
     }> = {},
   ): {
-    id: string;
+    id: AccountId;
     emailHash: string;
     emailSalt: string;
     authKeyHash: Uint8Array;
@@ -47,7 +49,7 @@ describe("SQLite auth schema", () => {
   } {
     const now = Date.now();
     const data = {
-      id: overrides.id ?? crypto.randomUUID(),
+      id: brandId<AccountId>(overrides.id ?? crypto.randomUUID()),
       emailHash: overrides.emailHash ?? `hash_${crypto.randomUUID()}`,
       emailSalt: overrides.emailSalt ?? `salt_${crypto.randomUUID()}`,
       authKeyHash: overrides.authKeyHash ?? new Uint8Array(32),
@@ -61,9 +63,9 @@ describe("SQLite auth schema", () => {
   }
 
   function insertSession(
-    accountId: string,
+    accountId: AccountId,
     overrides: Partial<{ id: string; tokenHash: string; createdAt: number }> = {},
-  ): { id: string; accountId: string; tokenHash: string; createdAt: number } {
+  ): { id: string; accountId: AccountId; tokenHash: string; createdAt: number } {
     const data = {
       id: overrides.id ?? crypto.randomUUID(),
       accountId,

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, systemSettings };
@@ -41,7 +43,7 @@ describe("PG system_settings schema", () => {
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(systemSettings).values({
-      id: `sset_${crypto.randomUUID()}`,
+      id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       locale: "en-US",
       pinHash: "$argon2id$hash123",
@@ -69,7 +71,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
-      id: `sset_${crypto.randomUUID()}`,
+      id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -89,7 +91,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
-      id: `sset_${crypto.randomUUID()}`,
+      id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -110,7 +112,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
-      id: `sset_${crypto.randomUUID()}`,
+      id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -130,7 +132,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
-      id: `sset_${crypto.randomUUID()}`,
+      id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -139,7 +141,7 @@ describe("PG system_settings schema", () => {
 
     await expect(
       db.insert(systemSettings).values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
@@ -154,7 +156,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
-      id: `sset_${crypto.randomUUID()}`,
+      id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -173,8 +175,8 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
     await expect(
       db.insert(systemSettings).values({
-        id: `sset_${crypto.randomUUID()}`,
-        systemId: "nonexistent",
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
+        systemId: brandId<SystemId>("nonexistent"),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -215,7 +217,7 @@ describe("PG system_settings schema", () => {
     const blob = testBlob(blobCiphertext);
 
     await db.insert(systemSettings).values({
-      id: `sset_${crypto.randomUUID()}`,
+      id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       encryptedData: blob,
       createdAt: now,

@@ -1,8 +1,10 @@
 import { accounts } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 
 import { decryptEmail } from "./email-encrypt.js";
 
+import type { AccountId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
@@ -22,7 +24,7 @@ export async function resolveAccountEmail(
   const rows = await db
     .select({ encryptedEmail: accounts.encryptedEmail })
     .from(accounts)
-    .where(eq(accounts.id, accountId))
+    .where(eq(accounts.id, brandId<AccountId>(accountId)))
     .limit(1);
 
   const row = rows[0];

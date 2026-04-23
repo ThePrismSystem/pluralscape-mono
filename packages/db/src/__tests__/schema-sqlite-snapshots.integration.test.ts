@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -13,6 +14,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { SystemSnapshotId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { systems, systemSnapshots };
@@ -44,7 +46,7 @@ describe("SQLite system_snapshots schema", () => {
   it("round-trips insert and select", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(systemSnapshots)
@@ -66,7 +68,7 @@ describe("SQLite system_snapshots schema", () => {
   it("accepts scheduled-daily trigger", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
 
     db.insert(systemSnapshots)
       .values({
@@ -85,7 +87,7 @@ describe("SQLite system_snapshots schema", () => {
   it("accepts scheduled-weekly trigger", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
 
     db.insert(systemSnapshots)
       .values({
@@ -109,7 +111,7 @@ describe("SQLite system_snapshots schema", () => {
       db
         .insert(systemSnapshots)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<SystemSnapshotId>(crypto.randomUUID()),
           systemId,
           snapshotTrigger: "invalid" as "manual",
           encryptedData: testBlob(),
@@ -122,7 +124,7 @@ describe("SQLite system_snapshots schema", () => {
   it("cascades on system deletion", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
 
     db.insert(systemSnapshots)
       .values({
@@ -147,7 +149,7 @@ describe("SQLite system_snapshots schema", () => {
     for (let i = 0; i < 3; i++) {
       db.insert(systemSnapshots)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<SystemSnapshotId>(crypto.randomUUID()),
           systemId,
           snapshotTrigger: "manual",
           encryptedData: testBlob(),

@@ -1,6 +1,6 @@
-import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, sqliteTable } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -11,14 +11,15 @@ import {
 
 import { accounts } from "./auth.js";
 
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /** SQLite systems table — top-level entity for a plural system. */
 export const systems = sqliteTable(
   "systems",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<SystemId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     /** Nullable — system can exist before profile setup during onboarding. */

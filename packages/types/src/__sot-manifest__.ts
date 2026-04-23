@@ -1,3 +1,4 @@
+import type { Account, AccountServerMetadata, AccountWire } from "./entities/account.js";
 import type {
   AuditLogEntry,
   AuditLogEntryServerMetadata,
@@ -51,9 +52,29 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
 } from "./entities/structure-entity.js";
-import type { SystemSettings, SystemSettingsEncryptedFields } from "./entities/system-settings.js";
-import type { System, SystemEncryptedFields } from "./entities/system.js";
-import type { NomenclatureEncryptedFields, NomenclatureSettings } from "./nomenclature.js";
+import type {
+  SystemSettings,
+  SystemSettingsEncryptedFields,
+  SystemSettingsServerMetadata,
+  SystemSettingsWire,
+} from "./entities/system-settings.js";
+import type {
+  SystemSnapshot,
+  SystemSnapshotServerMetadata,
+  SystemSnapshotWire,
+} from "./entities/system-snapshot.js";
+import type {
+  System,
+  SystemEncryptedFields,
+  SystemServerMetadata,
+  SystemWire,
+} from "./entities/system.js";
+import type {
+  NomenclatureEncryptedFields,
+  NomenclatureServerMetadata,
+  NomenclatureSettings,
+  NomenclatureWire,
+} from "./nomenclature.js";
 
 /**
  * Registry of every domain entity that participates in the types-as-SoT
@@ -87,8 +108,17 @@ export type SotEntityManifest = {
     // Plaintext wire — no encrypted fields.
     encryptedFields: never;
   };
+  Account: {
+    domain: Account;
+    server: AccountServerMetadata;
+    wire: AccountWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
+  };
   System: {
     domain: System;
+    server: SystemServerMetadata;
+    wire: SystemWire;
     encryptedFields: SystemEncryptedFields;
   };
   MemberPhoto: {
@@ -145,7 +175,18 @@ export type SotEntityManifest = {
   };
   SystemSettings: {
     domain: SystemSettings;
+    server: SystemSettingsServerMetadata;
+    wire: SystemSettingsWire;
     encryptedFields: SystemSettingsEncryptedFields;
+  };
+  SystemSnapshot: {
+    domain: SystemSnapshot;
+    server: SystemSnapshotServerMetadata;
+    wire: SystemSnapshotWire;
+    // Hybrid entity: plaintext metadata + opaque `encryptedData` blob whose
+    // decrypted shape (`SnapshotContent`) lives in its own type, not as a
+    // keys-subset of `SystemSnapshot`. No `encryptedFields` union.
+    encryptedFields: never;
   };
   StructureEntityMemberLink: {
     domain: SystemStructureEntityMemberLink;
@@ -157,6 +198,8 @@ export type SotEntityManifest = {
   };
   Nomenclature: {
     domain: NomenclatureSettings;
+    server: NomenclatureServerMetadata;
+    wire: NomenclatureWire;
     encryptedFields: NomenclatureEncryptedFields;
   };
 };

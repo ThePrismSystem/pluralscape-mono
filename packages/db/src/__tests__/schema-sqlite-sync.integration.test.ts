@@ -22,9 +22,8 @@ describe("SQLite sync schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string): string =>
-    sqliteInsertSystem(db, accountId, id);
+  const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
 
   /** Insert a minimal valid syncDocuments row and return its documentId. */
   const insertDocument = (systemId: string, docType: SyncDocumentType = "system-core"): string => {

@@ -1,7 +1,9 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { Locale } from "../i18n.js";
 import type { BucketId, SystemSettingsId, SystemId } from "../ids.js";
 import type { LittlesSafeModeConfig } from "../littles-safe-mode.js";
 import type { NomenclatureSettings } from "../nomenclature.js";
+import type { Serialize } from "../type-assertions.js";
 import type { AuditMetadata } from "../utility.js";
 import type { SnapshotSchedule } from "./system-snapshot.js";
 
@@ -92,3 +94,30 @@ export type SystemSettingsEncryptedFields =
   | "autoCaptureFrontingOnJournal"
   | "snapshotSchedule"
   | "onboardingComplete";
+
+/**
+ * Server-visible SystemSettings metadata — raw Drizzle row shape.
+ *
+ * Derived from `SystemSettings` by stripping the encrypted field keys
+ * (bundled inside `encryptedData`) plus `defaultBucketId` (not stored on
+ * the `system_settings` table — the default bucket is wired through the
+ * encrypted payload) and `nomenclature` (stored in its own
+ * `nomenclature_settings` table). Adds `pinHash` and `biometricEnabled`
+ * (server-visible for device-transfer policy enforcement without
+ * decrypting the settings blob) and `encryptedData`.
+ */
+export type SystemSettingsServerMetadata = Omit<
+  SystemSettings,
+  SystemSettingsEncryptedFields | "defaultBucketId" | "nomenclature"
+> & {
+  readonly pinHash: string | null;
+  readonly biometricEnabled: boolean;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of SystemSettings. Derived from the domain
+ * `SystemSettings` type via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`.
+ */
+export type SystemSettingsWire = Serialize<SystemSettings>;

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, nomenclatureSettings };
@@ -145,7 +147,7 @@ describe("PG nomenclature_settings schema", () => {
     const now = Date.now();
     await expect(
       db.insert(nomenclatureSettings).values({
-        systemId: "nonexistent",
+        systemId: brandId<SystemId>("nonexistent"),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,

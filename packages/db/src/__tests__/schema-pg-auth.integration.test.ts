@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -13,7 +14,11 @@ import {
 
 import { createPgAuthTables, testBlob } from "./helpers/pg-helpers.js";
 
+import type { AccountId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+
+/** Branded ID factory for test fixtures — produces an AccountId from crypto.randomUUID(). */
+const newAccountId = (raw?: string): AccountId => brandId<AccountId>(raw ?? crypto.randomUUID());
 
 const ONE_DAY_MS = 86_400_000;
 const ONE_HOUR_MS = 3_600_000;
@@ -37,7 +42,7 @@ describe("PG auth schema", () => {
       updatedAt: number;
     }> = {},
   ): Promise<{
-    id: string;
+    id: AccountId;
     emailHash: string;
     emailSalt: string;
     authKeyHash: Uint8Array;
@@ -47,7 +52,7 @@ describe("PG auth schema", () => {
   }> {
     const now = Date.now();
     const data = {
-      id: overrides.id ?? crypto.randomUUID(),
+      id: newAccountId(overrides.id),
       emailHash: overrides.emailHash ?? `hash_${crypto.randomUUID()}`,
       emailSalt: overrides.emailSalt ?? `salt_${crypto.randomUUID()}`,
       authKeyHash: overrides.authKeyHash ?? new Uint8Array(32),
@@ -61,9 +66,9 @@ describe("PG auth schema", () => {
   }
 
   async function insertSession(
-    accountId: string,
+    accountId: AccountId,
     overrides: Partial<{ id: string; createdAt: number; tokenHash: string }> = {},
-  ): Promise<{ id: string; accountId: string; tokenHash: string; createdAt: number }> {
+  ): Promise<{ id: string; accountId: AccountId; tokenHash: string; createdAt: number }> {
     const data = {
       id: overrides.id ?? crypto.randomUUID(),
       accountId,

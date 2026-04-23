@@ -1,19 +1,19 @@
 import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { SNAPSHOT_TRIGGERS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { SnapshotTrigger } from "@pluralscape/types";
+import type { SnapshotTrigger, SystemId, SystemSnapshotId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSnapshots = sqliteTable(
   "system_snapshots",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemSnapshotId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     snapshotTrigger: text("snapshot_trigger").notNull().$type<SnapshotTrigger>(),

@@ -36,7 +36,7 @@ import {
   setupRouterFixture,
 } from "../integration-helpers.js";
 
-import type { SystemSnapshotId } from "@pluralscape/types";
+import type { SystemId, SystemSnapshotId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 const INITIAL_SYSTEM_VERSION = 1;
@@ -71,8 +71,8 @@ async function seedSnapshot(
   const snapshotIdRaw = `snap_${crypto.randomUUID()}`;
   const timestamp = Date.now();
   await db.insert(systemSnapshots).values({
-    id: snapshotIdRaw,
-    systemId: systemIdRaw,
+    id: brandId<SystemSnapshotId>(snapshotIdRaw),
+    systemId: brandId<SystemId>(systemIdRaw),
     snapshotTrigger: "manual",
     encryptedData: testBlob(),
     createdAt: timestamp,

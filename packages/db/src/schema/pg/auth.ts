@@ -1,19 +1,19 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, index, integer, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { ACCOUNT_TYPES, AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
+import type { AccountId, AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = pgTable(
   "accounts",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    id: brandedId<AccountId>("id").primaryKey(),
     accountType: varchar("account_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("system")

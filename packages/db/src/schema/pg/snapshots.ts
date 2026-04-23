@@ -1,20 +1,20 @@
 import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { SNAPSHOT_TRIGGERS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { SnapshotTrigger } from "@pluralscape/types";
+import type { SnapshotTrigger, SystemId, SystemSnapshotId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSnapshots = pgTable(
   "system_snapshots",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemSnapshotId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     snapshotTrigger: varchar("snapshot_trigger", { length: ENUM_MAX_LENGTH })

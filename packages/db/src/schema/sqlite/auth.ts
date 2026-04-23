@@ -1,18 +1,23 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import {
+  brandedId,
+  sqliteBinary,
+  sqliteEncryptedBlob,
+  sqliteTimestamp,
+} from "../../columns/sqlite.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ACCOUNT_TYPES, AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
+import type { AccountId, AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = sqliteTable(
   "accounts",
   {
-    id: text("id").primaryKey(),
+    id: brandedId<AccountId>("id").primaryKey(),
     accountType: text("account_type").notNull().default("system").$type<AccountType>(),
     emailHash: text("email_hash").notNull(),
     emailSalt: text("email_salt").notNull(),

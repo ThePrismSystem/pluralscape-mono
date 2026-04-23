@@ -353,6 +353,8 @@ export type {
   CanonicalTerm,
   NomenclatureSettings,
   NomenclatureEncryptedFields,
+  NomenclatureServerMetadata,
+  NomenclatureWire,
   TermPreset,
 } from "./nomenclature.js";
 export { DEFAULT_TERM_PRESETS, createDefaultNomenclatureSettings } from "./nomenclature.js";

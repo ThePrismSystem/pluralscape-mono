@@ -22,7 +22,7 @@ export async function createSystem(
     throw new ApiHttpError(HTTP_FORBIDDEN, "FORBIDDEN", "Only system accounts can create systems");
   }
 
-  const systemId = createId(ID_PREFIXES.system);
+  const systemId = brandId<SystemId>(createId(ID_PREFIXES.system));
   const timestamp = now();
 
   const [row] = await withAccountTransaction(db, auth.accountId, async (tx) => {
@@ -40,7 +40,7 @@ export async function createSystem(
       eventType: "system.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "System created",
-      systemId: brandId<SystemId>(systemId),
+      systemId,
     });
 
     return inserted;

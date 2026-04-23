@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, nomenclatureSettings };
@@ -22,7 +24,7 @@ describe("SQLite nomenclature_settings schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -165,7 +167,7 @@ describe("SQLite nomenclature_settings schema", () => {
       db
         .insert(nomenclatureSettings)
         .values({
-          systemId: "nonexistent",
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,

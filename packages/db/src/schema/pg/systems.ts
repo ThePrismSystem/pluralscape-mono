@@ -1,6 +1,6 @@
-import { index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { index, pgTable, unique } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -8,18 +8,18 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { accounts } from "./auth.js";
 
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /** PG systems table — top-level entity for a plural system. */
 export const systems = pgTable(
   "systems",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     /** Nullable — system can exist before profile setup during onboarding. */

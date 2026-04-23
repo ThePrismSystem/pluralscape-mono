@@ -80,7 +80,7 @@ export async function createSnapshot(
     const [row] = await tx
       .insert(systemSnapshots)
       .values({
-        id: snapshotId,
+        id: brandId<SystemSnapshotId>(snapshotId),
         systemId,
         snapshotTrigger: parsed.snapshotTrigger,
         encryptedData: blob,
@@ -120,7 +120,7 @@ export async function listSnapshots(
     const conditions = [eq(systemSnapshots.systemId, systemId)];
 
     if (cursor) {
-      conditions.push(lt(systemSnapshots.id, cursor));
+      conditions.push(lt(systemSnapshots.id, brandId<SystemSnapshotId>(cursor)));
     }
 
     const rows = await tx

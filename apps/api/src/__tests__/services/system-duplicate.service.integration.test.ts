@@ -22,7 +22,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, SystemId, SystemSnapshotId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { systems, systemSnapshots } = schema;
@@ -48,7 +48,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
     snapshotId = `snap_${crypto.randomUUID()}`;
     const now = Date.now();
     await db.insert(systemSnapshots).values({
-      id: snapshotId,
+      id: brandId<SystemSnapshotId>(snapshotId),
       systemId,
       snapshotTrigger: "manual",
       encryptedData: testBlob(),
@@ -100,7 +100,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
       const [snapshot] = await db
         .select()
         .from(systemSnapshots)
-        .where(eq(systemSnapshots.id, snapshotId));
+        .where(eq(systemSnapshots.id, brandId<SystemSnapshotId>(snapshotId)));
       expect(snapshot?.id).toBe(snapshotId);
     });
 
