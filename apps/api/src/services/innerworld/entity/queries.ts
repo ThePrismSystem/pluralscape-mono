@@ -1,4 +1,5 @@
 import { innerworldEntities } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -48,7 +49,7 @@ export async function listEntities(
     }
 
     if (opts?.cursor) {
-      conditions.push(gt(innerworldEntities.id, opts.cursor));
+      conditions.push(gt(innerworldEntities.id, brandId<InnerWorldEntityId>(opts.cursor)));
     }
 
     const rows = await tx

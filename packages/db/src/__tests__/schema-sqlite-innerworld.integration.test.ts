@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -16,6 +17,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { InnerWorldEntityId, InnerWorldRegionId, SystemId } from "@pluralscape/types";
 import type DatabaseConstructor from "better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -39,15 +41,23 @@ describe("SQLite Innerworld Schema", () => {
     db.delete(innerworldRegions).run();
   });
 
-  function setupSystem(): string {
+  function setupSystem(): SystemId {
     const accountId = sqliteInsertAccount(db);
     return sqliteInsertSystem(db, accountId);
+  }
+
+  function newRegionId(): InnerWorldRegionId {
+    return brandId<InnerWorldRegionId>(crypto.randomUUID());
+  }
+
+  function newEntityId(): InnerWorldEntityId {
+    return brandId<InnerWorldEntityId>(crypto.randomUUID());
   }
 
   it("round-trips innerworldRegions with all fields", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     db.insert(innerworldRegions)
       .values({
@@ -81,7 +91,7 @@ describe("SQLite Innerworld Schema", () => {
   it("innerworld_regions defaults archived to false and archivedAt to null", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     db.insert(innerworldRegions)
       .values({
@@ -105,7 +115,7 @@ describe("SQLite Innerworld Schema", () => {
   it("innerworld_regions round-trips archived: true with archivedAt", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     db.insert(innerworldRegions)
       .values({
@@ -157,7 +167,7 @@ describe("SQLite Innerworld Schema", () => {
   it("innerworld_regions updates archived from false to true", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     db.insert(innerworldRegions)
       .values({
@@ -186,7 +196,7 @@ describe("SQLite Innerworld Schema", () => {
   it("round-trips innerworldEntities with all fields", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     db.insert(innerworldRegions)
       .values({
@@ -198,7 +208,7 @@ describe("SQLite Innerworld Schema", () => {
       })
       .run();
 
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
     db.insert(innerworldEntities)
       .values({
         id: entityId,
@@ -227,7 +237,7 @@ describe("SQLite Innerworld Schema", () => {
   it("innerworld_entities defaults archived to false and archivedAt to null", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
 
     db.insert(innerworldEntities)
       .values({
@@ -251,7 +261,7 @@ describe("SQLite Innerworld Schema", () => {
   it("innerworld_entities round-trips archived: true with archivedAt", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
 
     db.insert(innerworldEntities)
       .values({
@@ -303,7 +313,7 @@ describe("SQLite Innerworld Schema", () => {
   it("innerworld_entities updates archived from false to true", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
 
     db.insert(innerworldEntities)
       .values({
@@ -356,8 +366,8 @@ describe("SQLite Innerworld Schema", () => {
   it("sets parentRegionId to null when parent region is deleted (SET NULL)", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const parentId = crypto.randomUUID();
-    const childId = crypto.randomUUID();
+    const parentId = newRegionId();
+    const childId = newRegionId();
 
     db.insert(innerworldRegions)
       .values({
@@ -390,8 +400,8 @@ describe("SQLite Innerworld Schema", () => {
   it("sets entity regionId to null when region is deleted (SET NULL)", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
-    const entityId = crypto.randomUUID();
+    const regionId = newRegionId();
+    const entityId = newEntityId();
 
     db.insert(innerworldRegions)
       .values({
@@ -428,7 +438,7 @@ describe("SQLite Innerworld Schema", () => {
   it("cascades system delete to all 3 innerworld tables", () => {
     const systemId = setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     db.insert(innerworldRegions)
       .values({
@@ -442,7 +452,7 @@ describe("SQLite Innerworld Schema", () => {
 
     db.insert(innerworldEntities)
       .values({
-        id: crypto.randomUUID(),
+        id: newEntityId(),
         systemId,
         regionId,
         encryptedData: testBlob(new Uint8Array([2])),
