@@ -8,6 +8,7 @@ import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
 } from "./entities/field-definition.js";
+import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
@@ -69,5 +70,9 @@ export type SotEntityManifest = {
   FieldDefinition: {
     domain: FieldDefinition;
     encryptedFields: FieldDefinitionEncryptedFields;
+  };
+  FieldValue: {
+    domain: FieldValue;
+    encryptedFields: FieldValueEncryptedFields;
   };
 };

@@ -49,6 +49,8 @@ import type {
   Equal,
   FieldDefinition,
   FieldDefinitionEncryptedFields,
+  FieldValue,
+  FieldValueEncryptedFields,
   Group,
   GroupEncryptedFields,
   Member,
@@ -135,6 +137,13 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextFieldDefinition"],
     Serialize<Pick<FieldDefinition, FieldDefinitionEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextFieldValue"],
+    Serialize<Pick<FieldValue, FieldValueEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
 

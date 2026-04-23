@@ -7887,53 +7887,57 @@ export interface components {
     /**
      * @description **Encrypted into**: `encryptedData` on field value set/update endpoints.
      *
-     *     A typed value for a custom field on a member. The `fieldType` discriminant
-     *     determines the shape of `value`. Encryption tier: **T1**.
+     *     A typed value for a custom field on a member. Wraps the
+     *     discriminated `value` (keyed by `fieldType`) so the encrypted
+     *     payload parity matches the domain projection
+     *     `Pick<FieldValue, "value">`. Encryption tier: **T1**.
      */
-    PlaintextFieldValue:
-      | {
-          /** @constant */
-          fieldType: "text";
-          value: string;
-        }
-      | {
-          /** @constant */
-          fieldType: "number";
-          value: number;
-        }
-      | {
-          /** @constant */
-          fieldType: "boolean";
-          value: boolean;
-        }
-      | {
-          /** @constant */
-          fieldType: "date";
-          /** @description ISO 8601 date string */
-          value: string;
-        }
-      | {
-          /** @constant */
-          fieldType: "color";
-          /** @description Hex color (e.g., #FF00AA) */
-          value: string;
-        }
-      | {
-          /** @constant */
-          fieldType: "select";
-          value: string;
-        }
-      | {
-          /** @constant */
-          fieldType: "multi-select";
-          value: string[];
-        }
-      | {
-          /** @constant */
-          fieldType: "url";
-          /** Format: uri */
-          value: string;
-        };
+    PlaintextFieldValue: {
+      value:
+        | {
+            /** @constant */
+            fieldType: "text";
+            value: string;
+          }
+        | {
+            /** @constant */
+            fieldType: "number";
+            value: number;
+          }
+        | {
+            /** @constant */
+            fieldType: "boolean";
+            value: boolean;
+          }
+        | {
+            /** @constant */
+            fieldType: "date";
+            /** @description ISO 8601 date string */
+            value: string;
+          }
+        | {
+            /** @constant */
+            fieldType: "color";
+            /** @description Hex color (e.g., #FF00AA) */
+            value: string;
+          }
+        | {
+            /** @constant */
+            fieldType: "select";
+            value: string;
+          }
+        | {
+            /** @constant */
+            fieldType: "multi-select";
+            value: string[];
+          }
+        | {
+            /** @constant */
+            fieldType: "url";
+            /** Format: uri */
+            value: string;
+          };
+    };
     /**
      * @description **Encrypted into**: `encryptedData` on relationship create/update endpoints.
      *

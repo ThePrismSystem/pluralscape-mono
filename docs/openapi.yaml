@@ -15900,94 +15900,101 @@ components:
       description: |
         **Encrypted into**: `encryptedData` on field value set/update endpoints.
 
-        A typed value for a custom field on a member. The `fieldType` discriminant
-        determines the shape of `value`. Encryption tier: **T1**.
-      oneOf:
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: text
-            value:
-              type: string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: number
-            value:
-              type: number
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: boolean
-            value:
-              type: boolean
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: date
-            value:
-              type: string
-              description: ISO 8601 date string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: color
-            value:
-              type: string
-              description: "Hex color (e.g., #FF00AA)"
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: select
-            value:
-              type: string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: multi-select
-            value:
-              type: array
-              items:
-                type: string
-        - type: object
-          required:
-            - fieldType
-            - value
-          properties:
-            fieldType:
-              type: string
-              const: url
-            value:
-              type: string
-              format: uri
+        A typed value for a custom field on a member. Wraps the
+        discriminated `value` (keyed by `fieldType`) so the encrypted
+        payload parity matches the domain projection
+        `Pick<FieldValue, "value">`. Encryption tier: **T1**.
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          oneOf:
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: text
+                value:
+                  type: string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: number
+                value:
+                  type: number
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: boolean
+                value:
+                  type: boolean
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: date
+                value:
+                  type: string
+                  description: ISO 8601 date string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: color
+                value:
+                  type: string
+                  description: "Hex color (e.g., #FF00AA)"
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: select
+                value:
+                  type: string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: multi-select
+                value:
+                  type: array
+                  items:
+                    type: string
+            - type: object
+              required:
+                - fieldType
+                - value
+              properties:
+                fieldType:
+                  type: string
+                  const: url
+                value:
+                  type: string
+                  format: uri
     PlaintextRelationship:
       description: |
         **Encrypted into**: `encryptedData` on relationship create/update endpoints.
