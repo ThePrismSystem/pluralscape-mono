@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-22T23:05:34Z
+updated_at: 2026-04-23T06:14:53Z
 parent: ps-cd6x
 ---
 
@@ -57,3 +57,26 @@ Pilot landed. Member and AuditLogEntry through the parity stack:
 - Manifest completeness gate prevents silent entity drop-off (pilot-scope: Member + AuditLogEntry).
 
 Fleet (Phase 2) next: ~23 remaining Server/Client entity pairs across 6 domain clusters. See follow-up plan for rollout. Follow-up beans: `db-drq1` (Drizzle helper branding), `types-tef0` (OpenAPI enc/dec boundary).
+
+## Plan 2 fleet preconditions (documented by types-tef0)
+
+Each per-entity fleet PR must include these substeps in addition to renaming the Server<X>:
+
+**Types package** (`packages/types/src/entities/<x>.ts`):
+
+1. Rename `Server<X>` → `<X>ServerMetadata`; move declaration from `encryption-primitives.ts` to the entity file.
+2. Refactor as `<X>ServerMetadata = Omit<<X>, <X>EncryptedFields> & { encryptedData: EncryptedBlob }` (consumes the `<X>EncryptedFields` union already in place from types-tef0). Note Member also required omitting `"archived"` due to literal-type mismatch — check each entity for similar.
+3. Add `<X>Wire = Serialize<<X>>`.
+4. Delete old `Server<X>` / `Client<X>` declarations from `encryption-primitives.ts`.
+
+**Parity test** (`scripts/openapi-wire-parity.type-test.ts`): 5. **Do NOT add per-entity encrypted-wire (`<X>Response`) parity** — architecturally impossible. OpenAPI models `encryptedData` as opaque `string`, domain models it as structured `EncryptedBlob`. The shared `EncryptedEntity` envelope parity already covers the wire-shape tripwire.
+
+**Data package** (`packages/data/src/transforms/<x>.ts`): 6. Rename hand-written `<X>EncryptedFields` interface → `<X>EncryptedInput = Pick<<X>, <X>EncryptedFields>` (consumes types-package keys-union). 7. Delete local `AssertXFieldsSubset` type (redundant — `Pick` enforces the constraint). 8. Delete hand-written `assertXEncryptedFields` runtime validator. 9. Update `encryptXInput(data: <X>EncryptedInput, masterKey)` signature.
+
+**Validation package** (`packages/validation/src/<x>.ts`): 10. Add `<X>EncryptedInputSchema` Zod schema (every field of `<X>EncryptedInput`; nested types from shared `plaintext-shared.ts`). 11. Add Zod parity test: `Equal<z.infer<typeof <X>EncryptedInputSchema>, Pick<<X>, <X>EncryptedFields>>` (assert against `Pick` directly to avoid data → validation cycle). 12. Replace `assertXEncryptedFields` call sites (typically inside `decryptX`) with `<X>EncryptedInputSchema.parse()`.
+
+**Consumer packages**: 13. `packages/import-sp/src/mappers/<x>.mapper.ts` + `packages/import-pk/src/mappers/<x>.mapper.ts`: rename imports `<X>EncryptedFields` → `<X>EncryptedInput`.
+
+**Sot manifest** — already done by types-tef0 (all 20 entries include `encryptedFields`). Fleet only needs to upgrade the partial entries (`{ domain, encryptedFields }`) to full entries (`{ domain, server, wire, encryptedFields }`) as it lands `<X>ServerMetadata` and `<X>Wire`.
+
+Pilot (Member) landed in types-tef0 as a reference implementation. The 18 non-pilot entities + Nomenclature are fleet scope.

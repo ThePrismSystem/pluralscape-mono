@@ -1,11 +1,11 @@
 ---
 # types-tef0
 title: OpenAPI-Wire parity for Member and AuditLogEntry - resolve enc/dec boundary
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-22T22:58:41Z
-updated_at: 2026-04-22T23:56:42Z
+updated_at: 2026-04-23T06:15:17Z
 parent: types-ltel
 ---
 
@@ -86,3 +86,41 @@ Explicit, catches 'field added to Member but not encrypted' as a compile error.
 ### Prerequisite
 
 Blocked-by `types-reorg` (per-entity file consolidation). Once every entity has its own file, `<Entity>EncryptedFields` has a natural home alongside `<Entity>`, `<Entity>ServerMetadata`, `<Entity>Wire`.
+
+## Summary of Changes
+
+### Universal — all 20 encrypted schemas
+
+- Added `<Entity>EncryptedFields` keys-union for 19 entities + Nomenclature.
+- Added 20 `PlaintextX` parity assertions in `scripts/openapi-wire-parity.type-test.ts`: `Equal<components['schemas']['PlaintextX'], Serialize<Pick<X, XEncryptedFields>>>`.
+- Extended `SotEntityManifest` with `encryptedFields` slot per entry (partial form for non-pilot entities: `{ domain, encryptedFields }`).
+- Reconciled `docs/openapi/schemas/plaintext.yaml` against domain drift — many entities needed `required:` lists updated, field names corrected (e.g., `notes` aligned, `coPresence` → `co-presence` in Nomenclature), InnerworldEntity rewritten as `oneOf` discriminated union.
+
+### AuditLogEntry
+
+- Rewrote OpenAPI schema to match domain: rename `timestamp` → `createdAt`, drop `resourceType`/`resourceId`, add `systemId`/`detail`, replace `actor: string` with `oneOf` matching `AuditActor` tagged union.
+- Added domain/OpenAPI parity assertion: `Equal<components['schemas']['AuditLogEntry'], Serialize<AuditLogEntry>>`.
+- Consumer sweep across apps/api + test fixtures.
+- Extended `Serialize<T>` to strip `Plaintext<T>` branding; exported `__plaintext` symbol.
+
+### Member pilot full-stack refactor
+
+- `MemberServerMetadata = Omit<Member, MemberEncryptedFields | 'archived'> & { archived: boolean; archivedAt: UnixMillis | null; encryptedData: EncryptedBlob }` (derived, not declared). Additional `'archived'` omit needed because domain has literal `archived: false`.
+- Added encrypted-wire parity for Member only. `MemberResponse` parity itself structurally impossible (OpenAPI `encryptedData: string` vs domain `EncryptedBlob`) — documented in file comments.
+- Data package: renamed hand-written `MemberEncryptedFields` interface → `MemberEncryptedInput = Pick<Member, MemberEncryptedFields>`. Deleted `AssertMemberFieldsSubset`.
+- Validation package: added `MemberEncryptedInputSchema` Zod schema + parity test. New `plaintext-shared.ts` with `PlaintextImageSourceSchema` / `PlaintextSaturationLevelSchema` / `PlaintextTagSchema` / `HexColorSchema`.
+- Replaced hand-written `assertMemberEncryptedFields` runtime validator with `MemberEncryptedInputSchema.parse()`.
+- Closed enum-drift hole: `KNOWN_TAGS` + `KNOWN_SATURATION_LEVELS` exported as `as const` tuples from types; Zod schemas derive via `z.enum(TUPLE)`.
+- `@pluralscape/validation` added as runtime dep of `@pluralscape/data` (for .parse() at decrypt time).
+- Consumer updates: `packages/import-sp/src/mappers/member.mapper.ts` + `packages/import-pk/src/mappers/member.mapper.ts`.
+
+### Quality gates
+
+- `pnpm types:check-sot` — all 4 phases green (types typecheck, Drizzle parity, Zod parity, OpenAPI-Wire parity).
+- `pnpm turbo typecheck` — green (21 packages).
+- Negative-test fixture `scripts/openapi-wire-parity.negative-test.ts` proves the parity helpers are live.
+
+### Plan 2 fleet preconditions
+
+- 13-step checklist appended to `types-ltel` parent bean. Each fleet per-entity PR must follow.
+- Encrypted-wire per-entity response parity dropped from the checklist — architecturally impossible.
