@@ -5626,7 +5626,7 @@ export interface components {
        * Format: int64
        * @description Unix timestamp in milliseconds when archived, null if not archived
        */
-      archivedAt?: number | null;
+      archivedAt: number | null;
     };
     LoginRequest: {
       /**

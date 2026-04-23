@@ -7,34 +7,45 @@
  *
  * Typechecked via `pnpm types:check-sot`.
  *
- * ── Scope and deferrals ──────────────────────────────────────────────
+ * ── Scope ────────────────────────────────────────────────────────────
  *
- * `MemberResponse` parity is intentionally not asserted here. OpenAPI
- * models `encryptedData` as an opaque `string` (the base64-encoded
- * envelope on the wire), while `MemberServerMetadata.encryptedData` is
- * the structured `EncryptedBlob` discriminated union (pre-serialization).
- * A direct `Equal<components["schemas"]["MemberResponse"],
- * Serialize<MemberServerMetadata>>` assertion would fail by design. The
- * shared `EncryptedEntity` envelope parity below is the real tripwire
- * for the wire shape every encrypted response rides on.
+ * Every `<X>Response` has two parts:
+ *  1. The opaque `encryptedData` field — `string` on the wire but a
+ *     structured `EncryptedBlob` discriminated union in the domain. The
+ *     asymmetry is at an encode/decode boundary that cannot be
+ *     structurally equated.
+ *  2. Every OTHER field (plaintext columns the server sees) — ids,
+ *     timestamps, `version`, `archived`/`archivedAt`, plus per-entity
+ *     denormalized additions (e.g. `FrontingSessionResponse.structureEntityId`).
+ *     These ARE fully structurally assertable.
+ *
+ * Per-entity plaintext-column parity therefore takes a split form — see
+ * the Member block below. This is the canonical fleet pattern: every
+ * renamed entity replicates the split (`Omit<..., "encryptedData">`
+ * equality + `<X>Response["encryptedData"] extends string`).
+ *
+ * The shared `EncryptedEntity` envelope parity serves as the canonical
+ * tripwire for the envelope shape itself (the set of plaintext columns
+ * every T1 response rides on). If the envelope drifts, every per-entity
+ * assertion will also trip — the envelope check localizes the diagnosis.
  *
  * `AuditLogEntry` is plaintext on the wire (not encrypted), so the
- * OpenAPI schema structurally matches the domain type directly and a
- * real `Equal<components["schemas"]["AuditLogEntry"],
- * Serialize<AuditLogEntry>>` compile-time check is enforced below.
+ * OpenAPI schema structurally matches the domain type directly via
+ * `Equal<components["schemas"]["AuditLogEntry"], Serialize<AuditLogEntry>>`.
  *
- * What this file enforces right now:
+ * What this file enforces:
  *  - `MemberWire ≡ Serialize<Member>` (self-consistency of the helper).
  *  - `AuditLogEntryWire ≡ Serialize<AuditLogEntry>` (same).
- *  - `components["schemas"]["EncryptedEntity"]` is structurally equal to the
- *    hand-authored `EncryptedEntityWire` mirror below — a real OpenAPI→
- *    domain parity tripwire for the shared envelope that every T1 response
- *    (including Member) rides on.
+ *  - `components["schemas"]["EncryptedEntity"]` structurally equals the
+ *    hand-authored `EncryptedEntityWire` mirror below — canonical envelope
+ *    tripwire.
+ *  - `MemberResponse` plaintext columns (split parity, see Member block).
  *  - `components["schemas"]["PlaintextMember"]` structurally equals
  *    `Serialize<Pick<Member, MemberEncryptedFields>>` — the pre-encryption
  *    contract derived directly from the domain.
  *  - `components["schemas"]["AuditLogEntry"]` structurally equals
  *    `Serialize<AuditLogEntry>` — plaintext-wire parity for the audit log.
+ *  - `PlaintextX` parity for every fleet-renamed entity.
  *
  * Adding a bogus field on either side of any assertion will fail the gate
  * — see `pnpm types:check-sot`.
@@ -67,6 +78,7 @@ import type {
   MemberEncryptedFields,
   MemberPhoto,
   MemberPhotoEncryptedFields,
+  MemberServerMetadata,
   MemberWire,
   NomenclatureEncryptedFields,
   NomenclatureSettings,
@@ -115,7 +127,7 @@ interface EncryptedEntityWire {
   createdAt: number;
   updatedAt: number;
   archived: boolean;
-  archivedAt?: number | null;
+  archivedAt: number | null;
 }
 
 expectTypeOf<
@@ -133,6 +145,32 @@ expectTypeOf<
 expectTypeOf<
   Equal<components["schemas"]["PlaintextMember"], Serialize<Pick<Member, MemberEncryptedFields>>>
 >().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: MemberResponse plaintext columns ──────
+//
+// Every <X>Response has two parts: the opaque `encryptedData` field
+// (string on wire, structured EncryptedBlob in domain — the asymmetry
+// is at an encode/decode boundary that can't be structurally equated),
+// and every other field (plaintext columns the server sees). The
+// plaintext columns ARE assertable, so we split the parity:
+//
+// Piece 1: plaintext columns on both sides, minus `encryptedData`.
+// Piece 2: `encryptedData` on the wire is opaque `string`.
+//
+// This catches per-entity plaintext column drift (e.g., `archived`
+// rename, new denormalized column added to a response). Fleet must
+// replicate this split for every renamed entity.
+
+type MemberResponseOpenApi = components["schemas"]["MemberResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<MemberResponseOpenApi, "encryptedData">,
+    Omit<Serialize<MemberServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<MemberResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 // ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
 //

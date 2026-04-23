@@ -11825,6 +11825,8 @@ components:
         - version
         - createdAt
         - updatedAt
+        - archived
+        - archivedAt
       properties:
         id:
           type: string

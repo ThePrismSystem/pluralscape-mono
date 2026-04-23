@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-22T22:58:41Z
-updated_at: 2026-04-23T06:15:17Z
+updated_at: 2026-04-23T06:55:44Z
 parent: types-ltel
 ---
 
@@ -106,7 +106,7 @@ Blocked-by `types-reorg` (per-entity file consolidation). Once every entity has 
 ### Member pilot full-stack refactor
 
 - `MemberServerMetadata = Omit<Member, MemberEncryptedFields | 'archived'> & { archived: boolean; archivedAt: UnixMillis | null; encryptedData: EncryptedBlob }` (derived, not declared). Additional `'archived'` omit needed because domain has literal `archived: false`.
-- Added encrypted-wire parity for Member only. `MemberResponse` parity itself structurally impossible (OpenAPI `encryptedData: string` vs domain `EncryptedBlob`) — documented in file comments.
+- Added split-form encrypted-wire parity for Member: `Equal<Omit<MemberResponse, 'encryptedData'>, Omit<Serialize<MemberServerMetadata>, 'encryptedData'>>` + `MemberResponse['encryptedData']` is opaque `string`. Per-entity plaintext-column drift (including per-entity denormalized plaintext fields) is now caught. Fleet step #5 rewritten to this pattern.
 - Data package: renamed hand-written `MemberEncryptedFields` interface → `MemberEncryptedInput = Pick<Member, MemberEncryptedFields>`. Deleted `AssertMemberFieldsSubset`.
 - Validation package: added `MemberEncryptedInputSchema` Zod schema + parity test. New `plaintext-shared.ts` with `PlaintextImageSourceSchema` / `PlaintextSaturationLevelSchema` / `PlaintextTagSchema` / `HexColorSchema`.
 - Replaced hand-written `assertMemberEncryptedFields` runtime validator with `MemberEncryptedInputSchema.parse()`.
@@ -123,4 +123,4 @@ Blocked-by `types-reorg` (per-entity file consolidation). Once every entity has 
 ### Plan 2 fleet preconditions
 
 - 13-step checklist appended to `types-ltel` parent bean. Each fleet per-entity PR must follow.
-- Encrypted-wire per-entity response parity dropped from the checklist — architecturally impossible.
+- Fleet step #5 now mandates split-form per-entity plaintext-column parity (`Omit<..., "encryptedData">` equality + `encryptedData extends string`). The `encryptedData` field itself is the only structurally-impossible piece; all plaintext columns are fully asserted per-entity.

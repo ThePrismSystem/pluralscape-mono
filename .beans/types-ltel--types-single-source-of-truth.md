@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-23T06:14:53Z
+updated_at: 2026-04-23T06:55:26Z
 parent: ps-cd6x
 ---
 
@@ -69,7 +69,22 @@ Each per-entity fleet PR must include these substeps in addition to renaming the
 3. Add `<X>Wire = Serialize<<X>>`.
 4. Delete old `Server<X>` / `Client<X>` declarations from `encryption-primitives.ts`.
 
-**Parity test** (`scripts/openapi-wire-parity.type-test.ts`): 5. **Do NOT add per-entity encrypted-wire (`<X>Response`) parity** — architecturally impossible. OpenAPI models `encryptedData` as opaque `string`, domain models it as structured `EncryptedBlob`. The shared `EncryptedEntity` envelope parity already covers the wire-shape tripwire.
+**Parity test** (`scripts/openapi-wire-parity.type-test.ts`): 5. Add split-form encrypted-wire parity for the entity:
+
+```ts
+type <X>ResponseOpenApi = components["schemas"]["<X>Response"];
+
+expectTypeOf<
+  Equal<
+    Omit<<X>ResponseOpenApi, "encryptedData">,
+    Omit<Serialize<<X>ServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<<X>ResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+```
+
+The Omit excludes the one structurally-impossible field (`encryptedData` is opaque `string` on wire but structured `EncryptedBlob` in domain). All plaintext columns (ids, timestamps, version, archived flags, and per-entity denormalized plaintext additions like `FrontingSessionResponse.structureEntityId`) are asserted.
 
 **Data package** (`packages/data/src/transforms/<x>.ts`): 6. Rename hand-written `<X>EncryptedFields` interface → `<X>EncryptedInput = Pick<<X>, <X>EncryptedFields>` (consumes types-package keys-union). 7. Delete local `AssertXFieldsSubset` type (redundant — `Pick` enforces the constraint). 8. Delete hand-written `assertXEncryptedFields` runtime validator. 9. Update `encryptXInput(data: <X>EncryptedInput, masterKey)` signature.
 
