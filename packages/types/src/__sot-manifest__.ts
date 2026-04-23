@@ -3,6 +3,7 @@ import type {
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
+import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
   Member,
   MemberEncryptedFields,
@@ -46,5 +47,9 @@ export type SotEntityManifest = {
   System: {
     domain: System;
     encryptedFields: SystemEncryptedFields;
+  };
+  MemberPhoto: {
+    domain: MemberPhoto;
+    encryptedFields: MemberPhotoEncryptedFields;
   };
 };

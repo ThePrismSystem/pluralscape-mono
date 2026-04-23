@@ -15809,11 +15809,13 @@ components:
       type: object
       required:
         - imageSource
+        - sortOrder
+        - caption
       properties:
         imageSource:
           $ref: "#/components/schemas/PlaintextImageSource"
         sortOrder:
-          type: integer
+          type: number
         caption:
           type: string
           nullable: true

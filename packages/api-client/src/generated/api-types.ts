@@ -7843,8 +7843,8 @@ export interface components {
      */
     PlaintextMemberPhoto: {
       imageSource: components["schemas"]["PlaintextImageSource"];
-      sortOrder?: number;
-      caption?: string | null;
+      sortOrder: number;
+      caption: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on group create/update endpoints.

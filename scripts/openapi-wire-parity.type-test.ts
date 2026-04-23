@@ -47,6 +47,8 @@ import type {
   Equal,
   Member,
   MemberEncryptedFields,
+  MemberPhoto,
+  MemberPhotoEncryptedFields,
   MemberWire,
   Serialize,
   System,
@@ -115,6 +117,13 @@ expectTypeOf<
 // structurally equals `Serialize<Pick<<Entity>, <Entity>EncryptedFields>>`
 // — the single source of truth for the client-encrypted payload contract.
 // Sorted alphabetically by entity.
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextMemberPhoto"],
+    Serialize<Pick<MemberPhoto, MemberPhotoEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
 
 expectTypeOf<
   Equal<components["schemas"]["PlaintextSystem"], Serialize<Pick<System, SystemEncryptedFields>>>

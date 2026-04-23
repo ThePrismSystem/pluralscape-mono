@@ -204,12 +204,12 @@ PlaintextMemberPhoto:
 
     A photo entry in a member's gallery. Encryption tier: **T1**.
   type: object
-  required: [imageSource]
+  required: [imageSource, sortOrder, caption]
   properties:
     imageSource:
       $ref: "#/PlaintextImageSource"
     sortOrder:
-      type: integer
+      type: number
     caption:
       type: string
       nullable: true
