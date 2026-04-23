@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-22T22:58:41Z
-updated_at: 2026-04-23T06:55:44Z
+updated_at: 2026-04-23T07:03:10Z
 parent: types-ltel
 ---
 
@@ -124,3 +124,7 @@ Blocked-by `types-reorg` (per-entity file consolidation). Once every entity has 
 
 - 13-step checklist appended to `types-ltel` parent bean. Each fleet per-entity PR must follow.
 - Fleet step #5 now mandates split-form per-entity plaintext-column parity (`Omit<..., "encryptedData">` equality + `encryptedData extends string`). The `encryptedData` field itself is the only structurally-impossible piece; all plaintext columns are fully asserted per-entity.
+
+### Follow-up fix
+
+Noticed during review that the Plan 2 fleet checklist on `types-ltel` was missing the `db` package Drizzle parity step. Added as step 5 of the checklist — fleet now creates a per-entity Drizzle parity test file (`packages/db/src/__tests__/type-parity/<x>.type.test.ts`) asserting `Equal<StripBrands<InferSelectModel<typeof <table>>>, StripBrands<<X>ServerMetadata>>`.
