@@ -627,10 +627,9 @@ export type {
   InnerWorldEntity,
   ArchivedInnerWorldEntity,
   InnerWorldEntityType,
-  InnerWorldRegion,
-  ArchivedInnerWorldRegion,
-  InnerWorldCanvas,
-} from "./innerworld.js";
+} from "./entities/innerworld-entity.js";
+export type { InnerWorldRegion, ArchivedInnerWorldRegion } from "./entities/innerworld-region.js";
+export type { InnerWorldCanvas } from "./entities/innerworld-canvas.js";
 
 // ── Littles Safe Mode ─────────────────────────────────────────────
 export type {

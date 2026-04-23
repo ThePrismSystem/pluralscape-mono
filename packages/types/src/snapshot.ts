@@ -1,3 +1,4 @@
+import type { InnerWorldEntityType } from "./entities/innerworld-entity.js";
 import type { Tag, SaturationLevel } from "./entities/member.js";
 import type { RelationshipType } from "./entities/relationship.js";
 import type { SystemStructureEntityAssociation } from "./entities/structure-entity-association.js";
@@ -13,7 +14,6 @@ import type {
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
 } from "./ids.js";
-import type { InnerWorldEntityType } from "./innerworld.js";
 import type { UnixMillis } from "./timestamps.js";
 
 // ── Snapshot metadata ─────────────────────────────────────────────

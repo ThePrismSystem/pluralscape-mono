@@ -1,3 +1,4 @@
+import type { InnerWorldEntityType } from "./entities/innerworld-entity.js";
 import type {
   InnerWorldEntityId,
   InnerWorldRegionId,
@@ -6,7 +7,6 @@ import type {
   SystemId,
   SystemStructureEntityId,
 } from "./ids.js";
-import type { InnerWorldEntityType } from "./innerworld.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { EntityReference } from "./utility.js";
 

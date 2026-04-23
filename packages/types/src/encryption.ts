@@ -7,6 +7,8 @@ import type { Channel } from "./entities/channel.js";
 import type { CustomFront } from "./entities/custom-front.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
+import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
+import type { InnerWorldRegion } from "./entities/innerworld-region.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
 import type { Member } from "./entities/member.js";
 import type { ChatMessage } from "./entities/message.js";
@@ -49,7 +51,6 @@ import type {
   SlugHash,
   WikiPageId,
 } from "./ids.js";
-import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
 import type { JournalEntry, WikiPage } from "./journal.js";
 import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
 import type { TimerConfig } from "./timer.js";

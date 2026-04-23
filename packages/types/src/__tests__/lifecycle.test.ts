@@ -1,5 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { InnerWorldEntityType } from "../entities/innerworld-entity.js";
 import type {
   InnerWorldEntityId,
   LifecycleEventId,
@@ -7,7 +8,6 @@ import type {
   SystemId,
   SystemStructureEntityId,
 } from "../ids.js";
-import type { InnerWorldEntityType } from "../innerworld.js";
 import type {
   ArchivalEvent,
   DiscoveryEvent,
