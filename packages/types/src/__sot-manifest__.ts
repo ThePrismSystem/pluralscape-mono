@@ -9,6 +9,7 @@ import type {
   MemberServerMetadata,
   MemberWire,
 } from "./entities/member.js";
+import type { System, SystemEncryptedFields } from "./entities/system.js";
 
 /**
  * Registry of every domain entity that participates in the types-as-SoT
@@ -17,12 +18,16 @@ import type {
  * - `domain` — the full decrypted domain shape (`<Entity>`)
  * - `server` — the server-visible Drizzle row shape (`<Entity>ServerMetadata`)
  * - `wire`   — the JSON-serialized HTTP shape (`<Entity>Wire`)
+ * - `encryptedFields` — keys-union of encrypted fields
  *
  * Completeness checks in `packages/db` and `packages/validation` assert that
  * every Drizzle table and every Zod schema maps to a manifest entry, so
  * silently dropping an entity during fleet work fails CI.
  *
- * Phase 1 (pilot): Member + AuditLogEntry. Fleet (Phase 2) fills the rest.
+ * Phase 1 (pilot): Member + AuditLogEntry carry the full triple (domain +
+ * server + wire + encryptedFields). Fleet (Phase 2) currently populates
+ * only `domain` + `encryptedFields` per entity; `server` / `wire` are
+ * filled in when each entity's ServerMetadata/Wire types land.
  */
 export type SotEntityManifest = {
   Member: {
@@ -37,5 +42,9 @@ export type SotEntityManifest = {
     wire: AuditLogEntryWire;
     // Plaintext wire — no encrypted fields.
     encryptedFields: never;
+  };
+  System: {
+    domain: System;
+    encryptedFields: SystemEncryptedFields;
   };
 };

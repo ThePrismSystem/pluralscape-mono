@@ -49,6 +49,8 @@ import type {
   MemberEncryptedFields,
   MemberWire,
   Serialize,
+  System,
+  SystemEncryptedFields,
 } from "../packages/types/src/index.js";
 import { expectTypeOf } from "vitest";
 
@@ -105,4 +107,15 @@ expectTypeOf<
 
 expectTypeOf<
   Equal<components["schemas"]["AuditLogEntry"], Serialize<AuditLogEntry>>
+>().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: PlaintextX (fleet, Phase 2) ────────────
+//
+// For each non-pilot entity, assert that the OpenAPI `PlaintextX` schema
+// structurally equals `Serialize<Pick<<Entity>, <Entity>EncryptedFields>>`
+// — the single source of truth for the client-encrypted payload contract.
+// Sorted alphabetically by entity.
+
+expectTypeOf<
+  Equal<components["schemas"]["PlaintextSystem"], Serialize<Pick<System, SystemEncryptedFields>>>
 >().toEqualTypeOf<true>();

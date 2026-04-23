@@ -12,6 +12,15 @@ export interface System extends AuditMetadata {
   readonly settingsId: SystemSettingsId;
 }
 
+/**
+ * Keys of `System` that are encrypted client-side before the server sees
+ * them. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextSystem parity)
+ * - Plan 2 fleet will consume when deriving `SystemServerMetadata`.
+ */
+export type SystemEncryptedFields = "name" | "displayName" | "description" | "avatarSource";
+
 /** @future Multi-system switcher list item — not yet implemented. */
 export interface SystemListItem {
   readonly id: SystemId;

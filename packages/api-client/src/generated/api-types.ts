@@ -7812,9 +7812,9 @@ export interface components {
       /** @description Display name of the plural system */
       name: string;
       /** @description Optional alternate display name */
-      displayName?: string | null;
-      description?: string | null;
-      avatarSource?: components["schemas"]["PlaintextImageSource"] | null;
+      displayName: string | null;
+      description: string | null;
+      avatarSource: components["schemas"]["PlaintextImageSource"] | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on member create/update endpoints.

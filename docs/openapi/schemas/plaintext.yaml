@@ -131,7 +131,7 @@ PlaintextSystem:
     The system profile visible after client-side decryption.
     Encryption tier: **T1** (master-key encrypted).
   type: object
-  required: [name]
+  required: [name, displayName, description, avatarSource]
   properties:
     name:
       type: string
