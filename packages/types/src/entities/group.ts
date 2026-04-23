@@ -16,6 +16,15 @@ export interface Group extends AuditMetadata {
   readonly archived: false;
 }
 
+/**
+ * Keys of `Group` that are encrypted client-side before the server sees
+ * them. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextGroup parity)
+ * - Plan 2 fleet will consume when deriving `GroupServerMetadata`.
+ */
+export type GroupEncryptedFields = "name" | "description" | "imageSource" | "color" | "emoji";
+
 /** An archived group — preserves all data with archive metadata. */
 export type ArchivedGroup = Archived<Group>;
 

@@ -45,6 +45,8 @@ import type {
   AuditLogEntry,
   AuditLogEntryWire,
   Equal,
+  Group,
+  GroupEncryptedFields,
   Member,
   MemberEncryptedFields,
   MemberPhoto,
@@ -117,6 +119,10 @@ expectTypeOf<
 // structurally equals `Serialize<Pick<<Entity>, <Entity>EncryptedFields>>`
 // — the single source of truth for the client-encrypted payload contract.
 // Sorted alphabetically by entity.
+
+expectTypeOf<
+  Equal<components["schemas"]["PlaintextGroup"], Serialize<Pick<Group, GroupEncryptedFields>>>
+>().toEqualTypeOf<true>();
 
 expectTypeOf<
   Equal<

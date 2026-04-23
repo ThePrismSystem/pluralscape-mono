@@ -7853,11 +7853,11 @@ export interface components {
      */
     PlaintextGroup: {
       name: string;
-      description?: string | null;
-      imageSource?: components["schemas"]["PlaintextImageSource"] | null;
+      description: string | null;
+      imageSource: components["schemas"]["PlaintextImageSource"] | null;
       /** @description Hex color (e.g., #FF00AA) */
-      color?: string | null;
-      emoji?: string | null;
+      color: string | null;
+      emoji: string | null;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on custom front create/update endpoints.

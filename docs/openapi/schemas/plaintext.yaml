@@ -220,7 +220,7 @@ PlaintextGroup:
 
     A user-defined group for organizing members. Encryption tier: **T1**.
   type: object
-  required: [name]
+  required: [name, description, imageSource, color, emoji]
   properties:
     name:
       type: string
