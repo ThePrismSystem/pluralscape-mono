@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -8,6 +9,7 @@ import { systems } from "../schema/pg/systems.js";
 
 import { createPgSystemTables, pgInsertAccount, testBlob } from "./helpers/pg-helpers.js";
 
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems };
@@ -31,7 +33,7 @@ describe("PG systems schema", () => {
   it("inserts and retrieves with all columns", async () => {
     const accountId = await insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
     const data = testBlob(new Uint8Array([1, 2, 3, 4, 5]));
 
     await db.insert(systems).values({
@@ -52,7 +54,7 @@ describe("PG systems schema", () => {
   it("allows nullable encrypted_data", async () => {
     const accountId = await insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({
       id,
@@ -68,7 +70,7 @@ describe("PG systems schema", () => {
   it("round-trips encrypted_data binary correctly", async () => {
     const accountId = await insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
     const blobCiphertext = new Uint8Array(256);
     for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
     const blob = testBlob(blobCiphertext);
@@ -88,7 +90,7 @@ describe("PG systems schema", () => {
   it("defaults version to 1", async () => {
     const accountId = await insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({
       id,
@@ -104,7 +106,7 @@ describe("PG systems schema", () => {
   it("cascades on account deletion", async () => {
     const accountId = await insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({
       id,
@@ -122,8 +124,8 @@ describe("PG systems schema", () => {
     const now = Date.now();
     await expect(
       db.insert(systems).values({
-        id: crypto.randomUUID(),
-        accountId: "nonexistent",
+        id: brandId<SystemId>(crypto.randomUUID()),
+        accountId: brandId<AccountId>("nonexistent"),
         createdAt: now,
         updatedAt: now,
       }),
@@ -133,7 +135,7 @@ describe("PG systems schema", () => {
   it("rejects duplicate primary key", async () => {
     const accountId = await insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({
       id,

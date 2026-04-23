@@ -46,8 +46,7 @@ describe("SQLite views / query helpers", () => {
   let db: BetterSQLite3Database;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string): string =>
-    sqliteInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
 
   beforeAll(() => {
     client = new Database(":memory:");

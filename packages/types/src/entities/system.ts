@@ -1,5 +1,8 @@
-import type { SystemId, SystemSettingsId } from "../ids.js";
+import type { EncryptedBlob } from "../encryption-primitives.js";
+import type { AccountId, SystemId, SystemSettingsId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { AuditMetadata } from "../utility.js";
 
 /** A plural system — the top-level account entity. */
@@ -17,7 +20,7 @@ export interface System extends AuditMetadata {
  * them. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextSystem parity)
- * - Plan 2 fleet will consume when deriving `SystemServerMetadata`.
+ * - `SystemServerMetadata` (derived via `Omit`)
  */
 export type SystemEncryptedFields = "name" | "displayName" | "description" | "avatarSource";
 
@@ -27,3 +30,28 @@ export interface SystemListItem {
   readonly name: string;
   readonly avatarSource: ImageSource | null;
 }
+
+/**
+ * Server-visible System metadata — raw Drizzle row shape.
+ *
+ * Derived from `System` by stripping the encrypted field keys (bundled
+ * inside `encryptedData`) and `settingsId` (which lives on the companion
+ * `system_settings` table, joined on `systemId`, not as a column on
+ * `systems`). Adds the DB-only columns the domain type doesn't carry:
+ * `accountId` (owning account FK), `encryptedData` (nullable — the system
+ * row can exist in onboarding before a T1 blob is written), and
+ * `archived`/`archivedAt` (archivable metadata).
+ */
+export type SystemServerMetadata = Omit<System, SystemEncryptedFields | "settingsId"> & {
+  readonly accountId: AccountId;
+  readonly encryptedData: EncryptedBlob | null;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/**
+ * JSON-wire representation of a System. Derived from the domain `System`
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ */
+export type SystemWire = Serialize<System>;

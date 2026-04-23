@@ -105,7 +105,12 @@ export async function assertFriendAccess(
     const [system] = await tx
       .select({ id: systems.id })
       .from(systems)
-      .where(and(eq(systems.accountId, connection.friendAccountId), eq(systems.archived, false)))
+      .where(
+        and(
+          eq(systems.accountId, brandId<AccountId>(connection.friendAccountId)),
+          eq(systems.archived, false),
+        ),
+      )
       .limit(1);
 
     if (!system) {

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -12,7 +13,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems };
@@ -37,7 +38,7 @@ describe("SQLite systems schema", () => {
   it("inserts and retrieves with all columns", () => {
     const accountId = insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
     const data = testBlob(new Uint8Array([1, 2, 3, 4, 5]));
 
     db.insert(systems)
@@ -60,7 +61,7 @@ describe("SQLite systems schema", () => {
   it("allows nullable encrypted_data", () => {
     const accountId = insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)
       .values({
@@ -78,7 +79,7 @@ describe("SQLite systems schema", () => {
   it("round-trips encrypted_data binary correctly", () => {
     const accountId = insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
     const bigArray = new Uint8Array(256);
     for (let i = 0; i < 256; i++) bigArray[i] = i;
     const blob = testBlob(bigArray);
@@ -100,7 +101,7 @@ describe("SQLite systems schema", () => {
   it("defaults version to 1", () => {
     const accountId = insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)
       .values({
@@ -118,7 +119,7 @@ describe("SQLite systems schema", () => {
   it("cascades on account deletion", () => {
     const accountId = insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)
       .values({
@@ -140,8 +141,8 @@ describe("SQLite systems schema", () => {
       db
         .insert(systems)
         .values({
-          id: crypto.randomUUID(),
-          accountId: "nonexistent",
+          id: brandId<SystemId>(crypto.randomUUID()),
+          accountId: brandId<AccountId>("nonexistent"),
           createdAt: now,
           updatedAt: now,
         })
@@ -152,7 +153,7 @@ describe("SQLite systems schema", () => {
   it("rejects duplicate primary key", () => {
     const accountId = insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)
       .values({

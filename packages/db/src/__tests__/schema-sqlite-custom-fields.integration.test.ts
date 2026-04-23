@@ -43,8 +43,7 @@ describe("SQLite custom fields schema", () => {
   let db: BetterSQLite3Database<typeof schema>;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string): string =>
-    sqliteInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
 
   function insertBucket(systemId: string, id = crypto.randomUUID()): string {
     const now = Date.now();

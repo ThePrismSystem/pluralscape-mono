@@ -53,7 +53,12 @@ import type {
   SystemStructureEntityEncryptedFields,
 } from "./entities/structure-entity.js";
 import type { SystemSettings, SystemSettingsEncryptedFields } from "./entities/system-settings.js";
-import type { System, SystemEncryptedFields } from "./entities/system.js";
+import type {
+  System,
+  SystemEncryptedFields,
+  SystemServerMetadata,
+  SystemWire,
+} from "./entities/system.js";
 import type { NomenclatureEncryptedFields, NomenclatureSettings } from "./nomenclature.js";
 
 /**
@@ -97,6 +102,8 @@ export type SotEntityManifest = {
   };
   System: {
     domain: System;
+    server: SystemServerMetadata;
+    wire: SystemWire;
     encryptedFields: SystemEncryptedFields;
   };
   MemberPhoto: {
