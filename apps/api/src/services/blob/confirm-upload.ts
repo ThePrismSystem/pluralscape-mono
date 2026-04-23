@@ -1,5 +1,5 @@
 import { blobMetadata } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { brandId, now } from "@pluralscape/types";
 import { ConfirmUploadBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -33,6 +33,7 @@ export async function confirmUpload(
   }
 
   const { checksum, thumbnailOfBlobId } = result.data;
+  const thumbnailOfBlobIdBranded = thumbnailOfBlobId ? brandId<BlobId>(thumbnailOfBlobId) : null;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -60,13 +61,13 @@ export async function confirmUpload(
     }
 
     // Validate thumbnailOfBlobId if provided
-    if (thumbnailOfBlobId) {
+    if (thumbnailOfBlobIdBranded) {
       const [target] = await tx
         .select({ id: blobMetadata.id })
         .from(blobMetadata)
         .where(
           and(
-            eq(blobMetadata.id, thumbnailOfBlobId),
+            eq(blobMetadata.id, thumbnailOfBlobIdBranded),
             eq(blobMetadata.systemId, systemId),
             sql`${blobMetadata.uploadedAt} IS NOT NULL`,
             eq(blobMetadata.archived, false),
@@ -85,7 +86,7 @@ export async function confirmUpload(
         checksum,
         uploadedAt: timestamp,
         expiresAt: null,
-        thumbnailOfBlobId: thumbnailOfBlobId ?? null,
+        thumbnailOfBlobId: thumbnailOfBlobIdBranded,
       })
       .where(and(eq(blobMetadata.id, blobId), eq(blobMetadata.systemId, systemId)))
       .returning();

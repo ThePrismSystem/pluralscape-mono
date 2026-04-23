@@ -4,6 +4,11 @@ import type {
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
+import type {
+  BlobMetadata,
+  BlobMetadataServerMetadata,
+  BlobMetadataWire,
+} from "./entities/blob.js";
 import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
 import type {
   FieldDefinition,
@@ -113,6 +118,14 @@ export type SotEntityManifest = {
     server: AccountServerMetadata;
     wire: AccountWire;
     // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
+  };
+  BlobMetadata: {
+    domain: BlobMetadata;
+    server: BlobMetadataServerMetadata;
+    wire: BlobMetadataWire;
+    // Plaintext entity — no encrypted fields. The blob contents are
+    // encrypted, but the metadata row itself is server-visible.
     encryptedFields: never;
   };
   System: {

@@ -11,11 +11,11 @@ import {
 
 import type { JobHandler } from "@pluralscape/queue";
 import type { BlobStorageAdapter } from "@pluralscape/storage";
-import type { StorageKey } from "@pluralscape/types";
+import type { BlobId, StorageKey } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface BlobRow {
-  readonly id: string;
+  readonly id: BlobId;
   readonly storageKey: string;
 }
 
@@ -28,7 +28,7 @@ interface BlobRow {
 async function deleteSubBatch(
   rows: readonly BlobRow[],
   storageAdapter: BlobStorageAdapter,
-): Promise<readonly string[]> {
+): Promise<readonly BlobId[]> {
   const results = await Promise.allSettled(
     rows.map(async (row) => {
       await storageAdapter.delete(row.storageKey as StorageKey);
@@ -36,7 +36,7 @@ async function deleteSubBatch(
     }),
   );
 
-  const deletedIds: string[] = [];
+  const deletedIds: BlobId[] = [];
   results.forEach((result, idx) => {
     if (result.status === "fulfilled") {
       deletedIds.push(result.value);
@@ -94,7 +94,7 @@ export function createBlobS3CleanupHandler(
     // require per-delete AbortSignal plumbing for no real benefit because
     // the work is idempotent anyway.
     const signal: AbortSignal = ctx.signal;
-    const allDeletedIds: string[] = [];
+    const allDeletedIds: BlobId[] = [];
     for (let i = 0; i < rows.length; i += BLOB_S3_CLEANUP_PARALLEL_BATCH_SIZE) {
       if (signal.aborted) break;
       const subBatch = rows.slice(i, i + BLOB_S3_CLEANUP_PARALLEL_BATCH_SIZE);

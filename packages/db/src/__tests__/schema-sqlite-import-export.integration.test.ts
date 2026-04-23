@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -20,6 +21,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { BlobId, ChecksumHex } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -401,7 +403,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const blobId = crypto.randomUUID();
+      const blobId = brandId<BlobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(buckets)
@@ -422,7 +424,7 @@ describe("SQLite import-export schema", () => {
           sizeBytes: 1024,
           encryptionTier: 1,
           purpose: "export",
-          checksum: "a".repeat(64),
+          checksum: brandId<ChecksumHex>("a".repeat(64)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -557,7 +559,7 @@ describe("SQLite import-export schema", () => {
     it("sets blobId to null when blob is deleted", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const blobId = crypto.randomUUID();
+      const blobId = brandId<BlobId>(crypto.randomUUID());
       const exportId = crypto.randomUUID();
       const now = Date.now();
 
@@ -579,7 +581,7 @@ describe("SQLite import-export schema", () => {
           sizeBytes: 1024,
           encryptionTier: 1,
           purpose: "export",
-          checksum: "a".repeat(64),
+          checksum: brandId<ChecksumHex>("a".repeat(64)),
           createdAt: now,
           uploadedAt: now,
         })
