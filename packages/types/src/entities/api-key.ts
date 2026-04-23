@@ -1,7 +1,7 @@
-import type { ApiKeyId, Brand, BucketId, SystemId } from "./ids.js";
-import type { ScopeDomain, ScopeTier } from "./scope-domains.js";
-import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { ApiKeyId, Brand, BucketId, SystemId } from "../ids.js";
+import type { ScopeDomain, ScopeTier } from "../scope-domains.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { AuditMetadata } from "../utility.js";
 
 /** A branded API key token — prevents accidental logging. */
 export type ApiKeyToken = Brand<string, "ApiKeyToken">;

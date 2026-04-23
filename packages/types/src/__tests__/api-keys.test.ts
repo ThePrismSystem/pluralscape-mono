@@ -7,7 +7,7 @@ import type {
   ApiKeyWithSecret,
   CryptoApiKey,
   MetadataApiKey,
-} from "../api-keys.js";
+} from "../entities/api-key.js";
 import type { ApiKeyId, BucketId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";

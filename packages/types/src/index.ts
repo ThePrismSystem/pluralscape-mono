@@ -429,8 +429,8 @@ export type {
   CryptoApiKey,
   ApiKey,
   ApiKeyWithSecret,
-} from "./api-keys.js";
-export { API_KEY_TOKEN_PREFIX } from "./api-keys.js";
+} from "./entities/api-key.js";
+export { API_KEY_TOKEN_PREFIX } from "./entities/api-key.js";
 
 // ── Jobs ──────────────────────────────────────────────────────
 export type {
