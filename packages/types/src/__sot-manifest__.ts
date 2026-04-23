@@ -43,6 +43,7 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
 } from "./entities/structure-entity.js";
+import type { SystemSettings, SystemSettingsEncryptedFields } from "./entities/system-settings.js";
 import type { System, SystemEncryptedFields } from "./entities/system.js";
 
 /**
@@ -132,5 +133,9 @@ export type SotEntityManifest = {
   InnerworldCanvas: {
     domain: InnerWorldCanvas;
     encryptedFields: InnerWorldCanvasEncryptedFields;
+  };
+  SystemSettings: {
+    domain: SystemSettings;
+    encryptedFields: SystemSettingsEncryptedFields;
   };
 };

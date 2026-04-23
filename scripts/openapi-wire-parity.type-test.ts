@@ -73,6 +73,8 @@ import type {
   Serialize,
   System,
   SystemEncryptedFields,
+  SystemSettings,
+  SystemSettingsEncryptedFields,
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
   SystemStructureEntityType,
@@ -241,5 +243,12 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextInnerworldCanvas"],
     Serialize<Pick<InnerWorldCanvas, InnerWorldCanvasEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextSystemSettings"],
+    Serialize<Pick<SystemSettings, SystemSettingsEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
