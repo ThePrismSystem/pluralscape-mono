@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-23T12:00:30Z
+updated_at: 2026-04-23T23:01:08Z
 parent: ps-cd6x
 ---
 
@@ -141,3 +141,17 @@ The Omit excludes the one structurally-impossible field (`encryptedData` is opaq
 **Sot manifest** — already done by types-tef0 (all 20 entries include `encryptedFields`). Fleet only needs to upgrade the partial entries (`{ domain, encryptedFields }`) to full entries (`{ domain, server, wire, encryptedFields }`) as it lands `<X>ServerMetadata` and `<X>Wire`.
 
 Pilot (Member) landed in types-tef0 as a reference implementation. The 18 non-pilot entities + Nomenclature are fleet scope.
+
+## Fleet Progress
+
+- [x] Cluster 1 — Foundation (Account, System, SystemSettings, SystemSnapshot, Nomenclature; PR #542, merged as 1a3e8d35)
+- [ ] Cluster 2 — Auth + devices (pending)
+- [ ] Cluster 3 — Members + identity (pending)
+- [ ] Cluster 4 — Fields (pending)
+- [ ] Cluster 5 — Structure graph (pending)
+- [ ] Cluster 6 — Fronting + lifecycle (pending)
+- [ ] Cluster 7 — Innerworld (pending)
+- [ ] Cluster 8 — Communication + engagement (pending)
+- [ ] Cluster 9 — Operational (pending)
+- [ ] Cluster 10 — Privacy + social (pending)
+- [ ] Cluster 11 — Cleanup (timestamp lift + StripBrands deletion; pending)
