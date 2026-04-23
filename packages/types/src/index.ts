@@ -393,20 +393,7 @@ export type {
   ImportCollectionTotals,
   ImportCheckpointState,
   ImportCheckpointStateV2,
-  ImportEntityRef,
-  ImportEntityTargetIdMap,
-  ExportFormat,
-  ExportRequestStatus,
-  ExportSection,
-  DownloadableReport,
-  ExportManifest,
-  ExportRequest,
-  AccountPurgeStatus,
-  ReportFormat,
-  AccountPurgeRequest,
-  MemberReport,
-  SystemOverviewReport,
-} from "./import-export.js";
+} from "./entities/import-job.js";
 export {
   IMPORT_SOURCES,
   IMPORT_JOB_STATUSES,
@@ -414,7 +401,20 @@ export {
   IMPORT_COLLECTION_TYPES,
   IMPORT_AVATAR_MODES,
   IMPORT_CHECKPOINT_SCHEMA_VERSION,
-} from "./import-export.js";
+} from "./entities/import-job.js";
+export type { ImportEntityRef, ImportEntityTargetIdMap } from "./entities/import-entity-ref.js";
+export type {
+  ExportFormat,
+  ExportRequestStatus,
+  ExportSection,
+  DownloadableReport,
+  ExportManifest,
+  ExportRequest,
+  ReportFormat,
+  MemberReport,
+  SystemOverviewReport,
+} from "./entities/export-request.js";
+export type { AccountPurgeStatus, AccountPurgeRequest } from "./entities/account-purge-request.js";
 export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.js";
 
 // ── Scope domains ────────────────────────────────────────────
