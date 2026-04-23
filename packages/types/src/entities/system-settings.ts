@@ -1,9 +1,9 @@
-import type { SnapshotSchedule } from "./entities/system-snapshot.js";
-import type { Locale } from "./i18n.js";
-import type { BucketId, SystemSettingsId, SystemId } from "./ids.js";
-import type { LittlesSafeModeConfig } from "./littles-safe-mode.js";
-import type { NomenclatureSettings } from "./nomenclature.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Locale } from "../i18n.js";
+import type { BucketId, SystemSettingsId, SystemId } from "../ids.js";
+import type { LittlesSafeModeConfig } from "../littles-safe-mode.js";
+import type { NomenclatureSettings } from "../nomenclature.js";
+import type { AuditMetadata } from "../utility.js";
+import type { SnapshotSchedule } from "./system-snapshot.js";
 
 /** User preference for the application theme. */
 export type ThemePreference = "light" | "dark" | "high-contrast" | "system";

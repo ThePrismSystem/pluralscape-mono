@@ -1,9 +1,5 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { Locale } from "../i18n.js";
-import type { BucketId, SystemId, SystemSettingsId } from "../ids.js";
-import type { LittlesSafeModeConfig } from "../littles-safe-mode.js";
-import type { NomenclatureSettings } from "../nomenclature.js";
 import type {
   AppLockConfig,
   FriendRequestPolicy,
@@ -12,7 +8,11 @@ import type {
   SyncPreferences,
   SystemSettings,
   ThemePreference,
-} from "../settings.js";
+} from "../entities/system-settings.js";
+import type { Locale } from "../i18n.js";
+import type { BucketId, SystemId, SystemSettingsId } from "../ids.js";
+import type { LittlesSafeModeConfig } from "../littles-safe-mode.js";
+import type { NomenclatureSettings } from "../nomenclature.js";
 import type { AuditMetadata } from "../utility.js";
 
 describe("ThemePreference", () => {

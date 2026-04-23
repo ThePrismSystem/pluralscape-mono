@@ -687,7 +687,7 @@ export type {
   FriendRequestPolicy,
   PrivacyDefaults,
   SystemSettings,
-} from "./settings.js";
+} from "./entities/system-settings.js";
 
 // ── Snapshot ─────────────────────────────────────────────────────
 export type {
