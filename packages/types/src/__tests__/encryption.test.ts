@@ -1,6 +1,5 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { AuditActor, AuditLogEntry } from "../audit-log.js";
 import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
@@ -65,6 +64,7 @@ import type {
   T2EncryptedBlob,
 } from "../encryption.js";
 import type { AcknowledgementRequest } from "../entities/acknowledgement.js";
+import type { AuditActor, AuditLogEntry } from "../entities/audit-log-entry.js";
 import type { BoardMessage } from "../entities/board-message.js";
 import type { Channel } from "../entities/channel.js";
 import type { CustomFront } from "../entities/custom-front.js";

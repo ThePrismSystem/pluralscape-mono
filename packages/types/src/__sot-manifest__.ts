@@ -1,10 +1,10 @@
-import type { AuditLogEntry } from "./audit-log.js";
 import type {
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
   MemberServerMetadata,
   MemberWire,
 } from "./encryption.js";
+import type { AuditLogEntry } from "./entities/audit-log-entry.js";
 import type { Member } from "./entities/member.js";
 
 /**

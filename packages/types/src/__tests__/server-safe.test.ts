@@ -2,7 +2,6 @@ import { describe, expectTypeOf, it, expect } from "vitest";
 
 import { serverSafe } from "../server-safe.js";
 
-import type { AuditLogEntry } from "../audit-log.js";
 import type {
   AuditLogEntryServerMetadata,
   ClientAcknowledgementRequest,
@@ -55,6 +54,7 @@ import type {
   ServerTimerConfig,
   ServerWikiPage,
 } from "../encryption.js";
+import type { AuditLogEntry } from "../entities/audit-log-entry.js";
 import type { Member } from "../entities/member.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ServerSafe } from "../server-safe.js";

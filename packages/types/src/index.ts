@@ -458,7 +458,12 @@ export type {
 } from "./blob.js";
 
 // ── Audit log ─────────────────────────────────────────────────
-export type { AuditEventType, AuditActor, AuditLogEntry, SetupStepName } from "./audit-log.js";
+export type {
+  AuditEventType,
+  AuditActor,
+  AuditLogEntry,
+  SetupStepName,
+} from "./entities/audit-log-entry.js";
 
 // ── Webhooks ──────────────────────────────────────────────────
 export type {
