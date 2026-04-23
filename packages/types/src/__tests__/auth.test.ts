@@ -1,17 +1,14 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { Account, LoginCredentials } from "../entities/account.js";
+import type { AuthKey, AuthKeyType } from "../entities/auth-key.js";
 import type {
-  Account,
-  AuthKey,
-  AuthKeyType,
-  DeviceInfo,
   DeviceTransferPayload,
   DeviceTransferRequest,
   DeviceTransferStatus,
-  LoginCredentials,
-  RecoveryKey,
-  Session,
-} from "../auth.js";
+} from "../entities/device-transfer-request.js";
+import type { RecoveryKey } from "../entities/recovery-key.js";
+import type { DeviceInfo, Session } from "../entities/session.js";
 import type {
   AccountId,
   AuthKeyId,

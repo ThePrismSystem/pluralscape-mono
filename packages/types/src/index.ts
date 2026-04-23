@@ -247,21 +247,21 @@ export type {
 
 // ── Auth ──────────────────────────────────────────────────────
 export type {
-  AuthKeyType,
-  AccountType,
-  DeviceTransferStatus,
-  PendingAccountId,
   Account,
-  AuthKey,
-  Session,
-  DeviceInfo,
-  RecoveryKey,
+  AccountType,
   LoginCredentials,
-  RegistrationInitiateInput,
+  PendingAccountId,
   RegistrationCommitInput,
-  DeviceTransferRequest,
+  RegistrationInitiateInput,
+} from "./entities/account.js";
+export type { AuthKey, AuthKeyType } from "./entities/auth-key.js";
+export type {
   DeviceTransferPayload,
-} from "./auth.js";
+  DeviceTransferRequest,
+  DeviceTransferStatus,
+} from "./entities/device-transfer-request.js";
+export type { RecoveryKey } from "./entities/recovery-key.js";
+export type { DeviceInfo, Session } from "./entities/session.js";
 
 // ── Encryption ────────────────────────────────────────────────
 export type {
@@ -503,26 +503,17 @@ export type {
 
 // ── Communication ─────────────────────────────────────────────────
 export type {
-  Channel,
-  ArchivedChannel,
-  ChatMessage,
-  ArchivedChatMessage,
-  BoardMessage,
-  ArchivedBoardMessage,
-  NoteAuthorEntityType,
-  Note,
-  ArchivedNote,
-  PollOption,
-  PollKind,
-  PollStatus,
-  Poll,
-  ArchivedPoll,
-  PollVote,
-  ArchivedPollVote,
   AcknowledgementRequest,
   ArchivedAcknowledgementRequest,
-} from "./communication.js";
-export { NOTE_AUTHOR_ENTITY_TYPES, POLL_KINDS, POLL_STATUSES } from "./communication.js";
+} from "./entities/acknowledgement.js";
+export type { BoardMessage, ArchivedBoardMessage } from "./entities/board-message.js";
+export type { Channel, ArchivedChannel } from "./entities/channel.js";
+export type { ChatMessage, ArchivedChatMessage } from "./entities/message.js";
+export type { Note, ArchivedNote, NoteAuthorEntityType } from "./entities/note.js";
+export { NOTE_AUTHOR_ENTITY_TYPES } from "./entities/note.js";
+export type { PollVote, ArchivedPollVote } from "./entities/poll-vote.js";
+export type { Poll, ArchivedPoll, PollOption, PollKind, PollStatus } from "./entities/poll.js";
+export { POLL_KINDS, POLL_STATUSES } from "./entities/poll.js";
 
 // ── Lifecycle ─────────────────────────────────────────────────────
 export type {
