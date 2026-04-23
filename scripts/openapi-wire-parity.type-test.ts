@@ -63,6 +63,8 @@ import type {
   Serialize,
   System,
   SystemEncryptedFields,
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields,
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
 } from "../packages/types/src/index.js";
@@ -177,5 +179,12 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextStructureEntityType"],
     Serialize<Pick<SystemStructureEntityType, SystemStructureEntityTypeEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextStructureEntity"],
+    Serialize<Pick<SystemStructureEntity, SystemStructureEntityEncryptedFields>>
   >
 >().toEqualTypeOf<true>();

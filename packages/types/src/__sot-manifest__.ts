@@ -22,6 +22,10 @@ import type {
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
 } from "./entities/structure-entity-type.js";
+import type {
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields,
+} from "./entities/structure-entity.js";
 import type { System, SystemEncryptedFields } from "./entities/system.js";
 
 /**
@@ -87,5 +91,9 @@ export type SotEntityManifest = {
   StructureEntityType: {
     domain: SystemStructureEntityType;
     encryptedFields: SystemStructureEntityTypeEncryptedFields;
+  };
+  StructureEntity: {
+    domain: SystemStructureEntity;
+    encryptedFields: SystemStructureEntityEncryptedFields;
   };
 };
