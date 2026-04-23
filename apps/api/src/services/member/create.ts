@@ -18,7 +18,7 @@ import { toMemberResult } from "./internal.js";
 import type { MemberResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { MemberId, SystemId } from "@pluralscape/types";
+import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createMember(
@@ -160,8 +160,8 @@ export async function duplicateMember(
 
       if (photos.length > 0) {
         const photoRows = photos.map((photo) => ({
-          id: createId(ID_PREFIXES.memberPhoto),
-          memberId: newMemberId,
+          id: brandId<MemberPhotoId>(createId(ID_PREFIXES.memberPhoto)),
+          memberId: brandId<MemberId>(newMemberId),
           systemId,
           sortOrder: photo.sortOrder,
           encryptedData: photo.encryptedData,

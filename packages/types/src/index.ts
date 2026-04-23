@@ -157,8 +157,6 @@ export type {
   ClientJournalEntry,
   ServerWikiPage,
   ClientWikiPage,
-  ServerMemberPhoto,
-  ClientMemberPhoto,
   ServerPoll,
   ClientPoll,
   ServerPollVote,

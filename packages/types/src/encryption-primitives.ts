@@ -12,7 +12,6 @@ import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
 import type { InnerWorldRegion } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
-import type { MemberPhoto } from "./entities/member-photo.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
@@ -38,7 +37,6 @@ import type {
   InnerWorldRegionId,
   JournalEntryId,
   MemberId,
-  MemberPhotoId,
   MessageId,
   NoteId,
   PollId,
@@ -459,26 +457,6 @@ export interface ServerWikiPage extends AuditMetadata {
 
 /** Client-side wiki page — flat decrypted fields. */
 export type ClientWikiPage = WikiPage;
-
-// ── Member photos ──────────────────────────────────────────────
-
-/**
- * Server-side member photo representation.
- * T1 encrypted: imageSource, caption
- * T3 plaintext: memberId, sortOrder, archived
- *
- * Intentionally omits AuditMetadata — photos are append-only gallery items.
- */
-export interface ServerMemberPhoto {
-  readonly id: MemberPhotoId;
-  readonly memberId: MemberId;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side member photo — flat decrypted fields. */
-export type ClientMemberPhoto = MemberPhoto;
 
 // ── Polls ──────────────────────────────────────────────────────
 

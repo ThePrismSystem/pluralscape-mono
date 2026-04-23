@@ -16,7 +16,6 @@ import type {
   ClientInnerWorldRegion,
   ClientJournalEntry,
   ClientLifecycleEvent,
-  ClientMemberPhoto,
   ClientNote,
   ClientPoll,
   ClientRelationship,
@@ -44,7 +43,6 @@ import type {
   ServerLifecycleEvent,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
-  ServerMemberPhoto,
   ServerNote,
   ServerPoll,
   ServerRelationship,
@@ -74,7 +72,7 @@ import type { FrontingSession } from "../entities/fronting-session.js";
 import type { Group } from "../entities/group.js";
 import type { JournalEntry } from "../entities/journal-entry.js";
 import type { LifecycleEvent } from "../entities/lifecycle-event.js";
-import type { MemberPhoto } from "../entities/member-photo.js";
+import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
 import type { ChatMessage } from "../entities/message.js";
 import type { Note } from "../entities/note.js";
@@ -229,11 +227,11 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("member photo pair", () => {
-    expectTypeOf<ServerMemberPhoto>().toBeObject();
-    expectTypeOf<ServerMemberPhoto["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerMemberPhoto["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<ServerMemberPhoto["sortOrder"]>().toEqualTypeOf<number>();
-    expectTypeOf<ClientMemberPhoto>().toEqualTypeOf<MemberPhoto>();
+    expectTypeOf<MemberPhotoServerMetadata>().toBeObject();
+    expectTypeOf<MemberPhotoServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<MemberPhotoServerMetadata["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<MemberPhotoServerMetadata["sortOrder"]>().toEqualTypeOf<number>();
+    expectTypeOf<MemberPhoto>().toEqualTypeOf<MemberPhoto>();
   });
 
   it("poll pair", () => {

@@ -17,7 +17,6 @@ import type {
   ClientInnerWorldRegion,
   ClientJournalEntry,
   ClientLifecycleEvent,
-  ClientMemberPhoto,
   ClientNote,
   ClientPoll,
   ClientPollVote,
@@ -40,7 +39,6 @@ import type {
   ServerInnerWorldRegion,
   ServerJournalEntry,
   ServerLifecycleEvent,
-  ServerMemberPhoto,
   ServerNote,
   ServerPoll,
   ServerPollVote,
@@ -51,6 +49,7 @@ import type {
   ServerWikiPage,
 } from "../encryption-primitives.js";
 import type { AuditLogEntry, AuditLogEntryServerMetadata } from "../entities/audit-log-entry.js";
+import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ClientResponseData, ServerResponseData } from "../response-unions.js";
@@ -79,7 +78,7 @@ type AllServerTypes = [
   ServerCustomFront,
   ServerJournalEntry,
   ServerWikiPage,
-  ServerMemberPhoto,
+  MemberPhotoServerMetadata,
   ServerPoll,
   ServerPollVote,
   ServerAcknowledgementRequest,
@@ -168,8 +167,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerWikiPage>().toExtend<ServerResponseData>();
   });
 
-  it("ServerMemberPhoto extends ServerResponseData", () => {
-    expectTypeOf<ServerMemberPhoto>().toExtend<ServerResponseData>();
+  it("MemberPhotoServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<MemberPhotoServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("ServerPoll extends ServerResponseData", () => {
@@ -216,7 +215,7 @@ type AllClientTypes = [
   ClientCustomFront,
   ClientJournalEntry,
   ClientWikiPage,
-  ClientMemberPhoto,
+  MemberPhoto,
   ClientPoll,
   ClientPollVote,
   ClientAcknowledgementRequest,
@@ -305,8 +304,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientWikiPage>().toExtend<ClientResponseData>();
   });
 
-  it("ClientMemberPhoto extends ClientResponseData", () => {
-    expectTypeOf<ClientMemberPhoto>().toExtend<ClientResponseData>();
+  it("MemberPhoto extends ClientResponseData", () => {
+    expectTypeOf<MemberPhoto>().toExtend<ClientResponseData>();
   });
 
   it("ClientPoll extends ClientResponseData", () => {
@@ -349,7 +348,7 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ServerCustomFront>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerJournalEntry>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerWikiPage>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerMemberPhoto>().not.toExtend<ClientResponseData>();
+    expectTypeOf<MemberPhotoServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerPoll>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerPollVote>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerAcknowledgementRequest>().not.toExtend<ClientResponseData>();
@@ -435,8 +434,8 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<ClientWikiPage>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientMemberPhoto does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientMemberPhoto>().not.toExtend<ServerResponseData>();
+  it("MemberPhoto does NOT extend ServerResponseData", () => {
+    expectTypeOf<MemberPhoto>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientPoll does NOT extend ServerResponseData", () => {
