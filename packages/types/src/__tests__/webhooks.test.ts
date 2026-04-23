@@ -1,16 +1,15 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { ServerSecret } from "../encryption.js";
-import type { ApiKeyId, SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
-import type { UnixMillis } from "../timestamps.js";
-import type { AuditMetadata } from "../utility.js";
 import type {
   ArchivedWebhookConfig,
   WebhookConfig,
-  WebhookDelivery,
-  WebhookDeliveryStatus,
   WebhookEventType,
-} from "../webhooks.js";
+} from "../entities/webhook-config.js";
+import type { WebhookDelivery, WebhookDeliveryStatus } from "../entities/webhook-delivery.js";
+import type { ApiKeyId, SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { AuditMetadata } from "../utility.js";
 
 describe("WebhookDeliveryId", () => {
   it("extends string", () => {

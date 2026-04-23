@@ -462,13 +462,12 @@ export type { AuditEventType, AuditActor, AuditLogEntry, SetupStepName } from ".
 
 // ── Webhooks ──────────────────────────────────────────────────
 export type {
-  WebhookDeliveryStatus,
   WebhookEventType,
   WebhookConfig,
   ArchivedWebhookConfig,
-  WebhookDelivery,
   WebhookEventPayloadMap,
-} from "./webhooks.js";
+} from "./entities/webhook-config.js";
+export type { WebhookDeliveryStatus, WebhookDelivery } from "./entities/webhook-delivery.js";
 
 // ── Notifications ─────────────────────────────────────────────
 export type { DeviceTokenPlatform, DeviceToken } from "./entities/device-token.js";
