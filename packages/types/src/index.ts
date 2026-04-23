@@ -230,20 +230,24 @@ export type {
   RelationshipType,
   Relationship,
   ArchivedRelationship,
+} from "./entities/relationship.js";
+export type {
   KnownArchitectureType,
   ArchitectureType,
+  SystemStructureEntityType,
+  ArchivedSystemStructureEntityType,
+} from "./entities/structure-entity-type.js";
+export type {
   StructureVisualProps,
   OriginType,
   DiscoveryStatus,
   SystemProfile,
-  SystemStructureEntityType,
-  ArchivedSystemStructureEntityType,
   SystemStructureEntity,
   ArchivedSystemStructureEntity,
-  SystemStructureEntityLink,
-  SystemStructureEntityMemberLink,
-  SystemStructureEntityAssociation,
-} from "./structure.js";
+} from "./entities/structure-entity.js";
+export type { SystemStructureEntityLink } from "./entities/structure-entity-link.js";
+export type { SystemStructureEntityMemberLink } from "./entities/structure-entity-member-link.js";
+export type { SystemStructureEntityAssociation } from "./entities/structure-entity-association.js";
 
 // ── Auth ──────────────────────────────────────────────────────
 export type {

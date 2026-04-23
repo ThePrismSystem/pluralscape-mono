@@ -3,21 +3,13 @@ import { describe, expectTypeOf, it } from "vitest";
 import type {
   AcknowledgementRequest,
   ArchivedAcknowledgementRequest,
-  ArchivedBoardMessage,
-  ArchivedChannel,
-  ArchivedChatMessage,
-  ArchivedNote,
-  ArchivedPoll,
-  ArchivedPollVote,
-  BoardMessage,
-  Channel,
-  ChatMessage,
-  Note,
-  NoteAuthorEntityType,
-  Poll,
-  PollOption,
-  PollVote,
-} from "../communication.js";
+} from "../entities/acknowledgement.js";
+import type { ArchivedBoardMessage, BoardMessage } from "../entities/board-message.js";
+import type { ArchivedChannel, Channel } from "../entities/channel.js";
+import type { ArchivedChatMessage, ChatMessage } from "../entities/message.js";
+import type { ArchivedNote, Note, NoteAuthorEntityType } from "../entities/note.js";
+import type { ArchivedPollVote, PollVote } from "../entities/poll-vote.js";
+import type { ArchivedPoll, Poll, PollOption } from "../entities/poll.js";
 import type {
   AcknowledgementId,
   BlobId,

@@ -1,18 +1,13 @@
 import type { AuditEventType, AuditActor, AuditLogEntry } from "./audit-log.js";
-import type {
-  Channel,
-  ChatMessage,
-  BoardMessage,
-  Note,
-  NoteAuthorEntityType,
-  Poll,
-  PollKind,
-  PollStatus,
-  PollVote,
-  AcknowledgementRequest,
-} from "./communication.js";
 import type { KdfMasterKey } from "./crypto-keys.js";
 import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js";
+import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
+import type { BoardMessage } from "./entities/board-message.js";
+import type { Channel } from "./entities/channel.js";
+import type { ChatMessage } from "./entities/message.js";
+import type { Note, NoteAuthorEntityType } from "./entities/note.js";
+import type { PollVote } from "./entities/poll-vote.js";
+import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
 import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
 import type { Member, MemberPhoto } from "./identity.js";
@@ -54,9 +49,9 @@ import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
 import type {
   RelationshipType,
   Relationship,
-  SystemStructureEntityType,
-  SystemStructureEntity,
-} from "./structure.js";
+} from "./entities/relationship.js";
+import type { SystemStructureEntity } from "./entities/structure-entity.js";
+import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Serialize } from "./type-assertions.js";
