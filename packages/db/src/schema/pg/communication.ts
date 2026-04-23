@@ -32,7 +32,11 @@ import {
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/types";
+import type {
+  ChannelServerMetadata,
+  PollServerMetadata,
+  PollVoteServerMetadata,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const channels = pgTable(
@@ -42,7 +46,9 @@ export const channels = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    type: varchar("type", { length: ENUM_MAX_LENGTH }).notNull().$type<ServerChannel["type"]>(),
+    type: varchar("type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<ChannelServerMetadata["type"]>(),
     parentId: varchar("parent_id", { length: ID_MAX_LENGTH }),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -159,11 +165,13 @@ export const polls = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     createdByMemberId: varchar("created_by_member_id", { length: ID_MAX_LENGTH }),
-    kind: varchar("kind", { length: ENUM_MAX_LENGTH }).notNull().$type<ServerPoll["kind"]>(),
+    kind: varchar("kind", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<PollServerMetadata["kind"]>(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("open")
-      .$type<ServerPoll["status"]>(),
+      .$type<PollServerMetadata["status"]>(),
     closedAt: pgTimestamp("closed_at"),
     endsAt: pgTimestamp("ends_at"),
     allowMultipleVotes: boolean("allow_multiple_votes").notNull(),
@@ -200,7 +208,7 @@ export const pollVotes = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     optionId: varchar("option_id", { length: ID_MAX_LENGTH }),
-    voter: jsonb("voter").$type<ServerPollVote["voter"]>(),
+    voter: jsonb("voter").$type<PollVoteServerMetadata["voter"]>(),
     isVeto: boolean("is_veto").notNull().default(false),
     votedAt: pgTimestamp("voted_at").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

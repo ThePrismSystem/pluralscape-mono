@@ -1,30 +1,17 @@
 import type { KdfMasterKey } from "./crypto-keys.js";
-import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
-import type { BoardMessage } from "./entities/board-message.js";
-import type { Channel } from "./entities/channel.js";
 import type { CustomFront } from "./entities/custom-front.js";
 import type { FieldDefinition, FieldType } from "./entities/field-definition.js";
 import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
 import type { Group } from "./entities/group.js";
-import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
-import type { ChatMessage } from "./entities/message.js";
-import type { Note, NoteAuthorEntityType } from "./entities/note.js";
-import type { PollVote } from "./entities/poll-vote.js";
-import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
 import type { RelationshipType, Relationship } from "./entities/relationship.js";
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
-import type { TimerConfig } from "./entities/timer-config.js";
-import type { WikiPage } from "./entities/wiki-page.js";
 import type {
-  AcknowledgementId,
-  BoardMessageId,
   BucketId,
-  ChannelId,
   CustomFrontId,
   LifecycleEventId,
   FieldDefinitionId,
@@ -32,24 +19,15 @@ import type {
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
-  JournalEntryId,
   MemberId,
   MemberPhotoId,
-  MessageId,
-  NoteId,
-  PollId,
-  PollOptionId,
-  PollVoteId,
   RelationshipId,
   SystemId,
   SystemStructureEntityTypeId,
   SystemStructureEntityId,
-  TimerId,
-  SlugHash,
-  WikiPageId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata, EntityReference } from "./utility.js";
+import type { AuditMetadata } from "./utility.js";
 
 // ── Tier wrappers ──────────────────────────────────────────────
 
@@ -237,77 +215,9 @@ export interface ServerRelationship {
 export type ClientRelationship = Relationship;
 
 // ── Communication ──────────────────────────────────────────────
-
-/**
- * Server-side channel representation.
- * T1 encrypted: name
- * T3 plaintext: type, parentId, sortOrder, archived
- */
-export interface ServerChannel extends AuditMetadata {
-  readonly id: ChannelId;
-  readonly systemId: SystemId;
-  readonly type: "category" | "channel";
-  readonly parentId: ChannelId | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side channel — flat decrypted fields. */
-export type ClientChannel = Channel;
-
-/**
- * Server-side chat message representation.
- * T1 encrypted: content, attachments, mentions, senderId
- * T3 plaintext: channelId, replyToId, timestamp, editedAt, archived
- */
-export interface ServerChatMessage extends AuditMetadata {
-  readonly id: MessageId;
-  readonly channelId: ChannelId;
-  readonly systemId: SystemId;
-  readonly replyToId: MessageId | null;
-  readonly timestamp: UnixMillis;
-  readonly editedAt: UnixMillis | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side chat message — flat decrypted fields. */
-export type ClientChatMessage = ChatMessage;
-
-/**
- * Server-side board message representation.
- * T1 encrypted: content, senderId
- * T3 plaintext: pinned, sortOrder, archived
- */
-export interface ServerBoardMessage extends AuditMetadata {
-  readonly id: BoardMessageId;
-  readonly systemId: SystemId;
-  readonly pinned: boolean;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side board message — flat decrypted fields. */
-export type ClientBoardMessage = BoardMessage;
-
-/**
- * Server-side note representation.
- * T1 encrypted: title, content, backgroundColor
- * T3 plaintext: authorEntityType, authorEntityId, archived
- */
-export interface ServerNote extends AuditMetadata {
-  readonly id: NoteId;
-  readonly systemId: SystemId;
-  readonly authorEntityType: NoteAuthorEntityType | null;
-  readonly authorEntityId: string | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side note — flat decrypted fields. */
-export type ClientNote = Note;
+// Channel / ChatMessage / BoardMessage / Note ServerMetadata + Wire types
+// live in their respective entity files (channel.ts, message.ts,
+// board-message.ts, note.ts).
 
 // ── Custom fields ──────────────────────────────────────────────
 
@@ -389,37 +299,8 @@ export type ClientCustomFront = CustomFront;
 
 // ── Journal ────────────────────────────────────────────────────
 
-/**
- * Server-side journal entry representation.
- * T1 encrypted: title, blocks, tags, linkedEntities, author
- * T3 plaintext: frontingSessionId, archived
- */
-export interface ServerJournalEntry extends AuditMetadata {
-  readonly id: JournalEntryId;
-  readonly systemId: SystemId;
-  readonly frontingSessionId: FrontingSessionId | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side journal entry — flat decrypted fields. */
-export type ClientJournalEntry = JournalEntry;
-
-/**
- * Server-side wiki page representation.
- * T1 encrypted: title, slug, blocks, tags, linkedEntities, linkedFromPages
- * T3 plaintext: archived, slugHash
- */
-export interface ServerWikiPage extends AuditMetadata {
-  readonly id: WikiPageId;
-  readonly systemId: SystemId;
-  readonly slugHash: SlugHash;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side wiki page — flat decrypted fields. */
-export type ClientWikiPage = WikiPage;
+// JournalEntry / WikiPage ServerMetadata + Wire types live in their
+// respective entity files (journal-entry.ts, wiki-page.ts).
 
 // ── Member photos ──────────────────────────────────────────────
 
@@ -441,90 +322,10 @@ export interface ServerMemberPhoto {
 /** Client-side member photo — flat decrypted fields. */
 export type ClientMemberPhoto = MemberPhoto;
 
-// ── Polls ──────────────────────────────────────────────────────
-
-/**
- * Server-side poll representation.
- * T1 encrypted: title, options, description
- */
-export interface ServerPoll extends AuditMetadata {
-  readonly id: PollId;
-  readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId;
-  readonly kind: PollKind;
-  readonly status: PollStatus;
-  readonly closedAt: UnixMillis | null;
-  readonly endsAt: UnixMillis | null;
-  readonly allowMultipleVotes: boolean;
-  readonly maxVotesPerMember: number;
-  readonly allowAbstain: boolean;
-  readonly allowVeto: boolean;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side poll — flat decrypted fields. */
-export type ClientPoll = Poll;
-
-/**
- * Server-side poll vote representation.
- * T1 encrypted: comment
- * T3 plaintext: pollId, optionId, voter, isVeto, votedAt, archived
- */
-export interface ServerPollVote {
-  readonly id: PollVoteId;
-  readonly pollId: PollId;
-  readonly optionId: PollOptionId | null;
-  readonly voter: EntityReference<"member" | "structure-entity"> | null;
-  readonly isVeto: boolean | null;
-  readonly votedAt: UnixMillis | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob | null;
-}
-
-/** Client-side poll vote — flat decrypted fields. */
-export type ClientPollVote = PollVote;
-
-// ── Acknowledgement requests ───────────────────────────────────
-
-/**
- * Server-side acknowledgement request representation.
- * T1 encrypted: message, targetMemberId, confirmedAt
- * T3 plaintext: createdByMemberId, confirmed, archived
- */
-export interface ServerAcknowledgementRequest extends AuditMetadata {
-  readonly id: AcknowledgementId;
-  readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId | null;
-  readonly confirmed: boolean;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side acknowledgement request — flat decrypted fields. */
-export type ClientAcknowledgementRequest = AcknowledgementRequest;
-
-// ── Timer config ───────────────────────────────────────────────
-
-/**
- * Server-side timer config representation.
- * T1 encrypted: promptText
- * T3 plaintext: intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled, archived
- */
-export interface ServerTimerConfig extends AuditMetadata {
-  readonly id: TimerId;
-  readonly systemId: SystemId;
-  readonly intervalMinutes: number;
-  readonly wakingHoursOnly: boolean;
-  readonly wakingStart: string;
-  readonly wakingEnd: string;
-  readonly enabled: boolean;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side timer config — flat decrypted fields. */
-export type ClientTimerConfig = TimerConfig;
+// ── Polls + Acknowledgement + Timer ────────────────────────────
+// Poll / PollVote / AcknowledgementRequest / TimerConfig ServerMetadata +
+// Wire types live in their respective entity files (poll.ts, poll-vote.ts,
+// acknowledgement.ts, timer-config.ts).
 
 // ── Mapping utility types ──────────────────────────────────────
 

@@ -29,7 +29,11 @@ import {
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/types";
+import type {
+  ChannelServerMetadata,
+  PollServerMetadata,
+  PollVoteServerMetadata,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const channels = sqliteTable(
@@ -39,7 +43,7 @@ export const channels = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    type: text("type").notNull().$type<ServerChannel["type"]>(),
+    type: text("type").notNull().$type<ChannelServerMetadata["type"]>(),
     parentId: text("parent_id"),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -156,8 +160,8 @@ export const polls = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     createdByMemberId: text("created_by_member_id"),
-    kind: text("kind").notNull().$type<ServerPoll["kind"]>(),
-    status: text("status").notNull().default("open").$type<ServerPoll["status"]>(),
+    kind: text("kind").notNull().$type<PollServerMetadata["kind"]>(),
+    status: text("status").notNull().default("open").$type<PollServerMetadata["status"]>(),
     closedAt: sqliteTimestamp("closed_at"),
     endsAt: sqliteTimestamp("ends_at"),
     allowMultipleVotes: integer("allow_multiple_votes", { mode: "boolean" }).notNull(),
@@ -194,7 +198,7 @@ export const pollVotes = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     optionId: text("option_id"),
-    voter: sqliteJson("voter").$type<ServerPollVote["voter"]>(),
+    voter: sqliteJson("voter").$type<PollVoteServerMetadata["voter"]>(),
     isVeto: integer("is_veto", { mode: "boolean" }).notNull().default(false),
     votedAt: sqliteTimestamp("voted_at").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
