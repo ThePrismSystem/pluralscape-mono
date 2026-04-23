@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, systemSettings };
@@ -43,7 +45,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         locale: "en-US",
         pinHash: "$argon2id$test-hash",
@@ -74,7 +76,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -97,7 +99,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -121,7 +123,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -144,7 +146,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -156,7 +158,7 @@ describe("SQLite system_settings schema", () => {
       db
         .insert(systemSettings)
         .values({
-          id: `sset_${crypto.randomUUID()}`,
+          id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
           systemId,
           encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
@@ -173,7 +175,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -210,8 +212,8 @@ describe("SQLite system_settings schema", () => {
       db
         .insert(systemSettings)
         .values({
-          id: `sset_${crypto.randomUUID()}`,
-          systemId: "nonexistent",
+          id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -230,7 +232,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
-        id: `sset_${crypto.randomUUID()}`,
+        id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
         encryptedData: blob,
         createdAt: now,

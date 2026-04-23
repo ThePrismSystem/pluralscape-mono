@@ -52,7 +52,12 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
 } from "./entities/structure-entity.js";
-import type { SystemSettings, SystemSettingsEncryptedFields } from "./entities/system-settings.js";
+import type {
+  SystemSettings,
+  SystemSettingsEncryptedFields,
+  SystemSettingsServerMetadata,
+  SystemSettingsWire,
+} from "./entities/system-settings.js";
 import type {
   System,
   SystemEncryptedFields,
@@ -160,6 +165,8 @@ export type SotEntityManifest = {
   };
   SystemSettings: {
     domain: SystemSettings;
+    server: SystemSettingsServerMetadata;
+    wire: SystemSettingsWire;
     encryptedFields: SystemSettingsEncryptedFields;
   };
   StructureEntityMemberLink: {

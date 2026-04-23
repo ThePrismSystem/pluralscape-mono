@@ -1,19 +1,19 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { systems } from "./systems.js";
 
+import type { SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSettings = pgTable(
   "system_settings",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemSettingsId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .unique()
       .references(() => systems.id, { onDelete: "cascade" }),

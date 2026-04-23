@@ -29,6 +29,8 @@ import type {
   DateRange,
   EntityType,
   MemberFrontingBreakdown,
+  SystemId,
+  SystemSettingsId,
 } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -671,15 +673,16 @@ describe("Type-level assertions", () => {
     expectTypeOf<Row["frontingSessionId"]>().toEqualTypeOf<string>();
   });
 
-  // Fix 6 — systemSettings has both id and systemId as string
-  it("PG systemSettings.id infers as string", () => {
+  // Fix 6 — systemSettings has both id and systemId as branded IDs
+  // (was `string` before fleet Cluster 1 applied `brandedId<>` to the ID columns).
+  it("PG systemSettings.id infers as SystemSettingsId", () => {
     type Row = InferSelectModel<typeof pg.systemSettings>;
-    expectTypeOf<Row["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<Row["id"]>().toEqualTypeOf<SystemSettingsId>();
   });
 
-  it("PG systemSettings.systemId infers as string", () => {
+  it("PG systemSettings.systemId infers as SystemId", () => {
     type Row = InferSelectModel<typeof pg.systemSettings>;
-    expectTypeOf<Row["systemId"]>().toEqualTypeOf<string>();
+    expectTypeOf<Row["systemId"]>().toEqualTypeOf<SystemId>();
   });
 
   // Fix 7 — importJobs.updatedAt is number (non-nullable, custom pgTimestamp returns UnixMillis)

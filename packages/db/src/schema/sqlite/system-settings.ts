@@ -1,18 +1,19 @@
 import { sql } from "drizzle-orm";
 import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
 
+import type { SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSettings = sqliteTable(
   "system_settings",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemSettingsId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .unique()
       .references(() => systems.id, { onDelete: "cascade" }),
