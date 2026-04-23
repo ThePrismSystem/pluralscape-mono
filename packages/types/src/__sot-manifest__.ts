@@ -18,14 +18,20 @@ import type { Group, GroupEncryptedFields } from "./entities/group.js";
 import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
+  InnerWorldCanvasServerMetadata,
+  InnerWorldCanvasWire,
 } from "./entities/innerworld-canvas.js";
 import type {
   InnerWorldEntity,
   InnerWorldEntityEncryptedFields,
+  InnerWorldEntityServerMetadata,
+  InnerWorldEntityWire,
 } from "./entities/innerworld-entity.js";
 import type {
   InnerWorldRegion,
   InnerWorldRegionEncryptedFields,
+  InnerWorldRegionServerMetadata,
+  InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
 import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
@@ -163,14 +169,20 @@ export type SotEntityManifest = {
   };
   InnerworldRegion: {
     domain: InnerWorldRegion;
+    server: InnerWorldRegionServerMetadata;
+    wire: InnerWorldRegionWire;
     encryptedFields: InnerWorldRegionEncryptedFields;
   };
   InnerworldEntity: {
     domain: InnerWorldEntity;
+    server: InnerWorldEntityServerMetadata;
+    wire: InnerWorldEntityWire;
     encryptedFields: InnerWorldEntityEncryptedFields;
   };
   InnerworldCanvas: {
     domain: InnerWorldCanvas;
+    server: InnerWorldCanvasServerMetadata;
+    wire: InnerWorldCanvasWire;
     encryptedFields: InnerWorldCanvasEncryptedFields;
   };
   SystemSettings: {

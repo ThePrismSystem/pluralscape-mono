@@ -13,8 +13,6 @@ import type {
   ServerFrontingComment,
   ServerFrontingSession,
   ServerGroup,
-  ServerInnerWorldEntity,
-  ServerInnerWorldRegion,
   ServerJournalEntry,
   ServerLifecycleEvent,
   ServerMemberPhoto,
@@ -37,8 +35,14 @@ import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
 import type { Group } from "./entities/group.js";
-import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
-import type { InnerWorldRegion } from "./entities/innerworld-region.js";
+import type {
+  InnerWorldEntity,
+  InnerWorldEntityServerMetadata,
+} from "./entities/innerworld-entity.js";
+import type {
+  InnerWorldRegion,
+  InnerWorldRegionServerMetadata,
+} from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent } from "./entities/lifecycle-event.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
@@ -68,8 +72,8 @@ export type ServerResponseData =
   | ServerNote
   | ServerFieldDefinition
   | ServerFieldValue
-  | ServerInnerWorldEntity
-  | ServerInnerWorldRegion
+  | InnerWorldEntityServerMetadata
+  | InnerWorldRegionServerMetadata
   | ServerLifecycleEvent
   | ServerCustomFront
   | ServerJournalEntry

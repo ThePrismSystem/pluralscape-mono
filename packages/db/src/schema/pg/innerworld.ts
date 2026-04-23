@@ -1,6 +1,6 @@
-import { foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, index, pgTable, unique } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -8,21 +8,21 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { systems } from "./systems.js";
 
+import type { InnerWorldEntityId, InnerWorldRegionId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 // Regions must be declared before entities (entities FK to regions)
 export const innerworldRegions = pgTable(
   "innerworld_regions",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<InnerWorldRegionId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentRegionId: varchar("parent_region_id", { length: ID_MAX_LENGTH }),
+    parentRegionId: brandedId<InnerWorldRegionId>("parent_region_id"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -43,11 +43,11 @@ export const innerworldRegions = pgTable(
 export const innerworldEntities = pgTable(
   "innerworld_entities",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<InnerWorldEntityId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    regionId: varchar("region_id", { length: ID_MAX_LENGTH }),
+    regionId: brandedId<InnerWorldRegionId>("region_id"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -68,7 +68,7 @@ export const innerworldEntities = pgTable(
 export const innerworldCanvas = pgTable(
   "innerworld_canvas",
   {
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .primaryKey()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

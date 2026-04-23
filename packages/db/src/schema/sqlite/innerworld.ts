@@ -1,6 +1,6 @@
-import { foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, sqliteTable, unique } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -11,17 +11,18 @@ import {
 
 import { systems } from "./systems.js";
 
+import type { InnerWorldEntityId, InnerWorldRegionId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 // Regions must be declared before entities (entities FK to regions)
 export const innerworldRegions = sqliteTable(
   "innerworld_regions",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<InnerWorldRegionId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentRegionId: text("parent_region_id"),
+    parentRegionId: brandedId<InnerWorldRegionId>("parent_region_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -42,11 +43,11 @@ export const innerworldRegions = sqliteTable(
 export const innerworldEntities = sqliteTable(
   "innerworld_entities",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<InnerWorldEntityId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    regionId: text("region_id"),
+    regionId: brandedId<InnerWorldRegionId>("region_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -67,7 +68,7 @@ export const innerworldEntities = sqliteTable(
 export const innerworldCanvas = sqliteTable(
   "innerworld_canvas",
   {
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .primaryKey()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),

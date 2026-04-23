@@ -12,8 +12,6 @@ import type {
   ClientFieldValue,
   ClientFrontingSession,
   ClientGroup,
-  ClientInnerWorldEntity,
-  ClientInnerWorldRegion,
   ClientJournalEntry,
   ClientLifecycleEvent,
   ClientMemberPhoto,
@@ -42,8 +40,6 @@ import type {
   ServerGroup,
   ServerJournalEntry,
   ServerLifecycleEvent,
-  ServerInnerWorldEntity,
-  ServerInnerWorldRegion,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -72,6 +68,14 @@ import type { CustomFront } from "../entities/custom-front.js";
 import type { FrontingComment } from "../entities/fronting-comment.js";
 import type { FrontingSession } from "../entities/fronting-session.js";
 import type { Group } from "../entities/group.js";
+import type {
+  InnerWorldEntity,
+  InnerWorldEntityServerMetadata,
+} from "../entities/innerworld-entity.js";
+import type {
+  InnerWorldRegion,
+  InnerWorldRegionServerMetadata,
+} from "../entities/innerworld-region.js";
 import type { JournalEntry } from "../entities/journal-entry.js";
 import type { LifecycleEvent } from "../entities/lifecycle-event.js";
 import type { MemberPhoto } from "../entities/member-photo.js";
@@ -340,15 +344,15 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("innerworld entity pair", () => {
-    expectTypeOf<ServerInnerWorldEntity>().toBeObject();
-    expectTypeOf<ServerInnerWorldEntity["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientInnerWorldEntity>().toBeObject();
+    expectTypeOf<InnerWorldEntityServerMetadata>().toBeObject();
+    expectTypeOf<InnerWorldEntityServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<InnerWorldEntity>().toBeObject();
   });
 
   it("innerworld region pair", () => {
-    expectTypeOf<ServerInnerWorldRegion>().toBeObject();
-    expectTypeOf<ServerInnerWorldRegion["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientInnerWorldRegion>().toBeObject();
+    expectTypeOf<InnerWorldRegionServerMetadata>().toBeObject();
+    expectTypeOf<InnerWorldRegionServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<InnerWorldRegion>().toBeObject();
   });
 });
 
@@ -358,9 +362,9 @@ describe("T1 encrypted field absence on server types", () => {
     expectTypeOf<ServerJournalEntry["author"]>();
   });
 
-  it("ServerInnerWorldRegion must not have gatekeeperMemberIds", () => {
+  it("InnerWorldRegionServerMetadata must not have gatekeeperMemberIds", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerInnerWorldRegion["gatekeeperMemberIds"]>();
+    expectTypeOf<InnerWorldRegionServerMetadata["gatekeeperMemberIds"]>();
   });
 
   it("ServerChatMessage must not have senderId", () => {
@@ -373,24 +377,24 @@ describe("T1 encrypted field absence on server types", () => {
     expectTypeOf<ServerBoardMessage["senderId"]>();
   });
 
-  it("ServerInnerWorldEntity must not have entityType", () => {
+  it("InnerWorldEntityServerMetadata must not have entityType", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerInnerWorldEntity["entityType"]>();
+    expectTypeOf<InnerWorldEntityServerMetadata["entityType"]>();
   });
 
-  it("ServerInnerWorldEntity must not have positionX", () => {
+  it("InnerWorldEntityServerMetadata must not have positionX", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerInnerWorldEntity["positionX"]>();
+    expectTypeOf<InnerWorldEntityServerMetadata["positionX"]>();
   });
 
-  it("ServerInnerWorldEntity must not have positionY", () => {
+  it("InnerWorldEntityServerMetadata must not have positionY", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerInnerWorldEntity["positionY"]>();
+    expectTypeOf<InnerWorldEntityServerMetadata["positionY"]>();
   });
 
-  it("ServerInnerWorldRegion must not have accessType", () => {
+  it("InnerWorldRegionServerMetadata must not have accessType", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerInnerWorldRegion["accessType"]>();
+    expectTypeOf<InnerWorldRegionServerMetadata["accessType"]>();
   });
 
   it("ServerAcknowledgementRequest must not have targetMemberId", () => {

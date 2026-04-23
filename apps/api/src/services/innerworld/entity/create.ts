@@ -1,5 +1,5 @@
 import { innerworldEntities, innerworldRegions, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateEntityBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
@@ -17,7 +17,7 @@ import { toEntityResult } from "./internal.js";
 import type { EntityResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { InnerWorldEntityId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createEntity(
@@ -35,7 +35,7 @@ export async function createEntity(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const entityId = createId(ID_PREFIXES.innerWorldEntity);
+  const entityId = brandId<InnerWorldEntityId>(createId(ID_PREFIXES.innerWorldEntity));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
