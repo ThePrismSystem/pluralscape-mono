@@ -455,7 +455,7 @@ export type {
   ArchivedBlobMetadata,
   BlobUploadRequest,
   BlobDownloadRef,
-} from "./blob.js";
+} from "./entities/blob.js";
 
 // ── Audit log ─────────────────────────────────────────────────
 export type {

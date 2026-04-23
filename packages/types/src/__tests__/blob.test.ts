@@ -7,7 +7,7 @@ import type {
   BlobPurpose,
   BlobUploadRequest,
   EncryptionTier,
-} from "../blob.js";
+} from "../entities/blob.js";
 import type { BlobId, ChecksumHex, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 
