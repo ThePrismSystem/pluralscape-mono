@@ -8143,16 +8143,13 @@ export interface components {
       saturation?: string;
     };
     /**
-     * @description **Encrypted into**: `encryptedData` on structure entity member link endpoints.
-     *
-     *     Encrypted metadata for a member's assignment to a structure entity.
-     *     The `memberId` and `parentEntityId` are sent as separate plaintext fields.
-     *     Encryption tier: **T1**.
+     * @description Structure entity member links carry no encrypted payload today — every
+     *     field (`memberId`, `parentEntityId`, `sortOrder`) is plaintext at the
+     *     API layer. The schema is retained as an empty object so future encrypted
+     *     additions plug in without a breaking rename; the current parity gate
+     *     asserts the empty projection via the distributive-pick helper.
      */
-    PlaintextStructureEntityMemberLink: {
-      /** @description Optional notes about this membership */
-      notes?: string | null;
-    };
+    PlaintextStructureEntityMemberLink: Record<string, never>;
     /**
      * @description **Encrypted into**: `encryptedData` (optional) on structure entity association
      *     create endpoints.

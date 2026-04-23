@@ -77,6 +77,8 @@ import type {
   SystemSettingsEncryptedFields,
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
+  SystemStructureEntityMemberLink,
+  SystemStructureEntityMemberLinkEncryptedFields,
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
 } from "../packages/types/src/index.js";
@@ -250,5 +252,24 @@ expectTypeOf<
   Equal<
     components["schemas"]["PlaintextSystemSettings"],
     Serialize<Pick<SystemSettings, SystemSettingsEncryptedFields>>
+  >
+>().toEqualTypeOf<true>();
+
+// `SystemStructureEntityMemberLink` carries no encrypted fields today —
+// its encrypted-fields union is `never`, so the projection is the empty
+// object. openapi-typescript emits `Record<string, never>` for a schema
+// with `properties: {}`, which is semantically "no fields" and matches
+// `Pick<T, never>` once we collapse both to that canonical empty shape.
+type EmptyEncryptedProjection<T, K extends keyof T> = [K] extends [never]
+  ? Record<string, never>
+  : Serialize<Pick<T, K>>;
+
+expectTypeOf<
+  Equal<
+    components["schemas"]["PlaintextStructureEntityMemberLink"],
+    EmptyEncryptedProjection<
+      SystemStructureEntityMemberLink,
+      SystemStructureEntityMemberLinkEncryptedFields
+    >
   >
 >().toEqualTypeOf<true>();

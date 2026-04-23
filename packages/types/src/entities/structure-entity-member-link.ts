@@ -15,3 +15,16 @@ export interface SystemStructureEntityMemberLink {
   readonly sortOrder: number;
   readonly createdAt: UnixMillis;
 }
+
+/**
+ * Keys of `SystemStructureEntityMemberLink` that are encrypted client-side
+ * before the server sees them. Links carry no encrypted payload today —
+ * every field is plaintext at the API layer — so this union is `never`
+ * and the OpenAPI `PlaintextStructureEntityMemberLink` schema is an empty
+ * object. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextStructureEntityMemberLink parity)
+ * - Plan 2 fleet will consume when deriving
+ *   `SystemStructureEntityMemberLinkServerMetadata`.
+ */
+export type SystemStructureEntityMemberLinkEncryptedFields = never;

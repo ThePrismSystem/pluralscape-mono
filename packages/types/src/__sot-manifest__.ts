@@ -36,6 +36,10 @@ import type {
 } from "./entities/member.js";
 import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
 import type {
+  SystemStructureEntityMemberLink,
+  SystemStructureEntityMemberLinkEncryptedFields,
+} from "./entities/structure-entity-member-link.js";
+import type {
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
 } from "./entities/structure-entity-type.js";
@@ -137,5 +141,9 @@ export type SotEntityManifest = {
   SystemSettings: {
     domain: SystemSettings;
     encryptedFields: SystemSettingsEncryptedFields;
+  };
+  StructureEntityMemberLink: {
+    domain: SystemStructureEntityMemberLink;
+    encryptedFields: SystemStructureEntityMemberLinkEncryptedFields;
   };
 };
