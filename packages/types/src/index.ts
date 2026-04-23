@@ -125,8 +125,6 @@ export type {
   ClientFrontingSession,
   ServerFrontingComment,
   ClientFrontingComment,
-  ServerGroup,
-  ClientGroup,
   ServerStructureEntityType,
   ClientStructureEntityType,
   ServerStructureEntity,

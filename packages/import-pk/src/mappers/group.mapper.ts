@@ -11,13 +11,13 @@ import { mapped, parseHexColor, skipped, type MapperResult } from "@pluralscape/
 import { normalisePkColor } from "./pk-mapper-helpers.js";
 
 import type { PKGroup } from "../validators/pk-payload.js";
-import type { GroupEncryptedFields } from "@pluralscape/data";
+import type { GroupEncryptedInput } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
 import type { CreateGroupBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 export type PkMappedGroup = Omit<z.infer<typeof CreateGroupBodySchema>, "encryptedData"> & {
-  readonly encrypted: GroupEncryptedFields;
+  readonly encrypted: GroupEncryptedInput;
   readonly memberIds: readonly string[];
 };
 
@@ -45,7 +45,7 @@ export function mapPkGroup(pk: PKGroup, ctx: MappingContext): MapperResult<PkMap
     }
   }
 
-  let color: GroupEncryptedFields["color"] = null;
+  let color: GroupEncryptedInput["color"] = null;
   if (pk.color) {
     const normalised = normalisePkColor(pk.color);
     const parsed = parseHexColor(normalised);
@@ -60,7 +60,7 @@ export function mapPkGroup(pk: PKGroup, ctx: MappingContext): MapperResult<PkMap
     }
   }
 
-  const encrypted: GroupEncryptedFields = {
+  const encrypted: GroupEncryptedInput = {
     name: pk.name,
     description: pk.description ?? null,
     imageSource: pk.icon ? { kind: "external" as const, url: pk.icon } : null,

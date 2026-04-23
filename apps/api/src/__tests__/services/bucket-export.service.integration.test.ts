@@ -151,7 +151,7 @@ describe("bucket-export.service (PGlite integration)", () => {
   }
 
   async function insertGroup(updatedAt?: number): Promise<GroupId> {
-    const id = createId(ID_PREFIXES.group);
+    const id = brandId<GroupId>(createId(ID_PREFIXES.group));
     const ts = updatedAt ?? now();
     await db.insert(groups).values({
       id,
@@ -161,7 +161,7 @@ describe("bucket-export.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<GroupId>(id);
+    return id;
   }
 
   async function insertCustomFront(updatedAt?: number): Promise<CustomFrontId> {

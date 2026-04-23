@@ -32,7 +32,7 @@ export {
   encryptGroupInput,
   encryptGroupUpdate,
 } from "./transforms/group.js";
-export type { GroupEncryptedFields } from "./transforms/group.js";
+export type { GroupEncryptedInput } from "./transforms/group.js";
 
 export {
   decryptCustomFront,

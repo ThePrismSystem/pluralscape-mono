@@ -15,6 +15,7 @@ export {
 export { UpdateSystemBodySchema } from "./system.js";
 export {
   CreateGroupBodySchema,
+  GroupEncryptedInputSchema,
   UpdateGroupBodySchema,
   MoveGroupBodySchema,
   ReorderGroupsBodySchema,

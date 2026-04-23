@@ -34,7 +34,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, GroupId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { systems, members, groups, groupMemberships, relationships, notes, channels, messages } =
@@ -82,7 +82,7 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     // Add a group with membership
-    const groupId = `grp_${crypto.randomUUID()}`;
+    const groupId = brandId<GroupId>(`grp_${crypto.randomUUID()}`);
     await db.insert(groups).values({
       id: groupId,
       systemId,

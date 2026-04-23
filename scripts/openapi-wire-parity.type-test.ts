@@ -66,6 +66,7 @@ import type {
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
+  GroupServerMetadata,
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
   InnerWorldEntity,
@@ -171,6 +172,19 @@ expectTypeOf<
 >().toEqualTypeOf<true>();
 
 expectTypeOf<MemberResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: GroupResponse (split) ──────────────────
+
+type GroupResponseOpenApi = components["schemas"]["GroupResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<GroupResponseOpenApi, "encryptedData">,
+    Omit<Serialize<GroupServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<GroupResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 // ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
 //

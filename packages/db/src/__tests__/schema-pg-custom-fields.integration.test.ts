@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -23,6 +24,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -925,11 +927,12 @@ describe("PG custom fields schema", () => {
       return id;
     }
 
-    async function insertGroup(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    async function insertGroup(systemId: string, raw = crypto.randomUUID()): Promise<GroupId> {
+      const id = brandId<GroupId>(raw);
       const now = Date.now();
       await db.insert(groups).values({
         id,
-        systemId,
+        systemId: brandId<SystemId>(systemId),
         sortOrder: 0,
         encryptedData: testBlob(),
         createdAt: now,

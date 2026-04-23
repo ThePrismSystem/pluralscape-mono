@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -23,6 +24,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -1018,12 +1020,13 @@ describe("SQLite custom fields schema", () => {
       return id;
     }
 
-    function insertGroup(systemId: string, id = crypto.randomUUID()): string {
+    function insertGroup(systemId: string, raw = crypto.randomUUID()): GroupId {
+      const id = brandId<GroupId>(raw);
       const now = Date.now();
       db.insert(groups)
         .values({
           id,
-          systemId,
+          systemId: brandId<SystemId>(systemId),
           sortOrder: 0,
           encryptedData: testBlob(),
           createdAt: now,

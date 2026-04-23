@@ -12,7 +12,6 @@ import type {
   ClientFieldValue,
   ClientFrontingComment,
   ClientFrontingSession,
-  ClientGroup,
   ClientInnerWorldEntity,
   ClientInnerWorldRegion,
   ClientJournalEntry,
@@ -34,7 +33,6 @@ import type {
   ServerFieldValue,
   ServerFrontingComment,
   ServerFrontingSession,
-  ServerGroup,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
   ServerJournalEntry,
@@ -49,6 +47,7 @@ import type {
   ServerWikiPage,
 } from "../encryption-primitives.js";
 import type { AuditLogEntry, AuditLogEntryServerMetadata } from "../entities/audit-log-entry.js";
+import type { Group, GroupServerMetadata } from "../entities/group.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
 import type { PaginatedResult } from "../pagination.js";
@@ -62,7 +61,7 @@ type AllServerTypes = [
   MemberServerMetadata,
   ServerFrontingSession,
   ServerFrontingComment,
-  ServerGroup,
+  GroupServerMetadata,
   ServerStructureEntityType,
   ServerStructureEntity,
   ServerRelationship,
@@ -103,8 +102,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerFrontingComment>().toExtend<ServerResponseData>();
   });
 
-  it("ServerGroup extends ServerResponseData", () => {
-    expectTypeOf<ServerGroup>().toExtend<ServerResponseData>();
+  it("GroupServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<GroupServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("ServerStructureEntityType extends ServerResponseData", () => {
@@ -199,7 +198,7 @@ type AllClientTypes = [
   Member,
   ClientFrontingSession,
   ClientFrontingComment,
-  ClientGroup,
+  Group,
   ClientStructureEntityType,
   ClientStructureEntity,
   ClientRelationship,
@@ -240,8 +239,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientFrontingComment>().toExtend<ClientResponseData>();
   });
 
-  it("ClientGroup extends ClientResponseData", () => {
-    expectTypeOf<ClientGroup>().toExtend<ClientResponseData>();
+  it("Group extends ClientResponseData", () => {
+    expectTypeOf<Group>().toExtend<ClientResponseData>();
   });
 
   it("ClientStructureEntityType extends ClientResponseData", () => {
@@ -332,7 +331,7 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<MemberServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerFrontingSession>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerFrontingComment>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerGroup>().not.toExtend<ClientResponseData>();
+    expectTypeOf<GroupServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerStructureEntityType>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerStructureEntity>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerRelationship>().not.toExtend<ClientResponseData>();
@@ -370,8 +369,8 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<ClientFrontingComment>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientGroup does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientGroup>().not.toExtend<ServerResponseData>();
+  it("Group does NOT extend ServerResponseData", () => {
+    expectTypeOf<Group>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientStructureEntityType does NOT extend ServerResponseData", () => {

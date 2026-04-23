@@ -11,7 +11,6 @@ import type {
   ClientFieldDefinition,
   ClientFieldValue,
   ClientFrontingSession,
-  ClientGroup,
   ClientInnerWorldEntity,
   ClientInnerWorldRegion,
   ClientJournalEntry,
@@ -38,7 +37,6 @@ import type {
   ServerFieldDefinition,
   ServerFieldValue,
   ServerFrontingSession,
-  ServerGroup,
   ServerJournalEntry,
   ServerLifecycleEvent,
   ServerInnerWorldEntity,
@@ -69,7 +67,7 @@ import type { Channel } from "../entities/channel.js";
 import type { CustomFront } from "../entities/custom-front.js";
 import type { FrontingComment } from "../entities/fronting-comment.js";
 import type { FrontingSession } from "../entities/fronting-session.js";
-import type { Group } from "../entities/group.js";
+import type { Group, GroupServerMetadata } from "../entities/group.js";
 import type { JournalEntry } from "../entities/journal-entry.js";
 import type { LifecycleEvent } from "../entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
@@ -181,8 +179,8 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("group pair", () => {
-    expectTypeOf<ServerGroup>().toBeObject();
-    expectTypeOf<ClientGroup>().toEqualTypeOf<Group>();
+    expectTypeOf<GroupServerMetadata>().toBeObject();
+    expectTypeOf<Group>().toEqualTypeOf<Group>();
   });
 
   it("structure entity type pair", () => {

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -40,6 +41,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 describe("PG views / query helpers", () => {
@@ -391,7 +393,7 @@ describe("PG views / query helpers", () => {
       const now = Date.now();
       const memberId1 = crypto.randomUUID();
       const memberId2 = crypto.randomUUID();
-      const groupId = crypto.randomUUID();
+      const groupId = brandId<GroupId>(crypto.randomUUID());
 
       await db.insert(members).values([
         {
@@ -411,7 +413,7 @@ describe("PG views / query helpers", () => {
       ]);
       await db.insert(groups).values({
         id: groupId,
-        systemId,
+        systemId: brandId<SystemId>(systemId),
         sortOrder: 0,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,

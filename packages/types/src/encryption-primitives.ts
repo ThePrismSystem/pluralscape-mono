@@ -7,7 +7,6 @@ import type { FieldDefinition, FieldType } from "./entities/field-definition.js"
 import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
-import type { Group } from "./entities/group.js";
 import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
 import type { InnerWorldRegion } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
@@ -165,23 +164,6 @@ export interface ServerFrontingComment extends AuditMetadata {
 
 /** Client-side fronting comment — flat decrypted fields. */
 export type ClientFrontingComment = FrontingComment;
-
-/**
- * Server-side group representation.
- * T1 encrypted: name, description, imageSource, color, emoji
- * T3 plaintext: sortOrder, archived, parentGroupId
- */
-export interface ServerGroup extends AuditMetadata {
-  readonly id: GroupId;
-  readonly systemId: SystemId;
-  readonly parentGroupId: GroupId | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side group — flat decrypted fields. */
-export type ClientGroup = Group;
 
 // ── Structure entities ──────────────────────────────────────────
 

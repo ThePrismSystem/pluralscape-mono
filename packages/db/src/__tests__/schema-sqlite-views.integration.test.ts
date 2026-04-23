@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -39,6 +40,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 describe("SQLite views / query helpers", () => {
@@ -390,7 +392,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       const memberId1 = crypto.randomUUID();
       const memberId2 = crypto.randomUUID();
-      const groupId = crypto.randomUUID();
+      const groupId = brandId<GroupId>(crypto.randomUUID());
 
       db.insert(members)
         .values([
@@ -413,7 +415,7 @@ describe("SQLite views / query helpers", () => {
       db.insert(groups)
         .values({
           id: groupId,
-          systemId,
+          systemId: brandId<SystemId>(systemId),
           sortOrder: 0,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,

@@ -14,7 +14,12 @@ import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
 } from "./entities/fronting-session.js";
-import type { Group, GroupEncryptedFields } from "./entities/group.js";
+import type {
+  Group,
+  GroupEncryptedFields,
+  GroupServerMetadata,
+  GroupWire,
+} from "./entities/group.js";
 import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
@@ -134,6 +139,8 @@ export type SotEntityManifest = {
   };
   Group: {
     domain: Group;
+    server: GroupServerMetadata;
+    wire: GroupWire;
     encryptedFields: GroupEncryptedFields;
   };
   CustomFront: {

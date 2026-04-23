@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -37,13 +39,16 @@ describe("PG groups schema", () => {
   async function insertGroup(
     systemId: string,
     opts: { parentGroupId?: string | null; sortOrder?: number } = {},
-    id = crypto.randomUUID(),
-  ): Promise<string> {
+    raw = crypto.randomUUID(),
+  ): Promise<GroupId> {
+    const id = brandId<GroupId>(raw);
     const now = Date.now();
     await db.insert(groups).values({
       id,
-      systemId,
-      parentGroupId: opts.parentGroupId ?? null,
+      systemId: brandId<SystemId>(systemId),
+      parentGroupId: opts.parentGroupId === null || opts.parentGroupId === undefined
+        ? null
+        : brandId<GroupId>(opts.parentGroupId),
       sortOrder: opts.sortOrder ?? 0,
       encryptedData: testBlob(),
       createdAt: now,
@@ -87,7 +92,7 @@ describe("PG groups schema", () => {
     it("round-trips insert and select with all fields", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<GroupId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -134,7 +139,7 @@ describe("PG groups schema", () => {
 
       await expect(
         db.insert(groups).values({
-          id: crypto.randomUUID(),
+          id: brandId<GroupId>(crypto.randomUUID()),
           systemId,
           sortOrder: -1,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -147,7 +152,7 @@ describe("PG groups schema", () => {
     it("defaults archived to false, archivedAt to null, and version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<GroupId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(groups).values({
@@ -168,7 +173,7 @@ describe("PG groups schema", () => {
     it("round-trips archived: true with archivedAt timestamp", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<GroupId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(groups).values({
@@ -190,7 +195,7 @@ describe("PG groups schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<GroupId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(groups).values({
