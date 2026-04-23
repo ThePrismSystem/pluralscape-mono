@@ -55,7 +55,7 @@ import type {
   ServerTimerConfig,
   ServerWikiPage,
 } from "../encryption.js";
-import type { Member } from "../identity.js";
+import type { Member } from "../entities/member.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ServerSafe } from "../server-safe.js";
 

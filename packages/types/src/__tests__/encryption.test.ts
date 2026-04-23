@@ -73,9 +73,12 @@ import type {
   T1EncryptedBlob,
   T2EncryptedBlob,
 } from "../encryption.js";
-import type { CustomFront, FrontingComment, FrontingSession } from "../fronting.js";
+import type { CustomFront } from "../entities/custom-front.js";
+import type { FrontingComment } from "../entities/fronting-comment.js";
+import type { FrontingSession } from "../entities/fronting-session.js";
+import type { MemberPhoto } from "../entities/member-photo.js";
+import type { Member } from "../entities/member.js";
 import type { Group } from "../groups.js";
-import type { Member, MemberPhoto } from "../identity.js";
 import type {
   BucketId,
   FrontingCommentId,
