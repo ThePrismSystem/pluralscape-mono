@@ -1,8 +1,37 @@
 import { z } from "zod/v4";
 
 import { brandedIdQueryParam } from "./branded-id.js";
+import {
+  HexColorSchema,
+  PlaintextImageSourceSchema,
+  PlaintextSaturationLevelSchema,
+  PlaintextTagSchema,
+} from "./plaintext-shared.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_MEMBER_DATA_SIZE } from "./validation.constants.js";
+
+/**
+ * Runtime validator for the pre-encryption Member input. Every field of
+ * `MemberEncryptedInput` (in `@pluralscape/data`) must be present and
+ * well-formed. Zod compile-time parity is checked in
+ * `__tests__/type-parity/member.type.test.ts`.
+ *
+ * Replaces the hand-written `assertMemberEncryptedFields` that used to live
+ * in `packages/data/src/transforms/member.ts`.
+ */
+export const MemberEncryptedInputSchema = z
+  .object({
+    name: z.string().min(1),
+    pronouns: z.array(z.string()).readonly(),
+    description: z.string().nullable(),
+    avatarSource: PlaintextImageSourceSchema.nullable(),
+    colors: z.array(HexColorSchema).readonly(),
+    saturationLevel: PlaintextSaturationLevelSchema,
+    tags: z.array(PlaintextTagSchema).readonly(),
+    suppressFriendFrontNotification: z.boolean(),
+    boardMessageNotificationOnFront: z.boolean(),
+  })
+  .readonly();
 
 export const CreateMemberBodySchema = z
   .object({

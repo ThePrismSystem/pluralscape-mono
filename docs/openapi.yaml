@@ -15494,8 +15494,13 @@ components:
       required:
         - name
         - pronouns
+        - description
+        - avatarSource
         - colors
+        - saturationLevel
         - tags
+        - suppressFriendFrontNotification
+        - boardMessageNotificationOnFront
       properties:
         name:
           type: string

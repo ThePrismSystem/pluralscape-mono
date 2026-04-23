@@ -24,7 +24,7 @@ export {
   encryptMemberInput,
   encryptMemberUpdate,
 } from "./transforms/member.js";
-export type { MemberEncryptedFields } from "./transforms/member.js";
+export type { MemberEncryptedInput } from "./transforms/member.js";
 
 export {
   decryptGroup,

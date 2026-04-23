@@ -9,35 +9,35 @@
  *
  * ── Scope and deferrals ──────────────────────────────────────────────
  *
- * Two parity gaps were identified during Task 17 and deferred to
- * follow-up bean `types-tef0`:
+ * `MemberResponse` parity is intentionally not asserted here. OpenAPI
+ * models `encryptedData` as an opaque `string` (the base64-encoded
+ * envelope on the wire), while `MemberServerMetadata.encryptedData` is
+ * the structured `EncryptedBlob` discriminated union (pre-serialization).
+ * A direct `Equal<components["schemas"]["MemberResponse"],
+ * Serialize<MemberServerMetadata>>` assertion would fail by design. The
+ * shared `EncryptedEntity` envelope parity below is the real tripwire
+ * for the wire shape every encrypted response rides on.
  *
- * 1. `Member`: the OpenAPI spec exposes the on-the-wire *encrypted* entity
- *    (`MemberResponse = EncryptedEntity`). The domain `Member` type is the
- *    post-decryption client-side shape, so `Serialize<Member>` (a.k.a.
- *    `MemberWire`) lives at a different layer than what HTTP carries. A
- *    direct `Equal<components["schemas"]["MemberResponse"], MemberWire>`
- *    would fail by design. Resolving this requires either a distinct
- *    `MemberEncryptedWire` aliased to `EncryptedEntity`, or wiring plaintext
- *    (T1) shapes into the OpenAPI spec — outside pilot scope.
+ * `AuditLogEntry` diverges from the domain on field names
+ * (`timestamp` vs `createdAt`), extra fields (`resourceType`,
+ * `resourceId`), and actor shape (`string | null` vs the
+ * `AuditActor` tagged union). Aligning these requires either updating
+ * the OpenAPI spec or restructuring the domain type — out of scope
+ * for the types-tef0 Member pilot.
  *
- * 2. `AuditLogEntry`: the OpenAPI shape diverges from the domain on field
- *    names (`timestamp` vs `createdAt`), extra fields (`resourceType`,
- *    `resourceId`), and actor shape (`string | null` vs the
- *    `AuditActor` tagged union). Aligning these requires either updating
- *    the OpenAPI spec or restructuring the domain type — both are
- *    structural changes beyond Task 17 scope.
- *
- * What this file *does* enforce right now:
+ * What this file enforces right now:
  *  - `MemberWire ≡ Serialize<Member>` (self-consistency of the helper).
  *  - `AuditLogEntryWire ≡ Serialize<AuditLogEntry>` (same).
  *  - `components["schemas"]["EncryptedEntity"]` is structurally equal to the
  *    hand-authored `EncryptedEntityWire` mirror below — a real OpenAPI→
  *    domain parity tripwire for the shared envelope that every T1 response
  *    (including Member) rides on.
+ *  - `components["schemas"]["PlaintextMember"]` structurally equals
+ *    `Serialize<Pick<Member, MemberEncryptedFields>>` — the pre-encryption
+ *    contract derived directly from the domain.
  *
- * Adding a bogus field on either side of the `EncryptedEntity` assertion
- * will fail the gate — see `pnpm types:check-sot`.
+ * Adding a bogus field on either side of any assertion will fail the gate
+ * — see `pnpm types:check-sot`.
  */
 
 import type { components } from "../packages/api-client/src/generated/api-types.js";
@@ -46,6 +46,7 @@ import type {
   AuditLogEntryWire,
   Equal,
   Member,
+  MemberEncryptedFields,
   MemberWire,
   Serialize,
 } from "../packages/types/src/index.js";
@@ -68,8 +69,7 @@ expectTypeOf<Equal<AuditLogEntryWire, Serialize<AuditLogEntry>>>().toEqualTypeOf
 //
 // The mirror is kept local to this file rather than exported from
 // `@pluralscape/types` because the envelope is an API-layer concern,
-// not a domain concept. Promoting it (and aliasing `MemberResponse`
-// to it) is tracked in `types-tef0`.
+// not a domain concept.
 
 interface EncryptedEntityWire {
   id: string;
@@ -86,22 +86,14 @@ expectTypeOf<
   Equal<components["schemas"]["EncryptedEntity"], EncryptedEntityWire>
 >().toEqualTypeOf<true>();
 
-// ── Deferred: direct Member parity ──────────────────────────────────
+// ── OpenAPI ↔ domain parity: PlaintextMember ────────────────────────
 //
-// `components["schemas"]["MemberResponse"]` is `allOf: [EncryptedEntity]`
-// (see `docs/openapi.yaml`). It represents the encrypted wire entity,
-// not the decrypted domain `Member`. Tracking: bean `types-tef0`.
-//
-// Once a `MemberEncryptedWire` (aliased to `EncryptedEntity`) is
-// introduced, replace with:
-//
-//   expectTypeOf<
-//     Equal<components["schemas"]["MemberResponse"], MemberEncryptedWire>
-//   >().toEqualTypeOf<true>();
+// `components["schemas"]["PlaintextMember"]` is the client-enforced
+// pre-encryption contract. It must structurally equal the domain's
+// encrypted-field projection. `MemberEncryptedFields` (keys union) +
+// `Pick<Member, ...>` is the single source of truth; `Serialize<...>`
+// strips brands and converts timestamps so the result matches JSON.
 
-// ── Deferred: direct AuditLogEntry parity ───────────────────────────
-//
-// OpenAPI shape uses `timestamp`/`resourceType`/`resourceId`/
-// `actor: string`, whereas domain uses `createdAt`/(no resourceType)/
-// `actor: AuditActor` (tagged union). Resolving requires spec and/or
-// domain-type restructuring — tracked in bean `types-tef0`.
+expectTypeOf<
+  Equal<components["schemas"]["PlaintextMember"], Serialize<Pick<Member, MemberEncryptedFields>>>
+>().toEqualTypeOf<true>();

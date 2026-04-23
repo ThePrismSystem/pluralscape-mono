@@ -63,6 +63,28 @@ export interface Member extends AuditMetadata {
   readonly archived: false;
 }
 
+/**
+ * Keys of `Member` that are encrypted client-side before the server sees them.
+ * T1 fields are encrypted with the system master key; T2 fields (`avatarSource`)
+ * are encrypted with the bucket key. Both tiers are zero-knowledge from the
+ * server's perspective — the server only ever stores opaque ciphertext.
+ *
+ * This keys-union is consumed by:
+ * - `MemberServerMetadata` (derived via `Omit`)
+ * - `MemberEncryptedInput` in `packages/data` (derived via `Pick`)
+ * - `PlaintextMember` OpenAPI parity in `scripts/openapi-wire-parity.type-test.ts`
+ */
+export type MemberEncryptedFields =
+  | "name"
+  | "pronouns"
+  | "description"
+  | "avatarSource"
+  | "colors"
+  | "saturationLevel"
+  | "tags"
+  | "suppressFriendFrontNotification"
+  | "boardMessageNotificationOnFront";
+
 /** An archived member — preserves all data with archive metadata. */
 export type ArchivedMember = Archived<Member>;
 
@@ -98,18 +120,18 @@ export interface DuplicateMemberBody {
 
 /**
  * Server-visible Member metadata — raw Drizzle row shape.
- * T1 encrypted (inside `encryptedData`): name, pronouns, description, tags,
- *   colors, avatarSource, saturationLevel, suppressFriendFrontNotification,
- *   boardMessageNotificationOnFront
- * T3 plaintext columns: id, systemId, archived, audit timestamps
+ *
+ * Derived from `Member` by stripping the encrypted field keys (bundled inside
+ * `encryptedData`) plus `archived` (the server tracks a mutable boolean with
+ * a companion `archivedAt` timestamp, while the domain uses a `false` literal
+ * that toggles to `true` via the `Archived<T>` helper). The server sees
+ * everything in `Member` EXCEPT the encrypted keys.
  */
-export interface MemberServerMetadata extends AuditMetadata {
-  readonly id: MemberId;
-  readonly systemId: SystemId;
+export type MemberServerMetadata = Omit<Member, MemberEncryptedFields | "archived"> & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
-}
+};
 
 /**
  * JSON-wire representation of a Member. Derived from the domain `Member`

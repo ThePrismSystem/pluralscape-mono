@@ -3,7 +3,12 @@ import type {
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
-import type { Member, MemberServerMetadata, MemberWire } from "./entities/member.js";
+import type {
+  Member,
+  MemberEncryptedFields,
+  MemberServerMetadata,
+  MemberWire,
+} from "./entities/member.js";
 
 /**
  * Registry of every domain entity that participates in the types-as-SoT
@@ -20,10 +25,17 @@ import type { Member, MemberServerMetadata, MemberWire } from "./entities/member
  * Phase 1 (pilot): Member + AuditLogEntry. Fleet (Phase 2) fills the rest.
  */
 export type SotEntityManifest = {
-  Member: { domain: Member; server: MemberServerMetadata; wire: MemberWire };
+  Member: {
+    domain: Member;
+    server: MemberServerMetadata;
+    wire: MemberWire;
+    encryptedFields: MemberEncryptedFields;
+  };
   AuditLogEntry: {
     domain: AuditLogEntry;
     server: AuditLogEntryServerMetadata;
     wire: AuditLogEntryWire;
+    // Plaintext wire — no encrypted fields.
+    encryptedFields: never;
   };
 };

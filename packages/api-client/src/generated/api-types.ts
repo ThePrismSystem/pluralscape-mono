@@ -14,14 +14,10 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Initiate account registration
-     * @description Phase 1 of two-phase registration. Reserves an account slot and returns
-     *     a KDF salt and challenge nonce.
-     *
-     *     **Crypto flow**: The client uses the returned `kdfSalt` to derive the
-     *     auth key and password key from the user's password via Argon2id. The
-     *     `challengeNonce` must be signed with the client's Ed25519 signing key
-     *     and included in the commit phase to bind the keypair to this registration.
+     * Initiate account registration (phase 1)
+     * @description Two-phase registration. Returns accountId, KDF salt, and challenge nonce.
+     *     Always returns 201 regardless of whether the email is already registered
+     *     (anti-enumeration).
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -42,24 +38,10 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Commit account registration
-     * @description Phase 2 of two-phase registration. Submits all cryptographic material
-     *     and creates the account.
-     *
-     *     **Crypto flow**: The client derives the auth key and password key via
-     *     Argon2id using the `kdfSalt` from the initiate phase. The auth key is
-     *     sent as the credential. The master key is randomly generated client-side
-     *     and stored wrapped with the password key (`encryptedMasterKey`). The
-     *     recovery key independently wraps the master key (`recoveryEncryptedMasterKey`).
-     *     Identity keypairs are derived from the master key and their private keys
-     *     are stored encrypted (`encryptedSigningPrivateKey`,
-     *     `encryptedEncryptionPrivateKey`). The `challengeSignature` proves
-     *     ownership of the Ed25519 signing key by signing the nonce from the
-     *     initiate phase.
-     *
-     *     The recovery key must be stored securely by the client — it is the
-     *     **only** way to recover the master encryption key if the password is
-     *     forgotten.
+     * Complete account registration (phase 2)
+     * @description Zero-knowledge — the server never sees the password. The client sends
+     *     pre-encrypted key blobs and a challenge signature proving possession of
+     *     the signing key.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -81,16 +63,12 @@ export interface paths {
     put?: never;
     /**
      * Fetch KDF salt for an email address
-     * @description Returns the Argon2id KDF salt for the given email address, enabling the
-     *     client to derive the auth key before sending credentials.
-     *
-     *     **Anti-enumeration**: The response is identical (valid salt format,
-     *     equalized timing) whether or not the email is registered, preventing
-     *     account existence probing.
+     * @description Always returns 200 with a salt — either the real KDF salt for the account
+     *     or a deterministic fake salt derived from the email (anti-enumeration).
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
-    post: operations["getKdfSalt"];
+    post: operations["getSalt"];
     delete?: never;
     options?: never;
     head?: never;
@@ -108,17 +86,10 @@ export interface paths {
     put?: never;
     /**
      * Log in with email and auth key
-     * @description Authenticates with email and a pre-derived auth key, returning a session
-     *     token and the encrypted master key for client-side decryption.
-     *
-     *     **Crypto flow**: The client first fetches the KDF salt via `POST /auth/salt`,
-     *     derives the auth key from the password via Argon2id, then submits it here.
-     *     The server verifies the BLAKE2B hash of the auth key. On success, the
-     *     encrypted master key is returned so the client can unwrap it with the
-     *     password key (also derived locally). The server never sees the raw password.
-     *
-     *     **Security**: Timing is equalized across success and failure paths to
-     *     prevent user-enumeration attacks.
+     * @description Zero-knowledge login. The client derives an auth key from the password
+     *     via Argon2id and sends only the auth key — the server never sees the
+     *     plaintext password. Timing is equalized across success and failure paths
+     *     to prevent user-enumeration attacks.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -140,19 +111,12 @@ export interface paths {
     put?: never;
     /**
      * Reset password using recovery key
-     * @description Resets the account password using the recovery key.
-     *
-     *     **Crypto flow**: The client uses the recovery key to decrypt the master
-     *     key locally, then re-wraps it with a new password key derived from the
-     *     new password (using `newKdfSalt`). The new auth key, new KDF salt, and
-     *     two fresh encrypted master key blobs (`newEncryptedMasterKey` for
-     *     password-based access, `newRecoveryEncryptedMasterKey` for the new
-     *     recovery key) are all submitted pre-computed. The server replaces the
-     *     stored blobs atomically. All existing encrypted data remains accessible
-     *     because the underlying master key is unchanged — only its wrapping
-     *     changes. The `recoveryKeyHash` authenticates the request by proving
-     *     the client holds the current recovery key; `newRecoveryKeyHash` records
-     *     the replacement recovery key hash.
+     * @description Zero-knowledge password reset via recovery key. The client provides
+     *     hex-encoded blobs: a new auth key, new KDF salt, re-encrypted master
+     *     key, and a new recovery-encrypted master key. The server never sees
+     *     the plaintext password or master key. All existing encrypted data
+     *     remains accessible because the underlying master key is unchanged —
+     *     only its wrapping changes.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -328,15 +292,10 @@ export interface paths {
     put?: never;
     /**
      * Regenerate recovery key
-     * @description Regenerates the recovery key. Requires current auth key and explicit
-     *     confirmation.
-     *
-     *     **Crypto flow**: The client decrypts the master key locally using the
-     *     current password key, wraps it with a fresh recovery key to produce
-     *     `newRecoveryEncryptedMasterKey`, then submits the new blob along with the
-     *     auth key for identity verification. The `challengeSignature` proves the
-     *     client holds the signing key. The old recovery key and its encrypted
-     *     master key copy are permanently invalidated.
+     * @description Regenerates the recovery key backup. The client provides its auth key
+     *     to prove identity, plus a new recovery-encrypted master key blob and
+     *     recovery key hash. The server never sees the plaintext recovery key or
+     *     master key.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -366,7 +325,7 @@ export interface paths {
     /**
      * Delete account
      * @description Permanently deletes the authenticated account and all associated data.
-     *     Requires the current auth key for confirmation. This action is
+     *     Requires the current password for confirmation. This action is
      *     irreversible — all systems, members, sessions, keys, and dependent data
      *     are cascade-deleted.
      *
@@ -388,7 +347,7 @@ export interface paths {
     get?: never;
     /**
      * Change account email
-     * @description Changes the account email. Requires current auth key for verification.
+     * @description Changes the account email. Requires current password for verification.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -410,14 +369,7 @@ export interface paths {
     get?: never;
     /**
      * Change account password
-     * @description Changes the account password. Requires current auth key for verification.
-     *
-     *     **Crypto flow**: The client derives the new auth key and new password key
-     *     from the new password using `newKdfSalt`. The master key is re-wrapped
-     *     with the new password key to produce `newEncryptedMasterKey`. All blobs
-     *     are submitted pre-computed; the server never sees the raw password or the
-     *     master key. The `challengeSignature` proves the client holds the Ed25519
-     *     signing key bound to this account.
+     * @description Changes the account password. Requires current password for verification.
      *
      *     Rate limit: 5 req/min (authHeavy)
      */
@@ -1127,7 +1079,7 @@ export interface paths {
     /**
      * Permanently purge a system
      * @description Hard-deletes a system and all dependent data via CASCADE. The system must
-     *     be archived (soft-deleted) first. Auth key confirmation is required to
+     *     be archived (soft-deleted) first. Password confirmation is required to
      *     prevent accidental purge.
      *
      *     Rate limit: 60 req/min (write)
@@ -5517,6 +5469,51 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/i18n/manifest": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get translation manifest
+     * @description Returns the list of available locales and namespaces. Public; rate-limited
+     *     (i18nFetch: 30 requests per minute per IP). Response is cached in Valkey
+     *     for 24 hours.
+     */
+    get: operations["getI18nManifest"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/i18n/{locale}/{namespace}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get a translation namespace
+     * @description Returns a single locale's namespace as a flat key/value map. Supports
+     *     If-None-Match against the response ETag; returns 304 on match. Public;
+     *     rate-limited (i18nFetch: 30 requests per minute per IP). Response cached
+     *     in Valkey for 24 hours.
+     */
+    get: operations["getI18nNamespace"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5539,6 +5536,7 @@ export interface components {
           | "BUCKET_ACCESS_DENIED"
           | "NOT_FOUND"
           | "CONFLICT"
+          | "INVALID_STATE"
           | "HAS_DEPENDENTS"
           | "ROTATION_IN_PROGRESS"
           | "FRIEND_CODE_EXPIRED"
@@ -5630,45 +5628,43 @@ export interface components {
        */
       archivedAt?: number | null;
     };
-    SaltRequest: {
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
-    };
-    SaltResponse: {
-      /**
-       * @description Hex-encoded 16-byte Argon2id salt for password key derivation
-       * @example a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
-       */
-      kdfSalt: string;
-    };
     LoginRequest: {
       /**
        * Format: email
        * @example user@example.com
        */
       email: string;
-      /** @description Hex-encoded 32-byte auth key derived from the password via Argon2id */
+      /** @description 32-byte hex-encoded auth key derived from password via Argon2id */
       authKey: string;
     };
     LoginResponse: {
-      /**
-       * @description 32-byte hex-encoded session token (64 characters)
-       * @example a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-       */
-      sessionToken: string;
-      /** @example acc_abc123 */
-      accountId: string;
-      /** @example sys_abc123 */
-      systemId?: string | null;
-      /** @enum {string} */
-      accountType: "system" | "viewer";
-      /** @description Base64-encoded master key wrapped with the password key (XChaCha20-Poly1305) */
-      encryptedMasterKey: string;
-      /** @description Hex-encoded 16-byte Argon2id salt used to derive the password key */
-      kdfSalt: string;
+      data: {
+        /**
+         * @description 32-byte hex-encoded session token (64 characters)
+         * @example a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+         */
+        sessionToken: string;
+        /** @example acct_abc123 */
+        accountId: string;
+        /** @example sys_abc123 */
+        systemId?: string | null;
+        /** @enum {string} */
+        accountType: "system" | "viewer";
+        /** @description E2E-encrypted master key blob (hex-encoded) */
+        encryptedMasterKey?: string;
+        /** @description Hex-encoded 16-byte Argon2id salt */
+        kdfSalt?: string;
+      };
+    };
+    SaltRequest: {
+      /** Format: email */
+      email: string;
+    };
+    SaltResponse: {
+      data: {
+        /** @description Hex-encoded 16-byte Argon2id salt */
+        kdfSalt: string;
+      };
     };
     RegistrationInitiateRequest: {
       /** Format: email */
@@ -5680,69 +5676,56 @@ export interface components {
       accountType: "system" | "viewer";
     };
     RegistrationInitiateResponse: {
-      /**
-       * @description Reserved account ID to reference in the commit phase
-       * @example acc_abc123
-       */
-      accountId: string;
-      /**
-       * @description Hex-encoded 16-byte Argon2id salt generated by the server for this account
-       * @example a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4
-       */
-      kdfSalt: string;
-      /** @description Hex-encoded 32-byte nonce to be signed with the Ed25519 signing key in the commit phase */
-      challengeNonce: string;
+      data: {
+        accountId: string;
+        kdfSalt: string;
+        challengeNonce: string;
+      };
     };
     RegistrationCommitRequest: {
-      /** @description Account ID from the initiate phase */
       accountId: string;
-      /** @description Hex-encoded 32-byte auth key derived from the password via Argon2id */
       authKey: string;
-      /** @description Base64-encoded master key wrapped with the password key (XChaCha20-Poly1305) */
       encryptedMasterKey: string;
-      /** @description Base64-encoded Ed25519 signing private key encrypted with the master key */
       encryptedSigningPrivateKey: string;
-      /** @description Base64-encoded X25519 encryption private key encrypted with the master key */
       encryptedEncryptionPrivateKey: string;
-      /** @description Hex-encoded Ed25519 public signing key (64 hex chars, 32 bytes) */
       publicSigningKey: string;
-      /** @description Hex-encoded X25519 public encryption key (64 hex chars, 32 bytes) */
       publicEncryptionKey: string;
-      /** @description Base64-encoded master key wrapped with the recovery key (XChaCha20-Poly1305) */
       recoveryEncryptedMasterKey: string;
-      /** @description Hex-encoded Ed25519 signature of the challenge nonce from the initiate phase */
       challengeSignature: string;
       /** @constant */
       recoveryKeyBackupConfirmed: true;
-      /** @description Hex-encoded 32-byte BLAKE2b hash of the raw recovery key (64 hex chars) */
       recoveryKeyHash: string;
     };
     RegistrationCommitResponse: {
-      /** @description 32-byte hex-encoded session token */
-      sessionToken: string;
-      accountId: string;
-      /** @enum {string} */
-      accountType: "system" | "viewer";
+      data: {
+        sessionToken: string;
+        accountId: string;
+        /** @enum {string} */
+        accountType: "system" | "viewer";
+      };
+    };
+    RegenerateRecoveryKeyResponse: {
+      data: {
+        /** @constant */
+        ok: true;
+      };
     };
     PasswordResetViaRecoveryKeyRequest: {
       /** Format: email */
       email: string;
-      /** @description Hex-encoded 32-byte auth key derived from the new password via Argon2id */
+      recoveryKey: string;
       newAuthKey: string;
-      /** @description Hex-encoded 16-byte Argon2id salt used to derive the new auth key and password key */
       newKdfSalt: string;
-      /** @description Base64-encoded master key re-wrapped with the new password key */
       newEncryptedMasterKey: string;
-      /** @description Base64-encoded master key wrapped with the new recovery key */
       newRecoveryEncryptedMasterKey: string;
-      /** @description Hex-encoded 32-byte BLAKE2b hash of the current recovery key used to authenticate this reset (64 hex chars) */
       recoveryKeyHash: string;
-      /** @description Hex-encoded 32-byte BLAKE2b hash of the new recovery key replacing the current one (64 hex chars) */
       newRecoveryKeyHash: string;
     };
     PasswordResetResponse: {
-      sessionToken: string;
-      accountId: string;
+      data: {
+        sessionToken: string;
+        accountId: string;
+      };
     };
     BiometricTokenRequest: {
       /** @description Platform-specific biometric token */
@@ -5781,15 +5764,14 @@ export interface components {
       expiresAt?: number | null;
     };
     SessionListResponse: {
-      sessions: components["schemas"]["SessionInfo"][];
+      data: components["schemas"]["SessionInfo"][];
       nextCursor?: string | null;
       hasMore: boolean;
     };
     RegenerateRecoveryKeyRequest: {
-      /** @description Hex-encoded 32-byte auth key derived from the current password */
       authKey: string;
-      /** @description Base64-encoded master key wrapped with the newly generated recovery key */
       newRecoveryEncryptedMasterKey: string;
+      recoveryKeyHash: string;
       /** @constant */
       confirmed: true;
     };
@@ -5803,8 +5785,6 @@ export interface components {
     };
     RevokeAllResponse: {
       data: {
-        /** @constant */
-        success: true;
         /** @description Number of sessions revoked */
         revokedCount: number;
       };
@@ -5848,20 +5828,11 @@ export interface components {
        * @example user@example.com
        */
       email: string;
-      /** @description Hex-encoded 32-byte auth key derived from the current password */
-      authKey: string;
+      currentPassword: string;
     };
     ChangePasswordRequest: {
-      /** @description Hex-encoded 32-byte auth key derived from the current password */
-      oldAuthKey: string;
-      /** @description Hex-encoded 32-byte auth key derived from the new password */
-      newAuthKey: string;
-      /** @description Hex-encoded 16-byte Argon2id salt used to derive the new auth key and password key */
-      newKdfSalt: string;
-      /** @description Base64-encoded master key re-wrapped with the new password key */
-      newEncryptedMasterKey: string;
-      /** @description Hex-encoded Ed25519 signature proving ownership of the account signing key */
-      challengeSignature: string;
+      currentPassword: string;
+      newPassword: string;
     };
     AuditLogQuery: {
       /** @description Filter by event type */
@@ -5904,7 +5875,7 @@ export interface components {
       userAgent?: string | null;
     };
     AuditLogResponse: {
-      events: components["schemas"]["AuditLogEntry"][];
+      data: components["schemas"]["AuditLogEntry"][];
       nextCursor?: string | null;
       hasMore: boolean;
     };
@@ -5919,8 +5890,8 @@ export interface components {
       version: number;
     };
     DeleteAccountRequest: {
-      /** @description Hex-encoded 32-byte auth key derived from the current password for confirmation */
-      authKey: string;
+      /** @description Current account password for confirmation */
+      password: string;
     };
     VerifyPinResponse: {
       /** @enum {boolean} */
@@ -5999,8 +5970,8 @@ export interface components {
       sourceSnapshotId: string;
     };
     PurgeSystemRequest: {
-      /** @description Hex-encoded 32-byte auth key derived from the current password for confirmation */
-      authKey: string;
+      /** @description Account password for confirmation */
+      password: string;
     };
     /** @description A member (headmate) within a system. Extends EncryptedEntity with the server-visible `archived` field. */
     MemberResponse: components["schemas"]["EncryptedEntity"];
@@ -6016,11 +5987,20 @@ export interface components {
     DuplicateMemberRequest: {
       /** @description T1-encrypted PlaintextMember for the new duplicate (see ./plaintext.yaml#/PlaintextMember) */
       encryptedData: string;
-      /** @description Whether to copy the source member's photos to the duplicate */
+      /**
+       * @description Whether to copy the source member's photos to the duplicate
+       * @default false
+       */
       copyPhotos: boolean;
-      /** @description Whether to copy the source member's custom field values to the duplicate */
+      /**
+       * @description Whether to copy the source member's custom field values to the duplicate
+       * @default false
+       */
       copyFields: boolean;
-      /** @description Whether to copy the source member's group memberships to the duplicate */
+      /**
+       * @description Whether to copy the source member's group memberships to the duplicate
+       * @default false
+       */
       copyMemberships: boolean;
     };
     CreateMemberPhotoRequest: {
@@ -6970,6 +6950,11 @@ export interface components {
        * @description Unix milliseconds. Retroactive values are allowed.
        */
       startTime: number;
+      /**
+       * Format: int64
+       * @description Unix milliseconds when the session ended. Optional; omit for active sessions. Must be after startTime.
+       */
+      endTime?: number;
       /** @description Member ID (mem_ prefix). At least one subject required. */
       memberId?: string;
       /** @description Custom front ID (cf_ prefix) */
@@ -7591,16 +7576,16 @@ export interface components {
       name: string;
       /** @description List of pronoun sets (e.g., ['she/her', 'they/them']) */
       pronouns: string[];
-      description?: string | null;
-      avatarSource?: components["schemas"]["PlaintextImageSource"] | null;
+      description: string | null;
+      avatarSource: components["schemas"]["PlaintextImageSource"] | null;
       /** @description Member's associated colors (for UI theming) */
       colors: string[];
-      saturationLevel?: components["schemas"]["PlaintextSaturationLevel"];
+      saturationLevel: components["schemas"]["PlaintextSaturationLevel"];
       tags: components["schemas"]["PlaintextTag"][];
       /** @description When true, friends are not notified when this member starts fronting */
-      suppressFriendFrontNotification?: boolean;
+      suppressFriendFrontNotification: boolean;
       /** @description When true, a board message is posted when this member starts fronting */
-      boardMessageNotificationOnFront?: boolean;
+      boardMessageNotificationOnFront: boolean;
     };
     /**
      * @description **Encrypted into**: `encryptedData` on member photo create endpoints.
@@ -7930,7 +7915,7 @@ export interface components {
     PlaintextStructureEntityAssociation: {
       notes?: string | null;
     };
-    account_PinRequest: {
+    "PinRequest-2": {
       /** @description 4-6 digit PIN */
       pin: string;
     };
@@ -7990,7 +7975,7 @@ export interface components {
       updatedAt: number;
     };
     BucketExportPageResponse: {
-      items: components["schemas"]["BucketExportEntity"][];
+      data: components["schemas"]["BucketExportEntity"][];
       /** @description Cursor for the next page, or null if no more pages */
       nextCursor: string | null;
       /** @description Whether more pages are available */
@@ -8169,25 +8154,83 @@ export interface components {
      */
     ApiKeyType: "metadata" | "crypto";
     /**
-     * @description Permission scope granted to this API key
+     * @description Permission scope granted to an API key. Scopes follow the
+     *     `<tier>:<domain>` pattern plus a small set of special values.
+     *
+     *     - Tiers: `read` (list/get), `write` (create/update), `delete` (destroy).
+     *     - Aggregates: `read-all`, `write-all`, `delete-all` grant the tier across every domain.
+     *     - `read:audit-log` is the only audit-log scope (read-only by design).
+     *     - `full` grants unrestricted access including audit-log and api-key management endpoints.
      * @enum {string}
      */
     ApiKeyScope:
       | "read:members"
-      | "write:members"
       | "read:fronting"
-      | "write:fronting"
       | "read:groups"
-      | "write:groups"
       | "read:system"
-      | "write:system"
+      | "read:structure"
+      | "read:reports"
       | "read:webhooks"
-      | "write:webhooks"
-      | "read:audit-log"
       | "read:blobs"
-      | "write:blobs"
       | "read:notifications"
+      | "read:acknowledgements"
+      | "read:channels"
+      | "read:messages"
+      | "read:notes"
+      | "read:polls"
+      | "read:relationships"
+      | "read:innerworld"
+      | "read:fields"
+      | "read:check-ins"
+      | "read:lifecycle-events"
+      | "read:timers"
+      | "read:buckets"
+      | "write:members"
+      | "write:fronting"
+      | "write:groups"
+      | "write:system"
+      | "write:structure"
+      | "write:reports"
+      | "write:webhooks"
+      | "write:blobs"
       | "write:notifications"
+      | "write:acknowledgements"
+      | "write:channels"
+      | "write:messages"
+      | "write:notes"
+      | "write:polls"
+      | "write:relationships"
+      | "write:innerworld"
+      | "write:fields"
+      | "write:check-ins"
+      | "write:lifecycle-events"
+      | "write:timers"
+      | "write:buckets"
+      | "delete:members"
+      | "delete:fronting"
+      | "delete:groups"
+      | "delete:system"
+      | "delete:structure"
+      | "delete:reports"
+      | "delete:webhooks"
+      | "delete:blobs"
+      | "delete:notifications"
+      | "delete:acknowledgements"
+      | "delete:channels"
+      | "delete:messages"
+      | "delete:notes"
+      | "delete:polls"
+      | "delete:relationships"
+      | "delete:innerworld"
+      | "delete:fields"
+      | "delete:check-ins"
+      | "delete:lifecycle-events"
+      | "delete:timers"
+      | "delete:buckets"
+      | "read:audit-log"
+      | "read-all"
+      | "write-all"
+      | "delete-all"
       | "full";
     /**
      * @description An API key. The plaintext `token` is only returned on creation and
@@ -8640,7 +8683,7 @@ export interface components {
     };
     CreateImportJobBody: {
       source: components["schemas"]["ImportSource"];
-      /** @description Map of ImportEntityType → whether to import. At least one must be true. */
+      /** @description Map of ImportCollectionType → whether to import. At least one must be true. */
       selectedCategories: {
         [key: string]: boolean;
       };
@@ -8666,6 +8709,26 @@ export interface components {
       /** @description Brand varies by sourceEntityType (MemberId, GroupId, etc.). */
       pluralscapeEntityId: string;
       importedAt: number;
+    };
+    I18nNamespaceManifest: {
+      /** @example common */
+      name: string;
+      etag: string;
+    };
+    I18nLocaleManifest: {
+      /** @example es */
+      locale: string;
+      namespaces: components["schemas"]["I18nNamespaceManifest"][];
+    };
+    I18nManifest: {
+      /** Format: int64 */
+      distributionTimestamp: number;
+      locales: components["schemas"]["I18nLocaleManifest"][];
+    };
+    I18nNamespace: {
+      translations: {
+        [key: string]: string;
+      };
     };
   };
   responses: {
@@ -8756,7 +8819,7 @@ export interface operations {
     };
     responses: {
       /** @description Registration initiated */
-      200: {
+      201: {
         headers: {
           [name: string]: unknown;
         };
@@ -8765,7 +8828,6 @@ export interface operations {
         };
       };
       400: components["responses"]["ValidationError"];
-      409: components["responses"]["Conflict"];
       429: components["responses"]["RateLimited"];
     };
   };
@@ -8792,11 +8854,10 @@ export interface operations {
         };
       };
       400: components["responses"]["ValidationError"];
-      409: components["responses"]["Conflict"];
       429: components["responses"]["RateLimited"];
     };
   };
-  getKdfSalt: {
+  getSalt: {
     parameters: {
       query?: never;
       header?: never;
@@ -8809,7 +8870,7 @@ export interface operations {
       };
     };
     responses: {
-      /** @description KDF salt returned */
+      /** @description KDF salt */
       200: {
         headers: {
           [name: string]: unknown;
@@ -9047,16 +9108,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description Recovery key regenerated */
-      200: {
+      /** @description Recovery key backup regenerated */
+      201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            /** @constant */
-            ok: true;
-          };
+          "application/json": components["schemas"]["RegenerateRecoveryKeyResponse"];
         };
       };
       400: components["responses"]["ValidationError"];
@@ -9239,7 +9297,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["account_PinRequest"];
+        "application/json": components["schemas"]["PinRequest-2"];
       };
     };
     responses: {
@@ -9259,7 +9317,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["account_PinRequest"];
+        "application/json": components["schemas"]["PinRequest-2"];
       };
     };
     responses: {
@@ -9279,7 +9337,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["account_PinRequest"];
+        "application/json": components["schemas"]["PinRequest-2"];
       };
     };
     responses: {
@@ -9927,7 +9985,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            systems: components["schemas"]["SystemProfile"][];
+            data: components["schemas"]["SystemProfile"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -10126,7 +10184,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["SnapshotResponse"][];
+            data: components["schemas"]["SnapshotResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -10524,7 +10582,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            members: components["schemas"]["MemberResponse"][];
+            data: components["schemas"]["MemberResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -10753,7 +10811,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            memberships: components["schemas"]["GroupMembership"][];
+            data: components["schemas"]["GroupMembership"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -10990,7 +11048,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            groups: components["schemas"]["GroupResponse"][];
+            data: components["schemas"]["GroupResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -11299,7 +11357,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            members: components["schemas"]["GroupMembership"][];
+            data: components["schemas"]["GroupMembership"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -11387,7 +11445,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            customFronts: components["schemas"]["CustomFrontResponse"][];
+            data: components["schemas"]["CustomFrontResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -11765,7 +11823,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            fields: components["schemas"]["FieldDefinitionResponse"][];
+            data: components["schemas"]["FieldDefinitionResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -11956,10 +12014,9 @@ export interface operations {
         content: {
           "application/json": {
             data: {
-              items: {
-                bucketId: string;
-              }[];
-            };
+              fieldDefinitionId: string;
+              bucketId: string;
+            }[];
           };
         };
       };
@@ -12054,7 +12111,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            relationships: components["schemas"]["RelationshipResponse"][];
+            data: components["schemas"]["RelationshipResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -12246,7 +12303,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            entityTypes: components["schemas"]["StructureEntityTypeResponse"][];
+            data: components["schemas"]["StructureEntityTypeResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -12440,7 +12497,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            entities: components["schemas"]["StructureEntityResponse"][];
+            data: components["schemas"]["StructureEntityResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -12636,7 +12693,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            links: components["schemas"]["StructureEntityLinkResponse"][];
+            data: components["schemas"]["StructureEntityLinkResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -12756,7 +12813,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            memberLinks: components["schemas"]["StructureEntityMemberLinkResponse"][];
+            data: components["schemas"]["StructureEntityMemberLinkResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -12843,7 +12900,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            associations: components["schemas"]["StructureEntityAssociationResponse"][];
+            data: components["schemas"]["StructureEntityAssociationResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -12928,7 +12985,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            events: components["schemas"]["LifecycleEventResponse"][];
+            data: components["schemas"]["LifecycleEventResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -13072,7 +13129,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            regions: components["schemas"]["RegionResponse"][];
+            data: components["schemas"]["RegionResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -13265,7 +13322,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            entities: components["schemas"]["EntityResponse"][];
+            data: components["schemas"]["EntityResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -13515,7 +13572,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            blobs: components["schemas"]["BlobResponse"][];
+            data: components["schemas"]["BlobResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -13688,7 +13745,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["BucketResponse"][];
+            data: components["schemas"]["BucketResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -14312,6 +14369,10 @@ export interface operations {
         startFrom?: number;
         /** @description Filter sessions starting at or before this Unix timestamp (ms) */
         startUntil?: number;
+        /** @description Filter sessions ending at or after this Unix timestamp (ms) */
+        endFrom?: number;
+        /** @description Filter sessions ending at or before this Unix timestamp (ms) */
+        endUntil?: number;
         /** @description If true, only return sessions with no end time */
         activeOnly?: "true" | "false";
         /** @description If true, include archived sessions in the response */
@@ -14333,7 +14394,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["FrontingSessionResponse"][];
+            data: components["schemas"]["FrontingSessionResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -14589,7 +14650,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["FrontingCommentResponse"][];
+            data: components["schemas"]["FrontingCommentResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -15120,7 +15181,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["WebhookConfigResponse"][];
+            data: components["schemas"]["WebhookConfigResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -15382,7 +15443,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["WebhookDeliveryResponse"][];
+            data: components["schemas"]["WebhookDeliveryResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -15467,7 +15528,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["ApiKeyResponse"][];
+            data: components["schemas"]["ApiKeyResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -15583,7 +15644,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["ChannelResponse"][];
+            data: components["schemas"]["ChannelResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -15784,7 +15845,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["MessageResponse"][];
+            data: components["schemas"]["MessageResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -16003,7 +16064,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["BoardMessageResponse"][];
+            data: components["schemas"]["BoardMessageResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -16281,7 +16342,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["NoteResponse"][];
+            data: components["schemas"]["NoteResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -16478,7 +16539,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["PollResponse"][];
+            data: components["schemas"]["PollResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -16655,7 +16716,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["PollVoteResponse"][];
+            data: components["schemas"]["PollVoteResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -16861,7 +16922,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["AcknowledgementResponse"][];
+            data: components["schemas"]["AcknowledgementResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -17054,7 +17115,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["TimerConfigResponse"][];
+            data: components["schemas"]["TimerConfigResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -17260,7 +17321,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["CheckInRecordResponse"][];
+            data: components["schemas"]["CheckInRecordResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -17571,7 +17632,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["HierarchyNode"][];
+            data: components["schemas"]["HierarchyNode"][];
           };
         };
       };
@@ -17606,7 +17667,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["ImportJobResponse"][];
+            data: components["schemas"]["ImportJobResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -17769,7 +17830,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            items: components["schemas"]["ImportEntityRefResponse"][];
+            data: components["schemas"]["ImportEntityRefResponse"][];
           } & components["schemas"]["PaginationMeta"];
         };
       };
@@ -17917,6 +17978,117 @@ export interface operations {
         content?: never;
       };
       429: components["responses"]["RateLimited"];
+    };
+  };
+  getI18nManifest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Manifest retrieved */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: components["schemas"]["I18nManifest"];
+          };
+        };
+      };
+      429: components["responses"]["RateLimited"];
+      /** @description Translation source unavailable */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Translation proxy not configured */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getI18nNamespace: {
+    parameters: {
+      query?: never;
+      header?: {
+        "If-None-Match"?: string;
+      };
+      path: {
+        locale: string;
+        namespace: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Translations retrieved */
+      200: {
+        headers: {
+          ETag?: string;
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: components["schemas"]["I18nNamespace"];
+          };
+        };
+      };
+      /** @description Not modified */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Translation not found for the given locale/namespace */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          /**
+           * @example {
+           *       "error": {
+           *         "code": "NAMESPACE_NOT_FOUND",
+           *         "message": "Translation not found"
+           *       }
+           *     }
+           */
+          "application/json": {
+            error: {
+              /** @enum {string} */
+              code: "NAMESPACE_NOT_FOUND";
+              message: string;
+            };
+          };
+        };
+      };
+      429: components["responses"]["RateLimited"];
+      /** @description Translation source unavailable */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Translation proxy not configured */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
   };
 }

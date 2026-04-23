@@ -154,7 +154,16 @@ PlaintextMember:
 
     A member (headmate) profile. Encryption tier: **T1** (master-key encrypted).
   type: object
-  required: [name, pronouns, colors, tags]
+  required:
+    - name
+    - pronouns
+    - description
+    - avatarSource
+    - colors
+    - saturationLevel
+    - tags
+    - suppressFriendFrontNotification
+    - boardMessageNotificationOnFront
   properties:
     name:
       type: string
