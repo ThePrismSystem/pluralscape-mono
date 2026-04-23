@@ -18,6 +18,10 @@ import type {
   MemberWire,
 } from "./entities/member.js";
 import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
+import type {
+  SystemStructureEntityType,
+  SystemStructureEntityTypeEncryptedFields,
+} from "./entities/structure-entity-type.js";
 import type { System, SystemEncryptedFields } from "./entities/system.js";
 
 /**
@@ -79,5 +83,9 @@ export type SotEntityManifest = {
   Relationship: {
     domain: Relationship;
     encryptedFields: RelationshipEncryptedFields;
+  };
+  StructureEntityType: {
+    domain: SystemStructureEntityType;
+    encryptedFields: SystemStructureEntityTypeEncryptedFields;
   };
 };
