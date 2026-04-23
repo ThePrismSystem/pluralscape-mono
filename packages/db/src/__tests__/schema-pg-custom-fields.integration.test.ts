@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -23,6 +24,11 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -702,7 +708,10 @@ describe("PG custom fields schema", () => {
       await db.delete(fieldDefinitionScopes);
     });
 
-    async function insertEntityType(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    async function insertEntityType(
+      systemId: SystemId,
+      id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
+    ): Promise<SystemStructureEntityTypeId> {
       const now = Date.now();
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -894,7 +903,10 @@ describe("PG custom fields schema", () => {
   });
 
   describe("field_values — structureEntityId and groupId columns", () => {
-    async function insertEntityType(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    async function insertEntityType(
+      systemId: SystemId,
+      id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
+    ): Promise<SystemStructureEntityTypeId> {
       const now = Date.now();
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -908,10 +920,10 @@ describe("PG custom fields schema", () => {
     }
 
     async function insertEntity(
-      systemId: string,
-      entityTypeId: string,
-      id = crypto.randomUUID(),
-    ): Promise<string> {
+      systemId: SystemId,
+      entityTypeId: SystemStructureEntityTypeId,
+      id = brandId<SystemStructureEntityId>(crypto.randomUUID()),
+    ): Promise<SystemStructureEntityId> {
       const now = Date.now();
       await db.insert(systemStructureEntities).values({
         id,

@@ -18,8 +18,6 @@ import type {
   ClientNote,
   ClientPoll,
   ClientRelationship,
-  ClientStructureEntity,
-  ClientStructureEntityType,
   ClientTimerConfig,
   ClientWikiPage,
   DecryptFn,
@@ -44,8 +42,6 @@ import type {
   ServerNote,
   ServerPoll,
   ServerRelationship,
-  ServerStructureEntity,
-  ServerStructureEntityType,
   ServerTimerConfig,
   ServerFrontingComment,
   ClientFrontingComment,
@@ -85,6 +81,14 @@ import type { Note } from "../entities/note.js";
 import type { PollVote } from "../entities/poll-vote.js";
 import type { Poll } from "../entities/poll.js";
 import type { Relationship } from "../entities/relationship.js";
+import type {
+  SystemStructureEntityType,
+  SystemStructureEntityTypeServerMetadata,
+} from "../entities/structure-entity-type.js";
+import type {
+  SystemStructureEntity,
+  SystemStructureEntityServerMetadata,
+} from "../entities/structure-entity.js";
 import type { TimerConfig } from "../entities/timer-config.js";
 import type { WikiPage } from "../entities/wiki-page.js";
 import type {
@@ -192,17 +196,21 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("structure entity type pair", () => {
-    expectTypeOf<ServerStructureEntityType>().toBeObject();
-    expectTypeOf<ServerStructureEntityType["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientStructureEntityType>().toBeObject();
-    expectTypeOf<ClientStructureEntityType["name"]>().toBeString();
+    expectTypeOf<SystemStructureEntityTypeServerMetadata>().toBeObject();
+    expectTypeOf<
+      SystemStructureEntityTypeServerMetadata["encryptedData"]
+    >().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<SystemStructureEntityType>().toBeObject();
+    expectTypeOf<SystemStructureEntityType["name"]>().toBeString();
   });
 
   it("structure entity pair", () => {
-    expectTypeOf<ServerStructureEntity>().toBeObject();
-    expectTypeOf<ServerStructureEntity["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientStructureEntity>().toBeObject();
-    expectTypeOf<ClientStructureEntity["name"]>().toBeString();
+    expectTypeOf<SystemStructureEntityServerMetadata>().toBeObject();
+    expectTypeOf<
+      SystemStructureEntityServerMetadata["encryptedData"]
+    >().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<SystemStructureEntity>().toBeObject();
+    expectTypeOf<SystemStructureEntity["name"]>().toBeString();
   });
 
   it("relationship pair", () => {

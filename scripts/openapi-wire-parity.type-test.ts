@@ -98,8 +98,10 @@ import type {
   SystemStructureEntityEncryptedFields,
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityServerMetadata,
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
+  SystemStructureEntityTypeServerMetadata,
 } from "../packages/types/src/index.js";
 import { expectTypeOf } from "vitest";
 
@@ -241,12 +243,36 @@ expectTypeOf<
   >
 >().toEqualTypeOf<true>();
 
+// ── OpenAPI ↔ domain parity: StructureEntityTypeResponse plaintext columns ──
+type StructureEntityTypeResponseOpenApi = components["schemas"]["StructureEntityTypeResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<StructureEntityTypeResponseOpenApi, "encryptedData">,
+    Omit<Serialize<SystemStructureEntityTypeServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<StructureEntityTypeResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
 expectTypeOf<
   Equal<
     components["schemas"]["PlaintextStructureEntity"],
     Serialize<Pick<SystemStructureEntity, SystemStructureEntityEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: StructureEntityResponse plaintext columns ──
+type StructureEntityResponseOpenApi = components["schemas"]["StructureEntityResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<StructureEntityResponseOpenApi, "encryptedData">,
+    Omit<Serialize<SystemStructureEntityServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<StructureEntityResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 expectTypeOf<
   Equal<

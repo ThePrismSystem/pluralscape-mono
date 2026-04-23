@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -23,6 +24,11 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -767,7 +773,10 @@ describe("SQLite custom fields schema", () => {
       db.delete(fieldDefinitionScopes).run();
     });
 
-    function insertEntityType(systemId: string, id = crypto.randomUUID()): string {
+    function insertEntityType(
+      systemId: SystemId,
+      id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
+    ): SystemStructureEntityTypeId {
       const now = Date.now();
       db.insert(systemStructureEntityTypes)
         .values({
@@ -983,7 +992,10 @@ describe("SQLite custom fields schema", () => {
   });
 
   describe("field_values — structureEntityId and groupId columns", () => {
-    function insertEntityType(systemId: string, id = crypto.randomUUID()): string {
+    function insertEntityType(
+      systemId: SystemId,
+      id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
+    ): SystemStructureEntityTypeId {
       const now = Date.now();
       db.insert(systemStructureEntityTypes)
         .values({
@@ -999,10 +1011,10 @@ describe("SQLite custom fields schema", () => {
     }
 
     function insertEntity(
-      systemId: string,
-      entityTypeId: string,
-      id = crypto.randomUUID(),
-    ): string {
+      systemId: SystemId,
+      entityTypeId: SystemStructureEntityTypeId,
+      id = brandId<SystemStructureEntityId>(crypto.randomUUID()),
+    ): SystemStructureEntityId {
       const now = Date.now();
       db.insert(systemStructureEntities)
         .values({

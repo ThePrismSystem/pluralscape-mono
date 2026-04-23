@@ -1,5 +1,5 @@
 import { systemStructureEntityTypes } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateStructureEntityTypeBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
@@ -14,7 +14,7 @@ import { toEntityTypeResult, type EntityTypeResult } from "./internal.js";
 
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SystemId, SystemStructureEntityTypeId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createEntityType(
@@ -32,7 +32,9 @@ export async function createEntityType(
   }
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
-  const entityTypeId = createId(ID_PREFIXES.structureEntityType);
+  const entityTypeId = brandId<SystemStructureEntityTypeId>(
+    createId(ID_PREFIXES.structureEntityType),
+  );
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

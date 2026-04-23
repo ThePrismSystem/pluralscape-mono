@@ -66,6 +66,7 @@ export {
   UpdateStructureEntityTypeBodySchema,
   CreateStructureEntityBodySchema,
   UpdateStructureEntityBodySchema,
+  StructureEntityTypeEncryptedInputSchema,
 } from "./structure.js";
 export {
   CreateRelationshipBodySchema,

@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -23,7 +24,17 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+
+const newTypeId = (): SystemStructureEntityTypeId =>
+  brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
+const newEntityId = (): SystemStructureEntityId =>
+  brandId<SystemStructureEntityId>(crypto.randomUUID());
 
 const schema = {
   accounts,
@@ -423,7 +434,7 @@ describe("SQLite structure schema", () => {
     it("inserts and round-trips encrypted data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20]));
 
@@ -443,7 +454,7 @@ describe("SQLite structure schema", () => {
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -471,8 +482,8 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityTypes)
           .values({
-            id: crypto.randomUUID(),
-            systemId: "nonexistent",
+            id: newTypeId(),
+            systemId: brandId<SystemId>("nonexistent"),
             sortOrder: 0,
             encryptedData: testBlob(),
             createdAt: now,
@@ -485,7 +496,7 @@ describe("SQLite structure schema", () => {
     it("defaults archived to false", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -511,7 +522,7 @@ describe("SQLite structure schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -586,7 +597,7 @@ describe("SQLite structure schema", () => {
     it("inserts and round-trips data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -600,7 +611,7 @@ describe("SQLite structure schema", () => {
         })
         .run();
 
-      const entityId = crypto.randomUUID();
+      const entityId = newEntityId();
       const data = testBlob(new Uint8Array([30, 40]));
       db.insert(systemStructureEntities)
         .values({
@@ -633,9 +644,9 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntities)
           .values({
-            id: crypto.randomUUID(),
+            id: newEntityId(),
             systemId,
-            entityTypeId: "nonexistent",
+            entityTypeId: brandId<SystemStructureEntityTypeId>("nonexistent"),
             sortOrder: 0,
             encryptedData: testBlob(),
             createdAt: now,
@@ -648,7 +659,7 @@ describe("SQLite structure schema", () => {
     it("prevents deletion of entity type with dependent entities (RESTRICT)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -664,7 +675,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntities)
         .values({
-          id: crypto.randomUUID(),
+          id: newEntityId(),
           systemId,
           entityTypeId: typeId,
           sortOrder: 0,
@@ -685,7 +696,7 @@ describe("SQLite structure schema", () => {
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -699,7 +710,7 @@ describe("SQLite structure schema", () => {
         })
         .run();
 
-      const entityId = crypto.randomUUID();
+      const entityId = newEntityId();
       db.insert(systemStructureEntities)
         .values({
           id: entityId,
@@ -723,7 +734,7 @@ describe("SQLite structure schema", () => {
     it("rejects archived=true with null archivedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -750,7 +761,7 @@ describe("SQLite structure schema", () => {
     it("rejects archived=false with non-null archivedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -777,7 +788,7 @@ describe("SQLite structure schema", () => {
     it("rejects version 0", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -804,8 +815,8 @@ describe("SQLite structure schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -846,8 +857,8 @@ describe("SQLite structure schema", () => {
     it("inserts and round-trips data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -909,8 +920,8 @@ describe("SQLite structure schema", () => {
     it("prevents deletion of entity with dependent links (RESTRICT)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -946,9 +957,9 @@ describe("SQLite structure schema", () => {
     it("round-trips parentEntityId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const parentEntityId = crypto.randomUUID();
-      const childEntityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const parentEntityId = newEntityId();
+      const childEntityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1008,8 +1019,8 @@ describe("SQLite structure schema", () => {
     it("rejects nonexistent parentEntityId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1052,9 +1063,9 @@ describe("SQLite structure schema", () => {
     it("restricts deletion of parent entity with dependent link", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const parentEntityId = crypto.randomUUID();
-      const childEntityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const parentEntityId = newEntityId();
+      const childEntityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1111,9 +1122,9 @@ describe("SQLite structure schema", () => {
     it("enforces unique (entityId, parentEntityId)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const parentEntityId = crypto.randomUUID();
-      const childEntityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const parentEntityId = newEntityId();
+      const childEntityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1178,8 +1189,8 @@ describe("SQLite structure schema", () => {
     it("enforces unique entityId at root (parentEntityId = null)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1219,8 +1230,8 @@ describe("SQLite structure schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const linkId = crypto.randomUUID();
       const now = Date.now();
 
@@ -1264,8 +1275,8 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1356,8 +1367,8 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1490,9 +1501,9 @@ describe("SQLite structure schema", () => {
     it("inserts and round-trips data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1552,9 +1563,9 @@ describe("SQLite structure schema", () => {
     it("enforces unique (sourceEntityId, targetEntityId)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1617,9 +1628,9 @@ describe("SQLite structure schema", () => {
     it("prevents deletion of entity with dependent associations (RESTRICT)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)
@@ -1672,9 +1683,9 @@ describe("SQLite structure schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const assocId = crypto.randomUUID();
       const now = Date.now();
 
@@ -1730,8 +1741,8 @@ describe("SQLite structure schema", () => {
     it("rejects self-referential association", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)

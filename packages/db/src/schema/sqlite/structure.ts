@@ -10,7 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -24,7 +24,12 @@ import { RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerRelationship } from "@pluralscape/types";
+import type {
+  ServerRelationship,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = sqliteTable(
@@ -62,8 +67,8 @@ export const relationships = sqliteTable(
 export const systemStructureEntityTypes = sqliteTable(
   "system_structure_entity_types",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityTypeId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull(),
@@ -83,11 +88,11 @@ export const systemStructureEntityTypes = sqliteTable(
 export const systemStructureEntities = sqliteTable(
   "system_structure_entities",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityTypeId: text("entity_type_id").notNull(),
+    entityTypeId: brandedId<SystemStructureEntityTypeId>("entity_type_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),

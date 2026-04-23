@@ -199,6 +199,8 @@ export async function getEntityHierarchy(
 ): Promise<readonly HierarchyNode[]> {
   assertSystemOwnership(systemId, auth);
 
+  const entityIdBranded = brandId<SystemStructureEntityId>(entityId);
+
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify entity exists
     const [entity] = await tx
@@ -206,7 +208,7 @@ export async function getEntityHierarchy(
       .from(systemStructureEntities)
       .where(
         and(
-          eq(systemStructureEntities.id, entityId),
+          eq(systemStructureEntities.id, entityIdBranded),
           eq(systemStructureEntities.systemId, systemId),
           eq(systemStructureEntities.archived, false),
         ),

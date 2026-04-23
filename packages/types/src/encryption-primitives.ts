@@ -16,8 +16,6 @@ import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
 import type { RelationshipType, Relationship } from "./entities/relationship.js";
-import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
-import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
 import type { WikiPage } from "./entities/wiki-page.js";
 import type {
@@ -42,7 +40,6 @@ import type {
   PollVoteId,
   RelationshipId,
   SystemId,
-  SystemStructureEntityTypeId,
   SystemStructureEntityId,
   TimerId,
   SlugHash,
@@ -180,41 +177,6 @@ export interface ServerGroup extends AuditMetadata {
 
 /** Client-side group — flat decrypted fields. */
 export type ClientGroup = Group;
-
-// ── Structure entities ──────────────────────────────────────────
-
-/**
- * Server-side structure entity type representation.
- * T1 encrypted: name, description, emoji, color, imageSource
- * T3 plaintext: sortOrder, archived
- */
-export interface ServerStructureEntityType extends AuditMetadata {
-  readonly id: SystemStructureEntityTypeId;
-  readonly systemId: SystemId;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side structure entity type — flat decrypted fields. */
-export type ClientStructureEntityType = SystemStructureEntityType;
-
-/**
- * Server-side structure entity representation.
- * T1 encrypted: name, description, emoji, color, imageSource
- * T3 plaintext: entityTypeId, sortOrder, archived
- */
-export interface ServerStructureEntity extends AuditMetadata {
-  readonly id: SystemStructureEntityId;
-  readonly systemId: SystemId;
-  readonly entityTypeId: SystemStructureEntityTypeId;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side structure entity — flat decrypted fields. */
-export type ClientStructureEntity = SystemStructureEntity;
 
 /**
  * Server-side relationship representation.

@@ -47,6 +47,8 @@ import type {
   DeviceTransferRequestId,
   SessionId,
   SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -681,9 +683,9 @@ describe("PG views / query helpers", () => {
   describe("getStructureEntityAssociations", () => {
     it("returns associations for a system", async () => {
       const now = Date.now();
-      const entityTypeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const entityTypeId = brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
+      const entityId1 = brandId<SystemStructureEntityId>(crypto.randomUUID());
+      const entityId2 = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       await db.insert(systemStructureEntityTypes).values({
         id: entityTypeId,

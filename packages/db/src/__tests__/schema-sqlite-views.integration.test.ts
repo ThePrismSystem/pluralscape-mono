@@ -46,6 +46,8 @@ import type {
   DeviceTransferRequestId,
   SessionId,
   SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -647,9 +649,9 @@ describe("SQLite views / query helpers", () => {
 
     it("returns associations for a system", () => {
       const now = Date.now();
-      const entityTypeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const entityTypeId = brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
+      const entityId1 = brandId<SystemStructureEntityId>(crypto.randomUUID());
+      const entityId2 = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       db.insert(systemStructureEntityTypes)
         .values({

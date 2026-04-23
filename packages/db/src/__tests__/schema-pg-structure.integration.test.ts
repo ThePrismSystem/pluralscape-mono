@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -23,7 +24,20 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+
+const newTypeId = (): SystemStructureEntityTypeId =>
+  brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
+const newEntityId = (): SystemStructureEntityId =>
+  brandId<SystemStructureEntityId>(crypto.randomUUID());
+const newLinkId = (): SystemStructureEntityLinkId =>
+  brandId<SystemStructureEntityLinkId>(crypto.randomUUID());
 
 const schema = {
   accounts,
@@ -382,7 +396,7 @@ describe("PG structure schema", () => {
     it("inserts and round-trips encrypted data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20]));
 
@@ -406,7 +420,7 @@ describe("PG structure schema", () => {
     it("defaults version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -429,8 +443,8 @@ describe("PG structure schema", () => {
       const now = Date.now();
       await expect(
         db.insert(systemStructureEntityTypes).values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
+          id: newTypeId(),
+          systemId: brandId<SystemId>("nonexistent"),
           sortOrder: 0,
           encryptedData: testBlob(),
           createdAt: now,
@@ -442,7 +456,7 @@ describe("PG structure schema", () => {
     it("defaults archived to false", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -465,7 +479,7 @@ describe("PG structure schema", () => {
     it("round-trips archived: true with archivedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -490,7 +504,7 @@ describe("PG structure schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -556,7 +570,7 @@ describe("PG structure schema", () => {
     it("inserts and round-trips data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -568,7 +582,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      const entityId = crypto.randomUUID();
+      const entityId = newEntityId();
       const data = testBlob(new Uint8Array([30, 40]));
       await db.insert(systemStructureEntities).values({
         id: entityId,
@@ -596,9 +610,9 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntities).values({
-          id: crypto.randomUUID(),
+          id: newEntityId(),
           systemId,
-          entityTypeId: "nonexistent",
+          entityTypeId: brandId<SystemStructureEntityTypeId>("nonexistent"),
           sortOrder: 0,
           encryptedData: testBlob(),
           createdAt: now,
@@ -610,7 +624,7 @@ describe("PG structure schema", () => {
     it("prevents deletion of entity type with dependent entities (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -623,7 +637,7 @@ describe("PG structure schema", () => {
       });
 
       await db.insert(systemStructureEntities).values({
-        id: crypto.randomUUID(),
+        id: newEntityId(),
         systemId,
         entityTypeId: typeId,
         sortOrder: 0,
@@ -640,7 +654,7 @@ describe("PG structure schema", () => {
     it("defaults archived to false", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -652,7 +666,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      const entityId = crypto.randomUUID();
+      const entityId = newEntityId();
       await db.insert(systemStructureEntities).values({
         id: entityId,
         systemId,
@@ -674,7 +688,7 @@ describe("PG structure schema", () => {
     it("defaults version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -686,7 +700,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      const entityId = crypto.randomUUID();
+      const entityId = newEntityId();
       await db.insert(systemStructureEntities).values({
         id: entityId,
         systemId,
@@ -707,7 +721,7 @@ describe("PG structure schema", () => {
     it("rejects archived=true with null archivedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -730,7 +744,7 @@ describe("PG structure schema", () => {
     it("rejects archived=false with non-null archivedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -753,7 +767,7 @@ describe("PG structure schema", () => {
     it("rejects version 0", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
+      const typeId = newTypeId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -776,8 +790,8 @@ describe("PG structure schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -813,8 +827,8 @@ describe("PG structure schema", () => {
     it("inserts and round-trips data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -835,7 +849,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      const linkId = crypto.randomUUID();
+      const linkId = newLinkId();
       await db.insert(systemStructureEntityLinks).values({
         id: linkId,
         systemId,
@@ -872,8 +886,8 @@ describe("PG structure schema", () => {
     it("prevents deletion of entity with dependent links (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -909,9 +923,9 @@ describe("PG structure schema", () => {
     it("round-trips parentEntityId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const parentEntityId = crypto.randomUUID();
-      const childEntityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const parentEntityId = newEntityId();
+      const childEntityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -943,7 +957,7 @@ describe("PG structure schema", () => {
         },
       ]);
 
-      const linkId = crypto.randomUUID();
+      const linkId = newLinkId();
       await db.insert(systemStructureEntityLinks).values({
         id: linkId,
         systemId,
@@ -965,8 +979,8 @@ describe("PG structure schema", () => {
     it("rejects nonexistent parentEntityId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1002,9 +1016,9 @@ describe("PG structure schema", () => {
     it("restricts deletion of parent entity with dependent link", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const parentEntityId = crypto.randomUUID();
-      const childEntityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const parentEntityId = newEntityId();
+      const childEntityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1052,9 +1066,9 @@ describe("PG structure schema", () => {
     it("enforces unique (entityId, parentEntityId)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const parentEntityId = crypto.randomUUID();
-      const childEntityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const parentEntityId = newEntityId();
+      const childEntityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1110,8 +1124,8 @@ describe("PG structure schema", () => {
     it("enforces unique entityId at root (parentEntityId = null)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1154,9 +1168,9 @@ describe("PG structure schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
-      const linkId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
+      const linkId = newLinkId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1200,8 +1214,8 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1222,7 +1236,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      const linkId = crypto.randomUUID();
+      const linkId = newLinkId();
       await db.insert(systemStructureEntityMemberLinks).values({
         id: linkId,
         systemId,
@@ -1278,8 +1292,8 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1350,7 +1364,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const linkId = crypto.randomUUID();
+      const linkId = newLinkId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityMemberLinks).values({
@@ -1394,9 +1408,9 @@ describe("PG structure schema", () => {
     it("inserts and round-trips data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1449,9 +1463,9 @@ describe("PG structure schema", () => {
     it("enforces unique (sourceEntityId, targetEntityId)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1505,8 +1519,8 @@ describe("PG structure schema", () => {
     it("rejects self-referential association", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1538,9 +1552,9 @@ describe("PG structure schema", () => {
     it("prevents deletion of entity with dependent associations (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({
@@ -1587,9 +1601,9 @@ describe("PG structure schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const typeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const typeId = newTypeId();
+      const entityId1 = newEntityId();
+      const entityId2 = newEntityId();
       const assocId = crypto.randomUUID();
       const now = Date.now();
 

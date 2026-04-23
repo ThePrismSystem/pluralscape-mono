@@ -76,10 +76,14 @@ import type {
 import type {
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
+  SystemStructureEntityTypeServerMetadata,
+  SystemStructureEntityTypeWire,
 } from "./entities/structure-entity-type.js";
 import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
+  SystemStructureEntityServerMetadata,
+  SystemStructureEntityWire,
 } from "./entities/structure-entity.js";
 import type {
   SystemSettings,
@@ -176,10 +180,14 @@ export type SotEntityManifest = {
   };
   StructureEntityType: {
     domain: SystemStructureEntityType;
+    server: SystemStructureEntityTypeServerMetadata;
+    wire: SystemStructureEntityTypeWire;
     encryptedFields: SystemStructureEntityTypeEncryptedFields;
   };
   StructureEntity: {
     domain: SystemStructureEntity;
+    server: SystemStructureEntityServerMetadata;
+    wire: SystemStructureEntityWire;
     encryptedFields: SystemStructureEntityEncryptedFields;
   };
   FrontingSession: {

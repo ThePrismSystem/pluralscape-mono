@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -25,7 +25,12 @@ import { RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerRelationship } from "@pluralscape/types";
+import type {
+  ServerRelationship,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = pgTable(
@@ -65,8 +70,8 @@ export const relationships = pgTable(
 export const systemStructureEntityTypes = pgTable(
   "system_structure_entity_types",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityTypeId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull(),
@@ -86,11 +91,11 @@ export const systemStructureEntityTypes = pgTable(
 export const systemStructureEntities = pgTable(
   "system_structure_entities",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityTypeId: varchar("entity_type_id", { length: ID_MAX_LENGTH }).notNull(),
+    entityTypeId: brandedId<SystemStructureEntityTypeId>("entity_type_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
