@@ -10,6 +10,7 @@ import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
 import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
 import type { InnerWorldRegion } from "./entities/innerworld-region.js";
+import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
 import type { Member } from "./entities/member.js";
 import type { ChatMessage } from "./entities/message.js";
@@ -54,7 +55,6 @@ import type {
   WikiPageId,
 } from "./ids.js";
 import type { JournalEntry, WikiPage } from "./journal.js";
-import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Serialize } from "./type-assertions.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";

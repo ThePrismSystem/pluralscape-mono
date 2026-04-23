@@ -2,13 +2,6 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { InnerWorldEntityType } from "../entities/innerworld-entity.js";
 import type {
-  InnerWorldEntityId,
-  LifecycleEventId,
-  MemberId,
-  SystemId,
-  SystemStructureEntityId,
-} from "../ids.js";
-import type {
   ArchivalEvent,
   DiscoveryEvent,
   DormancyEndEvent,
@@ -24,7 +17,14 @@ import type {
   StructureMoveEvent,
   StructureEntityFormationEvent,
   UnmergeEvent,
-} from "../lifecycle.js";
+} from "../entities/lifecycle-event.js";
+import type {
+  InnerWorldEntityId,
+  LifecycleEventId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+} from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { EntityReference } from "../utility.js";
 

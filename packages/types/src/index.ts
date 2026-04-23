@@ -538,7 +538,7 @@ export type {
   InnerworldMoveEvent,
   LifecycleEvent,
   LifecycleEventType,
-} from "./lifecycle.js";
+} from "./entities/lifecycle-event.js";
 
 // ── Custom fields ─────────────────────────────────────────────────
 export { FIELD_TYPES } from "./entities/field-definition.js";

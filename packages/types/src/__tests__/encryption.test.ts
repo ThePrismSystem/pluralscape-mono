@@ -70,6 +70,7 @@ import type { Channel } from "../entities/channel.js";
 import type { CustomFront } from "../entities/custom-front.js";
 import type { FrontingComment } from "../entities/fronting-comment.js";
 import type { FrontingSession } from "../entities/fronting-session.js";
+import type { LifecycleEvent } from "../entities/lifecycle-event.js";
 import type { MemberPhoto } from "../entities/member-photo.js";
 import type { Member } from "../entities/member.js";
 import type { ChatMessage } from "../entities/message.js";
@@ -91,7 +92,6 @@ import type {
   SystemId,
 } from "../ids.js";
 import type { JournalEntry, WikiPage } from "../journal.js";
-import type { LifecycleEvent } from "../lifecycle.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 

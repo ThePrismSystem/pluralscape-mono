@@ -1,4 +1,3 @@
-import type { InnerWorldEntityType } from "./entities/innerworld-entity.js";
 import type {
   InnerWorldEntityId,
   InnerWorldRegionId,
@@ -6,9 +5,10 @@ import type {
   MemberId,
   SystemId,
   SystemStructureEntityId,
-} from "./ids.js";
-import type { UnixMillis } from "./timestamps.js";
-import type { EntityReference } from "./utility.js";
+} from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { EntityReference } from "../utility.js";
+import type { InnerWorldEntityType } from "./innerworld-entity.js";
 
 /**
  * Shared fields for all lifecycle events.
