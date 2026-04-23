@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -13,6 +14,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { SystemSnapshotId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { systems, systemSnapshots };
@@ -37,7 +39,7 @@ describe("PG system_snapshots schema", () => {
   it("round-trips insert and select", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(systemSnapshots).values({
@@ -57,7 +59,7 @@ describe("PG system_snapshots schema", () => {
   it("accepts scheduled-daily trigger", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
 
     await db.insert(systemSnapshots).values({
       id,
@@ -74,7 +76,7 @@ describe("PG system_snapshots schema", () => {
   it("accepts scheduled-weekly trigger", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
 
     await db.insert(systemSnapshots).values({
       id,
@@ -94,7 +96,7 @@ describe("PG system_snapshots schema", () => {
 
     await expect(
       db.insert(systemSnapshots).values({
-        id: crypto.randomUUID(),
+        id: brandId<SystemSnapshotId>(crypto.randomUUID()),
         systemId,
         snapshotTrigger: "invalid" as "manual",
         encryptedData: testBlob(),
@@ -106,7 +108,7 @@ describe("PG system_snapshots schema", () => {
   it("cascades on system deletion", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<SystemSnapshotId>(crypto.randomUUID());
 
     await db.insert(systemSnapshots).values({
       id,
@@ -128,7 +130,7 @@ describe("PG system_snapshots schema", () => {
 
     for (let i = 0; i < 3; i++) {
       await db.insert(systemSnapshots).values({
-        id: crypto.randomUUID(),
+        id: brandId<SystemSnapshotId>(crypto.randomUUID()),
         systemId,
         snapshotTrigger: "manual",
         encryptedData: testBlob(),

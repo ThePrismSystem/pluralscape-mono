@@ -61,7 +61,12 @@ export async function duplicateSystem(
     const [snapshot] = await tx
       .select({ id: systemSnapshots.id, encryptedData: systemSnapshots.encryptedData })
       .from(systemSnapshots)
-      .where(and(eq(systemSnapshots.id, snapshotId), eq(systemSnapshots.systemId, sourceSystemId)))
+      .where(
+        and(
+          eq(systemSnapshots.id, brandId<SystemSnapshotId>(snapshotId)),
+          eq(systemSnapshots.systemId, sourceSystemId),
+        ),
+      )
       .limit(1);
 
     if (!snapshot) {

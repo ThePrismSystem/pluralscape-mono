@@ -59,6 +59,11 @@ import type {
   SystemSettingsWire,
 } from "./entities/system-settings.js";
 import type {
+  SystemSnapshot,
+  SystemSnapshotServerMetadata,
+  SystemSnapshotWire,
+} from "./entities/system-snapshot.js";
+import type {
   System,
   SystemEncryptedFields,
   SystemServerMetadata,
@@ -168,6 +173,15 @@ export type SotEntityManifest = {
     server: SystemSettingsServerMetadata;
     wire: SystemSettingsWire;
     encryptedFields: SystemSettingsEncryptedFields;
+  };
+  SystemSnapshot: {
+    domain: SystemSnapshot;
+    server: SystemSnapshotServerMetadata;
+    wire: SystemSnapshotWire;
+    // Hybrid entity: plaintext metadata + opaque `encryptedData` blob whose
+    // decrypted shape (`SnapshotContent`) lives in its own type, not as a
+    // keys-subset of `SystemSnapshot`. No `encryptedFields` union.
+    encryptedFields: never;
   };
   StructureEntityMemberLink: {
     domain: SystemStructureEntityMemberLink;

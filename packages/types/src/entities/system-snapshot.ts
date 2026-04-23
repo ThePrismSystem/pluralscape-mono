@@ -1,3 +1,4 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   GroupId,
   InnerWorldEntityId,
@@ -9,6 +10,7 @@ import type {
   SystemStructureEntityTypeId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { InnerWorldEntityType } from "./innerworld-entity.js";
 import type { Tag, SaturationLevel } from "./member.js";
 import type { RelationshipType } from "./relationship.js";
@@ -31,6 +33,28 @@ export interface SystemSnapshot {
   readonly trigger: SnapshotTrigger;
   readonly createdAt: UnixMillis;
 }
+
+/**
+ * Server-visible SystemSnapshot metadata — raw Drizzle row shape.
+ *
+ * SystemSnapshot is a hybrid entity: it carries plaintext metadata
+ * (id, systemId, createdAt) plus an opaque `encryptedData` column that
+ * stores the T1-encrypted `SnapshotContent` — which lives in its own
+ * type (not as a keys-subset of `SystemSnapshot`), so no
+ * `SystemSnapshotEncryptedFields` union exists. Replaces the domain's
+ * `trigger` with the DB column's `snapshotTrigger` name.
+ */
+export type SystemSnapshotServerMetadata = Omit<SystemSnapshot, "trigger"> & {
+  readonly snapshotTrigger: SnapshotTrigger;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of SystemSnapshot. Derived from the domain
+ * `SystemSnapshot` type via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`.
+ */
+export type SystemSnapshotWire = Serialize<SystemSnapshot>;
 
 // ── Snapshot content (decrypted shape) ────────────────────────────
 
