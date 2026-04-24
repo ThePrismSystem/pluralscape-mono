@@ -16,7 +16,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { groups } from "../../schema/pg/groups.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, GroupServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -26,8 +25,8 @@ describe("Group Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof GroupServerMetadata>();
   });
 
-  it("groups Drizzle row equals GroupServerMetadata modulo brands and readonly", () => {
+  it("groups Drizzle row equals GroupServerMetadata", () => {
     type Row = InferSelectModel<typeof groups>;
-    expectTypeOf<Equal<StripBrands<Row>, StripBrands<GroupServerMetadata>>>().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, GroupServerMetadata>>().toEqualTypeOf<true>();
   });
 });

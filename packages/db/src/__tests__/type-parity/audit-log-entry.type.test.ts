@@ -15,7 +15,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { auditLog } from "../../schema/pg/audit-log.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { AuditLogEntryServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -25,10 +24,8 @@ describe("AuditLogEntry Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof AuditLogEntryServerMetadata>();
   });
 
-  it("audit_log Drizzle row equals AuditLogEntryServerMetadata modulo brands and readonly", () => {
+  it("audit_log Drizzle row equals AuditLogEntryServerMetadata", () => {
     type Row = InferSelectModel<typeof auditLog>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<AuditLogEntryServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, AuditLogEntryServerMetadata>>().toEqualTypeOf<true>();
   });
 });

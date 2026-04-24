@@ -6,7 +6,7 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 
 import { systems } from "./systems.js";
 
-import type { SystemId, SystemSettingsId } from "@pluralscape/types";
+import type { Locale, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSettings = sqliteTable(
@@ -17,7 +17,7 @@ export const systemSettings = sqliteTable(
       .notNull()
       .unique()
       .references(() => systems.id, { onDelete: "cascade" }),
-    locale: text("locale"),
+    locale: text("locale").$type<Locale>(),
     /** Must use Argon2id — PINs are low-entropy (4-6 digits) and trivially reversible with weak hashes. */
     pinHash: text("pin_hash"),
     biometricEnabled: integer("biometric_enabled", { mode: "boolean" }).notNull().default(false),

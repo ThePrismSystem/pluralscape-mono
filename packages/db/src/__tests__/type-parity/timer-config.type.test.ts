@@ -11,7 +11,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { timerConfigs } from "../../schema/pg/timers.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, TimerConfigServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -21,10 +20,8 @@ describe("TimerConfig Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof TimerConfigServerMetadata>();
   });
 
-  it("timerConfigs Drizzle row equals TimerConfigServerMetadata modulo brands and readonly", () => {
+  it("timerConfigs Drizzle row equals TimerConfigServerMetadata", () => {
     type Row = InferSelectModel<typeof timerConfigs>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<TimerConfigServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, TimerConfigServerMetadata>>().toEqualTypeOf<true>();
   });
 });

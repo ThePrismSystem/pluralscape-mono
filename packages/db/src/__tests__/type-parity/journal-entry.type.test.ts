@@ -11,7 +11,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { journalEntries } from "../../schema/pg/journal.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, JournalEntryServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -21,10 +20,8 @@ describe("JournalEntry Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof JournalEntryServerMetadata>();
   });
 
-  it("journalEntries Drizzle row equals JournalEntryServerMetadata modulo brands and readonly", () => {
+  it("journalEntries Drizzle row equals JournalEntryServerMetadata", () => {
     type Row = InferSelectModel<typeof journalEntries>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<JournalEntryServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, JournalEntryServerMetadata>>().toEqualTypeOf<true>();
   });
 });

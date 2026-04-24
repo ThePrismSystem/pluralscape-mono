@@ -27,6 +27,7 @@ import { systems } from "./systems.js";
 
 import type {
   AccountId,
+  DeviceTokenId,
   DeviceTokenPlatform,
   FriendConnectionId,
   FriendNotificationEventType,
@@ -40,11 +41,11 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const deviceTokens = sqliteTable(
   "device_tokens",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<DeviceTokenId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     platform: text("platform").notNull().$type<DeviceTokenPlatform>(),

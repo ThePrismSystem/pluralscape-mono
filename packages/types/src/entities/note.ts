@@ -1,5 +1,5 @@
 import type { EncryptedBlob } from "../encryption-primitives.js";
-import type { HexColor, NoteId, SystemId } from "../ids.js";
+import type { AnyBrandedId, HexColor, NoteId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata, EntityReference } from "../utility.js";
@@ -44,7 +44,7 @@ export type NoteServerMetadata = Omit<
   "author" | "title" | "content" | "backgroundColor" | "archived"
 > & {
   readonly authorEntityType: NoteAuthorEntityType | null;
-  readonly authorEntityId: string | null;
+  readonly authorEntityId: AnyBrandedId | null;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;

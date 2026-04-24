@@ -1,4 +1,4 @@
-import { foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, index, integer, pgTable, unique } from "drizzle-orm/pg-core";
 
 import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import {
@@ -8,7 +8,6 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { systems } from "./systems.js";
 
@@ -18,8 +17,8 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const members = pgTable(
   "members",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<MemberId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

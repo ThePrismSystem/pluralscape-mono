@@ -15,7 +15,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { systemSnapshots } from "../../schema/pg/snapshots.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, SystemSnapshotServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -25,10 +24,8 @@ describe("SystemSnapshot Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof SystemSnapshotServerMetadata>();
   });
 
-  it("system_snapshots Drizzle row equals SystemSnapshotServerMetadata modulo brands and readonly", () => {
+  it("system_snapshots Drizzle row equals SystemSnapshotServerMetadata", () => {
     type Row = InferSelectModel<typeof systemSnapshots>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<SystemSnapshotServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, SystemSnapshotServerMetadata>>().toEqualTypeOf<true>();
   });
 });

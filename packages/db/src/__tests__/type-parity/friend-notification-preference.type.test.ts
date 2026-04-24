@@ -16,7 +16,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { friendNotificationPreferences } from "../../schema/pg/notifications.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, FriendNotificationPreferenceServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -26,10 +25,8 @@ describe("FriendNotificationPreference Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof FriendNotificationPreferenceServerMetadata>();
   });
 
-  it("friend_notification_preferences Drizzle row equals FriendNotificationPreferenceServerMetadata modulo brands and readonly", () => {
+  it("friend_notification_preferences Drizzle row equals FriendNotificationPreferenceServerMetadata", () => {
     type Row = InferSelectModel<typeof friendNotificationPreferences>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<FriendNotificationPreferenceServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, FriendNotificationPreferenceServerMetadata>>().toEqualTypeOf<true>();
   });
 });

@@ -11,7 +11,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { acknowledgements } from "../../schema/pg/communication.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { AcknowledgementRequestServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -21,10 +20,8 @@ describe("AcknowledgementRequest Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof AcknowledgementRequestServerMetadata>();
   });
 
-  it("acknowledgements Drizzle row equals AcknowledgementRequestServerMetadata modulo brands and readonly", () => {
+  it("acknowledgements Drizzle row equals AcknowledgementRequestServerMetadata", () => {
     type Row = InferSelectModel<typeof acknowledgements>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<AcknowledgementRequestServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, AcknowledgementRequestServerMetadata>>().toEqualTypeOf<true>();
   });
 });

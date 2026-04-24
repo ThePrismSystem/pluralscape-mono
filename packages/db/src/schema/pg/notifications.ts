@@ -20,7 +20,7 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -29,6 +29,7 @@ import { systems } from "./systems.js";
 
 import type {
   AccountId,
+  DeviceTokenId,
   DeviceTokenPlatform,
   FriendConnectionId,
   FriendNotificationEventType,
@@ -42,11 +43,11 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const deviceTokens = pgTable(
   "device_tokens",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<DeviceTokenId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     platform: varchar("platform", { length: ENUM_MAX_LENGTH })

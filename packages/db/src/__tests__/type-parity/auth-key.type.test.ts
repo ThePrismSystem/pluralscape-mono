@@ -13,7 +13,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { authKeys } from "../../schema/pg/auth.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { AuthKeyServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -23,10 +22,8 @@ describe("AuthKey Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof AuthKeyServerMetadata>();
   });
 
-  it("auth_keys Drizzle row equals AuthKeyServerMetadata modulo brands and readonly", () => {
+  it("auth_keys Drizzle row equals AuthKeyServerMetadata", () => {
     type Row = InferSelectModel<typeof authKeys>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<AuthKeyServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, AuthKeyServerMetadata>>().toEqualTypeOf<true>();
   });
 });

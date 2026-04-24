@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { accounts } from "../../schema/pg/auth.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { AccountServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("Account Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof AccountServerMetadata>();
   });
 
-  it("accounts Drizzle row equals AccountServerMetadata modulo brands and readonly", () => {
+  it("accounts Drizzle row equals AccountServerMetadata", () => {
     type Row = InferSelectModel<typeof accounts>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<AccountServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, AccountServerMetadata>>().toEqualTypeOf<true>();
   });
 });

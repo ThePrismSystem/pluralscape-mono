@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { checkInRecords } from "../../schema/pg/timers.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { CheckInRecordServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("CheckInRecord Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof CheckInRecordServerMetadata>();
   });
 
-  it("check_in_records Drizzle row equals CheckInRecordServerMetadata modulo brands and readonly", () => {
+  it("check_in_records Drizzle row equals CheckInRecordServerMetadata", () => {
     type Row = InferSelectModel<typeof checkInRecords>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<CheckInRecordServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, CheckInRecordServerMetadata>>().toEqualTypeOf<true>();
   });
 });

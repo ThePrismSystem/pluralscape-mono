@@ -15,7 +15,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { importJobs } from "../../schema/pg/import-export.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, ImportJobServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -25,10 +24,8 @@ describe("ImportJob Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof ImportJobServerMetadata>();
   });
 
-  it("import_jobs Drizzle row equals ImportJobServerMetadata modulo brands and readonly", () => {
+  it("import_jobs Drizzle row equals ImportJobServerMetadata", () => {
     type Row = InferSelectModel<typeof importJobs>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<ImportJobServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, ImportJobServerMetadata>>().toEqualTypeOf<true>();
   });
 });

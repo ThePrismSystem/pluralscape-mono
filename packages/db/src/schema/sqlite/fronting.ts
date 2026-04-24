@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { check, foreignKey, index, sqliteTable, unique } from "drizzle-orm/sqlite-core";
 
 import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
@@ -19,7 +19,9 @@ import type {
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
+  MemberId,
   SystemId,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -54,9 +56,9 @@ export const frontingSessions = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: sqliteTimestamp("start_time").notNull(),
     endTime: sqliteTimestamp("end_time"),
-    memberId: text("member_id"),
-    customFrontId: text("custom_front_id"),
-    structureEntityId: text("structure_entity_id"),
+    memberId: brandedId<MemberId>("member_id"),
+    customFrontId: brandedId<CustomFrontId>("custom_front_id"),
+    structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -112,9 +114,9 @@ export const frontingComments = sqliteTable(
     systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    memberId: text("member_id"),
-    customFrontId: text("custom_front_id"),
-    structureEntityId: text("structure_entity_id"),
+    memberId: brandedId<MemberId>("member_id"),
+    customFrontId: brandedId<CustomFrontId>("custom_front_id"),
+    structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

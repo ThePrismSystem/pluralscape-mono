@@ -13,7 +13,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { messages } from "../../schema/pg/communication.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { ChatMessageServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -23,10 +22,8 @@ describe("ChatMessage Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof ChatMessageServerMetadata>();
   });
 
-  it("messages Drizzle row equals ChatMessageServerMetadata modulo brands and readonly", () => {
+  it("messages Drizzle row equals ChatMessageServerMetadata", () => {
     type Row = InferSelectModel<typeof messages>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<ChatMessageServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, ChatMessageServerMetadata>>().toEqualTypeOf<true>();
   });
 });

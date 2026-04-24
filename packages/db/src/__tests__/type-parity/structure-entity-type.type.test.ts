@@ -15,7 +15,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { systemStructureEntityTypes } from "../../schema/pg/structure.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, SystemStructureEntityTypeServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -25,10 +24,8 @@ describe("SystemStructureEntityType Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof SystemStructureEntityTypeServerMetadata>();
   });
 
-  it("system_structure_entity_types Drizzle row equals SystemStructureEntityTypeServerMetadata modulo brands and readonly", () => {
+  it("system_structure_entity_types Drizzle row equals SystemStructureEntityTypeServerMetadata", () => {
     type Row = InferSelectModel<typeof systemStructureEntityTypes>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<SystemStructureEntityTypeServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, SystemStructureEntityTypeServerMetadata>>().toEqualTypeOf<true>();
   });
 });

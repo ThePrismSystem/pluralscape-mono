@@ -23,7 +23,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { members } from "../../schema/pg/members.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, MemberServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -33,10 +32,8 @@ describe("Member Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof MemberServerMetadata>();
   });
 
-  it("members Drizzle row equals MemberServerMetadata modulo brands and readonly", () => {
+  it("members Drizzle row equals MemberServerMetadata", () => {
     type Row = InferSelectModel<typeof members>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<MemberServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, MemberServerMetadata>>().toEqualTypeOf<true>();
   });
 });

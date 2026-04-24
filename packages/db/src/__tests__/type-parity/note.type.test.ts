@@ -11,7 +11,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { notes } from "../../schema/pg/communication.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, NoteServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -21,8 +20,8 @@ describe("Note Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof NoteServerMetadata>();
   });
 
-  it("notes Drizzle row equals NoteServerMetadata modulo brands and readonly", () => {
+  it("notes Drizzle row equals NoteServerMetadata", () => {
     type Row = InferSelectModel<typeof notes>;
-    expectTypeOf<Equal<StripBrands<Row>, StripBrands<NoteServerMetadata>>>().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, NoteServerMetadata>>().toEqualTypeOf<true>();
   });
 });

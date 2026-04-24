@@ -11,7 +11,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { pollVotes } from "../../schema/pg/communication.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, PollVoteServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -21,10 +20,8 @@ describe("PollVote Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof PollVoteServerMetadata>();
   });
 
-  it("pollVotes Drizzle row equals PollVoteServerMetadata modulo brands and readonly", () => {
+  it("pollVotes Drizzle row equals PollVoteServerMetadata", () => {
     type Row = InferSelectModel<typeof pollVotes>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<PollVoteServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, PollVoteServerMetadata>>().toEqualTypeOf<true>();
   });
 });

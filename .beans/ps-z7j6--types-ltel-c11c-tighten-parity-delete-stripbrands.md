@@ -1,11 +1,11 @@
 ---
 # ps-z7j6
 title: "types-ltel C11c: tighten parity + delete StripBrands (epic closeout)"
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-04-24T09:27:17Z
-updated_at: 2026-04-24T09:27:17Z
+updated_at: 2026-04-24T18:03:23Z
 parent: types-ltel
 blocked_by:
   - ps-ava1

@@ -13,7 +13,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { innerworldCanvas } from "../../schema/pg/innerworld.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, InnerWorldCanvasServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -23,10 +22,8 @@ describe("InnerWorldCanvas Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof InnerWorldCanvasServerMetadata>();
   });
 
-  it("innerworld_canvas Drizzle row equals InnerWorldCanvasServerMetadata modulo brands and readonly", () => {
+  it("innerworld_canvas Drizzle row equals InnerWorldCanvasServerMetadata", () => {
     type Row = InferSelectModel<typeof innerworldCanvas>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<InnerWorldCanvasServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, InnerWorldCanvasServerMetadata>>().toEqualTypeOf<true>();
   });
 });

@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { systems } from "../../schema/pg/systems.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, SystemServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("System Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof SystemServerMetadata>();
   });
 
-  it("systems Drizzle row equals SystemServerMetadata modulo brands and readonly", () => {
+  it("systems Drizzle row equals SystemServerMetadata", () => {
     type Row = InferSelectModel<typeof systems>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<SystemServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, SystemServerMetadata>>().toEqualTypeOf<true>();
   });
 });

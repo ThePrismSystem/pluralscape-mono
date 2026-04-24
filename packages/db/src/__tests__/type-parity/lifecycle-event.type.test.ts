@@ -16,7 +16,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { lifecycleEvents } from "../../schema/pg/lifecycle-events.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, LifecycleEventServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -26,10 +25,8 @@ describe("LifecycleEvent Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof LifecycleEventServerMetadata>();
   });
 
-  it("lifecycle_events Drizzle row equals LifecycleEventServerMetadata modulo brands and readonly", () => {
+  it("lifecycle_events Drizzle row equals LifecycleEventServerMetadata", () => {
     type Row = InferSelectModel<typeof lifecycleEvents>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<LifecycleEventServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, LifecycleEventServerMetadata>>().toEqualTypeOf<true>();
   });
 });

@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { apiKeys } from "../../schema/pg/api-keys.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { ApiKeyServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("ApiKey Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof ApiKeyServerMetadata>();
   });
 
-  it("api_keys Drizzle row equals ApiKeyServerMetadata modulo brands and readonly", () => {
+  it("api_keys Drizzle row equals ApiKeyServerMetadata", () => {
     type Row = InferSelectModel<typeof apiKeys>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<ApiKeyServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, ApiKeyServerMetadata>>().toEqualTypeOf<true>();
   });
 });
