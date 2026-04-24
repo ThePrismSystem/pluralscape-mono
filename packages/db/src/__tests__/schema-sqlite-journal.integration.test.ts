@@ -10,6 +10,7 @@ import { journalEntries, wikiPages } from "../schema/sqlite/journal.js";
 import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteJournalTables,
   sqliteInsertAccount,
@@ -55,7 +56,7 @@ describe("SQLite journal schema", () => {
       const memberId = insertMember(systemId);
       const fsId = brandId<FrontingSessionId>(crypto.randomUUID());
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
       db.insert(frontingSessions)
@@ -92,7 +93,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(journalEntries)
         .values({
@@ -112,7 +113,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(journalEntries)
         .values({
@@ -134,7 +135,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(journalEntries)
         .values({
@@ -157,7 +158,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(journalEntries)
         .values({
@@ -177,7 +178,7 @@ describe("SQLite journal schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -191,7 +192,7 @@ describe("SQLite journal schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -206,7 +207,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(journalEntries)
         .values({
@@ -234,7 +235,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30]));
       const hash = brandId<SlugHash>("a".repeat(64));
 
@@ -259,7 +260,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(wikiPages)
         .values({
@@ -282,7 +283,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const slugHash = brandId<SlugHash>("b".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(wikiPages)
         .values({
@@ -315,7 +316,7 @@ describe("SQLite journal schema", () => {
       const systemId1 = insertSystem(accountId);
       const systemId2 = insertSystem(accountId);
       const slugHash = brandId<SlugHash>("c".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(wikiPages)
         .values({
@@ -349,7 +350,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(wikiPages)
         .values({
@@ -370,7 +371,7 @@ describe("SQLite journal schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -384,7 +385,7 @@ describe("SQLite journal schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -399,7 +400,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(wikiPages)
         .values({
@@ -425,7 +426,7 @@ describe("SQLite journal schema", () => {
     it("rejects slug_hash shorter than 64 chars", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -446,7 +447,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const slugHash = brandId<SlugHash>("h".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(wikiPages)
         .values({
@@ -482,7 +483,7 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const slugHash = brandId<SlugHash>("i".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(wikiPages)
         .values({

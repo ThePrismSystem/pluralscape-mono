@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -9,6 +9,7 @@ import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/sqlite/webhooks.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   MS_PER_DAY,
   TTL_RETENTION_DAYS,
@@ -61,7 +62,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const s = secret([1, 2, 3]);
 
       db.insert(webhookConfigs)
@@ -90,7 +91,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookConfigs)
         .values({
@@ -112,7 +113,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookConfigs)
         .values({
@@ -135,7 +136,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const keyId = brandId<ApiKeyId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(apiKeys)
         .values({
@@ -172,7 +173,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookConfigs)
         .values({
@@ -195,7 +196,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookConfigs)
         .values({
@@ -218,7 +219,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookConfigs)
         .values({
@@ -242,7 +243,7 @@ describe("SQLite webhooks schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -256,7 +257,7 @@ describe("SQLite webhooks schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -271,7 +272,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookConfigs)
         .values({
@@ -304,7 +305,7 @@ describe("SQLite webhooks schema", () => {
       const accountId = insertAccount();
       deliverySystemId = insertSystem(accountId);
       deliveryWhId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookConfigs)
         .values({
@@ -321,7 +322,7 @@ describe("SQLite webhooks schema", () => {
 
     it("round-trips with defaults", () => {
       const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookDeliveries)
         .values({
@@ -342,7 +343,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("rejects invalid event_type", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -355,7 +356,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("rejects invalid status", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -375,7 +376,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("rejects negative attempt_count", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -388,7 +389,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("rejects http_status outside 100-599", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -411,7 +412,7 @@ describe("SQLite webhooks schema", () => {
 
     it("cascades on system deletion", () => {
       const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookDeliveries)
         .values({
@@ -430,8 +431,8 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("supports TTL cleanup query on terminal states", () => {
-      const now = Date.now();
-      const thirtyOneDaysAgo = now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY;
+      const now = fixtureNow();
+      const thirtyOneDaysAgo = toUnixMillis(now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY);
       const whId = brandId<WebhookId>(crypto.randomUUID());
 
       db.insert(webhookConfigs)
@@ -499,7 +500,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("restricts webhook config deletion when referenced by delivery", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(webhookDeliveries)
         .values({
@@ -518,8 +519,8 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("queries retryable deliveries by system_id", () => {
-      const now = Date.now();
-      const retryAt = now + 60_000;
+      const now = fixtureNow();
+      const retryAt = toUnixMillis(now + 60_000);
 
       const pendingId = brandId<WebhookDeliveryId>(crypto.randomUUID());
       const successId = brandId<WebhookDeliveryId>(crypto.randomUUID());

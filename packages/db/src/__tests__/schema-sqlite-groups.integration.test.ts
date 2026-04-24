@@ -9,6 +9,7 @@ import { groupMemberships, groups } from "../schema/sqlite/groups.js";
 import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteGroupsTables,
   sqliteInsertAccount,
@@ -46,7 +47,7 @@ describe("SQLite groups schema", () => {
     } = {},
   ): GroupId {
     const id = brandId<GroupId>(opts.id ?? crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(groups)
       .values({
         id,
@@ -85,7 +86,7 @@ describe("SQLite groups schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<GroupId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(groups)
@@ -118,7 +119,7 @@ describe("SQLite groups schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<GroupId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(groups)
         .values({
@@ -157,7 +158,7 @@ describe("SQLite groups schema", () => {
     it("rejects negative sort_order via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -178,7 +179,7 @@ describe("SQLite groups schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<GroupId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(groups)
         .values({
@@ -197,7 +198,7 @@ describe("SQLite groups schema", () => {
       expect(before[0]?.archivedAt).toBeNull();
 
       // Update to archived
-      const archivedAt = Date.now();
+      const archivedAt = fixtureNow();
       db.update(groups).set({ archived: true, archivedAt }).where(eq(groups.id, id)).run();
 
       const after = db.select().from(groups).where(eq(groups.id, id)).all();
@@ -218,7 +219,7 @@ describe("SQLite groups schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -232,7 +233,7 @@ describe("SQLite groups schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -250,7 +251,7 @@ describe("SQLite groups schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const groupId = insertGroup(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(groupMemberships)
         .values({
@@ -278,7 +279,7 @@ describe("SQLite groups schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const groupId = insertGroup(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(groupMemberships)
         .values({
@@ -304,7 +305,7 @@ describe("SQLite groups schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const groupId = insertGroup(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(groupMemberships)
         .values({
@@ -330,7 +331,7 @@ describe("SQLite groups schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const groupId = insertGroup(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(groupMemberships)
         .values({
@@ -359,7 +360,7 @@ describe("SQLite groups schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const groupId = insertGroup(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(groupMemberships)
         .values({

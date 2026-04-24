@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -12,6 +12,7 @@ import {
   sessions,
 } from "../schema/sqlite/auth.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import { createSqliteAuthTables, testBlob } from "./helpers/sqlite-helpers.js";
 
 import type {
@@ -20,6 +21,7 @@ import type {
   DeviceTransferRequestId,
   RecoveryKeyId,
   SessionId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -47,8 +49,8 @@ describe("SQLite auth schema", () => {
       emailSalt: string;
       authKeyHash: Uint8Array;
       kdfSalt: string;
-      createdAt: number;
-      updatedAt: number;
+      createdAt: UnixMillis;
+      updatedAt: UnixMillis;
     }> = {},
   ): {
     id: AccountId;
@@ -56,10 +58,10 @@ describe("SQLite auth schema", () => {
     emailSalt: string;
     authKeyHash: Uint8Array;
     kdfSalt: string;
-    createdAt: number;
-    updatedAt: number;
+    createdAt: UnixMillis;
+    updatedAt: UnixMillis;
   } {
-    const now = Date.now();
+    const now = fixtureNow();
     const data = {
       id: brandId<AccountId>(overrides.id ?? crypto.randomUUID()),
       emailHash: overrides.emailHash ?? `hash_${crypto.randomUUID()}`,
@@ -76,13 +78,13 @@ describe("SQLite auth schema", () => {
 
   function insertSession(
     accountId: AccountId,
-    overrides: Partial<{ id: SessionId; tokenHash: string; createdAt: number }> = {},
-  ): { id: SessionId; accountId: AccountId; tokenHash: string; createdAt: number } {
+    overrides: Partial<{ id: SessionId; tokenHash: string; createdAt: UnixMillis }> = {},
+  ): { id: SessionId; accountId: AccountId; tokenHash: string; createdAt: UnixMillis } {
     const data = {
       id: overrides.id ?? newSessionId(),
       accountId,
       tokenHash: overrides.tokenHash ?? `tok_${crypto.randomUUID()}`,
-      createdAt: overrides.createdAt ?? Date.now(),
+      createdAt: overrides.createdAt ?? fixtureNow(),
     };
     db.insert(sessions).values(data).run();
     return data;
@@ -146,7 +148,7 @@ describe("SQLite auth schema", () => {
     });
 
     it("rejects null kdfSalt", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       expect(() =>
         client
           .prepare(
@@ -178,7 +180,7 @@ describe("SQLite auth schema", () => {
           encryptedPrivateKey: privateKey,
           publicKey,
           keyType: "encryption",
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -200,7 +202,7 @@ describe("SQLite auth schema", () => {
           encryptedPrivateKey: new Uint8Array([1]),
           publicKey: new Uint8Array([2]),
           keyType: "signing",
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -219,7 +221,7 @@ describe("SQLite auth schema", () => {
             encryptedPrivateKey: new Uint8Array([1]),
             publicKey: new Uint8Array([2]),
             keyType: "invalid" as "encryption",
-            createdAt: Date.now(),
+            createdAt: fixtureNow(),
           })
           .run(),
       ).toThrow(/constraint|CHECK/i);
@@ -236,7 +238,7 @@ describe("SQLite auth schema", () => {
           encryptedPrivateKey: new Uint8Array([1]),
           publicKey: new Uint8Array([2]),
           keyType: "encryption",
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -255,7 +257,7 @@ describe("SQLite auth schema", () => {
             encryptedPrivateKey: new Uint8Array([1]),
             publicKey: new Uint8Array([2]),
             keyType: "encryption",
-            createdAt: Date.now(),
+            createdAt: fixtureNow(),
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -272,7 +274,7 @@ describe("SQLite auth schema", () => {
           encryptedPrivateKey: new Uint8Array(0),
           publicKey: new Uint8Array(0),
           keyType: "encryption",
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -283,7 +285,7 @@ describe("SQLite auth schema", () => {
 
     it("enforces NOT NULL on required columns", () => {
       const account = insertAccount();
-      const now = String(Date.now());
+      const now = String(fixtureNow());
       expect(() =>
         client.exec(
           `INSERT INTO auth_keys (id, account_id, key_type, created_at) VALUES ('${crypto.randomUUID()}', '${account.id}', 'encryption', ${now})`,
@@ -295,10 +297,10 @@ describe("SQLite auth schema", () => {
   describe("sessions", () => {
     it("inserts and retrieves with all fields", () => {
       const account = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newSessionId();
 
-      const expiresAt = now + ONE_DAY_MS;
+      const expiresAt = toUnixMillis(now + ONE_DAY_MS);
       db.insert(sessions)
         .values({
           id,
@@ -329,7 +331,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           tokenHash: `tok_${crypto.randomUUID()}`,
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -346,7 +348,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           tokenHash: `tok_${crypto.randomUUID()}`,
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -357,14 +359,14 @@ describe("SQLite auth schema", () => {
     it("round-trips expiresAt when provided", () => {
       const account = insertAccount();
       const id = newSessionId();
-      const expiresAt = Date.now() + ONE_DAY_MS;
+      const expiresAt = toUnixMillis(fixtureNow() + ONE_DAY_MS);
 
       db.insert(sessions)
         .values({
           id,
           accountId: account.id,
           tokenHash: `tok_${crypto.randomUUID()}`,
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
           expiresAt,
         })
         .run();
@@ -382,7 +384,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           tokenHash: `tok_${crypto.randomUUID()}`,
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -399,7 +401,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           tokenHash: `tok_${crypto.randomUUID()}`,
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -423,7 +425,7 @@ describe("SQLite auth schema", () => {
             id: newSessionId(),
             accountId: brandId<AccountId>("nonexistent"),
             tokenHash: `tok_${crypto.randomUUID()}`,
-            createdAt: Date.now(),
+            createdAt: fixtureNow(),
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -431,7 +433,7 @@ describe("SQLite auth schema", () => {
 
     it("rejects expiresAt <= createdAt via CHECK", () => {
       const account = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -441,7 +443,7 @@ describe("SQLite auth schema", () => {
             accountId: account.id,
             tokenHash: `tok_${crypto.randomUUID()}`,
             createdAt: now,
-            expiresAt: now - 1000,
+            expiresAt: toUnixMillis(now - 1000),
           })
           .run(),
       ).toThrow(/constraint|CHECK/i);
@@ -449,7 +451,7 @@ describe("SQLite auth schema", () => {
 
     it("rejects expiresAt === createdAt via CHECK (boundary)", () => {
       const account = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -468,7 +470,7 @@ describe("SQLite auth schema", () => {
     it("updates expiresAt from null to a value", () => {
       const account = insertAccount();
       const id = newSessionId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(sessions)
         .values({
@@ -479,7 +481,7 @@ describe("SQLite auth schema", () => {
         })
         .run();
 
-      const expiresAt = now + ONE_DAY_MS;
+      const expiresAt = toUnixMillis(now + ONE_DAY_MS);
       db.update(sessions).set({ expiresAt }).where(eq(sessions.id, id)).run();
 
       const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
@@ -495,7 +497,7 @@ describe("SQLite auth schema", () => {
           id,
           accountId: account.id,
           tokenHash: `tok_${crypto.randomUUID()}`,
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -514,7 +516,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           tokenHash: `tok_${crypto.randomUUID()}`,
           encryptedData: blob,
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -535,7 +537,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           encryptedMasterKey: masterKey,
           recoveryKeyHash: new Uint8Array(32),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -554,7 +556,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           encryptedMasterKey: new Uint8Array([1, 2, 3]),
           recoveryKeyHash: new Uint8Array(32),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -565,14 +567,14 @@ describe("SQLite auth schema", () => {
     it("round-trips revokedAt when set", () => {
       const account = insertAccount();
       const id = newRecoveryKeyId();
-      const revokedAt = Date.now();
+      const revokedAt = fixtureNow();
 
       db.insert(recoveryKeys)
         .values({
           id,
           accountId: account.id,
           encryptedMasterKey: new Uint8Array([1, 2, 3]),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
           revokedAt,
         })
         .run();
@@ -591,7 +593,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           encryptedMasterKey: new Uint8Array([1]),
           recoveryKeyHash: new Uint8Array(32),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
@@ -609,7 +611,7 @@ describe("SQLite auth schema", () => {
             accountId: brandId<AccountId>("nonexistent"),
             encryptedMasterKey: new Uint8Array([1]),
             recoveryKeyHash: new Uint8Array(32),
-            createdAt: Date.now(),
+            createdAt: fixtureNow(),
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -625,11 +627,11 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           encryptedMasterKey: new Uint8Array([1, 2, 3]),
           recoveryKeyHash: new Uint8Array(32),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run();
 
-      const revokedAt = Date.now();
+      const revokedAt = fixtureNow();
       db.update(recoveryKeys).set({ revokedAt }).where(eq(recoveryKeys.id, id)).run();
 
       const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
@@ -642,7 +644,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -653,7 +655,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -672,7 +674,7 @@ describe("SQLite auth schema", () => {
     it("accepts targetSessionId as null", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -683,7 +685,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: null,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -700,7 +702,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -711,7 +713,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -728,7 +730,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -739,7 +741,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -755,7 +757,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
       const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
 
@@ -768,7 +770,7 @@ describe("SQLite auth schema", () => {
           encryptedKeyMaterial: keyMaterial,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -784,7 +786,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -795,7 +797,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -811,7 +813,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -824,7 +826,7 @@ describe("SQLite auth schema", () => {
           encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -840,7 +842,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -852,7 +854,7 @@ describe("SQLite auth schema", () => {
           status: "expired",
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -868,7 +870,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -881,7 +883,7 @@ describe("SQLite auth schema", () => {
             status: "invalid" as "pending",
             codeSalt: TEST_CODE_SALT,
             createdAt: now,
-            expiresAt: now + ONE_HOUR_MS,
+            expiresAt: toUnixMillis(now + ONE_HOUR_MS),
           })
           .run(),
       ).toThrow(/constraint|CHECK/i);
@@ -891,7 +893,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -903,7 +905,7 @@ describe("SQLite auth schema", () => {
             targetSessionId: target.id,
             codeSalt: TEST_CODE_SALT,
             createdAt: now,
-            expiresAt: now - 1000,
+            expiresAt: toUnixMillis(now - 1000),
           })
           .run(),
       ).toThrow(/constraint|CHECK/i);
@@ -913,7 +915,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -935,7 +937,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -946,7 +948,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -963,7 +965,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -974,7 +976,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 
@@ -990,7 +992,7 @@ describe("SQLite auth schema", () => {
     it("validates both source and target session FKs", () => {
       const account = insertAccount();
       const session = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1002,7 +1004,7 @@ describe("SQLite auth schema", () => {
             targetSessionId: session.id,
             codeSalt: TEST_CODE_SALT,
             createdAt: now,
-            expiresAt: now + ONE_HOUR_MS,
+            expiresAt: toUnixMillis(now + ONE_HOUR_MS),
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -1017,7 +1019,7 @@ describe("SQLite auth schema", () => {
             targetSessionId: brandId<SessionId>("nonexistent"),
             codeSalt: TEST_CODE_SALT,
             createdAt: now,
-            expiresAt: now + ONE_HOUR_MS,
+            expiresAt: toUnixMillis(now + ONE_HOUR_MS),
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -1027,7 +1029,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1040,7 +1042,7 @@ describe("SQLite auth schema", () => {
             status: "approved",
             codeSalt: TEST_CODE_SALT,
             createdAt: now,
-            expiresAt: now + ONE_HOUR_MS,
+            expiresAt: toUnixMillis(now + ONE_HOUR_MS),
           })
           .run(),
       ).toThrow(/constraint|CHECK/i);
@@ -1050,7 +1052,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
@@ -1061,7 +1063,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         })
         .run();
 

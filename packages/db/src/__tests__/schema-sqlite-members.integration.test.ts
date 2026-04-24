@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -8,6 +8,7 @@ import { accounts } from "../schema/sqlite/auth.js";
 import { members, memberPhotos } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteMemberTables,
   sqliteInsertAccount,
@@ -29,7 +30,7 @@ describe("SQLite members schema", () => {
 
   function insertMember(systemId: string, raw = crypto.randomUUID()): MemberId {
     const id = brandId<MemberId>(raw);
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(members)
       .values({
         id,
@@ -63,7 +64,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(members)
@@ -86,7 +87,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(members)
         .values({
@@ -107,7 +108,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(members)
         .values({
@@ -134,7 +135,7 @@ describe("SQLite members schema", () => {
     });
 
     it("rejects nonexistent systemId FK", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       expect(() =>
         db
           .insert(members)
@@ -153,7 +154,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(members)
         .values({
@@ -173,7 +174,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(members)
         .values({
@@ -196,7 +197,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(members)
         .values({
@@ -208,7 +209,7 @@ describe("SQLite members schema", () => {
         })
         .run();
 
-      const later = now + 1000;
+      const later = toUnixMillis(now + 1000);
       db.update(members)
         .set({ version: sql`${members.version} + 1`, updatedAt: later })
         .where(eq(members.id, id))
@@ -222,7 +223,7 @@ describe("SQLite members schema", () => {
     it("rejects version < 1 via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -236,7 +237,7 @@ describe("SQLite members schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -250,7 +251,7 @@ describe("SQLite members schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -265,7 +266,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(members)
         .values({
@@ -291,7 +292,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([100, 200]));
 
       db.insert(memberPhotos)
@@ -317,7 +318,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(memberPhotos)
         .values({
@@ -339,7 +340,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(memberPhotos)
         .values({
@@ -361,7 +362,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const photoId = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(memberPhotos)
         .values({
@@ -384,7 +385,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const photoId = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(memberPhotos)
         .values({
@@ -405,7 +406,7 @@ describe("SQLite members schema", () => {
     it("rejects nonexistent memberId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -426,7 +427,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -448,7 +449,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(memberPhotos)
         .values({
@@ -471,7 +472,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(memberPhotos)
         .values({
@@ -495,7 +496,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -510,7 +511,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -526,7 +527,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(memberPhotos)
         .values({

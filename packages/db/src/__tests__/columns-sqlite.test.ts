@@ -1,5 +1,5 @@
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,31 +11,39 @@ import {
   timestampToDriver,
 } from "../columns/sqlite.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
+
 import type { EncryptedBlob } from "@pluralscape/types";
 import type { BucketId } from "@pluralscape/types";
 
 describe("sqliteTimestamp mapping", () => {
   it("passes through integer values", () => {
-    const ms = 1704067200000;
+    const ms = toUnixMillis(1704067200000);
     expect(timestampToDriver(ms)).toBe(ms);
     expect(timestampFromDriver(ms)).toBe(ms);
   });
 
   it("round-trips through toDriver/fromDriver", () => {
-    const ms = Date.now();
+    const ms = fixtureNow();
     expect(timestampFromDriver(timestampToDriver(ms))).toBe(ms);
   });
 
   it("throws on NaN in toDriver", () => {
-    expect(() => timestampToDriver(NaN)).toThrow("not a finite number");
+    expect(() => timestampToDriver(NaN as ReturnType<typeof toUnixMillis>)).toThrow(
+      "not a finite number",
+    );
   });
 
   it("throws on Infinity in toDriver", () => {
-    expect(() => timestampToDriver(Infinity)).toThrow("not a finite number");
+    expect(() => timestampToDriver(Infinity as ReturnType<typeof toUnixMillis>)).toThrow(
+      "not a finite number",
+    );
   });
 
   it("throws on -Infinity in toDriver", () => {
-    expect(() => timestampToDriver(-Infinity)).toThrow("not a finite number");
+    expect(() => timestampToDriver(-Infinity as ReturnType<typeof toUnixMillis>)).toThrow(
+      "not a finite number",
+    );
   });
 
   it("throws on NaN in fromDriver", () => {

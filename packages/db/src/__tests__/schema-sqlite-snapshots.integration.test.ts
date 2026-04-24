@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { systemSnapshots } from "../schema/sqlite/snapshots.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteSnapshotTables,
   sqliteInsertAccount,
@@ -47,7 +48,7 @@ describe("SQLite system_snapshots schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const id = brandId<SystemSnapshotId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(systemSnapshots)
       .values({
@@ -76,7 +77,7 @@ describe("SQLite system_snapshots schema", () => {
         systemId,
         snapshotTrigger: "scheduled-daily",
         encryptedData: testBlob(),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       })
       .run();
 
@@ -95,7 +96,7 @@ describe("SQLite system_snapshots schema", () => {
         systemId,
         snapshotTrigger: "scheduled-weekly",
         encryptedData: testBlob(),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       })
       .run();
 
@@ -115,7 +116,7 @@ describe("SQLite system_snapshots schema", () => {
           systemId,
           snapshotTrigger: "invalid" as "manual",
           encryptedData: testBlob(),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         })
         .run(),
     ).toThrow();
@@ -132,7 +133,7 @@ describe("SQLite system_snapshots schema", () => {
         systemId,
         snapshotTrigger: "manual",
         encryptedData: testBlob(),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       })
       .run();
 
@@ -144,7 +145,7 @@ describe("SQLite system_snapshots schema", () => {
   it("supports multiple snapshots per system", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     for (let i = 0; i < 3; i++) {
       db.insert(systemSnapshots)
@@ -153,7 +154,7 @@ describe("SQLite system_snapshots schema", () => {
           systemId,
           snapshotTrigger: "manual",
           encryptedData: testBlob(),
-          createdAt: now + i * 1000,
+          createdAt: toUnixMillis(now + i * 1000),
         })
         .run();
     }

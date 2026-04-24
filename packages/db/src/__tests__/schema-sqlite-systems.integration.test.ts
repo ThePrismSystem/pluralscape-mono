@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteSystemTables,
   sqliteInsertAccount,
@@ -37,7 +38,7 @@ describe("SQLite systems schema", () => {
 
   it("inserts and retrieves with all columns", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
     const data = testBlob(new Uint8Array([1, 2, 3, 4, 5]));
 
@@ -60,7 +61,7 @@ describe("SQLite systems schema", () => {
 
   it("allows nullable encrypted_data", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)
@@ -78,7 +79,7 @@ describe("SQLite systems schema", () => {
 
   it("round-trips encrypted_data binary correctly", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
     const bigArray = new Uint8Array(256);
     for (let i = 0; i < 256; i++) bigArray[i] = i;
@@ -100,7 +101,7 @@ describe("SQLite systems schema", () => {
 
   it("defaults version to 1", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)
@@ -118,7 +119,7 @@ describe("SQLite systems schema", () => {
 
   it("cascades on account deletion", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)
@@ -136,7 +137,7 @@ describe("SQLite systems schema", () => {
   });
 
   it("rejects nonexistent accountId FK", () => {
-    const now = Date.now();
+    const now = fixtureNow();
     expect(() =>
       db
         .insert(systems)
@@ -152,7 +153,7 @@ describe("SQLite systems schema", () => {
 
   it("rejects duplicate primary key", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     db.insert(systems)

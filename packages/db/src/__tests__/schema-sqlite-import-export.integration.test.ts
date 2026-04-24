@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -14,6 +14,7 @@ import {
 import { buckets } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteImportExportTables,
   sqliteInsertAccount,
@@ -63,7 +64,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(importJobs)
         .values({
@@ -85,8 +86,8 @@ describe("SQLite import-export schema", () => {
           chunksTotal: 10,
           chunksCompleted: 4,
           createdAt: now,
-          updatedAt: now + 1000,
-          completedAt: now + 5000,
+          updatedAt: toUnixMillis(now + 1000),
+          completedAt: toUnixMillis(now + 5000),
         })
         .run();
 
@@ -109,7 +110,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(importJobs)
         .values({
@@ -138,7 +139,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const errors = [
         {
           entityType: "unknown" as const,
@@ -173,7 +174,7 @@ describe("SQLite import-export schema", () => {
     it("rejects invalid source value", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -193,7 +194,7 @@ describe("SQLite import-export schema", () => {
     it("rejects invalid status value", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -214,7 +215,7 @@ describe("SQLite import-export schema", () => {
     it("rejects negative progressPercent", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -236,7 +237,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(importJobs)
         .values({
@@ -258,7 +259,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(importJobs)
         .values({
@@ -279,7 +280,7 @@ describe("SQLite import-export schema", () => {
     it("rejects progressPercent above 100", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -301,7 +302,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(importJobs)
         .values({
@@ -322,7 +323,7 @@ describe("SQLite import-export schema", () => {
     it("rejects chunksCompleted exceeding chunksTotal", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -345,7 +346,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(importJobs)
         .values({
@@ -367,7 +368,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const errors = Array.from({ length: 1000 }, (_, i) => ({
         entityType: "unknown" as const,
         entityId: null,
@@ -394,7 +395,7 @@ describe("SQLite import-export schema", () => {
     it("rejects errorLog with more than 1000 entries", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const errors = Array.from({ length: 1001 }, (_, i) => ({
         entityType: "unknown" as const,
         entityId: null,
@@ -425,7 +426,7 @@ describe("SQLite import-export schema", () => {
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
       const blobId = brandId<BlobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(buckets)
         .values({
@@ -461,7 +462,7 @@ describe("SQLite import-export schema", () => {
           blobId,
           createdAt: now,
           updatedAt: now,
-          completedAt: now + 3000,
+          completedAt: toUnixMillis(now + 3000),
         })
         .run();
 
@@ -480,7 +481,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(exportRequests)
         .values({
@@ -504,7 +505,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(exportRequests)
         .values({
@@ -525,7 +526,7 @@ describe("SQLite import-export schema", () => {
     it("rejects invalid format value", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -545,7 +546,7 @@ describe("SQLite import-export schema", () => {
     it("rejects invalid status value", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -567,7 +568,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(exportRequests)
         .values({ id, accountId, systemId, format: "json", status, createdAt: now, updatedAt: now })
@@ -582,7 +583,7 @@ describe("SQLite import-export schema", () => {
       const systemId = insertSystem(accountId);
       const blobId = brandId<BlobId>(crypto.randomUUID());
       const exportId = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(buckets)
         .values({
@@ -632,7 +633,7 @@ describe("SQLite import-export schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(exportRequests)
         .values({
@@ -656,7 +657,7 @@ describe("SQLite import-export schema", () => {
     it("round-trips with all fields", () => {
       const accountId = insertAccount();
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(accountPurgeRequests)
         .values({
@@ -664,10 +665,10 @@ describe("SQLite import-export schema", () => {
           accountId,
           status: "confirmed",
           confirmationPhrase: "DELETE MY ACCOUNT",
-          scheduledPurgeAt: now + 86400000,
+          scheduledPurgeAt: toUnixMillis(now + 86400000),
           requestedAt: now,
-          confirmedAt: now + 1000,
-          completedAt: now + 86400000,
+          confirmedAt: toUnixMillis(now + 1000),
+          completedAt: toUnixMillis(now + 86400000),
           cancelledAt: null,
         })
         .run();
@@ -690,7 +691,7 @@ describe("SQLite import-export schema", () => {
 
     it("rejects invalid status value", () => {
       const accountId = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -700,7 +701,7 @@ describe("SQLite import-export schema", () => {
             accountId,
             status: "invalid-status" as "pending",
             confirmationPhrase: "DELETE MY ACCOUNT",
-            scheduledPurgeAt: now + 86400000,
+            scheduledPurgeAt: toUnixMillis(now + 86400000),
             requestedAt: now,
           })
           .run(),
@@ -710,7 +711,7 @@ describe("SQLite import-export schema", () => {
     it("applies default status of pending", () => {
       const accountId = insertAccount();
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(accountPurgeRequests)
         .values({
@@ -733,7 +734,7 @@ describe("SQLite import-export schema", () => {
     it("cascades on account deletion", () => {
       const accountId = insertAccount();
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(accountPurgeRequests)
         .values({
@@ -741,7 +742,7 @@ describe("SQLite import-export schema", () => {
           accountId,
           status: "pending",
           confirmationPhrase: "CONFIRM DELETE",
-          scheduledPurgeAt: now + 86400000,
+          scheduledPurgeAt: toUnixMillis(now + 86400000),
           requestedAt: now,
         })
         .run();
@@ -757,7 +758,7 @@ describe("SQLite import-export schema", () => {
 
     it("rejects second active purge request when first is confirmed", () => {
       const accountId = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       db.insert(accountPurgeRequests)
@@ -792,7 +793,7 @@ describe("SQLite import-export schema", () => {
 
     it("allows new purge request after previous is completed", () => {
       const accountId = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       db.insert(accountPurgeRequests)
@@ -833,7 +834,7 @@ describe("SQLite import-export schema", () => {
 
     it("allows new purge request after previous is cancelled", () => {
       const accountId = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       db.insert(accountPurgeRequests)
@@ -874,7 +875,7 @@ describe("SQLite import-export schema", () => {
 
     it("rejects second active purge request when first is processing", () => {
       const accountId = insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       db.insert(accountPurgeRequests)

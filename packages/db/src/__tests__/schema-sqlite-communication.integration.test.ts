@@ -17,6 +17,7 @@ import {
 import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteCommunicationTables,
   sqliteInsertAccount,
@@ -92,7 +93,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const data = testBlob(new Uint8Array([10, 20, 30]));
       const id = brandId<ChannelId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(channels)
         .values({
@@ -115,7 +116,7 @@ describe("SQLite communication schema", () => {
     it("rejects invalid type via CHECK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -136,7 +137,7 @@ describe("SQLite communication schema", () => {
     it("rejects negative sort_order via CHECK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -189,7 +190,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -203,7 +204,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -218,7 +219,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.update(channels)
         .set({ archived: true, archivedAt: now })
@@ -237,7 +238,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
       const id = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([5, 6, 7]));
 
       db.insert(messages)
@@ -264,7 +265,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
       const msgId = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(messages)
         .values({
@@ -288,7 +289,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
       const msgId = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(messages)
         .values({
@@ -311,7 +312,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -326,7 +327,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -342,7 +343,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
       const id = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(messages)
         .values({
@@ -368,7 +369,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
       const id = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(messages)
         .values({
@@ -394,7 +395,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(boardMessages)
         .values({
@@ -418,7 +419,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(boardMessages)
         .values({
@@ -439,7 +440,7 @@ describe("SQLite communication schema", () => {
     it("rejects negative sort_order via CHECK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -460,7 +461,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(boardMessages)
         .values({
@@ -482,7 +483,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(boardMessages)
         .values({
@@ -504,7 +505,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(boardMessages)
         .values({
@@ -527,7 +528,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -541,7 +542,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -556,7 +557,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(boardMessages)
         .values({
@@ -585,7 +586,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notes)
         .values({
@@ -608,7 +609,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notes)
         .values({
@@ -631,7 +632,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notes)
         .values({
@@ -652,7 +653,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notes)
         .values({
@@ -675,7 +676,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notes)
         .values({
@@ -695,7 +696,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -709,7 +710,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -724,7 +725,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notes)
         .values({
@@ -749,7 +750,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(polls)
         .values({
@@ -785,7 +786,7 @@ describe("SQLite communication schema", () => {
     it("rejects invalid status via CHECK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -822,7 +823,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(polls)
         .values({
@@ -858,7 +859,7 @@ describe("SQLite communication schema", () => {
     it("rejects invalid kind via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -884,7 +885,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(polls)
         .values({
@@ -910,7 +911,7 @@ describe("SQLite communication schema", () => {
     it("rejects nonexistent createdByMemberId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -946,7 +947,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(polls)
         .values({
@@ -973,7 +974,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -987,7 +988,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1002,7 +1003,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.update(polls).set({ archived: true, archivedAt: now }).where(eq(polls.id, pollId)).run();
 
@@ -1018,7 +1019,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20]));
 
       db.insert(pollVotes)
@@ -1043,7 +1044,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1060,7 +1061,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const voteId = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(pollVotes)
         .values({
@@ -1084,7 +1085,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const voteId = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(pollVotes)
         .values({
@@ -1108,8 +1109,8 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
-      const votedAt = Date.now();
+      const now = fixtureNow();
+      const votedAt = fixtureNow();
 
       db.insert(pollVotes)
         .values({
@@ -1138,7 +1139,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(pollVotes)
         .values({
@@ -1163,7 +1164,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(pollVotes)
         .values({
@@ -1187,7 +1188,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(pollVotes)
         .values({
@@ -1212,7 +1213,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1227,7 +1228,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1243,7 +1244,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(pollVotes)
         .values({
@@ -1273,7 +1274,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1294,7 +1295,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1315,7 +1316,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1337,7 +1338,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1358,7 +1359,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1379,7 +1380,7 @@ describe("SQLite communication schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1400,7 +1401,7 @@ describe("SQLite communication schema", () => {
     it("rejects nonexistent createdByMemberId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1421,7 +1422,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1442,7 +1443,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({
@@ -1464,7 +1465,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1478,7 +1479,7 @@ describe("SQLite communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1493,7 +1494,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(acknowledgements)
         .values({

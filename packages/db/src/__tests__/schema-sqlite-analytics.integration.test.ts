@@ -8,6 +8,7 @@ import { frontingReports } from "../schema/sqlite/analytics.js";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteAnalyticsTables,
   makeFrontingReportId,
@@ -48,7 +49,7 @@ describe("SQLite analytics schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = makeFrontingReportId();
-      const now = Date.now();
+      const now = fixtureNow();
       const blob = testBlob();
 
       db.insert(frontingReports)
@@ -75,7 +76,7 @@ describe("SQLite analytics schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = makeFrontingReportId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingReports)
         .values({
@@ -96,7 +97,7 @@ describe("SQLite analytics schema", () => {
     it("rejects invalid format value", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -118,7 +119,7 @@ describe("SQLite analytics schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = makeFrontingReportId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingReports)
         .values({
@@ -138,7 +139,7 @@ describe("SQLite analytics schema", () => {
     });
 
     it("rejects nonexistent systemId FK", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       expect(() =>
         db
           .insert(frontingReports)
@@ -159,7 +160,7 @@ describe("SQLite analytics schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = makeFrontingReportId();
-      const now = Date.now();
+      const now = fixtureNow();
       const values = {
         id,
         systemId,
@@ -177,7 +178,7 @@ describe("SQLite analytics schema", () => {
     it("queries multiple reports by systemId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingReports)
         .values([
@@ -214,7 +215,7 @@ describe("SQLite analytics schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = makeFrontingReportId();
-      const now = Date.now();
+      const now = fixtureNow();
       const blob = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(frontingReports)

@@ -10,6 +10,7 @@ import { accounts } from "../../schema/sqlite/auth.js";
 import { channels, polls } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
+import { fixtureNow } from "../fixtures/timestamps.js";
 
 import type {
   AccountId,
@@ -1495,7 +1496,7 @@ export function sqliteInsertAccount(
   id?: string,
 ): AccountId {
   const resolvedId = brandId<AccountId>(id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   db.insert(accounts)
     .values({
       id: resolvedId,
@@ -1517,7 +1518,7 @@ export function sqliteInsertSystem(
   id?: string,
 ): SystemId {
   const resolvedId = brandId<SystemId>(id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   db.insert(systems)
     .values({
       id: resolvedId,
@@ -1666,7 +1667,7 @@ export function sqliteInsertMember(
   id?: string,
 ): string {
   const resolvedId = id ?? crypto.randomUUID();
-  const now = Date.now();
+  const now = fixtureNow();
   db.insert(members)
     .values({
       id: resolvedId,
@@ -1690,7 +1691,7 @@ export function sqliteInsertChannel(
   } = {},
 ): ChannelId {
   const id = brandId<ChannelId>(opts.id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   db.insert(channels)
     .values({
       id,
@@ -1715,7 +1716,7 @@ export function sqliteInsertPoll(
   opts: { id?: string } = {},
 ): PollId {
   const id = brandId<PollId>(opts.id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   db.insert(polls)
     .values({
       id,

@@ -8,6 +8,7 @@ import { accounts } from "../schema/sqlite/auth.js";
 import { safeModeContent } from "../schema/sqlite/safe-mode-content.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteSafeModeContentTables,
   makeSafeModeContentId,
@@ -41,7 +42,7 @@ describe("SQLite safe_mode_content schema", () => {
   it("inserts and retrieves with all columns", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
@@ -68,7 +69,7 @@ describe("SQLite safe_mode_content schema", () => {
   it("defaults version to 1", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)
@@ -88,7 +89,7 @@ describe("SQLite safe_mode_content schema", () => {
   it("defaults sort_order to 0", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)
@@ -108,7 +109,7 @@ describe("SQLite safe_mode_content schema", () => {
   it("supports multiple items with ordering", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     for (let i = 0; i < 3; i++) {
       db.insert(safeModeContent)
@@ -136,7 +137,7 @@ describe("SQLite safe_mode_content schema", () => {
   it("round-trips encrypted_data binary correctly", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
     const bigArray = new Uint8Array(256);
     for (let i = 0; i < 256; i++) bigArray[i] = i;
@@ -159,7 +160,7 @@ describe("SQLite safe_mode_content schema", () => {
   it("cascades on system deletion", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)
@@ -178,7 +179,7 @@ describe("SQLite safe_mode_content schema", () => {
   });
 
   it("rejects nonexistent systemId FK", () => {
-    const now = Date.now();
+    const now = fixtureNow();
     expect(() =>
       db
         .insert(safeModeContent)
@@ -196,7 +197,7 @@ describe("SQLite safe_mode_content schema", () => {
   it("rejects duplicate primary key", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)

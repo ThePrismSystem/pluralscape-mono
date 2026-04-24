@@ -13,6 +13,7 @@ import {
 import { friendConnections } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteNotificationTables,
   sqliteInsertAccount,
@@ -66,7 +67,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(deviceTokens)
         .values({
@@ -93,7 +94,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(deviceTokens)
         .values({
@@ -114,7 +115,7 @@ describe("SQLite notifications schema", () => {
     it("rejects invalid platform", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -129,7 +130,7 @@ describe("SQLite notifications schema", () => {
     it("rejects duplicate tokenHash+platform pair", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       db.insert(deviceTokens)
@@ -161,7 +162,7 @@ describe("SQLite notifications schema", () => {
     it("allows same tokenHash on different platforms", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       db.insert(deviceTokens)
@@ -191,7 +192,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(deviceTokens)
         .values({
@@ -213,7 +214,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(deviceTokens)
         .values({
@@ -237,7 +238,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -262,7 +263,7 @@ describe("SQLite notifications schema", () => {
     it("enforces unique (system_id, event_type)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -291,7 +292,7 @@ describe("SQLite notifications schema", () => {
     it("rejects invalid event_type", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -307,7 +308,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -332,7 +333,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -359,7 +360,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({ id, systemId, eventType: "switch-reminder", createdAt: now, updatedAt: now })
@@ -378,7 +379,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -404,7 +405,7 @@ describe("SQLite notifications schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -418,7 +419,7 @@ describe("SQLite notifications schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -433,7 +434,7 @@ describe("SQLite notifications schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -462,7 +463,7 @@ describe("SQLite notifications schema", () => {
     it("allows duplicate (systemId, eventType) when both rows are archived", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -492,7 +493,7 @@ describe("SQLite notifications schema", () => {
     it("rejects duplicate (systemId, eventType) when both rows are active", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(notificationConfigs)
         .values({
@@ -526,7 +527,7 @@ describe("SQLite notifications schema", () => {
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -565,7 +566,7 @@ describe("SQLite notifications schema", () => {
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -603,7 +604,7 @@ describe("SQLite notifications schema", () => {
       insertSystem(accountId);
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -648,7 +649,7 @@ describe("SQLite notifications schema", () => {
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -687,7 +688,7 @@ describe("SQLite notifications schema", () => {
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -727,7 +728,7 @@ describe("SQLite notifications schema", () => {
       insertSystem(accountId);
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -754,7 +755,7 @@ describe("SQLite notifications schema", () => {
       insertSystem(accountId);
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -782,7 +783,7 @@ describe("SQLite notifications schema", () => {
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -825,7 +826,7 @@ describe("SQLite notifications schema", () => {
       insertSystem(accountId);
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({
@@ -870,7 +871,7 @@ describe("SQLite notifications schema", () => {
       insertSystem(accountId);
       const friendAccountId = insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(friendConnections)
         .values({

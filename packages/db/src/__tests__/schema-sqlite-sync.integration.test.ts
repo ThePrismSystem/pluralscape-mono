@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -8,6 +8,7 @@ import { accounts } from "../schema/sqlite/auth.js";
 import { syncChanges, syncDocuments, syncSnapshots } from "../schema/sqlite/sync.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteSyncTables,
   sqliteInsertAccount,
@@ -38,7 +39,7 @@ describe("SQLite sync schema", () => {
     docType: SyncDocumentType = "system-core",
   ): SyncDocumentId => {
     const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(syncDocuments)
       .values({ documentId, systemId, docType, createdAt: now, updatedAt: now })
       .run();
@@ -71,7 +72,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(syncDocuments)
         .values({
@@ -87,7 +88,7 @@ describe("SQLite sync schema", () => {
           bucketId: brandId<BucketId>(crypto.randomUUID()),
           channelId: brandId<ChannelId>(crypto.randomUUID()),
           createdAt: now,
-          updatedAt: now + 1000,
+          updatedAt: toUnixMillis(now + 1000),
         })
         .run();
 
@@ -117,7 +118,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(syncDocuments)
         .values({ documentId, systemId, docType: "chat", createdAt: now, updatedAt: now })
@@ -140,7 +141,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(syncDocuments)
         .values({ documentId, systemId, docType: "journal", createdAt: now, updatedAt: now })
@@ -160,7 +161,7 @@ describe("SQLite sync schema", () => {
     it("rejects invalid doc_type", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -179,7 +180,7 @@ describe("SQLite sync schema", () => {
     it("rejects invalid key_type", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -194,7 +195,7 @@ describe("SQLite sync schema", () => {
     it("rejects negative sizeBytes", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -214,7 +215,7 @@ describe("SQLite sync schema", () => {
     it("rejects negative snapshotVersion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -234,7 +235,7 @@ describe("SQLite sync schema", () => {
     it("rejects negative lastSeq", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -277,7 +278,7 @@ describe("SQLite sync schema", () => {
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
       const payload = Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05]);
       const authorKey = Buffer.from([0xaa, 0xbb, 0xcc]);
       const nonce = Buffer.from([0x11, 0x22, 0x33]);
@@ -312,7 +313,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const makeChange = () =>
         Buffer.from(crypto.randomUUID().replace(/-/g, ""), "hex").subarray(0, 8);
       const makeSig = () => Buffer.alloc(64, 0x77);
@@ -352,7 +353,7 @@ describe("SQLite sync schema", () => {
       const systemId = insertSystem(accountId);
       const docId1 = insertDocument(systemId, "chat");
       const docId2 = insertDocument(systemId, "journal");
-      const now = Date.now();
+      const now = fixtureNow();
       const makeChange = () =>
         Buffer.from(crypto.randomUUID().replace(/-/g, ""), "hex").subarray(0, 8);
       const makeSig = () => Buffer.alloc(64, 0x77);
@@ -393,7 +394,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const authorKey = Buffer.from([0xde, 0xad, 0xbe, 0xef]);
       const nonce = Buffer.from([0xca, 0xfe, 0xba, 0xbe]);
 
@@ -432,7 +433,7 @@ describe("SQLite sync schema", () => {
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
       const buf = Buffer.from([0x01, 0x02]);
 
       db.insert(syncChanges)
@@ -464,7 +465,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const payload = Buffer.from([0xf0, 0xe1, 0xd2, 0xc3]);
       const authorKey = Buffer.from([0x10, 0x20, 0x30]);
       const nonce = Buffer.from([0xa1, 0xb2, 0xc3]);
@@ -502,7 +503,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const buf = Buffer.from([0x01]);
       const sig = Buffer.alloc(64, 0x88);
 
@@ -547,7 +548,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const buf = Buffer.from([0x01]);
       const sig = Buffer.alloc(64, 0x88);
 
@@ -583,7 +584,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const buf = Buffer.from([0x01]);
       const sig = Buffer.alloc(64, 0x88);
 
@@ -607,7 +608,7 @@ describe("SQLite sync schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const buf = Buffer.from([0x01]);
       const sig = Buffer.alloc(64, 0x88);
 

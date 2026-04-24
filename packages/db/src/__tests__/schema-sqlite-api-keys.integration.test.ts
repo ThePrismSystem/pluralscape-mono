@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -8,6 +8,7 @@ import { apiKeys } from "../schema/sqlite/api-keys.js";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteApiKeysTables,
   sqliteInsertAccount,
@@ -40,7 +41,7 @@ describe("SQLite api_keys schema", () => {
   it("inserts and retrieves a metadata API key", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
     const tokenHash = `hash_${crypto.randomUUID()}`;
 
@@ -70,7 +71,7 @@ describe("SQLite api_keys schema", () => {
   it("inserts and retrieves a crypto API key", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
     const tokenHash = `hash_${crypto.randomUUID()}`;
     const keyMaterial = new Uint8Array([1, 2, 3, 4, 5]);
@@ -99,7 +100,7 @@ describe("SQLite api_keys schema", () => {
   it("rejects invalid key_type via CHECK constraint", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -121,7 +122,7 @@ describe("SQLite api_keys schema", () => {
   it("enforces unique token_hash", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const tokenHash = `hash_${crypto.randomUUID()}`;
 
     db.insert(apiKeys)
@@ -157,7 +158,7 @@ describe("SQLite api_keys schema", () => {
   it("allows nullable optional fields", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
@@ -184,8 +185,8 @@ describe("SQLite api_keys schema", () => {
   it("stores and retrieves timestamps", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
-    const later = now + 86400000;
+    const now = fixtureNow();
+    const later = toUnixMillis(now + 86400000);
     const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
@@ -213,7 +214,7 @@ describe("SQLite api_keys schema", () => {
   it("cascades on account deletion", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
@@ -237,7 +238,7 @@ describe("SQLite api_keys schema", () => {
   it("cascades on system deletion", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
@@ -261,7 +262,7 @@ describe("SQLite api_keys schema", () => {
   it("rejects nonexistent accountId FK", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -282,7 +283,7 @@ describe("SQLite api_keys schema", () => {
 
   it("rejects nonexistent systemId FK", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -304,7 +305,7 @@ describe("SQLite api_keys schema", () => {
   it("rejects metadata key with encrypted_key_material", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -327,7 +328,7 @@ describe("SQLite api_keys schema", () => {
   it("rejects crypto key without encrypted_key_material", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -349,7 +350,7 @@ describe("SQLite api_keys schema", () => {
   it("round-trips empty scopes array", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
@@ -372,7 +373,7 @@ describe("SQLite api_keys schema", () => {
   it("round-trips empty Uint8Array for encrypted_key_material", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
     const emptyMaterial = new Uint8Array(0);
 
@@ -397,7 +398,7 @@ describe("SQLite api_keys schema", () => {
   it("rejects insert without encryptedData", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -420,7 +421,7 @@ describe("SQLite api_keys schema", () => {
   it("round-trips encryptedData blob", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
     const blob = testBlob(new Uint8Array([10, 20, 30]));
 
