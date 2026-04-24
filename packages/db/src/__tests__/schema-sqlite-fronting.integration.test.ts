@@ -22,7 +22,9 @@ import type {
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
+  MemberId,
   SystemId,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -41,7 +43,7 @@ describe("SQLite fronting schema", () => {
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
-  const insertMember = (systemId: SystemId, id?: string): string =>
+  const insertMember = (systemId: SystemId, id?: string): MemberId =>
     sqliteInsertMember(db, systemId, id);
 
   function insertCustomFront(systemId: string, raw = crypto.randomUUID()): CustomFrontId {
@@ -62,7 +64,7 @@ describe("SQLite fronting schema", () => {
   function insertFrontingSession(
     systemId: SystemId,
     id = crypto.randomUUID(),
-    memberId?: string,
+    memberId?: MemberId,
   ): FrontingSessionId {
     const sessionId = brandId<FrontingSessionId>(id);
     const now = fixtureNow();
@@ -196,7 +198,7 @@ describe("SQLite fronting schema", () => {
           .values({
             id: brandId<FrontingSessionId>(crypto.randomUUID()),
             systemId: brandId<SystemId>("nonexistent"),
-            memberId: "nonexistent-member",
+            memberId: brandId<MemberId>("nonexistent-member"),
             startTime: now,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -297,7 +299,7 @@ describe("SQLite fronting schema", () => {
       const now = fixtureNow();
 
       const entityTypeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const entityId = brandId<SystemStructureEntityId>(crypto.randomUUID());
       client.exec(
         `INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES ('${entityTypeId}', '${systemId}', 0, X'0102', ${String(now)}, ${String(now)}, 1, 0)`,
       );
@@ -385,7 +387,7 @@ describe("SQLite fronting schema", () => {
             id: brandId<FrontingSessionId>(crypto.randomUUID()),
             systemId,
             startTime: now,
-            memberId: "nonexistent",
+            memberId: brandId<MemberId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -429,7 +431,7 @@ describe("SQLite fronting schema", () => {
             id: brandId<FrontingSessionId>(crypto.randomUUID()),
             systemId,
             startTime: now,
-            customFrontId: "nonexistent",
+            customFrontId: brandId<CustomFrontId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -579,7 +581,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const now = fixtureNow();
       const entityTypeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const entityId = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       client
         .prepare(
@@ -624,7 +626,7 @@ describe("SQLite fronting schema", () => {
             id: brandId<FrontingSessionId>(crypto.randomUUID()),
             systemId,
             startTime: now,
-            structureEntityId: "nonexistent",
+            structureEntityId: brandId<SystemStructureEntityId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -638,7 +640,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const now = fixtureNow();
       const entityTypeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const entityId = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       client
         .prepare(
@@ -1031,7 +1033,7 @@ describe("SQLite fronting schema", () => {
             id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: sessionId,
             systemId,
-            memberId: "nonexistent",
+            memberId: brandId<MemberId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,

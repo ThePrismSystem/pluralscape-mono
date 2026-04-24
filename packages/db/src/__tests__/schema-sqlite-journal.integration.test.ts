@@ -19,7 +19,13 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { FrontingSessionId, JournalEntryId, SlugHash, WikiPageId } from "@pluralscape/types";
+import type {
+  FrontingSessionId,
+  JournalEntryId,
+  MemberId,
+  SlugHash,
+  WikiPageId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, frontingSessions, journalEntries, wikiPages };
@@ -30,7 +36,7 @@ describe("SQLite journal schema", () => {
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
-  const insertMember = (systemId: string, id?: string): string =>
+  const insertMember = (systemId: string, id?: string): MemberId =>
     sqliteInsertMember(db, systemId, id);
 
   beforeAll(() => {

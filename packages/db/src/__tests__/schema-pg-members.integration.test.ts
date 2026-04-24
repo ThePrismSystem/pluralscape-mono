@@ -28,7 +28,7 @@ describe("PG members schema", () => {
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
-  async function insertMember(systemId: string, raw = crypto.randomUUID()): Promise<MemberId> {
+  async function insertMember(systemId: SystemId, raw = crypto.randomUUID()): Promise<MemberId> {
     const id = brandId<MemberId>(raw);
     const now = fixtureNow();
     await db.insert(members).values({
@@ -60,7 +60,7 @@ describe("PG members schema", () => {
     it("inserts with encrypted_data and round-trips binary", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -81,7 +81,7 @@ describe("PG members schema", () => {
     it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(members).values({
@@ -100,7 +100,7 @@ describe("PG members schema", () => {
     it("defaults version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(members).values({
@@ -129,8 +129,8 @@ describe("PG members schema", () => {
       const now = fixtureNow();
       await expect(
         db.insert(members).values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
+          id: brandId<MemberId>(crypto.randomUUID()),
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -141,7 +141,7 @@ describe("PG members schema", () => {
     it("round-trips empty Uint8Array for encrypted_data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(members).values({
@@ -159,7 +159,7 @@ describe("PG members schema", () => {
     it("round-trips archived: true with archivedAt timestamp", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(members).values({
@@ -180,7 +180,7 @@ describe("PG members schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(members).values({
@@ -205,7 +205,7 @@ describe("PG members schema", () => {
     it("updates version and updatedAt correctly", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(members).values({

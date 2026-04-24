@@ -49,8 +49,10 @@ import type {
   DeviceTransferRequestId,
   FriendConnectionId,
   FrontingCommentId,
+  DeviceTokenId,
   FrontingSessionId,
   GroupId,
+  MemberId,
   ServerSecret,
   SessionId,
   SystemId,
@@ -71,7 +73,7 @@ describe("PG views / query helpers", () => {
 
   let accountId: AccountId;
   let systemId: SystemId;
-  let memberId: string;
+  let memberId: MemberId;
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -409,8 +411,8 @@ describe("PG views / query helpers", () => {
   describe("getMemberGroupSummary", () => {
     it("returns correct member count per group", async () => {
       const now = fixtureNow();
-      const memberId1 = crypto.randomUUID();
-      const memberId2 = crypto.randomUUID();
+      const memberId1 = brandId<MemberId>(crypto.randomUUID());
+      const memberId2 = brandId<MemberId>(crypto.randomUUID());
       const groupId = brandId<GroupId>(crypto.randomUUID());
 
       await db.insert(members).values([
@@ -488,7 +490,7 @@ describe("PG views / query helpers", () => {
       const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<DeviceTokenId>(crypto.randomUUID()),
         accountId,
         systemId,
         platform: "ios",
@@ -496,7 +498,7 @@ describe("PG views / query helpers", () => {
         createdAt: now,
       });
       await db.insert(deviceTokens).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<DeviceTokenId>(crypto.randomUUID()),
         accountId,
         systemId,
         platform: "android",

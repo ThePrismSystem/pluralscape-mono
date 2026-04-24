@@ -84,7 +84,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test-account" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test-account") },
       detail: "Login successful",
     });
 
@@ -94,7 +94,7 @@ describe("createAuditWriter", () => {
       accountId: "acc_test-account",
       systemId: "sys_test-system",
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test-account" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test-account") },
       detail: "Login successful",
     });
   });
@@ -106,7 +106,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.register",
-      actor: { kind: "account", id: "acc_new" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_new") },
     });
 
     expect(writeAuditLogSpy).toHaveBeenCalledOnce();
@@ -125,7 +125,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_override" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_override") },
       accountId: brandId<AccountId>("acc_explicit"),
       systemId: brandId<SystemId>("sys_explicit"),
     });
@@ -142,7 +142,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockParams(0).userAgent).toBe("PluralscapeApp/2.0");
@@ -156,7 +156,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockParams(0).userAgent).toBeNull();
@@ -174,7 +174,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.register",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockParams(0).ipAddress).toBeNull();
@@ -193,7 +193,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockParams(0).ipAddress).toBe("203.0.113.50");
@@ -210,7 +210,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockParams(0).ipAddress).toBeNull();
@@ -223,7 +223,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     const firstCall = writeAuditLogSpy.mock.calls[0] as unknown[];
@@ -237,7 +237,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockParams(0).detail).toBeUndefined();
@@ -251,11 +251,11 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test-account" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test-account") },
     });
     await audit(db, {
       eventType: "auth.logout",
-      actor: { kind: "account", id: "acc_test-account" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test-account") },
       detail: "User logged out",
     });
 
@@ -280,7 +280,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "settings.changed",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
       overrideTrackIp: true,
     });
 
@@ -303,7 +303,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "settings.changed",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
       overrideTrackIp: false,
     });
 
@@ -326,7 +326,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockParams(0).ipAddress).toBe("203.0.113.50");
@@ -344,7 +344,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("TRUST_PROXY"));
@@ -358,7 +358,7 @@ describe("createAuditWriter", () => {
 
     await audit(db, {
       eventType: "auth.login",
-      actor: { kind: "account", id: "acc_test" },
+      actor: { kind: "account", id: brandId<AccountId>("acc_test") },
     });
 
     expect(mockLogger.warn).not.toHaveBeenCalled();

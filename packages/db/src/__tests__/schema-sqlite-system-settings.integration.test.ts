@@ -48,7 +48,7 @@ describe("SQLite system_settings schema", () => {
       .values({
         id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
         systemId,
-        locale: "en-US",
+        locale: "en",
         pinHash: "$argon2id$test-hash",
         biometricEnabled: true,
         encryptedData: data,
@@ -64,7 +64,7 @@ describe("SQLite system_settings schema", () => {
       .all();
     expect(rows).toHaveLength(1);
     expect(rows[0]?.systemId).toBe(systemId);
-    expect(rows[0]?.locale).toBe("en-US");
+    expect(rows[0]?.locale).toBe("en");
     expect(rows[0]?.pinHash).toBe("$argon2id$test-hash");
     expect(rows[0]?.biometricEnabled).toBe(true);
     expect(rows[0]?.encryptedData).toEqual(data);

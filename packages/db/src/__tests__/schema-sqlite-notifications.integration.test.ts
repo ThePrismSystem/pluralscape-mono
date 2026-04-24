@@ -22,6 +22,7 @@ import {
 
 import type {
   AccountId,
+  DeviceTokenId,
   FriendConnectionId,
   FriendNotificationPreferenceId,
   NotificationConfigId,
@@ -66,7 +67,7 @@ describe("SQLite notifications schema", () => {
     it("round-trips all fields", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(deviceTokens)
@@ -93,7 +94,7 @@ describe("SQLite notifications schema", () => {
     it("allows nullable lastActiveAt and revokedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(deviceTokens)
@@ -135,7 +136,7 @@ describe("SQLite notifications schema", () => {
 
       db.insert(deviceTokens)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<DeviceTokenId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "ios",
@@ -148,7 +149,7 @@ describe("SQLite notifications schema", () => {
         db
           .insert(deviceTokens)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<DeviceTokenId>(crypto.randomUUID()),
             accountId,
             systemId,
             platform: "ios",
@@ -167,7 +168,7 @@ describe("SQLite notifications schema", () => {
 
       db.insert(deviceTokens)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<DeviceTokenId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "ios",
@@ -178,7 +179,7 @@ describe("SQLite notifications schema", () => {
 
       db.insert(deviceTokens)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<DeviceTokenId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "android",
@@ -191,7 +192,7 @@ describe("SQLite notifications schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(deviceTokens)
@@ -213,7 +214,7 @@ describe("SQLite notifications schema", () => {
     it("cascades on account deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(deviceTokens)

@@ -20,7 +20,7 @@ import {
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
 
-import type { ImportCheckpointState, ImportJobId } from "@pluralscape/types";
+import type { AccountPurgeRequestId, ImportCheckpointState, ImportJobId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -543,7 +543,7 @@ describe("PG import-export schema", () => {
   describe("account_purge_requests", () => {
     it("round-trips all fields including all timestamps", async () => {
       const accountId = await insertAccount();
-      const id = brandId<ImportJobId>(crypto.randomUUID());
+      const id = brandId<AccountPurgeRequestId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
@@ -575,7 +575,7 @@ describe("PG import-export schema", () => {
 
     it("applies default status of pending", async () => {
       const accountId = await insertAccount();
-      const id = brandId<ImportJobId>(crypto.randomUUID());
+      const id = brandId<AccountPurgeRequestId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
@@ -599,7 +599,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(accountPurgeRequests).values({
-          id: brandId<ImportJobId>(crypto.randomUUID()),
+          id: brandId<AccountPurgeRequestId>(crypto.randomUUID()),
           accountId,
           status: "invalid-status" as "pending",
           confirmationPhrase: "DELETE MY ACCOUNT",
@@ -611,7 +611,7 @@ describe("PG import-export schema", () => {
 
     it("cascades on account deletion", async () => {
       const accountId = await insertAccount();
-      const id = brandId<ImportJobId>(crypto.randomUUID());
+      const id = brandId<AccountPurgeRequestId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
@@ -633,7 +633,7 @@ describe("PG import-export schema", () => {
 
     it("allows nullable confirmedAt, completedAt, and cancelledAt", async () => {
       const accountId = await insertAccount();
-      const id = brandId<ImportJobId>(crypto.randomUUID());
+      const id = brandId<AccountPurgeRequestId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
@@ -658,7 +658,7 @@ describe("PG import-export schema", () => {
     it("rejects second active purge request when first is confirmed", async () => {
       const accountId = await insertAccount();
       const now = fixtureNow();
-      const firstId = crypto.randomUUID();
+      const firstId = brandId<AccountPurgeRequestId>(crypto.randomUUID());
 
       await db.insert(accountPurgeRequests).values({
         id: firstId,
@@ -675,7 +675,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(accountPurgeRequests).values({
-          id: brandId<ImportJobId>(crypto.randomUUID()),
+          id: brandId<AccountPurgeRequestId>(crypto.randomUUID()),
           accountId,
           status: "pending",
           confirmationPhrase: "DELETE MY ACCOUNT",
@@ -688,7 +688,7 @@ describe("PG import-export schema", () => {
     it("allows new purge request after previous is completed", async () => {
       const accountId = await insertAccount();
       const now = fixtureNow();
-      const firstId = crypto.randomUUID();
+      const firstId = brandId<AccountPurgeRequestId>(crypto.randomUUID());
 
       await db.insert(accountPurgeRequests).values({
         id: firstId,
@@ -703,7 +703,7 @@ describe("PG import-export schema", () => {
         firstId,
       ]);
 
-      const secondId = crypto.randomUUID();
+      const secondId = brandId<AccountPurgeRequestId>(crypto.randomUUID());
       await db.insert(accountPurgeRequests).values({
         id: secondId,
         accountId,
@@ -724,7 +724,7 @@ describe("PG import-export schema", () => {
     it("allows new purge request after previous is cancelled", async () => {
       const accountId = await insertAccount();
       const now = fixtureNow();
-      const firstId = crypto.randomUUID();
+      const firstId = brandId<AccountPurgeRequestId>(crypto.randomUUID());
 
       await db.insert(accountPurgeRequests).values({
         id: firstId,
@@ -739,7 +739,7 @@ describe("PG import-export schema", () => {
         firstId,
       ]);
 
-      const secondId = crypto.randomUUID();
+      const secondId = brandId<AccountPurgeRequestId>(crypto.randomUUID());
       await db.insert(accountPurgeRequests).values({
         id: secondId,
         accountId,
@@ -760,7 +760,7 @@ describe("PG import-export schema", () => {
     it("rejects second active purge request when first is processing", async () => {
       const accountId = await insertAccount();
       const now = fixtureNow();
-      const firstId = crypto.randomUUID();
+      const firstId = brandId<AccountPurgeRequestId>(crypto.randomUUID());
 
       await db.insert(accountPurgeRequests).values({
         id: firstId,
@@ -777,7 +777,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(accountPurgeRequests).values({
-          id: brandId<ImportJobId>(crypto.randomUUID()),
+          id: brandId<AccountPurgeRequestId>(crypto.randomUUID()),
           accountId,
           status: "pending",
           confirmationPhrase: "DELETE MY ACCOUNT",

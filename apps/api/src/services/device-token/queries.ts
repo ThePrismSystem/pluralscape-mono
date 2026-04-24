@@ -1,5 +1,5 @@
 import { deviceTokens } from "@pluralscape/db/pg";
-import { toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../../lib/pagination.js";
@@ -15,7 +15,7 @@ import { toDeviceTokenResult } from "./internal.js";
 
 import type { DeviceTokenResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, SystemId } from "@pluralscape/types";
+import type { DeviceTokenId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** List all non-revoked device tokens for a system, newest first. */
@@ -37,7 +37,10 @@ export async function listDeviceTokens(
       const sortValue = toUnixMillis(decoded.sortValue);
       const cursorCondition = or(
         lt(deviceTokens.createdAt, sortValue),
-        and(eq(deviceTokens.createdAt, sortValue), lt(deviceTokens.id, decoded.id)),
+        and(
+          eq(deviceTokens.createdAt, sortValue),
+          lt(deviceTokens.id, brandId<DeviceTokenId>(decoded.id)),
+        ),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

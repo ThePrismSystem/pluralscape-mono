@@ -40,7 +40,7 @@ export async function listMembers(
     }
 
     if (opts?.cursor) {
-      conditions.push(gt(members.id, opts.cursor));
+      conditions.push(gt(members.id, brandId<MemberId>(opts.cursor)));
     }
 
     if (opts?.groupId) {
