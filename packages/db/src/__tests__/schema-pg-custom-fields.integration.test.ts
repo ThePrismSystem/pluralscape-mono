@@ -717,7 +717,10 @@ describe("PG custom fields schema", () => {
       await db.delete(fieldDefinitionScopes);
     });
 
-    async function insertEntityType(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    async function insertEntityType(
+      systemId: SystemId,
+      id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
+    ): Promise<SystemStructureEntityTypeId> {
       const now = Date.now();
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -909,7 +912,10 @@ describe("PG custom fields schema", () => {
   });
 
   describe("field_values — structureEntityId and groupId columns", () => {
-    async function insertEntityType(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    async function insertEntityType(
+      systemId: SystemId,
+      id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
+    ): Promise<SystemStructureEntityTypeId> {
       const now = Date.now();
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -923,10 +929,10 @@ describe("PG custom fields schema", () => {
     }
 
     async function insertEntity(
-      systemId: string,
-      entityTypeId: string,
-      id = crypto.randomUUID(),
-    ): Promise<string> {
+      systemId: SystemId,
+      entityTypeId: SystemStructureEntityTypeId,
+      id = brandId<SystemStructureEntityId>(crypto.randomUUID()),
+    ): Promise<SystemStructureEntityId> {
       const now = Date.now();
       await db.insert(systemStructureEntities).values({
         id,

@@ -100,18 +100,31 @@ import type { Session, SessionServerMetadata, SessionWire } from "./entities/ses
 import type {
   SystemStructureEntityAssociation,
   SystemStructureEntityAssociationEncryptedFields,
+  SystemStructureEntityAssociationServerMetadata,
+  SystemStructureEntityAssociationWire,
 } from "./entities/structure-entity-association.js";
+import type {
+  SystemStructureEntityLink,
+  SystemStructureEntityLinkServerMetadata,
+  SystemStructureEntityLinkWire,
+} from "./entities/structure-entity-link.js";
 import type {
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityMemberLinkServerMetadata,
+  SystemStructureEntityMemberLinkWire,
 } from "./entities/structure-entity-member-link.js";
 import type {
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
+  SystemStructureEntityTypeServerMetadata,
+  SystemStructureEntityTypeWire,
 } from "./entities/structure-entity-type.js";
 import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
+  SystemStructureEntityServerMetadata,
+  SystemStructureEntityWire,
 } from "./entities/structure-entity.js";
 import type {
   SystemSettings,
@@ -227,10 +240,14 @@ export type SotEntityManifest = {
   };
   StructureEntityType: {
     domain: SystemStructureEntityType;
+    server: SystemStructureEntityTypeServerMetadata;
+    wire: SystemStructureEntityTypeWire;
     encryptedFields: SystemStructureEntityTypeEncryptedFields;
   };
   StructureEntity: {
     domain: SystemStructureEntity;
+    server: SystemStructureEntityServerMetadata;
+    wire: SystemStructureEntityWire;
     encryptedFields: SystemStructureEntityEncryptedFields;
   };
   FrontingSession: {
@@ -276,10 +293,14 @@ export type SotEntityManifest = {
   };
   StructureEntityMemberLink: {
     domain: SystemStructureEntityMemberLink;
+    server: SystemStructureEntityMemberLinkServerMetadata;
+    wire: SystemStructureEntityMemberLinkWire;
     encryptedFields: SystemStructureEntityMemberLinkEncryptedFields;
   };
   StructureEntityAssociation: {
     domain: SystemStructureEntityAssociation;
+    server: SystemStructureEntityAssociationServerMetadata;
+    wire: SystemStructureEntityAssociationWire;
     encryptedFields: SystemStructureEntityAssociationEncryptedFields;
   };
   ApiKey: {
@@ -326,6 +347,13 @@ export type SotEntityManifest = {
     server: SessionServerMetadata;
     wire: SessionWire;
     // Plaintext entity — no encrypted fields in the domain keyset.
+    encryptedFields: never;
+  };
+  StructureEntityLink: {
+    domain: SystemStructureEntityLink;
+    server: SystemStructureEntityLinkServerMetadata;
+    wire: SystemStructureEntityLinkWire;
+    // Plaintext entity — no client-side encryption; never needed.
     encryptedFields: never;
   };
   Nomenclature: {

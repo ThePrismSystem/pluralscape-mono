@@ -32,7 +32,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 type PgDb = PgDatabase<PgQueryResultHKT>;
@@ -245,7 +245,7 @@ export async function getActiveDeviceTransfers(
 /** Get all structure entity associations for a system. */
 export async function getStructureEntityAssociations(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<StructureEntityAssociationRow[]> {
   // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
   // (camelCase columns, `createdAt` as unix millis via `pgTimestamp`), so no

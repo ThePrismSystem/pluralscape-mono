@@ -26,7 +26,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 /** Get currently fronting members (end_time IS NULL). */
@@ -254,7 +254,7 @@ export function getActiveDeviceTransfers(
 /** Get all structure entity associations for a system. */
 export function getStructureEntityAssociations(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): StructureEntityAssociationRow[] {
   // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
   // (camelCase columns, `createdAt` as unix millis via `sqliteTimestamp`), so

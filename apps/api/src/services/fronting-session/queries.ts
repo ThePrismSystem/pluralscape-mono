@@ -178,7 +178,7 @@ export async function getActiveFronting(
     // Collect structure entity IDs from active sessions
     const entityIds = rows
       .map((r) => r.structureEntityId)
-      .filter((id): id is string => id !== null);
+      .filter((id): id is SystemStructureEntityId => id !== null);
 
     // Resolve member associations for fronting structure entities
     const entityMemberMap: Record<string, readonly string[]> = {};
