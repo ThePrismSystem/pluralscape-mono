@@ -5,7 +5,7 @@ import {
   PWHASH_SALT_BYTES,
   TRANSFER_TIMEOUT_MS,
 } from "@pluralscape/crypto";
-import { MS_PER_HOUR } from "@pluralscape/types";
+import { MS_PER_HOUR, brandId } from "@pluralscape/types";
 import {
   AuditLogQuerySchema,
   BiometricEnrollBodySchema,
@@ -63,6 +63,8 @@ import {
   createTRPCRateLimiter,
 } from "../middlewares/rate-limit.js";
 import { router } from "../trpc.js";
+
+import type { DeviceTransferRequestId } from "@pluralscape/types";
 
 // ── Device transfer input validation ──────────────────────────────────────────
 // Zod v4 mirror of device-transfer.schema.ts (v3). Constants derived from
@@ -328,7 +330,7 @@ export const accountRouter = router({
       try {
         await approveTransfer(
           ctx.db,
-          input.transferId,
+          brandId<DeviceTransferRequestId>(input.transferId),
           ctx.auth.accountId,
           session.sessionId,
           audit,
@@ -359,7 +361,7 @@ export const accountRouter = router({
       try {
         return await completeTransfer(
           ctx.db,
-          input.transferId,
+          brandId<DeviceTransferRequestId>(input.transferId),
           ctx.auth.accountId,
           session.sessionId,
           input.code,

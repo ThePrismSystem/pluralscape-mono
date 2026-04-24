@@ -1,5 +1,5 @@
 import { TRANSFER_TIMEOUT_MS } from "@pluralscape/crypto";
-import { MS_PER_HOUR } from "@pluralscape/types";
+import { MS_PER_HOUR, brandId } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import {
@@ -40,6 +40,7 @@ import {
 } from "./device-transfer.schema.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
+import type { DeviceTransferRequestId } from "@pluralscape/types";
 import type { Context } from "hono";
 
 /** Extract accountId from an authenticated context for rate-limit keying. */
@@ -113,7 +114,7 @@ deviceTransferRoute.post("/:id/approve", async (c) => {
   const transferId = c.req.param("id");
 
   try {
-    await approveTransfer(db, transferId, auth.accountId, session.sessionId, audit);
+    await approveTransfer(db, brandId<DeviceTransferRequestId>(transferId), auth.accountId, session.sessionId, audit);
     return c.body(null, HTTP_NO_CONTENT);
   } catch (error: unknown) {
     if (error instanceof TransferNotFoundError) {
@@ -159,7 +160,7 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
   try {
     const result = await completeTransfer(
       db,
-      transferId,
+      brandId<DeviceTransferRequestId>(transferId),
       auth.accountId,
       session.sessionId,
       parseResult.data.code,

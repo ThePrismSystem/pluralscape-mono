@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -7,6 +8,11 @@ import { accounts, deviceTransferRequests, sessions } from "../schema/sqlite/aut
 
 import { createSqliteAuthTables, sqliteInsertAccount } from "./helpers/sqlite-helpers.js";
 
+import type {
+  AccountId,
+  DeviceTransferRequestId,
+  SessionId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const ONE_HOUR_MS = 3_600_000;
@@ -18,8 +24,8 @@ describe("sqliteCleanupDeviceTransfers", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  function insertSession(accountId: string): string {
-    const id = crypto.randomUUID();
+  function insertSession(accountId: AccountId): SessionId {
+    const id = brandId<SessionId>(crypto.randomUUID());
     db.insert(sessions)
       .values({
         id,
@@ -32,14 +38,14 @@ describe("sqliteCleanupDeviceTransfers", () => {
   }
 
   function insertTransfer(opts: {
-    accountId: string;
-    sourceSessionId: string;
+    accountId: AccountId;
+    sourceSessionId: SessionId;
     status?: "pending" | "approved" | "expired";
     createdAt?: number;
     expiresAt?: number;
     encryptedKeyMaterial?: Uint8Array;
-  }): string {
-    const id = crypto.randomUUID();
+  }): DeviceTransferRequestId {
+    const id = brandId<DeviceTransferRequestId>(crypto.randomUUID());
     const now = Date.now();
     db.insert(deviceTransferRequests)
       .values({

@@ -32,6 +32,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
+import type { AccountId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 type PgDb = PgDatabase<PgQueryResultHKT>;
@@ -65,7 +66,7 @@ export async function getCurrentFrontersWithDuration(
 }
 
 /** Get active (non-revoked) API keys. */
-export async function getActiveApiKeys(db: PgDb, accountId: string): Promise<ActiveApiKey[]> {
+export async function getActiveApiKeys(db: PgDb, accountId: AccountId): Promise<ActiveApiKey[]> {
   return db
     .select({
       id: apiKeys.id,
@@ -179,7 +180,7 @@ export async function getActiveFriendConnections(
 /** Get active (non-revoked) device tokens. */
 export async function getActiveDeviceTokens(
   db: PgDb,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<ActiveDeviceToken[]> {
   return db
     .select({
@@ -220,7 +221,7 @@ export async function getCurrentFrontingComments(
 /** Get active (pending, non-expired) device transfer requests. */
 export async function getActiveDeviceTransfers(
   db: PgDb,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<ActiveDeviceTransfer[]> {
   return db
     .select({

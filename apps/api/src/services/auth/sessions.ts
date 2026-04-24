@@ -1,5 +1,5 @@
 import { sessions } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { brandId, now } from "@pluralscape/types";
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
 import { toCursor } from "../../lib/pagination.js";
@@ -8,13 +8,13 @@ import { buildIdleTimeoutFilter } from "../../lib/session-idle-filter.js";
 import { DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT } from "../../routes/auth/auth.constants.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AccountId, PaginationCursor } from "@pluralscape/types";
+import type { AccountId, PaginationCursor, SessionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Session management ─────────────────────────────────────────────
 
 export interface SessionInfo {
-  readonly id: string;
+  readonly id: SessionId;
   readonly createdAt: number;
   readonly lastActive: number | null;
   readonly expiresAt: number | null;
@@ -39,7 +39,7 @@ export async function listSessions(
       buildIdleTimeoutFilter(currentTime),
     ];
     if (cursor) {
-      conditions.push(gt(sessions.id, cursor));
+      conditions.push(gt(sessions.id, brandId<SessionId>(cursor)));
     }
 
     const rows = await tx
@@ -65,7 +65,7 @@ export async function listSessions(
 
 export async function revokeSession(
   db: PostgresJsDatabase,
-  sessionId: string,
+  sessionId: SessionId,
   actorAccountId: AccountId,
   audit: AuditWriter,
 ): Promise<boolean> {
@@ -99,7 +99,7 @@ export async function revokeSession(
 export async function revokeAllSessions(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  exceptSessionId: string,
+  exceptSessionId: SessionId,
   audit: AuditWriter,
 ): Promise<number> {
   return withAccountTransaction(db, accountId, async (tx) => {
@@ -127,7 +127,7 @@ export async function revokeAllSessions(
 
 export async function logoutCurrentSession(
   db: PostgresJsDatabase,
-  sessionId: string,
+  sessionId: SessionId,
   accountId: AccountId,
   audit: AuditWriter,
 ): Promise<void> {

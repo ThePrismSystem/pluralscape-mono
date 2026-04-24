@@ -25,7 +25,7 @@ import {
 import { initiateTransfer } from "../../services/device-transfer/initiate.js";
 import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
-import type { AccountId, SessionId } from "@pluralscape/types";
+import type { AccountId, DeviceTransferRequestId, SessionId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 // ── Mock the KDF worker offload ───────────────────────────────────────
@@ -74,7 +74,7 @@ function validEncryptedHex(): string {
 
 async function insertSession(
   db: PgliteDatabase<typeof schema>,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<SessionId> {
   const sessionId = brandId<SessionId>(`sess_${randomUUID()}`);
   const now = Date.now();
@@ -268,7 +268,7 @@ describe("device-transfer.service (PGlite integration)", () => {
       await expect(
         completeTransfer(
           asDb(db),
-          "dtr_nonexistent",
+          brandId<DeviceTransferRequestId>("dtr_nonexistent"),
           accountId,
           targetSessionId,
           "1234567890",

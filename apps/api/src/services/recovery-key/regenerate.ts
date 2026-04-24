@@ -1,6 +1,6 @@
 import { assertAuthKey, assertAuthKeyHash, verifyAuthKey } from "@pluralscape/crypto";
 import { accounts, recoveryKeys } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { RegenerateRecoveryKeySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -13,7 +13,7 @@ import { INCORRECT_PASSWORD_ERROR } from "../auth.constants.js";
 import { NoActiveRecoveryKeyError } from "./internal.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, RecoveryKeyId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Regenerate Recovery Key ──────────────────────────────────────
@@ -67,7 +67,7 @@ export async function regenerateRecoveryKeyBackup(
     const newRecoveryEncryptedMasterKeyBytes = fromHex(parsed.newRecoveryEncryptedMasterKey);
     const recoveryKeyHashBytes = fromHex(parsed.recoveryKeyHash);
     const timestamp = now();
-    const newId = createId(ID_PREFIXES.recoveryKey);
+    const newId = brandId<RecoveryKeyId>(createId(ID_PREFIXES.recoveryKey));
 
     const revoked = await tx
       .update(recoveryKeys)

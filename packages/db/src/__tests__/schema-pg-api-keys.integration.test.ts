@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { AccountId, ApiKeyId, BucketId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys };
@@ -38,7 +40,7 @@ describe("PG api_keys schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
     const tokenHash = `hash_${crypto.randomUUID()}`;
 
     await db.insert(apiKeys).values({
@@ -66,7 +68,7 @@ describe("PG api_keys schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
     const tokenHash = `hash_${crypto.randomUUID()}`;
     const keyMaterial = new Uint8Array([1, 2, 3, 4, 5]);
 
@@ -79,7 +81,7 @@ describe("PG api_keys schema", () => {
       tokenHash,
       scopes: ["full"],
       encryptedKeyMaterial: keyMaterial,
-      scopedBucketIds: ["bucket-1", "bucket-2"],
+      scopedBucketIds: [brandId<BucketId>("bucket-1"), brandId<BucketId>("bucket-2")],
       createdAt: now,
     });
 
@@ -96,7 +98,7 @@ describe("PG api_keys schema", () => {
 
     await expect(
       db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         encryptedData: testBlob(),
@@ -115,7 +117,7 @@ describe("PG api_keys schema", () => {
     const tokenHash = `hash_${crypto.randomUUID()}`;
 
     await db.insert(apiKeys).values({
-      id: crypto.randomUUID(),
+      id: brandId<ApiKeyId>(crypto.randomUUID()),
       accountId,
       systemId,
       encryptedData: testBlob(),
@@ -127,7 +129,7 @@ describe("PG api_keys schema", () => {
 
     await expect(
       db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         encryptedData: testBlob(),
@@ -143,7 +145,7 @@ describe("PG api_keys schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     await db.insert(apiKeys).values({
       id,
@@ -169,7 +171,7 @@ describe("PG api_keys schema", () => {
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
     const later = now + 86400000;
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     await db.insert(apiKeys).values({
       id,
@@ -195,7 +197,7 @@ describe("PG api_keys schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     await db.insert(apiKeys).values({
       id,
@@ -217,7 +219,7 @@ describe("PG api_keys schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     await db.insert(apiKeys).values({
       id,
@@ -242,8 +244,8 @@ describe("PG api_keys schema", () => {
 
     await expect(
       db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
-        accountId: "nonexistent",
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
+        accountId: brandId<AccountId>("nonexistent"),
         systemId,
         encryptedData: testBlob(),
         keyType: "metadata",
@@ -261,7 +263,7 @@ describe("PG api_keys schema", () => {
 
     await expect(
       db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         encryptedData: testBlob(),
@@ -281,7 +283,7 @@ describe("PG api_keys schema", () => {
 
     await expect(
       db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         encryptedData: testBlob(),
@@ -297,7 +299,7 @@ describe("PG api_keys schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     await db.insert(apiKeys).values({
       id,
@@ -320,9 +322,9 @@ describe("PG api_keys schema", () => {
 
     await expect(
       db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
-        systemId: "nonexistent",
+        systemId: brandId<SystemId>("nonexistent"),
         encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
@@ -341,7 +343,7 @@ describe("PG api_keys schema", () => {
     // accountA tries to create an API key referencing accountB's system
     await expect(
       db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId: accountA,
         systemId: systemOfB,
         encryptedData: testBlob(),
@@ -370,7 +372,7 @@ describe("PG api_keys schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
     const blob = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(apiKeys).values({

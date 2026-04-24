@@ -1,5 +1,6 @@
 import type { AccountId, DeviceTokenId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { AuditMetadata } from "../utility.js";
 
 /** Platforms that can receive push notifications. */
@@ -17,3 +18,31 @@ export interface DeviceToken extends AuditMetadata {
   readonly token: string;
   readonly lastActiveAt: UnixMillis | null;
 }
+
+/**
+ * Server-visible DeviceToken metadata — raw Drizzle row shape.
+ *
+ * The server never stores raw push tokens — it keeps only a `tokenHash`
+ * for identification. The DB row also has a nullable `revokedAt`
+ * timestamp (for tracking token invalidation) that the domain type
+ * doesn't expose, and omits the `updatedAt`/`version` fields from
+ * `AuditMetadata` since device token rows are never mutated after
+ * creation (only inserted/revoked).
+ */
+export interface DeviceTokenServerMetadata {
+  readonly id: DeviceTokenId;
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly platform: DeviceTokenPlatform;
+  readonly tokenHash: string;
+  readonly createdAt: UnixMillis;
+  readonly lastActiveAt: UnixMillis | null;
+  readonly revokedAt: UnixMillis | null;
+}
+
+/**
+ * JSON-wire representation of a DeviceToken. Derived from the domain
+ * `DeviceToken` type via `Serialize<T>`; branded IDs become plain strings
+ * and `UnixMillis` becomes `number`.
+ */
+export type DeviceTokenWire = Serialize<DeviceToken>;

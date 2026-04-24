@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -17,6 +18,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { ApiKeyId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
@@ -115,7 +117,7 @@ describe("PG webhooks schema", () => {
     it("restricts api_key deletion when referenced by webhook config", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const keyId = crypto.randomUUID();
+      const keyId = brandId<ApiKeyId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(apiKeys).values({

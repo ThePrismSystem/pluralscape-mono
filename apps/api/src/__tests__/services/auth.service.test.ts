@@ -31,7 +31,7 @@ import {
 import { mockDb, type MockChain } from "../helpers/mock-db.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SessionId } from "@pluralscape/types";
 import type { Context } from "hono";
 
 const TEST_ACCOUNT_ID = brandId<AccountId>("acct_123");
@@ -1183,7 +1183,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_999", TEST_ACCOUNT_ID, mockAudit);
+      const result = await revokeSession(db, brandId<SessionId>("sess_999"), TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
 
@@ -1191,7 +1191,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
+      const result = await revokeSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
 
@@ -1199,7 +1199,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
-      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
+      const result = await revokeSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(true);
       expect(chain.transaction).toHaveBeenCalled();
     });
@@ -1208,7 +1208,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_target", ATTACKER_ACCOUNT_ID, mockAudit);
+      const result = await revokeSession(db, brandId<SessionId>("sess_target"), ATTACKER_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
       expect(mockAudit).not.toHaveBeenCalled();
     });
@@ -1217,7 +1217,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
+      const result = await revokeSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
   });
@@ -1229,7 +1229,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
+      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, brandId<SessionId>("sess_keep"), mockAudit);
       expect(count).toBe(0);
     });
 
@@ -1237,7 +1237,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }, { id: "sess_2" }, { id: "sess_3" }]);
 
-      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
+      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, brandId<SessionId>("sess_keep"), mockAudit);
       expect(count).toBe(3);
     });
 
@@ -1245,7 +1245,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
-      await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
+      await revokeAllSessions(db, TEST_ACCOUNT_ID, brandId<SessionId>("sess_keep"), mockAudit);
       expect(chain.set).toHaveBeenCalledWith({ revoked: true });
     });
   });
@@ -1256,7 +1256,7 @@ describe("auth service", () => {
     it("revokes the session and returns void", async () => {
       const { db, chain } = mockDb();
 
-      await logoutCurrentSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
+      await logoutCurrentSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit);
       expect(chain.update).toHaveBeenCalled();
       expect(chain.set).toHaveBeenCalledWith({ revoked: true });
     });
@@ -1265,7 +1265,7 @@ describe("auth service", () => {
       const { db } = mockDb();
 
       await expect(
-        logoutCurrentSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit),
+        logoutCurrentSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit),
       ).resolves.toBeUndefined();
     });
   });

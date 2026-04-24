@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -17,7 +18,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { SystemId } from "@pluralscape/types";
+import type { ApiKeyId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
@@ -123,7 +124,7 @@ describe("SQLite webhooks schema", () => {
     it("restricts api_key deletion when referenced by webhook config", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const keyId = crypto.randomUUID();
+      const keyId = brandId<ApiKeyId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(apiKeys)

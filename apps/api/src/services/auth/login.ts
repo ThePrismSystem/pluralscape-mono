@@ -31,7 +31,7 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { ClientPlatform } from "../../routes/auth/auth.constants.js";
 import type { AuthKey, AuthKeyHash } from "@pluralscape/crypto";
-import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
+import type { AccountId, AccountType, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Login ──────────────────────────────────────────────────────────
@@ -179,7 +179,7 @@ export async function loginAccount(
     );
   }
 
-  const sessionId = createId(ID_PREFIXES.session);
+  const sessionId = brandId<SessionId>(createId(ID_PREFIXES.session));
   const rawToken = generateSessionToken();
   const tokenHash = hashSessionToken(rawToken);
   const timestamp = now();
