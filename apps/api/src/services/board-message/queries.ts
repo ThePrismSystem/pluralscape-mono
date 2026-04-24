@@ -1,4 +1,5 @@
 import { boardMessages } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { BoardMessageQuerySchema } from "@pluralscape/validation";
 import { and, eq, gt, or } from "drizzle-orm";
 
@@ -50,7 +51,10 @@ export async function listBoardMessages(
       const decoded = fromCompositeCursor(opts.cursor, "board message");
       const cursorCondition = or(
         gt(boardMessages.sortOrder, decoded.sortValue),
-        and(eq(boardMessages.sortOrder, decoded.sortValue), gt(boardMessages.id, decoded.id)),
+        and(
+          eq(boardMessages.sortOrder, decoded.sortValue),
+          gt(boardMessages.id, brandId<BoardMessageId>(decoded.id)),
+        ),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

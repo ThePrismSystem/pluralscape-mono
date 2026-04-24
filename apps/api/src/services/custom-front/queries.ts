@@ -1,4 +1,5 @@
 import { customFronts } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -31,7 +32,7 @@ export async function listCustomFronts(
     const conditions = [eq(customFronts.systemId, systemId), eq(customFronts.archived, false)];
 
     if (cursor) {
-      conditions.push(gt(customFronts.id, cursor));
+      conditions.push(gt(customFronts.id, brandId<CustomFrontId>(cursor)));
     }
 
     const rows = await tx

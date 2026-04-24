@@ -1,4 +1,5 @@
 import { timerConfigs } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { TimerConfigQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
@@ -35,7 +36,7 @@ export async function listTimerConfigs(
     }
 
     if (opts.cursor) {
-      conditions.push(lt(timerConfigs.id, opts.cursor));
+      conditions.push(lt(timerConfigs.id, brandId<TimerId>(opts.cursor)));
     }
 
     const rows = await tx

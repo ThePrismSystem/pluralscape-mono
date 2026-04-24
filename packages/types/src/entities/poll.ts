@@ -1,5 +1,7 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { HexColor, MemberId, PollId, PollOptionId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** A single option within a poll. */
@@ -47,3 +49,25 @@ export interface Poll extends AuditMetadata {
 
 /** An archived poll. */
 export type ArchivedPoll = Archived<Poll>;
+
+/**
+ * Server-visible Poll metadata — raw Drizzle row shape.
+ *
+ * Hybrid entity: plaintext columns for scheduling and status flags alongside
+ * the opaque `encryptedData` blob carrying the encrypted `title`,
+ * `description`, and `options`. `createdByMemberId` is stored plaintext as a
+ * FK for referential integrity. `archived: false` on the domain flips to a
+ * mutable boolean here, with a companion `archivedAt` timestamp.
+ */
+export type PollServerMetadata = Omit<Poll, "title" | "description" | "options" | "archived"> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of a Poll. Derived from the domain `Poll` type
+ * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ */
+export type PollWire = Serialize<Poll>;

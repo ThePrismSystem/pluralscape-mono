@@ -1,6 +1,6 @@
 import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -12,17 +12,17 @@ import { LIFECYCLE_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { ServerLifecycleEvent } from "@pluralscape/types";
+import type { LifecycleEvent, LifecycleEventId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const lifecycleEvents = sqliteTable(
   "lifecycle_events",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<LifecycleEventId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    eventType: text("event_type").notNull().$type<ServerLifecycleEvent["eventType"]>(),
+    eventType: text("event_type").notNull().$type<LifecycleEvent["eventType"]>(),
     occurredAt: sqliteTimestamp("occurred_at").notNull(),
     recordedAt: sqliteTimestamp("recorded_at").notNull(),
     updatedAt: sqliteTimestamp("updated_at").notNull(),

@@ -32,13 +32,13 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { SystemId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 type PgDb = PgDatabase<PgQueryResultHKT>;
 
 /** Get currently fronting members (end_time IS NULL). */
-export async function getCurrentFronters(db: PgDb, systemId: string): Promise<CurrentFronter[]> {
+export async function getCurrentFronters(db: PgDb, systemId: SystemId): Promise<CurrentFronter[]> {
   return db
     .select({
       id: frontingSessions.id,
@@ -52,7 +52,7 @@ export async function getCurrentFronters(db: PgDb, systemId: string): Promise<Cu
 /** Get currently fronting members with computed duration in milliseconds. */
 export async function getCurrentFrontersWithDuration(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<CurrentFronterWithDuration[]> {
   return db
     .select({
@@ -66,7 +66,7 @@ export async function getCurrentFrontersWithDuration(
 }
 
 /** Get active (non-revoked) API keys. */
-export async function getActiveApiKeys(db: PgDb, accountId: string): Promise<ActiveApiKey[]> {
+export async function getActiveApiKeys(db: PgDb, accountId: AccountId): Promise<ActiveApiKey[]> {
   return db
     .select({
       id: apiKeys.id,
@@ -131,7 +131,7 @@ export async function getPendingWebhookRetries(
 /** Get unconfirmed acknowledgements. */
 export async function getUnconfirmedAcknowledgements(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<UnconfirmedAcknowledgement[]> {
   return db
     .select({
@@ -180,7 +180,7 @@ export async function getActiveFriendConnections(
 /** Get active (non-revoked) device tokens. */
 export async function getActiveDeviceTokens(
   db: PgDb,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<ActiveDeviceToken[]> {
   return db
     .select({
@@ -197,7 +197,7 @@ export async function getActiveDeviceTokens(
 /** Get fronting comments on currently active sessions (end_time IS NULL). */
 export async function getCurrentFrontingComments(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<CurrentFrontingComment[]> {
   return db
     .select({
@@ -221,7 +221,7 @@ export async function getCurrentFrontingComments(
 /** Get active (pending, non-expired) device transfer requests. */
 export async function getActiveDeviceTransfers(
   db: PgDb,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<ActiveDeviceTransfer[]> {
   return db
     .select({
@@ -245,7 +245,7 @@ export async function getActiveDeviceTransfers(
 /** Get all structure entity associations for a system. */
 export async function getStructureEntityAssociations(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<StructureEntityAssociationRow[]> {
   // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
   // (camelCase columns, `createdAt` as unix millis via `pgTimestamp`), so no

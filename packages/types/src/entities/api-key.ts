@@ -1,6 +1,8 @@
-import type { ApiKeyId, Brand, BucketId, SystemId } from "../ids.js";
+import type { EncryptedBlob } from "../encryption-primitives.js";
+import type { AccountId, ApiKeyId, Brand, BucketId, SystemId } from "../ids.js";
 import type { ScopeDomain, ScopeTier } from "../scope-domains.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { AuditMetadata } from "../utility.js";
 
 /** A branded API key token — prevents accidental logging. */
@@ -53,3 +55,36 @@ export interface ApiKeyWithSecret {
   readonly key: ApiKey;
   readonly token: ApiKeyToken;
 }
+
+/**
+ * Server-visible ApiKey metadata — raw Drizzle row shape.
+ *
+ * The domain `ApiKey` type is a discriminated union (metadata vs crypto)
+ * plus AuditMetadata fields that live in the encrypted blob or are not
+ * stored server-side. The DB row is a flat record: fields like `name` and
+ * `publicKey` are bundled inside `encryptedData`; `updatedAt`/`version`
+ * from AuditMetadata are not tracked on `api_keys`; and `revoked: boolean`
+ * in the domain becomes a nullable `revokedAt` timestamp server-side.
+ */
+export interface ApiKeyServerMetadata {
+  readonly id: ApiKeyId;
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly keyType: ApiKey["keyType"];
+  readonly tokenHash: string;
+  readonly scopes: readonly ApiKeyScope[];
+  readonly encryptedData: EncryptedBlob;
+  readonly encryptedKeyMaterial: Uint8Array | null;
+  readonly createdAt: UnixMillis;
+  readonly lastUsedAt: UnixMillis | null;
+  readonly revokedAt: UnixMillis | null;
+  readonly expiresAt: UnixMillis | null;
+  readonly scopedBucketIds: readonly BucketId[] | null;
+}
+
+/**
+ * JSON-wire representation of an ApiKey. Derived from the domain `ApiKey`
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`, `Uint8Array` becomes `string` (base64).
+ */
+export type ApiKeyWire = Serialize<ApiKey>;

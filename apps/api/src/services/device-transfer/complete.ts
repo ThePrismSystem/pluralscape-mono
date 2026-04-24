@@ -23,7 +23,7 @@ import {
 } from "./errors.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AccountId, SessionId } from "@pluralscape/types";
+import type { AccountId, DeviceTransferRequestId, SessionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export interface CompleteTransferResult {
@@ -41,7 +41,7 @@ export interface CompleteTransferResult {
  */
 export async function completeTransfer(
   db: PostgresJsDatabase,
-  transferId: string,
+  transferId: DeviceTransferRequestId,
   accountId: AccountId,
   sessionId: SessionId,
   code: string,

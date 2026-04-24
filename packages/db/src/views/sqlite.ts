@@ -26,11 +26,14 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { SystemId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 /** Get currently fronting members (end_time IS NULL). */
-export function getCurrentFronters(db: BetterSQLite3Database, systemId: string): CurrentFronter[] {
+export function getCurrentFronters(
+  db: BetterSQLite3Database,
+  systemId: SystemId,
+): CurrentFronter[] {
   return db
     .select({
       id: frontingSessions.id,
@@ -50,7 +53,7 @@ export function getCurrentFronters(db: BetterSQLite3Database, systemId: string):
  */
 export function getCurrentFrontersWithDuration(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): CurrentFronterWithDuration[] {
   return db
     .select({
@@ -65,7 +68,7 @@ export function getCurrentFrontersWithDuration(
 }
 
 /** Get active (non-revoked) API keys. */
-export function getActiveApiKeys(db: BetterSQLite3Database, accountId: string): ActiveApiKey[] {
+export function getActiveApiKeys(db: BetterSQLite3Database, accountId: AccountId): ActiveApiKey[] {
   return db
     .select({
       id: apiKeys.id,
@@ -134,7 +137,7 @@ export function getPendingWebhookRetries(
 /** Get unconfirmed acknowledgements. */
 export function getUnconfirmedAcknowledgements(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): UnconfirmedAcknowledgement[] {
   return db
     .select({
@@ -186,7 +189,7 @@ export function getActiveFriendConnections(
 /** Get active (non-revoked) device tokens. */
 export function getActiveDeviceTokens(
   db: BetterSQLite3Database,
-  accountId: string,
+  accountId: AccountId,
 ): ActiveDeviceToken[] {
   return db
     .select({
@@ -204,7 +207,7 @@ export function getActiveDeviceTokens(
 /** Get fronting comments on currently active sessions (end_time IS NULL). */
 export function getCurrentFrontingComments(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): CurrentFrontingComment[] {
   return db
     .select({
@@ -228,7 +231,7 @@ export function getCurrentFrontingComments(
 /** Get active (pending, non-expired) device transfer requests. */
 export function getActiveDeviceTransfers(
   db: BetterSQLite3Database,
-  accountId: string,
+  accountId: AccountId,
 ): ActiveDeviceTransfer[] {
   const now = Date.now();
   return db
@@ -254,7 +257,7 @@ export function getActiveDeviceTransfers(
 /** Get all structure entity associations for a system. */
 export function getStructureEntityAssociations(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): StructureEntityAssociationRow[] {
   // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
   // (camelCase columns, `createdAt` as unix millis via `sqliteTimestamp`), so

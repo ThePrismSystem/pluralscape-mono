@@ -1,6 +1,6 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { memberPhotos, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateMemberPhotoBodySchema } from "@pluralscape/validation";
 import { and, count, eq, max } from "drizzle-orm";
 
@@ -17,7 +17,7 @@ import { toPhotoResult } from "./internal.js";
 import type { MemberPhotoResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { EncryptedBlob, MemberId, SystemId } from "@pluralscape/types";
+import type { EncryptedBlob, MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 const MAX_ENCRYPTED_PHOTO_DATA_BYTES = 131_072;
@@ -60,7 +60,7 @@ export async function createMemberPhoto(
   }
 
   const blob = parseAndValidatePhotoBlob(parsed.data.encryptedData);
-  const photoId = createId(ID_PREFIXES.memberPhoto);
+  const photoId = brandId<MemberPhotoId>(createId(ID_PREFIXES.memberPhoto));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

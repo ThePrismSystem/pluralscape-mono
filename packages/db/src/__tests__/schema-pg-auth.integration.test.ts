@@ -14,11 +14,22 @@ import {
 
 import { createPgAuthTables, testBlob } from "./helpers/pg-helpers.js";
 
-import type { AccountId } from "@pluralscape/types";
+import type {
+  AccountId,
+  AuthKeyId,
+  DeviceTransferRequestId,
+  RecoveryKeyId,
+  SessionId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 /** Branded ID factory for test fixtures — produces an AccountId from crypto.randomUUID(). */
 const newAccountId = (raw?: string): AccountId => brandId<AccountId>(raw ?? crypto.randomUUID());
+const newSessionId = (): SessionId => brandId<SessionId>(crypto.randomUUID());
+const newAuthKeyId = (): AuthKeyId => brandId<AuthKeyId>(crypto.randomUUID());
+const newRecoveryKeyId = (): RecoveryKeyId => brandId<RecoveryKeyId>(crypto.randomUUID());
+const newDeviceTransferRequestId = (): DeviceTransferRequestId =>
+  brandId<DeviceTransferRequestId>(crypto.randomUUID());
 
 const ONE_DAY_MS = 86_400_000;
 const ONE_HOUR_MS = 3_600_000;
@@ -67,10 +78,10 @@ describe("PG auth schema", () => {
 
   async function insertSession(
     accountId: AccountId,
-    overrides: Partial<{ id: string; createdAt: number; tokenHash: string }> = {},
-  ): Promise<{ id: string; accountId: AccountId; tokenHash: string; createdAt: number }> {
+    overrides: Partial<{ id: SessionId; createdAt: number; tokenHash: string }> = {},
+  ): Promise<{ id: SessionId; accountId: AccountId; tokenHash: string; createdAt: number }> {
     const data = {
-      id: overrides.id ?? crypto.randomUUID(),
+      id: overrides.id ?? newSessionId(),
       accountId,
       tokenHash: overrides.tokenHash ?? `tok_${crypto.randomUUID()}`,
       createdAt: overrides.createdAt ?? Date.now(),
@@ -123,7 +134,7 @@ describe("PG auth schema", () => {
     });
 
     it("rejects duplicate primary key", async () => {
-      const id = crypto.randomUUID();
+      const id = newAccountId();
       await insertAccount({ id });
       await expect(insertAccount({ id })).rejects.toThrow();
     });
@@ -158,7 +169,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const privateKey = new Uint8Array([1, 2, 3, 4, 5]);
       const publicKey = new Uint8Array([10, 20, 30, 40, 50]);
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       await db.insert(authKeys).values({
         id,
@@ -178,7 +189,7 @@ describe("PG auth schema", () => {
 
     it("inserts signing key type", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       await db.insert(authKeys).values({
         id,
@@ -197,7 +208,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       await expect(
         db.insert(authKeys).values({
-          id: crypto.randomUUID(),
+          id: newAuthKeyId(),
           accountId: account.id,
           encryptedPrivateKey: new Uint8Array([1]),
           publicKey: new Uint8Array([2]),
@@ -209,7 +220,7 @@ describe("PG auth schema", () => {
 
     it("cascades on account deletion", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       await db.insert(authKeys).values({
         id,
@@ -228,8 +239,8 @@ describe("PG auth schema", () => {
     it("rejects nonexistent accountId FK", async () => {
       await expect(
         db.insert(authKeys).values({
-          id: crypto.randomUUID(),
-          accountId: "nonexistent",
+          id: newAuthKeyId(),
+          accountId: brandId<AccountId>("nonexistent"),
           encryptedPrivateKey: new Uint8Array([1]),
           publicKey: new Uint8Array([2]),
           keyType: "encryption",
@@ -240,7 +251,7 @@ describe("PG auth schema", () => {
 
     it("round-trips empty Uint8Array", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       await db.insert(authKeys).values({
         id,
@@ -271,7 +282,7 @@ describe("PG auth schema", () => {
     it("inserts and retrieves with all fields", async () => {
       const account = await insertAccount();
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       const expiresAt = now + ONE_DAY_MS;
       await db.insert(sessions).values({
@@ -295,7 +306,7 @@ describe("PG auth schema", () => {
 
     it("defaults revoked to false", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       await db.insert(sessions).values({
         id,
@@ -310,7 +321,7 @@ describe("PG auth schema", () => {
 
     it("defaults expiresAt to null", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       await db.insert(sessions).values({
         id,
@@ -325,7 +336,7 @@ describe("PG auth schema", () => {
 
     it("round-trips expiresAt when provided", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
       const expiresAt = Date.now() + ONE_DAY_MS;
 
       await db.insert(sessions).values({
@@ -342,7 +353,7 @@ describe("PG auth schema", () => {
 
     it("handles nullable lastActive", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       await db.insert(sessions).values({
         id,
@@ -357,7 +368,7 @@ describe("PG auth schema", () => {
 
     it("cascades on account deletion", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       await db.insert(sessions).values({
         id,
@@ -381,8 +392,8 @@ describe("PG auth schema", () => {
     it("rejects nonexistent accountId FK", async () => {
       await expect(
         db.insert(sessions).values({
-          id: crypto.randomUUID(),
-          accountId: "nonexistent",
+          id: newSessionId(),
+          accountId: brandId<AccountId>("nonexistent"),
           createdAt: Date.now(),
           tokenHash: `tok_${crypto.randomUUID()}`,
         }),
@@ -395,7 +406,7 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(sessions).values({
-          id: crypto.randomUUID(),
+          id: newSessionId(),
           accountId: account.id,
           createdAt: now,
           expiresAt: now - 1000,
@@ -410,7 +421,7 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(sessions).values({
-          id: crypto.randomUUID(),
+          id: newSessionId(),
           accountId: account.id,
           createdAt: now,
           expiresAt: now,
@@ -421,7 +432,7 @@ describe("PG auth schema", () => {
 
     it("updates expiresAt from null to a value", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
       const now = Date.now();
 
       await db.insert(sessions).values({
@@ -440,7 +451,7 @@ describe("PG auth schema", () => {
 
     it("defaults encryptedData to null", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       await db.insert(sessions).values({
         id,
@@ -455,7 +466,7 @@ describe("PG auth schema", () => {
 
     it("round-trips encryptedData blob", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
       const blob = testBlob(new Uint8Array([10, 20, 30]));
 
       await db.insert(sessions).values({
@@ -475,7 +486,7 @@ describe("PG auth schema", () => {
     it("inserts and round-trips binary encrypted_master_key", async () => {
       const account = await insertAccount();
       const masterKey = new Uint8Array([99, 88, 77, 66, 55, 44, 33, 22, 11]);
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       await db.insert(recoveryKeys).values({
         id,
@@ -492,7 +503,7 @@ describe("PG auth schema", () => {
 
     it("defaults revokedAt to null", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       await db.insert(recoveryKeys).values({
         id,
@@ -508,7 +519,7 @@ describe("PG auth schema", () => {
 
     it("round-trips revokedAt when set", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
       const revokedAt = Date.now();
 
       await db.insert(recoveryKeys).values({
@@ -525,7 +536,7 @@ describe("PG auth schema", () => {
 
     it("cascades on account deletion", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       await db.insert(recoveryKeys).values({
         id,
@@ -543,8 +554,8 @@ describe("PG auth schema", () => {
     it("rejects nonexistent accountId FK", async () => {
       await expect(
         db.insert(recoveryKeys).values({
-          id: crypto.randomUUID(),
-          accountId: "nonexistent",
+          id: newRecoveryKeyId(),
+          accountId: brandId<AccountId>("nonexistent"),
           encryptedMasterKey: new Uint8Array([1]),
           recoveryKeyHash: new Uint8Array(32),
           createdAt: Date.now(),
@@ -554,7 +565,7 @@ describe("PG auth schema", () => {
 
     it("updates revokedAt from null to timestamp", async () => {
       const account = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       await db.insert(recoveryKeys).values({
         id,
@@ -578,7 +589,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -605,7 +616,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -630,7 +641,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -654,7 +665,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
       const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
 
       await db.insert(deviceTransferRequests).values({
@@ -680,7 +691,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -704,7 +715,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -730,7 +741,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -758,7 +769,7 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(deviceTransferRequests).values({
-          id: crypto.randomUUID(),
+          id: newDeviceTransferRequestId(),
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
@@ -778,7 +789,7 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(deviceTransferRequests).values({
-          id: crypto.randomUUID(),
+          id: newDeviceTransferRequestId(),
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
@@ -797,7 +808,7 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(deviceTransferRequests).values({
-          id: crypto.randomUUID(),
+          id: newDeviceTransferRequestId(),
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
@@ -813,7 +824,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -838,7 +849,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,
@@ -865,9 +876,9 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(deviceTransferRequests).values({
-          id: crypto.randomUUID(),
+          id: newDeviceTransferRequestId(),
           accountId: account.id,
-          sourceSessionId: "nonexistent",
+          sourceSessionId: brandId<SessionId>("nonexistent"),
           targetSessionId: session.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
@@ -877,10 +888,10 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(deviceTransferRequests).values({
-          id: crypto.randomUUID(),
+          id: newDeviceTransferRequestId(),
           accountId: account.id,
           sourceSessionId: session.id,
-          targetSessionId: "nonexistent",
+          targetSessionId: brandId<SessionId>("nonexistent"),
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
@@ -896,7 +907,7 @@ describe("PG auth schema", () => {
 
       await expect(
         db.insert(deviceTransferRequests).values({
-          id: crypto.randomUUID(),
+          id: newDeviceTransferRequestId(),
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
@@ -913,7 +924,7 @@ describe("PG auth schema", () => {
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
         id,

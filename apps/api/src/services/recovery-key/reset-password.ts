@@ -20,7 +20,7 @@ import { NoActiveRecoveryKeyError } from "./internal.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { ClientPlatform } from "../../routes/auth/auth.constants.js";
-import type { AccountId, SessionId } from "@pluralscape/types";
+import type { AccountId, RecoveryKeyId, SessionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Reset Password via Recovery Key ──────────────────────────────
@@ -99,8 +99,8 @@ export async function resetPasswordWithRecoveryKey(
     const timestamp = now();
     const rawToken = generateSessionToken();
     const tokenHash = hashSessionToken(rawToken);
-    const sessionId = createId(ID_PREFIXES.session);
-    const newRecoveryKeyId = createId(ID_PREFIXES.recoveryKey);
+    const sessionId = brandId<SessionId>(createId(ID_PREFIXES.session));
+    const newRecoveryKeyId = brandId<RecoveryKeyId>(createId(ID_PREFIXES.recoveryKey));
     const timeouts = SESSION_TIMEOUTS[platform];
     const expiresAt = timestamp + timeouts.absoluteTtlMs;
 

@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-23T23:01:08Z
+updated_at: 2026-04-24T00:36:27Z
 parent: ps-cd6x
 ---
 
@@ -145,12 +145,12 @@ Pilot (Member) landed in types-tef0 as a reference implementation. The 18 non-pi
 ## Fleet Progress
 
 - [x] Cluster 1 — Foundation (Account, System, SystemSettings, SystemSnapshot, Nomenclature; PR #542, merged as 1a3e8d35)
-- [ ] Cluster 2 — Auth + devices (pending)
+- [x] Cluster 2 — Auth + devices (session, api-key, auth-key, device-token, recovery-key, account-purge-request, device-transfer-request; PR #545, merged as 3a4d4bca)
 - [ ] Cluster 3 — Members + identity (pending)
 - [ ] Cluster 4 — Fields (pending)
 - [ ] Cluster 5 — Structure graph (pending)
 - [ ] Cluster 6 — Fronting + lifecycle (pending)
-- [ ] Cluster 7 — Innerworld (pending)
+- [x] Cluster 7 — Innerworld (innerworld-region, innerworld-entity, innerworld-canvas; PR #544, merged as dcaa91cd)
 - [ ] Cluster 8 — Communication + engagement (pending)
 - [ ] Cluster 9 — Operational (pending)
 - [ ] Cluster 10 — Privacy + social (pending)

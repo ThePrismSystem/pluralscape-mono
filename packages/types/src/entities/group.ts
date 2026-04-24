@@ -1,5 +1,8 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { GroupId, HexColor, MemberId, SystemId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** A user-defined group (folder) for organizing members. */
@@ -21,7 +24,7 @@ export interface Group extends AuditMetadata {
  * them. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextGroup parity)
- * - Plan 2 fleet will consume when deriving `GroupServerMetadata`.
+ * - `GroupServerMetadata` (derived via `Omit`)
  */
 export type GroupEncryptedFields = "name" | "description" | "imageSource" | "color" | "emoji";
 
@@ -44,3 +47,24 @@ export interface GroupMoveOperation {
   readonly sourceGroupId: GroupId;
   readonly targetParentGroupId: GroupId | null;
 }
+
+/**
+ * Server-visible Group metadata — raw Drizzle row shape.
+ *
+ * Derived from `Group` by stripping the encrypted field keys bundled
+ * inside `encryptedData` and `archived` (server tracks a mutable boolean
+ * with a companion `archivedAt` timestamp, domain uses `false` literal).
+ * Adds DB-only columns the domain type doesn't carry: `encryptedData`
+ * (the T1 blob), `archived`/`archivedAt`.
+ */
+export type GroupServerMetadata = Omit<Group, GroupEncryptedFields | "archived"> & {
+  readonly encryptedData: EncryptedBlob;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/**
+ * JSON-wire representation of a Group. Derived from the domain `Group`
+ * type via `Serialize<T>`; branded IDs become plain strings.
+ */
+export type GroupWire = Serialize<Group>;

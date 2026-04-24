@@ -1,3 +1,4 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   HexColor,
   SystemId,
@@ -5,6 +6,8 @@ import type {
   SystemStructureEntityTypeId,
 } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 import type { ArchitectureType } from "./structure-entity-type.js";
 
@@ -51,8 +54,7 @@ export interface SystemStructureEntity extends AuditMetadata, StructureVisualPro
  * the server sees them. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextStructureEntity parity)
- * - Plan 2 fleet will consume when deriving
- *   `SystemStructureEntityServerMetadata`.
+ * - `SystemStructureEntityServerMetadata` (derived via `Omit`)
  */
 export type SystemStructureEntityEncryptedFields =
   | "name"
@@ -62,3 +64,28 @@ export type SystemStructureEntityEncryptedFields =
   | "emoji";
 
 export type ArchivedSystemStructureEntity = Archived<SystemStructureEntity>;
+
+/**
+ * Server-visible SystemStructureEntity metadata — raw Drizzle row shape.
+ *
+ * Derived from `SystemStructureEntity` by stripping the encrypted field
+ * keys (bundled inside `encryptedData`) and `archived` (the domain literal
+ * `false` becomes a mutable boolean at the DB layer, paired with an
+ * `archivedAt` timestamp). The server sees everything in the domain type
+ * EXCEPT the encrypted keys, plus `encryptedData` + archive metadata.
+ */
+export type SystemStructureEntityServerMetadata = Omit<
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields | "archived"
+> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of SystemStructureEntity. Derived from the
+ * domain `SystemStructureEntity` type via `Serialize<T>`; branded IDs
+ * become plain strings, `UnixMillis` becomes `number`.
+ */
+export type SystemStructureEntityWire = Serialize<SystemStructureEntity>;

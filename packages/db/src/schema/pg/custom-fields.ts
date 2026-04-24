@@ -12,7 +12,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -21,7 +21,7 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { enumCheck, exclusiveNullCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { FIELD_DEFINITION_SCOPE_TYPES, FIELD_TYPES } from "../../helpers/enums.js";
 
 import { groups } from "./groups.js";
@@ -30,19 +30,28 @@ import { buckets } from "./privacy.js";
 import { systemStructureEntities, systemStructureEntityTypes } from "./structure.js";
 import { systems } from "./systems.js";
 
-import type { ServerFieldDefinition } from "@pluralscape/types";
+import type {
+  BucketId,
+  FieldDefinitionId,
+  FieldDefinitionScopeId,
+  FieldType,
+  FieldValueId,
+  GroupId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const fieldDefinitions = pgTable(
   "field_definitions",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FieldDefinitionId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    fieldType: varchar("field_type", { length: ENUM_MAX_LENGTH })
-      .notNull()
-      .$type<ServerFieldDefinition["fieldType"]>(),
+    fieldType: varchar("field_type", { length: ENUM_MAX_LENGTH }).notNull().$type<FieldType>(),
     required: boolean("required").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -62,12 +71,12 @@ export const fieldDefinitions = pgTable(
 export const fieldValues = pgTable(
   "field_values",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    fieldDefinitionId: varchar("field_definition_id", { length: ID_MAX_LENGTH }).notNull(),
-    memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
-    structureEntityId: varchar("structure_entity_id", { length: ID_MAX_LENGTH }),
-    groupId: varchar("group_id", { length: ID_MAX_LENGTH }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FieldValueId>("id").primaryKey(),
+    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
+    memberId: brandedId<MemberId>("member_id"),
+    structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
+    groupId: brandedId<GroupId>("group_id"),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -120,13 +129,13 @@ export const fieldValues = pgTable(
 export const fieldBucketVisibility = pgTable(
   "field_bucket_visibility",
   {
-    fieldDefinitionId: varchar("field_definition_id", { length: ID_MAX_LENGTH })
+    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id")
       .notNull()
       .references(() => fieldDefinitions.id, { onDelete: "restrict" }),
-    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
   },
@@ -140,11 +149,13 @@ export const fieldBucketVisibility = pgTable(
 export const fieldDefinitionScopes = pgTable(
   "field_definition_scopes",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    fieldDefinitionId: varchar("field_definition_id", { length: ID_MAX_LENGTH }).notNull(),
-    scopeType: varchar("scope_type", { length: ENUM_MAX_LENGTH }).notNull(),
-    scopeEntityTypeId: varchar("scope_entity_type_id", { length: ID_MAX_LENGTH }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FieldDefinitionScopeId>("id").primaryKey(),
+    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
+    scopeType: varchar("scope_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<"system" | "member" | "group" | "structure-entity-type">(),
+    scopeEntityTypeId: brandedId<SystemStructureEntityTypeId>("scope_entity_type_id"),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     ...timestamps(),

@@ -109,13 +109,13 @@ describe("decryptGroup", () => {
       masterKey,
     );
     const raw = makeRawGroup({ encryptedData: encrypted });
-    expect(() => decryptGroup(raw, masterKey)).toThrow("missing required string field: name");
+    expect(() => decryptGroup(raw, masterKey)).toThrow(/"name"/);
   });
 
   it("throws when encrypted blob is not an object", () => {
     const encrypted = encryptAndEncodeT1("not-an-object", masterKey);
     const raw = makeRawGroup({ encryptedData: encrypted });
-    expect(() => decryptGroup(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptGroup(raw, masterKey)).toThrow(/expected object, received string/);
   });
 
   it("throws when imageSource is a non-object, non-null value", () => {
@@ -124,7 +124,7 @@ describe("decryptGroup", () => {
       masterKey,
     );
     const raw = makeRawGroup({ encryptedData: encrypted });
-    expect(() => decryptGroup(raw, masterKey)).toThrow("imageSource must be object or null");
+    expect(() => decryptGroup(raw, masterKey)).toThrow(/"imageSource"/);
   });
 });
 

@@ -21,6 +21,8 @@ import type {
   EntityReference,
   MemberId,
   PollId,
+  PollOptionId,
+  PollVoteId,
   SystemId,
   SystemStructureEntityId,
 } from "@pluralscape/types";
@@ -111,7 +113,8 @@ export async function castVote(
     }
 
     // 6. Insert the vote
-    const voteId = createId(ID_PREFIXES.pollVote);
+    const voteId = brandId<PollVoteId>(createId(ID_PREFIXES.pollVote));
+    const brandedOptionId = optionId === null ? null : brandId<PollOptionId>(optionId);
     const timestamp = now();
 
     const [row] = await tx
@@ -120,7 +123,7 @@ export async function castVote(
         id: voteId,
         pollId,
         systemId,
-        optionId,
+        optionId: brandedOptionId,
         voter,
         isVeto: parsed.isVeto,
         votedAt: timestamp,

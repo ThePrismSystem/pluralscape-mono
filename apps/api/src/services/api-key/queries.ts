@@ -1,4 +1,5 @@
 import { apiKeys } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -44,7 +45,7 @@ export async function listApiKeys(
     }
 
     if (opts.cursor) {
-      conditions.push(lt(apiKeys.id, opts.cursor));
+      conditions.push(lt(apiKeys.id, brandId<ApiKeyId>(opts.cursor)));
     }
 
     const rows = await tx

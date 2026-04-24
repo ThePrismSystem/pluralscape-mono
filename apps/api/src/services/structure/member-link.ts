@@ -74,7 +74,9 @@ export async function createEntityMemberLink(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
   }
 
-  const linkId = createId(ID_PREFIXES.structureEntityMemberLink);
+  const linkId = brandId<SystemStructureEntityMemberLinkId>(
+    createId(ID_PREFIXES.structureEntityMemberLink),
+  );
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -122,7 +124,12 @@ export async function listEntityMemberLinks(
     const conditions = [eq(systemStructureEntityMemberLinks.systemId, systemId)];
 
     if (opts?.cursor) {
-      conditions.push(gt(systemStructureEntityMemberLinks.id, opts.cursor));
+      conditions.push(
+        gt(
+          systemStructureEntityMemberLinks.id,
+          brandId<SystemStructureEntityMemberLinkId>(opts.cursor),
+        ),
+      );
     }
 
     const rows = await tx
@@ -145,13 +152,15 @@ export async function deleteEntityMemberLink(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
+  const linkIdBranded = brandId<SystemStructureEntityMemberLinkId>(linkId);
+
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: systemStructureEntityMemberLinks.id })
       .from(systemStructureEntityMemberLinks)
       .where(
         and(
-          eq(systemStructureEntityMemberLinks.id, linkId),
+          eq(systemStructureEntityMemberLinks.id, linkIdBranded),
           eq(systemStructureEntityMemberLinks.systemId, systemId),
         ),
       )
@@ -173,7 +182,7 @@ export async function deleteEntityMemberLink(
       .delete(systemStructureEntityMemberLinks)
       .where(
         and(
-          eq(systemStructureEntityMemberLinks.id, linkId),
+          eq(systemStructureEntityMemberLinks.id, linkIdBranded),
           eq(systemStructureEntityMemberLinks.systemId, systemId),
         ),
       );

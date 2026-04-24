@@ -6,7 +6,7 @@ import { withAccountTransaction } from "../../lib/rls-context.js";
 import { TransferNotFoundError, TransferSessionMismatchError } from "./errors.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AccountId, SessionId } from "@pluralscape/types";
+import type { AccountId, DeviceTransferRequestId, SessionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
@@ -17,7 +17,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  */
 export async function approveTransfer(
   db: PostgresJsDatabase,
-  transferId: string,
+  transferId: DeviceTransferRequestId,
   accountId: AccountId,
   sessionId: SessionId,
   audit: AuditWriter,

@@ -1,4 +1,5 @@
 import { frontingComments, frontingSessions } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, lt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -54,7 +55,7 @@ export async function listFrontingComments(
     }
 
     if (opts?.cursor) {
-      conditions.push(lt(frontingComments.id, opts.cursor));
+      conditions.push(lt(frontingComments.id, brandId<FrontingCommentId>(opts.cursor)));
     }
 
     const rows = await tx

@@ -1,5 +1,5 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, MS_PER_SECOND, createId } from "@pluralscape/types";
+import { ID_PREFIXES, MS_PER_SECOND, brandId, createId } from "@pluralscape/types";
 import { and, asc, eq, gt, isNull, lte } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
@@ -8,6 +8,7 @@ import { computeNextCheckInAt } from "../lib/timer-scheduling.js";
 import { CHECK_IN_GENERATE_BATCH_SIZE } from "./jobs.constants.js";
 
 import type { JobHandler } from "@pluralscape/queue";
+import type { CheckInRecordId, SystemId, TimerId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Seconds per minute, used to convert interval minutes to milliseconds. */
@@ -61,7 +62,7 @@ export function createCheckInGenerateHandler(
         lte(timerConfigs.nextCheckInAt, nowMs),
       ];
       if (cursor !== null) {
-        conditions.push(gt(timerConfigs.id, cursor));
+        conditions.push(gt(timerConfigs.id, brandId<TimerId>(cursor)));
       }
 
       const configs = await db
@@ -84,15 +85,15 @@ export function createCheckInGenerateHandler(
 
           // Create the check-in record with idempotency key to prevent duplicates.
           // ON CONFLICT DO NOTHING ensures concurrent runs are safe.
-          const recordId = createId(ID_PREFIXES.checkInRecord);
+          const recordId = brandId<CheckInRecordId>(createId(ID_PREFIXES.checkInRecord));
           const idempotencyKey = computeIdempotencyKey(config.id, config.intervalMinutes, nowMs);
 
           await db
             .insert(checkInRecords)
             .values({
               id: recordId,
-              systemId: config.systemId,
-              timerConfigId: config.id,
+              systemId: brandId<SystemId>(config.systemId),
+              timerConfigId: brandId<TimerId>(config.id),
               scheduledAt: nowMs,
               idempotencyKey,
             })

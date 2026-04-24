@@ -10,7 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -24,19 +24,29 @@ import { RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerRelationship } from "@pluralscape/types";
+import type {
+  MemberId,
+  Relationship,
+  RelationshipId,
+  SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+  SystemStructureEntityMemberLinkId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = sqliteTable(
   "relationships",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<RelationshipId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceMemberId: text("source_member_id"),
-    targetMemberId: text("target_member_id"),
-    type: text("type").notNull().$type<ServerRelationship["type"]>(),
+    sourceMemberId: brandedId<MemberId>("source_member_id"),
+    targetMemberId: brandedId<MemberId>("target_member_id"),
+    type: text("type").notNull().$type<Relationship["type"]>(),
     bidirectional: integer("bidirectional", { mode: "boolean" }).notNull().default(false),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -62,8 +72,8 @@ export const relationships = sqliteTable(
 export const systemStructureEntityTypes = sqliteTable(
   "system_structure_entity_types",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityTypeId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull(),
@@ -83,11 +93,11 @@ export const systemStructureEntityTypes = sqliteTable(
 export const systemStructureEntities = sqliteTable(
   "system_structure_entities",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityTypeId: text("entity_type_id").notNull(),
+    entityTypeId: brandedId<SystemStructureEntityTypeId>("entity_type_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -110,12 +120,12 @@ export const systemStructureEntities = sqliteTable(
 export const systemStructureEntityLinks = sqliteTable(
   "system_structure_entity_links",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityId: text("entity_id").notNull(),
-    parentEntityId: text("parent_entity_id"),
+    entityId: brandedId<SystemStructureEntityId>("entity_id").notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
     sortOrder: integer("sort_order").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
@@ -140,12 +150,12 @@ export const systemStructureEntityLinks = sqliteTable(
 export const systemStructureEntityMemberLinks = sqliteTable(
   "system_structure_entity_member_links",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityMemberLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentEntityId: text("parent_entity_id"),
-    memberId: text("member_id").notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
+    memberId: brandedId<MemberId>("member_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
@@ -182,12 +192,12 @@ export const systemStructureEntityMemberLinks = sqliteTable(
 export const systemStructureEntityAssociations = sqliteTable(
   "system_structure_entity_associations",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityAssociationId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceEntityId: text("source_entity_id").notNull(),
-    targetEntityId: text("target_entity_id").notNull(),
+    sourceEntityId: brandedId<SystemStructureEntityId>("source_entity_id").notNull(),
+    targetEntityId: brandedId<SystemStructureEntityId>("target_entity_id").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [

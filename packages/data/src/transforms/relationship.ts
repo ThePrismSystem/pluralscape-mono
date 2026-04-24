@@ -1,26 +1,27 @@
 import { brandId } from "@pluralscape/types";
+import { RelationshipEncryptedInputSchema } from "@pluralscape/validation";
 
-import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
   MemberId,
+  Relationship,
+  RelationshipEncryptedFields,
   RelationshipId,
   RelationshipType,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
 
-export interface RelationshipEncryptedFields {
-  readonly label: string;
-}
+/**
+ * Shape passed to `encryptRelationshipInput()` / `encryptRelationshipUpdate()`
+ * before encryption. Derived from the `Relationship` domain type by picking
+ * the encrypted-field keys — single source of truth lives in
+ * `@pluralscape/types`.
+ */
+export type RelationshipEncryptedInput = Pick<Relationship, RelationshipEncryptedFields>;
 
 export interface RelationshipDecrypted {
   readonly id: RelationshipId;
@@ -34,15 +35,9 @@ export interface RelationshipDecrypted {
   readonly archived: false;
 }
 
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertRelationshipFieldsSubset =
-  RelationshipEncryptedFields extends Pick<RelationshipDecrypted, keyof RelationshipEncryptedFields>
-    ? true
-    : never;
-
 export type RelationshipRaw = Omit<
   RelationshipDecrypted,
-  keyof RelationshipEncryptedFields | "archived" | "sourceMemberId" | "targetMemberId"
+  RelationshipEncryptedFields | "archived" | "sourceMemberId" | "targetMemberId"
 > & {
   readonly sourceMemberId: string | null;
   readonly targetMemberId: string | null;
@@ -56,13 +51,6 @@ export interface RelationshipPage {
   readonly nextCursor: string | null;
 }
 
-function assertRelationshipEncryptedFields(
-  raw: unknown,
-): asserts raw is RelationshipEncryptedFields {
-  const obj = assertObjectBlob(raw, "relationship");
-  assertStringField(obj, "relationship", "label");
-}
-
 export function decryptRelationship(
   raw: RelationshipRaw,
   masterKey: KdfMasterKey,
@@ -70,8 +58,8 @@ export function decryptRelationship(
   let label: string | null = null;
   if (raw.encryptedData !== null) {
     const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-    assertRelationshipEncryptedFields(plaintext);
-    label = plaintext.label;
+    const validated = RelationshipEncryptedInputSchema.parse(plaintext);
+    label = validated.label;
   }
 
   const base = {
@@ -106,14 +94,14 @@ export function decryptRelationshipPage(
 }
 
 export function encryptRelationshipInput(
-  data: RelationshipEncryptedFields,
+  data: RelationshipEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 export function encryptRelationshipUpdate(
-  data: RelationshipEncryptedFields,
+  data: RelationshipEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

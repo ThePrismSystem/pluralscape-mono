@@ -12,7 +12,7 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { CustomFrontEncryptedFields } from "../custom-front.js";
+import type { CustomFrontEncryptedInput } from "../custom-front.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { CustomFrontId, HexColor, SystemId, UnixMillis } from "@pluralscape/types";
 
@@ -27,7 +27,7 @@ beforeAll(async () => {
 // ── Server shape helpers ─────────────────────────────────────────────
 
 function makeRawCustomFront(
-  fields: CustomFrontEncryptedFields,
+  fields: CustomFrontEncryptedInput,
   key: KdfMasterKey,
   overrides?: Partial<{
     id: CustomFrontId;
@@ -56,7 +56,7 @@ function makeRawCustomFront(
 
 describe("decryptCustomFront", () => {
   it("decrypts all encrypted fields and passes through transparent fields", () => {
-    const fields: CustomFrontEncryptedFields = {
+    const fields: CustomFrontEncryptedInput = {
       name: "Dissociated",
       description: "A foggy state",
       color: "#aabbcc" as HexColor,
@@ -78,7 +78,7 @@ describe("decryptCustomFront", () => {
   });
 
   it("handles null optional fields", () => {
-    const fields: CustomFrontEncryptedFields = {
+    const fields: CustomFrontEncryptedInput = {
       name: "Blurry",
       description: null,
       color: null,
@@ -104,7 +104,7 @@ describe("decryptCustomFront", () => {
 
   it("throws when blob was encrypted with a different key", () => {
     const otherKey = generateMasterKey();
-    const fields: CustomFrontEncryptedFields = {
+    const fields: CustomFrontEncryptedInput = {
       name: "Ghost",
       description: null,
       color: null,
@@ -115,7 +115,7 @@ describe("decryptCustomFront", () => {
   });
 
   it("returns archived variant when raw.archived is true", () => {
-    const fields: CustomFrontEncryptedFields = {
+    const fields: CustomFrontEncryptedInput = {
       name: "Archived Front",
       description: null,
       color: null,
@@ -137,13 +137,13 @@ describe("decryptCustomFront", () => {
 
 describe("decryptCustomFrontPage", () => {
   it("decrypts each item and preserves nextCursor", () => {
-    const fields1: CustomFrontEncryptedFields = {
+    const fields1: CustomFrontEncryptedInput = {
       name: "Alpha",
       description: null,
       color: null,
       emoji: null,
     };
-    const fields2: CustomFrontEncryptedFields = {
+    const fields2: CustomFrontEncryptedInput = {
       name: "Beta",
       description: "desc",
       color: null,
@@ -169,7 +169,7 @@ describe("decryptCustomFrontPage", () => {
   });
 
   it("returns null nextCursor when page has no more items", () => {
-    const fields: CustomFrontEncryptedFields = {
+    const fields: CustomFrontEncryptedInput = {
       name: "Solo",
       description: null,
       color: null,
@@ -205,7 +205,7 @@ describe("decryptCustomFrontPage", () => {
 
 describe("encryptCustomFrontInput", () => {
   it("returns encryptedData that decrypts back to the original fields", () => {
-    const input: CustomFrontEncryptedFields = {
+    const input: CustomFrontEncryptedInput = {
       name: "Overwhelmed",
       description: "Too much sensory input",
       color: "#ff0000" as HexColor,
@@ -226,7 +226,7 @@ describe("encryptCustomFrontInput", () => {
   });
 
   it("produces a different ciphertext on each call (nonce randomness)", () => {
-    const input: CustomFrontEncryptedFields = {
+    const input: CustomFrontEncryptedInput = {
       name: "Test",
       description: null,
       color: null,
@@ -242,7 +242,7 @@ describe("encryptCustomFrontInput", () => {
 
 describe("encryptCustomFrontUpdate", () => {
   it("returns encryptedData and version", () => {
-    const data: CustomFrontEncryptedFields = {
+    const data: CustomFrontEncryptedInput = {
       name: "Updated Name",
       description: null,
       color: null,
@@ -255,7 +255,7 @@ describe("encryptCustomFrontUpdate", () => {
   });
 
   it("round-trips through decryptCustomFront", () => {
-    const data: CustomFrontEncryptedFields = {
+    const data: CustomFrontEncryptedInput = {
       name: "Round-trip",
       description: "desc",
       color: "#123456" as HexColor,

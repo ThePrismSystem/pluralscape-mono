@@ -1,3 +1,4 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   CustomFrontId,
   FrontingSessionId,
@@ -6,6 +7,7 @@ import type {
   SystemStructureEntityId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** Sentiment classification for an outtrigger reason. */
@@ -68,3 +70,34 @@ export interface CoFrontState {
   readonly timestamp: UnixMillis;
   readonly activeSessions: readonly ActiveFrontingSession[];
 }
+
+/**
+ * Server-visible FrontingSession metadata — raw Drizzle row shape.
+ *
+ * Derived from the `FrontingSession` discriminated union by stripping the
+ * encrypted field keys (bundled inside `encryptedData`), `archived` (the
+ * domain uses a `false` literal while the server tracks a mutable boolean
+ * with a companion `archivedAt` timestamp), and `endTime` (replaced below
+ * with a single nullable column — both union variants collapse to the
+ * same shape after stripping those keys). Adds `archived`/`archivedAt`
+ * and the encrypted blob.
+ *
+ * The underlying table is partitioned by `startTime` (ADR 019) — see
+ * `packages/db/src/schema/pg/fronting.ts`.
+ */
+export type FrontingSessionServerMetadata = Omit<
+  FrontingSession,
+  FrontingSessionEncryptedFields | "archived" | "endTime"
+> & {
+  readonly endTime: UnixMillis | null;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of FrontingSession. Derived from the domain
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ */
+export type FrontingSessionWire = Serialize<FrontingSession>;

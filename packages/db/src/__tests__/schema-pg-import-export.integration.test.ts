@@ -68,9 +68,7 @@ describe("PG import-export schema", () => {
         source: "simply-plural",
         status: "importing",
         progressPercent: 42,
-        errorLog: [
-          { entityType: "unknown", entityId: null, message: "bad row", fatal: false },
-        ],
+        errorLog: [{ entityType: "unknown", entityId: null, message: "bad row", fatal: false }],
         warningCount: 3,
         chunksTotal: 10,
         chunksCompleted: 4,

@@ -10,10 +10,10 @@ import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPFrontStatus } from "../sources/sp-types.js";
-import type { CustomFrontEncryptedFields } from "@pluralscape/data";
+import type { CustomFrontEncryptedInput } from "@pluralscape/data";
 
 export interface MappedCustomFront {
-  readonly encrypted: CustomFrontEncryptedFields;
+  readonly encrypted: CustomFrontEncryptedInput;
 }
 
 export function mapCustomFront(
@@ -38,7 +38,7 @@ export function mapCustomFront(
     });
   }
 
-  const encrypted: CustomFrontEncryptedFields = {
+  const encrypted: CustomFrontEncryptedInput = {
     name: sp.name,
     description: sp.desc ?? null,
     color,
