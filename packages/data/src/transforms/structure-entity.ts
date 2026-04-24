@@ -1,58 +1,31 @@
-import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { StructureEntityEncryptedInputSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
-  HexColor,
-  ImageSource,
-  SystemStructureEntityId,
-  SystemStructureEntityTypeId,
-  SystemId,
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields,
   UnixMillis,
 } from "@pluralscape/types";
 
-export interface StructureEntityEncryptedFields {
-  readonly name: string;
-  readonly description: string | null;
-  readonly emoji: string | null;
-  readonly color: HexColor | null;
-  readonly imageSource: ImageSource | null;
-}
+// ── Wire types (derived from domain types) ──────────────────────────
 
-export interface StructureEntityDecrypted {
-  readonly id: SystemStructureEntityId;
-  readonly systemId: SystemId;
-  readonly entityTypeId: SystemStructureEntityTypeId;
-  readonly name: string;
-  readonly description: string | null;
-  readonly emoji: string | null;
-  readonly color: HexColor | null;
-  readonly imageSource: ImageSource | null;
-  readonly sortOrder: number;
-  readonly archived: false;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+/**
+ * Shape passed to `encryptStructureEntityInput()` before encryption.
+ * Derived from the `SystemStructureEntity` domain type by picking the
+ * encrypted-field keys — single source of truth lives in `@pluralscape/types`.
+ */
+export type StructureEntityEncryptedInput = Pick<
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields
+>;
 
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertStructureEntityFieldsSubset =
-  StructureEntityEncryptedFields extends Pick<
-    StructureEntityDecrypted,
-    keyof StructureEntityEncryptedFields
-  >
-    ? true
-    : never;
-
+/** Wire shape returned by `structureEntity.get` — derived from the domain. */
 export type StructureEntityRaw = Omit<
-  StructureEntityDecrypted,
-  keyof StructureEntityEncryptedFields | "archived"
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields | "archived"
 > & {
   readonly encryptedData: string;
   readonly archived: boolean;
@@ -64,29 +37,31 @@ export interface StructureEntityPage {
   readonly nextCursor: string | null;
 }
 
-function assertStructureEntityEncryptedFields(
-  raw: unknown,
-): asserts raw is StructureEntityEncryptedFields {
-  const obj = assertObjectBlob(raw, "structureEntity");
-  assertStringField(obj, "structureEntity", "name");
-}
+// ── Transforms ────────────────────────────────────────────────────────
 
+/**
+ * Decrypt a single structure entity wire object to the canonical domain type.
+ * Passthrough fields (id, systemId, entityTypeId, sortOrder, archived,
+ * version, createdAt, updatedAt) are copied directly; encrypted fields are
+ * decrypted from encryptedData and validated by
+ * `StructureEntityEncryptedInputSchema`.
+ */
 export function decryptStructureEntity(
   raw: StructureEntityRaw,
   masterKey: KdfMasterKey,
-): StructureEntityDecrypted | Archived<StructureEntityDecrypted> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertStructureEntityEncryptedFields(plaintext);
+): SystemStructureEntity | Archived<SystemStructureEntity> {
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = StructureEntityEncryptedInputSchema.parse(decrypted);
 
   const base = {
     id: raw.id,
     systemId: raw.systemId,
     entityTypeId: raw.entityTypeId,
-    name: plaintext.name,
-    description: plaintext.description,
-    emoji: plaintext.emoji,
-    color: plaintext.color,
-    imageSource: plaintext.imageSource,
+    name: validated.name,
+    description: validated.description,
+    emoji: validated.emoji,
+    color: validated.color,
+    imageSource: validated.imageSource,
     sortOrder: raw.sortOrder,
     version: raw.version,
     createdAt: raw.createdAt,
@@ -104,7 +79,7 @@ export function decryptStructureEntityPage(
   raw: StructureEntityPage,
   masterKey: KdfMasterKey,
 ): {
-  data: (StructureEntityDecrypted | Archived<StructureEntityDecrypted>)[];
+  data: (SystemStructureEntity | Archived<SystemStructureEntity>)[];
   nextCursor: string | null;
 } {
   return {
@@ -114,14 +89,14 @@ export function decryptStructureEntityPage(
 }
 
 export function encryptStructureEntityInput(
-  data: StructureEntityEncryptedFields,
+  data: StructureEntityEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 export function encryptStructureEntityUpdate(
-  data: StructureEntityEncryptedFields,
+  data: StructureEntityEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

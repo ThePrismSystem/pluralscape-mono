@@ -20,12 +20,12 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
-  StructureEntityDecrypted,
   StructureEntityPage as StructureEntityRawPage,
   StructureEntityRaw,
 } from "@pluralscape/data/transforms/structure-entity";
 import type {
   Archived,
+  SystemStructureEntity,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
@@ -39,10 +39,10 @@ interface StructureEntityListOpts extends SystemIdOverride {
 export function useStructureEntity(
   entityId: SystemStructureEntityId,
   opts?: SystemIdOverride,
-): DataQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>> {
+): DataQuery<SystemStructureEntity | Archived<SystemStructureEntity>> {
   return useOfflineFirstQuery<
     StructureEntityRaw,
-    StructureEntityDecrypted | Archived<StructureEntityDecrypted>
+    SystemStructureEntity | Archived<SystemStructureEntity>
   >({
     queryKey: ["structure_entities", entityId],
     table: "structure_entities",
@@ -52,7 +52,7 @@ export function useStructureEntity(
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
       trpc.structure.entity.get.useQuery({ systemId, entityId }, { enabled, select }) as DataQuery<
-        StructureEntityDecrypted | Archived<StructureEntityDecrypted>
+        SystemStructureEntity | Archived<SystemStructureEntity>
       >,
   });
 }
@@ -69,10 +69,10 @@ export function useStructureEntityHierarchy(
 
 export function useStructureEntitiesList(
   opts?: StructureEntityListOpts,
-): DataListQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>> {
+): DataListQuery<SystemStructureEntity | Archived<SystemStructureEntity>> {
   return useOfflineFirstInfiniteQuery<
     StructureEntityRaw,
-    StructureEntityDecrypted | Archived<StructureEntityDecrypted>
+    SystemStructureEntity | Archived<SystemStructureEntity>
   >({
     queryKey: ["structure_entities", "list", opts?.includeArchived ?? false, opts?.entityTypeId],
     table: "structure_entities",
@@ -106,7 +106,7 @@ export function useStructureEntitiesList(
           getNextPageParam: (lastPage: StructureEntityRawPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>>,
+      ) as DataListQuery<SystemStructureEntity | Archived<SystemStructureEntity>>,
   });
 }
 

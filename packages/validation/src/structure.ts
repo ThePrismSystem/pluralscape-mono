@@ -42,6 +42,25 @@ export const UpdateStructureEntityTypeBodySchema = z
 
 // ── Structure Entity ────────────────────────────────────────────────
 
+/**
+ * Runtime validator for the pre-encryption SystemStructureEntity input.
+ * Every field of `StructureEntityEncryptedInput` (in `@pluralscape/data`)
+ * must be present and well-formed. Zod compile-time parity is checked in
+ * `__tests__/type-parity/structure-entity.type.test.ts`.
+ *
+ * Replaces the hand-written `assertStructureEntityEncryptedFields` that
+ * used to live in `packages/data/src/transforms/structure-entity.ts`.
+ */
+export const StructureEntityEncryptedInputSchema = z
+  .object({
+    name: z.string().min(1),
+    description: z.string().nullable(),
+    emoji: z.string().nullable(),
+    color: HexColorSchema.nullable(),
+    imageSource: PlaintextImageSourceSchema.nullable(),
+  })
+  .readonly();
+
 export const CreateStructureEntityBodySchema = z
   .object({
     structureEntityTypeId: brandedString<"SystemStructureEntityTypeId">(),
