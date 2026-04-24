@@ -420,7 +420,12 @@ describe("SQLite timers schema", () => {
         .run();
 
       db.insert(checkInRecords)
-        .values({ id: brandId<CheckInRecordId>(crypto.randomUUID()), systemId, timerConfigId: timerId, scheduledAt: now })
+        .values({
+          id: brandId<CheckInRecordId>(crypto.randomUUID()),
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+        })
         .run();
 
       expect(() => db.delete(timerConfigs).where(eq(timerConfigs.id, timerId)).run()).toThrow(

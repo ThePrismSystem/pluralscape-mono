@@ -57,10 +57,7 @@ import type {
   InnerWorldRegion,
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
-import type {
-  LifecycleEvent,
-  LifecycleEventServerMetadata,
-} from "../entities/lifecycle-event.js";
+import type { LifecycleEvent, LifecycleEventServerMetadata } from "../entities/lifecycle-event.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ClientResponseData, ServerResponseData } from "../response-unions.js";
