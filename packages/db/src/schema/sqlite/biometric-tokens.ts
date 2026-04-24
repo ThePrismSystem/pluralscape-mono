@@ -1,17 +1,18 @@
 import { sql } from "drizzle-orm";
 import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
 
 import { sessions } from "./auth.js";
 
+import type { BiometricTokenId, SessionId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const biometricTokens = sqliteTable(
   "biometric_tokens",
   {
-    id: text("id").primaryKey(),
-    sessionId: text("session_id")
+    id: brandedId<BiometricTokenId>("id").primaryKey(),
+    sessionId: brandedId<SessionId>("session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull(),
