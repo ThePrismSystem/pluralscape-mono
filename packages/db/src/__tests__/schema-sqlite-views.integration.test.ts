@@ -44,6 +44,7 @@ import type {
   AccountId,
   ApiKeyId,
   DeviceTransferRequestId,
+  FrontingCommentId,
   FrontingSessionId,
   SessionId,
   SystemId,
@@ -544,7 +545,7 @@ describe("SQLite views / query helpers", () => {
       db.insert(frontingComments)
         .values([
           {
-            id: brandId<FrontingSessionId>(crypto.randomUUID()),
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: activeSessionId,
             systemId,
             memberId,
@@ -553,7 +554,7 @@ describe("SQLite views / query helpers", () => {
             updatedAt: now,
           },
           {
-            id: brandId<FrontingSessionId>(crypto.randomUUID()),
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: endedSessionId,
             systemId,
             memberId,

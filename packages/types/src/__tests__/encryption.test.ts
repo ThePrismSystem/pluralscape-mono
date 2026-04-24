@@ -45,8 +45,6 @@ import type {
   ServerStructureEntity,
   ServerStructureEntityType,
   ServerTimerConfig,
-  ServerFrontingComment,
-  ClientFrontingComment,
   ServerPollVote,
   ClientPollVote,
   ServerWikiPage,
@@ -63,7 +61,10 @@ import type {
 import type { BoardMessage } from "../entities/board-message.js";
 import type { Channel } from "../entities/channel.js";
 import type { CustomFront } from "../entities/custom-front.js";
-import type { FrontingComment } from "../entities/fronting-comment.js";
+import type {
+  FrontingComment,
+  FrontingCommentServerMetadata,
+} from "../entities/fronting-comment.js";
 import type { FrontingSessionServerMetadata } from "../entities/fronting-session.js";
 import type { Group } from "../entities/group.js";
 import type {
@@ -278,13 +279,16 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("fronting comment pair", () => {
-    expectTypeOf<ServerFrontingComment>().toBeObject();
-    expectTypeOf<ServerFrontingComment["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerFrontingComment["id"]>().toEqualTypeOf<FrontingCommentId>();
-    expectTypeOf<ServerFrontingComment["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
-    expectTypeOf<ServerFrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ServerFrontingComment["memberId"]>().toEqualTypeOf<MemberId | null>();
-    expectTypeOf<ClientFrontingComment>().toEqualTypeOf<FrontingComment>();
+    expectTypeOf<FrontingCommentServerMetadata>().toBeObject();
+    expectTypeOf<FrontingCommentServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<FrontingCommentServerMetadata["id"]>().toEqualTypeOf<FrontingCommentId>();
+    expectTypeOf<
+      FrontingCommentServerMetadata["frontingSessionId"]
+    >().toEqualTypeOf<FrontingSessionId>();
+    expectTypeOf<FrontingCommentServerMetadata["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FrontingCommentServerMetadata["memberId"]>().toEqualTypeOf<MemberId | null>();
+    // FrontingComment (domain) still referenced via its type file — retained for import.
+    expectTypeOf<FrontingComment>().toBeObject();
   });
 
   it("poll vote pair", () => {

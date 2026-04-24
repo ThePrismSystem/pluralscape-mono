@@ -45,6 +45,7 @@ import type {
   AccountId,
   ApiKeyId,
   DeviceTransferRequestId,
+  FrontingCommentId,
   FrontingSessionId,
   SessionId,
   SystemId,
@@ -577,7 +578,7 @@ describe("PG views / query helpers", () => {
       ]);
       await db.insert(frontingComments).values([
         {
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: activeSessionId,
           systemId,
           sessionStartTime: now - 60000,
@@ -587,7 +588,7 @@ describe("PG views / query helpers", () => {
           updatedAt: now,
         },
         {
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: endedSessionId,
           systemId,
           sessionStartTime: now - 120000,
@@ -645,7 +646,7 @@ describe("PG views / query helpers", () => {
 
       // Comment on system A's session
       await db.insert(frontingComments).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<FrontingCommentId>(crypto.randomUUID()),
         frontingSessionId: sessionIdA,
         systemId,
         sessionStartTime: startTimeA,
@@ -657,7 +658,7 @@ describe("PG views / query helpers", () => {
 
       // Comment on system B's session
       await db.insert(frontingComments).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<FrontingCommentId>(crypto.randomUUID()),
         frontingSessionId: sessionIdB,
         systemId: otherSystemId,
         sessionStartTime: startTimeB,

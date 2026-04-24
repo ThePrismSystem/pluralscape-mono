@@ -28,6 +28,12 @@ import type {
 } from "./entities/field-definition.js";
 import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
 import type {
+  FrontingComment,
+  FrontingCommentEncryptedFields,
+  FrontingCommentServerMetadata,
+  FrontingCommentWire,
+} from "./entities/fronting-comment.js";
+import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
   FrontingSessionServerMetadata,
@@ -189,6 +195,12 @@ export type SotEntityManifest = {
     server: FrontingSessionServerMetadata;
     wire: FrontingSessionWire;
     encryptedFields: FrontingSessionEncryptedFields;
+  };
+  FrontingComment: {
+    domain: FrontingComment;
+    server: FrontingCommentServerMetadata;
+    wire: FrontingCommentWire;
+    encryptedFields: FrontingCommentEncryptedFields;
   };
   LifecycleEvent: {
     domain: LifecycleEvent;

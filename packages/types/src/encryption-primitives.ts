@@ -5,7 +5,6 @@ import type { Channel } from "./entities/channel.js";
 import type { CustomFront } from "./entities/custom-front.js";
 import type { FieldDefinition, FieldType } from "./entities/field-definition.js";
 import type { FieldValue } from "./entities/field-value.js";
-import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { Group } from "./entities/group.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
@@ -28,7 +27,6 @@ import type {
   LifecycleEventId,
   FieldDefinitionId,
   FieldValueId,
-  FrontingCommentId,
   FrontingSessionId,
   GroupId,
   JournalEntryId,
@@ -121,27 +119,6 @@ export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 // Only defined for completed domain modules.
 // MemberServerMetadata / MemberWire live in entities/member.ts.
 // AuditLogEntryServerMetadata / AuditLogEntryWire live in entities/audit-log-entry.ts.
-
-/**
- * Server-side fronting comment representation.
- * T1 encrypted: content
- * T3 plaintext: frontingSessionId, sessionStartTime, memberId, customFrontId, structureEntityId, archived
- */
-export interface ServerFrontingComment extends AuditMetadata {
-  readonly id: FrontingCommentId;
-  readonly frontingSessionId: FrontingSessionId;
-  readonly systemId: SystemId;
-  /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
-  readonly sessionStartTime: UnixMillis;
-  readonly memberId: MemberId | null;
-  readonly customFrontId: CustomFrontId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side fronting comment — flat decrypted fields. */
-export type ClientFrontingComment = FrontingComment;
 
 /**
  * Server-side group representation.

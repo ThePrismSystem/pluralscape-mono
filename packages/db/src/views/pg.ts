@@ -197,7 +197,7 @@ export async function getActiveDeviceTokens(
 /** Get fronting comments on currently active sessions (end_time IS NULL). */
 export async function getCurrentFrontingComments(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<CurrentFrontingComment[]> {
   return db
     .select({

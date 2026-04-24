@@ -17,7 +17,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { FrontingSessionId, SystemId } from "@pluralscape/types";
+import type { FrontingCommentId, FrontingSessionId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -817,7 +817,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -845,7 +845,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(frontingComments)
@@ -873,7 +873,7 @@ describe("SQLite fronting schema", () => {
 
       db.insert(frontingComments)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: sessionId,
           systemId,
           memberId,
@@ -893,7 +893,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const commentId = crypto.randomUUID();
+      const commentId = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(frontingComments)
@@ -927,8 +927,8 @@ describe("SQLite fronting schema", () => {
         db
           .insert(frontingComments)
           .values({
-            id: brandId<FrontingSessionId>(crypto.randomUUID()),
-            frontingSessionId: "nonexistent",
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
+            frontingSessionId: brandId<FrontingSessionId>("nonexistent"),
             systemId,
             memberId,
             encryptedData: testBlob(new Uint8Array([1])),
@@ -944,7 +944,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(frontingComments)
@@ -968,7 +968,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const customFrontId = insertCustomFront(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(frontingComments)
@@ -996,7 +996,7 @@ describe("SQLite fronting schema", () => {
 
       db.insert(frontingComments)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: sessionId,
           systemId,
           memberId,
@@ -1021,7 +1021,7 @@ describe("SQLite fronting schema", () => {
         db
           .insert(frontingComments)
           .values({
-            id: brandId<FrontingSessionId>(crypto.randomUUID()),
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: sessionId,
             systemId,
             memberId: "nonexistent",
@@ -1038,7 +1038,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(frontingComments)
@@ -1063,7 +1063,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(frontingComments)
@@ -1122,7 +1122,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(frontingComments)

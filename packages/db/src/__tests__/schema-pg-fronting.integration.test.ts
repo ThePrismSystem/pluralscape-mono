@@ -17,7 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { FrontingSessionId, SystemId } from "@pluralscape/types";
+import type { FrontingCommentId, FrontingSessionId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -794,7 +794,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -821,7 +821,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -844,7 +844,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const commentId = crypto.randomUUID();
+      const commentId = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -875,7 +875,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const commentId = crypto.randomUUID();
+      const commentId = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -905,8 +905,8 @@ describe("PG fronting schema", () => {
 
       await expect(
         db.insert(frontingComments).values({
-          id: crypto.randomUUID(),
-          frontingSessionId: "nonexistent",
+          id: brandId<FrontingCommentId>(crypto.randomUUID()),
+          frontingSessionId: brandId<FrontingSessionId>("nonexistent"),
           systemId,
           sessionStartTime: now,
           memberId,
@@ -926,7 +926,7 @@ describe("PG fronting schema", () => {
 
       await expect(
         db.insert(frontingComments).values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: sessionId,
           systemId,
           sessionStartTime: sessionStartTime + 99999,
@@ -943,7 +943,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -966,7 +966,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const customFrontId = await insertCustomFront(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -989,7 +989,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -1014,7 +1014,7 @@ describe("PG fronting schema", () => {
 
       await expect(
         db.insert(frontingComments).values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: sessionId,
           systemId,
           sessionStartTime,
@@ -1031,7 +1031,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -1055,7 +1055,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({
@@ -1081,7 +1081,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<FrontingCommentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(frontingComments).values({

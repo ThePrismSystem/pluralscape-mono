@@ -1,5 +1,5 @@
 import { frontingComments, frontingSessions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateFrontingCommentBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -17,7 +17,7 @@ import { toFrontingCommentResult } from "./internal.js";
 import type { FrontingCommentResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { FrontingSessionId, SystemId } from "@pluralscape/types";
+import type { FrontingCommentId, FrontingSessionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
@@ -66,7 +66,7 @@ export async function createFrontingComment(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const commentId = createId(ID_PREFIXES.frontingComment);
+  const commentId = brandId<FrontingCommentId>(createId(ID_PREFIXES.frontingComment));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

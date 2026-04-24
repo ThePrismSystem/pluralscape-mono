@@ -207,7 +207,7 @@ export function getActiveDeviceTokens(
 /** Get fronting comments on currently active sessions (end_time IS NULL). */
 export function getCurrentFrontingComments(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): CurrentFrontingComment[] {
   return db
     .select({
