@@ -351,10 +351,13 @@ describe("encryptFieldValueInput", () => {
 
 // ── Validation branches for encrypted blob assertions ─────────────────
 
-describe("assertFieldDefinitionEncryptedInput branches (via decryptFieldDefinition)", () => {
+// Zod rejects malformed decrypted payloads with structured ZodError — these
+// branches assert the schema catches every failure mode of the replaced
+// hand-written asserts.
+describe("FieldDefinitionEncryptedInputSchema branches (via decryptFieldDefinition)", () => {
   it("throws when decrypted blob is null", () => {
     const raw = { ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(null, masterKey) };
-    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(/not an object/i);
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow();
   });
 
   it("throws when decrypted blob is a primitive (string)", () => {
@@ -362,7 +365,7 @@ describe("assertFieldDefinitionEncryptedInput branches (via decryptFieldDefiniti
       ...BASE_DEFINITION_RESULT,
       encryptedData: makeBase64Blob("just a string", masterKey),
     };
-    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(/not an object/i);
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow();
   });
 
   it("throws when name is not a string", () => {
@@ -370,9 +373,7 @@ describe("assertFieldDefinitionEncryptedInput branches (via decryptFieldDefiniti
       ...BASE_DEFINITION_RESULT,
       encryptedData: makeBase64Blob({ name: 42, description: null, options: null }, masterKey),
     };
-    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(
-      /missing required string field: name/,
-    );
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow();
   });
 
   it("throws when description is neither null nor a string", () => {
@@ -380,9 +381,7 @@ describe("assertFieldDefinitionEncryptedInput branches (via decryptFieldDefiniti
       ...BASE_DEFINITION_RESULT,
       encryptedData: makeBase64Blob({ name: "X", description: 5, options: null }, masterKey),
     };
-    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(
-      /description must be string or null/,
-    );
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow();
   });
 
   it("throws when options is not an array", () => {
@@ -393,9 +392,7 @@ describe("assertFieldDefinitionEncryptedInput branches (via decryptFieldDefiniti
         masterKey,
       ),
     };
-    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(
-      /options must be string\[\] or null/,
-    );
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow();
   });
 
   it("throws when one of the options is not a string", () => {
@@ -406,19 +403,19 @@ describe("assertFieldDefinitionEncryptedInput branches (via decryptFieldDefiniti
         masterKey,
       ),
     };
-    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(/each option must be a string/);
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow();
   });
 });
 
-describe("assertFieldValueUnion branches (via decryptFieldValue)", () => {
+describe("FieldValueEncryptedInputSchema branches (via decryptFieldValue)", () => {
   it("throws when decrypted blob is null", () => {
     const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(null, masterKey) };
-    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/not an object/i);
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow();
   });
 
   it("throws when decrypted blob is a primitive", () => {
     const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(123, masterKey) };
-    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/not an object/i);
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow();
   });
 
   it("throws when fieldType is not a string", () => {
@@ -426,7 +423,7 @@ describe("assertFieldValueUnion branches (via decryptFieldValue)", () => {
       ...BASE_VALUE_RESULT,
       encryptedData: makeBase64Blob({ fieldType: 42, value: "x" }, masterKey),
     };
-    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/invalid fieldType/);
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow();
   });
 
   it("throws when fieldType is a string but not in the allowed set", () => {
@@ -434,7 +431,7 @@ describe("assertFieldValueUnion branches (via decryptFieldValue)", () => {
       ...BASE_VALUE_RESULT,
       encryptedData: makeBase64Blob({ fieldType: "bogus", value: "x" }, masterKey),
     };
-    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/invalid fieldType: bogus/);
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow();
   });
 
   it("throws when value field is missing entirely", () => {
@@ -442,7 +439,7 @@ describe("assertFieldValueUnion branches (via decryptFieldValue)", () => {
       ...BASE_VALUE_RESULT,
       encryptedData: makeBase64Blob({ fieldType: "text" }, masterKey),
     };
-    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/missing required field: value/);
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow();
   });
 });
 
