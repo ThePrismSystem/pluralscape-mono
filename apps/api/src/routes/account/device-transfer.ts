@@ -114,7 +114,13 @@ deviceTransferRoute.post("/:id/approve", async (c) => {
   const transferId = c.req.param("id");
 
   try {
-    await approveTransfer(db, brandId<DeviceTransferRequestId>(transferId), auth.accountId, session.sessionId, audit);
+    await approveTransfer(
+      db,
+      brandId<DeviceTransferRequestId>(transferId),
+      auth.accountId,
+      session.sessionId,
+      audit,
+    );
     return c.body(null, HTTP_NO_CONTENT);
   } catch (error: unknown) {
     if (error instanceof TransferNotFoundError) {

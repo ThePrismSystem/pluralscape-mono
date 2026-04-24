@@ -8,11 +8,7 @@ import { accounts, deviceTransferRequests, sessions } from "../schema/sqlite/aut
 
 import { createSqliteAuthTables, sqliteInsertAccount } from "./helpers/sqlite-helpers.js";
 
-import type {
-  AccountId,
-  DeviceTransferRequestId,
-  SessionId,
-} from "@pluralscape/types";
+import type { AccountId, DeviceTransferRequestId, SessionId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const ONE_HOUR_MS = 3_600_000;

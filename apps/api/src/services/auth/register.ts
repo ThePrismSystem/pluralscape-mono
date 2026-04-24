@@ -26,7 +26,14 @@ import { EMAIL_SALT_BYTES, CHALLENGE_NONCE_TTL_MS } from "../../routes/auth/auth
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { ClientPlatform } from "../../routes/auth/auth.constants.js";
 import type { ChallengeNonce } from "@pluralscape/crypto";
-import type { AccountId, AccountType, AuthKeyId, RecoveryKeyId, SessionId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  AccountType,
+  AuthKeyId,
+  RecoveryKeyId,
+  SessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Registration Phase 1: Initiate ────────────────────────────────

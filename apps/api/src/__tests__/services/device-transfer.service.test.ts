@@ -169,7 +169,13 @@ describe("device-transfer.service", () => {
       // UPDATE: set status to approved, returning
       chain.returning.mockResolvedValueOnce([{ id: "dtr_test" }]);
 
-      await approveTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, SESSION_ID, mockAudit);
+      await approveTransfer(
+        db,
+        brandId<DeviceTransferRequestId>("dtr_test"),
+        ACCOUNT_ID,
+        SESSION_ID,
+        mockAudit,
+      );
 
       expect(chain.update).toHaveBeenCalled();
       expect(mockAudit).toHaveBeenCalledWith(
@@ -183,7 +189,13 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        approveTransfer(db, brandId<DeviceTransferRequestId>("dtr_nonexistent"), ACCOUNT_ID, SESSION_ID, mockAudit),
+        approveTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_nonexistent"),
+          ACCOUNT_ID,
+          SESSION_ID,
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferNotFoundError);
     });
 
@@ -192,7 +204,13 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValueOnce([{ id: "dtr_test", sourceSessionId: "sess_other" }]);
 
       await expect(
-        approveTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, SESSION_ID, mockAudit),
+        approveTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          SESSION_ID,
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferSessionMismatchError);
     });
 
@@ -204,7 +222,13 @@ describe("device-transfer.service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        approveTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, SESSION_ID, mockAudit),
+        approveTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          SESSION_ID,
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferNotFoundError);
     });
   });
@@ -223,7 +247,14 @@ describe("device-transfer.service", () => {
       mockIsValidTransferCode.mockReturnValue(false);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "abc", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "abc",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferValidationError);
     });
 
@@ -246,7 +277,14 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValue([makeRow({ encryptedKeyMaterial: null })]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "12345678",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferNotFoundError);
     });
 
@@ -276,7 +314,14 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValue([makeRow()]);
       chain.returning.mockResolvedValue([{ id: "dtr_test" }]);
 
-      await completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit);
+      await completeTransfer(
+        db,
+        brandId<DeviceTransferRequestId>("dtr_test"),
+        ACCOUNT_ID,
+        TARGET_SESSION_ID,
+        "12345678",
+        mockAudit,
+      );
 
       expect(chain.delete).toHaveBeenCalled();
       expect(chain.returning).toHaveBeenCalled();
@@ -287,7 +332,14 @@ describe("device-transfer.service", () => {
       chain.returning.mockResolvedValue([]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "12345678",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferNotFoundError);
     });
 
@@ -300,7 +352,14 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValue([makeRow()]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "12345678",
+          mockAudit,
+        ),
       ).rejects.toThrow(KeyDerivationUnavailableError);
     });
 
@@ -315,7 +374,14 @@ describe("device-transfer.service", () => {
       chain.returning.mockResolvedValue([{ codeAttempts: 1 }]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "00000000", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "00000000",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferCodeError);
 
       expect(chain.update).toHaveBeenCalled();
@@ -333,7 +399,14 @@ describe("device-transfer.service", () => {
       chain.returning.mockResolvedValue([{ codeAttempts: 5 }]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "00000000", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "00000000",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferExpiredError);
     });
 
@@ -348,7 +421,14 @@ describe("device-transfer.service", () => {
       chain.returning.mockResolvedValue([]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "00000000", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "00000000",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferNotFoundError);
     });
 
@@ -360,7 +440,14 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValue([makeRow()]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "12345678",
+          mockAudit,
+        ),
       ).rejects.toThrow(TypeError);
     });
 
@@ -368,7 +455,14 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValue([]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          ACCOUNT_ID,
+          TARGET_SESSION_ID,
+          "12345678",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferNotFoundError);
     });
 
@@ -377,7 +471,14 @@ describe("device-transfer.service", () => {
       chain.limit.mockResolvedValue([]);
 
       await expect(
-        completeTransfer(db, brandId<DeviceTransferRequestId>("dtr_test"), OTHER_ACCOUNT, TARGET_SESSION_ID, "12345678", mockAudit),
+        completeTransfer(
+          db,
+          brandId<DeviceTransferRequestId>("dtr_test"),
+          OTHER_ACCOUNT,
+          TARGET_SESSION_ID,
+          "12345678",
+          mockAudit,
+        ),
       ).rejects.toThrow(TransferNotFoundError);
     });
   });
