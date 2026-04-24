@@ -26,9 +26,11 @@ import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type {
+  MemberId,
   ServerRelationship,
   SystemId,
   SystemStructureEntityId,
+  SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -147,12 +149,12 @@ export const systemStructureEntityLinks = pgTable(
 export const systemStructureEntityMemberLinks = pgTable(
   "system_structure_entity_member_links",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityMemberLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentEntityId: varchar("parent_entity_id", { length: ID_MAX_LENGTH }),
-    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
+    memberId: brandedId<MemberId>("member_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },

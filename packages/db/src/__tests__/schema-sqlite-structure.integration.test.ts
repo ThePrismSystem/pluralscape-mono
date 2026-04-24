@@ -25,8 +25,10 @@ import {
 } from "./helpers/sqlite-helpers.js";
 
 import type {
+  MemberId,
   SystemId,
   SystemStructureEntityId,
+  SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -35,6 +37,9 @@ const newTypeId = (): SystemStructureEntityTypeId =>
   brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
 const newEntityId = (): SystemStructureEntityId =>
   brandId<SystemStructureEntityId>(crypto.randomUUID());
+const newMemberLinkId = (): SystemStructureEntityMemberLinkId =>
+  brandId<SystemStructureEntityMemberLinkId>(crypto.randomUUID());
+const asMemberId = (id: string): MemberId => brandId<MemberId>(id);
 
 const schema = {
   accounts,
@@ -1301,13 +1306,13 @@ describe("SQLite structure schema", () => {
         })
         .run();
 
-      const linkId = crypto.randomUUID();
+      const linkId = newMemberLinkId();
       db.insert(systemStructureEntityMemberLinks)
         .values({
           id: linkId,
           systemId,
           parentEntityId: entityId,
-          memberId,
+          memberId: asMemberId(memberId),
           sortOrder: 0,
           createdAt: now,
         })
@@ -1332,9 +1337,9 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: newMemberLinkId(),
             systemId,
-            memberId: "nonexistent",
+            memberId: asMemberId("nonexistent"),
             sortOrder: 0,
             createdAt: now,
           })
@@ -1350,9 +1355,9 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: newMemberLinkId(),
           systemId,
-          memberId,
+          memberId: asMemberId(memberId),
           sortOrder: 0,
           createdAt: now,
         })
@@ -1395,9 +1400,9 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: newMemberLinkId(),
           systemId,
-          memberId,
+          memberId: asMemberId(memberId),
           parentEntityId: entityId,
           sortOrder: 0,
           createdAt: now,
@@ -1408,9 +1413,9 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: newMemberLinkId(),
             systemId,
-            memberId,
+            memberId: asMemberId(memberId),
             parentEntityId: entityId,
             sortOrder: 1,
             createdAt: now,
@@ -1427,9 +1432,9 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: newMemberLinkId(),
           systemId,
-          memberId,
+          memberId: asMemberId(memberId),
           sortOrder: 0,
           createdAt: now,
         })
@@ -1439,9 +1444,9 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: newMemberLinkId(),
             systemId,
-            memberId,
+            memberId: asMemberId(memberId),
             sortOrder: 1,
             createdAt: now,
           })
@@ -1453,14 +1458,14 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const linkId = crypto.randomUUID();
+      const linkId = newMemberLinkId();
       const now = Date.now();
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
           id: linkId,
           systemId,
-          memberId,
+          memberId: asMemberId(memberId),
           sortOrder: 0,
           createdAt: now,
         })
@@ -1483,10 +1488,10 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: newMemberLinkId(),
             systemId,
-            memberId,
-            parentEntityId: "nonexistent",
+            memberId: asMemberId(memberId),
+            parentEntityId: brandId<SystemStructureEntityId>("nonexistent"),
             sortOrder: 0,
             createdAt: now,
           })

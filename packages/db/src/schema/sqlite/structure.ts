@@ -25,9 +25,11 @@ import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type {
+  MemberId,
   ServerRelationship,
   SystemId,
   SystemStructureEntityId,
+  SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -145,12 +147,12 @@ export const systemStructureEntityLinks = sqliteTable(
 export const systemStructureEntityMemberLinks = sqliteTable(
   "system_structure_entity_member_links",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityMemberLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentEntityId: text("parent_entity_id"),
-    memberId: text("member_id").notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
+    memberId: brandedId<MemberId>("member_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },

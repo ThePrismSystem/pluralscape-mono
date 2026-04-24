@@ -27,7 +27,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, SystemId, SystemStructureEntityMemberLinkId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const {
@@ -755,7 +755,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(systemStructureEntityMemberLinks).values({
-        id: `ssml_${crypto.randomUUID()}`,
+        id: brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`),
         systemId,
         memberId: created.id,
         sortOrder: 0,
@@ -1080,7 +1080,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const linkId = `ssml_${crypto.randomUUID()}`;
+      const linkId = brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`);
       await db.insert(systemStructureEntityMemberLinks).values({
         id: linkId,
         systemId,

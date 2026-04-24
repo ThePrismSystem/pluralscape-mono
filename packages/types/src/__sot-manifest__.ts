@@ -72,6 +72,8 @@ import type {
 import type {
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityMemberLinkServerMetadata,
+  SystemStructureEntityMemberLinkWire,
 } from "./entities/structure-entity-member-link.js";
 import type {
   SystemStructureEntityType,
@@ -233,6 +235,8 @@ export type SotEntityManifest = {
   };
   StructureEntityMemberLink: {
     domain: SystemStructureEntityMemberLink;
+    server: SystemStructureEntityMemberLinkServerMetadata;
+    wire: SystemStructureEntityMemberLinkWire;
     encryptedFields: SystemStructureEntityMemberLinkEncryptedFields;
   };
   StructureEntityAssociation: {

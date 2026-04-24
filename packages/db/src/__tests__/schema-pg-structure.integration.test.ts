@@ -25,12 +25,18 @@ import {
 } from "./helpers/pg-helpers.js";
 
 import type {
+  MemberId,
   SystemId,
   SystemStructureEntityId,
   SystemStructureEntityLinkId,
+  SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+
+const newMemberLinkId = (): SystemStructureEntityMemberLinkId =>
+  brandId<SystemStructureEntityMemberLinkId>(crypto.randomUUID());
+const asMemberId = (id: string): MemberId => brandId<MemberId>(id);
 
 const newTypeId = (): SystemStructureEntityTypeId =>
   brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
@@ -1236,12 +1242,12 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      const linkId = newLinkId();
+      const linkId = newMemberLinkId();
       await db.insert(systemStructureEntityMemberLinks).values({
         id: linkId,
         systemId,
         parentEntityId: entityId,
-        memberId,
+        memberId: asMemberId(memberId),
         sortOrder: 0,
         createdAt: now,
       });
@@ -1262,9 +1268,9 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityMemberLinks).values({
-          id: crypto.randomUUID(),
+          id: newMemberLinkId(),
           systemId,
-          memberId: "nonexistent",
+          memberId: asMemberId("nonexistent"),
           sortOrder: 0,
           createdAt: now,
         }),
@@ -1278,9 +1284,9 @@ describe("PG structure schema", () => {
       const now = Date.now();
 
       await db.insert(systemStructureEntityMemberLinks).values({
-        id: crypto.randomUUID(),
+        id: newMemberLinkId(),
         systemId,
-        memberId,
+        memberId: asMemberId(memberId),
         sortOrder: 0,
         createdAt: now,
       });
@@ -1315,9 +1321,9 @@ describe("PG structure schema", () => {
       });
 
       await db.insert(systemStructureEntityMemberLinks).values({
-        id: crypto.randomUUID(),
+        id: newMemberLinkId(),
         systemId,
-        memberId,
+        memberId: asMemberId(memberId),
         parentEntityId: entityId,
         sortOrder: 0,
         createdAt: now,
@@ -1325,9 +1331,9 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityMemberLinks).values({
-          id: crypto.randomUUID(),
+          id: newMemberLinkId(),
           systemId,
-          memberId,
+          memberId: asMemberId(memberId),
           parentEntityId: entityId,
           sortOrder: 1,
           createdAt: now,
@@ -1342,18 +1348,18 @@ describe("PG structure schema", () => {
       const now = Date.now();
 
       await db.insert(systemStructureEntityMemberLinks).values({
-        id: crypto.randomUUID(),
+        id: newMemberLinkId(),
         systemId,
-        memberId,
+        memberId: asMemberId(memberId),
         sortOrder: 0,
         createdAt: now,
       });
 
       await expect(
         db.insert(systemStructureEntityMemberLinks).values({
-          id: crypto.randomUUID(),
+          id: newMemberLinkId(),
           systemId,
-          memberId,
+          memberId: asMemberId(memberId),
           sortOrder: 1,
           createdAt: now,
         }),
@@ -1364,13 +1370,13 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const linkId = newLinkId();
+      const linkId = newMemberLinkId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityMemberLinks).values({
         id: linkId,
         systemId,
-        memberId,
+        memberId: asMemberId(memberId),
         sortOrder: 0,
         createdAt: now,
       });
@@ -1391,10 +1397,10 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityMemberLinks).values({
-          id: crypto.randomUUID(),
+          id: newMemberLinkId(),
           systemId,
-          memberId,
-          parentEntityId: "nonexistent",
+          memberId: asMemberId(memberId),
+          parentEntityId: brandId<SystemStructureEntityId>("nonexistent"),
           sortOrder: 0,
           createdAt: now,
         }),
