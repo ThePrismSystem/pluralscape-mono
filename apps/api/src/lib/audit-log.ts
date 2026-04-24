@@ -1,10 +1,10 @@
 import { auditLog } from "@pluralscape/db/pg";
-import { createId, now } from "@pluralscape/types";
+import { brandId, createId, now } from "@pluralscape/types";
 
 import { AUDIT_LOG_IP_MAX_LENGTH, AUDIT_LOG_UA_MAX_LENGTH } from "./audit-log.constants.js";
 
 import type { DbAuditActor } from "@pluralscape/db";
-import type { AccountId, AuditEventType, SystemId } from "@pluralscape/types";
+import type { AccountId, AuditEventType, AuditLogEntryId, SystemId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 /** Parameters for writing an audit log entry. */
@@ -28,7 +28,7 @@ export async function writeAuditLog(
 ): Promise<void> {
   const timestamp = now();
   await db.insert(auditLog).values({
-    id: createId("al_"),
+    id: brandId<AuditLogEntryId>(createId("al_")),
     accountId: params.accountId,
     systemId: params.systemId,
     eventType: params.eventType,

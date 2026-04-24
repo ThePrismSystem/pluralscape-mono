@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
 } from "./helpers/sqlite-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
+import type { AccountId, AuditLogEntryId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, auditLog };
@@ -45,13 +47,13 @@ describe("sqliteCleanupAuditLog", () => {
     accountId: string;
     systemId: string;
     timestamp?: number;
-  }): string {
-    const id = crypto.randomUUID();
+  }): AuditLogEntryId {
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
     db.insert(auditLog)
       .values({
         id,
-        accountId: opts.accountId,
-        systemId: opts.systemId,
+        accountId: brandId<AccountId>(opts.accountId),
+        systemId: brandId<SystemId>(opts.systemId),
         eventType: "auth.login",
         timestamp: opts.timestamp ?? Date.now(),
         actor: testActor(opts.accountId),

@@ -136,7 +136,7 @@ export async function queryAuditLog(
     const cursor = decodeCursor(params.cursor);
     const cursorCondition = or(
       lt(auditLog.timestamp, cursor.t),
-      and(eq(auditLog.timestamp, cursor.t), lt(auditLog.id, cursor.i)),
+      and(eq(auditLog.timestamp, cursor.t), lt(auditLog.id, brandId<AuditLogEntryId>(cursor.i))),
     );
     if (cursorCondition) {
       conditions.push(cursorCondition);

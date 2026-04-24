@@ -10,20 +10,16 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import {
-  AUDIT_LOG_DETAIL_MAX_LENGTH,
-  ENUM_MAX_LENGTH,
-  ID_MAX_LENGTH,
-} from "../../helpers/db.constants.js";
+import { AUDIT_LOG_DETAIL_MAX_LENGTH, ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { AUDIT_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
 import type { DbAuditActor } from "../../helpers/types.js";
-import type { AuditEventType } from "@pluralscape/types";
+import type { AccountId, AuditEventType, AuditLogEntryId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export type { DbAuditActor } from "../../helpers/types.js";
@@ -34,14 +30,14 @@ export type { DbAuditActor } from "../../helpers/types.js";
 export const auditLog = pgTable(
   "audit_log",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
+    id: brandedId<AuditLogEntryId>("id").notNull(),
     // ON DELETE SET NULL: audit logs survive account/system deletion with nullified references.
     // Intentional exception to the RESTRICT policy — audit history must be preserved.
     /** Denormalized for query performance — avoids joining through systems to get account. */
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH }).references(() => accounts.id, {
+    accountId: brandedId<AccountId>("account_id").references(() => accounts.id, {
       onDelete: "set null",
     }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH }).references(() => systems.id, {
+    systemId: brandedId<SystemId>("system_id").references(() => systems.id, {
       onDelete: "set null",
     }),
     eventType: varchar("event_type", { length: ENUM_MAX_LENGTH }).notNull().$type<AuditEventType>(),

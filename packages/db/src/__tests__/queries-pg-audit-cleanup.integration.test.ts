@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -10,6 +11,7 @@ import { systems } from "../schema/pg/systems.js";
 import { createPgAuditLogTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
+import type { AccountId, AuditLogEntryId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, auditLog };
@@ -40,12 +42,12 @@ describe("pgCleanupAuditLog", () => {
     accountId: string;
     systemId: string;
     timestamp?: number;
-  }): Promise<string> {
-    const id = crypto.randomUUID();
+  }): Promise<AuditLogEntryId> {
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
     await db.insert(auditLog).values({
       id,
-      accountId: opts.accountId,
-      systemId: opts.systemId,
+      accountId: brandId<AccountId>(opts.accountId),
+      systemId: brandId<SystemId>(opts.systemId),
       eventType: "auth.login",
       timestamp: opts.timestamp ?? Date.now(),
       actor: testActor(opts.accountId),

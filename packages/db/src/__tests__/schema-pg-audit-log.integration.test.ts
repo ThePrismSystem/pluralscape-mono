@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -10,6 +11,7 @@ import { systems } from "../schema/pg/systems.js";
 import { createPgAuditLogTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
+import type { AuditLogEntryId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, auditLog };
@@ -38,7 +40,7 @@ describe("PG audit_log schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
     const actor = testActor("account", accountId);
 
     await db.insert(auditLog).values({
@@ -67,7 +69,7 @@ describe("PG audit_log schema", () => {
 
   it("allows nullable fields (accountId, systemId, ipAddress, userAgent, detail)", async () => {
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
 
     await db.insert(auditLog).values({
       id,
@@ -89,7 +91,7 @@ describe("PG audit_log schema", () => {
 
     await expect(
       db.insert(auditLog).values({
-        id: crypto.randomUUID(),
+        id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
         eventType: "invalid.event" as "auth.login",
         timestamp: now,
         actor: testActor("account", "acc-123"),
@@ -125,7 +127,7 @@ describe("PG audit_log schema", () => {
     const now = Date.now();
     for (const eventType of eventTypes) {
       await db.insert(auditLog).values({
-        id: crypto.randomUUID(),
+        id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
         accountId,
         eventType,
         timestamp: now,
@@ -142,7 +144,7 @@ describe("PG audit_log schema", () => {
 
   it("supports api-key actor type", async () => {
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
     const actor = testActor("api-key", "key-123");
 
     await db.insert(auditLog).values({
@@ -159,7 +161,7 @@ describe("PG audit_log schema", () => {
   it("sets account_id to NULL on account deletion (SET NULL)", async () => {
     const accountId = await insertAccount();
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
 
     await db.insert(auditLog).values({
       id,
@@ -179,7 +181,7 @@ describe("PG audit_log schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
 
     await db.insert(auditLog).values({
       id,
@@ -198,7 +200,7 @@ describe("PG audit_log schema", () => {
 
   it("rejects duplicate composite primary key (same id + timestamp)", async () => {
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
 
     await db.insert(auditLog).values({
       id,
@@ -218,7 +220,7 @@ describe("PG audit_log schema", () => {
   });
 
   it("allows same id with different timestamps (composite PK)", async () => {
-    const id = crypto.randomUUID();
+    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
     const now = Date.now();
 
     await db.insert(auditLog).values({
@@ -244,7 +246,7 @@ describe("PG audit_log schema", () => {
     const now = Date.now();
 
     await db.insert(auditLog).values({
-      id: crypto.randomUUID(),
+      id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
       eventType: "auth.login",
       timestamp: now,
       actor: testActor("account", "acc-123"),
@@ -257,7 +259,7 @@ describe("PG audit_log schema", () => {
 
     await expect(
       db.insert(auditLog).values({
-        id: crypto.randomUUID(),
+        id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
         eventType: "auth.login",
         timestamp: now,
         actor: testActor("account", "acc-123"),
