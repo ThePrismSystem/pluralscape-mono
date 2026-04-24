@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import {
   ENUM_MAX_LENGTH,
@@ -31,24 +31,28 @@ import { blobMetadata } from "./blob-metadata.js";
 import { systems } from "./systems.js";
 
 import type {
+  AccountId,
   AccountPurgeStatus,
   ExportFormat,
   ExportRequestStatus,
   ImportCheckpointState,
   ImportEntityType,
+  ImportError,
+  ImportJobId,
   ImportJobStatus,
   ImportSourceFormat,
+  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const importJobs = pgTable(
   "import_jobs",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<ImportJobId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: brandedId<SystemId>("system_id").notNull(),
     source: varchar("source", { length: ENUM_MAX_LENGTH }).notNull().$type<ImportSourceFormat>(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
@@ -56,7 +60,7 @@ export const importJobs = pgTable(
       .$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
     /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
-    errorLog: jsonb("error_log"),
+    errorLog: jsonb("error_log").$type<readonly ImportError[]>(),
     /** Resumption state for interrupted imports. See ImportCheckpointState in @pluralscape/types. */
     checkpointState: jsonb("checkpoint_state").$type<ImportCheckpointState>(),
     warningCount: integer("warning_count").notNull().default(0),

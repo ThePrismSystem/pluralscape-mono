@@ -9,7 +9,7 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -23,22 +23,30 @@ import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/en
 import { apiKeys } from "./api-keys.js";
 import { systems } from "./systems.js";
 
-import type { WebhookDeliveryStatus, WebhookEventType } from "@pluralscape/types";
+import type {
+  ApiKeyId,
+  ServerSecret,
+  SystemId,
+  WebhookDeliveryId,
+  WebhookDeliveryStatus,
+  WebhookEventType,
+  WebhookId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const webhookConfigs = sqliteTable(
   "webhook_configs",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<WebhookId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     url: text("url").notNull(),
     /** T3 (server-readable): raw HMAC signing key the server uses to sign outbound webhook payloads. Intentionally not E2E encrypted — server must read it to produce signatures at delivery time. */
-    secret: sqliteBinary("secret").notNull(),
+    secret: sqliteBinary("secret").notNull().$type<ServerSecret>(),
     eventTypes: sqliteJson("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-    cryptoKeyId: text("crypto_key_id").references(() => apiKeys.id, {
+    cryptoKeyId: brandedId<ApiKeyId>("crypto_key_id").references(() => apiKeys.id, {
       onDelete: "restrict",
     }),
     ...timestamps(),
@@ -56,9 +64,9 @@ export const webhookConfigs = sqliteTable(
 export const webhookDeliveries = sqliteTable(
   "webhook_deliveries",
   {
-    id: text("id").primaryKey(),
-    webhookId: text("webhook_id").notNull(),
-    systemId: text("system_id")
+    id: brandedId<WebhookDeliveryId>("id").primaryKey(),
+    webhookId: brandedId<WebhookId>("webhook_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     eventType: text("event_type").notNull().$type<WebhookEventType>(),

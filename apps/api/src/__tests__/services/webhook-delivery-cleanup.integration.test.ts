@@ -13,7 +13,13 @@ import { WEBHOOK_DELIVERY_RETENTION_DAYS } from "../../service.constants.js";
 import { cleanupWebhookDeliveries } from "../../services/webhook-delivery-cleanup.js";
 import { asDb, genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
 
-import type { AccountId, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ServerSecret,
+  SystemId,
+  WebhookDeliveryId,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const MS_PER_DAY = 86_400_000;
@@ -37,7 +43,7 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
       id: webhookId,
       systemId,
       url: "https://example.com/hook",
-      secret: Buffer.from("test-secret"),
+      secret: new Uint8Array(Buffer.from("test-secret")) as ServerSecret,
       eventTypes: ["fronting.started"],
       enabled: true,
       createdAt: Date.now(),

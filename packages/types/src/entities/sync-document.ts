@@ -1,5 +1,6 @@
-import type { SystemId } from "../ids.js";
+import type { BucketId, ChannelId, SyncDocumentId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 
 /** Sync document types matching the document topology spec. */
 export type SyncDocumentType =
@@ -19,7 +20,7 @@ export type SyncIndicatorStatus = "synced" | "syncing" | "offline" | "error";
 
 /** Server-side sync document metadata (document-level, not entity-level). */
 export interface SyncDocument {
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   readonly systemId: SystemId;
   readonly docType: SyncDocumentType;
   readonly sizeBytes: number;
@@ -28,11 +29,18 @@ export interface SyncDocument {
   readonly archived: boolean;
   readonly timePeriod: string | null;
   readonly keyType: DocumentKeyType;
-  readonly bucketId: string | null;
-  readonly channelId: string | null;
+  readonly bucketId: BucketId | null;
+  readonly channelId: ChannelId | null;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
 }
+
+/**
+ * JSON-wire representation of SyncDocument. Derived from the domain
+ * type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`.
+ */
+export type SyncDocumentWire = Serialize<SyncDocument>;
 
 /** Overall sync status for a system. Runtime state, not persisted. */
 export interface SyncState {

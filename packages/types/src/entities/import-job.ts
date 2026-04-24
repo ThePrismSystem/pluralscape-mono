@@ -1,5 +1,6 @@
 import type { AccountId, ImportJobId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 
 // ── PluralKit import payloads ───────────────────────────────────────
 
@@ -144,6 +145,24 @@ export interface ImportJob {
   readonly updatedAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
 }
+
+/**
+ * Server-visible import job metadata — raw Drizzle row shape.
+ *
+ * Derived from `ImportJob` by adding `checkpointState`: the resumable
+ * import engine state the client writes back to the server between
+ * chunks but doesn't expose on the domain view of an import job.
+ */
+export type ImportJobServerMetadata = ImportJob & {
+  readonly checkpointState: ImportCheckpointState | null;
+};
+
+/**
+ * JSON-wire representation of ImportJob. Derived from the domain type
+ * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ */
+export type ImportJobWire = Serialize<ImportJob>;
 
 /** Schema version for `ImportCheckpointState`. Bumped when the shape changes. */
 export type ImportCheckpointSchemaVersion = 2;

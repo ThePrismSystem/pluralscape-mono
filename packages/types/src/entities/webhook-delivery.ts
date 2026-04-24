@@ -1,5 +1,6 @@
 import type { SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { WebhookEventType } from "./webhook-config.js";
 
 /** Status of a webhook delivery attempt. */
@@ -18,3 +19,22 @@ export interface WebhookDelivery {
   readonly nextRetryAt: UnixMillis | null;
   readonly createdAt: UnixMillis;
 }
+
+/**
+ * Server-visible webhook delivery metadata — raw Drizzle row shape.
+ *
+ * Derived from `WebhookDelivery` by adding the server-only
+ * `encryptedData` column — the T3-encrypted payload the server stores
+ * to sign at delivery time. The payload itself is encrypted with a
+ * server-held key (not E2E), so it's `Uint8Array` not `EncryptedBlob`.
+ */
+export type WebhookDeliveryServerMetadata = WebhookDelivery & {
+  readonly encryptedData: Uint8Array;
+};
+
+/**
+ * JSON-wire representation of WebhookDelivery. Derived from the domain
+ * type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`.
+ */
+export type WebhookDeliveryWire = Serialize<WebhookDelivery>;

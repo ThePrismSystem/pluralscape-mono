@@ -129,7 +129,7 @@ export async function listWebhookDeliveries(
     }
 
     if (opts.cursor) {
-      conditions.push(lt(webhookDeliveries.id, opts.cursor));
+      conditions.push(lt(webhookDeliveries.id, brandId<WebhookDeliveryId>(opts.cursor)));
     }
 
     const rows = await tx

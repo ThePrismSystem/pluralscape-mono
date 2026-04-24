@@ -85,7 +85,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
   let service: PgSyncRelayService;
-  let systemId: string;
+  let systemId: SystemId;
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -96,7 +96,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
 
     // Seed account + system
     const accountId = crypto.randomUUID();
-    systemId = `sys_${crypto.randomUUID().slice(0, 8)}`;
+    systemId = brandId<SystemId>(`sys_${crypto.randomUUID().slice(0, 8)}`);
     const now = new Date().toISOString();
     await client.exec(
       `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at)
@@ -125,7 +125,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
     const raw = id ?? `system-core-sys_${crypto.randomUUID().slice(0, 8)}`;
     const now = Date.now();
     await db.insert(syncDocuments).values({
-      documentId: raw,
+      documentId: asSyncDocId(raw),
       systemId,
       docType: "system-core",
       createdAt: now,

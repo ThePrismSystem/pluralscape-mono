@@ -42,7 +42,13 @@ import {
 } from "../../services/webhook-payload-encryption.js";
 import { asDb, genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
 
-import type { AccountId, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ServerSecret,
+  SystemId,
+  WebhookDeliveryId,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { webhookConfigs, webhookDeliveries } = schema;
@@ -54,7 +60,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
   let db: PgliteDatabase<typeof schema>;
   let systemId: SystemId;
   let webhookId: WebhookId;
-  let webhookSecret: Buffer;
+  let webhookSecret: ServerSecret;
 
   beforeAll(async () => {
     await initSodium();
@@ -65,7 +71,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
     systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
 
     // Insert a webhook config with a known secret
-    webhookSecret = randomBytes(32);
+    webhookSecret = new Uint8Array(randomBytes(32)) as ServerSecret;
     webhookId = genWebhookId();
     await db.insert(webhookConfigs).values({
       id: webhookId,
@@ -180,7 +186,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
         id: disabledWhId,
         systemId,
         url: "https://example.com/disabled",
-        secret: randomBytes(32),
+        secret: new Uint8Array(randomBytes(32)) as ServerSecret,
         eventTypes: ["fronting.started"],
         enabled: false,
         createdAt: Date.now(),

@@ -48,11 +48,14 @@ import type {
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
+  ServerSecret,
   SessionId,
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
+  WebhookDeliveryId,
+  WebhookId,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -62,6 +65,8 @@ describe("SQLite views / query helpers", () => {
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const brandedWebhookId = (): WebhookId => brandId<WebhookId>(crypto.randomUUID());
+  const webhookSecret = (): ServerSecret => new Uint8Array([1, 2, 3]) as ServerSecret;
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -299,14 +304,14 @@ describe("SQLite views / query helpers", () => {
 
     it("returns failed deliveries under max attempts and respects limit", () => {
       const now = Date.now();
-      const webhookId = crypto.randomUUID();
+      const webhookId = brandedWebhookId();
       const maxAttempts = 3;
       db.insert(webhookConfigs)
         .values({
           id: webhookId,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1, 2, 3]),
+          secret: webhookSecret(),
           eventTypes: ["member.created"],
           createdAt: now,
           updatedAt: now,
@@ -315,7 +320,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -329,7 +334,7 @@ describe("SQLite views / query helpers", () => {
       // Over limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -343,7 +348,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit but nextRetryAt in the future — should NOT be returned
       db.insert(webhookDeliveries)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",

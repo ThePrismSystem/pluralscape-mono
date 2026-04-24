@@ -68,11 +68,13 @@ describe("webhook-dispatcher (PGlite integration)", () => {
       sessionId: brandId<FrontingSessionId>("ses_test"),
     });
     expect(ids.length).toBe(1);
+    const [firstId] = ids;
+    if (!firstId) throw new Error("expected delivery id");
 
     const [row] = await db
       .select()
       .from(webhookDeliveries)
-      .where(eq(webhookDeliveries.id, ids[0] as string));
+      .where(eq(webhookDeliveries.id, firstId));
     expect(row?.status).toBe("pending");
     expect(row?.eventType).toBe("fronting.started");
   });

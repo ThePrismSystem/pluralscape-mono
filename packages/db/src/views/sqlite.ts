@@ -108,7 +108,7 @@ export function getPendingFriendRequests(
 /** Get webhook deliveries pending retry (status = 'failed', under max attempts, due for retry). */
 export function getPendingWebhookRetries(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
   maxAttempts: number,
 ): PendingWebhookRetry[] {
   const now = Date.now();

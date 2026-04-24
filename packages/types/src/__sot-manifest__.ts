@@ -17,6 +17,11 @@ import type {
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
 import type {
+  BlobMetadata,
+  BlobMetadataServerMetadata,
+  BlobMetadataWire,
+} from "./entities/blob.js";
+import type {
   BoardMessage,
   BoardMessageServerMetadata,
   BoardMessageWire,
@@ -78,6 +83,7 @@ import type {
   GroupServerMetadata,
   GroupWire,
 } from "./entities/group.js";
+import type { ImportJob, ImportJobServerMetadata, ImportJobWire } from "./entities/import-job.js";
 import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
@@ -168,6 +174,7 @@ import type {
   SystemStructureEntityServerMetadata,
   SystemStructureEntityWire,
 } from "./entities/structure-entity.js";
+import type { SyncDocument, SyncDocumentWire } from "./entities/sync-document.js";
 import type {
   SystemSettings,
   SystemSettingsEncryptedFields,
@@ -190,6 +197,16 @@ import type {
   TimerConfigServerMetadata,
   TimerConfigWire,
 } from "./entities/timer-config.js";
+import type {
+  WebhookConfig,
+  WebhookConfigServerMetadata,
+  WebhookConfigWire,
+} from "./entities/webhook-config.js";
+import type {
+  WebhookDelivery,
+  WebhookDeliveryServerMetadata,
+  WebhookDeliveryWire,
+} from "./entities/webhook-delivery.js";
 import type { WikiPage, WikiPageServerMetadata, WikiPageWire } from "./entities/wiki-page.js";
 import type {
   NomenclatureEncryptedFields,
@@ -235,6 +252,14 @@ export type SotEntityManifest = {
     server: AccountServerMetadata;
     wire: AccountWire;
     // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
+  };
+  BlobMetadata: {
+    domain: BlobMetadata;
+    server: BlobMetadataServerMetadata;
+    wire: BlobMetadataWire;
+    // Plaintext entity — no encrypted fields. The blob contents are
+    // encrypted, but the metadata row itself is server-visible.
     encryptedFields: never;
   };
   System: {
@@ -491,6 +516,39 @@ export type SotEntityManifest = {
     domain: WikiPage;
     server: WikiPageServerMetadata;
     wire: WikiPageWire;
+    encryptedFields: never;
+  };
+  // ── Cluster 9: Operational ────────────────────────────────────────────
+  WebhookConfig: {
+    domain: WebhookConfig;
+    server: WebhookConfigServerMetadata;
+    wire: WebhookConfigWire;
+    // Plaintext entity — the T3 HMAC `secret` is readable by the server
+    // but is not E2E encrypted user data. No encryptedFields union.
+    encryptedFields: never;
+  };
+  WebhookDelivery: {
+    domain: WebhookDelivery;
+    server: WebhookDeliveryServerMetadata;
+    wire: WebhookDeliveryWire;
+    // Plaintext domain — the `encryptedData` payload is server-held T3
+    // (not E2E), attached only to the server-side metadata.
+    encryptedFields: never;
+  };
+  SyncDocument: {
+    domain: SyncDocument;
+    // SyncDocument has no server-only columns — the server sees the same
+    // document-metadata shape as the client.
+    server: SyncDocument;
+    wire: SyncDocumentWire;
+    encryptedFields: never;
+  };
+  ImportJob: {
+    domain: ImportJob;
+    server: ImportJobServerMetadata;
+    wire: ImportJobWire;
+    // Plaintext domain — `checkpointState` is server-only resumption
+    // state, attached only to the server-side metadata.
     encryptedFields: never;
   };
 };

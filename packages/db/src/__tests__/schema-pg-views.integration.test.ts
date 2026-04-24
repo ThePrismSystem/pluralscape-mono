@@ -49,11 +49,14 @@ import type {
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
+  ServerSecret,
   SessionId,
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
+  WebhookDeliveryId,
+  WebhookId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -310,21 +313,21 @@ describe("PG views / query helpers", () => {
   describe("getPendingWebhookRetries", () => {
     it("respects max_attempts parameter", async () => {
       const now = Date.now();
-      const webhookId = crypto.randomUUID();
+      const webhookId = brandId<WebhookId>(crypto.randomUUID());
       const maxAttempts = 3;
 
       await db.insert(webhookConfigs).values({
         id: webhookId,
         systemId,
         url: "https://example.com/hook",
-        secret: new Uint8Array([1, 2, 3]),
+        secret: new Uint8Array([1, 2, 3]) as ServerSecret,
         eventTypes: ["member.created"],
         createdAt: now,
         updatedAt: now,
       });
       // Under limit, nextRetryAt in the past
       await db.insert(webhookDeliveries).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
         webhookId,
         systemId,
         eventType: "member.created",
@@ -336,7 +339,7 @@ describe("PG views / query helpers", () => {
       });
       // Over limit, nextRetryAt in the past
       await db.insert(webhookDeliveries).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
         webhookId,
         systemId,
         eventType: "member.created",
@@ -348,7 +351,7 @@ describe("PG views / query helpers", () => {
       });
       // Under limit but nextRetryAt in the future — should NOT be returned
       await db.insert(webhookDeliveries).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
         webhookId,
         systemId,
         eventType: "member.created",
