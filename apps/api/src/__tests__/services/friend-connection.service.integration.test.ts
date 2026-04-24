@@ -38,8 +38,10 @@ import {
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
   AccountId,
+  BucketId,
   FriendConnectionId,
   FriendConnectionStatus,
+  KeyGrantId,
   SystemId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -50,16 +52,16 @@ const { friendConnections, friendBucketAssignments, keyGrants, buckets } = schem
 async function insertConnection(
   db: PgliteDatabase<typeof schema>,
   opts: {
-    id?: string;
-    accountId: string;
-    friendAccountId: string;
+    id?: FriendConnectionId;
+    accountId: AccountId;
+    friendAccountId: AccountId;
     status?: FriendConnectionStatus;
     version?: number;
     archived?: boolean;
     archivedAt?: number | null;
   },
-): Promise<string> {
-  const id = opts.id ?? createId(ID_PREFIXES.friendConnection);
+): Promise<FriendConnectionId> {
+  const id = opts.id ?? brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
   const timestamp = now();
   await db.insert(friendConnections).values({
     id,
@@ -410,7 +412,7 @@ describe("friend-connection.service (PGlite integration)", () => {
 
       // Create a bucket and assignment
       const bucketTimestamp = now();
-      const bucketId = createId(ID_PREFIXES.bucket);
+      const bucketId = brandId<BucketId>(createId(ID_PREFIXES.bucket));
       await db.insert(buckets).values({
         id: bucketId,
         systemId,
@@ -445,7 +447,7 @@ describe("friend-connection.service (PGlite integration)", () => {
 
       // Create a bucket, assignment, and key grant
       const bucketTimestamp = now();
-      const bucketId = createId(ID_PREFIXES.bucket);
+      const bucketId = brandId<BucketId>(createId(ID_PREFIXES.bucket));
       await db.insert(buckets).values({
         id: bucketId,
         systemId,
@@ -458,7 +460,7 @@ describe("friend-connection.service (PGlite integration)", () => {
         bucketId,
         systemId,
       });
-      const keyGrantId = createId(ID_PREFIXES.keyGrant);
+      const keyGrantId = brandId<KeyGrantId>(createId(ID_PREFIXES.keyGrant));
       await db.insert(keyGrants).values({
         id: keyGrantId,
         bucketId,

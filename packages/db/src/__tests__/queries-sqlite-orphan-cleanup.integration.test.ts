@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -21,7 +22,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { BucketContentEntityType } from "@pluralscape/types";
+import type { BucketContentEntityType, BucketId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, groups, buckets, bucketContentTags };
@@ -53,8 +54,8 @@ describe("sqliteCleanupOrphanedTags", () => {
     db.delete(members).run();
   });
 
-  function insertBucket(systemId: string): string {
-    const id = crypto.randomUUID();
+  function insertBucket(systemId: SystemId): BucketId {
+    const id = brandId<BucketId>(crypto.randomUUID());
     const now = Date.now();
     db.insert(buckets)
       .values({
@@ -71,8 +72,8 @@ describe("sqliteCleanupOrphanedTags", () => {
   function insertTag(
     entityType: BucketContentEntityType,
     entityId: string,
-    bucketId: string,
-    systemId: string,
+    bucketId: BucketId,
+    systemId: SystemId,
   ): void {
     db.insert(bucketContentTags).values({ entityType, entityId, bucketId, systemId }).run();
   }

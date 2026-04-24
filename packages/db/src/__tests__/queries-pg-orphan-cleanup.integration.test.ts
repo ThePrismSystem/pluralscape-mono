@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -19,7 +20,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { BucketContentEntityType } from "@pluralscape/types";
+import type { BucketContentEntityType, BucketId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, members, groups, buckets, bucketContentTags };
@@ -51,8 +52,8 @@ describe("pgCleanupOrphanedTags", () => {
     await db.delete(members);
   });
 
-  async function insertBucket(systemId: string): Promise<string> {
-    const id = crypto.randomUUID();
+  async function insertBucket(systemId: SystemId): Promise<BucketId> {
+    const id = brandId<BucketId>(crypto.randomUUID());
     const now = Date.now();
     await db.insert(buckets).values({
       id,
@@ -67,8 +68,8 @@ describe("pgCleanupOrphanedTags", () => {
   async function insertTag(
     entityType: BucketContentEntityType,
     entityId: string,
-    bucketId: string,
-    systemId: string,
+    bucketId: BucketId,
+    systemId: SystemId,
   ): Promise<void> {
     await db.insert(bucketContentTags).values({ entityType, entityId, bucketId, systemId });
   }

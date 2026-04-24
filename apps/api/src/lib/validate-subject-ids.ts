@@ -6,7 +6,7 @@ import { HTTP_BAD_REQUEST } from "../http.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 
-import type { CustomFrontId, SystemId } from "@pluralscape/types";
+import type { CustomFrontId, SystemId, SystemStructureEntityId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface SubjectIds {
@@ -72,7 +72,10 @@ export async function validateSubjectIds(
       .from(systemStructureEntities)
       .where(
         and(
-          eq(systemStructureEntities.id, subjects.structureEntityId),
+          eq(
+            systemStructureEntities.id,
+            brandId<SystemStructureEntityId>(subjects.structureEntityId),
+          ),
           eq(systemStructureEntities.systemId, systemId),
           eq(systemStructureEntities.archived, false),
         ),

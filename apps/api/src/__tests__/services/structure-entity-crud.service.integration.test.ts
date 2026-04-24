@@ -39,6 +39,8 @@ import type {
   AccountId,
   MemberId,
   SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -405,7 +407,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
       const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const now = Date.now();
       await db.insert(systemStructureEntityMemberLinks).values({
-        id: `steml_${crypto.randomUUID()}`,
+        id: brandId<SystemStructureEntityMemberLinkId>(`steml_${crypto.randomUUID()}`),
         systemId,
         parentEntityId: entity.id,
         memberId,
@@ -438,7 +440,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
       );
 
       await db.insert(systemStructureEntityAssociations).values({
-        id: `stea_${crypto.randomUUID()}`,
+        id: brandId<SystemStructureEntityAssociationId>(`stea_${crypto.randomUUID()}`),
         systemId,
         sourceEntityId: entityA.id,
         targetEntityId: entityB.id,

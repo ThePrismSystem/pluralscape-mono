@@ -31,7 +31,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, BucketId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const {
@@ -124,7 +124,7 @@ describe("bucket.service (PGlite integration)", () => {
     it("enforces QUOTA_EXCEEDED", async () => {
       const timestamp = now();
       const values = Array.from({ length: MAX_BUCKETS_PER_SYSTEM }, () => ({
-        id: createId(ID_PREFIXES.bucket),
+        id: brandId<BucketId>(createId(ID_PREFIXES.bucket)),
         systemId,
         encryptedData: testBlob(),
         createdAt: timestamp,

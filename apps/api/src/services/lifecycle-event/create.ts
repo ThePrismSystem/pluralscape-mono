@@ -38,7 +38,7 @@ export async function createLifecycleEvent(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const eventId = createId(ID_PREFIXES.lifecycleEvent);
+  const eventId = brandId<LifecycleEventId>(createId(ID_PREFIXES.lifecycleEvent));
   const timestamp = now();
 
   // Validate per-event-type metadata if provided

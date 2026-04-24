@@ -38,7 +38,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { boardMessages, webhookConfigs, webhookDeliveries } = schema;
@@ -692,13 +692,13 @@ describe("board-message.service (PGlite integration)", () => {
 
     it("creates webhook delivery records for each reordered message", async () => {
       // Insert a webhook config subscribed to board-message.reordered
-      const webhookId = `wh_${crypto.randomUUID()}`;
+      const webhookId = brandId<WebhookId>(`wh_${crypto.randomUUID()}`);
       const ts = Date.now();
       await db.insert(webhookConfigs).values({
         id: webhookId,
         systemId,
         url: "https://example.com/hook",
-        secret: Buffer.from("test-secret"),
+        secret: new Uint8Array(Buffer.from("test-secret")) as ServerSecret,
         eventTypes: ["board-message.reordered"],
         enabled: true,
         version: 1,

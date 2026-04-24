@@ -1,5 +1,5 @@
 import { timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
 import { CreateTimerConfigBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -14,7 +14,7 @@ import { toTimerConfigResult } from "./internal.js";
 import type { TimerConfigResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SystemId, TimerId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createTimerConfig(
@@ -32,7 +32,7 @@ export async function createTimerConfig(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const timerId = createId(ID_PREFIXES.timer);
+  const timerId = brandId<TimerId>(createId(ID_PREFIXES.timer));
   const timestamp = now();
   const isEnabled = parsed.enabled ?? true;
   const intervalMinutes = parsed.intervalMinutes ?? null;

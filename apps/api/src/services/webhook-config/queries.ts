@@ -1,4 +1,5 @@
 import { webhookConfigs } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { WebhookConfigQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
@@ -42,7 +43,7 @@ export async function listWebhookConfigs(
     }
 
     if (opts.cursor) {
-      conditions.push(lt(webhookConfigs.id, opts.cursor));
+      conditions.push(lt(webhookConfigs.id, brandId<WebhookId>(opts.cursor)));
     }
 
     const rows = await tx

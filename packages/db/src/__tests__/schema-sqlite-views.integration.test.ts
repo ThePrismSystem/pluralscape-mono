@@ -42,11 +42,21 @@ import {
 
 import type {
   AccountId,
+  AcknowledgementId,
   ApiKeyId,
   DeviceTransferRequestId,
+  FriendConnectionId,
+  FrontingCommentId,
+  FrontingSessionId,
   GroupId,
+  ServerSecret,
   SessionId,
   SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+  WebhookDeliveryId,
+  WebhookId,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -55,7 +65,9 @@ describe("SQLite views / query helpers", () => {
   let db: BetterSQLite3Database;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: AccountId, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const brandedWebhookId = (): WebhookId => brandId<WebhookId>(crypto.randomUUID());
+  const webhookSecret = (): ServerSecret => new Uint8Array([1, 2, 3]) as ServerSecret;
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -151,7 +163,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(frontingSessions)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
           startTime: now - 60000,
@@ -163,7 +175,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(frontingSessions)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
           startTime: now - 120000,
@@ -190,7 +202,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(frontingSessions)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
           startTime: now - 60000,
@@ -261,7 +273,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId: otherAccountId1,
           friendAccountId: accountId,
           status: "pending",
@@ -271,7 +283,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId: otherAccountId2,
           friendAccountId: accountId,
           status: "accepted",
@@ -293,14 +305,14 @@ describe("SQLite views / query helpers", () => {
 
     it("returns failed deliveries under max attempts and respects limit", () => {
       const now = Date.now();
-      const webhookId = crypto.randomUUID();
+      const webhookId = brandedWebhookId();
       const maxAttempts = 3;
       db.insert(webhookConfigs)
         .values({
           id: webhookId,
           systemId,
           url: "https://example.com/hook",
-          secret: new Uint8Array([1, 2, 3]),
+          secret: webhookSecret(),
           eventTypes: ["member.created"],
           createdAt: now,
           updatedAt: now,
@@ -309,7 +321,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -323,7 +335,7 @@ describe("SQLite views / query helpers", () => {
       // Over limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -337,7 +349,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit but nextRetryAt in the future — should NOT be returned
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -365,7 +377,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(acknowledgements)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<AcknowledgementId>(crypto.randomUUID()),
           systemId,
           confirmed: false,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -375,7 +387,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(acknowledgements)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<AcknowledgementId>(crypto.randomUUID()),
           systemId,
           confirmed: true,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -455,7 +467,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId,
           friendAccountId: otherAccountId,
           status: "accepted",
@@ -480,7 +492,7 @@ describe("SQLite views / query helpers", () => {
       const tokenHashValue = `tokenHash_${crypto.randomUUID()}`.slice(0, 64);
       db.insert(deviceTokens)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "ios",
@@ -490,7 +502,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(deviceTokens)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "android",
@@ -514,8 +526,8 @@ describe("SQLite views / query helpers", () => {
 
     it("returns comments only for active sessions", () => {
       const now = Date.now();
-      const activeSessionId = crypto.randomUUID();
-      const endedSessionId = crypto.randomUUID();
+      const activeSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
+      const endedSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
 
       db.insert(frontingSessions)
         .values([
@@ -544,7 +556,7 @@ describe("SQLite views / query helpers", () => {
       db.insert(frontingComments)
         .values([
           {
-            id: crypto.randomUUID(),
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: activeSessionId,
             systemId,
             memberId,
@@ -553,7 +565,7 @@ describe("SQLite views / query helpers", () => {
             updatedAt: now,
           },
           {
-            id: crypto.randomUUID(),
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: endedSessionId,
             systemId,
             memberId,
@@ -648,9 +660,9 @@ describe("SQLite views / query helpers", () => {
 
     it("returns associations for a system", () => {
       const now = Date.now();
-      const entityTypeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const entityTypeId = brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
+      const entityId1 = brandId<SystemStructureEntityId>(crypto.randomUUID());
+      const entityId2 = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -686,7 +698,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(systemStructureEntityAssociations)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<SystemStructureEntityAssociationId>(crypto.randomUUID()),
           systemId,
           sourceEntityId: entityId1,
           targetEntityId: entityId2,

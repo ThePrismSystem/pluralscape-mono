@@ -70,7 +70,7 @@ export async function createUploadUrl(
     throw error;
   }
 
-  const blobId = createId(ID_PREFIXES.blob);
+  const blobId = brandId<BlobId>(createId(ID_PREFIXES.blob));
   const storageKey = `${systemId}/${blobId}` as StorageKey;
   const timestamp = now();
   const expiresAt = toUnixMillis(timestamp + PRESIGNED_UPLOAD_TTL_MS);
@@ -117,7 +117,7 @@ export async function createUploadUrl(
   }
 
   return {
-    blobId: brandId<BlobId>(blobId),
+    blobId,
     uploadUrl: presigned.url,
     expiresAt: presigned.expiresAt,
     ...(presigned.fields ? { fields: presigned.fields } : {}),

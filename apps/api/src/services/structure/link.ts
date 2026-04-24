@@ -53,13 +53,15 @@ export async function updateEntityLink(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
   }
 
+  const linkIdBranded = brandId<SystemStructureEntityLinkId>(linkId);
+
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: systemStructureEntityLinks.id })
       .from(systemStructureEntityLinks)
       .where(
         and(
-          eq(systemStructureEntityLinks.id, linkId),
+          eq(systemStructureEntityLinks.id, linkIdBranded),
           eq(systemStructureEntityLinks.systemId, systemId),
         ),
       )
@@ -75,7 +77,7 @@ export async function updateEntityLink(
       .set({ sortOrder: parsed.data.sortOrder })
       .where(
         and(
-          eq(systemStructureEntityLinks.id, linkId),
+          eq(systemStructureEntityLinks.id, linkIdBranded),
           eq(systemStructureEntityLinks.systemId, systemId),
         ),
       )
@@ -142,7 +144,7 @@ export async function createEntityLink(
     throw new ApiHttpError(HTTP_CONFLICT, "CYCLE_DETECTED", "Cannot link entity to itself");
   }
 
-  const linkId = createId(ID_PREFIXES.structureEntityLink);
+  const linkId = brandId<SystemStructureEntityLinkId>(createId(ID_PREFIXES.structureEntityLink));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -236,7 +238,9 @@ export async function listEntityLinks(
     const conditions = [eq(systemStructureEntityLinks.systemId, systemId)];
 
     if (opts?.cursor) {
-      conditions.push(gt(systemStructureEntityLinks.id, opts.cursor));
+      conditions.push(
+        gt(systemStructureEntityLinks.id, brandId<SystemStructureEntityLinkId>(opts.cursor)),
+      );
     }
 
     const rows = await tx
@@ -259,13 +263,15 @@ export async function deleteEntityLink(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
+  const linkIdBranded = brandId<SystemStructureEntityLinkId>(linkId);
+
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: systemStructureEntityLinks.id })
       .from(systemStructureEntityLinks)
       .where(
         and(
-          eq(systemStructureEntityLinks.id, linkId),
+          eq(systemStructureEntityLinks.id, linkIdBranded),
           eq(systemStructureEntityLinks.systemId, systemId),
         ),
       )
@@ -287,7 +293,7 @@ export async function deleteEntityLink(
       .delete(systemStructureEntityLinks)
       .where(
         and(
-          eq(systemStructureEntityLinks.id, linkId),
+          eq(systemStructureEntityLinks.id, linkIdBranded),
           eq(systemStructureEntityLinks.systemId, systemId),
         ),
       );

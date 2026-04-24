@@ -10,7 +10,12 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import {
+  brandedId,
+  sqliteEncryptedBlob,
+  sqliteJson,
+  sqliteTimestamp,
+} from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -29,18 +34,33 @@ import {
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/types";
+import type {
+  AcknowledgementId,
+  AnyBrandedId,
+  BoardMessageId,
+  ChannelServerMetadata,
+  ChannelId,
+  MemberId,
+  MessageId,
+  NoteId,
+  PollId,
+  PollOptionId,
+  PollServerMetadata,
+  PollVoteId,
+  PollVoteServerMetadata,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const channels = sqliteTable(
   "channels",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<ChannelId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    type: text("type").notNull().$type<ServerChannel["type"]>(),
-    parentId: text("parent_id"),
+    type: text("type").notNull().$type<ChannelServerMetadata["type"]>(),
+    parentId: brandedId<ChannelId>("parent_id"),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -65,12 +85,12 @@ export const channels = sqliteTable(
 export const messages = sqliteTable(
   "messages",
   {
-    id: text("id").notNull(),
-    channelId: text("channel_id").notNull(),
-    systemId: text("system_id")
+    id: brandedId<MessageId>("id").notNull(),
+    channelId: brandedId<ChannelId>("channel_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    replyToId: text("reply_to_id"),
+    replyToId: brandedId<MessageId>("reply_to_id"),
     timestamp: sqliteTimestamp("timestamp").notNull(),
     editedAt: sqliteTimestamp("edited_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -99,8 +119,8 @@ export const messages = sqliteTable(
 export const boardMessages = sqliteTable(
   "board_messages",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<BoardMessageId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
@@ -122,12 +142,15 @@ export const boardMessages = sqliteTable(
 export const notes = sqliteTable(
   "notes",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<NoteId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     authorEntityType: text("author_entity_type"),
-    authorEntityId: text("author_entity_id"),
+    // Polymorphic: targets member or structure-entity — discriminator lives in
+    // `authorEntityType`. Brand-level narrowing happens at the application
+    // layer (`brandedId<AnyBrandedId>` intentionally permissive here).
+    authorEntityId: brandedId<AnyBrandedId>("author_entity_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -151,13 +174,13 @@ export const notes = sqliteTable(
 export const polls = sqliteTable(
   "polls",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<PollId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: text("created_by_member_id"),
-    kind: text("kind").notNull().$type<ServerPoll["kind"]>(),
-    status: text("status").notNull().default("open").$type<ServerPoll["status"]>(),
+    createdByMemberId: brandedId<MemberId>("created_by_member_id"),
+    kind: text("kind").notNull().$type<PollServerMetadata["kind"]>(),
+    status: text("status").notNull().default("open").$type<PollServerMetadata["status"]>(),
     closedAt: sqliteTimestamp("closed_at"),
     endsAt: sqliteTimestamp("ends_at"),
     allowMultipleVotes: integer("allow_multiple_votes", { mode: "boolean" }).notNull(),
@@ -188,13 +211,13 @@ export const polls = sqliteTable(
 export const pollVotes = sqliteTable(
   "poll_votes",
   {
-    id: text("id").primaryKey(),
-    pollId: text("poll_id").notNull(),
-    systemId: text("system_id")
+    id: brandedId<PollVoteId>("id").primaryKey(),
+    pollId: brandedId<PollId>("poll_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    optionId: text("option_id"),
-    voter: sqliteJson("voter").$type<ServerPollVote["voter"]>(),
+    optionId: brandedId<PollOptionId>("option_id"),
+    voter: sqliteJson("voter").$type<PollVoteServerMetadata["voter"]>(),
     isVeto: integer("is_veto", { mode: "boolean" }).notNull().default(false),
     votedAt: sqliteTimestamp("voted_at").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -219,11 +242,11 @@ export const pollVotes = sqliteTable(
 export const acknowledgements = sqliteTable(
   "acknowledgements",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<AcknowledgementId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: text("created_by_member_id"),
+    createdByMemberId: brandedId<MemberId>("created_by_member_id"),
     confirmed: integer("confirmed", { mode: "boolean" }).notNull().default(false),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),

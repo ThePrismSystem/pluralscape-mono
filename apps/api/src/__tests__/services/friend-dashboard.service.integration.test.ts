@@ -27,6 +27,7 @@ import type {
   MemberId,
   SystemId,
   SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -130,7 +131,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertBucket(): Promise<BucketId> {
-    const id = createId(ID_PREFIXES.bucket);
+    const id = brandId<BucketId>(createId(ID_PREFIXES.bucket));
     const ts = now();
     await db.insert(buckets).values({
       id,
@@ -154,7 +155,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertKeyGrant(bucketId: BucketId): Promise<KeyGrantId> {
-    const id = createId(ID_PREFIXES.keyGrant);
+    const id = brandId<KeyGrantId>(createId(ID_PREFIXES.keyGrant));
     await db.insert(keyGrants).values({
       id,
       bucketId,
@@ -168,7 +169,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertMember(): Promise<MemberId> {
-    const id = createId(ID_PREFIXES.member);
+    const id = brandId<MemberId>(createId(ID_PREFIXES.member));
     const ts = now();
     await db.insert(members).values({
       id,
@@ -193,8 +194,8 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     return id;
   }
 
-  async function insertStructureEntityType(): Promise<string> {
-    const id = createId(ID_PREFIXES.structureEntityType);
+  async function insertStructureEntityType(): Promise<SystemStructureEntityTypeId> {
+    const id = brandId<SystemStructureEntityTypeId>(createId(ID_PREFIXES.structureEntityType));
     const ts = now();
     await db.insert(systemStructureEntityTypes).values({
       id,
@@ -208,10 +209,10 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertStructureEntity(
-    entityTypeId: string,
+    entityTypeId: SystemStructureEntityTypeId,
     sortOrder: number,
   ): Promise<SystemStructureEntityId> {
-    const id = createId(ID_PREFIXES.structureEntity);
+    const id = brandId<SystemStructureEntityId>(createId(ID_PREFIXES.structureEntity));
     const ts = now();
     await db.insert(systemStructureEntities).values({
       id,
@@ -222,7 +223,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<SystemStructureEntityId>(id);
+    return id;
   }
 
   async function insertBucketTag(
@@ -242,7 +243,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     memberId: MemberId | null,
     customFrontId: CustomFrontId | null = null,
   ): Promise<FrontingSessionId> {
-    const id = createId(ID_PREFIXES.frontingSession);
+    const id = brandId<FrontingSessionId>(createId(ID_PREFIXES.frontingSession));
     const ts = now();
     await db.insert(frontingSessions).values({
       id,
@@ -256,7 +257,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<FrontingSessionId>(id);
+    return id;
   }
 
   // ── Tests ───────────────────────────────────────────────────────────

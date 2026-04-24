@@ -11,33 +11,40 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgTimestamp } from "../../columns/pg.js";
 import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH, MAX_BLOB_SIZE_BYTES } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH, MAX_BLOB_SIZE_BYTES } from "../../helpers/db.constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { BlobPurpose, EncryptionTier } from "@pluralscape/types";
+import type {
+  BlobId,
+  BlobPurpose,
+  BucketId,
+  ChecksumHex,
+  EncryptionTier,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const blobMetadata = pgTable(
   "blob_metadata",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<BlobId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     storageKey: varchar("storage_key", { length: 1024 }).notNull(),
     mimeType: varchar("mime_type", { length: 255 }),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     encryptionTier: integer("encryption_tier").notNull().$type<EncryptionTier>(),
-    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH }),
+    bucketId: brandedId<BucketId>("bucket_id"),
     purpose: varchar("purpose", { length: ENUM_MAX_LENGTH }).notNull().$type<BlobPurpose>(),
-    thumbnailOfBlobId: varchar("thumbnail_of_blob_id", { length: ID_MAX_LENGTH }),
-    checksum: varchar("checksum", { length: 255 }),
+    thumbnailOfBlobId: brandedId<BlobId>("thumbnail_of_blob_id"),
+    checksum: varchar("checksum", { length: 255 }).$type<ChecksumHex>(),
     createdAt: pgTimestamp("created_at").notNull(),
     uploadedAt: pgTimestamp("uploaded_at"),
     expiresAt: pgTimestamp("expires_at"),

@@ -1,4 +1,5 @@
 import { friendCodes } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 
 import { assertAccountOwnership } from "../../../lib/account-ownership.js";
@@ -8,7 +9,7 @@ import { withAccountRead } from "../../../lib/rls-context.js";
 import { toFriendCodeResult, type FriendCodeResult } from "./internal.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { AccountId, PaginatedResult } from "@pluralscape/types";
+import type { AccountId, FriendCodeId, PaginatedResult } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Default page size for friend code listing. */
@@ -43,7 +44,7 @@ export async function listFriendCodes(
     ];
 
     if (cursor) {
-      conditions.push(lt(friendCodes.id, cursor));
+      conditions.push(lt(friendCodes.id, brandId<FriendCodeId>(cursor)));
     }
 
     const rows = await tx

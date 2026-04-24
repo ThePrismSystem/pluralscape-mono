@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -15,6 +16,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { BlobId, BucketId, ChecksumHex } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, buckets, blobMetadata };
@@ -44,7 +46,7 @@ describe("SQLite blob_metadata schema", () => {
   it("round-trips all fields", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(blobMetadata)
@@ -56,7 +58,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 1024,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       })
@@ -80,13 +82,13 @@ describe("SQLite blob_metadata schema", () => {
 
     db.insert(blobMetadata)
       .values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey,
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "attachment",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       })
@@ -96,13 +98,13 @@ describe("SQLite blob_metadata schema", () => {
       db
         .insert(blobMetadata)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BlobId>(crypto.randomUUID()),
           systemId,
           storageKey,
           sizeBytes: 200,
           encryptionTier: 1,
           purpose: "attachment",
-          checksum: "a".repeat(64),
+          checksum: brandId<ChecksumHex>("a".repeat(64)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -113,7 +115,7 @@ describe("SQLite blob_metadata schema", () => {
   it("cascades on system deletion", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(blobMetadata)
@@ -124,7 +126,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 2,
         purpose: "member-photo",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       })
@@ -138,7 +140,7 @@ describe("SQLite blob_metadata schema", () => {
   it("restricts bucket deletion when referenced by blob metadata", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const bucketId = crypto.randomUUID();
+    const bucketId = brandId<BucketId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(buckets)
@@ -153,13 +155,13 @@ describe("SQLite blob_metadata schema", () => {
 
     db.insert(blobMetadata)
       .values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "attachment",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         bucketId,
         createdAt: now,
         uploadedAt: now,
@@ -204,13 +206,13 @@ describe("SQLite blob_metadata schema", () => {
       db
         .insert(blobMetadata)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BlobId>(crypto.randomUUID()),
           systemId,
           storageKey: `blobs/${crypto.randomUUID()}`,
           sizeBytes: 0,
           encryptionTier: 1,
           purpose: "avatar",
-          checksum: "a".repeat(64),
+          checksum: brandId<ChecksumHex>("a".repeat(64)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -221,13 +223,13 @@ describe("SQLite blob_metadata schema", () => {
       db
         .insert(blobMetadata)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BlobId>(crypto.randomUUID()),
           systemId,
           storageKey: `blobs/${crypto.randomUUID()}`,
           sizeBytes: -1,
           encryptionTier: 1,
           purpose: "avatar",
-          checksum: "a".repeat(64),
+          checksum: brandId<ChecksumHex>("a".repeat(64)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -281,7 +283,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects null checksum", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     // Use raw SQL to bypass Drizzle's type checking and test the DB constraint
@@ -304,13 +306,13 @@ describe("SQLite blob_metadata schema", () => {
       db
         .insert(blobMetadata)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BlobId>(crypto.randomUUID()),
           systemId,
           storageKey: `blobs/${crypto.randomUUID()}`,
           sizeBytes: 100,
           encryptionTier: 1,
           purpose: "avatar",
-          checksum: "a".repeat(63),
+          checksum: brandId<ChecksumHex>("a".repeat(63)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -321,13 +323,13 @@ describe("SQLite blob_metadata schema", () => {
       db
         .insert(blobMetadata)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BlobId>(crypto.randomUUID()),
           systemId,
           storageKey: `blobs/${crypto.randomUUID()}`,
           sizeBytes: 100,
           encryptionTier: 1,
           purpose: "avatar",
-          checksum: "a".repeat(65),
+          checksum: brandId<ChecksumHex>("a".repeat(65)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -387,7 +389,7 @@ describe("SQLite blob_metadata schema", () => {
   it("defaults archived to false and archivedAt to null", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(blobMetadata)
@@ -398,7 +400,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       })
@@ -412,7 +414,7 @@ describe("SQLite blob_metadata schema", () => {
   it("round-trips archived: true with archivedAt timestamp", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(blobMetadata)
@@ -423,7 +425,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
         archived: true,
@@ -488,7 +490,7 @@ describe("SQLite blob_metadata schema", () => {
   it("updates archived from false to true", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(blobMetadata)
@@ -499,7 +501,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       })

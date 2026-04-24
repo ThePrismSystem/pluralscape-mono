@@ -1,4 +1,5 @@
 import { friendConnections } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -54,7 +55,7 @@ export async function listFriendConnections(
         lt(friendConnections.createdAt, decoded.sortValue),
         and(
           eq(friendConnections.createdAt, decoded.sortValue),
-          lt(friendConnections.id, decoded.id),
+          lt(friendConnections.id, brandId<FriendConnectionId>(decoded.id)),
         ),
       );
       if (cursorCondition) {

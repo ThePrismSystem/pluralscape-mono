@@ -88,7 +88,14 @@ import { webhookConfigs, webhookDeliveries } from "../../schema/pg/webhooks.js";
 import { pgTableToCreateDDL, pgTableToIndexDDL } from "./schema-to-ddl.js";
 
 import type { PGlite } from "@electric-sql/pglite";
-import type { AccountId, BucketId, EncryptedBlob, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketId,
+  ChannelId,
+  EncryptedBlob,
+  PollId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT, PgTable } from "drizzle-orm/pg-core";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -540,14 +547,17 @@ export async function pgInsertChannel(
     parentId?: string | null;
     sortOrder?: number;
   } = {},
-): Promise<string> {
-  const id = opts.id ?? crypto.randomUUID();
+): Promise<ChannelId> {
+  const id = brandId<ChannelId>(opts.id ?? crypto.randomUUID());
   const now = Date.now();
   await db.insert(channels).values({
     id,
-    systemId,
+    systemId: brandId<SystemId>(systemId),
     type: opts.type ?? "channel",
-    parentId: opts.parentId ?? null,
+    parentId:
+      opts.parentId === null || opts.parentId === undefined
+        ? null
+        : brandId<ChannelId>(opts.parentId),
     sortOrder: opts.sortOrder ?? 0,
     encryptedData: testBlob(),
     createdAt: now,
@@ -560,12 +570,12 @@ export async function pgInsertPoll(
   db: PgliteDatabase<Record<string, unknown>>,
   systemId: string,
   opts: { id?: string } = {},
-): Promise<string> {
-  const id = opts.id ?? crypto.randomUUID();
+): Promise<PollId> {
+  const id = brandId<PollId>(opts.id ?? crypto.randomUUID());
   const now = Date.now();
   await db.insert(polls).values({
     id,
-    systemId,
+    systemId: brandId<SystemId>(systemId),
     kind: "standard",
     encryptedData: testBlob(),
     allowMultipleVotes: false,

@@ -10,7 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { MAX_BLOB_SIZE_BYTES } from "../../helpers/db.constants.js";
@@ -19,14 +19,21 @@ import { BLOB_PURPOSES } from "../../helpers/enums.js";
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { BlobPurpose, EncryptionTier } from "@pluralscape/types";
+import type {
+  BlobId,
+  BlobPurpose,
+  BucketId,
+  ChecksumHex,
+  EncryptionTier,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const blobMetadata = sqliteTable(
   "blob_metadata",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<BlobId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     storageKey: text("storage_key").notNull(),
@@ -34,10 +41,10 @@ export const blobMetadata = sqliteTable(
     /** SQLite integer is 64-bit in practice; PG uses bigint explicitly. Semantically equivalent but distinguish when comparing raw schemas. */
     sizeBytes: integer("size_bytes").notNull(),
     encryptionTier: integer("encryption_tier").notNull().$type<EncryptionTier>(),
-    bucketId: text("bucket_id"),
+    bucketId: brandedId<BucketId>("bucket_id"),
     purpose: text("purpose").notNull().$type<BlobPurpose>(),
-    thumbnailOfBlobId: text("thumbnail_of_blob_id"),
-    checksum: text("checksum"),
+    thumbnailOfBlobId: brandedId<BlobId>("thumbnail_of_blob_id"),
+    checksum: text("checksum").$type<ChecksumHex>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     uploadedAt: sqliteTimestamp("uploaded_at"),
     expiresAt: sqliteTimestamp("expires_at"),

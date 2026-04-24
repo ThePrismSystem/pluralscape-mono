@@ -1,3 +1,4 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   CustomFrontId,
   FrontingCommentId,
@@ -6,6 +7,8 @@ import type {
   SystemId,
   SystemStructureEntityId,
 } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** A comment on a fronting session — unlimited length, multiple per session. */
@@ -20,5 +23,45 @@ export interface FrontingComment extends AuditMetadata {
   readonly archived: false;
 }
 
+/**
+ * Keys of `FrontingComment` that are encrypted client-side before the
+ * server sees them. Plaintext siblings (`frontingSessionId`, `memberId`,
+ * `customFrontId`, `structureEntityId`) travel as separate request fields
+ * and are intentionally excluded. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `FrontingCommentServerMetadata` (derived via `Omit`)
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextFrontingComment parity)
+ */
+export type FrontingCommentEncryptedFields = "content";
+
 /** An archived fronting comment. */
 export type ArchivedFrontingComment = Archived<FrontingComment>;
+
+/**
+ * Server-visible FrontingComment metadata — raw Drizzle row shape.
+ *
+ * Derived from `FrontingComment` by stripping the encrypted field keys
+ * (bundled inside `encryptedData`) and `archived` (the domain uses a
+ * `false` literal that toggles to `true` via `Archived<T>`; the server
+ * tracks a mutable boolean with a companion `archivedAt` timestamp).
+ * Adds `sessionStartTime` — denormalized from the parent fronting session
+ * to support the composite FK into the partitioned `fronting_sessions`
+ * table (ADR 019) — plus `archived`/`archivedAt` and the encrypted blob.
+ */
+export type FrontingCommentServerMetadata = Omit<
+  FrontingComment,
+  FrontingCommentEncryptedFields | "archived"
+> & {
+  /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
+  readonly sessionStartTime: UnixMillis;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of FrontingComment. Derived from the domain
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ */
+export type FrontingCommentWire = Serialize<FrontingComment>;

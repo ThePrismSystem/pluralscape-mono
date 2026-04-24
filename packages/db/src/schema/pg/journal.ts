@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -9,20 +9,26 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { systems } from "./systems.js";
 
+import type {
+  FrontingSessionId,
+  JournalEntryId,
+  SlugHash,
+  SystemId,
+  WikiPageId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const journalEntries = pgTable(
   "journal_entries",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<JournalEntryId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    frontingSessionId: varchar("fronting_session_id", { length: ID_MAX_LENGTH }),
+    frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -42,11 +48,14 @@ export const journalEntries = pgTable(
 export const wikiPages = pgTable(
   "wiki_pages",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<WikiPageId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    slugHash: varchar("slug_hash", { length: 64 }).notNull(),
+    // slugHash is a SHA-256 hex digest of the decrypted slug — server-visible
+    // for uniqueness enforcement without ever reading the slug. Branded
+    // `SlugHash` to prevent accidental mixing with other 64-char hex values.
+    slugHash: varchar("slug_hash", { length: 64 }).notNull().$type<SlugHash>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

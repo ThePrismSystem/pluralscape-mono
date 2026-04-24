@@ -14,7 +14,7 @@ import {
 import { makeBase64Blob } from "./helpers.js";
 
 import type {
-  StructureEntityTypeEncryptedFields,
+  StructureEntityTypeEncryptedInput,
   StructureEntityTypeRaw,
 } from "../structure-entity-type.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -30,7 +30,7 @@ beforeAll(async () => {
 
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeEncryptedFields(): StructureEntityTypeEncryptedFields {
+function makeEncryptedFields(): StructureEntityTypeEncryptedInput {
   return {
     name: "Protector",
     description: "Keeps the system safe",
@@ -68,7 +68,7 @@ describe("decryptStructureEntityType", () => {
   });
 
   it("handles null optional fields", () => {
-    const fields: StructureEntityTypeEncryptedFields = {
+    const fields: StructureEntityTypeEncryptedInput = {
       name: "Unknown",
       description: null,
       emoji: null,
@@ -137,16 +137,16 @@ describe("encryptStructureEntityTypeUpdate", () => {
   });
 });
 
-describe("assertStructureEntityTypeEncryptedFields", () => {
-  it("throws when blob is not an object", () => {
+describe("StructureEntityTypeEncryptedInputSchema validation", () => {
+  it("throws when decrypted blob is not an object", () => {
     const raw = makeRaw({ encryptedData: makeBase64Blob("string", masterKey) });
-    expect(() => decryptStructureEntityType(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptStructureEntityType(raw, masterKey)).toThrow(/expected object/);
   });
 
   it("throws when name is missing", () => {
     const raw = makeRaw({
       encryptedData: makeBase64Blob({ description: null }, masterKey),
     });
-    expect(() => decryptStructureEntityType(raw, masterKey)).toThrow("name");
+    expect(() => decryptStructureEntityType(raw, masterKey)).toThrow(/name/);
   });
 });
