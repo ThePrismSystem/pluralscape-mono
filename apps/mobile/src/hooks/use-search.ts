@@ -11,7 +11,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
-export type SearchScope = "self" | "friends" | "all";
+export type UiSearchScope = "self" | "friends" | "all";
 
 export interface SearchResult {
   readonly type: SyncedEntityType | `friend-${SyncedEntityType}`;
@@ -96,7 +96,7 @@ async function searchTable(
 export async function executeSearch(
   db: LocalDatabase,
   query: string,
-  scope: SearchScope,
+  scope: UiSearchScope,
 ): Promise<SearchResult[]> {
   if (query.trim().length === 0) {
     return [];
@@ -161,7 +161,7 @@ function useDebouncedValue(value: string, delay: number): string {
 export function useSearch(
   db: LocalDatabase,
   query: string,
-  scope: SearchScope = "all",
+  scope: UiSearchScope = "all",
 ): UseQueryResult<SearchResult[]> {
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
 
