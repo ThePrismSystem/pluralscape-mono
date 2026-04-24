@@ -13,6 +13,9 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 
+// Intentionally hand-rolled: FrontingCommentServerMetadata carries a denormalized
+// `sessionStartTime` (ADR 019 FK for partitioned table) that is server-internal
+// and must NOT leak onto the wire. `EncryptedWire<T>` would surface it.
 export interface FrontingCommentResult {
   readonly id: FrontingCommentId;
   readonly frontingSessionId: FrontingSessionId;
