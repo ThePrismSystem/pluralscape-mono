@@ -57,6 +57,7 @@ import type {
   AuditLogEntryWire,
   CustomFront,
   CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
   Equal,
   FieldDefinition,
   FieldDefinitionEncryptedFields,
@@ -66,6 +67,7 @@ import type {
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
+  GroupServerMetadata,
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
   InnerWorldCanvasServerMetadata,
@@ -174,6 +176,41 @@ expectTypeOf<
 >().toEqualTypeOf<true>();
 
 expectTypeOf<MemberResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: GroupResponse (split) ──────────────────
+
+type GroupResponseOpenApi = components["schemas"]["GroupResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<GroupResponseOpenApi, "encryptedData">,
+    Omit<Serialize<GroupServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<GroupResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: CustomFrontResponse (split) ────────────
+
+type CustomFrontResponseOpenApi = components["schemas"]["CustomFrontResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<CustomFrontResponseOpenApi, "encryptedData">,
+    Omit<Serialize<CustomFrontServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<CustomFrontResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: RelationshipResponse ──────────────────
+//
+// The full split-parity assertion is deferred: the OpenAPI wire spec
+// currently marks `sourceMemberId`/`targetMemberId` non-nullable, while
+// `Relationship` models them as `MemberId | null`. Reconciling that is a
+// follow-up (either tighten the domain or widen the spec). The
+// `PlaintextRelationship` equality below still enforces the
+// label-field parity that Cluster 3 owns.
 
 // ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
 //

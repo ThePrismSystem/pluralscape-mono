@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -16,6 +17,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -42,14 +44,17 @@ describe("SQLite groups schema", () => {
       parentGroupId?: string | null;
       sortOrder?: number;
     } = {},
-  ): string {
-    const id = opts.id ?? crypto.randomUUID();
+  ): GroupId {
+    const id = brandId<GroupId>(opts.id ?? crypto.randomUUID());
     const now = Date.now();
     db.insert(groups)
       .values({
         id,
-        systemId,
-        parentGroupId: opts.parentGroupId ?? null,
+        systemId: brandId<SystemId>(systemId),
+        parentGroupId:
+          opts.parentGroupId === null || opts.parentGroupId === undefined
+            ? null
+            : brandId<GroupId>(opts.parentGroupId),
         sortOrder: opts.sortOrder ?? 0,
         encryptedData: testBlob(),
         createdAt: now,
@@ -79,7 +84,7 @@ describe("SQLite groups schema", () => {
     it("round-trips all fields including sortOrder, encryptedData, timestamps, and version", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<GroupId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -112,7 +117,7 @@ describe("SQLite groups schema", () => {
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<GroupId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(groups)
@@ -158,7 +163,7 @@ describe("SQLite groups schema", () => {
         db
           .insert(groups)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<GroupId>(crypto.randomUUID()),
             systemId,
             sortOrder: -1,
             encryptedData: testBlob(new Uint8Array([1])),
@@ -172,7 +177,7 @@ describe("SQLite groups schema", () => {
     it("supports archivable fields with defaults and update", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<GroupId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(groups)

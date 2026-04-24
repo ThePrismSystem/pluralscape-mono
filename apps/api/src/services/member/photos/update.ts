@@ -1,5 +1,5 @@
 import { memberPhotos } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { brandId, now } from "@pluralscape/types";
 import { ReorderPhotosBodySchema } from "@pluralscape/validation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
@@ -15,7 +15,7 @@ import { toPhotoResult } from "./internal.js";
 import type { MemberPhotoResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { MemberId, SystemId } from "@pluralscape/types";
+import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function reorderMemberPhotos(
@@ -49,7 +49,7 @@ export async function reorderMemberPhotos(
         ),
       );
 
-    const existingIds = new Set(existingPhotos.map((p) => p.id));
+    const existingIds = new Set<string>(existingPhotos.map((p) => p.id));
 
     for (const item of parsed.data.order) {
       if (!existingIds.has(item.id)) {
@@ -71,9 +71,10 @@ export async function reorderMemberPhotos(
     }
 
     // Batch update sort orders with single CASE/WHEN query
-    const targetIds = parsed.data.order.map((item) => item.id);
+    const targetIds = parsed.data.order.map((item) => brandId<MemberPhotoId>(item.id));
     const cases = parsed.data.order.map(
-      (item) => sql`WHEN ${memberPhotos.id} = ${item.id} THEN ${item.sortOrder}`,
+      (item) =>
+        sql`WHEN ${memberPhotos.id} = ${brandId<MemberPhotoId>(item.id)} THEN ${item.sortOrder}`,
     );
     const updatedRows = await tx
       .update(memberPhotos)

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, members, memberPhotos };
@@ -25,7 +27,8 @@ describe("PG members schema", () => {
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
-  async function insertMember(systemId: string, id = crypto.randomUUID()): Promise<string> {
+  async function insertMember(systemId: string, raw = crypto.randomUUID()): Promise<MemberId> {
+    const id = brandId<MemberId>(raw);
     const now = Date.now();
     await db.insert(members).values({
       id,
@@ -268,7 +271,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([100, 200]));
 
@@ -292,7 +295,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(memberPhotos).values({
@@ -312,7 +315,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(memberPhotos).values({
@@ -335,7 +338,7 @@ describe("PG members schema", () => {
       const now = Date.now();
 
       await db.insert(memberPhotos).values({
-        id: crypto.randomUUID(),
+        id: brandId<MemberPhotoId>(crypto.randomUUID()),
         memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -350,7 +353,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const photoId = crypto.randomUUID();
+      const photoId = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(memberPhotos).values({
@@ -374,8 +377,8 @@ describe("PG members schema", () => {
 
       await expect(
         db.insert(memberPhotos).values({
-          id: crypto.randomUUID(),
-          memberId: "nonexistent",
+          id: brandId<MemberPhotoId>(crypto.randomUUID()),
+          memberId: brandId<MemberId>("nonexistent"),
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -392,9 +395,9 @@ describe("PG members schema", () => {
 
       await expect(
         db.insert(memberPhotos).values({
-          id: crypto.randomUUID(),
+          id: brandId<MemberPhotoId>(crypto.randomUUID()),
           memberId,
-          systemId: "nonexistent",
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -406,7 +409,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(memberPhotos).values({
@@ -427,7 +430,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(memberPhotos).values({
@@ -450,7 +453,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(memberPhotos).values({

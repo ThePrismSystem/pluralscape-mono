@@ -79,7 +79,7 @@ export async function moveGroup(
           const [row] = await tx
             .select({ parentGroupId: groups.parentGroupId })
             .from(groups)
-            .where(and(eq(groups.id, id), eq(groups.systemId, systemId)))
+            .where(and(eq(groups.id, brandId<GroupId>(id)), eq(groups.systemId, systemId)))
             .limit(1);
           return row?.parentGroupId;
         },
@@ -204,7 +204,7 @@ export async function copyGroup(
     const sortOrder = (maxResult?.maxSort ?? -1) + 1;
 
     // Insert new group
-    const newGroupId = createId(ID_PREFIXES.group);
+    const newGroupId = brandId<GroupId>(createId(ID_PREFIXES.group));
     const [row] = await tx
       .insert(groups)
       .values({

@@ -1,6 +1,6 @@
 import { foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -12,6 +12,7 @@ import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { systems } from "./systems.js";
 
+import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const members = pgTable(
@@ -38,10 +39,10 @@ export const members = pgTable(
 export const memberPhotos = pgTable(
   "member_photos",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
+    id: brandedId<MemberPhotoId>("id").primaryKey(),
+    memberId: brandedId<MemberId>("member_id").notNull(),
     /** Denormalized from members — avoids join through members for RLS queries. */
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull().default(0),

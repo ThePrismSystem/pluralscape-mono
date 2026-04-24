@@ -15,6 +15,7 @@ export {
 export { UpdateSystemBodySchema } from "./system.js";
 export {
   CreateGroupBodySchema,
+  GroupEncryptedInputSchema,
   UpdateGroupBodySchema,
   MoveGroupBodySchema,
   ReorderGroupsBodySchema,
@@ -22,7 +23,11 @@ export {
   AddGroupMemberBodySchema,
 } from "./group.js";
 export { CreateChannelBodySchema, UpdateChannelBodySchema, ChannelQuerySchema } from "./channel.js";
-export { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "./custom-front.js";
+export {
+  CreateCustomFrontBodySchema,
+  CustomFrontEncryptedInputSchema,
+  UpdateCustomFrontBodySchema,
+} from "./custom-front.js";
 export {
   BiometricEnrollBodySchema,
   BiometricVerifyBodySchema,
@@ -70,6 +75,7 @@ export {
 export {
   CreateRelationshipBodySchema,
   RELATIONSHIP_TYPES,
+  RelationshipEncryptedInputSchema,
   UpdateRelationshipBodySchema,
 } from "./relationship.js";
 export {

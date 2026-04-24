@@ -1,6 +1,6 @@
 import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -11,6 +11,7 @@ import {
 
 import { systems } from "./systems.js";
 
+import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const members = sqliteTable(
@@ -37,10 +38,10 @@ export const members = sqliteTable(
 export const memberPhotos = sqliteTable(
   "member_photos",
   {
-    id: text("id").primaryKey(),
-    memberId: text("member_id").notNull(),
+    id: brandedId<MemberPhotoId>("id").primaryKey(),
+    memberId: brandedId<MemberId>("member_id").notNull(),
     /** Denormalized from members — avoids join through members for RLS queries. */
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull().default(0),
