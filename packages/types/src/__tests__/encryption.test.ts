@@ -7,8 +7,6 @@ import type {
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
-  ClientFieldDefinition,
-  ClientFieldValue,
   ClientFrontingSession,
   ClientJournalEntry,
   ClientLifecycleEvent,
@@ -29,8 +27,6 @@ import type {
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
-  ServerFieldDefinition,
-  ServerFieldValue,
   ServerFrontingSession,
   ServerJournalEntry,
   ServerLifecycleEvent,
@@ -315,18 +311,6 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerNote>().toBeObject();
     expectTypeOf<ServerNote["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<ClientNote>().toEqualTypeOf<Note>();
-  });
-
-  it("field definition pair", () => {
-    expectTypeOf<ServerFieldDefinition>().toBeObject();
-    expectTypeOf<ServerFieldDefinition["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientFieldDefinition>().toBeObject();
-  });
-
-  it("field value pair", () => {
-    expectTypeOf<ServerFieldValue>().toBeObject();
-    expectTypeOf<ServerFieldValue["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientFieldValue>().toBeObject();
   });
 
   it("lifecycle event pair", () => {

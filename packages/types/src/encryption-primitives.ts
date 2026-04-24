@@ -2,8 +2,6 @@ import type { KdfMasterKey } from "./crypto-keys.js";
 import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
-import type { FieldDefinition, FieldType } from "./entities/field-definition.js";
-import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
@@ -23,11 +21,8 @@ import type {
   ChannelId,
   CustomFrontId,
   LifecycleEventId,
-  FieldDefinitionId,
-  FieldValueId,
   FrontingCommentId,
   FrontingSessionId,
-  GroupId,
   JournalEntryId,
   MemberId,
   MessageId,
@@ -265,44 +260,6 @@ export interface ServerNote extends AuditMetadata {
 
 /** Client-side note — flat decrypted fields. */
 export type ClientNote = Note;
-
-// ── Custom fields ──────────────────────────────────────────────
-
-/**
- * Server-side field definition representation.
- * T1 encrypted: name, description, options
- * T3 plaintext: fieldType, required, sortOrder, archived
- */
-export interface ServerFieldDefinition extends AuditMetadata {
-  readonly id: FieldDefinitionId;
-  readonly systemId: SystemId;
-  /** Required field type — must be set when creating a field definition. */
-  readonly fieldType: FieldType;
-  readonly required: boolean;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side field definition — flat decrypted fields. */
-export type ClientFieldDefinition = FieldDefinition;
-
-/**
- * Server-side field value representation.
- * T1 encrypted: value
- * T3 plaintext: fieldDefinitionId, memberId, structureEntityId, groupId
- */
-export interface ServerFieldValue extends AuditMetadata {
-  readonly id: FieldValueId;
-  readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly groupId: GroupId | null;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side field value — flat decrypted fields. */
-export type ClientFieldValue = FieldValue;
 
 // ── Lifecycle ──────────────────────────────────────────────────
 

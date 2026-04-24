@@ -6314,11 +6314,11 @@ export interface components {
       /** @description ID of the field definition this value belongs to */
       fieldDefinitionId: string;
       /** @description ID of the member this value is set on (null for group/entity values) */
-      memberId?: string | null;
+      memberId: string | null;
       /** @description ID of the group this value is set on (null for member/entity values) */
-      groupId?: string | null;
+      groupId: string | null;
       /** @description ID of the structure entity this value is set on (null for member/group values) */
-      structureEntityId?: string | null;
+      structureEntityId: string | null;
       systemId: string;
       encryptedData: string;
       version: number;

@@ -59,8 +59,9 @@ export {
   encryptFieldValueInput,
 } from "./transforms/custom-field.js";
 export type {
-  FieldDefinitionEncryptedFields,
+  FieldDefinitionEncryptedInput,
   FieldValueDecrypted,
+  FieldValueEncryptedInput,
 } from "./transforms/custom-field.js";
 
 export {

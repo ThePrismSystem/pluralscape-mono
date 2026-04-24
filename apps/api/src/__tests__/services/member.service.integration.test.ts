@@ -27,7 +27,14 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, MemberPhotoId, RelationshipId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  FieldDefinitionId,
+  FieldValueId,
+  MemberPhotoId,
+  RelationshipId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const {
@@ -716,7 +723,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const fdId = `fd_${crypto.randomUUID()}`;
+      const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       // Insert field definition first (FK constraint)
       await db.insert(fieldDefinitions).values({
         id: fdId,
@@ -727,7 +734,7 @@ describe("member.service (PGlite integration)", () => {
         updatedAt: now,
       });
       await db.insert(fieldValues).values({
-        id: `fv_${crypto.randomUUID()}`,
+        id: brandId<FieldValueId>(`fv_${crypto.randomUUID()}`),
         fieldDefinitionId: fdId,
         memberId: created.id,
         systemId,
@@ -896,7 +903,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const fdId = `fd_${crypto.randomUUID()}`;
+      const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       await db.insert(fieldDefinitions).values({
         id: fdId,
         systemId,
@@ -906,7 +913,7 @@ describe("member.service (PGlite integration)", () => {
         updatedAt: now,
       });
       await db.insert(fieldValues).values({
-        id: `fv_${crypto.randomUUID()}`,
+        id: brandId<FieldValueId>(`fv_${crypto.randomUUID()}`),
         fieldDefinitionId: fdId,
         memberId: source.id,
         systemId,

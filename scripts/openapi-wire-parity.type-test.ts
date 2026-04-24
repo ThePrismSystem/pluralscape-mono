@@ -61,8 +61,10 @@ import type {
   Equal,
   FieldDefinition,
   FieldDefinitionEncryptedFields,
+  FieldDefinitionServerMetadata,
   FieldValue,
   FieldValueEncryptedFields,
+  FieldValueServerMetadata,
   FrontingSession,
   FrontingSessionEncryptedFields,
   Group,
@@ -176,6 +178,32 @@ expectTypeOf<
 >().toEqualTypeOf<true>();
 
 expectTypeOf<MemberResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: FieldDefinitionResponse split parity ──
+
+type FieldDefinitionResponseOpenApi = components["schemas"]["FieldDefinitionResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<FieldDefinitionResponseOpenApi, "encryptedData">,
+    Omit<Serialize<FieldDefinitionServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<FieldDefinitionResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: FieldValueResponse split parity ───────
+
+type FieldValueResponseOpenApi = components["schemas"]["FieldValueResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<FieldValueResponseOpenApi, "encryptedData">,
+    Omit<Serialize<FieldValueServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<FieldValueResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 // ── OpenAPI ↔ domain parity: GroupResponse (split) ──────────────────
 

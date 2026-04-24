@@ -1,4 +1,5 @@
 import { fieldDefinitions } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt } from "drizzle-orm";
 
 import { buildPaginatedResult } from "../../lib/pagination.js";
@@ -11,7 +12,7 @@ import { fieldDefCache, listCacheKey, toFieldDefinitionResult } from "./internal
 
 import type { FieldDefinitionResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, SystemId } from "@pluralscape/types";
+import type { FieldDefinitionId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listFieldDefinitions(
@@ -39,7 +40,7 @@ export async function listFieldDefinitions(
     }
 
     if (opts?.cursor) {
-      conditions.push(gt(fieldDefinitions.id, opts.cursor));
+      conditions.push(gt(fieldDefinitions.id, brandId<FieldDefinitionId>(opts.cursor)));
     }
 
     const rows = await tx
