@@ -137,7 +137,7 @@ export function getPendingWebhookRetries(
 /** Get unconfirmed acknowledgements. */
 export function getUnconfirmedAcknowledgements(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): UnconfirmedAcknowledgement[] {
   return db
     .select({

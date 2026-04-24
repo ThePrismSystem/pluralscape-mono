@@ -131,7 +131,7 @@ export async function getPendingWebhookRetries(
 /** Get unconfirmed acknowledgements. */
 export async function getUnconfirmedAcknowledgements(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<UnconfirmedAcknowledgement[]> {
   return db
     .select({

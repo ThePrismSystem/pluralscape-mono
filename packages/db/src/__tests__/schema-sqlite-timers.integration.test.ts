@@ -17,7 +17,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { CheckInRecordId, TimerId } from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, TimerId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, timerConfigs, checkInRecords };
@@ -51,7 +51,7 @@ describe("SQLite timers schema", () => {
     it("round-trips with encrypted_data and defaults", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
@@ -75,7 +75,7 @@ describe("SQLite timers schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -96,7 +96,7 @@ describe("SQLite timers schema", () => {
     it("stores enabled as false correctly", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -117,7 +117,7 @@ describe("SQLite timers schema", () => {
     it("round-trips T3 metadata columns", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -150,7 +150,7 @@ describe("SQLite timers schema", () => {
         ["08:30", "22:00"],
         ["12:00", "18:45"],
       ]) {
-        const id = crypto.randomUUID();
+        const id = brandId<TimerId>(crypto.randomUUID());
         const now = Date.now();
         db.insert(timerConfigs)
           .values({
@@ -178,7 +178,7 @@ describe("SQLite timers schema", () => {
           db
             .insert(timerConfigs)
             .values({
-              id: crypto.randomUUID(),
+              id: brandId<TimerId>(crypto.randomUUID()),
               systemId,
               wakingStart: bad,
               encryptedData: testBlob(new Uint8Array([1])),
@@ -199,7 +199,7 @@ describe("SQLite timers schema", () => {
           db
             .insert(timerConfigs)
             .values({
-              id: crypto.randomUUID(),
+              id: brandId<TimerId>(crypto.randomUUID()),
               systemId,
               wakingEnd: bad,
               encryptedData: testBlob(new Uint8Array([1])),
@@ -214,7 +214,7 @@ describe("SQLite timers schema", () => {
     it("defaults T3 metadata to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -237,7 +237,7 @@ describe("SQLite timers schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -258,7 +258,7 @@ describe("SQLite timers schema", () => {
     it("round-trips archived: true with archivedAt timestamp", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -309,7 +309,7 @@ describe("SQLite timers schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -519,7 +519,7 @@ describe("SQLite timers schema", () => {
           systemId,
           timerConfigId: timerId,
           scheduledAt: now,
-          respondedByMemberId: memberId,
+          respondedByMemberId: brandId<MemberId>(memberId),
         })
         .run();
 
@@ -580,7 +580,7 @@ describe("SQLite timers schema", () => {
           systemId,
           timerConfigId: timerId,
           scheduledAt: now,
-          respondedByMemberId: memberId,
+          respondedByMemberId: brandId<MemberId>(memberId),
         })
         .run();
 
@@ -613,7 +613,7 @@ describe("SQLite timers schema", () => {
             systemId,
             timerConfigId: timerId,
             scheduledAt: now,
-            respondedByMemberId: "nonexistent",
+            respondedByMemberId: brandId<MemberId>("nonexistent"),
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);

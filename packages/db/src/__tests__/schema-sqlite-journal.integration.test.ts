@@ -18,7 +18,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { FrontingSessionId } from "@pluralscape/types";
+import type { FrontingSessionId, JournalEntryId, SlugHash, WikiPageId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, frontingSessions, journalEntries, wikiPages };
@@ -54,7 +54,7 @@ describe("SQLite journal schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const fsId = brandId<FrontingSessionId>(crypto.randomUUID());
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
@@ -91,7 +91,7 @@ describe("SQLite journal schema", () => {
     it("allows nullable frontingSessionId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(journalEntries)
@@ -111,7 +111,7 @@ describe("SQLite journal schema", () => {
     it("defaults archived to false and version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(journalEntries)
@@ -133,7 +133,7 @@ describe("SQLite journal schema", () => {
     it("round-trips archived state", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(journalEntries)
@@ -156,7 +156,7 @@ describe("SQLite journal schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(journalEntries)
@@ -205,7 +205,7 @@ describe("SQLite journal schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(journalEntries)
@@ -233,16 +233,16 @@ describe("SQLite journal schema", () => {
     it("round-trips with encrypted_data and slugHash", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
-      const hash = "a".repeat(64);
+      const hash = brandId<SlugHash>("a".repeat(64));
 
       db.insert(wikiPages)
         .values({
           id,
           systemId,
-          slugHash: hash,
+          slugHash: brandId<SlugHash>(hash),
           encryptedData: data,
           createdAt: now,
           updatedAt: now,
@@ -258,14 +258,14 @@ describe("SQLite journal schema", () => {
     it("defaults archived to false and version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
           id,
           systemId,
-          slugHash: "a".repeat(64),
+          slugHash: brandId<SlugHash>("a".repeat(64)),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -281,12 +281,12 @@ describe("SQLite journal schema", () => {
     it("enforces unique (system_id, slug_hash)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const slugHash = "b".repeat(64);
+      const slugHash = brandId<SlugHash>("b".repeat(64));
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId,
           slugHash,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -299,7 +299,7 @@ describe("SQLite journal schema", () => {
         db
           .insert(wikiPages)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<WikiPageId>(crypto.randomUUID()),
             systemId,
             slugHash,
             encryptedData: testBlob(new Uint8Array([2])),
@@ -314,12 +314,12 @@ describe("SQLite journal schema", () => {
       const accountId = insertAccount();
       const systemId1 = insertSystem(accountId);
       const systemId2 = insertSystem(accountId);
-      const slugHash = "c".repeat(64);
+      const slugHash = brandId<SlugHash>("c".repeat(64));
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId: systemId1,
           slugHash,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -330,7 +330,7 @@ describe("SQLite journal schema", () => {
 
       db.insert(wikiPages)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId: systemId2,
           slugHash,
           encryptedData: testBlob(new Uint8Array([2])),
@@ -348,14 +348,14 @@ describe("SQLite journal schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
           id,
           systemId,
-          slugHash: "d".repeat(64),
+          slugHash: brandId<SlugHash>("d".repeat(64)),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -398,14 +398,14 @@ describe("SQLite journal schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
           id,
           systemId,
-          slugHash: "g".repeat(64),
+          slugHash: brandId<SlugHash>("g".repeat(64)),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -431,9 +431,9 @@ describe("SQLite journal schema", () => {
         db
           .insert(wikiPages)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<WikiPageId>(crypto.randomUUID()),
             systemId,
-            slugHash: "a".repeat(32),
+            slugHash: brandId<SlugHash>("a".repeat(32)),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -445,12 +445,12 @@ describe("SQLite journal schema", () => {
     it("allows duplicate (systemId, slugHash) when both rows are archived", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const slugHash = "h".repeat(64);
+      const slugHash = brandId<SlugHash>("h".repeat(64));
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId,
           slugHash,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -463,7 +463,7 @@ describe("SQLite journal schema", () => {
 
       db.insert(wikiPages)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId,
           slugHash,
           encryptedData: testBlob(new Uint8Array([2])),
@@ -481,12 +481,12 @@ describe("SQLite journal schema", () => {
     it("rejects duplicate (systemId, slugHash) when both rows are active", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const slugHash = "i".repeat(64);
+      const slugHash = brandId<SlugHash>("i".repeat(64));
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId,
           slugHash,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -499,7 +499,7 @@ describe("SQLite journal schema", () => {
         db
           .insert(wikiPages)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<WikiPageId>(crypto.randomUUID()),
             systemId,
             slugHash,
             encryptedData: testBlob(new Uint8Array([2])),

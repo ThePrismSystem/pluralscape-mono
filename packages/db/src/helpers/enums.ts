@@ -37,8 +37,8 @@ import {
   type ReportFormat,
   type RotationItemStatus,
   type RotationState,
+  type ChannelServerMetadata,
   type SearchableEntityType,
-  type ServerChannel,
   type SnapshotTrigger,
   type SyncDocumentType,
   type WebhookDeliveryStatus,
@@ -362,7 +362,7 @@ export const AUDIT_EVENT_TYPES = [
 export const CHANNEL_TYPES = [
   "category",
   "channel",
-] as const satisfies readonly ServerChannel["type"][];
+] as const satisfies readonly ChannelServerMetadata["type"][];
 export { POLL_STATUSES } from "@pluralscape/types";
 export const POLL_KINDS = ["standard", "custom"] as const satisfies readonly PollKind[];
 export const PK_SYNC_DIRECTIONS = [

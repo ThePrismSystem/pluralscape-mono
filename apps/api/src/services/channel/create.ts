@@ -1,5 +1,5 @@
 import { channels, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
 import { CreateChannelBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
@@ -18,7 +18,7 @@ import { toChannelResult } from "./internal.js";
 import type { ChannelResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SystemId, ChannelId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createChannel(
@@ -41,7 +41,7 @@ export async function createChannel(
     throw new ApiHttpError(HTTP_CONFLICT, "INVALID_HIERARCHY", "Categories cannot have a parent");
   }
 
-  const channelId = createId(ID_PREFIXES.channel);
+  const channelId = brandId<ChannelId>(createId(ID_PREFIXES.channel));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

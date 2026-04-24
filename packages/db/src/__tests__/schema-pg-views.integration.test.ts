@@ -43,6 +43,7 @@ import {
 
 import type {
   AccountId,
+  AcknowledgementId,
   ApiKeyId,
   DeviceTransferRequestId,
   FrontingCommentId,
@@ -374,7 +375,7 @@ describe("PG views / query helpers", () => {
       const now = Date.now();
 
       await db.insert(acknowledgements).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<AcknowledgementId>(crypto.randomUUID()),
         systemId,
         confirmed: false,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -382,7 +383,7 @@ describe("PG views / query helpers", () => {
         updatedAt: now,
       });
       await db.insert(acknowledgements).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<AcknowledgementId>(crypto.randomUUID()),
         systemId,
         confirmed: true,
         encryptedData: testBlob(new Uint8Array([1])),

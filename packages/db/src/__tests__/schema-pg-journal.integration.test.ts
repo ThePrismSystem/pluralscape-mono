@@ -17,7 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { FrontingSessionId } from "@pluralscape/types";
+import type { FrontingSessionId, JournalEntryId, SlugHash, WikiPageId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, frontingSessions, journalEntries, wikiPages };
@@ -49,7 +49,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fsId = brandId<FrontingSessionId>(crypto.randomUUID());
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
@@ -83,7 +83,7 @@ describe("PG journal schema", () => {
     it("allows nullable frontingSessionId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(journalEntries).values({
@@ -101,7 +101,7 @@ describe("PG journal schema", () => {
     it("defaults archived to false and version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(journalEntries).values({
@@ -121,7 +121,7 @@ describe("PG journal schema", () => {
     it("round-trips archived state", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(journalEntries).values({
@@ -142,7 +142,7 @@ describe("PG journal schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(journalEntries).values({
@@ -167,7 +167,7 @@ describe("PG journal schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<JournalEntryId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(journalEntries).values({
@@ -214,15 +214,15 @@ describe("PG journal schema", () => {
     it("round-trips with encrypted_data and slugHash", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
-      const hash = "a".repeat(64);
+      const hash = brandId<SlugHash>("a".repeat(64));
 
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slugHash: hash,
+        slugHash: brandId<SlugHash>(hash),
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -237,13 +237,13 @@ describe("PG journal schema", () => {
     it("defaults archived to false and version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slugHash: "a".repeat(64),
+        slugHash: brandId<SlugHash>("a".repeat(64)),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -258,13 +258,13 @@ describe("PG journal schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slugHash: "g".repeat(64),
+        slugHash: brandId<SlugHash>("g".repeat(64)),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -284,11 +284,11 @@ describe("PG journal schema", () => {
     it("enforces unique (system_id, slug_hash)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const slugHash = "b".repeat(64);
+      const slugHash = brandId<SlugHash>("b".repeat(64));
       const now = Date.now();
 
       await db.insert(wikiPages).values({
-        id: crypto.randomUUID(),
+        id: brandId<WikiPageId>(crypto.randomUUID()),
         systemId,
         slugHash,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -298,7 +298,7 @@ describe("PG journal schema", () => {
 
       await expect(
         db.insert(wikiPages).values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId,
           slugHash,
           encryptedData: testBlob(new Uint8Array([2])),
@@ -312,11 +312,11 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId1 = await insertSystem(accountId);
       const systemId2 = await insertSystem(accountId);
-      const slugHash = "c".repeat(64);
+      const slugHash = brandId<SlugHash>("c".repeat(64));
       const now = Date.now();
 
       await db.insert(wikiPages).values({
-        id: crypto.randomUUID(),
+        id: brandId<WikiPageId>(crypto.randomUUID()),
         systemId: systemId1,
         slugHash,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -325,7 +325,7 @@ describe("PG journal schema", () => {
       });
 
       await db.insert(wikiPages).values({
-        id: crypto.randomUUID(),
+        id: brandId<WikiPageId>(crypto.randomUUID()),
         systemId: systemId2,
         slugHash,
         encryptedData: testBlob(new Uint8Array([2])),
@@ -342,13 +342,13 @@ describe("PG journal schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<WikiPageId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slugHash: "d".repeat(64),
+        slugHash: brandId<SlugHash>("d".repeat(64)),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -392,9 +392,9 @@ describe("PG journal schema", () => {
 
       await expect(
         db.insert(wikiPages).values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId,
-          slugHash: "a".repeat(32),
+          slugHash: brandId<SlugHash>("a".repeat(32)),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -405,11 +405,11 @@ describe("PG journal schema", () => {
     it("allows duplicate (systemId, slugHash) when both rows are archived", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const slugHash = "h".repeat(64);
+      const slugHash = brandId<SlugHash>("h".repeat(64));
       const now = Date.now();
 
       await db.insert(wikiPages).values({
-        id: crypto.randomUUID(),
+        id: brandId<WikiPageId>(crypto.randomUUID()),
         systemId,
         slugHash,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -420,7 +420,7 @@ describe("PG journal schema", () => {
       });
 
       await db.insert(wikiPages).values({
-        id: crypto.randomUUID(),
+        id: brandId<WikiPageId>(crypto.randomUUID()),
         systemId,
         slugHash,
         encryptedData: testBlob(new Uint8Array([2])),
@@ -437,11 +437,11 @@ describe("PG journal schema", () => {
     it("rejects duplicate (systemId, slugHash) when both rows are active", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const slugHash = "i".repeat(64);
+      const slugHash = brandId<SlugHash>("i".repeat(64));
       const now = Date.now();
 
       await db.insert(wikiPages).values({
-        id: crypto.randomUUID(),
+        id: brandId<WikiPageId>(crypto.randomUUID()),
         systemId,
         slugHash,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -451,7 +451,7 @@ describe("PG journal schema", () => {
 
       await expect(
         db.insert(wikiPages).values({
-          id: crypto.randomUUID(),
+          id: brandId<WikiPageId>(crypto.randomUUID()),
           systemId,
           slugHash,
           encryptedData: testBlob(new Uint8Array([2])),

@@ -1,4 +1,5 @@
 import { channels } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -50,7 +51,7 @@ export async function listChannels(
     }
 
     if (opts.cursor) {
-      conditions.push(gt(channels.id, opts.cursor));
+      conditions.push(gt(channels.id, brandId<ChannelId>(opts.cursor)));
     }
 
     const rows = await tx

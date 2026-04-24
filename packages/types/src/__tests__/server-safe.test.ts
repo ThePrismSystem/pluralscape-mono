@@ -3,28 +3,12 @@ import { describe, expectTypeOf, it, expect } from "vitest";
 import { serverSafe } from "../server-safe.js";
 
 import type {
-  ClientAcknowledgementRequest,
-  ClientBoardMessage,
-  ClientChannel,
-  ClientChatMessage,
-  ClientJournalEntry,
-  ClientNote,
-  ClientPoll,
-  ClientPollVote,
-  ClientTimerConfig,
-  ClientWikiPage,
-  ServerAcknowledgementRequest,
-  ServerBoardMessage,
-  ServerChannel,
-  ServerChatMessage,
-  ServerJournalEntry,
-  ServerNote,
-  ServerPoll,
-  ServerPollVote,
-  ServerTimerConfig,
-  ServerWikiPage,
-} from "../encryption-primitives.js";
+  AcknowledgementRequest,
+  AcknowledgementRequestServerMetadata,
+} from "../entities/acknowledgement.js";
 import type { AuditLogEntry, AuditLogEntryServerMetadata } from "../entities/audit-log-entry.js";
+import type { BoardMessage, BoardMessageServerMetadata } from "../entities/board-message.js";
+import type { Channel, ChannelServerMetadata } from "../entities/channel.js";
 import type { CustomFront, CustomFrontServerMetadata } from "../entities/custom-front.js";
 import type {
   FieldDefinition,
@@ -48,9 +32,14 @@ import type {
   InnerWorldRegion,
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
+import type { JournalEntry, JournalEntryServerMetadata } from "../entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventServerMetadata } from "../entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
+import type { ChatMessage, ChatMessageServerMetadata } from "../entities/message.js";
+import type { Note, NoteServerMetadata } from "../entities/note.js";
+import type { PollVote, PollVoteServerMetadata } from "../entities/poll-vote.js";
+import type { Poll, PollServerMetadata } from "../entities/poll.js";
 import type { Relationship, RelationshipServerMetadata } from "../entities/relationship.js";
 import type {
   SystemStructureEntityType,
@@ -60,13 +49,15 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityServerMetadata,
 } from "../entities/structure-entity.js";
+import type { TimerConfig, TimerConfigServerMetadata } from "../entities/timer-config.js";
+import type { WikiPage, WikiPageServerMetadata } from "../entities/wiki-page.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ClientResponseData, ServerResponseData } from "../response-unions.js";
 import type { ServerSafe } from "../server-safe.js";
 
 // ── Count assertion ────────────────────────────────────────────────
-// If a new Server* type is added to encryption.ts but not to
-// ServerResponseData, this tuple will have the wrong length.
+// If a new Server*Metadata type is added but not to ServerResponseData, this
+// tuple will have the wrong length.
 type AllServerTypes = [
   MemberServerMetadata,
   FrontingSessionServerMetadata,
@@ -75,23 +66,23 @@ type AllServerTypes = [
   SystemStructureEntityTypeServerMetadata,
   SystemStructureEntityServerMetadata,
   RelationshipServerMetadata,
-  ServerChannel,
-  ServerChatMessage,
-  ServerBoardMessage,
-  ServerNote,
+  ChannelServerMetadata,
+  ChatMessageServerMetadata,
+  BoardMessageServerMetadata,
+  NoteServerMetadata,
   FieldDefinitionServerMetadata,
   FieldValueServerMetadata,
   InnerWorldEntityServerMetadata,
   InnerWorldRegionServerMetadata,
   LifecycleEventServerMetadata,
   CustomFrontServerMetadata,
-  ServerJournalEntry,
-  ServerWikiPage,
+  JournalEntryServerMetadata,
+  WikiPageServerMetadata,
   MemberPhotoServerMetadata,
-  ServerPoll,
-  ServerPollVote,
-  ServerAcknowledgementRequest,
-  ServerTimerConfig,
+  PollServerMetadata,
+  PollVoteServerMetadata,
+  AcknowledgementRequestServerMetadata,
+  TimerConfigServerMetadata,
   AuditLogEntryServerMetadata,
 ];
 
@@ -128,20 +119,20 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<RelationshipServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerChannel extends ServerResponseData", () => {
-    expectTypeOf<ServerChannel>().toExtend<ServerResponseData>();
+  it("ChannelServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<ChannelServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerChatMessage extends ServerResponseData", () => {
-    expectTypeOf<ServerChatMessage>().toExtend<ServerResponseData>();
+  it("ChatMessageServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<ChatMessageServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerBoardMessage extends ServerResponseData", () => {
-    expectTypeOf<ServerBoardMessage>().toExtend<ServerResponseData>();
+  it("BoardMessageServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<BoardMessageServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerNote extends ServerResponseData", () => {
-    expectTypeOf<ServerNote>().toExtend<ServerResponseData>();
+  it("NoteServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<NoteServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("FieldDefinitionServerMetadata extends ServerResponseData", () => {
@@ -168,32 +159,32 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<CustomFrontServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerJournalEntry extends ServerResponseData", () => {
-    expectTypeOf<ServerJournalEntry>().toExtend<ServerResponseData>();
+  it("JournalEntryServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<JournalEntryServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerWikiPage extends ServerResponseData", () => {
-    expectTypeOf<ServerWikiPage>().toExtend<ServerResponseData>();
+  it("WikiPageServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<WikiPageServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("MemberPhotoServerMetadata extends ServerResponseData", () => {
     expectTypeOf<MemberPhotoServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerPoll extends ServerResponseData", () => {
-    expectTypeOf<ServerPoll>().toExtend<ServerResponseData>();
+  it("PollServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<PollServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerPollVote extends ServerResponseData", () => {
-    expectTypeOf<ServerPollVote>().toExtend<ServerResponseData>();
+  it("PollVoteServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<PollVoteServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerAcknowledgementRequest extends ServerResponseData", () => {
-    expectTypeOf<ServerAcknowledgementRequest>().toExtend<ServerResponseData>();
+  it("AcknowledgementRequestServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<AcknowledgementRequestServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerTimerConfig extends ServerResponseData", () => {
-    expectTypeOf<ServerTimerConfig>().toExtend<ServerResponseData>();
+  it("TimerConfigServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<TimerConfigServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("AuditLogEntryServerMetadata extends ServerResponseData", () => {
@@ -202,8 +193,8 @@ describe("serverSafe() — Server* types accepted", () => {
 });
 
 // ── Count assertion for ClientResponseData ──────────────────────────
-// If a new Client* type is added to encryption.ts but not to
-// ClientResponseData, this tuple will have the wrong length.
+// If a new Client* or domain type is added but not to ClientResponseData,
+// this tuple will have the wrong length.
 type AllClientTypes = [
   Member,
   FrontingSession,
@@ -212,28 +203,28 @@ type AllClientTypes = [
   SystemStructureEntityType,
   SystemStructureEntity,
   Relationship,
-  ClientChannel,
-  ClientChatMessage,
-  ClientBoardMessage,
-  ClientNote,
+  Channel,
+  ChatMessage,
+  BoardMessage,
+  Note,
   FieldDefinition,
   FieldValue,
   InnerWorldEntity,
   InnerWorldRegion,
   LifecycleEvent,
   CustomFront,
-  ClientJournalEntry,
-  ClientWikiPage,
+  JournalEntry,
+  WikiPage,
   MemberPhoto,
-  ClientPoll,
-  ClientPollVote,
-  ClientAcknowledgementRequest,
-  ClientTimerConfig,
+  Poll,
+  PollVote,
+  AcknowledgementRequest,
+  TimerConfig,
   AuditLogEntry,
 ];
 
 describe("ClientResponseData union completeness", () => {
-  it("has all 25 Client* types (count assertion)", () => {
+  it("has all 25 client-side types (count assertion)", () => {
     expectTypeOf<AllClientTypes["length"]>().toEqualTypeOf<25>();
   });
 
@@ -265,20 +256,20 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<Relationship>().toExtend<ClientResponseData>();
   });
 
-  it("ClientChannel extends ClientResponseData", () => {
-    expectTypeOf<ClientChannel>().toExtend<ClientResponseData>();
+  it("Channel extends ClientResponseData", () => {
+    expectTypeOf<Channel>().toExtend<ClientResponseData>();
   });
 
-  it("ClientChatMessage extends ClientResponseData", () => {
-    expectTypeOf<ClientChatMessage>().toExtend<ClientResponseData>();
+  it("ChatMessage extends ClientResponseData", () => {
+    expectTypeOf<ChatMessage>().toExtend<ClientResponseData>();
   });
 
-  it("ClientBoardMessage extends ClientResponseData", () => {
-    expectTypeOf<ClientBoardMessage>().toExtend<ClientResponseData>();
+  it("BoardMessage extends ClientResponseData", () => {
+    expectTypeOf<BoardMessage>().toExtend<ClientResponseData>();
   });
 
-  it("ClientNote extends ClientResponseData", () => {
-    expectTypeOf<ClientNote>().toExtend<ClientResponseData>();
+  it("Note extends ClientResponseData", () => {
+    expectTypeOf<Note>().toExtend<ClientResponseData>();
   });
 
   it("FieldDefinition extends ClientResponseData", () => {
@@ -305,32 +296,32 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<CustomFront>().toExtend<ClientResponseData>();
   });
 
-  it("ClientJournalEntry extends ClientResponseData", () => {
-    expectTypeOf<ClientJournalEntry>().toExtend<ClientResponseData>();
+  it("JournalEntry extends ClientResponseData", () => {
+    expectTypeOf<JournalEntry>().toExtend<ClientResponseData>();
   });
 
-  it("ClientWikiPage extends ClientResponseData", () => {
-    expectTypeOf<ClientWikiPage>().toExtend<ClientResponseData>();
+  it("WikiPage extends ClientResponseData", () => {
+    expectTypeOf<WikiPage>().toExtend<ClientResponseData>();
   });
 
   it("MemberPhoto extends ClientResponseData", () => {
     expectTypeOf<MemberPhoto>().toExtend<ClientResponseData>();
   });
 
-  it("ClientPoll extends ClientResponseData", () => {
-    expectTypeOf<ClientPoll>().toExtend<ClientResponseData>();
+  it("Poll extends ClientResponseData", () => {
+    expectTypeOf<Poll>().toExtend<ClientResponseData>();
   });
 
-  it("ClientPollVote extends ClientResponseData", () => {
-    expectTypeOf<ClientPollVote>().toExtend<ClientResponseData>();
+  it("PollVote extends ClientResponseData", () => {
+    expectTypeOf<PollVote>().toExtend<ClientResponseData>();
   });
 
-  it("ClientAcknowledgementRequest extends ClientResponseData", () => {
-    expectTypeOf<ClientAcknowledgementRequest>().toExtend<ClientResponseData>();
+  it("AcknowledgementRequest extends ClientResponseData", () => {
+    expectTypeOf<AcknowledgementRequest>().toExtend<ClientResponseData>();
   });
 
-  it("ClientTimerConfig extends ClientResponseData", () => {
-    expectTypeOf<ClientTimerConfig>().toExtend<ClientResponseData>();
+  it("TimerConfig extends ClientResponseData", () => {
+    expectTypeOf<TimerConfig>().toExtend<ClientResponseData>();
   });
 
   it("AuditLogEntry extends ClientResponseData", () => {
@@ -345,23 +336,23 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<SystemStructureEntityTypeServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<SystemStructureEntityServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<RelationshipServerMetadata>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerChannel>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerChatMessage>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerBoardMessage>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerNote>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ChannelServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ChatMessageServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<BoardMessageServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<NoteServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<FieldDefinitionServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<FieldValueServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<InnerWorldEntityServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<InnerWorldRegionServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<LifecycleEventServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<CustomFrontServerMetadata>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerJournalEntry>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerWikiPage>().not.toExtend<ClientResponseData>();
+    expectTypeOf<JournalEntryServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<WikiPageServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<MemberPhotoServerMetadata>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerPoll>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerPollVote>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerAcknowledgementRequest>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerTimerConfig>().not.toExtend<ClientResponseData>();
+    expectTypeOf<PollServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<PollVoteServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<AcknowledgementRequestServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<TimerConfigServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<AuditLogEntryServerMetadata>().not.toExtend<ClientResponseData>();
   });
 });
@@ -395,20 +386,20 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<Relationship>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientChannel does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientChannel>().not.toExtend<ServerResponseData>();
+  it("Channel does NOT extend ServerResponseData", () => {
+    expectTypeOf<Channel>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientChatMessage does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientChatMessage>().not.toExtend<ServerResponseData>();
+  it("ChatMessage does NOT extend ServerResponseData", () => {
+    expectTypeOf<ChatMessage>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientBoardMessage does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientBoardMessage>().not.toExtend<ServerResponseData>();
+  it("BoardMessage does NOT extend ServerResponseData", () => {
+    expectTypeOf<BoardMessage>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientNote does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientNote>().not.toExtend<ServerResponseData>();
+  it("Note does NOT extend ServerResponseData", () => {
+    expectTypeOf<Note>().not.toExtend<ServerResponseData>();
   });
 
   it("FieldDefinition does NOT extend ServerResponseData", () => {
@@ -435,32 +426,32 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<CustomFront>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientJournalEntry does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientJournalEntry>().not.toExtend<ServerResponseData>();
+  it("JournalEntry does NOT extend ServerResponseData", () => {
+    expectTypeOf<JournalEntry>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientWikiPage does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientWikiPage>().not.toExtend<ServerResponseData>();
+  it("WikiPage does NOT extend ServerResponseData", () => {
+    expectTypeOf<WikiPage>().not.toExtend<ServerResponseData>();
   });
 
   it("MemberPhoto does NOT extend ServerResponseData", () => {
     expectTypeOf<MemberPhoto>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientPoll does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientPoll>().not.toExtend<ServerResponseData>();
+  it("Poll does NOT extend ServerResponseData", () => {
+    expectTypeOf<Poll>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientPollVote does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientPollVote>().not.toExtend<ServerResponseData>();
+  it("PollVote does NOT extend ServerResponseData", () => {
+    expectTypeOf<PollVote>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientAcknowledgementRequest does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientAcknowledgementRequest>().not.toExtend<ServerResponseData>();
+  it("AcknowledgementRequest does NOT extend ServerResponseData", () => {
+    expectTypeOf<AcknowledgementRequest>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientTimerConfig does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientTimerConfig>().not.toExtend<ServerResponseData>();
+  it("TimerConfig does NOT extend ServerResponseData", () => {
+    expectTypeOf<TimerConfig>().not.toExtend<ServerResponseData>();
   });
 
   it("AuditLogEntry does NOT extend ServerResponseData", () => {

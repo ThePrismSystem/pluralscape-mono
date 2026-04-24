@@ -3,21 +3,12 @@
 // generic encryption/decryption helpers.
 
 import type {
-  ServerAcknowledgementRequest,
-  ServerBoardMessage,
-  ServerChannel,
-  ServerChatMessage,
-  ServerJournalEntry,
-  ServerNote,
-  ServerPoll,
-  ServerPollVote,
-  ServerTimerConfig,
-  ServerWikiPage,
-} from "./encryption-primitives.js";
-import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
+  AcknowledgementRequest,
+  AcknowledgementRequestServerMetadata,
+} from "./entities/acknowledgement.js";
 import type { AuditLogEntry, AuditLogEntryServerMetadata } from "./entities/audit-log-entry.js";
-import type { BoardMessage } from "./entities/board-message.js";
-import type { Channel } from "./entities/channel.js";
+import type { BoardMessage, BoardMessageServerMetadata } from "./entities/board-message.js";
+import type { Channel, ChannelServerMetadata } from "./entities/channel.js";
 import type { CustomFront, CustomFrontServerMetadata } from "./entities/custom-front.js";
 import type {
   FieldDefinition,
@@ -41,14 +32,14 @@ import type {
   InnerWorldRegion,
   InnerWorldRegionServerMetadata,
 } from "./entities/innerworld-region.js";
-import type { JournalEntry } from "./entities/journal-entry.js";
+import type { JournalEntry, JournalEntryServerMetadata } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventServerMetadata } from "./entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "./entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "./entities/member.js";
-import type { ChatMessage } from "./entities/message.js";
-import type { Note } from "./entities/note.js";
-import type { PollVote } from "./entities/poll-vote.js";
-import type { Poll } from "./entities/poll.js";
+import type { ChatMessage, ChatMessageServerMetadata } from "./entities/message.js";
+import type { Note, NoteServerMetadata } from "./entities/note.js";
+import type { PollVote, PollVoteServerMetadata } from "./entities/poll-vote.js";
+import type { Poll, PollServerMetadata } from "./entities/poll.js";
 import type { Relationship, RelationshipServerMetadata } from "./entities/relationship.js";
 import type {
   SystemStructureEntityType,
@@ -58,8 +49,8 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityServerMetadata,
 } from "./entities/structure-entity.js";
-import type { TimerConfig } from "./entities/timer-config.js";
-import type { WikiPage } from "./entities/wiki-page.js";
+import type { TimerConfig, TimerConfigServerMetadata } from "./entities/timer-config.js";
+import type { WikiPage, WikiPageServerMetadata } from "./entities/wiki-page.js";
 
 /** Union of all server-side types safe to return from API routes. */
 export type ServerResponseData =
@@ -70,23 +61,23 @@ export type ServerResponseData =
   | SystemStructureEntityTypeServerMetadata
   | SystemStructureEntityServerMetadata
   | RelationshipServerMetadata
-  | ServerChannel
-  | ServerChatMessage
-  | ServerBoardMessage
-  | ServerNote
+  | ChannelServerMetadata
+  | ChatMessageServerMetadata
+  | BoardMessageServerMetadata
+  | NoteServerMetadata
   | FieldDefinitionServerMetadata
   | FieldValueServerMetadata
   | InnerWorldEntityServerMetadata
   | InnerWorldRegionServerMetadata
   | LifecycleEventServerMetadata
   | CustomFrontServerMetadata
-  | ServerJournalEntry
-  | ServerWikiPage
+  | JournalEntryServerMetadata
+  | WikiPageServerMetadata
   | MemberPhotoServerMetadata
-  | ServerPoll
-  | ServerPollVote
-  | ServerAcknowledgementRequest
-  | ServerTimerConfig
+  | PollServerMetadata
+  | PollVoteServerMetadata
+  | AcknowledgementRequestServerMetadata
+  | TimerConfigServerMetadata
   | AuditLogEntryServerMetadata;
 
 /** Union of all client-side types that must NEVER appear in API responses. */

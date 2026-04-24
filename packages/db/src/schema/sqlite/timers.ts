@@ -22,14 +22,14 @@ import { sqliteTimeFormatCheck } from "../../helpers/check.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { CheckInRecordId, SystemId, TimerId } from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = sqliteTable(
   "timer_configs",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<TimerId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
@@ -59,6 +59,9 @@ export const timerConfigs = sqliteTable(
   ],
 );
 
+// CheckInRecord is a Cluster 6 entity; its own `id` brand lift lives with
+// that cluster. The FK columns pointing at timer-config and member are lifted
+// here because they reference this cluster's and Cluster 1's tables.
 export const checkInRecords = sqliteTable(
   "check_in_records",
   {
@@ -70,7 +73,7 @@ export const checkInRecords = sqliteTable(
     scheduledAt: sqliteTimestamp("scheduled_at").notNull(),
     respondedAt: sqliteTimestamp("responded_at"),
     dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
-    respondedByMemberId: text("responded_by_member_id"),
+    respondedByMemberId: brandedId<MemberId>("responded_by_member_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
     idempotencyKey: text("idempotency_key"),
     ...archivable(),

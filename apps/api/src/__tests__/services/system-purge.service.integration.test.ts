@@ -34,7 +34,16 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, GroupId, MemberId, RelationshipId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ChannelId,
+  GroupId,
+  MemberId,
+  MessageId,
+  NoteId,
+  RelationshipId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { systems, members, groups, groupMemberships, relationships, notes, channels, messages } =
@@ -101,7 +110,7 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     // Add a channel with a message
-    const channelId = `ch_${crypto.randomUUID()}`;
+    const channelId = brandId<ChannelId>(`ch_${crypto.randomUUID()}`);
     await db.insert(channels).values({
       id: channelId,
       systemId,
@@ -114,7 +123,7 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     await db.insert(messages).values({
-      id: `msg_${crypto.randomUUID()}`,
+      id: brandId<MessageId>(`msg_${crypto.randomUUID()}`),
       channelId,
       systemId,
       timestamp: now,
@@ -125,7 +134,7 @@ describe("system-purge.service (PGlite integration)", () => {
 
     // Add a note
     await db.insert(notes).values({
-      id: `note_${crypto.randomUUID()}`,
+      id: brandId<NoteId>(`note_${crypto.randomUUID()}`),
       systemId,
       encryptedData: testBlob(),
       createdAt: now,

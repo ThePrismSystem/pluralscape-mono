@@ -3,15 +3,6 @@ import { describe, expectTypeOf, it } from "vitest";
 import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
-  ClientAcknowledgementRequest,
-  ClientBoardMessage,
-  ClientChannel,
-  ClientChatMessage,
-  ClientJournalEntry,
-  ClientNote,
-  ClientPoll,
-  ClientTimerConfig,
-  ClientWikiPage,
   DecryptFn,
   Encrypted,
   EncryptedBlob,
@@ -19,29 +10,21 @@ import type {
   EncryptFn,
   EncryptionAlgorithm,
   Plaintext,
-  ServerAcknowledgementRequest,
-  ServerBoardMessage,
-  ServerChannel,
-  ServerChatMessage,
-  ServerJournalEntry,
-  ServerNote,
-  ServerPoll,
-  ServerTimerConfig,
-  ServerPollVote,
-  ClientPollVote,
-  ServerWikiPage,
   T1EncryptedBlob,
   T2EncryptedBlob,
 } from "../encryption-primitives.js";
-import type { AcknowledgementRequest } from "../entities/acknowledgement.js";
+import type {
+  AcknowledgementRequest,
+  AcknowledgementRequestServerMetadata,
+} from "../entities/acknowledgement.js";
 import type {
   AuditActor,
   AuditLogEntry,
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
 } from "../entities/audit-log-entry.js";
-import type { BoardMessage } from "../entities/board-message.js";
-import type { Channel } from "../entities/channel.js";
+import type { BoardMessage, BoardMessageServerMetadata } from "../entities/board-message.js";
+import type { Channel, ChannelServerMetadata } from "../entities/channel.js";
 import type { CustomFront, CustomFrontServerMetadata } from "../entities/custom-front.js";
 import type {
   FrontingComment,
@@ -57,14 +40,14 @@ import type {
   InnerWorldRegion,
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
-import type { JournalEntry } from "../entities/journal-entry.js";
+import type { JournalEntry, JournalEntryServerMetadata } from "../entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventServerMetadata } from "../entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
-import type { ChatMessage } from "../entities/message.js";
-import type { Note } from "../entities/note.js";
-import type { PollVote } from "../entities/poll-vote.js";
-import type { Poll } from "../entities/poll.js";
+import type { ChatMessage, ChatMessageServerMetadata } from "../entities/message.js";
+import type { Note, NoteServerMetadata } from "../entities/note.js";
+import type { PollVote, PollVoteServerMetadata } from "../entities/poll-vote.js";
+import type { Poll, PollServerMetadata } from "../entities/poll.js";
 import type { Relationship, RelationshipServerMetadata } from "../entities/relationship.js";
 import type {
   SystemStructureEntityType,
@@ -74,8 +57,8 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityServerMetadata,
 } from "../entities/structure-entity.js";
-import type { TimerConfig } from "../entities/timer-config.js";
-import type { WikiPage } from "../entities/wiki-page.js";
+import type { TimerConfig, TimerConfigServerMetadata } from "../entities/timer-config.js";
+import type { WikiPage, WikiPageServerMetadata } from "../entities/wiki-page.js";
 import type {
   BucketId,
   FrontingCommentId,
@@ -211,18 +194,20 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("journal entry pair", () => {
-    expectTypeOf<ServerJournalEntry>().toBeObject();
-    expectTypeOf<ServerJournalEntry["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerJournalEntry["archived"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ClientJournalEntry>().toEqualTypeOf<JournalEntry>();
+    expectTypeOf<JournalEntryServerMetadata>().toBeObject();
+    expectTypeOf<JournalEntryServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<JournalEntryServerMetadata["archived"]>().toEqualTypeOf<boolean>();
+    // JournalEntry is the domain type (was ClientJournalEntry alias).
+    expectTypeOf<JournalEntry>().toBeObject();
   });
 
   it("wiki page pair", () => {
-    expectTypeOf<ServerWikiPage>().toBeObject();
-    expectTypeOf<ServerWikiPage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerWikiPage["archived"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ServerWikiPage["slugHash"]>().toEqualTypeOf<SlugHash>();
-    expectTypeOf<ClientWikiPage>().toEqualTypeOf<WikiPage>();
+    expectTypeOf<WikiPageServerMetadata>().toBeObject();
+    expectTypeOf<WikiPageServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<WikiPageServerMetadata["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<WikiPageServerMetadata["slugHash"]>().toEqualTypeOf<SlugHash>();
+    // WikiPage is the domain type (was ClientWikiPage alias).
+    expectTypeOf<WikiPage>().toBeObject();
   });
 
   it("member photo pair", () => {
@@ -234,33 +219,38 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("poll pair", () => {
-    expectTypeOf<ServerPoll>().toBeObject();
-    expectTypeOf<ServerPoll["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerPoll["createdByMemberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<ServerPoll["status"]>().toEqualTypeOf<"open" | "closed">();
-    expectTypeOf<ServerPoll["closedAt"]>().toEqualTypeOf<UnixMillis | null>();
-    expectTypeOf<ServerPoll["allowMultipleVotes"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ServerPoll["maxVotesPerMember"]>().toEqualTypeOf<number>();
-    expectTypeOf<ClientPoll>().toEqualTypeOf<Poll>();
+    expectTypeOf<PollServerMetadata>().toBeObject();
+    expectTypeOf<PollServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<PollServerMetadata["createdByMemberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<PollServerMetadata["status"]>().toEqualTypeOf<"open" | "closed">();
+    expectTypeOf<PollServerMetadata["closedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<PollServerMetadata["allowMultipleVotes"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<PollServerMetadata["maxVotesPerMember"]>().toEqualTypeOf<number>();
+    // Poll is the domain type (was ClientPoll alias).
+    expectTypeOf<Poll>().toBeObject();
   });
 
   it("acknowledgement request pair", () => {
-    expectTypeOf<ServerAcknowledgementRequest>().toBeObject();
-    expectTypeOf<ServerAcknowledgementRequest["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<AcknowledgementRequestServerMetadata>().toBeObject();
     expectTypeOf<
-      ServerAcknowledgementRequest["createdByMemberId"]
+      AcknowledgementRequestServerMetadata["encryptedData"]
+    >().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<
+      AcknowledgementRequestServerMetadata["createdByMemberId"]
     >().toEqualTypeOf<MemberId | null>();
-    expectTypeOf<ServerAcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ClientAcknowledgementRequest>().toEqualTypeOf<AcknowledgementRequest>();
+    expectTypeOf<AcknowledgementRequestServerMetadata["confirmed"]>().toEqualTypeOf<boolean>();
+    // AcknowledgementRequest is the domain type (was ClientAcknowledgementRequest alias).
+    expectTypeOf<AcknowledgementRequest>().toBeObject();
   });
 
   it("timer config pair", () => {
-    expectTypeOf<ServerTimerConfig>().toBeObject();
-    expectTypeOf<ServerTimerConfig["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerTimerConfig["intervalMinutes"]>().toEqualTypeOf<number>();
-    expectTypeOf<ServerTimerConfig["wakingHoursOnly"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ServerTimerConfig["enabled"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ClientTimerConfig>().toEqualTypeOf<TimerConfig>();
+    expectTypeOf<TimerConfigServerMetadata>().toBeObject();
+    expectTypeOf<TimerConfigServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<TimerConfigServerMetadata["intervalMinutes"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<TimerConfigServerMetadata["wakingHoursOnly"]>().toEqualTypeOf<boolean | null>();
+    expectTypeOf<TimerConfigServerMetadata["enabled"]>().toEqualTypeOf<boolean>();
+    // TimerConfig is the domain type (was ClientTimerConfig alias).
+    expectTypeOf<TimerConfig>().toBeObject();
   });
 
   it("audit log entry pair", () => {
@@ -286,39 +276,44 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("poll vote pair", () => {
-    expectTypeOf<ServerPollVote>().toBeObject();
-    expectTypeOf<ServerPollVote["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
-    expectTypeOf<ServerPollVote["id"]>().toEqualTypeOf<PollVoteId>();
-    expectTypeOf<ServerPollVote["pollId"]>().toEqualTypeOf<PollId>();
-    expectTypeOf<ServerPollVote["optionId"]>().toEqualTypeOf<PollOptionId | null>();
-    expectTypeOf<ServerPollVote["isVeto"]>().toEqualTypeOf<boolean | null>();
-    expectTypeOf<ClientPollVote>().toEqualTypeOf<PollVote>();
+    expectTypeOf<PollVoteServerMetadata>().toBeObject();
+    expectTypeOf<PollVoteServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<PollVoteServerMetadata["id"]>().toEqualTypeOf<PollVoteId>();
+    expectTypeOf<PollVoteServerMetadata["pollId"]>().toEqualTypeOf<PollId>();
+    expectTypeOf<PollVoteServerMetadata["optionId"]>().toEqualTypeOf<PollOptionId | null>();
+    expectTypeOf<PollVoteServerMetadata["isVeto"]>().toEqualTypeOf<boolean>();
+    // PollVote is the domain type (was ClientPollVote alias).
+    expectTypeOf<PollVote>().toBeObject();
   });
 
   it("channel pair", () => {
-    expectTypeOf<ServerChannel>().toBeObject();
-    expectTypeOf<ServerChannel["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerChannel["type"]>().toEqualTypeOf<"category" | "channel">();
-    expectTypeOf<ClientChannel>().toEqualTypeOf<Channel>();
+    expectTypeOf<ChannelServerMetadata>().toBeObject();
+    expectTypeOf<ChannelServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<ChannelServerMetadata["type"]>().toEqualTypeOf<"category" | "channel">();
+    // Channel is the domain type (was ClientChannel alias).
+    expectTypeOf<Channel>().toBeObject();
   });
 
   it("chat message pair", () => {
-    expectTypeOf<ServerChatMessage>().toBeObject();
-    expectTypeOf<ServerChatMessage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientChatMessage>().toEqualTypeOf<ChatMessage>();
+    expectTypeOf<ChatMessageServerMetadata>().toBeObject();
+    expectTypeOf<ChatMessageServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    // ChatMessage is the domain type (was ClientChatMessage alias).
+    expectTypeOf<ChatMessage>().toBeObject();
   });
 
   it("board message pair", () => {
-    expectTypeOf<ServerBoardMessage>().toBeObject();
-    expectTypeOf<ServerBoardMessage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerBoardMessage["pinned"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ClientBoardMessage>().toEqualTypeOf<BoardMessage>();
+    expectTypeOf<BoardMessageServerMetadata>().toBeObject();
+    expectTypeOf<BoardMessageServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<BoardMessageServerMetadata["pinned"]>().toEqualTypeOf<boolean>();
+    // BoardMessage is the domain type (was ClientBoardMessage alias).
+    expectTypeOf<BoardMessage>().toBeObject();
   });
 
   it("note pair", () => {
-    expectTypeOf<ServerNote>().toBeObject();
-    expectTypeOf<ServerNote["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientNote>().toEqualTypeOf<Note>();
+    expectTypeOf<NoteServerMetadata>().toBeObject();
+    expectTypeOf<NoteServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    // Note is the domain type (was ClientNote alias).
+    expectTypeOf<Note>().toBeObject();
   });
 
   it("lifecycle event pair", () => {
@@ -341,9 +336,9 @@ describe("Server/Client pairs exist for completed domains", () => {
 });
 
 describe("T1 encrypted field absence on server types", () => {
-  it("ServerJournalEntry must not have author", () => {
+  it("JournalEntryServerMetadata must not have author", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerJournalEntry["author"]>();
+    expectTypeOf<JournalEntryServerMetadata["author"]>();
   });
 
   it("InnerWorldRegionServerMetadata must not have gatekeeperMemberIds", () => {
@@ -351,14 +346,14 @@ describe("T1 encrypted field absence on server types", () => {
     expectTypeOf<InnerWorldRegionServerMetadata["gatekeeperMemberIds"]>();
   });
 
-  it("ServerChatMessage must not have senderId", () => {
+  it("ChatMessageServerMetadata must not have senderId", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerChatMessage["senderId"]>();
+    expectTypeOf<ChatMessageServerMetadata["senderId"]>();
   });
 
-  it("ServerBoardMessage must not have senderId", () => {
+  it("BoardMessageServerMetadata must not have senderId", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerBoardMessage["senderId"]>();
+    expectTypeOf<BoardMessageServerMetadata["senderId"]>();
   });
 
   it("InnerWorldEntityServerMetadata must not have entityType", () => {
@@ -381,14 +376,14 @@ describe("T1 encrypted field absence on server types", () => {
     expectTypeOf<InnerWorldRegionServerMetadata["accessType"]>();
   });
 
-  it("ServerAcknowledgementRequest must not have targetMemberId", () => {
+  it("AcknowledgementRequestServerMetadata must not have targetMemberId", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerAcknowledgementRequest["targetMemberId"]>();
+    expectTypeOf<AcknowledgementRequestServerMetadata["targetMemberId"]>();
   });
 
-  it("ServerAcknowledgementRequest must not have confirmedAt", () => {
+  it("AcknowledgementRequestServerMetadata must not have confirmedAt", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerAcknowledgementRequest["confirmedAt"]>();
+    expectTypeOf<AcknowledgementRequestServerMetadata["confirmedAt"]>();
   });
 });
 

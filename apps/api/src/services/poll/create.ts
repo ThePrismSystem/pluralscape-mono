@@ -1,5 +1,5 @@
 import { polls } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
 import { CreatePollBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -14,7 +14,7 @@ import { toPollResult } from "./internal.js";
 import type { PollResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SystemId, PollId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createPoll(
@@ -32,7 +32,7 @@ export async function createPoll(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const pollId = createId(ID_PREFIXES.poll);
+  const pollId = brandId<PollId>(createId(ID_PREFIXES.poll));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

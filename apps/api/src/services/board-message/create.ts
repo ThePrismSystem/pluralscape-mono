@@ -1,5 +1,5 @@
 import { boardMessages } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
 import { CreateBoardMessageBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -14,7 +14,7 @@ import { toBoardMessageResult } from "./internal.js";
 import type { BoardMessageResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SystemId, BoardMessageId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createBoardMessage(
@@ -32,7 +32,7 @@ export async function createBoardMessage(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const boardMessageId = createId(ID_PREFIXES.boardMessage);
+  const boardMessageId = brandId<BoardMessageId>(createId(ID_PREFIXES.boardMessage));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

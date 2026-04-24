@@ -29,11 +29,14 @@ import {
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
   AccountId,
+  AcknowledgementId,
   CheckInRecordId,
   FieldDefinitionId,
   FieldValueId,
   FrontingSessionId,
   MemberPhotoId,
+  NoteId,
+  PollId,
   RelationshipId,
   SystemId,
   SystemStructureEntityMemberLinkId,
@@ -573,7 +576,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(notes).values({
-        id: `note_${crypto.randomUUID()}`,
+        id: brandId<NoteId>(`note_${crypto.randomUUID()}`),
         systemId,
         authorEntityType: "member",
         authorEntityId: created.id,
@@ -601,7 +604,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(acknowledgements).values({
-        id: `ack_${crypto.randomUUID()}`,
+        id: brandId<AcknowledgementId>(`ack_${crypto.randomUUID()}`),
         systemId,
         createdByMemberId: created.id,
         encryptedData: testBlob(),
@@ -628,7 +631,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(polls).values({
-        id: `poll_${crypto.randomUUID()}`,
+        id: brandId<PollId>(`poll_${crypto.randomUUID()}`),
         systemId,
         createdByMemberId: created.id,
         kind: "standard",

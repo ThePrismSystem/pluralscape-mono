@@ -4,6 +4,11 @@ import type {
   AccountPurgeRequestWire,
 } from "./entities/account-purge-request.js";
 import type { Account, AccountServerMetadata, AccountWire } from "./entities/account.js";
+import type {
+  AcknowledgementRequest,
+  AcknowledgementRequestServerMetadata,
+  AcknowledgementRequestWire,
+} from "./entities/acknowledgement.js";
 import type { ApiKey, ApiKeyServerMetadata, ApiKeyWire } from "./entities/api-key.js";
 import type {
   AuditLogEntry,
@@ -11,6 +16,12 @@ import type {
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
+import type {
+  BoardMessage,
+  BoardMessageServerMetadata,
+  BoardMessageWire,
+} from "./entities/board-message.js";
+import type { Channel, ChannelServerMetadata, ChannelWire } from "./entities/channel.js";
 import type {
   CheckInRecord,
   CheckInRecordServerMetadata,
@@ -86,6 +97,11 @@ import type {
   InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
 import type {
+  JournalEntry,
+  JournalEntryServerMetadata,
+  JournalEntryWire,
+} from "./entities/journal-entry.js";
+import type {
   LifecycleEvent,
   LifecycleEventEncryptedFields,
   LifecycleEventServerMetadata,
@@ -103,6 +119,14 @@ import type {
   MemberServerMetadata,
   MemberWire,
 } from "./entities/member.js";
+import type {
+  ChatMessage,
+  ChatMessageServerMetadata,
+  ChatMessageWire,
+} from "./entities/message.js";
+import type { Note, NoteServerMetadata, NoteWire } from "./entities/note.js";
+import type { PollVote, PollVoteServerMetadata, PollVoteWire } from "./entities/poll-vote.js";
+import type { Poll, PollServerMetadata, PollWire } from "./entities/poll.js";
 import type {
   RecoveryKey,
   RecoveryKeyServerMetadata,
@@ -161,6 +185,12 @@ import type {
   SystemServerMetadata,
   SystemWire,
 } from "./entities/system.js";
+import type {
+  TimerConfig,
+  TimerConfigServerMetadata,
+  TimerConfigWire,
+} from "./entities/timer-config.js";
+import type { WikiPage, WikiPageServerMetadata, WikiPageWire } from "./entities/wiki-page.js";
 import type {
   NomenclatureEncryptedFields,
   NomenclatureServerMetadata,
@@ -396,6 +426,71 @@ export type SotEntityManifest = {
     wire: CheckInRecordWire;
     // Hybrid entity: plaintext domain with optional `encryptedData` blob
     // (server-only column; no keys-subset of `CheckInRecord`).
+    encryptedFields: never;
+  };
+  // ── Cluster 8: Communication + engagement ─────────────────────────────
+  // 10 hybrid entities: plaintext metadata + opaque `encryptedData` blob
+  // whose decrypted shape is the full domain type, not a keys-subset. No
+  // `<X>EncryptedFields` keys union exists for these — they follow the
+  // SystemSnapshot pattern with `encryptedFields: never`.
+  Channel: {
+    domain: Channel;
+    server: ChannelServerMetadata;
+    wire: ChannelWire;
+    encryptedFields: never;
+  };
+  ChatMessage: {
+    domain: ChatMessage;
+    server: ChatMessageServerMetadata;
+    wire: ChatMessageWire;
+    encryptedFields: never;
+  };
+  Note: {
+    domain: Note;
+    server: NoteServerMetadata;
+    wire: NoteWire;
+    encryptedFields: never;
+  };
+  BoardMessage: {
+    domain: BoardMessage;
+    server: BoardMessageServerMetadata;
+    wire: BoardMessageWire;
+    encryptedFields: never;
+  };
+  Poll: {
+    domain: Poll;
+    server: PollServerMetadata;
+    wire: PollWire;
+    encryptedFields: never;
+  };
+  PollVote: {
+    domain: PollVote;
+    server: PollVoteServerMetadata;
+    wire: PollVoteWire;
+    encryptedFields: never;
+  };
+  AcknowledgementRequest: {
+    domain: AcknowledgementRequest;
+    server: AcknowledgementRequestServerMetadata;
+    wire: AcknowledgementRequestWire;
+    encryptedFields: never;
+  };
+  TimerConfig: {
+    domain: TimerConfig;
+    server: TimerConfigServerMetadata;
+    wire: TimerConfigWire;
+    encryptedFields: never;
+  };
+  JournalEntry: {
+    domain: JournalEntry;
+    server: JournalEntryServerMetadata;
+    wire: JournalEntryWire;
+    encryptedFields: never;
+  };
+  WikiPage: {
+    domain: WikiPage;
+    server: WikiPageServerMetadata;
+    wire: WikiPageWire;
     encryptedFields: never;
   };
 };

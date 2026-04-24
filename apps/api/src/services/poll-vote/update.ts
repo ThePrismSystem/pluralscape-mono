@@ -1,5 +1,5 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { brandId, now } from "@pluralscape/types";
 import { UpdatePollVoteBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -17,7 +17,7 @@ import { toVoteResult } from "./internal.js";
 import type { PollVoteResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PollId, PollVoteId, SystemId } from "@pluralscape/types";
+import type { PollId, PollOptionId, PollVoteId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function updatePollVote(
@@ -98,7 +98,7 @@ export async function updatePollVote(
     const [updated] = await tx
       .update(pollVotes)
       .set({
-        optionId: parsed.optionId,
+        optionId: parsed.optionId === null ? null : brandId<PollOptionId>(parsed.optionId),
         isVeto: parsed.isVeto ?? existing.isVeto,
         encryptedData: blob,
         votedAt: timestamp,

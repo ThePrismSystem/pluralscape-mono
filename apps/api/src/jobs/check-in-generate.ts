@@ -62,7 +62,7 @@ export function createCheckInGenerateHandler(
         lte(timerConfigs.nextCheckInAt, nowMs),
       ];
       if (cursor !== null) {
-        conditions.push(gt(timerConfigs.id, cursor));
+        conditions.push(gt(timerConfigs.id, brandId<TimerId>(cursor)));
       }
 
       const configs = await db
