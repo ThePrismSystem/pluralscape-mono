@@ -28,6 +28,7 @@ import type {
   MemberId,
   ServerRelationship,
   SystemId,
+  SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
@@ -189,12 +190,12 @@ export const systemStructureEntityMemberLinks = sqliteTable(
 export const systemStructureEntityAssociations = sqliteTable(
   "system_structure_entity_associations",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityAssociationId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceEntityId: text("source_entity_id").notNull(),
-    targetEntityId: text("target_entity_id").notNull(),
+    sourceEntityId: brandedId<SystemStructureEntityId>("source_entity_id").notNull(),
+    targetEntityId: brandedId<SystemStructureEntityId>("target_entity_id").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [

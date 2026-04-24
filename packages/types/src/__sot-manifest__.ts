@@ -68,6 +68,8 @@ import type { Session, SessionServerMetadata, SessionWire } from "./entities/ses
 import type {
   SystemStructureEntityAssociation,
   SystemStructureEntityAssociationEncryptedFields,
+  SystemStructureEntityAssociationServerMetadata,
+  SystemStructureEntityAssociationWire,
 } from "./entities/structure-entity-association.js";
 import type {
   SystemStructureEntityMemberLink,
@@ -241,6 +243,8 @@ export type SotEntityManifest = {
   };
   StructureEntityAssociation: {
     domain: SystemStructureEntityAssociation;
+    server: SystemStructureEntityAssociationServerMetadata;
+    wire: SystemStructureEntityAssociationWire;
     encryptedFields: SystemStructureEntityAssociationEncryptedFields;
   };
   ApiKey: {

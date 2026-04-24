@@ -39,6 +39,7 @@ import type {
   AccountId,
   MemberId,
   SystemId,
+  SystemStructureEntityAssociationId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
@@ -439,7 +440,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
       );
 
       await db.insert(systemStructureEntityAssociations).values({
-        id: `stea_${crypto.randomUUID()}`,
+        id: brandId<SystemStructureEntityAssociationId>(`stea_${crypto.randomUUID()}`),
         systemId,
         sourceEntityId: entityA.id,
         targetEntityId: entityB.id,

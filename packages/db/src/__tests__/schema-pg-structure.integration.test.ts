@@ -27,6 +27,7 @@ import {
 import type {
   MemberId,
   SystemId,
+  SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityLinkId,
   SystemStructureEntityMemberLinkId,
@@ -36,6 +37,8 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const newMemberLinkId = (): SystemStructureEntityMemberLinkId =>
   brandId<SystemStructureEntityMemberLinkId>(crypto.randomUUID());
+const newAssocId = (): SystemStructureEntityAssociationId =>
+  brandId<SystemStructureEntityAssociationId>(crypto.randomUUID());
 const asMemberId = (id: string): MemberId => brandId<MemberId>(id);
 
 const newTypeId = (): SystemStructureEntityTypeId =>
@@ -1448,7 +1451,7 @@ describe("PG structure schema", () => {
         },
       ]);
 
-      const assocId = crypto.randomUUID();
+      const assocId = newAssocId();
       await db.insert(systemStructureEntityAssociations).values({
         id: assocId,
         systemId,
@@ -1504,7 +1507,7 @@ describe("PG structure schema", () => {
       ]);
 
       await db.insert(systemStructureEntityAssociations).values({
-        id: crypto.randomUUID(),
+        id: newAssocId(),
         systemId,
         sourceEntityId: entityId1,
         targetEntityId: entityId2,
@@ -1513,7 +1516,7 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityAssociations).values({
-          id: crypto.randomUUID(),
+          id: newAssocId(),
           systemId,
           sourceEntityId: entityId1,
           targetEntityId: entityId2,
@@ -1592,7 +1595,7 @@ describe("PG structure schema", () => {
         },
       ]);
       await db.insert(systemStructureEntityAssociations).values({
-        id: crypto.randomUUID(),
+        id: newAssocId(),
         systemId,
         sourceEntityId: entityId1,
         targetEntityId: entityId2,
@@ -1610,7 +1613,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const assocId = crypto.randomUUID();
+      const assocId = newAssocId();
       const now = Date.now();
 
       await db.insert(systemStructureEntityTypes).values({

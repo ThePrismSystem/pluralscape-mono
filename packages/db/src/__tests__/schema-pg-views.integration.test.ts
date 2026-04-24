@@ -47,6 +47,7 @@ import type {
   DeviceTransferRequestId,
   SessionId,
   SystemId,
+  SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
@@ -716,7 +717,7 @@ describe("PG views / query helpers", () => {
         },
       ]);
       await db.insert(systemStructureEntityAssociations).values({
-        id: crypto.randomUUID(),
+        id: brandId<SystemStructureEntityAssociationId>(crypto.randomUUID()),
         systemId,
         sourceEntityId: entityId1,
         targetEntityId: entityId2,

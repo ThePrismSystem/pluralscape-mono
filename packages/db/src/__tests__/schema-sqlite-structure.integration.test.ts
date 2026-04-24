@@ -27,6 +27,7 @@ import {
 import type {
   MemberId,
   SystemId,
+  SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
@@ -39,6 +40,8 @@ const newEntityId = (): SystemStructureEntityId =>
   brandId<SystemStructureEntityId>(crypto.randomUUID());
 const newMemberLinkId = (): SystemStructureEntityMemberLinkId =>
   brandId<SystemStructureEntityMemberLinkId>(crypto.randomUUID());
+const newAssocId = (): SystemStructureEntityAssociationId =>
+  brandId<SystemStructureEntityAssociationId>(crypto.randomUUID());
 const asMemberId = (id: string): MemberId => brandId<MemberId>(id);
 
 const schema = {
@@ -1544,7 +1547,7 @@ describe("SQLite structure schema", () => {
         ])
         .run();
 
-      const assocId = crypto.randomUUID();
+      const assocId = newAssocId();
       db.insert(systemStructureEntityAssociations)
         .values({
           id: assocId,
@@ -1608,7 +1611,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityAssociations)
         .values({
-          id: crypto.randomUUID(),
+          id: newAssocId(),
           systemId,
           sourceEntityId: entityId1,
           targetEntityId: entityId2,
@@ -1620,7 +1623,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityAssociations)
           .values({
-            id: crypto.randomUUID(),
+            id: newAssocId(),
             systemId,
             sourceEntityId: entityId1,
             targetEntityId: entityId2,
@@ -1672,7 +1675,7 @@ describe("SQLite structure schema", () => {
         .run();
       db.insert(systemStructureEntityAssociations)
         .values({
-          id: crypto.randomUUID(),
+          id: newAssocId(),
           systemId,
           sourceEntityId: entityId1,
           targetEntityId: entityId2,
@@ -1691,7 +1694,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const assocId = crypto.randomUUID();
+      const assocId = newAssocId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)

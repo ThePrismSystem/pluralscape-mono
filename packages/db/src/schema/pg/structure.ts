@@ -29,6 +29,7 @@ import type {
   MemberId,
   ServerRelationship,
   SystemId,
+  SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
@@ -187,12 +188,12 @@ export const systemStructureEntityMemberLinks = pgTable(
 export const systemStructureEntityAssociations = pgTable(
   "system_structure_entity_associations",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityAssociationId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceEntityId: varchar("source_entity_id", { length: ID_MAX_LENGTH }).notNull(),
-    targetEntityId: varchar("target_entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    sourceEntityId: brandedId<SystemStructureEntityId>("source_entity_id").notNull(),
+    targetEntityId: brandedId<SystemStructureEntityId>("target_entity_id").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
