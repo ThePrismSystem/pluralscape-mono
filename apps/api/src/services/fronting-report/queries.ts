@@ -25,7 +25,7 @@ export interface FrontingReportListOptions {
 
 interface CursorData {
   readonly t: number;
-  readonly i: string;
+  readonly i: FrontingReportId;
 }
 
 function encodeCursor(data: CursorData): string {
@@ -40,12 +40,13 @@ function decodeCursor(cursor: string): CursorData {
       parsed !== null &&
       "t" in parsed &&
       "i" in parsed &&
-      typeof (parsed as CursorData).t === "number" &&
-      (parsed as CursorData).t >= 0 &&
-      typeof (parsed as CursorData).i === "string" &&
-      (parsed as CursorData).i.length > 0
+      typeof (parsed as { t: unknown }).t === "number" &&
+      (parsed as { t: number }).t >= 0 &&
+      typeof (parsed as { i: unknown }).i === "string" &&
+      (parsed as { i: string }).i.length > 0
     ) {
-      return parsed as CursorData;
+      const raw = parsed as { t: number; i: string };
+      return { t: raw.t, i: brandId<FrontingReportId>(raw.i) };
     }
   } catch {
     // fall through
@@ -72,10 +73,7 @@ export async function listFrontingReports(
       const cursor = decodeCursor(opts.cursor);
       const cursorCondition = or(
         lt(frontingReports.generatedAt, cursor.t),
-        and(
-          eq(frontingReports.generatedAt, cursor.t),
-          lt(frontingReports.id, brandId<FrontingReportId>(cursor.i)),
-        ),
+        and(eq(frontingReports.generatedAt, cursor.t), lt(frontingReports.id, cursor.i)),
       );
       if (cursorCondition) conditions.push(cursorCondition);
     }
