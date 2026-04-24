@@ -81,6 +81,7 @@ export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
 export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
 export type SystemSnapshotId = Brand<string, "SystemSnapshotId">;
 export type BiometricTokenId = Brand<string, "BiometricTokenId">;
+export type SafeModeContentId = Brand<string, "SafeModeContentId">;
 export type StorageKey = Brand<string, "StorageKey">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
@@ -160,7 +161,8 @@ export type AnyBrandedId =
   | BucketKeyRotationId
   | BucketRotationItemId
   | SystemSnapshotId
-  | BiometricTokenId;
+  | BiometricTokenId
+  | SafeModeContentId;
 
 // ── Branded value types (not entity IDs) ────────────────────────────
 
@@ -237,6 +239,7 @@ export const ID_PREFIXES = {
   bucketRotationItem: "bri_",
   systemSnapshot: "snap_",
   biometricToken: "bt_",
+  safeModeContent: "smc_",
 } as const;
 
 /** Maps each ID prefix value to its Brand tag string. */
@@ -305,6 +308,7 @@ export interface IdPrefixBrandMap {
   bri_: "BucketRotationItemId";
   snap_: "SystemSnapshotId";
   bt_: "BiometricTokenId";
+  smc_: "SafeModeContentId";
 }
 
 // Helper: constrains T to Record<string, true> — fails at definition site if any value is not `true`.
