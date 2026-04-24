@@ -13,11 +13,12 @@ import { QueryCache } from "../../lib/query-cache.js";
 
 import type {
   EncryptedBlob,
+  EncryptedWire,
   FieldDefinitionId,
+  FieldDefinitionServerMetadata,
   FieldType,
   PaginatedResult,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 
 // ── Constants ───────────────────────────────────────────────────────
@@ -27,19 +28,7 @@ const MAX_ENCRYPTED_FIELD_DATA_BYTES = 32_768;
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface FieldDefinitionResult {
-  readonly id: FieldDefinitionId;
-  readonly systemId: SystemId;
-  readonly fieldType: FieldType;
-  readonly required: boolean;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
+export type FieldDefinitionResult = EncryptedWire<FieldDefinitionServerMetadata>;
 
 // ── Cache ───────────────────────────────────────────────────────────
 

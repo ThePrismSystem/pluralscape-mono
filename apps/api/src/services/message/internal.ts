@@ -4,22 +4,16 @@ import { eq, type SQL } from "drizzle-orm";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type { ChannelId, MessageId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  ChannelId,
+  ChatMessageServerMetadata,
+  EncryptedWire,
+  MessageId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
-export interface MessageResult {
-  readonly id: MessageId;
-  readonly channelId: ChannelId;
-  readonly systemId: SystemId;
-  readonly replyToId: MessageId | null;
-  readonly timestamp: UnixMillis;
-  readonly editedAt: UnixMillis | null;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type MessageResult = EncryptedWire<ChatMessageServerMetadata>;
 
 export interface TimestampHint {
   readonly timestamp?: UnixMillis;

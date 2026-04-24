@@ -15,13 +15,14 @@ import { MAX_ENCRYPTED_FIELD_VALUE_BYTES } from "../field-value.constants.js";
 
 import type {
   EncryptedBlob,
+  EncryptedWire,
   FieldDefinitionId,
   FieldValueId,
+  FieldValueServerMetadata,
   GroupId,
   MemberId,
   SystemId,
   SystemStructureEntityId,
-  UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -34,18 +35,7 @@ export type FieldValueOwner =
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface FieldValueResult {
-  readonly id: FieldValueId;
-  readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly groupId: GroupId | null;
-  readonly systemId: SystemId;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type FieldValueResult = EncryptedWire<FieldValueServerMetadata>;
 
 // ── Internal helpers ───────────────────────────────────────────────
 

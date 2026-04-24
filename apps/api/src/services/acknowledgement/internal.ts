@@ -3,22 +3,17 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type { AcknowledgementId, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  AcknowledgementId,
+  AcknowledgementRequestServerMetadata,
+  EncryptedWire,
+  MemberId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface AcknowledgementResult {
-  readonly id: AcknowledgementId;
-  readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId | null;
-  readonly confirmed: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type AcknowledgementResult = EncryptedWire<AcknowledgementRequestServerMetadata>;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
