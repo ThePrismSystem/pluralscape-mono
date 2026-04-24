@@ -940,11 +940,12 @@ describe("PG custom fields schema", () => {
       return id;
     }
 
-    async function insertGroup(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    async function insertGroup(systemId: string, raw = crypto.randomUUID()): Promise<GroupId> {
+      const id = brandId<GroupId>(raw);
       const now = Date.now();
       await db.insert(groups).values({
         id,
-        systemId,
+        systemId: brandId<SystemId>(systemId),
         sortOrder: 0,
         encryptedData: testBlob(),
         createdAt: now,

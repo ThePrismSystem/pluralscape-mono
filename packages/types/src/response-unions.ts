@@ -7,17 +7,13 @@ import type {
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
-  ServerCustomFront,
   ServerFrontingComment,
   ServerFrontingSession,
-  ServerGroup,
   ServerJournalEntry,
   ServerLifecycleEvent,
-  ServerMemberPhoto,
   ServerNote,
   ServerPoll,
   ServerPollVote,
-  ServerRelationship,
   ServerStructureEntity,
   ServerStructureEntityType,
   ServerTimerConfig,
@@ -27,7 +23,7 @@ import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
 import type { AuditLogEntry, AuditLogEntryServerMetadata } from "./entities/audit-log-entry.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
-import type { CustomFront } from "./entities/custom-front.js";
+import type { CustomFront, CustomFrontServerMetadata } from "./entities/custom-front.js";
 import type {
   FieldDefinition,
   FieldDefinitionServerMetadata,
@@ -35,7 +31,7 @@ import type {
 import type { FieldValue, FieldValueServerMetadata } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
-import type { Group } from "./entities/group.js";
+import type { Group, GroupServerMetadata } from "./entities/group.js";
 import type {
   InnerWorldEntity,
   InnerWorldEntityServerMetadata,
@@ -46,13 +42,13 @@ import type {
 } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent } from "./entities/lifecycle-event.js";
-import type { MemberPhoto } from "./entities/member-photo.js";
+import type { MemberPhoto, MemberPhotoServerMetadata } from "./entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "./entities/member.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll } from "./entities/poll.js";
-import type { Relationship } from "./entities/relationship.js";
+import type { Relationship, RelationshipServerMetadata } from "./entities/relationship.js";
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
@@ -63,10 +59,10 @@ export type ServerResponseData =
   | MemberServerMetadata
   | ServerFrontingSession
   | ServerFrontingComment
-  | ServerGroup
+  | GroupServerMetadata
   | ServerStructureEntityType
   | ServerStructureEntity
-  | ServerRelationship
+  | RelationshipServerMetadata
   | ServerChannel
   | ServerChatMessage
   | ServerBoardMessage
@@ -76,10 +72,10 @@ export type ServerResponseData =
   | InnerWorldEntityServerMetadata
   | InnerWorldRegionServerMetadata
   | ServerLifecycleEvent
-  | ServerCustomFront
+  | CustomFrontServerMetadata
   | ServerJournalEntry
   | ServerWikiPage
-  | ServerMemberPhoto
+  | MemberPhotoServerMetadata
   | ServerPoll
   | ServerPollVote
   | ServerAcknowledgementRequest

@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -23,16 +23,17 @@ import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const groups = pgTable(
   "groups",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<GroupId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentGroupId: varchar("parent_group_id", { length: ID_MAX_LENGTH }),
+    parentGroupId: brandedId<GroupId>("parent_group_id"),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),

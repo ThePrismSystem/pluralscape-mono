@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { CustomFrontId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -35,11 +37,15 @@ describe("PG fronting schema", () => {
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
   const insertMember = (systemId: string, id?: string) => pgInsertMember(db, systemId, id);
 
-  async function insertCustomFront(systemId: string, id = crypto.randomUUID()): Promise<string> {
+  async function insertCustomFront(
+    systemId: string,
+    raw = crypto.randomUUID(),
+  ): Promise<CustomFrontId> {
+    const id = brandId<CustomFrontId>(raw);
     const now = Date.now();
     await db.insert(customFronts).values({
       id,
-      systemId,
+      systemId: brandId<SystemId>(systemId),
       encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
@@ -652,7 +658,7 @@ describe("PG fronting schema", () => {
     it("inserts with encrypted_data and round-trips binary", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -673,7 +679,7 @@ describe("PG fronting schema", () => {
     it("defaults archived to false, archivedAt to null, and version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(customFronts).values({
@@ -693,7 +699,7 @@ describe("PG fronting schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(customFronts).values({
@@ -712,7 +718,7 @@ describe("PG fronting schema", () => {
     it("round-trips archived: true with archivedAt timestamp", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(customFronts).values({

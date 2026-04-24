@@ -2,18 +2,14 @@ import type { KdfMasterKey } from "./crypto-keys.js";
 import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
-import type { CustomFront } from "./entities/custom-front.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
-import type { Group } from "./entities/group.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
-import type { MemberPhoto } from "./entities/member-photo.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
-import type { RelationshipType, Relationship } from "./entities/relationship.js";
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
@@ -27,16 +23,13 @@ import type {
   LifecycleEventId,
   FrontingCommentId,
   FrontingSessionId,
-  GroupId,
   JournalEntryId,
   MemberId,
-  MemberPhotoId,
   MessageId,
   NoteId,
   PollId,
   PollOptionId,
   PollVoteId,
-  RelationshipId,
   SystemId,
   SystemStructureEntityTypeId,
   SystemStructureEntityId,
@@ -160,23 +153,6 @@ export interface ServerFrontingComment extends AuditMetadata {
 /** Client-side fronting comment — flat decrypted fields. */
 export type ClientFrontingComment = FrontingComment;
 
-/**
- * Server-side group representation.
- * T1 encrypted: name, description, imageSource, color, emoji
- * T3 plaintext: sortOrder, archived, parentGroupId
- */
-export interface ServerGroup extends AuditMetadata {
-  readonly id: GroupId;
-  readonly systemId: SystemId;
-  readonly parentGroupId: GroupId | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side group — flat decrypted fields. */
-export type ClientGroup = Group;
-
 // ── Structure entities ──────────────────────────────────────────
 
 /**
@@ -211,26 +187,6 @@ export interface ServerStructureEntity extends AuditMetadata {
 
 /** Client-side structure entity — flat decrypted fields. */
 export type ClientStructureEntity = SystemStructureEntity;
-
-/**
- * Server-side relationship representation.
- * T1 encrypted: label
- * T3 plaintext: type, sourceMemberId, targetMemberId, bidirectional, archived
- */
-export interface ServerRelationship {
-  readonly id: RelationshipId;
-  readonly systemId: SystemId;
-  readonly sourceMemberId: MemberId | null;
-  readonly targetMemberId: MemberId | null;
-  readonly type: RelationshipType;
-  readonly bidirectional: boolean;
-  readonly createdAt: UnixMillis;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob | null;
-}
-
-/** Client-side relationship — flat decrypted fields. */
-export type ClientRelationship = Relationship;
 
 // ── Communication ──────────────────────────────────────────────
 
@@ -328,23 +284,6 @@ export interface ServerLifecycleEvent {
 /** Client-side lifecycle event — flat decrypted fields. */
 export type ClientLifecycleEvent = LifecycleEvent;
 
-// ── Custom fronts ──────────────────────────────────────────────
-
-/**
- * Server-side custom front representation.
- * T1 encrypted: name, description, color, emoji
- * T3 plaintext: archived
- */
-export interface ServerCustomFront extends AuditMetadata {
-  readonly id: CustomFrontId;
-  readonly systemId: SystemId;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side custom front — flat decrypted fields. */
-export type ClientCustomFront = CustomFront;
-
 // ── Journal ────────────────────────────────────────────────────
 
 /**
@@ -378,26 +317,6 @@ export interface ServerWikiPage extends AuditMetadata {
 
 /** Client-side wiki page — flat decrypted fields. */
 export type ClientWikiPage = WikiPage;
-
-// ── Member photos ──────────────────────────────────────────────
-
-/**
- * Server-side member photo representation.
- * T1 encrypted: imageSource, caption
- * T3 plaintext: memberId, sortOrder, archived
- *
- * Intentionally omits AuditMetadata — photos are append-only gallery items.
- */
-export interface ServerMemberPhoto {
-  readonly id: MemberPhotoId;
-  readonly memberId: MemberId;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side member photo — flat decrypted fields. */
-export type ClientMemberPhoto = MemberPhoto;
 
 // ── Polls ──────────────────────────────────────────────────────
 

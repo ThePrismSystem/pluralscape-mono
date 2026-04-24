@@ -11,7 +11,12 @@ import type {
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
-import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
+import type {
+  CustomFront,
+  CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
+  CustomFrontWire,
+} from "./entities/custom-front.js";
 import type {
   DeviceToken,
   DeviceTokenServerMetadata,
@@ -43,7 +48,12 @@ import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
 } from "./entities/fronting-session.js";
-import type { Group, GroupEncryptedFields } from "./entities/group.js";
+import type {
+  Group,
+  GroupEncryptedFields,
+  GroupServerMetadata,
+  GroupWire,
+} from "./entities/group.js";
 import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
@@ -63,7 +73,12 @@ import type {
   InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
 import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
-import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
+import type {
+  MemberPhoto,
+  MemberPhotoEncryptedFields,
+  MemberPhotoServerMetadata,
+  MemberPhotoWire,
+} from "./entities/member-photo.js";
 import type {
   Member,
   MemberEncryptedFields,
@@ -75,7 +90,12 @@ import type {
   RecoveryKeyServerMetadata,
   RecoveryKeyWire,
 } from "./entities/recovery-key.js";
-import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
+import type {
+  Relationship,
+  RelationshipEncryptedFields,
+  RelationshipServerMetadata,
+  RelationshipWire,
+} from "./entities/relationship.js";
 import type { Session, SessionServerMetadata, SessionWire } from "./entities/session.js";
 import type {
   SystemStructureEntityAssociation,
@@ -164,14 +184,20 @@ export type SotEntityManifest = {
   };
   MemberPhoto: {
     domain: MemberPhoto;
+    server: MemberPhotoServerMetadata;
+    wire: MemberPhotoWire;
     encryptedFields: MemberPhotoEncryptedFields;
   };
   Group: {
     domain: Group;
+    server: GroupServerMetadata;
+    wire: GroupWire;
     encryptedFields: GroupEncryptedFields;
   };
   CustomFront: {
     domain: CustomFront;
+    server: CustomFrontServerMetadata;
+    wire: CustomFrontWire;
     encryptedFields: CustomFrontEncryptedFields;
   };
   FieldDefinition: {
@@ -195,6 +221,8 @@ export type SotEntityManifest = {
   };
   Relationship: {
     domain: Relationship;
+    server: RelationshipServerMetadata;
+    wire: RelationshipWire;
     encryptedFields: RelationshipEncryptedFields;
   };
   StructureEntityType: {

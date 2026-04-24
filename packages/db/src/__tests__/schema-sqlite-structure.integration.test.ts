@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -23,6 +24,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { MemberId, RelationshipId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -42,9 +44,11 @@ describe("SQLite structure schema", () => {
   let db: BetterSQLite3Database<typeof schema>;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertMember = (systemId: string, id?: string): string =>
-    sqliteInsertMember(db, systemId, id);
-  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string): MemberId =>
+    brandId<MemberId>(sqliteInsertMember(db, systemId, id));
+  const insertSystem = (accountId: string, id?: string): SystemId =>
+    sqliteInsertSystem(db, accountId, id);
+  const newRelId = (): RelationshipId => brandId<RelationshipId>(crypto.randomUUID());
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -70,7 +74,7 @@ describe("SQLite structure schema", () => {
     it("inserts and round-trips encrypted data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -94,7 +98,7 @@ describe("SQLite structure schema", () => {
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -115,7 +119,7 @@ describe("SQLite structure schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -140,8 +144,8 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
-            systemId: "nonexistent",
+            id: brandId<RelationshipId>(crypto.randomUUID()),
+            systemId: brandId<SystemId>("nonexistent"),
             type: "sibling",
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -156,7 +160,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const sourceMemberId = insertMember(systemId);
       const targetMemberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -183,7 +187,7 @@ describe("SQLite structure schema", () => {
     it("defaults T3 metadata to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -212,7 +216,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             type: "invalid" as "sibling",
             encryptedData: testBlob(new Uint8Array([1])),
@@ -227,7 +231,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -256,10 +260,10 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             type: "sibling",
-            sourceMemberId: "nonexistent",
+            sourceMemberId: brandId<MemberId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -272,7 +276,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -301,10 +305,10 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             type: "sibling",
-            targetMemberId: "nonexistent",
+            targetMemberId: brandId<MemberId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -316,7 +320,7 @@ describe("SQLite structure schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -338,7 +342,7 @@ describe("SQLite structure schema", () => {
     it("round-trips archived: true with archivedAt timestamp", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -392,7 +396,7 @@ describe("SQLite structure schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -471,7 +475,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityTypes)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId: "nonexistent",
             sortOrder: 0,
             encryptedData: testBlob(),
@@ -633,7 +637,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntities)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             entityTypeId: "nonexistent",
             sortOrder: 0,
@@ -664,7 +668,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntities)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           entityTypeId: typeId,
           sortOrder: 0,
@@ -896,7 +900,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             entityId: "nonexistent",
             sortOrder: 0,
@@ -935,7 +939,13 @@ describe("SQLite structure schema", () => {
         })
         .run();
       db.insert(systemStructureEntityLinks)
-        .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 0, createdAt: now })
+        .values({
+          id: brandId<RelationshipId>(crypto.randomUUID()),
+          systemId,
+          entityId,
+          sortOrder: 0,
+          createdAt: now,
+        })
         .run();
 
       expect(() =>
@@ -1038,7 +1048,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             entityId,
             parentEntityId: "nonexistent",
@@ -1091,7 +1101,7 @@ describe("SQLite structure schema", () => {
         .run();
       db.insert(systemStructureEntityLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           entityId: childEntityId,
           parentEntityId,
@@ -1151,7 +1161,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           entityId: childEntityId,
           parentEntityId,
@@ -1164,7 +1174,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             entityId: childEntityId,
             parentEntityId,
@@ -1205,13 +1215,25 @@ describe("SQLite structure schema", () => {
         .run();
 
       db.insert(systemStructureEntityLinks)
-        .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 0, createdAt: now })
+        .values({
+          id: brandId<RelationshipId>(crypto.randomUUID()),
+          systemId,
+          entityId,
+          sortOrder: 0,
+          createdAt: now,
+        })
         .run();
 
       expect(() =>
         db
           .insert(systemStructureEntityLinks)
-          .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 1, createdAt: now })
+          .values({
+            id: brandId<RelationshipId>(crypto.randomUUID()),
+            systemId,
+            entityId,
+            sortOrder: 1,
+            createdAt: now,
+          })
           .run(),
       ).toThrow(/UNIQUE|constraint/i);
     });
@@ -1321,7 +1343,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             memberId: "nonexistent",
             sortOrder: 0,
@@ -1339,7 +1361,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           memberId,
           sortOrder: 0,
@@ -1384,7 +1406,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           memberId,
           parentEntityId: entityId,
@@ -1397,7 +1419,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             memberId,
             parentEntityId: entityId,
@@ -1416,7 +1438,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           memberId,
           sortOrder: 0,
@@ -1428,7 +1450,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             memberId,
             sortOrder: 1,
@@ -1472,7 +1494,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityMemberLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             memberId,
             parentEntityId: "nonexistent",
@@ -1592,7 +1614,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityAssociations)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           sourceEntityId: entityId1,
           targetEntityId: entityId2,
@@ -1604,7 +1626,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityAssociations)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             sourceEntityId: entityId1,
             targetEntityId: entityId2,
@@ -1656,7 +1678,7 @@ describe("SQLite structure schema", () => {
         .run();
       db.insert(systemStructureEntityAssociations)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<RelationshipId>(crypto.randomUUID()),
           systemId,
           sourceEntityId: entityId1,
           targetEntityId: entityId2,

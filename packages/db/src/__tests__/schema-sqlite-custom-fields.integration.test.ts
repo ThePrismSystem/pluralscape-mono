@@ -1036,12 +1036,13 @@ describe("SQLite custom fields schema", () => {
       return id;
     }
 
-    function insertGroup(systemId: string, id = crypto.randomUUID()): string {
+    function insertGroup(systemId: string, raw = crypto.randomUUID()): GroupId {
+      const id = brandId<GroupId>(raw);
       const now = Date.now();
       db.insert(groups)
         .values({
           id,
-          systemId,
+          systemId: brandId<SystemId>(systemId),
           sortOrder: 0,
           encryptedData: testBlob(),
           createdAt: now,
