@@ -1,24 +1,32 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { EntityType, RotationItemStatus, RotationState } from "@pluralscape/types";
+import type {
+  BucketId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  EntityType,
+  RotationItemStatus,
+  RotationState,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const bucketKeyRotations = sqliteTable(
   "bucket_key_rotations",
   {
-    id: text("id").primaryKey(),
-    bucketId: text("bucket_id")
+    id: brandedId<BucketKeyRotationId>("id").primaryKey(),
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     fromKeyVersion: integer("from_key_version").notNull(),
@@ -45,14 +53,15 @@ export const bucketKeyRotations = sqliteTable(
 export const bucketRotationItems = sqliteTable(
   "bucket_rotation_items",
   {
-    id: text("id").primaryKey(),
-    rotationId: text("rotation_id")
+    id: brandedId<BucketRotationItemId>("id").primaryKey(),
+    rotationId: brandedId<BucketKeyRotationId>("rotation_id")
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "restrict" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     entityType: text("entity_type").notNull().$type<EntityType>(),
+    // Polymorphic — domain `BucketRotationItem.entityId` is a plain string.
     entityId: text("entity_id").notNull(),
     status: text("status").notNull().default("pending").$type<RotationItemStatus>(),
     claimedBy: text("claimed_by"),

@@ -83,7 +83,7 @@ export function getActiveApiKeys(db: BetterSQLite3Database, accountId: AccountId
 /** Get pending friend requests (received by this account). */
 export function getPendingFriendRequests(
   db: BetterSQLite3Database,
-  accountId: string,
+  accountId: AccountId,
 ): PendingFriendRequest[] {
   return db
     .select({
@@ -167,7 +167,7 @@ export function getMemberGroupSummary(
 /** Get active (accepted) friend connections. */
 export function getActiveFriendConnections(
   db: BetterSQLite3Database,
-  accountId: string,
+  accountId: AccountId,
 ): ActiveFriendConnection[] {
   return db
     .select({

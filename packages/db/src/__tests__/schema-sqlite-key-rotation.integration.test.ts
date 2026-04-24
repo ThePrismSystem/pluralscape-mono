@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -14,6 +15,13 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type {
+  AccountId,
+  BucketId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  SystemId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { systems, buckets, bucketKeyRotations, bucketRotationItems };
@@ -23,9 +31,12 @@ describe("SQLite key-rotation schema", () => {
   let db: BetterSQLite3Database<typeof schema>;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: AccountId, id?: string) => sqliteInsertSystem(db, accountId, id);
 
-  function insertBucket(systemId: string, id = crypto.randomUUID()): string {
+  function insertBucket(
+    systemId: SystemId,
+    id: BucketId = brandId<BucketId>(crypto.randomUUID()),
+  ): BucketId {
     const now = Date.now();
     db.insert(buckets)
       .values({
@@ -40,17 +51,17 @@ describe("SQLite key-rotation schema", () => {
   }
 
   function insertRotation(
-    bucketId: string,
-    systemId: string,
+    bucketId: BucketId,
+    systemId: SystemId,
     overrides: Partial<{
-      id: string;
+      id: BucketKeyRotationId;
       fromKeyVersion: number;
       toKeyVersion: number;
       totalItems: number;
       initiatedAt: number;
     }> = {},
-  ): string {
-    const id = overrides.id ?? crypto.randomUUID();
+  ): BucketKeyRotationId {
+    const id = overrides.id ?? brandId<BucketKeyRotationId>(crypto.randomUUID());
     db.insert(bucketKeyRotations)
       .values({
         id,
@@ -82,7 +93,7 @@ describe("SQLite key-rotation schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = brandId<BucketKeyRotationId>(crypto.randomUUID());
 
       db.insert(bucketKeyRotations)
         .values({
@@ -117,7 +128,7 @@ describe("SQLite key-rotation schema", () => {
         db
           .insert(bucketKeyRotations)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<BucketKeyRotationId>(crypto.randomUUID()),
             bucketId,
             systemId,
             fromKeyVersion: 1,
@@ -139,7 +150,7 @@ describe("SQLite key-rotation schema", () => {
         db
           .insert(bucketKeyRotations)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<BucketKeyRotationId>(crypto.randomUUID()),
             bucketId,
             systemId,
             fromKeyVersion: 3,
@@ -160,7 +171,7 @@ describe("SQLite key-rotation schema", () => {
         db
           .insert(bucketKeyRotations)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<BucketKeyRotationId>(crypto.randomUUID()),
             bucketId,
             systemId,
             fromKeyVersion: 2,
@@ -176,7 +187,7 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketKeyRotationId>(crypto.randomUUID());
 
       db.insert(bucketKeyRotations)
         .values({
@@ -208,7 +219,7 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketKeyRotationId>(crypto.randomUUID());
 
       db.insert(bucketKeyRotations)
         .values({
@@ -254,7 +265,7 @@ describe("SQLite key-rotation schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const rotationId = insertRotation(bucketId, systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketRotationItemId>(crypto.randomUUID());
 
       db.insert(bucketRotationItems)
         .values({
@@ -289,7 +300,7 @@ describe("SQLite key-rotation schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const rotationId = insertRotation(bucketId, systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketRotationItemId>(crypto.randomUUID());
 
       db.insert(bucketRotationItems)
         .values({
@@ -322,7 +333,7 @@ describe("SQLite key-rotation schema", () => {
         db
           .insert(bucketRotationItems)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<BucketRotationItemId>(crypto.randomUUID()),
             rotationId,
             systemId,
             entityType: "member",
@@ -338,7 +349,7 @@ describe("SQLite key-rotation schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const rotationId = insertRotation(bucketId, systemId);
-      const itemId = crypto.randomUUID();
+      const itemId = brandId<BucketRotationItemId>(crypto.randomUUID());
 
       db.insert(bucketRotationItems)
         .values({
@@ -365,7 +376,7 @@ describe("SQLite key-rotation schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const rotationId = insertRotation(bucketId, systemId);
-      const itemId = crypto.randomUUID();
+      const itemId = brandId<BucketRotationItemId>(crypto.randomUUID());
 
       db.insert(bucketRotationItems)
         .values({

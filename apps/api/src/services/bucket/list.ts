@@ -1,4 +1,5 @@
 import { buckets } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { BucketQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
@@ -13,7 +14,7 @@ import { toBucketResult } from "./internal.js";
 
 import type { BucketResult, ListBucketOpts } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, SystemId } from "@pluralscape/types";
+import type { BucketId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listBuckets(
@@ -40,7 +41,10 @@ export async function listBuckets(
       const decoded = fromCompositeCursor(opts.cursor, "bucket");
       const cursorCondition = or(
         lt(buckets.createdAt, decoded.sortValue),
-        and(eq(buckets.createdAt, decoded.sortValue), lt(buckets.id, decoded.id)),
+        and(
+          eq(buckets.createdAt, decoded.sortValue),
+          lt(buckets.id, brandId<BucketId>(decoded.id)),
+        ),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

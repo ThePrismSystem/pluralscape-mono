@@ -112,7 +112,7 @@ async function transitionConnectionStatus(
 async function updateReverseConnection(
   tx: PostgresJsDatabase,
   accountId: AccountId,
-  friendAccountId: string,
+  friendAccountId: AccountId,
   targetStatus: FriendConnectionStatus,
   timestamp: UnixMillis,
 ): Promise<void> {
@@ -135,7 +135,7 @@ async function updateReverseConnection(
 async function cleanupBucketAssignments(
   tx: PostgresJsDatabase,
   connectionId: FriendConnectionId,
-  friendAccountId: string,
+  friendAccountId: AccountId,
   timestamp: UnixMillis,
 ): Promise<ReadonlyArray<{ readonly systemId: SystemId; readonly bucketId: BucketId }>> {
   const assignments = await tx

@@ -1,5 +1,5 @@
 import { buckets, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateBucketBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
@@ -18,7 +18,7 @@ import { toBucketResult } from "./internal.js";
 import type { BucketResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { BucketId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createBucket(
@@ -32,7 +32,7 @@ export async function createBucket(
 
   const { blob } = parseAndValidateBlob(params, CreateBucketBodySchema, MAX_ENCRYPTED_DATA_BYTES);
 
-  const bucketId = createId(ID_PREFIXES.bucket);
+  const bucketId = brandId<BucketId>(createId(ID_PREFIXES.bucket));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

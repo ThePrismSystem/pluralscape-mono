@@ -11,6 +11,22 @@ import type {
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
+import type {
+  BucketKeyRotation,
+  BucketKeyRotationServerMetadata,
+  BucketKeyRotationWire,
+} from "./entities/bucket-key-rotation.js";
+import type {
+  BucketRotationItem,
+  BucketRotationItemServerMetadata,
+  BucketRotationItemWire,
+} from "./entities/bucket-rotation-item.js";
+import type {
+  PrivacyBucket,
+  PrivacyBucketEncryptedFields,
+  PrivacyBucketServerMetadata,
+  PrivacyBucketWire,
+} from "./entities/bucket.js";
 import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
 import type {
   DeviceToken,
@@ -27,6 +43,21 @@ import type {
   FieldDefinitionEncryptedFields,
 } from "./entities/field-definition.js";
 import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
+import type {
+  FriendCode,
+  FriendCodeServerMetadata,
+  FriendCodeWire,
+} from "./entities/friend-code.js";
+import type {
+  FriendConnection,
+  FriendConnectionServerMetadata,
+  FriendConnectionWire,
+} from "./entities/friend-connection.js";
+import type {
+  FriendNotificationPreference,
+  FriendNotificationPreferenceServerMetadata,
+  FriendNotificationPreferenceWire,
+} from "./entities/friend-notification-preference.js";
 import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
@@ -50,6 +81,7 @@ import type {
   InnerWorldRegionServerMetadata,
   InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
+import type { KeyGrant, KeyGrantServerMetadata, KeyGrantWire } from "./entities/key-grant.js";
 import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
@@ -58,6 +90,11 @@ import type {
   MemberServerMetadata,
   MemberWire,
 } from "./entities/member.js";
+import type {
+  NotificationConfig,
+  NotificationConfigServerMetadata,
+  NotificationConfigWire,
+} from "./entities/notification-config.js";
 import type {
   RecoveryKey,
   RecoveryKeyServerMetadata,
@@ -282,5 +319,64 @@ export type SotEntityManifest = {
     server: NomenclatureServerMetadata;
     wire: NomenclatureWire;
     encryptedFields: NomenclatureEncryptedFields;
+  };
+  PrivacyBucket: {
+    domain: PrivacyBucket;
+    server: PrivacyBucketServerMetadata;
+    wire: PrivacyBucketWire;
+    encryptedFields: PrivacyBucketEncryptedFields;
+  };
+  BucketKeyRotation: {
+    domain: BucketKeyRotation;
+    server: BucketKeyRotationServerMetadata;
+    wire: BucketKeyRotationWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
+  };
+  BucketRotationItem: {
+    domain: BucketRotationItem;
+    server: BucketRotationItemServerMetadata;
+    wire: BucketRotationItemWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
+  };
+  KeyGrant: {
+    domain: KeyGrant;
+    server: KeyGrantServerMetadata;
+    wire: KeyGrantWire;
+    // Plaintext entity — the grant payload is an E2E ciphertext the server
+    // treats opaquely, not a client-encrypted domain field.
+    encryptedFields: never;
+  };
+  NotificationConfig: {
+    domain: NotificationConfig;
+    server: NotificationConfigServerMetadata;
+    wire: NotificationConfigWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
+  };
+  FriendConnection: {
+    domain: FriendConnection;
+    server: FriendConnectionServerMetadata;
+    wire: FriendConnectionWire;
+    // Hybrid entity: domain carries derived `assignedBucketIds` (junction
+    // table) and `visibility` (T1 blob) that are not columns. Server row
+    // omits them and exposes the nullable `encryptedData` blob instead.
+    // No `encryptedFields` keys-subset union.
+    encryptedFields: never;
+  };
+  FriendCode: {
+    domain: FriendCode;
+    server: FriendCodeServerMetadata;
+    wire: FriendCodeWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
+  };
+  FriendNotificationPreference: {
+    domain: FriendNotificationPreference;
+    server: FriendNotificationPreferenceServerMetadata;
+    wire: FriendNotificationPreferenceWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
   };
 };

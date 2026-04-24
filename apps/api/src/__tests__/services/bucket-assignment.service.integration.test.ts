@@ -81,7 +81,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
   // ── Helpers ─────────────────────────────────────────────────────────
 
   async function insertBucket(): Promise<BucketId> {
-    const id = createId(ID_PREFIXES.bucket);
+    const id = brandId<BucketId>(createId(ID_PREFIXES.bucket));
     const ts = now();
     await db.insert(buckets).values({
       id,
@@ -96,7 +96,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
   async function insertConnection(
     opts: { status?: string; archived?: boolean } = {},
   ): Promise<FriendConnectionId> {
-    const id = createId(ID_PREFIXES.friendConnection);
+    const id = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
     const ts = now();
     await db.insert(friendConnections).values({
       id,
@@ -331,7 +331,7 @@ describe("bucket-assignment.service (PGlite integration)", () => {
 
       // Need a second friend account for a second connection
       const friendAccount2 = brandId<AccountId>(await pgInsertAccount(db));
-      const connectionId2 = createId(ID_PREFIXES.friendConnection);
+      const connectionId2 = brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));
       const ts = now();
       await db.insert(friendConnections).values({
         id: connectionId2,

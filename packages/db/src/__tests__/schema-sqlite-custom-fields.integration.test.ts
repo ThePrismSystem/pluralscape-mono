@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -23,6 +24,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { BucketId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -45,7 +47,10 @@ describe("SQLite custom fields schema", () => {
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
 
-  function insertBucket(systemId: string, id = crypto.randomUUID()): string {
+  function insertBucket(
+    systemId: SystemId,
+    id: BucketId = brandId<BucketId>(crypto.randomUUID()),
+  ): BucketId {
     const now = Date.now();
     db.insert(buckets)
       .values({

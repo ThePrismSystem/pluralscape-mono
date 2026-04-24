@@ -10,7 +10,12 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import {
+  brandedId,
+  sqliteBinary,
+  sqliteEncryptedBlob,
+  sqliteTimestamp,
+} from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -24,14 +29,23 @@ import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../h
 import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
-import type { BucketContentEntityType, FriendConnectionStatus } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketContentEntityType,
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  FriendConnectionStatus,
+  KeyGrantId,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const buckets = sqliteTable(
   "buckets",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<BucketId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -51,11 +65,12 @@ export const bucketContentTags = sqliteTable(
   "bucket_content_tags",
   {
     entityType: text("entity_type").notNull().$type<BucketContentEntityType>(),
+    // Polymorphic — domain `BucketContentTag.entityId` is a plain string.
     entityId: text("entity_id").notNull(),
-    bucketId: text("bucket_id")
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
   },
@@ -74,14 +89,14 @@ export const bucketContentTags = sqliteTable(
 export const keyGrants = sqliteTable(
   "key_grants",
   {
-    id: text("id").primaryKey(),
-    bucketId: text("bucket_id")
+    id: brandedId<KeyGrantId>("id").primaryKey(),
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    friendAccountId: text("friend_account_id")
+    friendAccountId: brandedId<AccountId>("friend_account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedKey: sqliteBinary("encrypted_key").notNull(),
@@ -104,11 +119,11 @@ export const keyGrants = sqliteTable(
 export const friendConnections = sqliteTable(
   "friend_connections",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<FriendConnectionId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    friendAccountId: text("friend_account_id")
+    friendAccountId: brandedId<AccountId>("friend_account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("pending").$type<FriendConnectionStatus>(),
@@ -135,8 +150,8 @@ export const friendConnections = sqliteTable(
 export const friendCodes = sqliteTable(
   "friend_codes",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<FriendCodeId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     code: text("code").notNull(),
@@ -161,13 +176,13 @@ export const friendCodes = sqliteTable(
 export const friendBucketAssignments = sqliteTable(
   "friend_bucket_assignments",
   {
-    friendConnectionId: text("friend_connection_id")
+    friendConnectionId: brandedId<FriendConnectionId>("friend_connection_id")
       .notNull()
       .references(() => friendConnections.id, { onDelete: "restrict" }),
-    bucketId: text("bucket_id")
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
   },

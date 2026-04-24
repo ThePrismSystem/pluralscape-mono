@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -25,14 +25,23 @@ import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../h
 import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
-import type { BucketContentEntityType, FriendConnectionStatus } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketContentEntityType,
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  FriendConnectionStatus,
+  KeyGrantId,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const buckets = pgTable(
   "buckets",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<BucketId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -54,11 +63,14 @@ export const bucketContentTags = pgTable(
     entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<BucketContentEntityType>(),
+    // Polymorphic — the domain `BucketContentTag.entityId` is a plain
+    // string, so this column stays as a plain varchar (the actual brand is
+    // discriminated at app-layer by `entity_type`).
     entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
-    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
   },
@@ -77,14 +89,14 @@ export const bucketContentTags = pgTable(
 export const keyGrants = pgTable(
   "key_grants",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
+    id: brandedId<KeyGrantId>("id").primaryKey(),
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    friendAccountId: varchar("friend_account_id", { length: ID_MAX_LENGTH })
+    friendAccountId: brandedId<AccountId>("friend_account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedKey: pgBinary("encrypted_key").notNull(),
@@ -107,11 +119,11 @@ export const keyGrants = pgTable(
 export const friendConnections = pgTable(
   "friend_connections",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FriendConnectionId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    friendAccountId: varchar("friend_account_id", { length: ID_MAX_LENGTH })
+    friendAccountId: brandedId<AccountId>("friend_account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
@@ -141,8 +153,8 @@ export const friendConnections = pgTable(
 export const friendCodes = pgTable(
   "friend_codes",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FriendCodeId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     code: varchar("code", { length: 255 }).notNull(),
@@ -167,13 +179,13 @@ export const friendCodes = pgTable(
 export const friendBucketAssignments = pgTable(
   "friend_bucket_assignments",
   {
-    friendConnectionId: varchar("friend_connection_id", { length: ID_MAX_LENGTH })
+    friendConnectionId: brandedId<FriendConnectionId>("friend_connection_id")
       .notNull()
       .references(() => friendConnections.id, { onDelete: "restrict" }),
-    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
   },

@@ -11,7 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -28,9 +28,14 @@ import { friendConnections } from "./privacy.js";
 import { systems } from "./systems.js";
 
 import type {
+  AccountId,
   DeviceTokenPlatform,
+  FriendConnectionId,
   FriendNotificationEventType,
+  FriendNotificationPreferenceId,
+  NotificationConfigId,
   NotificationEventType,
+  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -64,8 +69,8 @@ export const deviceTokens = pgTable(
 export const notificationConfigs = pgTable(
   "notification_configs",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<NotificationConfigId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     eventType: varchar("event_type", { length: ENUM_MAX_LENGTH })
@@ -93,11 +98,11 @@ export const notificationConfigs = pgTable(
 export const friendNotificationPreferences = pgTable(
   "friend_notification_preferences",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FriendNotificationPreferenceId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    friendConnectionId: varchar("friend_connection_id", { length: ID_MAX_LENGTH }).notNull(),
+    friendConnectionId: brandedId<FriendConnectionId>("friend_connection_id").notNull(),
     enabledEventTypes: jsonb("enabled_event_types")
       .notNull()
       .$type<readonly FriendNotificationEventType[]>(),

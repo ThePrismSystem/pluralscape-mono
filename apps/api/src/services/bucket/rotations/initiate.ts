@@ -8,6 +8,7 @@ import {
   ID_PREFIXES,
   ROTATION_ITEM_STATUSES,
   ROTATION_STATES,
+  brandId,
   createId,
   now,
 } from "@pluralscape/types";
@@ -24,7 +25,16 @@ import { toRotationResult } from "./internal.js";
 
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { BucketId, BucketKeyRotation, RotationItemStatus, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketId,
+  BucketKeyRotation,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  KeyGrantId,
+  RotationItemStatus,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function initiateRotation(
@@ -42,7 +52,7 @@ export async function initiateRotation(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid initiate payload");
   }
 
-  const rotationId = createId(ID_PREFIXES.bucketKeyRotation);
+  const rotationId = brandId<BucketKeyRotationId>(createId(ID_PREFIXES.bucketKeyRotation));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -112,7 +122,7 @@ export async function initiateRotation(
     if (tags.length > 0) {
       await tx.insert(bucketRotationItems).values(
         tags.map((tag) => ({
-          id: createId(ID_PREFIXES.bucketRotationItem),
+          id: brandId<BucketRotationItemId>(createId(ID_PREFIXES.bucketRotationItem)),
           rotationId,
           systemId,
           entityType: tag.entityType,
@@ -138,10 +148,10 @@ export async function initiateRotation(
     if (parsed.data.friendKeyGrants.length > 0) {
       await tx.insert(keyGrants).values(
         parsed.data.friendKeyGrants.map((grant) => ({
-          id: createId(ID_PREFIXES.keyGrant),
+          id: brandId<KeyGrantId>(createId(ID_PREFIXES.keyGrant)),
           bucketId,
           systemId,
-          friendAccountId: grant.friendAccountId,
+          friendAccountId: brandId<AccountId>(grant.friendAccountId),
           encryptedKey: Buffer.from(grant.encryptedKey, "base64"),
           keyVersion: parsed.data.newKeyVersion,
           createdAt: timestamp,

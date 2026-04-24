@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -18,6 +19,12 @@ import {
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
 
+import type {
+  AccountId,
+  FriendConnectionId,
+  FriendNotificationPreferenceId,
+  NotificationConfigId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -34,7 +41,7 @@ describe("PG notifications schema", () => {
   let db: PgliteDatabase<typeof schema>;
 
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: AccountId, id?: string) => pgInsertSystem(db, accountId, id);
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -212,7 +219,7 @@ describe("PG notifications schema", () => {
     it("round-trips with fail-closed defaults (enabled=false, push_enabled=false)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NotificationConfigId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
@@ -238,7 +245,7 @@ describe("PG notifications schema", () => {
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
-        id: crypto.randomUUID(),
+        id: brandId<NotificationConfigId>(crypto.randomUUID()),
         systemId,
         eventType: "check-in-due",
         createdAt: now,
@@ -247,7 +254,7 @@ describe("PG notifications schema", () => {
 
       await expect(
         db.insert(notificationConfigs).values({
-          id: crypto.randomUUID(),
+          id: brandId<NotificationConfigId>(crypto.randomUUID()),
           systemId,
           eventType: "check-in-due",
           createdAt: now,
@@ -259,7 +266,7 @@ describe("PG notifications schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NotificationConfigId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
@@ -285,7 +292,7 @@ describe("PG notifications schema", () => {
 
       await expect(
         db.insert(notificationConfigs).values({
-          id: crypto.randomUUID(),
+          id: brandId<NotificationConfigId>(crypto.randomUUID()),
           systemId,
           eventType: "invalid-event" as "switch-reminder",
           createdAt: now,
@@ -297,7 +304,7 @@ describe("PG notifications schema", () => {
     it("stores enabled and pushEnabled as false correctly", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NotificationConfigId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
@@ -321,7 +328,7 @@ describe("PG notifications schema", () => {
     it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NotificationConfigId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
@@ -343,7 +350,7 @@ describe("PG notifications schema", () => {
     it("round-trips archived: true with archivedAt timestamp", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NotificationConfigId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
@@ -367,7 +374,7 @@ describe("PG notifications schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NotificationConfigId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
@@ -397,7 +404,7 @@ describe("PG notifications schema", () => {
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
-        id: crypto.randomUUID(),
+        id: brandId<NotificationConfigId>(crypto.randomUUID()),
         systemId,
         eventType: "switch-reminder",
         archived: true,
@@ -407,7 +414,7 @@ describe("PG notifications schema", () => {
       });
 
       await db.insert(notificationConfigs).values({
-        id: crypto.randomUUID(),
+        id: brandId<NotificationConfigId>(crypto.randomUUID()),
         systemId,
         eventType: "switch-reminder",
         archived: true,
@@ -423,7 +430,7 @@ describe("PG notifications schema", () => {
       const now = Date.now();
 
       await db.insert(notificationConfigs).values({
-        id: crypto.randomUUID(),
+        id: brandId<NotificationConfigId>(crypto.randomUUID()),
         systemId,
         eventType: "switch-reminder",
         createdAt: now,
@@ -432,7 +439,7 @@ describe("PG notifications schema", () => {
 
       await expect(
         db.insert(notificationConfigs).values({
-          id: crypto.randomUUID(),
+          id: brandId<NotificationConfigId>(crypto.randomUUID()),
           systemId,
           eventType: "switch-reminder",
           createdAt: now,
@@ -472,8 +479,8 @@ describe("PG notifications schema", () => {
     it("round-trips with enabledEventTypes JSON", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const fcId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
+      const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -505,8 +512,8 @@ describe("PG notifications schema", () => {
     it("restricts friend_connection deletion when referenced by preference", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const fcId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
+      const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -536,7 +543,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
-      const fcId = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -549,7 +556,7 @@ describe("PG notifications schema", () => {
       });
 
       await db.insert(friendNotificationPreferences).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendNotificationPreferenceId>(crypto.randomUUID()),
         accountId,
         friendConnectionId: fcId,
         enabledEventTypes: [],
@@ -559,7 +566,7 @@ describe("PG notifications schema", () => {
 
       await expect(
         db.insert(friendNotificationPreferences).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendNotificationPreferenceId>(crypto.randomUUID()),
           accountId,
           friendConnectionId: fcId,
           enabledEventTypes: [],
@@ -572,8 +579,8 @@ describe("PG notifications schema", () => {
     it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const fcId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
+      const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -605,8 +612,8 @@ describe("PG notifications schema", () => {
     it("round-trips archived: true with archivedAt timestamp", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const fcId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
+      const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -640,8 +647,8 @@ describe("PG notifications schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const fcId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
+      const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -679,7 +686,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
-      const fcId = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -692,7 +699,7 @@ describe("PG notifications schema", () => {
       });
 
       await db.insert(friendNotificationPreferences).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendNotificationPreferenceId>(crypto.randomUUID()),
         accountId,
         friendConnectionId: fcId,
         enabledEventTypes: [],
@@ -703,7 +710,7 @@ describe("PG notifications schema", () => {
       });
 
       await db.insert(friendNotificationPreferences).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendNotificationPreferenceId>(crypto.randomUUID()),
         accountId,
         friendConnectionId: fcId,
         enabledEventTypes: [],
@@ -718,7 +725,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
-      const fcId = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -731,7 +738,7 @@ describe("PG notifications schema", () => {
       });
 
       await db.insert(friendNotificationPreferences).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendNotificationPreferenceId>(crypto.randomUUID()),
         accountId,
         friendConnectionId: fcId,
         enabledEventTypes: [],
@@ -741,7 +748,7 @@ describe("PG notifications schema", () => {
 
       await expect(
         db.insert(friendNotificationPreferences).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendNotificationPreferenceId>(crypto.randomUUID()),
           accountId,
           friendConnectionId: fcId,
           enabledEventTypes: [],
@@ -754,7 +761,7 @@ describe("PG notifications schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const fcId = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -777,7 +784,7 @@ describe("PG notifications schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const fcId = crypto.randomUUID();
+      const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({

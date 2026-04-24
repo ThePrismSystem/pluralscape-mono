@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -20,6 +21,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { BucketId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -406,7 +408,7 @@ describe("SQLite import-export schema", () => {
 
       db.insert(buckets)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BucketId>(crypto.randomUUID()),
           systemId,
           encryptedData: testBlob(),
           createdAt: now,
@@ -563,7 +565,7 @@ describe("SQLite import-export schema", () => {
 
       db.insert(buckets)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BucketId>(crypto.randomUUID()),
           systemId,
           encryptedData: testBlob(),
           createdAt: now,

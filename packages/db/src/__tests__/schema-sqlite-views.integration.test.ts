@@ -44,6 +44,7 @@ import type {
   AccountId,
   ApiKeyId,
   DeviceTransferRequestId,
+  FriendConnectionId,
   SessionId,
   SystemId,
 } from "@pluralscape/types";
@@ -54,7 +55,7 @@ describe("SQLite views / query helpers", () => {
   let db: BetterSQLite3Database;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: AccountId, id?: string) => sqliteInsertSystem(db, accountId, id);
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -260,7 +261,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId: otherAccountId1,
           friendAccountId: accountId,
           status: "pending",
@@ -270,7 +271,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId: otherAccountId2,
           friendAccountId: accountId,
           status: "accepted",
@@ -454,7 +455,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId,
           friendAccountId: otherAccountId,
           status: "accepted",

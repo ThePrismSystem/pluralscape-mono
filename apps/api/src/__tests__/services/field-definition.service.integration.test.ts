@@ -21,7 +21,13 @@ import { updateFieldDefinition } from "../../services/field-definition/update.js
 import { asDb, assertApiError, makeAuth, noopAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, FieldDefinitionId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketId,
+  FieldDefinitionId,
+  FieldValueId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { fieldDefinitions, fieldValues, fieldBucketVisibility, fieldDefinitionScopes, buckets } =
@@ -76,7 +82,7 @@ describe("field-definition.service (PGlite integration)", () => {
   // ── Helper: insert a field definition directly ──────────────────────
 
   async function insertFieldDef(archived = false): Promise<FieldDefinitionId> {
-    const id = createId(ID_PREFIXES.fieldDefinition);
+    const id = brandId<FieldDefinitionId>(createId(ID_PREFIXES.fieldDefinition));
     const ts = now();
     const archivedAt = archived ? ts : null;
     await db.insert(fieldDefinitions).values({
@@ -95,7 +101,7 @@ describe("field-definition.service (PGlite integration)", () => {
   }
 
   async function insertBucket(): Promise<string> {
-    const id = createId(ID_PREFIXES.bucket);
+    const id = brandId<BucketId>(createId(ID_PREFIXES.bucket));
     const ts = now();
     await db.insert(buckets).values({
       id,
@@ -330,7 +336,7 @@ describe("field-definition.service (PGlite integration)", () => {
       const id = await insertFieldDef();
       const ts = now();
       await db.insert(fieldValues).values({
-        id: createId(ID_PREFIXES.fieldValue),
+        id: brandId<FieldValueId>(createId(ID_PREFIXES.fieldValue)),
         fieldDefinitionId: id,
         systemId,
         encryptedData: testBlob(),
@@ -384,7 +390,7 @@ describe("field-definition.service (PGlite integration)", () => {
       const id = await insertFieldDef();
       const ts = now();
       await db.insert(fieldValues).values({
-        id: createId(ID_PREFIXES.fieldValue),
+        id: brandId<FieldValueId>(createId(ID_PREFIXES.fieldValue)),
         fieldDefinitionId: id,
         systemId,
         encryptedData: testBlob(),

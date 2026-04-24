@@ -45,6 +45,7 @@ import type {
   AccountId,
   ApiKeyId,
   DeviceTransferRequestId,
+  FriendConnectionId,
   SessionId,
   SystemId,
 } from "@pluralscape/types";
@@ -55,7 +56,7 @@ describe("PG views / query helpers", () => {
   let db: PgliteDatabase;
 
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: AccountId, id?: string) => pgInsertSystem(db, accountId, id);
 
   let accountId: AccountId;
   let systemId: SystemId;
@@ -274,7 +275,7 @@ describe("PG views / query helpers", () => {
       const now = Date.now();
 
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId: otherAccountId1,
         friendAccountId: accountId,
         status: "pending",
@@ -282,7 +283,7 @@ describe("PG views / query helpers", () => {
         updatedAt: now,
       });
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId: otherAccountId2,
         friendAccountId: accountId,
         status: "accepted",
@@ -450,7 +451,7 @@ describe("PG views / query helpers", () => {
       await insertSystem(otherAccountId2);
 
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId,
         friendAccountId: otherAccountId1,
         status: "accepted",
@@ -458,7 +459,7 @@ describe("PG views / query helpers", () => {
         updatedAt: now,
       });
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId,
         friendAccountId: otherAccountId2,
         status: "pending",
