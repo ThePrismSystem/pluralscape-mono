@@ -42,7 +42,7 @@ import { createMockLogger } from "../../helpers/mock-logger.js";
 import { setupRouterFixture } from "../integration-helpers.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
+import type { AccountId, RecoveryKeyId, SessionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Default page size expected from session.list when no cursor is supplied. */
@@ -111,7 +111,7 @@ async function insertAccountWithKnownRecoveryKey(db: PostgresJsDatabase): Promis
 }> {
   const email = `reset-${crypto.randomUUID()}@test.local`;
   const accountId = `acct_${crypto.randomUUID()}`;
-  const recoveryKeyId = `rk_${crypto.randomUUID()}`;
+  const recoveryKeyId = brandId<RecoveryKeyId>(`rk_${crypto.randomUUID()}`);
   // randomBytes returns Node's Buffer; coerce to plain Uint8Array so the
   // branded `AuthKey` assertion narrows correctly.
   const rawAuthKey = new Uint8Array(randomBytes(RECOVERY_KEY_BYTES));

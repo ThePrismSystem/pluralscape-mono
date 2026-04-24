@@ -26,6 +26,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
+import type { AccountId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 /** Get currently fronting members (end_time IS NULL). */
@@ -64,7 +65,7 @@ export function getCurrentFrontersWithDuration(
 }
 
 /** Get active (non-revoked) API keys. */
-export function getActiveApiKeys(db: BetterSQLite3Database, accountId: string): ActiveApiKey[] {
+export function getActiveApiKeys(db: BetterSQLite3Database, accountId: AccountId): ActiveApiKey[] {
   return db
     .select({
       id: apiKeys.id,
@@ -185,7 +186,7 @@ export function getActiveFriendConnections(
 /** Get active (non-revoked) device tokens. */
 export function getActiveDeviceTokens(
   db: BetterSQLite3Database,
-  accountId: string,
+  accountId: AccountId,
 ): ActiveDeviceToken[] {
   return db
     .select({
@@ -227,7 +228,7 @@ export function getCurrentFrontingComments(
 /** Get active (pending, non-expired) device transfer requests. */
 export function getActiveDeviceTransfers(
   db: BetterSQLite3Database,
-  accountId: string,
+  accountId: AccountId,
 ): ActiveDeviceTransfer[] {
   const now = Date.now();
   return db

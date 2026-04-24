@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { AccountId, ApiKeyId, BucketId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, apiKeys };
@@ -39,7 +41,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
     const tokenHash = `hash_${crypto.randomUUID()}`;
 
     db.insert(apiKeys)
@@ -69,7 +71,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
     const tokenHash = `hash_${crypto.randomUUID()}`;
     const keyMaterial = new Uint8Array([1, 2, 3, 4, 5]);
 
@@ -83,7 +85,7 @@ describe("SQLite api_keys schema", () => {
         tokenHash,
         scopes: ["full"],
         encryptedKeyMaterial: keyMaterial,
-        scopedBucketIds: ["bucket-1", "bucket-2"],
+        scopedBucketIds: [brandId<BucketId>("bucket-1"), brandId<BucketId>("bucket-2")],
         createdAt: now,
       })
       .run();
@@ -103,7 +105,7 @@ describe("SQLite api_keys schema", () => {
       db
         .insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
           accountId,
           systemId,
           encryptedData: testBlob(),
@@ -124,7 +126,7 @@ describe("SQLite api_keys schema", () => {
 
     db.insert(apiKeys)
       .values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         encryptedData: testBlob(),
@@ -139,7 +141,7 @@ describe("SQLite api_keys schema", () => {
       db
         .insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
           accountId,
           systemId,
           encryptedData: testBlob(),
@@ -156,7 +158,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
       .values({
@@ -184,7 +186,7 @@ describe("SQLite api_keys schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
     const later = now + 86400000;
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
       .values({
@@ -212,7 +214,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
       .values({
@@ -236,7 +238,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
       .values({
@@ -265,8 +267,8 @@ describe("SQLite api_keys schema", () => {
       db
         .insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
-          accountId: "nonexistent",
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
+          accountId: brandId<AccountId>("nonexistent"),
           systemId,
           encryptedData: testBlob(),
           keyType: "metadata",
@@ -286,9 +288,9 @@ describe("SQLite api_keys schema", () => {
       db
         .insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
           accountId,
-          systemId: "nonexistent",
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(),
           keyType: "metadata",
           tokenHash: `hash_${crypto.randomUUID()}`,
@@ -308,7 +310,7 @@ describe("SQLite api_keys schema", () => {
       db
         .insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
           accountId,
           systemId,
           encryptedData: testBlob(),
@@ -331,7 +333,7 @@ describe("SQLite api_keys schema", () => {
       db
         .insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
           accountId,
           systemId,
           encryptedData: testBlob(),
@@ -348,7 +350,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
 
     db.insert(apiKeys)
       .values({
@@ -371,7 +373,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
     const emptyMaterial = new Uint8Array(0);
 
     db.insert(apiKeys)
@@ -419,7 +421,7 @@ describe("SQLite api_keys schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<ApiKeyId>(crypto.randomUUID());
     const blob = testBlob(new Uint8Array([10, 20, 30]));
 
     db.insert(apiKeys)

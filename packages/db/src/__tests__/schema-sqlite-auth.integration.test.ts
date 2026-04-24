@@ -14,7 +14,13 @@ import {
 
 import { createSqliteAuthTables, testBlob } from "./helpers/sqlite-helpers.js";
 
-import type { AccountId } from "@pluralscape/types";
+import type {
+  AccountId,
+  AuthKeyId,
+  DeviceTransferRequestId,
+  RecoveryKeyId,
+  SessionId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const ONE_DAY_MS = 86_400_000;
@@ -23,6 +29,12 @@ const ONE_HOUR_MS = 3_600_000;
 const TEST_CODE_SALT = new Uint8Array(16);
 
 const schema = { accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests };
+
+const newSessionId = (): SessionId => brandId<SessionId>(crypto.randomUUID());
+const newAuthKeyId = (): AuthKeyId => brandId<AuthKeyId>(crypto.randomUUID());
+const newRecoveryKeyId = (): RecoveryKeyId => brandId<RecoveryKeyId>(crypto.randomUUID());
+const newDeviceTransferRequestId = (): DeviceTransferRequestId =>
+  brandId<DeviceTransferRequestId>(crypto.randomUUID());
 
 describe("SQLite auth schema", () => {
   let client: InstanceType<typeof Database>;
@@ -64,10 +76,10 @@ describe("SQLite auth schema", () => {
 
   function insertSession(
     accountId: AccountId,
-    overrides: Partial<{ id: string; tokenHash: string; createdAt: number }> = {},
-  ): { id: string; accountId: AccountId; tokenHash: string; createdAt: number } {
+    overrides: Partial<{ id: SessionId; tokenHash: string; createdAt: number }> = {},
+  ): { id: SessionId; accountId: AccountId; tokenHash: string; createdAt: number } {
     const data = {
-      id: overrides.id ?? crypto.randomUUID(),
+      id: overrides.id ?? newSessionId(),
       accountId,
       tokenHash: overrides.tokenHash ?? `tok_${crypto.randomUUID()}`,
       createdAt: overrides.createdAt ?? Date.now(),
@@ -121,7 +133,7 @@ describe("SQLite auth schema", () => {
     });
 
     it("rejects duplicate primary key", () => {
-      const id = crypto.randomUUID();
+      const id = brandId<AccountId>(crypto.randomUUID());
       insertAccount({ id });
       expect(() => insertAccount({ id })).toThrow(/UNIQUE|constraint/i);
     });
@@ -157,7 +169,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const privateKey = new Uint8Array([1, 2, 3, 4, 5]);
       const publicKey = new Uint8Array([10, 20, 30, 40, 50]);
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       db.insert(authKeys)
         .values({
@@ -179,7 +191,7 @@ describe("SQLite auth schema", () => {
 
     it("inserts signing key type", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       db.insert(authKeys)
         .values({
@@ -202,7 +214,7 @@ describe("SQLite auth schema", () => {
         db
           .insert(authKeys)
           .values({
-            id: crypto.randomUUID(),
+            id: newAuthKeyId(),
             accountId: account.id,
             encryptedPrivateKey: new Uint8Array([1]),
             publicKey: new Uint8Array([2]),
@@ -215,7 +227,7 @@ describe("SQLite auth schema", () => {
 
     it("cascades on account deletion", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       db.insert(authKeys)
         .values({
@@ -238,8 +250,8 @@ describe("SQLite auth schema", () => {
         db
           .insert(authKeys)
           .values({
-            id: crypto.randomUUID(),
-            accountId: "nonexistent",
+            id: newAuthKeyId(),
+            accountId: brandId<AccountId>("nonexistent"),
             encryptedPrivateKey: new Uint8Array([1]),
             publicKey: new Uint8Array([2]),
             keyType: "encryption",
@@ -251,7 +263,7 @@ describe("SQLite auth schema", () => {
 
     it("round-trips empty Uint8Array", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newAuthKeyId();
 
       db.insert(authKeys)
         .values({
@@ -284,7 +296,7 @@ describe("SQLite auth schema", () => {
     it("inserts and retrieves with all fields", () => {
       const account = insertAccount();
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       const expiresAt = now + ONE_DAY_MS;
       db.insert(sessions)
@@ -310,7 +322,7 @@ describe("SQLite auth schema", () => {
 
     it("defaults revoked to false", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       db.insert(sessions)
         .values({
@@ -327,7 +339,7 @@ describe("SQLite auth schema", () => {
 
     it("defaults expiresAt to null", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       db.insert(sessions)
         .values({
@@ -344,7 +356,7 @@ describe("SQLite auth schema", () => {
 
     it("round-trips expiresAt when provided", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
       const expiresAt = Date.now() + ONE_DAY_MS;
 
       db.insert(sessions)
@@ -363,7 +375,7 @@ describe("SQLite auth schema", () => {
 
     it("handles nullable lastActive", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       db.insert(sessions)
         .values({
@@ -380,7 +392,7 @@ describe("SQLite auth schema", () => {
 
     it("cascades on account deletion", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       db.insert(sessions)
         .values({
@@ -408,8 +420,8 @@ describe("SQLite auth schema", () => {
         db
           .insert(sessions)
           .values({
-            id: crypto.randomUUID(),
-            accountId: "nonexistent",
+            id: newSessionId(),
+            accountId: brandId<AccountId>("nonexistent"),
             tokenHash: `tok_${crypto.randomUUID()}`,
             createdAt: Date.now(),
           })
@@ -425,7 +437,7 @@ describe("SQLite auth schema", () => {
         db
           .insert(sessions)
           .values({
-            id: crypto.randomUUID(),
+            id: newSessionId(),
             accountId: account.id,
             tokenHash: `tok_${crypto.randomUUID()}`,
             createdAt: now,
@@ -443,7 +455,7 @@ describe("SQLite auth schema", () => {
         db
           .insert(sessions)
           .values({
-            id: crypto.randomUUID(),
+            id: newSessionId(),
             accountId: account.id,
             tokenHash: `tok_${crypto.randomUUID()}`,
             createdAt: now,
@@ -455,7 +467,7 @@ describe("SQLite auth schema", () => {
 
     it("updates expiresAt from null to a value", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
       const now = Date.now();
 
       db.insert(sessions)
@@ -476,7 +488,7 @@ describe("SQLite auth schema", () => {
 
     it("defaults encryptedData to null", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
 
       db.insert(sessions)
         .values({
@@ -493,7 +505,7 @@ describe("SQLite auth schema", () => {
 
     it("round-trips encryptedData blob", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newSessionId();
       const blob = testBlob(new Uint8Array([10, 20, 30]));
 
       db.insert(sessions)
@@ -515,7 +527,7 @@ describe("SQLite auth schema", () => {
     it("inserts and round-trips binary encrypted_master_key", () => {
       const account = insertAccount();
       const masterKey = new Uint8Array([99, 88, 77, 66, 55, 44, 33, 22, 11]);
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       db.insert(recoveryKeys)
         .values({
@@ -534,7 +546,7 @@ describe("SQLite auth schema", () => {
 
     it("defaults revokedAt to null", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       db.insert(recoveryKeys)
         .values({
@@ -552,7 +564,7 @@ describe("SQLite auth schema", () => {
 
     it("round-trips revokedAt when set", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
       const revokedAt = Date.now();
 
       db.insert(recoveryKeys)
@@ -571,7 +583,7 @@ describe("SQLite auth schema", () => {
 
     it("cascades on account deletion", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       db.insert(recoveryKeys)
         .values({
@@ -593,8 +605,8 @@ describe("SQLite auth schema", () => {
         db
           .insert(recoveryKeys)
           .values({
-            id: crypto.randomUUID(),
-            accountId: "nonexistent",
+            id: newRecoveryKeyId(),
+            accountId: brandId<AccountId>("nonexistent"),
             encryptedMasterKey: new Uint8Array([1]),
             recoveryKeyHash: new Uint8Array(32),
             createdAt: Date.now(),
@@ -605,7 +617,7 @@ describe("SQLite auth schema", () => {
 
     it("updates revokedAt from null to timestamp", () => {
       const account = insertAccount();
-      const id = crypto.randomUUID();
+      const id = newRecoveryKeyId();
 
       db.insert(recoveryKeys)
         .values({
@@ -631,7 +643,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -661,7 +673,7 @@ describe("SQLite auth schema", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -689,7 +701,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -717,7 +729,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -744,7 +756,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
       const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
 
       db.insert(deviceTransferRequests)
@@ -773,7 +785,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -800,7 +812,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -829,7 +841,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -862,7 +874,7 @@ describe("SQLite auth schema", () => {
         db
           .insert(deviceTransferRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: newDeviceTransferRequestId(),
             accountId: account.id,
             sourceSessionId: source.id,
             targetSessionId: target.id,
@@ -885,7 +897,7 @@ describe("SQLite auth schema", () => {
         db
           .insert(deviceTransferRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: newDeviceTransferRequestId(),
             accountId: account.id,
             sourceSessionId: source.id,
             targetSessionId: target.id,
@@ -907,7 +919,7 @@ describe("SQLite auth schema", () => {
         db
           .insert(deviceTransferRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: newDeviceTransferRequestId(),
             accountId: account.id,
             sourceSessionId: source.id,
             targetSessionId: target.id,
@@ -924,7 +936,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -952,7 +964,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({
@@ -984,9 +996,9 @@ describe("SQLite auth schema", () => {
         db
           .insert(deviceTransferRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: newDeviceTransferRequestId(),
             accountId: account.id,
-            sourceSessionId: "nonexistent",
+            sourceSessionId: brandId<SessionId>("nonexistent"),
             targetSessionId: session.id,
             codeSalt: TEST_CODE_SALT,
             createdAt: now,
@@ -999,10 +1011,10 @@ describe("SQLite auth schema", () => {
         db
           .insert(deviceTransferRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: newDeviceTransferRequestId(),
             accountId: account.id,
             sourceSessionId: session.id,
-            targetSessionId: "nonexistent",
+            targetSessionId: brandId<SessionId>("nonexistent"),
             codeSalt: TEST_CODE_SALT,
             createdAt: now,
             expiresAt: now + ONE_HOUR_MS,
@@ -1021,7 +1033,7 @@ describe("SQLite auth schema", () => {
         db
           .insert(deviceTransferRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: newDeviceTransferRequestId(),
             accountId: account.id,
             sourceSessionId: source.id,
             targetSessionId: target.id,
@@ -1039,7 +1051,7 @@ describe("SQLite auth schema", () => {
       const source = insertSession(account.id);
       const target = insertSession(account.id);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = newDeviceTransferRequestId();
 
       db.insert(deviceTransferRequests)
         .values({

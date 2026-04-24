@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -12,6 +13,7 @@ import { accounts, recoveryKeys } from "../schema/sqlite/auth.js";
 
 import { SQLITE_DDL, sqliteInsertAccount } from "./helpers/sqlite-helpers.js";
 
+import type { AccountId, RecoveryKeyId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, recoveryKeys };
@@ -42,9 +44,12 @@ describe("recovery key queries (SQLite)", () => {
     return new Uint8Array(72).fill(0xab);
   }
 
-  function makeRow(accountId: string, overrides: Partial<{ id: string; createdAt: number }> = {}) {
+  function makeRow(
+    accountId: AccountId,
+    overrides: Partial<{ id: RecoveryKeyId; createdAt: number }> = {},
+  ) {
     return {
-      id: overrides.id ?? crypto.randomUUID(),
+      id: overrides.id ?? brandId<RecoveryKeyId>(crypto.randomUUID()),
       accountId,
       encryptedMasterKey: makeEncryptedKey(),
       createdAt: overrides.createdAt ?? Date.now(),
@@ -154,7 +159,7 @@ describe("recovery key queries (SQLite)", () => {
       expect(() => {
         sqliteRevokeRecoveryKey(
           db as BetterSQLite3Database<Record<string, unknown>>,
-          "nonexistent-id",
+          brandId<RecoveryKeyId>("nonexistent-id"),
           Date.now(),
         );
       }).toThrow("Recovery key not found.");
@@ -208,7 +213,7 @@ describe("recovery key queries (SQLite)", () => {
       const newRow = makeRow(accountId);
       expect(() => {
         sqliteReplaceRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, {
-          revokeId: "nonexistent-id",
+          revokeId: brandId<RecoveryKeyId>("nonexistent-id"),
           revokedAt: Date.now(),
           newRow,
         });

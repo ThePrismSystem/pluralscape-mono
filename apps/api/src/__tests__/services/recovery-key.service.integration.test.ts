@@ -31,7 +31,7 @@ import { getRecoveryKeyStatus } from "../../services/recovery-key/status.js";
 import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, RecoveryKeyId, SessionId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
@@ -91,7 +91,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     const recoveryKeyBytes = randBytes(32);
     const recoveryKeyHashBytes = hashRecoveryKey(recoveryKeyBytes);
     const timestamp = Date.now();
-    const recoveryKeyId = `rk_${crypto.randomUUID()}`;
+    const recoveryKeyId = brandId<RecoveryKeyId>(`rk_${crypto.randomUUID()}`);
 
     await db.insert(accounts).values({
       id: accountId,
@@ -357,7 +357,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
       const timestamp = Date.now();
       await db.insert(sessions).values({
-        id: `sess_${crypto.randomUUID()}`,
+        id: brandId<SessionId>(`sess_${crypto.randomUUID()}`),
         accountId,
         tokenHash: toHex(randBytes(32)),
         createdAt: timestamp,

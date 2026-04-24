@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { apiKeys } from "@pluralscape/db/pg";
-import { API_KEY_TOKEN_PREFIX, ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { API_KEY_TOKEN_PREFIX, ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateApiKeyBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
@@ -20,7 +20,7 @@ import {
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { ApiKeyId, BucketId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export async function createApiKey(
     result.data;
 
   const blob = validateEncryptedBlob(encryptedData);
-  const akId = createId(ID_PREFIXES.apiKey);
+  const akId = brandId<ApiKeyId>(createId(ID_PREFIXES.apiKey));
   const timestamp = now();
   const { token, tokenHash } = await generateTokenPair();
 
@@ -87,7 +87,7 @@ export async function createApiKey(
         lastUsedAt: null,
         revokedAt: null,
         expiresAt: expiresAt ?? null,
-        scopedBucketIds: scopedBucketIds ?? null,
+        scopedBucketIds: scopedBucketIds?.map((id) => brandId<BucketId>(id)) ?? null,
       })
       .returning(API_KEY_SELECT_COLUMNS);
 

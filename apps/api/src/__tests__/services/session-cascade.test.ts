@@ -28,8 +28,10 @@ describe("session cascade on account deletion (structural verification)", () => 
   });
 
   it("sessions table has accountId as a required field", () => {
-    // accountId must be NOT NULL to ensure every session belongs to an account
-    expect(authSchemaSource).toContain('accountId: varchar("account_id"');
+    // accountId must be NOT NULL to ensure every session belongs to an account.
+    // Column declaration uses the brandedId<AccountId>() helper so the
+    // inferred row type carries the AccountId brand (types-ltel fleet).
+    expect(authSchemaSource).toContain('accountId: brandedId<AccountId>("account_id"');
     // The .notNull() must be chained before .references()
     const sessionBlock = authSchemaSource.slice(authSchemaSource.indexOf("export const sessions"));
     expect(sessionBlock).toContain(".notNull()");

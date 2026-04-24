@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -39,6 +40,13 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type {
+  AccountId,
+  ApiKeyId,
+  DeviceTransferRequestId,
+  SessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 describe("SQLite views / query helpers", () => {
@@ -98,8 +106,8 @@ describe("SQLite views / query helpers", () => {
     client.close();
   });
 
-  let accountId: string;
-  let systemId: string;
+  let accountId: AccountId;
+  let systemId: SystemId;
   let memberId: string;
 
   beforeEach(() => {
@@ -208,7 +216,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
           accountId,
           systemId,
           encryptedData: testBlob(),
@@ -220,7 +228,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(apiKeys)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<ApiKeyId>(crypto.randomUUID()),
           accountId,
           systemId,
           encryptedData: testBlob(),
@@ -569,8 +577,8 @@ describe("SQLite views / query helpers", () => {
 
     it("returns pending non-expired transfers", () => {
       const now = Date.now();
-      const sourceSession = crypto.randomUUID();
-      const targetSession = crypto.randomUUID();
+      const sourceSession = brandId<SessionId>(crypto.randomUUID());
+      const targetSession = brandId<SessionId>(crypto.randomUUID());
 
       db.insert(sessions)
         .values([
@@ -582,7 +590,7 @@ describe("SQLite views / query helpers", () => {
       // Pending, not expired
       db.insert(deviceTransferRequests)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<DeviceTransferRequestId>(crypto.randomUUID()),
           accountId,
           sourceSessionId: sourceSession,
           targetSessionId: targetSession,
@@ -594,8 +602,8 @@ describe("SQLite views / query helpers", () => {
         .run();
 
       // Pending but expired
-      const sourceSession2 = crypto.randomUUID();
-      const targetSession2 = crypto.randomUUID();
+      const sourceSession2 = brandId<SessionId>(crypto.randomUUID());
+      const targetSession2 = brandId<SessionId>(crypto.randomUUID());
       db.insert(sessions)
         .values([
           {
@@ -614,7 +622,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(deviceTransferRequests)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<DeviceTransferRequestId>(crypto.randomUUID()),
           accountId,
           sourceSessionId: sourceSession2,
           targetSessionId: targetSession2,

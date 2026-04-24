@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, DeviceTransferRequestId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ describe("POST /account/device-transfer (initiate)", () => {
 
   it("returns 201 on successful initiation", async () => {
     vi.mocked(initiateTransfer).mockResolvedValueOnce({
-      transferId: "dtr_test-id",
+      transferId: brandId<DeviceTransferRequestId>("dtr_test-id"),
       expiresAt: 1_300_000 as never,
     });
 

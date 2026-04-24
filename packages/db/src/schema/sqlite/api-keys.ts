@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import {
+  brandedId,
   sqliteBinary,
   sqliteEncryptedBlob,
   sqliteJson,
@@ -13,18 +14,25 @@ import { API_KEY_KEY_TYPES } from "../../helpers/enums.js";
 import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
-import type { ApiKey, ApiKeyScope } from "@pluralscape/types";
+import type {
+  AccountId,
+  ApiKey,
+  ApiKeyId,
+  ApiKeyScope,
+  BucketId,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /** Account-system ownership (ensuring the account owns the system) is enforced at the app layer. */
 export const apiKeys = sqliteTable(
   "api_keys",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<ApiKeyId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     keyType: text("key_type").notNull().$type<ApiKey["keyType"]>(),
@@ -36,7 +44,7 @@ export const apiKeys = sqliteTable(
     lastUsedAt: sqliteTimestamp("last_used_at"),
     revokedAt: sqliteTimestamp("revoked_at"),
     expiresAt: sqliteTimestamp("expires_at"),
-    scopedBucketIds: sqliteJson("scoped_bucket_ids").$type<readonly string[]>(),
+    scopedBucketIds: sqliteJson("scoped_bucket_ids").$type<readonly BucketId[] | null>(),
   },
   (t) => [
     index("api_keys_account_id_idx").on(t.accountId),
