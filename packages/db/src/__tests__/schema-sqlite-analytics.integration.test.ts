@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -9,11 +10,13 @@ import { systems } from "../schema/sqlite/systems.js";
 
 import {
   createSqliteAnalyticsTables,
+  makeFrontingReportId,
   sqliteInsertAccount,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, frontingReports };
@@ -44,7 +47,7 @@ describe("SQLite analytics schema", () => {
     it("round-trips all fields", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = makeFrontingReportId();
       const now = Date.now();
       const blob = testBlob();
 
@@ -71,7 +74,7 @@ describe("SQLite analytics schema", () => {
     it("accepts pdf format", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = makeFrontingReportId();
       const now = Date.now();
 
       db.insert(frontingReports)
@@ -99,7 +102,7 @@ describe("SQLite analytics schema", () => {
         db
           .insert(frontingReports)
           .values({
-            id: crypto.randomUUID(),
+            id: makeFrontingReportId(),
             systemId,
             encryptedData: testBlob(),
             format: "docx" as "html",
@@ -114,7 +117,7 @@ describe("SQLite analytics schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = makeFrontingReportId();
       const now = Date.now();
 
       db.insert(frontingReports)
@@ -140,8 +143,8 @@ describe("SQLite analytics schema", () => {
         db
           .insert(frontingReports)
           .values({
-            id: crypto.randomUUID(),
-            systemId: "nonexistent",
+            id: makeFrontingReportId(),
+            systemId: brandId<SystemId>("nonexistent"),
             encryptedData: testBlob(),
             format: "html",
             generatedAt: now,
@@ -155,7 +158,7 @@ describe("SQLite analytics schema", () => {
     it("rejects duplicate primary key", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = makeFrontingReportId();
       const now = Date.now();
       const values = {
         id,
@@ -179,7 +182,7 @@ describe("SQLite analytics schema", () => {
       db.insert(frontingReports)
         .values([
           {
-            id: crypto.randomUUID(),
+            id: makeFrontingReportId(),
             systemId,
             encryptedData: testBlob(new Uint8Array([1])),
             format: "html",
@@ -188,7 +191,7 @@ describe("SQLite analytics schema", () => {
             updatedAt: now,
           },
           {
-            id: crypto.randomUUID(),
+            id: makeFrontingReportId(),
             systemId,
             encryptedData: testBlob(new Uint8Array([2])),
             format: "pdf",
@@ -210,7 +213,7 @@ describe("SQLite analytics schema", () => {
     it("round-trips distinct ciphertext payloads", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = makeFrontingReportId();
       const now = Date.now();
       const blob = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 

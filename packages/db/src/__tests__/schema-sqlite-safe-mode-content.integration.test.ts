@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -9,11 +10,13 @@ import { systems } from "../schema/sqlite/systems.js";
 
 import {
   createSqliteSafeModeContentTables,
+  makeSafeModeContentId,
   sqliteInsertAccount,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, safeModeContent };
@@ -39,7 +42,7 @@ describe("SQLite safe_mode_content schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = makeSafeModeContentId();
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     db.insert(safeModeContent)
@@ -66,7 +69,7 @@ describe("SQLite safe_mode_content schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)
       .values({
@@ -86,7 +89,7 @@ describe("SQLite safe_mode_content schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)
       .values({
@@ -110,7 +113,7 @@ describe("SQLite safe_mode_content schema", () => {
     for (let i = 0; i < 3; i++) {
       db.insert(safeModeContent)
         .values({
-          id: crypto.randomUUID(),
+          id: makeSafeModeContentId(),
           systemId,
           sortOrder: i + 1,
           encryptedData: testBlob(new Uint8Array([i + 1])),
@@ -134,7 +137,7 @@ describe("SQLite safe_mode_content schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = makeSafeModeContentId();
     const bigArray = new Uint8Array(256);
     for (let i = 0; i < 256; i++) bigArray[i] = i;
     const blob = testBlob(bigArray);
@@ -157,7 +160,7 @@ describe("SQLite safe_mode_content schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)
       .values({
@@ -180,8 +183,8 @@ describe("SQLite safe_mode_content schema", () => {
       db
         .insert(safeModeContent)
         .values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
+          id: makeSafeModeContentId(),
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -194,7 +197,7 @@ describe("SQLite safe_mode_content schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = makeSafeModeContentId();
 
     db.insert(safeModeContent)
       .values({

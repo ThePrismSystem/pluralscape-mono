@@ -1,17 +1,18 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
 
+import type { SafeModeContentId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const safeModeContent = sqliteTable(
   "safe_mode_content",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SafeModeContentId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull().default(0),

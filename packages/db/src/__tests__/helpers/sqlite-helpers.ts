@@ -13,14 +13,35 @@ import { systems } from "../../schema/sqlite/systems.js";
 
 import type {
   AccountId,
+  AuditLogEntryId,
   BucketId,
   ChannelId,
   EncryptedBlob,
+  FrontingReportId,
+  PKBridgeConfigId,
   PollId,
+  SafeModeContentId,
   SystemId,
 } from "@pluralscape/types";
 import type Database from "better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+
+// ── Branded-ID fixture factories ───────────────────────────────────
+// One helper per entity whose Drizzle schema uses `brandedId<XId>()`. These
+// centralize the prefix strings used in integration-test fixtures so the
+// prefix is single-sourced with `ID_PREFIXES` in @pluralscape/types.
+
+export const makeAuditLogEntryId = (): AuditLogEntryId =>
+  brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+
+export const makeFrontingReportId = (): FrontingReportId =>
+  brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`);
+
+export const makePkBridgeConfigId = (): PKBridgeConfigId =>
+  brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
+
+export const makeSafeModeContentId = (): SafeModeContentId =>
+  brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`);
 
 /** Creates a minimal valid EncryptedBlob for test fixtures. */
 export function testBlob(ciphertext: Uint8Array = new Uint8Array([1, 2, 3])): EncryptedBlob {

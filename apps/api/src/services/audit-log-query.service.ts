@@ -55,7 +55,7 @@ export interface AuditLogQueryParams {
 
 interface CursorData {
   readonly t: number;
-  readonly i: string;
+  readonly i: AuditLogEntryId;
 }
 
 function encodeCursor(data: CursorData): string {
@@ -70,12 +70,13 @@ function decodeCursor(cursor: string): CursorData {
       parsed !== null &&
       "t" in parsed &&
       "i" in parsed &&
-      typeof (parsed as CursorData).t === "number" &&
-      (parsed as CursorData).t > 0 &&
-      typeof (parsed as CursorData).i === "string" &&
-      (parsed as CursorData).i.length > 0
+      typeof (parsed as { t: unknown }).t === "number" &&
+      (parsed as { t: number }).t > 0 &&
+      typeof (parsed as { i: unknown }).i === "string" &&
+      (parsed as { i: string }).i.length > 0
     ) {
-      return parsed as CursorData;
+      const raw = parsed as { t: number; i: string };
+      return { t: raw.t, i: brandId<AuditLogEntryId>(raw.i) };
     }
   } catch {
     // fall through

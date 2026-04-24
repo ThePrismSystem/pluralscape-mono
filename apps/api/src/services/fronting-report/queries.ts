@@ -1,4 +1,5 @@
 import { frontingReports } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -24,7 +25,7 @@ export interface FrontingReportListOptions {
 
 interface CursorData {
   readonly t: number;
-  readonly i: string;
+  readonly i: FrontingReportId;
 }
 
 function encodeCursor(data: CursorData): string {
@@ -39,12 +40,13 @@ function decodeCursor(cursor: string): CursorData {
       parsed !== null &&
       "t" in parsed &&
       "i" in parsed &&
-      typeof (parsed as CursorData).t === "number" &&
-      (parsed as CursorData).t >= 0 &&
-      typeof (parsed as CursorData).i === "string" &&
-      (parsed as CursorData).i.length > 0
+      typeof (parsed as { t: unknown }).t === "number" &&
+      (parsed as { t: number }).t >= 0 &&
+      typeof (parsed as { i: unknown }).i === "string" &&
+      (parsed as { i: string }).i.length > 0
     ) {
-      return parsed as CursorData;
+      const raw = parsed as { t: number; i: string };
+      return { t: raw.t, i: brandId<FrontingReportId>(raw.i) };
     }
   } catch {
     // fall through

@@ -1,18 +1,18 @@
 import { sql } from "drizzle-orm";
 import { index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { brandedId, pgTimestamp } from "../../columns/pg.js";
 
 import { sessions } from "./auth.js";
 
+import type { BiometricTokenId, SessionId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const biometricTokens = pgTable(
   "biometric_tokens",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    sessionId: varchar("session_id", { length: ID_MAX_LENGTH })
+    id: brandedId<BiometricTokenId>("id").primaryKey(),
+    sessionId: brandedId<SessionId>("session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 128 }).notNull(),

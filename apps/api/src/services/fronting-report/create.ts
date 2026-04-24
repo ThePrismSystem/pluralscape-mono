@@ -1,5 +1,5 @@
 import { frontingReports } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateFrontingReportBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -13,7 +13,7 @@ import { toFrontingReportResult } from "./internal.js";
 import type { FrontingReportResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { FrontingReportId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createFrontingReport(
@@ -31,7 +31,7 @@ export async function createFrontingReport(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const reportId = createId(ID_PREFIXES.frontingReport);
+  const reportId = brandId<FrontingReportId>(createId(ID_PREFIXES.frontingReport));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

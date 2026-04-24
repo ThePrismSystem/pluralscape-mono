@@ -84,6 +84,7 @@ export type {
   BucketRotationItemId,
   SystemSnapshotId,
   BiometricTokenId,
+  SafeModeContentId,
   StorageKey,
   HexColor,
   SlugHash,

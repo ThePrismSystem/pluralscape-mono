@@ -211,9 +211,12 @@ describe("ID_PREFIXES", () => {
     expect(unique.size).toBe(values.length);
   });
 
-  it("has the same number of entries as EntityType members", () => {
+  it("has an entry for every AnyBrandedId member", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(64);
+    // 65 IDs: one per brand in AnyBrandedId. Adding a brand without a prefix
+    // fails AssertAllPrefixesMapped at compile time; removing a prefix entry
+    // silently passes typecheck, so this count catches that drift.
+    expect(prefixCount).toBe(65);
   });
 });
 
