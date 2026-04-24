@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { FrontingReportId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, frontingReports };
@@ -43,7 +45,7 @@ describe("PG analytics schema", () => {
     it("round-trips all fields", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`);
       const ts = Date.now();
       const blob = testBlob();
 
@@ -73,7 +75,7 @@ describe("PG analytics schema", () => {
     it("accepts pdf format", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`);
       const ts = Date.now();
 
       await db.insert(frontingReports).values({
@@ -97,7 +99,7 @@ describe("PG analytics schema", () => {
 
       await expect(
         db.insert(frontingReports).values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`),
           systemId,
           encryptedData: testBlob(),
           format: "docx" as "html",
@@ -111,7 +113,7 @@ describe("PG analytics schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`);
       const ts = Date.now();
 
       await db.insert(frontingReports).values({
@@ -133,8 +135,8 @@ describe("PG analytics schema", () => {
       const ts = Date.now();
       await expect(
         db.insert(frontingReports).values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
+          id: brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`),
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(),
           format: "html",
           generatedAt: ts,
@@ -147,7 +149,7 @@ describe("PG analytics schema", () => {
     it("rejects duplicate primary key", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`);
       const ts = Date.now();
       const values = {
         id,
@@ -170,7 +172,7 @@ describe("PG analytics schema", () => {
 
       await db.insert(frontingReports).values([
         {
-          id: crypto.randomUUID(),
+          id: brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`),
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           format: "html",
@@ -179,7 +181,7 @@ describe("PG analytics schema", () => {
           updatedAt: ts,
         },
         {
-          id: crypto.randomUUID(),
+          id: brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`),
           systemId,
           encryptedData: testBlob(new Uint8Array([2])),
           format: "pdf",
@@ -199,7 +201,7 @@ describe("PG analytics schema", () => {
     it("round-trips distinct ciphertext payloads", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`);
       const ts = Date.now();
       const blob = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -224,7 +226,7 @@ describe("PG analytics schema", () => {
 
       await expect(
         db.insert(frontingReports).values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`),
           systemId,
           encryptedData: testBlob(),
           format: "html",
@@ -244,7 +246,7 @@ describe("PG analytics schema", () => {
       // archived=true but archivedAt=null should fail
       await expect(
         db.insert(frontingReports).values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingReportId>(`fr_${crypto.randomUUID()}`),
           systemId,
           encryptedData: testBlob(),
           format: "html",

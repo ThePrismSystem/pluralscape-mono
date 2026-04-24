@@ -1,4 +1,5 @@
 import { frontingReports } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -71,7 +72,10 @@ export async function listFrontingReports(
       const cursor = decodeCursor(opts.cursor);
       const cursorCondition = or(
         lt(frontingReports.generatedAt, cursor.t),
-        and(eq(frontingReports.generatedAt, cursor.t), lt(frontingReports.id, cursor.i)),
+        and(
+          eq(frontingReports.generatedAt, cursor.t),
+          lt(frontingReports.id, brandId<FrontingReportId>(cursor.i)),
+        ),
       );
       if (cursorCondition) conditions.push(cursorCondition);
     }
