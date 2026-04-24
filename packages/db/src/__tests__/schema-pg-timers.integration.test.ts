@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -9,6 +9,7 @@ import { members } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 import { checkInRecords, timerConfigs } from "../schema/pg/timers.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgTimerTables,
   pgInsertAccount,
@@ -50,7 +51,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
       await db.insert(timerConfigs).values({
@@ -72,7 +73,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id,
@@ -91,7 +92,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id,
@@ -110,7 +111,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id,
@@ -141,7 +142,7 @@ describe("PG timers schema", () => {
         ["12:00", "18:45"],
       ]) {
         const id = brandId<TimerId>(crypto.randomUUID());
-        const now = Date.now();
+        const now = fixtureNow();
         await db.insert(timerConfigs).values({
           id,
           systemId,
@@ -168,8 +169,8 @@ describe("PG timers schema", () => {
             systemId,
             wakingStart: bad,
             encryptedData: testBlob(new Uint8Array([1])),
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
+            createdAt: fixtureNow(),
+            updatedAt: fixtureNow(),
           }),
         ).rejects.toThrow();
       }
@@ -186,8 +187,8 @@ describe("PG timers schema", () => {
             systemId,
             wakingEnd: bad,
             encryptedData: testBlob(new Uint8Array([1])),
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
+            createdAt: fixtureNow(),
+            updatedAt: fixtureNow(),
           }),
         ).rejects.toThrow();
       }
@@ -197,7 +198,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id,
@@ -218,7 +219,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id,
@@ -237,7 +238,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id,
@@ -258,7 +259,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id,
@@ -268,7 +269,7 @@ describe("PG timers schema", () => {
         updatedAt: now,
       });
 
-      const updateNow = Date.now();
+      const updateNow = fixtureNow();
       await db
         .update(timerConfigs)
         .set({ archived: true, archivedAt: updateNow })
@@ -281,7 +282,7 @@ describe("PG timers schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -294,7 +295,7 @@ describe("PG timers schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -311,7 +312,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -340,7 +341,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([5, 6, 7]));
 
       await db.insert(timerConfigs).values({
@@ -356,7 +357,7 @@ describe("PG timers schema", () => {
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,
-        respondedAt: now + 1000,
+        respondedAt: toUnixMillis(now + 1000),
         dismissed: true,
         encryptedData: data,
       });
@@ -371,7 +372,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -396,7 +397,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -423,7 +424,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -451,7 +452,7 @@ describe("PG timers schema", () => {
       const memberId = await insertMember(systemId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -478,7 +479,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -504,7 +505,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -529,7 +530,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -554,7 +555,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -574,14 +575,14 @@ describe("PG timers schema", () => {
           id: respondedId,
           systemId,
           timerConfigId: timerId,
-          scheduledAt: now + 1000,
-          respondedAt: now + 2000,
+          scheduledAt: toUnixMillis(now + 1000),
+          respondedAt: toUnixMillis(now + 2000),
         },
         {
           id: dismissedId,
           systemId,
           timerConfigId: timerId,
-          scheduledAt: now + 3000,
+          scheduledAt: toUnixMillis(now + 3000),
           dismissed: true,
         },
       ]);
@@ -599,7 +600,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -623,7 +624,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -652,7 +653,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -666,7 +667,7 @@ describe("PG timers schema", () => {
         .insert(checkInRecords)
         .values({ id, systemId, timerConfigId: timerId, scheduledAt: now });
 
-      const updateNow = Date.now();
+      const updateNow = fixtureNow();
       await db
         .update(checkInRecords)
         .set({ archived: true, archivedAt: updateNow })
@@ -680,7 +681,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -717,7 +718,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -739,7 +740,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(timerConfigs).values({
         id: timerId,

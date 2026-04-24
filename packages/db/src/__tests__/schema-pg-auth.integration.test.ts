@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -12,6 +12,7 @@ import {
   sessions,
 } from "../schema/pg/auth.js";
 
+import { fixtureNow, fixtureNowPlus } from "./fixtures/timestamps.js";
 import { createPgAuthTables, testBlob } from "./helpers/pg-helpers.js";
 
 import type {
@@ -20,6 +21,7 @@ import type {
   DeviceTransferRequestId,
   RecoveryKeyId,
   SessionId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -49,8 +51,8 @@ describe("PG auth schema", () => {
       emailSalt: string;
       authKeyHash: Uint8Array;
       kdfSalt: string;
-      createdAt: number;
-      updatedAt: number;
+      createdAt: UnixMillis;
+      updatedAt: UnixMillis;
     }> = {},
   ): Promise<{
     id: AccountId;
@@ -58,10 +60,10 @@ describe("PG auth schema", () => {
     emailSalt: string;
     authKeyHash: Uint8Array;
     kdfSalt: string;
-    createdAt: number;
-    updatedAt: number;
+    createdAt: UnixMillis;
+    updatedAt: UnixMillis;
   }> {
-    const now = Date.now();
+    const now = fixtureNow();
     const data = {
       id: newAccountId(overrides.id),
       emailHash: overrides.emailHash ?? `hash_${crypto.randomUUID()}`,
@@ -78,13 +80,13 @@ describe("PG auth schema", () => {
 
   async function insertSession(
     accountId: AccountId,
-    overrides: Partial<{ id: SessionId; createdAt: number; tokenHash: string }> = {},
-  ): Promise<{ id: SessionId; accountId: AccountId; tokenHash: string; createdAt: number }> {
+    overrides: Partial<{ id: SessionId; createdAt: UnixMillis; tokenHash: string }> = {},
+  ): Promise<{ id: SessionId; accountId: AccountId; tokenHash: string; createdAt: UnixMillis }> {
     const data = {
       id: overrides.id ?? newSessionId(),
       accountId,
       tokenHash: overrides.tokenHash ?? `tok_${crypto.randomUUID()}`,
-      createdAt: overrides.createdAt ?? Date.now(),
+      createdAt: overrides.createdAt ?? fixtureNow(),
     };
     await db.insert(sessions).values(data);
     return data;
@@ -147,7 +149,7 @@ describe("PG auth schema", () => {
     });
 
     it("rejects null kdfSalt", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       await expect(
         client.query(
           "INSERT INTO accounts (id, email_hash, email_salt, auth_key_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, NULL, $5, $6, 1)",
@@ -177,7 +179,7 @@ describe("PG auth schema", () => {
         encryptedPrivateKey: privateKey,
         publicKey,
         keyType: "encryption",
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       const rows = await db.select().from(authKeys).where(eq(authKeys.id, id));
@@ -197,7 +199,7 @@ describe("PG auth schema", () => {
         encryptedPrivateKey: new Uint8Array([1]),
         publicKey: new Uint8Array([2]),
         keyType: "signing",
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       const rows = await db.select().from(authKeys).where(eq(authKeys.id, id));
@@ -213,7 +215,7 @@ describe("PG auth schema", () => {
           encryptedPrivateKey: new Uint8Array([1]),
           publicKey: new Uint8Array([2]),
           keyType: "invalid" as "encryption",
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -228,7 +230,7 @@ describe("PG auth schema", () => {
         encryptedPrivateKey: new Uint8Array([1]),
         publicKey: new Uint8Array([2]),
         keyType: "encryption",
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       await db.delete(accounts).where(eq(accounts.id, account.id));
@@ -244,7 +246,7 @@ describe("PG auth schema", () => {
           encryptedPrivateKey: new Uint8Array([1]),
           publicKey: new Uint8Array([2]),
           keyType: "encryption",
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -259,7 +261,7 @@ describe("PG auth schema", () => {
         encryptedPrivateKey: new Uint8Array(0),
         publicKey: new Uint8Array(0),
         keyType: "encryption",
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       const rows = await db.select().from(authKeys).where(eq(authKeys.id, id));
@@ -281,10 +283,10 @@ describe("PG auth schema", () => {
   describe("sessions", () => {
     it("inserts and retrieves with all fields", async () => {
       const account = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newSessionId();
 
-      const expiresAt = now + ONE_DAY_MS;
+      const expiresAt = toUnixMillis(now + ONE_DAY_MS);
       await db.insert(sessions).values({
         id,
         accountId: account.id,
@@ -311,7 +313,7 @@ describe("PG auth schema", () => {
       await db.insert(sessions).values({
         id,
         accountId: account.id,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
@@ -326,7 +328,7 @@ describe("PG auth schema", () => {
       await db.insert(sessions).values({
         id,
         accountId: account.id,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
@@ -337,12 +339,12 @@ describe("PG auth schema", () => {
     it("round-trips expiresAt when provided", async () => {
       const account = await insertAccount();
       const id = newSessionId();
-      const expiresAt = Date.now() + ONE_DAY_MS;
+      const expiresAt = fixtureNowPlus(ONE_DAY_MS);
 
       await db.insert(sessions).values({
         id,
         accountId: account.id,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         expiresAt,
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
@@ -358,7 +360,7 @@ describe("PG auth schema", () => {
       await db.insert(sessions).values({
         id,
         accountId: account.id,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
@@ -373,7 +375,7 @@ describe("PG auth schema", () => {
       await db.insert(sessions).values({
         id,
         accountId: account.id,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
@@ -394,7 +396,7 @@ describe("PG auth schema", () => {
         db.insert(sessions).values({
           id: newSessionId(),
           accountId: brandId<AccountId>("nonexistent"),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
           tokenHash: `tok_${crypto.randomUUID()}`,
         }),
       ).rejects.toThrow();
@@ -402,14 +404,14 @@ describe("PG auth schema", () => {
 
     it("rejects expiresAt <= createdAt via CHECK", async () => {
       const account = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(sessions).values({
           id: newSessionId(),
           accountId: account.id,
           createdAt: now,
-          expiresAt: now - 1000,
+          expiresAt: toUnixMillis(now - 1000),
           tokenHash: `tok_${crypto.randomUUID()}`,
         }),
       ).rejects.toThrow();
@@ -417,7 +419,7 @@ describe("PG auth schema", () => {
 
     it("rejects expiresAt === createdAt via CHECK (boundary)", async () => {
       const account = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(sessions).values({
@@ -433,7 +435,7 @@ describe("PG auth schema", () => {
     it("updates expiresAt from null to a value", async () => {
       const account = await insertAccount();
       const id = newSessionId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(sessions).values({
         id,
@@ -442,7 +444,7 @@ describe("PG auth schema", () => {
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
-      const expiresAt = now + ONE_DAY_MS;
+      const expiresAt = toUnixMillis(now + ONE_DAY_MS);
       await db.update(sessions).set({ expiresAt }).where(eq(sessions.id, id));
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -456,7 +458,7 @@ describe("PG auth schema", () => {
       await db.insert(sessions).values({
         id,
         accountId: account.id,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
@@ -473,7 +475,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         encryptedData: blob,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
@@ -493,7 +495,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         encryptedMasterKey: masterKey,
         recoveryKeyHash: new Uint8Array(32),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
@@ -510,7 +512,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         encryptedMasterKey: new Uint8Array([1, 2, 3]),
         recoveryKeyHash: new Uint8Array(32),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
@@ -520,13 +522,13 @@ describe("PG auth schema", () => {
     it("round-trips revokedAt when set", async () => {
       const account = await insertAccount();
       const id = newRecoveryKeyId();
-      const revokedAt = Date.now();
+      const revokedAt = fixtureNow();
 
       await db.insert(recoveryKeys).values({
         id,
         accountId: account.id,
         encryptedMasterKey: new Uint8Array([1, 2, 3]),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
         revokedAt,
       });
 
@@ -543,7 +545,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         encryptedMasterKey: new Uint8Array([1]),
         recoveryKeyHash: new Uint8Array(32),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       await db.delete(accounts).where(eq(accounts.id, account.id));
@@ -558,7 +560,7 @@ describe("PG auth schema", () => {
           accountId: brandId<AccountId>("nonexistent"),
           encryptedMasterKey: new Uint8Array([1]),
           recoveryKeyHash: new Uint8Array(32),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -572,10 +574,10 @@ describe("PG auth schema", () => {
         accountId: account.id,
         encryptedMasterKey: new Uint8Array([1, 2, 3]),
         recoveryKeyHash: new Uint8Array(32),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
-      const revokedAt = Date.now();
+      const revokedAt = fixtureNow();
       await db.update(recoveryKeys).set({ revokedAt }).where(eq(recoveryKeys.id, id));
 
       const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
@@ -588,7 +590,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -598,7 +600,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const rows = await db
@@ -615,7 +617,7 @@ describe("PG auth schema", () => {
     it("accepts targetSessionId as null", async () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -625,7 +627,7 @@ describe("PG auth schema", () => {
         targetSessionId: null,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const rows = await db
@@ -640,7 +642,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -650,7 +652,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const rows = await db
@@ -664,7 +666,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
       const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
 
@@ -676,7 +678,7 @@ describe("PG auth schema", () => {
         encryptedKeyMaterial: keyMaterial,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const rows = await db
@@ -690,7 +692,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -700,7 +702,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const rows = await db
@@ -714,7 +716,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -726,7 +728,7 @@ describe("PG auth schema", () => {
         encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const rows = await db
@@ -740,7 +742,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -751,7 +753,7 @@ describe("PG auth schema", () => {
         status: "expired",
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const rows = await db
@@ -765,7 +767,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(deviceTransferRequests).values({
@@ -776,7 +778,7 @@ describe("PG auth schema", () => {
           status: "invalid" as "pending",
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         }),
       ).rejects.toThrow();
     });
@@ -785,7 +787,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(deviceTransferRequests).values({
@@ -795,7 +797,7 @@ describe("PG auth schema", () => {
           targetSessionId: target.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now - 1000,
+          expiresAt: toUnixMillis(now - 1000),
         }),
       ).rejects.toThrow();
     });
@@ -804,7 +806,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(deviceTransferRequests).values({
@@ -823,7 +825,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -833,7 +835,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       await db.delete(accounts).where(eq(accounts.id, account.id));
@@ -848,7 +850,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -858,7 +860,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       await db.delete(sessions).where(eq(sessions.id, source.id));
@@ -872,7 +874,7 @@ describe("PG auth schema", () => {
     it("validates both source and target session FKs", async () => {
       const account = await insertAccount();
       const session = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(deviceTransferRequests).values({
@@ -882,7 +884,7 @@ describe("PG auth schema", () => {
           targetSessionId: session.id,
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         }),
       ).rejects.toThrow();
 
@@ -894,7 +896,7 @@ describe("PG auth schema", () => {
           targetSessionId: brandId<SessionId>("nonexistent"),
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         }),
       ).rejects.toThrow();
     });
@@ -903,7 +905,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(deviceTransferRequests).values({
@@ -914,7 +916,7 @@ describe("PG auth schema", () => {
           status: "approved",
           codeSalt: TEST_CODE_SALT,
           createdAt: now,
-          expiresAt: now + ONE_HOUR_MS,
+          expiresAt: toUnixMillis(now + ONE_HOUR_MS),
         }),
       ).rejects.toThrow();
     });
@@ -923,7 +925,7 @@ describe("PG auth schema", () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newDeviceTransferRequestId();
 
       await db.insert(deviceTransferRequests).values({
@@ -933,7 +935,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         codeSalt: TEST_CODE_SALT,
         createdAt: now,
-        expiresAt: now + ONE_HOUR_MS,
+        expiresAt: toUnixMillis(now + ONE_HOUR_MS),
       });
 
       const keyMaterial = new Uint8Array([10, 20, 30, 40]);

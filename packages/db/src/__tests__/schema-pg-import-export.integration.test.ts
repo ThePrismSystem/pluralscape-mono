@@ -13,6 +13,7 @@ import {
 } from "../schema/pg/import-export.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgImportExportTables,
   pgInsertAccount,
@@ -59,7 +60,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importJobs).values({
         id,
@@ -97,7 +98,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importJobs).values({
         id,
@@ -123,7 +124,7 @@ describe("PG import-export schema", () => {
     it("rejects negative progressPercent", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(importJobs).values({
@@ -142,7 +143,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importJobs).values({
         id,
@@ -162,7 +163,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importJobs).values({
         id,
@@ -181,7 +182,7 @@ describe("PG import-export schema", () => {
     it("rejects progressPercent above 100", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(importJobs).values({
@@ -199,7 +200,7 @@ describe("PG import-export schema", () => {
     it("rejects invalid source value", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(importJobs).values({
@@ -216,7 +217,7 @@ describe("PG import-export schema", () => {
     it("rejects invalid status value", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(importJobs).values({
@@ -235,7 +236,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importJobs).values({
         id,
@@ -254,7 +255,7 @@ describe("PG import-export schema", () => {
     it("rejects chunksCompleted exceeding chunksTotal", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(importJobs).values({
@@ -274,7 +275,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importJobs).values({
         id,
@@ -294,7 +295,7 @@ describe("PG import-export schema", () => {
       const accountA = await insertAccount();
       const accountB = await insertAccount();
       const systemOfB = await insertSystem(accountB);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(importJobs).values({
@@ -312,7 +313,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const errors = [
         {
           entityType: "unknown" as const,
@@ -347,7 +348,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const errors = Array.from({ length: 1000 }, (_, i) => ({
         entityType: "unknown" as const,
         entityId: null,
@@ -372,7 +373,7 @@ describe("PG import-export schema", () => {
     it("rejects errorLog with more than 1000 entries", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const errors = Array.from({ length: 1001 }, (_, i) => ({
         entityType: "unknown" as const,
         entityId: null,
@@ -399,7 +400,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(exportRequests).values({
         id,
@@ -426,7 +427,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(exportRequests).values({
         id,
@@ -447,7 +448,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(exportRequests).values({
         id,
@@ -466,7 +467,7 @@ describe("PG import-export schema", () => {
     it("rejects invalid format value", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(exportRequests).values({
@@ -484,7 +485,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(exportRequests).values({
         id,
@@ -504,7 +505,7 @@ describe("PG import-export schema", () => {
       const accountA = await insertAccount();
       const accountB = await insertAccount();
       const systemOfB = await insertSystem(accountB);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(exportRequests).values({
@@ -522,7 +523,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(exportRequests).values({
         id,
@@ -543,7 +544,7 @@ describe("PG import-export schema", () => {
     it("round-trips all fields including all timestamps", async () => {
       const accountId = await insertAccount();
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
         id,
@@ -575,7 +576,7 @@ describe("PG import-export schema", () => {
     it("applies default status of pending", async () => {
       const accountId = await insertAccount();
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
         id,
@@ -594,7 +595,7 @@ describe("PG import-export schema", () => {
 
     it("rejects invalid status value", async () => {
       const accountId = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(accountPurgeRequests).values({
@@ -611,7 +612,7 @@ describe("PG import-export schema", () => {
     it("cascades on account deletion", async () => {
       const accountId = await insertAccount();
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
         id,
@@ -633,7 +634,7 @@ describe("PG import-export schema", () => {
     it("allows nullable confirmedAt, completedAt, and cancelledAt", async () => {
       const accountId = await insertAccount();
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(accountPurgeRequests).values({
         id,
@@ -656,7 +657,7 @@ describe("PG import-export schema", () => {
 
     it("rejects second active purge request when first is confirmed", async () => {
       const accountId = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       await db.insert(accountPurgeRequests).values({
@@ -686,7 +687,7 @@ describe("PG import-export schema", () => {
 
     it("allows new purge request after previous is completed", async () => {
       const accountId = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       await db.insert(accountPurgeRequests).values({
@@ -722,7 +723,7 @@ describe("PG import-export schema", () => {
 
     it("allows new purge request after previous is cancelled", async () => {
       const accountId = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       await db.insert(accountPurgeRequests).values({
@@ -758,7 +759,7 @@ describe("PG import-export schema", () => {
 
     it("rejects second active purge request when first is processing", async () => {
       const accountId = await insertAccount();
-      const now = Date.now();
+      const now = fixtureNow();
       const firstId = crypto.randomUUID();
 
       await db.insert(accountPurgeRequests).values({
@@ -792,7 +793,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       const state: ImportCheckpointState = {
         schemaVersion: 2,
@@ -841,7 +842,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importJobs).values({
         id,
@@ -869,7 +870,7 @@ describe("PG import-export schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ImportJobId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importEntityRefs).values({
         id,
@@ -892,7 +893,7 @@ describe("PG import-export schema", () => {
     it("enforces unique (account, system, source, type, sourceId)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(importEntityRefs).values({
         id: crypto.randomUUID(),
@@ -932,7 +933,7 @@ describe("PG import-export schema", () => {
           sourceEntityType: "member",
           sourceEntityId: "x",
           pluralscapeEntityId: "y",
-          importedAt: Date.now(),
+          importedAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -949,7 +950,7 @@ describe("PG import-export schema", () => {
         sourceEntityType: "member",
         sourceEntityId: "sys-cascade-check",
         pluralscapeEntityId: "mem_sys_cascade",
-        importedAt: Date.now(),
+        importedAt: fixtureNow(),
       });
 
       await db.delete(systems).where(eq(systems.id, systemId));
@@ -974,7 +975,7 @@ describe("PG import-export schema", () => {
           sourceEntityType: "not-a-real-type" as never,
           sourceEntityId: "x",
           pluralscapeEntityId: "y",
-          importedAt: Date.now(),
+          importedAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -991,7 +992,7 @@ describe("PG import-export schema", () => {
         sourceEntityType: "member",
         sourceEntityId: "abc-cascade",
         pluralscapeEntityId: "mem_cascade_target",
-        importedAt: Date.now(),
+        importedAt: fixtureNow(),
       });
 
       await db.delete(accounts).where(eq(accounts.id, accountId));

@@ -8,6 +8,7 @@ import { accounts } from "../schema/pg/auth.js";
 import { safeModeContent } from "../schema/pg/safe-mode-content.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgSafeModeContentTables,
   makeSafeModeContentId,
@@ -40,7 +41,7 @@ describe("PG safe_mode_content schema", () => {
   it("inserts and retrieves with all columns", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
@@ -65,7 +66,7 @@ describe("PG safe_mode_content schema", () => {
   it("defaults version to 1", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({
@@ -83,7 +84,7 @@ describe("PG safe_mode_content schema", () => {
   it("defaults sort_order to 0", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({
@@ -101,7 +102,7 @@ describe("PG safe_mode_content schema", () => {
   it("supports multiple content items per system with ordering", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     const items = [
       { id: makeSafeModeContentId(), sortOrder: 3 },
@@ -130,7 +131,7 @@ describe("PG safe_mode_content schema", () => {
   it("round-trips encrypted_data binary correctly", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
     const blobCiphertext = new Uint8Array(256);
     for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
@@ -151,7 +152,7 @@ describe("PG safe_mode_content schema", () => {
   it("cascades on system deletion", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({
@@ -168,7 +169,7 @@ describe("PG safe_mode_content schema", () => {
   });
 
   it("rejects nonexistent systemId FK", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
     await expect(
       db.insert(safeModeContent).values({
         id: makeSafeModeContentId(),
@@ -195,7 +196,7 @@ describe("PG safe_mode_content schema", () => {
   it("rejects duplicate primary key", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({

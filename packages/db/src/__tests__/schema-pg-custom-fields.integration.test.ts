@@ -16,6 +16,7 @@ import { buckets } from "../schema/pg/privacy.js";
 import { systemStructureEntities, systemStructureEntityTypes } from "../schema/pg/structure.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgCustomFieldsTables,
   pgInsertAccount,
@@ -61,7 +62,7 @@ describe("PG custom fields schema", () => {
     systemId: SystemId,
     id: BucketId = brandId<BucketId>(crypto.randomUUID()),
   ): Promise<BucketId> {
-    const now = Date.now();
+    const now = fixtureNow();
     await db.insert(buckets).values({
       id,
       systemId,
@@ -76,7 +77,7 @@ describe("PG custom fields schema", () => {
     systemId: SystemId,
     id: FieldDefinitionId = brandId<FieldDefinitionId>(crypto.randomUUID()),
   ): Promise<FieldDefinitionId> {
-    const now = Date.now();
+    const now = fixtureNow();
     await db.insert(fieldDefinitions).values({
       id,
       systemId,
@@ -109,7 +110,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(fieldDefinitions).values({
@@ -131,7 +132,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitions).values({
         id,
@@ -162,7 +163,7 @@ describe("PG custom fields schema", () => {
     });
 
     it("rejects nonexistent systemId FK", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       await expect(
         db.insert(fieldDefinitions).values({
           id: brandId<FieldDefinitionId>(crypto.randomUUID()),
@@ -179,7 +180,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitions).values({
         id,
@@ -201,7 +202,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitions).values({
         id,
@@ -212,7 +213,7 @@ describe("PG custom fields schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(fieldDefinitions)
         .set({ archived: true, archivedAt: archiveTime })
@@ -227,7 +228,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitions).values({
         id,
@@ -250,7 +251,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitions).values({
         id,
@@ -270,7 +271,7 @@ describe("PG custom fields schema", () => {
     it("rejects invalid fieldType via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldDefinitions).values({
@@ -287,7 +288,7 @@ describe("PG custom fields schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -300,7 +301,7 @@ describe("PG custom fields schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -317,7 +318,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(fieldValues).values({
@@ -341,7 +342,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id,
@@ -361,7 +362,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const valueId = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: valueId,
@@ -382,7 +383,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const valueId = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: valueId,
@@ -401,7 +402,7 @@ describe("PG custom fields schema", () => {
     it("rejects nonexistent fieldDefinitionId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldValues).values({
@@ -421,7 +422,7 @@ describe("PG custom fields schema", () => {
       const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id,
@@ -443,7 +444,7 @@ describe("PG custom fields schema", () => {
       const memberId1 = brandId<MemberId>(await pgInsertMember(db, systemId));
       const memberId2 = brandId<MemberId>(await pgInsertMember(db, systemId));
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),
@@ -476,7 +477,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),
@@ -505,7 +506,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),
@@ -533,7 +534,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),
@@ -565,7 +566,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id,
@@ -721,7 +722,7 @@ describe("PG custom fields schema", () => {
       systemId: SystemId,
       id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
     ): Promise<SystemStructureEntityTypeId> {
-      const now = Date.now();
+      const now = fixtureNow();
       await db.insert(systemStructureEntityTypes).values({
         id,
         systemId,
@@ -738,7 +739,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = brandId<FieldDefinitionScopeId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitionScopes).values({
         id,
@@ -763,7 +764,7 @@ describe("PG custom fields schema", () => {
     it("rejects nonexistent field_definition_id FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldDefinitionScopes).values({
@@ -781,7 +782,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldDefinitionScopes).values({
@@ -800,7 +801,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -815,7 +816,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const entityTypeId = brandId<SystemStructureEntityTypeId>(await insertEntityType(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -829,7 +830,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitionScopes).values({
         id: brandId<FieldDefinitionScopeId>(crypto.randomUUID()),
@@ -856,7 +857,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -871,7 +872,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = brandId<FieldDefinitionScopeId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitionScopes).values({
         id,
@@ -894,7 +895,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldDefinitionScopes).values({
         id: brandId<FieldDefinitionScopeId>(crypto.randomUUID()),
@@ -916,7 +917,7 @@ describe("PG custom fields schema", () => {
       systemId: SystemId,
       id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
     ): Promise<SystemStructureEntityTypeId> {
-      const now = Date.now();
+      const now = fixtureNow();
       await db.insert(systemStructureEntityTypes).values({
         id,
         systemId,
@@ -933,7 +934,7 @@ describe("PG custom fields schema", () => {
       entityTypeId: SystemStructureEntityTypeId,
       id = brandId<SystemStructureEntityId>(crypto.randomUUID()),
     ): Promise<SystemStructureEntityId> {
-      const now = Date.now();
+      const now = fixtureNow();
       await db.insert(systemStructureEntities).values({
         id,
         systemId,
@@ -948,7 +949,7 @@ describe("PG custom fields schema", () => {
 
     async function insertGroup(systemId: string, raw = crypto.randomUUID()): Promise<GroupId> {
       const id = brandId<GroupId>(raw);
-      const now = Date.now();
+      const now = fixtureNow();
       await db.insert(groups).values({
         id,
         systemId: brandId<SystemId>(systemId),
@@ -967,7 +968,7 @@ describe("PG custom fields schema", () => {
       const entityTypeId = brandId<SystemStructureEntityTypeId>(await insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(await insertEntity(systemId, entityTypeId));
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id,
@@ -992,7 +993,7 @@ describe("PG custom fields schema", () => {
       const fieldDefId = await insertFieldDefinition(systemId);
       const groupId = brandId<GroupId>(await insertGroup(systemId));
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id,
@@ -1018,7 +1019,7 @@ describe("PG custom fields schema", () => {
       const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const entityTypeId = brandId<SystemStructureEntityTypeId>(await insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(await insertEntity(systemId, entityTypeId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldValues).values({
@@ -1040,7 +1041,7 @@ describe("PG custom fields schema", () => {
       const fieldDefId = await insertFieldDefinition(systemId);
       const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
       const groupId = brandId<GroupId>(await insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldValues).values({
@@ -1063,7 +1064,7 @@ describe("PG custom fields schema", () => {
       const entityTypeId = brandId<SystemStructureEntityTypeId>(await insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(await insertEntity(systemId, entityTypeId));
       const groupId = brandId<GroupId>(await insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldValues).values({
@@ -1087,7 +1088,7 @@ describe("PG custom fields schema", () => {
       const entityTypeId = brandId<SystemStructureEntityTypeId>(await insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(await insertEntity(systemId, entityTypeId));
       const groupId = brandId<GroupId>(await insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldValues).values({
@@ -1110,7 +1111,7 @@ describe("PG custom fields schema", () => {
       const fieldDefId = await insertFieldDefinition(systemId);
       const entityTypeId = brandId<SystemStructureEntityTypeId>(await insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(await insertEntity(systemId, entityTypeId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),
@@ -1132,7 +1133,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const groupId = brandId<GroupId>(await insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),
@@ -1151,7 +1152,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldValues).values({
@@ -1170,7 +1171,7 @@ describe("PG custom fields schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(fieldValues).values({
@@ -1191,7 +1192,7 @@ describe("PG custom fields schema", () => {
       const fieldDefId = await insertFieldDefinition(systemId);
       const entityTypeId = brandId<SystemStructureEntityTypeId>(await insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(await insertEntity(systemId, entityTypeId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),
@@ -1221,7 +1222,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const groupId = brandId<GroupId>(await insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(fieldValues).values({
         id: brandId<FieldValueId>(crypto.randomUUID()),

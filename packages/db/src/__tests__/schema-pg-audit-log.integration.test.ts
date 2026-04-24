@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -7,6 +8,7 @@ import { auditLog } from "../schema/pg/audit-log.js";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgAuditLogTables,
   makeAuditLogEntryId,
@@ -42,7 +44,7 @@ describe("PG audit_log schema", () => {
   it("inserts and retrieves with all columns", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
     const actor = testActor("account", accountId);
 
@@ -71,7 +73,7 @@ describe("PG audit_log schema", () => {
   });
 
   it("allows nullable fields (accountId, systemId, ipAddress, userAgent, detail)", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     await db.insert(auditLog).values({
@@ -90,7 +92,7 @@ describe("PG audit_log schema", () => {
   });
 
   it("rejects invalid event_type via CHECK constraint", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       db.insert(auditLog).values({
@@ -127,7 +129,7 @@ describe("PG audit_log schema", () => {
     ] as const;
 
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     for (const eventType of eventTypes) {
       await db.insert(auditLog).values({
         id: makeAuditLogEntryId(),
@@ -146,7 +148,7 @@ describe("PG audit_log schema", () => {
   });
 
   it("supports api-key actor type", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
     const actor = testActor("api-key", "key-123");
 
@@ -163,7 +165,7 @@ describe("PG audit_log schema", () => {
 
   it("sets account_id to NULL on account deletion (SET NULL)", async () => {
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     await db.insert(auditLog).values({
@@ -183,7 +185,7 @@ describe("PG audit_log schema", () => {
   it("sets system_id to NULL on system deletion (SET NULL)", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     await db.insert(auditLog).values({
@@ -202,7 +204,7 @@ describe("PG audit_log schema", () => {
   });
 
   it("rejects duplicate composite primary key (same id + timestamp)", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     await db.insert(auditLog).values({
@@ -224,7 +226,7 @@ describe("PG audit_log schema", () => {
 
   it("allows same id with different timestamps (composite PK)", async () => {
     const id = makeAuditLogEntryId();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(auditLog).values({
       id,
@@ -236,7 +238,7 @@ describe("PG audit_log schema", () => {
     await db.insert(auditLog).values({
       id,
       eventType: "auth.logout",
-      timestamp: now + 1000,
+      timestamp: toUnixMillis(now + 1000),
       actor: testActor("account", "acc-1"),
     });
 
@@ -246,7 +248,7 @@ describe("PG audit_log schema", () => {
   });
 
   it("accepts detail at exactly 2048 characters", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(auditLog).values({
       id: makeAuditLogEntryId(),
@@ -258,7 +260,7 @@ describe("PG audit_log schema", () => {
   });
 
   it("rejects detail exceeding 2048 characters", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       db.insert(auditLog).values({

@@ -32,6 +32,7 @@ import type {
   MemberFrontingBreakdown,
   SystemId,
   SystemSettingsId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -686,25 +687,25 @@ describe("Type-level assertions", () => {
     expectTypeOf<Row["systemId"]>().toEqualTypeOf<SystemId>();
   });
 
-  // Fix 7 — importJobs.updatedAt is number (non-nullable, custom pgTimestamp returns UnixMillis)
-  it("PG importJobs.updatedAt infers as number (non-nullable)", () => {
+  // Fix 7 — importJobs.updatedAt is UnixMillis (non-nullable, custom pgTimestamp returns UnixMillis)
+  it("PG importJobs.updatedAt infers as UnixMillis (non-nullable)", () => {
     type Row = InferSelectModel<typeof pg.importJobs>;
-    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<number>();
+    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 
-  it("SQLite importJobs.updatedAt infers as number (non-nullable)", () => {
+  it("SQLite importJobs.updatedAt infers as UnixMillis (non-nullable)", () => {
     type Row = InferSelectModel<typeof sqlite.importJobs>;
-    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<number>();
+    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 
-  it("PG exportRequests.updatedAt infers as number (non-nullable)", () => {
+  it("PG exportRequests.updatedAt infers as UnixMillis (non-nullable)", () => {
     type Row = InferSelectModel<typeof pg.exportRequests>;
-    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<number>();
+    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 
-  it("SQLite exportRequests.updatedAt infers as number (non-nullable)", () => {
+  it("SQLite exportRequests.updatedAt infers as UnixMillis (non-nullable)", () => {
     type Row = InferSelectModel<typeof sqlite.exportRequests>;
-    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<number>();
+    expectTypeOf<Row["updatedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 
   // Fix 8 — frontingReports has expected field types
@@ -718,30 +719,30 @@ describe("Type-level assertions", () => {
     expectTypeOf<Row["format"]>().toEqualTypeOf<"html" | "pdf">();
   });
 
-  it("PG frontingReports.generatedAt infers as number", () => {
+  it("PG frontingReports.generatedAt infers as UnixMillis", () => {
     type Row = InferSelectModel<typeof pg.frontingReports>;
-    expectTypeOf<Row["generatedAt"]>().toEqualTypeOf<number>();
+    expectTypeOf<Row["generatedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 
   // Auth session security — new nullable columns
-  it("PG sessions.expiresAt infers as number | null", () => {
+  it("PG sessions.expiresAt infers as UnixMillis | null", () => {
     type Row = InferSelectModel<typeof pg.sessions>;
-    expectTypeOf<Row["expiresAt"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Row["expiresAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 
-  it("SQLite sessions.expiresAt infers as number | null", () => {
+  it("SQLite sessions.expiresAt infers as UnixMillis | null", () => {
     type Row = InferSelectModel<typeof sqlite.sessions>;
-    expectTypeOf<Row["expiresAt"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Row["expiresAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 
-  it("PG recoveryKeys.revokedAt infers as number | null", () => {
+  it("PG recoveryKeys.revokedAt infers as UnixMillis | null", () => {
     type Row = InferSelectModel<typeof pg.recoveryKeys>;
-    expectTypeOf<Row["revokedAt"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Row["revokedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 
-  it("SQLite recoveryKeys.revokedAt infers as number | null", () => {
+  it("SQLite recoveryKeys.revokedAt infers as UnixMillis | null", () => {
     type Row = InferSelectModel<typeof sqlite.recoveryKeys>;
-    expectTypeOf<Row["revokedAt"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Row["revokedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 });
 

@@ -16,6 +16,7 @@ import {
 } from "../schema/pg/structure.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgStructureTables,
   pgInsertAccount,
@@ -98,7 +99,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(relationships).values({
@@ -120,7 +121,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id,
@@ -139,7 +140,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id,
@@ -156,7 +157,7 @@ describe("PG structure schema", () => {
     });
 
     it("rejects nonexistent systemId FK", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       await expect(
         db.insert(relationships).values({
           id: newRelId(),
@@ -175,7 +176,7 @@ describe("PG structure schema", () => {
       const sourceMemberId = await insertMember(systemId);
       const targetMemberId = await insertMember(systemId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id,
@@ -200,7 +201,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id,
@@ -221,7 +222,7 @@ describe("PG structure schema", () => {
     it("rejects invalid type via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(relationships).values({
@@ -239,7 +240,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id: newRelId(),
@@ -257,7 +258,7 @@ describe("PG structure schema", () => {
     it("rejects nonexistent sourceMemberId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(relationships).values({
@@ -276,7 +277,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id: newRelId(),
@@ -294,7 +295,7 @@ describe("PG structure schema", () => {
     it("rejects nonexistent targetMemberId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(relationships).values({
@@ -313,7 +314,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id,
@@ -333,7 +334,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id,
@@ -355,7 +356,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(relationships).values({
         id,
@@ -366,7 +367,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      const updateNow = Date.now();
+      const updateNow = fixtureNow();
       await db
         .update(relationships)
         .set({ archived: true, archivedAt: updateNow })
@@ -379,7 +380,7 @@ describe("PG structure schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -392,7 +393,7 @@ describe("PG structure schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -410,7 +411,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20]));
 
       await db.insert(systemStructureEntityTypes).values({
@@ -434,7 +435,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -453,7 +454,7 @@ describe("PG structure schema", () => {
     });
 
     it("rejects nonexistent systemId FK", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       await expect(
         db.insert(systemStructureEntityTypes).values({
           id: newTypeId(),
@@ -470,7 +471,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -493,7 +494,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -518,7 +519,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id,
@@ -540,7 +541,7 @@ describe("PG structure schema", () => {
     it("rejects archived=true with null archivedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -553,7 +554,7 @@ describe("PG structure schema", () => {
     it("rejects archived=false with non-null archivedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -566,7 +567,7 @@ describe("PG structure schema", () => {
     it("rejects version 0", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -584,7 +585,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -619,7 +620,7 @@ describe("PG structure schema", () => {
     it("rejects nonexistent entityTypeId FK (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(systemStructureEntities).values({
@@ -638,7 +639,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -668,7 +669,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -702,7 +703,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -735,7 +736,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -758,7 +759,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -781,7 +782,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -805,7 +806,7 @@ describe("PG structure schema", () => {
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -842,7 +843,7 @@ describe("PG structure schema", () => {
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -883,7 +884,7 @@ describe("PG structure schema", () => {
     it("rejects nonexistent entityId FK (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(systemStructureEntityLinks).values({
@@ -901,7 +902,7 @@ describe("PG structure schema", () => {
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -939,7 +940,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const parentEntityId = newEntityId();
       const childEntityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -994,7 +995,7 @@ describe("PG structure schema", () => {
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1032,7 +1033,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const parentEntityId = newEntityId();
       const childEntityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1082,7 +1083,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const parentEntityId = newEntityId();
       const childEntityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1139,7 +1140,7 @@ describe("PG structure schema", () => {
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1184,7 +1185,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const entityId = newEntityId();
       const linkId = newLinkId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1229,7 +1230,7 @@ describe("PG structure schema", () => {
       const memberId = await insertMember(systemId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1271,7 +1272,7 @@ describe("PG structure schema", () => {
     it("rejects nonexistent memberId FK (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(systemStructureEntityMemberLinks).values({
@@ -1288,7 +1289,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityMemberLinks).values({
         id: newMemberLinkId(),
@@ -1307,7 +1308,7 @@ describe("PG structure schema", () => {
       const memberId = await insertMember(systemId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1352,7 +1353,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityMemberLinks).values({
         id: newMemberLinkId(),
@@ -1378,7 +1379,7 @@ describe("PG structure schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const linkId = newMemberLinkId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityMemberLinks).values({
         id: linkId,
@@ -1400,7 +1401,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(systemStructureEntityMemberLinks).values({
@@ -1424,7 +1425,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1479,7 +1480,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1534,7 +1535,7 @@ describe("PG structure schema", () => {
       const systemId = await insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1568,7 +1569,7 @@ describe("PG structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,
@@ -1618,7 +1619,7 @@ describe("PG structure schema", () => {
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
       const assocId = newAssocId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(systemStructureEntityTypes).values({
         id: typeId,

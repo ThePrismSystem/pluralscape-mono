@@ -8,6 +8,7 @@ import { bucketKeyRotations, bucketRotationItems } from "../schema/pg/key-rotati
 import { buckets } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgKeyRotationTables,
   pgInsertAccount,
@@ -21,6 +22,7 @@ import type {
   BucketKeyRotationId,
   BucketRotationItemId,
   SystemId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -37,7 +39,7 @@ describe("PG key-rotation schema", () => {
     systemId: SystemId,
     id: BucketId = brandId<BucketId>(crypto.randomUUID()),
   ): Promise<BucketId> {
-    const now = Date.now();
+    const now = fixtureNow();
     await db.insert(buckets).values({
       id,
       systemId,
@@ -56,7 +58,7 @@ describe("PG key-rotation schema", () => {
       fromKeyVersion: number;
       toKeyVersion: number;
       totalItems: number;
-      initiatedAt: number;
+      initiatedAt: UnixMillis;
     }> = {},
   ): Promise<BucketKeyRotationId> {
     const id = overrides.id ?? brandId<BucketKeyRotationId>(crypto.randomUUID());
@@ -67,7 +69,7 @@ describe("PG key-rotation schema", () => {
       fromKeyVersion: overrides.fromKeyVersion ?? 1,
       toKeyVersion: overrides.toKeyVersion ?? 2,
       totalItems: overrides.totalItems ?? 10,
-      initiatedAt: overrides.initiatedAt ?? Date.now(),
+      initiatedAt: overrides.initiatedAt ?? fixtureNow(),
     });
     return id;
   }
@@ -87,7 +89,7 @@ describe("PG key-rotation schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = brandId<BucketKeyRotationId>(crypto.randomUUID());
 
       await db.insert(bucketKeyRotations).values({
@@ -126,7 +128,7 @@ describe("PG key-rotation schema", () => {
           toKeyVersion: 2,
           state: "invalid" as "initiated",
           totalItems: 1,
-          initiatedAt: Date.now(),
+          initiatedAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -144,7 +146,7 @@ describe("PG key-rotation schema", () => {
           fromKeyVersion: 3,
           toKeyVersion: 2,
           totalItems: 1,
-          initiatedAt: Date.now(),
+          initiatedAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -162,7 +164,7 @@ describe("PG key-rotation schema", () => {
           fromKeyVersion: 2,
           toKeyVersion: 2,
           totalItems: 1,
-          initiatedAt: Date.now(),
+          initiatedAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -180,7 +182,7 @@ describe("PG key-rotation schema", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         totalItems: 1,
-        initiatedAt: Date.now(),
+        initiatedAt: fixtureNow(),
       });
 
       for (const nextState of ["migrating", "sealing", "completed"] as const) {
@@ -209,7 +211,7 @@ describe("PG key-rotation schema", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         totalItems: 5,
-        initiatedAt: Date.now(),
+        initiatedAt: fixtureNow(),
       });
 
       await expect(
@@ -246,7 +248,7 @@ describe("PG key-rotation schema", () => {
         entityId: crypto.randomUUID(),
         status: "claimed",
         claimedBy: "worker-1",
-        claimedAt: Date.now(),
+        claimedAt: fixtureNow(),
         attempts: 1,
       });
 

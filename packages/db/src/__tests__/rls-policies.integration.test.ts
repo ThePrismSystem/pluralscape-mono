@@ -19,6 +19,7 @@ import {
 } from "../rls/policies.js";
 import { members } from "../schema/pg/members.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgSyncTables,
   pgInsertAccount,
@@ -345,7 +346,7 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
     await setSessionSystemId(db, systemIdA);
 
     const crossTenantId = crypto.randomUUID();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       db.insert(members).values({

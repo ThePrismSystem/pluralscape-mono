@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -32,6 +32,7 @@ import {
   getUnconfirmedAcknowledgements,
 } from "../views/pg.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   PG_DDL,
   pgExec,
@@ -162,13 +163,13 @@ describe("PG views / query helpers", () => {
 
   describe("getCurrentFronters", () => {
     it("returns sessions with null end_time", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(frontingSessions).values({
         id: brandId<FrontingSessionId>(crypto.randomUUID()),
         systemId,
         memberId,
-        startTime: now - 60000,
+        startTime: toUnixMillis(now - 60000),
         endTime: null,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -178,8 +179,8 @@ describe("PG views / query helpers", () => {
         id: brandId<FrontingSessionId>(crypto.randomUUID()),
         systemId,
         memberId,
-        startTime: now - 120000,
-        endTime: now - 30000,
+        startTime: toUnixMillis(now - 120000),
+        endTime: toUnixMillis(now - 30000),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -198,13 +199,13 @@ describe("PG views / query helpers", () => {
 
   describe("getCurrentFrontersWithDuration", () => {
     it("returns positive duration for active sessions", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(frontingSessions).values({
         id: brandId<FrontingSessionId>(crypto.randomUUID()),
         systemId,
         memberId,
-        startTime: now - 60000,
+        startTime: toUnixMillis(now - 60000),
         endTime: null,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -224,7 +225,7 @@ describe("PG views / query helpers", () => {
 
   describe("getActiveApiKeys", () => {
     it("returns non-revoked keys", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(apiKeys).values({
         id: brandId<ApiKeyId>(crypto.randomUUID()),
@@ -258,7 +259,7 @@ describe("PG views / query helpers", () => {
     });
 
     it("includes key with encryptedData", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(apiKeys).values({
         id: brandId<ApiKeyId>(crypto.randomUUID()),
@@ -282,7 +283,7 @@ describe("PG views / query helpers", () => {
       await insertSystem(otherAccountId1);
       const otherAccountId2 = await insertAccount();
       await insertSystem(otherAccountId2);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: brandId<FriendConnectionId>(crypto.randomUUID()),
@@ -313,7 +314,7 @@ describe("PG views / query helpers", () => {
 
   describe("getPendingWebhookRetries", () => {
     it("respects max_attempts parameter", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const webhookId = brandId<WebhookId>(crypto.randomUUID());
       const maxAttempts = 3;
 
@@ -334,7 +335,7 @@ describe("PG views / query helpers", () => {
         eventType: "member.created",
         status: "failed",
         attemptCount: 2,
-        nextRetryAt: now - 60000,
+        nextRetryAt: toUnixMillis(now - 60000),
         encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: now,
       });
@@ -346,7 +347,7 @@ describe("PG views / query helpers", () => {
         eventType: "member.created",
         status: "failed",
         attemptCount: 5,
-        nextRetryAt: now - 60000,
+        nextRetryAt: toUnixMillis(now - 60000),
         encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: now,
       });
@@ -358,7 +359,7 @@ describe("PG views / query helpers", () => {
         eventType: "member.created",
         status: "failed",
         attemptCount: 2,
-        nextRetryAt: now + 60000,
+        nextRetryAt: toUnixMillis(now + 60000),
         encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: now,
       });
@@ -376,7 +377,7 @@ describe("PG views / query helpers", () => {
 
   describe("getUnconfirmedAcknowledgements", () => {
     it("returns only unconfirmed", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id: brandId<AcknowledgementId>(crypto.randomUUID()),
@@ -407,7 +408,7 @@ describe("PG views / query helpers", () => {
 
   describe("getMemberGroupSummary", () => {
     it("returns correct member count per group", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const memberId1 = crypto.randomUUID();
       const memberId2 = crypto.randomUUID();
       const groupId = brandId<GroupId>(crypto.randomUUID());
@@ -454,7 +455,7 @@ describe("PG views / query helpers", () => {
 
   describe("getActiveFriendConnections", () => {
     it("returns only accepted connections", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const otherAccountId1 = await insertAccount();
       await insertSystem(otherAccountId1);
       const otherAccountId2 = await insertAccount();
@@ -484,7 +485,7 @@ describe("PG views / query helpers", () => {
 
   describe("getActiveDeviceTokens", () => {
     it("returns non-revoked tokens", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
         id: brandId<FrontingSessionId>(crypto.randomUUID()),
@@ -512,7 +513,7 @@ describe("PG views / query helpers", () => {
 
   describe("getActiveDeviceTransfers", () => {
     it("returns pending non-expired transfers", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const sourceSession = brandId<SessionId>(crypto.randomUUID());
       const targetSession = brandId<SessionId>(crypto.randomUUID());
 
@@ -530,7 +531,7 @@ describe("PG views / query helpers", () => {
         status: "pending",
         codeSalt: new Uint8Array(16),
         createdAt: now,
-        expiresAt: now + 3600000,
+        expiresAt: toUnixMillis(now + 3600000),
       });
 
       // Pending but expired
@@ -547,8 +548,8 @@ describe("PG views / query helpers", () => {
         targetSessionId: targetSession2,
         status: "pending",
         codeSalt: new Uint8Array(16),
-        createdAt: now - 7200000,
-        expiresAt: now - 3600000,
+        createdAt: toUnixMillis(now - 7200000),
+        expiresAt: toUnixMillis(now - 3600000),
       });
 
       const active = await getActiveDeviceTransfers(db, accountId);
@@ -559,7 +560,7 @@ describe("PG views / query helpers", () => {
 
   describe("getCurrentFrontingComments", () => {
     it("returns comments only for active sessions", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const activeSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
       const endedSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
 
@@ -568,7 +569,7 @@ describe("PG views / query helpers", () => {
           id: activeSessionId,
           systemId,
           memberId,
-          startTime: now - 60000,
+          startTime: toUnixMillis(now - 60000),
           endTime: null,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -578,8 +579,8 @@ describe("PG views / query helpers", () => {
           id: endedSessionId,
           systemId,
           memberId,
-          startTime: now - 120000,
-          endTime: now - 30000,
+          startTime: toUnixMillis(now - 120000),
+          endTime: toUnixMillis(now - 30000),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -590,7 +591,7 @@ describe("PG views / query helpers", () => {
           id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: activeSessionId,
           systemId,
-          sessionStartTime: now - 60000,
+          sessionStartTime: toUnixMillis(now - 60000),
           memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -600,7 +601,7 @@ describe("PG views / query helpers", () => {
           id: brandId<FrontingCommentId>(crypto.randomUUID()),
           frontingSessionId: endedSessionId,
           systemId,
-          sessionStartTime: now - 120000,
+          sessionStartTime: toUnixMillis(now - 120000),
           memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -619,11 +620,11 @@ describe("PG views / query helpers", () => {
     });
 
     it("excludes comments with matching sessionId but mismatched systemId", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const sessionIdA = brandId<FrontingSessionId>(crypto.randomUUID());
       const sessionIdB = brandId<FrontingSessionId>(crypto.randomUUID());
-      const startTimeA = now - 60000;
-      const startTimeB = now - 90000;
+      const startTimeA = toUnixMillis(now - 60000);
+      const startTimeB = toUnixMillis(now - 90000);
 
       // Create session in system A
       await db.insert(frontingSessions).values({
@@ -691,7 +692,7 @@ describe("PG views / query helpers", () => {
 
   describe("getStructureEntityAssociations", () => {
     it("returns associations for a system", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const entityTypeId = brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
       const entityId1 = brandId<SystemStructureEntityId>(crypto.randomUUID());
       const entityId2 = brandId<SystemStructureEntityId>(crypto.randomUUID());
