@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, index, integer, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import {
   DOCUMENT_ID_MAX_LENGTH,
@@ -12,7 +12,14 @@ import { SYNC_DOC_TYPES, SYNC_KEY_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
+import type {
+  BucketId,
+  ChannelId,
+  DocumentKeyType,
+  SyncDocumentId,
+  SyncDocumentType,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /** Conflict resolution strategies — mirrors @pluralscape/sync ConflictResolutionStrategy to avoid circular dep. */
@@ -28,8 +35,10 @@ type ConflictResolutionStrategy =
 export const syncDocuments = pgTable(
   "sync_documents",
   {
-    documentId: varchar("document_id", { length: DOCUMENT_ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    documentId: varchar("document_id", { length: DOCUMENT_ID_MAX_LENGTH })
+      .primaryKey()
+      .$type<SyncDocumentId>(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     docType: varchar("doc_type", { length: ENUM_MAX_LENGTH }).notNull().$type<SyncDocumentType>(),
@@ -42,8 +51,8 @@ export const syncDocuments = pgTable(
       .notNull()
       .default("derived")
       .$type<DocumentKeyType>(),
-    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH }),
-    channelId: varchar("channel_id", { length: ID_MAX_LENGTH }),
+    bucketId: brandedId<BucketId>("bucket_id"),
+    channelId: brandedId<ChannelId>("channel_id"),
     createdAt: pgTimestamp("created_at").notNull(),
     updatedAt: pgTimestamp("updated_at").notNull(),
   },

@@ -57,6 +57,7 @@ import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
 } from "./entities/structure-entity.js";
+import type { SyncDocument, SyncDocumentWire } from "./entities/sync-document.js";
 import type {
   SystemSettings,
   SystemSettingsEncryptedFields,
@@ -239,6 +240,14 @@ export type SotEntityManifest = {
     wire: WebhookDeliveryWire;
     // Plaintext domain — the `encryptedData` payload is server-held T3
     // (not E2E), attached only to the server-side metadata.
+    encryptedFields: never;
+  };
+  SyncDocument: {
+    domain: SyncDocument;
+    // SyncDocument has no server-only columns — the server sees the same
+    // document-metadata shape as the client.
+    server: SyncDocument;
+    wire: SyncDocumentWire;
     encryptedFields: never;
   };
 };

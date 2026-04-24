@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -13,7 +14,13 @@ import {
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
-import type { SyncDocumentType } from "@pluralscape/types";
+import type {
+  BucketId,
+  ChannelId,
+  SyncDocumentId,
+  SyncDocumentType,
+  SystemId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, syncDocuments, syncChanges, syncSnapshots };
@@ -26,8 +33,11 @@ describe("SQLite sync schema", () => {
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
 
   /** Insert a minimal valid syncDocuments row and return its documentId. */
-  const insertDocument = (systemId: string, docType: SyncDocumentType = "system-core"): string => {
-    const documentId = crypto.randomUUID();
+  const insertDocument = (
+    systemId: SystemId,
+    docType: SyncDocumentType = "system-core",
+  ): SyncDocumentId => {
+    const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
     const now = Date.now();
     db.insert(syncDocuments)
       .values({ documentId, systemId, docType, createdAt: now, updatedAt: now })
@@ -60,7 +70,7 @@ describe("SQLite sync schema", () => {
     it("round-trips all fields", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const documentId = crypto.randomUUID();
+      const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(syncDocuments)
@@ -74,8 +84,8 @@ describe("SQLite sync schema", () => {
           archived: true,
           timePeriod: "2024-01",
           keyType: "bucket",
-          bucketId: crypto.randomUUID(),
-          channelId: crypto.randomUUID(),
+          bucketId: brandId<BucketId>(crypto.randomUUID()),
+          channelId: brandId<ChannelId>(crypto.randomUUID()),
           createdAt: now,
           updatedAt: now + 1000,
         })
@@ -106,7 +116,7 @@ describe("SQLite sync schema", () => {
     it("applies default values: sizeBytes=0, snapshotVersion=0, lastSeq=0, archived=false, keyType='derived'", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const documentId = crypto.randomUUID();
+      const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(syncDocuments)
@@ -129,7 +139,7 @@ describe("SQLite sync schema", () => {
     it("allows null for optional fields: timePeriod, bucketId, channelId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const documentId = crypto.randomUUID();
+      const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(syncDocuments)
@@ -156,7 +166,7 @@ describe("SQLite sync schema", () => {
         db
           .insert(syncDocuments)
           .values({
-            documentId: crypto.randomUUID(),
+            documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
             systemId,
             docType: "invalid-type" as "chat",
             createdAt: now,
@@ -190,7 +200,7 @@ describe("SQLite sync schema", () => {
         db
           .insert(syncDocuments)
           .values({
-            documentId: crypto.randomUUID(),
+            documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
             systemId,
             docType: "system-core",
             sizeBytes: -1,
@@ -210,7 +220,7 @@ describe("SQLite sync schema", () => {
         db
           .insert(syncDocuments)
           .values({
-            documentId: crypto.randomUUID(),
+            documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
             systemId,
             docType: "system-core",
             snapshotVersion: -1,
@@ -230,7 +240,7 @@ describe("SQLite sync schema", () => {
         db
           .insert(syncDocuments)
           .values({
-            documentId: crypto.randomUUID(),
+            documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
             systemId,
             docType: "system-core",
             lastSeq: -1,
