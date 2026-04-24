@@ -1,5 +1,5 @@
 import { notes } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { NoteQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
@@ -99,10 +99,11 @@ export async function listNotes(
 
     if (opts.cursor) {
       const decoded = fromCompositeCursor(opts.cursor, "note");
+      const sortValue = toUnixMillis(decoded.sortValue);
       // or() returns SQL | undefined in drizzle types; always defined with concrete args
       const cursorCondition = or(
-        lt(notes.createdAt, decoded.sortValue),
-        and(eq(notes.createdAt, decoded.sortValue), lt(notes.id, brandId<NoteId>(decoded.id))),
+        lt(notes.createdAt, sortValue),
+        and(eq(notes.createdAt, sortValue), lt(notes.id, brandId<NoteId>(decoded.id))),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

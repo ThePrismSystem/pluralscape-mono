@@ -7,7 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -38,7 +38,7 @@ async function seedPhotos(
   memberId: MemberId,
   count: number,
 ): Promise<void> {
-  const now = Date.now();
+  const now = toUnixMillis(Date.now());
   const blob = testBlob();
   for (let i = 0; i < count; i++) {
     await db.insert(memberPhotos).values({
@@ -314,7 +314,11 @@ describe("member-photo.service (PGlite integration)", () => {
       if (!toArchive) throw new Error("Expected photo id");
       await db
         .update(memberPhotos)
-        .set({ archived: true, archivedAt: Date.now(), updatedAt: Date.now() })
+        .set({
+          archived: true,
+          archivedAt: toUnixMillis(Date.now()),
+          updatedAt: toUnixMillis(Date.now()),
+        })
         .where(eq(memberPhotos.id, toArchive));
 
       // Fill back to 5 active
@@ -349,7 +353,11 @@ describe("member-photo.service (PGlite integration)", () => {
       );
       await db
         .update(memberPhotos)
-        .set({ archived: true, archivedAt: Date.now(), updatedAt: Date.now() })
+        .set({
+          archived: true,
+          archivedAt: toUnixMillis(Date.now()),
+          updatedAt: toUnixMillis(Date.now()),
+        })
         .where(eq(memberPhotos.id, photoToRestore.id));
 
       // Seed 500 active photos on a second member to hit system quota

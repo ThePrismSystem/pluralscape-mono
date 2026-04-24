@@ -1,5 +1,5 @@
 import { frontingSessions, systemStructureEntityMemberLinks } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { FrontingSessionQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte } from "drizzle-orm";
 
@@ -87,11 +87,11 @@ export async function listFrontingSessions(
     }
 
     if (opts.startFrom !== undefined) {
-      conditions.push(gte(frontingSessions.startTime, opts.startFrom));
+      conditions.push(gte(frontingSessions.startTime, toUnixMillis(opts.startFrom)));
     }
 
     if (opts.startUntil !== undefined) {
-      conditions.push(lte(frontingSessions.startTime, opts.startUntil));
+      conditions.push(lte(frontingSessions.startTime, toUnixMillis(opts.startUntil)));
     }
 
     // End-time filters exclude active sessions (null endTime) by requiring endTime IS NOT NULL
@@ -99,10 +99,10 @@ export async function listFrontingSessions(
       conditions.push(isNotNull(frontingSessions.endTime));
     }
     if (opts.endFrom !== undefined) {
-      conditions.push(gte(frontingSessions.endTime, opts.endFrom));
+      conditions.push(gte(frontingSessions.endTime, toUnixMillis(opts.endFrom)));
     }
     if (opts.endUntil !== undefined) {
-      conditions.push(lte(frontingSessions.endTime, opts.endUntil));
+      conditions.push(lte(frontingSessions.endTime, toUnixMillis(opts.endUntil)));
     }
 
     if (opts.activeOnly) {

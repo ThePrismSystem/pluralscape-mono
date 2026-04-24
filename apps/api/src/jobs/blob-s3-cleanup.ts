@@ -1,4 +1,5 @@
 import { blobMetadata } from "@pluralscape/db/pg";
+import { toUnixMillis } from "@pluralscape/types";
 import { and, eq, inArray, lt } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
@@ -68,7 +69,7 @@ export function createBlobS3CleanupHandler(
   return async (_job, ctx) => {
     if (ctx.signal.aborted) return;
 
-    const cutoff = Date.now() - BLOB_S3_CLEANUP_GRACE_PERIOD_MS;
+    const cutoff = toUnixMillis(Date.now() - BLOB_S3_CLEANUP_GRACE_PERIOD_MS);
 
     // Find archived blobs past the grace period
     const rows = await db

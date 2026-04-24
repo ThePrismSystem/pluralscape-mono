@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { assertAuthKey, hashAuthKey, hashRecoveryKey, initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -90,7 +90,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     const recoveryEncMasterKey = randBytes(72);
     const recoveryKeyBytes = randBytes(32);
     const recoveryKeyHashBytes = hashRecoveryKey(recoveryKeyBytes);
-    const timestamp = Date.now();
+    const timestamp = toUnixMillis(Date.now());
     const recoveryKeyId = brandId<RecoveryKeyId>(`rk_${crypto.randomUUID()}`);
 
     await db.insert(accounts).values({
@@ -263,7 +263,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("throws NoActiveRecoveryKeyError when no active key exists", async () => {
       const { accountId, authKeyHex } = await insertTestAccount();
 
-      await db.update(recoveryKeys).set({ revokedAt: Date.now() });
+      await db.update(recoveryKeys).set({ revokedAt: toUnixMillis(Date.now()) });
 
       await expect(
         regenerateRecoveryKeyBackup(
@@ -340,7 +340,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("throws NoActiveRecoveryKeyError when no active key exists", async () => {
       const { email, recoveryKeyHex } = await insertTestAccount();
 
-      await db.update(recoveryKeys).set({ revokedAt: Date.now() });
+      await db.update(recoveryKeys).set({ revokedAt: toUnixMillis(Date.now()) });
 
       await expect(
         resetPasswordWithRecoveryKey(
@@ -355,14 +355,14 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("revokes old sessions after password reset", async () => {
       const { email, accountId, recoveryKeyHex } = await insertTestAccount();
 
-      const timestamp = Date.now();
+      const timestamp = toUnixMillis(Date.now());
       await db.insert(sessions).values({
         id: brandId<SessionId>(`sess_${crypto.randomUUID()}`),
         accountId,
         tokenHash: toHex(randBytes(32)),
         createdAt: timestamp,
         lastActive: timestamp,
-        expiresAt: timestamp + 3_600_000,
+        expiresAt: toUnixMillis(timestamp + 3_600_000),
       });
 
       const before = await client.query<{ count: string }>(

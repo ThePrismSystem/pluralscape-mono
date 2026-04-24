@@ -10,6 +10,7 @@ import {
   innerworldRegions,
 } from "../schema/sqlite/innerworld.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteInnerworldTables,
   sqliteInsertAccount,
@@ -56,7 +57,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("round-trips innerworldRegions with all fields", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     db.insert(innerworldRegions)
@@ -90,7 +91,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_regions defaults archived to false and archivedAt to null", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     db.insert(innerworldRegions)
@@ -114,7 +115,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_regions round-trips archived: true with archivedAt", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     db.insert(innerworldRegions)
@@ -140,7 +141,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_regions rejects archived=true with archivedAt=null via CHECK", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -153,7 +154,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_regions rejects archived=false with archivedAt set via CHECK", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -166,7 +167,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_regions updates archived from false to true", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     db.insert(innerworldRegions)
@@ -195,7 +196,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("round-trips innerworldEntities with all fields", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     db.insert(innerworldRegions)
@@ -236,7 +237,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_entities defaults archived to false and archivedAt to null", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const entityId = newEntityId();
 
     db.insert(innerworldEntities)
@@ -260,7 +261,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_entities round-trips archived: true with archivedAt", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const entityId = newEntityId();
 
     db.insert(innerworldEntities)
@@ -286,7 +287,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_entities rejects archived=true with archivedAt=null via CHECK", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -299,7 +300,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_entities rejects archived=false with archivedAt set via CHECK", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -312,7 +313,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("innerworld_entities updates archived from false to true", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const entityId = newEntityId();
 
     db.insert(innerworldEntities)
@@ -341,7 +342,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(innerworldCanvas)
       .values({
@@ -365,7 +366,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("sets parentRegionId to null when parent region is deleted (SET NULL)", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const parentId = newRegionId();
     const childId = newRegionId();
 
@@ -399,7 +400,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("sets entity regionId to null when region is deleted (SET NULL)", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
     const entityId = newEntityId();
 
@@ -437,7 +438,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("cascades system delete to all 3 innerworld tables", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     db.insert(innerworldRegions)
@@ -485,7 +486,7 @@ describe("SQLite Innerworld Schema", () => {
 
   it("enforces canvas 1:1 pattern (PK violation on duplicate systemId)", () => {
     const systemId = setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(innerworldCanvas)
       .values({

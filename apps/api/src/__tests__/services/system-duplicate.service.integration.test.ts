@@ -6,7 +6,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -46,7 +46,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
 
     // Create a snapshot for the source system
     snapshotId = `snap_${crypto.randomUUID()}`;
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     await db.insert(systemSnapshots).values({
       id: brandId<SystemSnapshotId>(snapshotId),
       systemId,

@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import { createPgSystemTables, pgInsertAccount, testBlob } from "./helpers/pg-helpers.js";
 
 import type { AccountId, SystemId } from "@pluralscape/types";
@@ -32,7 +33,7 @@ describe("PG systems schema", () => {
 
   it("inserts and retrieves with all columns", async () => {
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
     const data = testBlob(new Uint8Array([1, 2, 3, 4, 5]));
 
@@ -53,7 +54,7 @@ describe("PG systems schema", () => {
 
   it("allows nullable encrypted_data", async () => {
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({
@@ -69,7 +70,7 @@ describe("PG systems schema", () => {
 
   it("round-trips encrypted_data binary correctly", async () => {
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
     const blobCiphertext = new Uint8Array(256);
     for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
@@ -89,7 +90,7 @@ describe("PG systems schema", () => {
 
   it("defaults version to 1", async () => {
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({
@@ -105,7 +106,7 @@ describe("PG systems schema", () => {
 
   it("cascades on account deletion", async () => {
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({
@@ -121,7 +122,7 @@ describe("PG systems schema", () => {
   });
 
   it("rejects nonexistent accountId FK", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
     await expect(
       db.insert(systems).values({
         id: brandId<SystemId>(crypto.randomUUID()),
@@ -134,7 +135,7 @@ describe("PG systems schema", () => {
 
   it("rejects duplicate primary key", async () => {
     const accountId = await insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = brandId<SystemId>(crypto.randomUUID());
 
     await db.insert(systems).values({

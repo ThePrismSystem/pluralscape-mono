@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { pkBridgeConfigs } from "../schema/sqlite/pk-bridge.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqlitePkBridgeTables,
   makePkBridgeConfigId,
@@ -41,7 +42,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("round-trips all fields including binary columns and timestamps", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makePkBridgeConfigId();
     const pkTokenCiphertext = new Uint8Array([10, 20, 30]);
     const pkToken = testBlob(pkTokenCiphertext);
@@ -81,7 +82,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("defaults enabled to true when not explicitly set", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makePkBridgeConfigId();
 
     db.insert(pkBridgeConfigs)
@@ -108,7 +109,7 @@ describe("SQLite PK Bridge Schema", () => {
     for (const direction of validDirections) {
       const accountId = insertAccount();
       const systemId = sqliteInsertSystem(db, accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = makePkBridgeConfigId();
 
       db.insert(pkBridgeConfigs)
@@ -132,7 +133,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("rejects invalid syncDirection via CHECK constraint", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -154,7 +155,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("allows null lastSyncAt", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makePkBridgeConfigId();
 
     db.insert(pkBridgeConfigs)
@@ -178,8 +179,8 @@ describe("SQLite PK Bridge Schema", () => {
   it("stores non-null lastSyncAt timestamp", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
-    const syncTime = now - 60000;
+    const now = fixtureNow();
+    const syncTime = toUnixMillis(now - 60000);
     const id = makePkBridgeConfigId();
 
     db.insert(pkBridgeConfigs)
@@ -203,7 +204,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("round-trips larger Uint8Array data for all binary columns", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makePkBridgeConfigId();
 
     const largePkTokenCiphertext = new Uint8Array(256);
@@ -238,7 +239,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("cascades delete when parent system is deleted", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makePkBridgeConfigId();
 
     db.insert(pkBridgeConfigs)
@@ -268,7 +269,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("defaults version to 1", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makePkBridgeConfigId();
 
     db.insert(pkBridgeConfigs)
@@ -289,7 +290,7 @@ describe("SQLite PK Bridge Schema", () => {
   });
 
   it("rejects nonexistent systemId FK", () => {
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -311,7 +312,7 @@ describe("SQLite PK Bridge Schema", () => {
   it("stores enabled as false and retrieves it correctly", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makePkBridgeConfigId();
 
     db.insert(pkBridgeConfigs)

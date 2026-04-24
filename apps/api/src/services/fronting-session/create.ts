@@ -1,5 +1,5 @@
 import { frontingSessions } from "@pluralscape/db/pg";
-import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
@@ -50,8 +50,8 @@ export async function createFrontingSession(
       .values({
         id: fsId,
         systemId,
-        startTime: parsed.startTime,
-        endTime: parsed.endTime ?? null,
+        startTime: toUnixMillis(parsed.startTime),
+        endTime: parsed.endTime !== undefined ? toUnixMillis(parsed.endTime) : null,
         memberId: parsed.memberId ?? null,
         customFrontId: parsed.customFrontId ?? null,
         structureEntityId: parsed.structureEntityId ?? null,

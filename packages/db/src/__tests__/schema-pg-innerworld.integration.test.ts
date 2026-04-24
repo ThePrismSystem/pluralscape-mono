@@ -10,6 +10,7 @@ import {
   innerworldRegions,
 } from "../schema/pg/innerworld.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgInnerworldTables,
   pgInsertAccount,
@@ -54,7 +55,7 @@ describe("PG Innerworld Schema", () => {
 
   it("round-trips innerworldRegions with all fields", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
@@ -85,7 +86,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_regions defaults archived to false and archivedAt to null", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
@@ -106,7 +107,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_regions round-trips archived: true with archivedAt", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
@@ -129,7 +130,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_regions updates archived from false to true", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
@@ -140,7 +141,7 @@ describe("PG Innerworld Schema", () => {
       updatedAt: now,
     });
 
-    const archiveTime = Date.now();
+    const archiveTime = fixtureNow();
     await db
       .update(innerworldRegions)
       .set({ archived: true, archivedAt: archiveTime })
@@ -156,7 +157,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_regions rejects archived=true with archivedAt=null via CHECK", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       client.query(
@@ -168,7 +169,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_regions rejects archived=false with archivedAt set via CHECK", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       client.query(
@@ -180,7 +181,7 @@ describe("PG Innerworld Schema", () => {
 
   it("round-trips innerworldEntities with all fields", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
@@ -207,7 +208,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_entities defaults archived to false and archivedAt to null", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
@@ -228,7 +229,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_entities round-trips archived: true with archivedAt", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
@@ -251,7 +252,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_entities updates archived from false to true", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
@@ -262,7 +263,7 @@ describe("PG Innerworld Schema", () => {
       updatedAt: now,
     });
 
-    const archiveTime = Date.now();
+    const archiveTime = fixtureNow();
     await db
       .update(innerworldEntities)
       .set({ archived: true, archivedAt: archiveTime })
@@ -278,7 +279,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_entities rejects archived=true with archivedAt=null via CHECK", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       client.query(
@@ -290,7 +291,7 @@ describe("PG Innerworld Schema", () => {
 
   it("innerworld_entities rejects archived=false with archivedAt set via CHECK", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       client.query(
@@ -302,7 +303,7 @@ describe("PG Innerworld Schema", () => {
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(innerworldCanvas).values({
       systemId,
@@ -323,7 +324,7 @@ describe("PG Innerworld Schema", () => {
 
   it("restricts parent region deletion when referenced by child region", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const parentId = newRegionId();
 
     await db.insert(innerworldRegions).values({
@@ -350,7 +351,7 @@ describe("PG Innerworld Schema", () => {
 
   it("restricts region deletion when referenced by entity", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
@@ -377,7 +378,7 @@ describe("PG Innerworld Schema", () => {
 
   it("cascades system delete to all 3 innerworld tables", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
     const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
@@ -427,7 +428,7 @@ describe("PG Innerworld Schema", () => {
 
   it("enforces canvas 1:1 pattern (PK violation on duplicate systemId)", async () => {
     const systemId = await setupSystem();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(innerworldCanvas).values({
       systemId,

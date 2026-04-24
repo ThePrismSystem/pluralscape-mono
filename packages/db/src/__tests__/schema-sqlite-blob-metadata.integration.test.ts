@@ -9,6 +9,7 @@ import { blobMetadata } from "../schema/sqlite/blob-metadata.js";
 import { buckets } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteBlobMetadataTables,
   sqliteInsertAccount,
@@ -47,7 +48,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(blobMetadata)
       .values({
@@ -78,7 +79,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const storageKey = `blobs/${crypto.randomUUID()}`;
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(blobMetadata)
       .values({
@@ -116,7 +117,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(blobMetadata)
       .values({
@@ -141,7 +142,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const bucketId = brandId<BucketId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(buckets)
       .values({
@@ -176,7 +177,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects invalid purpose", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -200,7 +201,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects sizeBytes <= 0", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -240,7 +241,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects invalid encryptionTier", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     // Use raw SQL to bypass TypeScript EncryptionTier type and test DB CHECK constraint
     expect(() =>
@@ -284,7 +285,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     // Use raw SQL to bypass Drizzle's type checking and test the DB constraint
     expect(() =>
@@ -300,7 +301,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects checksum not exactly 64 characters", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -340,7 +341,7 @@ describe("SQLite blob_metadata schema", () => {
   it("accepts size_bytes at exactly 10 GB", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -365,7 +366,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects size_bytes exceeding 10 GB", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -390,7 +391,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(blobMetadata)
       .values({
@@ -415,7 +416,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(blobMetadata)
       .values({
@@ -441,7 +442,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -465,7 +466,7 @@ describe("SQLite blob_metadata schema", () => {
   it("rejects archived=false with archivedAt set via CHECK constraint", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       client
@@ -491,7 +492,7 @@ describe("SQLite blob_metadata schema", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(blobMetadata)
       .values({

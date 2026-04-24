@@ -1,5 +1,5 @@
 import { sessions } from "@pluralscape/db/pg";
-import { SESSION_TIMEOUTS } from "@pluralscape/types";
+import { SESSION_TIMEOUTS, toUnixMillis } from "@pluralscape/types";
 import { and, gte, isNull, not, or, sql } from "drizzle-orm";
 
 import type { SQL } from "drizzle-orm";
@@ -37,7 +37,7 @@ export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
     } else {
       // Idle timeout applies: must match absoluteTtl AND be within idle window.
       // Use gte() with pre-computed threshold for index-friendly comparison.
-      const thresholdMs = currentTimeMs - config.idleTimeoutMs;
+      const thresholdMs = toUnixMillis(currentTimeMs - config.idleTimeoutMs);
       const condition = and(ttlMatchExpr, gte(sessions.lastActive, thresholdMs));
       if (!condition) throw new Error("Invariant: and() returned undefined with non-empty args");
       conditions.push(condition);
@@ -48,7 +48,7 @@ export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
   // Build a NOT IN check for all known absoluteTtls, then apply the default idle window.
   const knownTtls = Object.values(SESSION_TIMEOUTS).map((c) => c.absoluteTtlMs);
   const defaultIdleTimeoutMs = SESSION_TIMEOUTS.web.idleTimeoutMs;
-  const defaultThresholdMs = currentTimeMs - defaultIdleTimeoutMs;
+  const defaultThresholdMs = toUnixMillis(currentTimeMs - defaultIdleTimeoutMs);
   const unknownTtlCondition = and(
     not(isNull(sessions.expiresAt)),
     not(isNull(sessions.lastActive)),

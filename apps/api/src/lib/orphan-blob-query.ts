@@ -1,4 +1,5 @@
 import { blobMetadata } from "@pluralscape/db/pg";
+import { toUnixMillis } from "@pluralscape/types";
 import { and, eq, isNull, lt } from "drizzle-orm";
 
 import type { OrphanBlobQuery } from "@pluralscape/storage/quota";
@@ -17,7 +18,7 @@ export class OrphanBlobQueryImpl implements OrphanBlobQuery {
   }
 
   async findOrphanedKeys(systemId: SystemId, olderThanMs: number): Promise<readonly StorageKey[]> {
-    const cutoff = Date.now() - olderThanMs;
+    const cutoff = toUnixMillis(Date.now() - olderThanMs);
 
     const rows = await this.db
       .select({ storageKey: blobMetadata.storageKey })

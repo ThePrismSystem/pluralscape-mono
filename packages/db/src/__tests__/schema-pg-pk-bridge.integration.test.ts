@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import { accounts } from "../schema/pg/auth.js";
 import { pkBridgeConfigs } from "../schema/pg/pk-bridge.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgPkBridgeTables,
   makePkBridgeConfigId,
@@ -45,8 +46,8 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
-    const syncAt = now - 60_000;
+    const now = fixtureNow();
+    const syncAt = toUnixMillis(now - 60_000);
     const tokenCiphertext = new Uint8Array([10, 20, 30, 40]);
     const token = testBlob(tokenCiphertext);
     const mappings = testBlob(new Uint8Array([50, 60, 70]));
@@ -86,7 +87,7 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(pkBridgeConfigs).values({
       id,
@@ -110,7 +111,7 @@ describe("PG pk_bridge_configs schema", () => {
       const accountId = await insertAccount();
       const systemId = await pgInsertSystem(db, accountId);
       const id = makePkBridgeConfigId();
-      const now = Date.now();
+      const now = fixtureNow();
       await db.insert(pkBridgeConfigs).values({
         id,
         systemId,
@@ -144,7 +145,7 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(pkBridgeConfigs).values({
       id,
@@ -166,8 +167,8 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
-    const syncAt = now - 120_000;
+    const now = fixtureNow();
+    const syncAt = toUnixMillis(now - 120_000);
 
     await db.insert(pkBridgeConfigs).values({
       id,
@@ -189,7 +190,7 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
+    const now = fixtureNow();
 
     const tokenCiphertext = new Uint8Array(256);
     for (let i = 0; i < 256; i++) tokenCiphertext[i] = i;
@@ -222,7 +223,7 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(pkBridgeConfigs).values({
       id,
@@ -250,7 +251,7 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(pkBridgeConfigs).values({
       id,
@@ -268,7 +269,7 @@ describe("PG pk_bridge_configs schema", () => {
   });
 
   it("rejects nonexistent systemId FK", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
     await expect(
       db.insert(pkBridgeConfigs).values({
         id: makePkBridgeConfigId(),
@@ -287,7 +288,7 @@ describe("PG pk_bridge_configs schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = makePkBridgeConfigId();
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(pkBridgeConfigs).values({
       id,

@@ -1,5 +1,5 @@
 import { friendConnections } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -51,10 +51,11 @@ export async function listFriendConnections(
 
     if (opts.cursor) {
       const decoded = fromCompositeCursor(opts.cursor, "friend-connection");
+      const sortValue = toUnixMillis(decoded.sortValue);
       const cursorCondition = or(
-        lt(friendConnections.createdAt, decoded.sortValue),
+        lt(friendConnections.createdAt, sortValue),
         and(
-          eq(friendConnections.createdAt, decoded.sortValue),
+          eq(friendConnections.createdAt, sortValue),
           lt(friendConnections.id, brandId<FriendConnectionId>(decoded.id)),
         ),
       );

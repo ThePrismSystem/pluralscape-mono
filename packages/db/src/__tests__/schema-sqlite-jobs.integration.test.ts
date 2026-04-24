@@ -8,6 +8,7 @@ import { accounts } from "../schema/sqlite/auth.js";
 import { jobs } from "../schema/sqlite/jobs.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteJobsTables,
   sqliteInsertAccount,
@@ -45,7 +46,7 @@ describe("SQLite jobs schema", () => {
 
   describe("text primary key", () => {
     it("stores and retrieves a prefixed UUID as the primary key", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newJobId();
 
       db.insert(jobs)
@@ -63,7 +64,7 @@ describe("SQLite jobs schema", () => {
     });
 
     it("rejects duplicate primary keys", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const id = newJobId();
 
       db.insert(jobs).values({ id, type: "sync-push", payload: {}, createdAt: now }).run();
@@ -78,7 +79,7 @@ describe("SQLite jobs schema", () => {
     it("stores and retrieves all fields including JSON payload", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const payload = { key: "value", nested: { count: 42 } };
 
       db.insert(jobs)
@@ -90,10 +91,10 @@ describe("SQLite jobs schema", () => {
           status: "running",
           attempts: 2,
           maxAttempts: 10,
-          nextRetryAt: now + 60000,
+          nextRetryAt: toUnixMillis(now + 60000),
           error: "Previous attempt failed",
           createdAt: now,
-          startedAt: now + 1000,
+          startedAt: toUnixMillis(now + 1000),
           completedAt: null,
           idempotencyKey: `idem-${crypto.randomUUID()}`,
         })
@@ -117,7 +118,7 @@ describe("SQLite jobs schema", () => {
 
   describe("defaults", () => {
     it("defaults status to pending, attempts to 0, maxAttempts to 5", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       const result = db
         .insert(jobs)
@@ -138,7 +139,7 @@ describe("SQLite jobs schema", () => {
 
   describe("nullable systemId", () => {
     it("allows null systemId for system-wide jobs", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       const result = db
         .insert(jobs)
@@ -159,7 +160,7 @@ describe("SQLite jobs schema", () => {
 
   describe("status CHECK constraint", () => {
     it("rejects invalid status values", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db.run(
@@ -171,7 +172,7 @@ describe("SQLite jobs schema", () => {
 
   describe("type CHECK constraint", () => {
     it("rejects invalid job type", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db.run(
@@ -183,7 +184,7 @@ describe("SQLite jobs schema", () => {
 
   describe("attempts CHECK constraint", () => {
     it("rejects attempts exceeding max_attempts", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db.run(
@@ -195,7 +196,7 @@ describe("SQLite jobs schema", () => {
 
   describe("idempotency key unique constraint", () => {
     it("rejects duplicate idempotency keys", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const key = `unique-key-${crypto.randomUUID()}`;
 
       db.insert(jobs)
@@ -223,7 +224,7 @@ describe("SQLite jobs schema", () => {
     });
 
     it("allows multiple null idempotency keys", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() => {
         db.insert(jobs)
@@ -252,7 +253,7 @@ describe("SQLite jobs schema", () => {
     it("cascades delete when system is deleted", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(jobs)
         .values({
@@ -276,7 +277,7 @@ describe("SQLite jobs schema", () => {
 
   describe("job lifecycle", () => {
     it("transitions through pending -> running -> completed", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       const inserted = db
         .insert(jobs)
@@ -292,7 +293,7 @@ describe("SQLite jobs schema", () => {
       expect(inserted.status).toBe("pending");
 
       db.update(jobs)
-        .set({ status: "running", startedAt: now + 1000, attempts: 1 })
+        .set({ status: "running", startedAt: toUnixMillis(now + 1000), attempts: 1 })
         .where(eq(jobs.id, inserted.id))
         .run();
 
@@ -301,7 +302,7 @@ describe("SQLite jobs schema", () => {
       expect(running?.attempts).toBe(1);
 
       db.update(jobs)
-        .set({ status: "completed", completedAt: now + 5000 })
+        .set({ status: "completed", completedAt: toUnixMillis(now + 5000) })
         .where(eq(jobs.id, inserted.id))
         .run();
 
@@ -311,7 +312,7 @@ describe("SQLite jobs schema", () => {
     });
 
     it("transitions through pending -> running -> dead-letter with error", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       const inserted = db
         .insert(jobs)
@@ -327,7 +328,7 @@ describe("SQLite jobs schema", () => {
       db.update(jobs)
         .set({
           status: "running",
-          startedAt: now + 1000,
+          startedAt: toUnixMillis(now + 1000),
           attempts: 1,
         })
         .where(eq(jobs.id, inserted.id))
@@ -338,7 +339,7 @@ describe("SQLite jobs schema", () => {
           status: "dead-letter",
           attempts: 5,
           error: "Connection timeout after 5 attempts",
-          completedAt: now + 30000,
+          completedAt: toUnixMillis(now + 30000),
         })
         .where(eq(jobs.id, inserted.id))
         .run();
@@ -352,7 +353,7 @@ describe("SQLite jobs schema", () => {
 
   describe("new columns (ADR 010)", () => {
     it("round-trips heartbeat, timeout, result, scheduledFor, priority", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const result: JobResult = {
         success: true,
         message: "done",
@@ -366,10 +367,10 @@ describe("SQLite jobs schema", () => {
           type: "sync-push",
           payload: { test: true },
           createdAt: now,
-          lastHeartbeatAt: now + 1000,
+          lastHeartbeatAt: toUnixMillis(now + 1000),
           timeoutMs: 60000,
           result,
-          scheduledFor: now + 10000,
+          scheduledFor: toUnixMillis(now + 10000),
           priority: 5,
         })
         .returning()
@@ -383,7 +384,7 @@ describe("SQLite jobs schema", () => {
     });
 
     it("defaults timeoutMs to 30000 and priority to 0", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       const inserted = db
         .insert(jobs)
@@ -406,7 +407,7 @@ describe("SQLite jobs schema", () => {
 
   describe("dead-letter status", () => {
     it("accepts attempts equal to maxAttempts for terminal states", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       const inserted = db
         .insert(jobs)
@@ -429,7 +430,7 @@ describe("SQLite jobs schema", () => {
     });
 
     it("replays dead-letter -> pending with reset", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       const inserted = db
         .insert(jobs)
@@ -459,7 +460,7 @@ describe("SQLite jobs schema", () => {
 
   describe("timeoutMs CHECK constraint", () => {
     it("rejects non-positive timeoutMs", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db.run(
@@ -477,7 +478,7 @@ describe("SQLite jobs schema", () => {
 
   describe("priority ordering", () => {
     it("orders jobs by priority ascending", () => {
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(jobs)
         .values([

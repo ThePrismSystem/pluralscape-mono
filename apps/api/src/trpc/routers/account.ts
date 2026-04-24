@@ -5,7 +5,7 @@ import {
   PWHASH_SALT_BYTES,
   TRANSFER_TIMEOUT_MS,
 } from "@pluralscape/crypto";
-import { MS_PER_HOUR, brandId } from "@pluralscape/types";
+import { MS_PER_HOUR, brandId, toUnixMillis } from "@pluralscape/types";
 import {
   AuditLogQuerySchema,
   BiometricEnrollBodySchema,
@@ -276,8 +276,8 @@ export const accountRouter = router({
       return queryAuditLog(ctx.db, ctx.auth.accountId, {
         eventType: input.event_type,
         resourceType: input.resource_type,
-        from: input.from ?? 0,
-        to: input.to ?? now,
+        from: toUnixMillis(input.from ?? 0),
+        to: toUnixMillis(input.to ?? now),
         cursor: input.cursor ?? undefined,
         limit: input.limit,
       });

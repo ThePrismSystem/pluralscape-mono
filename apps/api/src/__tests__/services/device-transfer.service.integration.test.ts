@@ -9,7 +9,7 @@ import {
 } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, pgInsertAccount } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -77,14 +77,14 @@ async function insertSession(
   accountId: AccountId,
 ): Promise<SessionId> {
   const sessionId = brandId<SessionId>(`sess_${randomUUID()}`);
-  const now = Date.now();
+  const now = toUnixMillis(Date.now());
   await db.insert(sessions).values({
     id: sessionId,
     accountId,
     tokenHash: `hash_${randomUUID()}`,
     createdAt: now,
     lastActive: now,
-    expiresAt: now + 86_400_000,
+    expiresAt: toUnixMillis(now + 86_400_000),
   });
   return sessionId;
 }
@@ -395,10 +395,10 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       // Set expiresAt to a time in the past (the check constraint requires
       // expiresAt > createdAt, so we set both to the past)
-      const pastTime = Date.now() - 600_000;
+      const pastTime = toUnixMillis(Date.now() - 600_000);
       await db
         .update(deviceTransferRequests)
-        .set({ createdAt: pastTime - 1000, expiresAt: pastTime })
+        .set({ createdAt: toUnixMillis(pastTime - 1000), expiresAt: pastTime })
         .where(eq(deviceTransferRequests.id, transferId));
 
       const targetSessionId = await insertSession(db, accountId);

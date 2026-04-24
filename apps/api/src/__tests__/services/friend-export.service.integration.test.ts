@@ -14,6 +14,7 @@ import {
   ID_PREFIXES,
   now,
   brandId,
+  toUnixMillis,
 } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -25,6 +26,7 @@ import {
 import { asDb, assertApiError, makeAuth } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { UnixMillis } from "@pluralscape/types";
 import type {
   AccountId,
   BucketId,
@@ -173,7 +175,7 @@ describe("friend-export.service (PGlite integration)", () => {
     });
   }
 
-  async function insertMember(updatedAt?: number): Promise<MemberId> {
+  async function insertMember(updatedAt?: UnixMillis): Promise<MemberId> {
     const id = brandId<MemberId>(createId(ID_PREFIXES.member));
     const ts = updatedAt ?? now();
     await db.insert(members).values({
@@ -236,7 +238,7 @@ describe("friend-export.service (PGlite integration)", () => {
     await insertBucketAssignment(ownerConnectionId, bucketId);
 
     const baseTs = now();
-    const laterTs = baseTs + 5000;
+    const laterTs = toUnixMillis(baseTs + 5000);
 
     const m1 = await insertMember(baseTs);
     const m2 = await insertMember(laterTs);
@@ -324,7 +326,7 @@ describe("friend-export.service (PGlite integration)", () => {
     const baseTs = now();
     const memberIds: MemberId[] = [];
     for (let i = 0; i < 8; i++) {
-      const mid = await insertMember(baseTs + i * 1000);
+      const mid = await insertMember(toUnixMillis(baseTs + i * 1000));
       await insertBucketTag("member", mid, bucketId);
       memberIds.push(mid);
     }
@@ -360,7 +362,7 @@ describe("friend-export.service (PGlite integration)", () => {
     const baseTs = now();
     // Create alternating visible/invisible members so filtering removes some per batch
     for (let i = 0; i < 6; i++) {
-      const mid = await insertMember(baseTs + i * 1000);
+      const mid = await insertMember(toUnixMillis(baseTs + i * 1000));
       const bucket = i % 2 === 0 ? assignedBucket : unassignedBucket;
       await insertBucketTag("member", mid, bucket);
     }
@@ -379,8 +381,8 @@ describe("friend-export.service (PGlite integration)", () => {
 
     const baseTs = now();
     const m1 = await insertMember(baseTs);
-    const m2 = await insertMember(baseTs + 2000);
-    const m3 = await insertMember(baseTs + 1000);
+    const m2 = await insertMember(toUnixMillis(baseTs + 2000));
+    const m3 = await insertMember(toUnixMillis(baseTs + 1000));
     await insertBucketTag("member", m1, bucketId);
     await insertBucketTag("member", m2, bucketId);
     await insertBucketTag("member", m3, bucketId);
@@ -402,7 +404,7 @@ describe("friend-export.service (PGlite integration)", () => {
     // Need >= 7 visible items so first batch (6 rows) doesn't exhaust the DB.
     const baseTs = now();
     for (let i = 0; i < 8; i++) {
-      const mid = await insertMember(baseTs + i * 1000);
+      const mid = await insertMember(toUnixMillis(baseTs + i * 1000));
       await insertBucketTag("member", mid, bucketId);
     }
 

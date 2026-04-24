@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -9,6 +9,7 @@ import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 import { checkInRecords, timerConfigs } from "../schema/sqlite/timers.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteTimerTables,
   sqliteInsertAccount,
@@ -52,7 +53,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
       db.insert(timerConfigs)
@@ -76,7 +77,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -97,7 +98,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -118,7 +119,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -151,7 +152,7 @@ describe("SQLite timers schema", () => {
         ["12:00", "18:45"],
       ]) {
         const id = brandId<TimerId>(crypto.randomUUID());
-        const now = Date.now();
+        const now = fixtureNow();
         db.insert(timerConfigs)
           .values({
             id,
@@ -182,8 +183,8 @@ describe("SQLite timers schema", () => {
               systemId,
               wakingStart: bad,
               encryptedData: testBlob(new Uint8Array([1])),
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
+              createdAt: fixtureNow(),
+              updatedAt: fixtureNow(),
             })
             .run(),
         ).toThrow();
@@ -203,8 +204,8 @@ describe("SQLite timers schema", () => {
               systemId,
               wakingEnd: bad,
               encryptedData: testBlob(new Uint8Array([1])),
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
+              createdAt: fixtureNow(),
+              updatedAt: fixtureNow(),
             })
             .run(),
         ).toThrow();
@@ -215,7 +216,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -238,7 +239,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -259,7 +260,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -281,7 +282,7 @@ describe("SQLite timers schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -295,7 +296,7 @@ describe("SQLite timers schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -310,7 +311,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -339,7 +340,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -372,7 +373,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([5, 6, 7]));
 
       db.insert(timerConfigs)
@@ -391,7 +392,7 @@ describe("SQLite timers schema", () => {
           systemId,
           timerConfigId: timerId,
           scheduledAt: now,
-          respondedAt: now + 1000,
+          respondedAt: toUnixMillis(now + 1000),
           dismissed: true,
           encryptedData: data,
         })
@@ -407,7 +408,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -438,7 +439,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -469,7 +470,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -501,7 +502,7 @@ describe("SQLite timers schema", () => {
       const memberId = insertMember(systemId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -532,7 +533,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -562,7 +563,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -593,7 +594,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -623,7 +624,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -646,14 +647,14 @@ describe("SQLite timers schema", () => {
             id: respondedId,
             systemId,
             timerConfigId: timerId,
-            scheduledAt: now + 1000,
-            respondedAt: now + 2000,
+            scheduledAt: toUnixMillis(now + 1000),
+            respondedAt: toUnixMillis(now + 2000),
           },
           {
             id: dismissedId,
             systemId,
             timerConfigId: timerId,
-            scheduledAt: now + 3000,
+            scheduledAt: toUnixMillis(now + 3000),
             dismissed: true,
           },
         ])
@@ -673,7 +674,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -699,7 +700,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -731,7 +732,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -773,7 +774,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -798,7 +799,7 @@ describe("SQLite timers schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({
@@ -824,7 +825,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const timerId = brandId<TimerId>(crypto.randomUUID());
       const id = brandId<CheckInRecordId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(timerConfigs)
         .values({

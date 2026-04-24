@@ -10,7 +10,14 @@ import {
   verifyChallenge,
 } from "@pluralscape/crypto";
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
-import { brandId, ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  SESSION_TIMEOUTS,
+  createId,
+  now,
+  toUnixMillis,
+} from "@pluralscape/types";
 import { RegistrationCommitSchema, RegistrationInitiateSchema } from "@pluralscape/validation";
 import { and, eq, isNotNull } from "drizzle-orm";
 
@@ -60,7 +67,7 @@ export async function initiateRegistration(
   const emailSalt = toHex(adapter.randomBytes(EMAIL_SALT_BYTES));
   const kdfSalt = generateSalt();
   const challengeNonce = generateChallengeNonce();
-  const challengeExpiresAt = now() + CHALLENGE_NONCE_TTL_MS;
+  const challengeExpiresAt = toUnixMillis(now() + CHALLENGE_NONCE_TTL_MS);
 
   // Placeholder: 32 zero bytes indicate incomplete registration
   const placeholderAuthKeyHash = new Uint8Array(AUTH_KEY_HASH_BYTES);
@@ -214,7 +221,7 @@ export async function commitRegistration(
   const tokenHash = hashSessionToken(rawToken);
   const timestamp = now();
   const timeouts = SESSION_TIMEOUTS[platform];
-  const expiresAt = timestamp + timeouts.absoluteTtlMs;
+  const expiresAt = toUnixMillis(timestamp + timeouts.absoluteTtlMs);
 
   await withAccountTransaction(db, brandId<AccountId>(account.id), async (tx) => {
     // Fill in the account shell with real crypto data

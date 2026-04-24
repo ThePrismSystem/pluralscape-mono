@@ -5,7 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -35,7 +35,7 @@ async function insertFriendConnection(
   friendAccountId: AccountId,
 ): Promise<FriendConnectionId> {
   const id = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
-  const now = Date.now();
+  const now = toUnixMillis(Date.now());
   await db.insert(friendConnections).values({
     id,
     accountId,

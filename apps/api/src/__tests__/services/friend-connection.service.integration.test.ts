@@ -36,6 +36,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { UnixMillis } from "@pluralscape/types";
 import type {
   AccountId,
   BucketId,
@@ -58,7 +59,7 @@ async function insertConnection(
     status?: FriendConnectionStatus;
     version?: number;
     archived?: boolean;
-    archivedAt?: number | null;
+    archivedAt?: UnixMillis | null;
   },
 ): Promise<FriendConnectionId> {
   const id = opts.id ?? brandId<FriendConnectionId>(createId(ID_PREFIXES.friendConnection));

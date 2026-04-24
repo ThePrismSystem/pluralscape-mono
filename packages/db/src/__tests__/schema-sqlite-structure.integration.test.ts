@@ -16,6 +16,7 @@ import {
 } from "../schema/sqlite/structure.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteStructureTables,
   sqliteInsertAccount,
@@ -96,7 +97,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(relationships)
@@ -120,7 +121,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -141,7 +142,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -160,7 +161,7 @@ describe("SQLite structure schema", () => {
     });
 
     it("rejects nonexistent systemId FK", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       expect(() =>
         db
           .insert(relationships)
@@ -182,7 +183,7 @@ describe("SQLite structure schema", () => {
       const sourceMemberId = insertMember(systemId);
       const targetMemberId = insertMember(systemId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -209,7 +210,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -231,7 +232,7 @@ describe("SQLite structure schema", () => {
     it("rejects invalid type via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -253,7 +254,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -275,7 +276,7 @@ describe("SQLite structure schema", () => {
     it("rejects nonexistent sourceMemberId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -298,7 +299,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -320,7 +321,7 @@ describe("SQLite structure schema", () => {
     it("rejects nonexistent targetMemberId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -342,7 +343,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -364,7 +365,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -387,7 +388,7 @@ describe("SQLite structure schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -402,7 +403,7 @@ describe("SQLite structure schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -418,7 +419,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newRelId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(relationships)
         .values({
@@ -449,7 +450,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20]));
 
       db.insert(systemStructureEntityTypes)
@@ -469,7 +470,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -491,7 +492,7 @@ describe("SQLite structure schema", () => {
     });
 
     it("rejects nonexistent systemId FK", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       expect(() =>
         db
           .insert(systemStructureEntityTypes)
@@ -511,7 +512,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -537,7 +538,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -562,7 +563,7 @@ describe("SQLite structure schema", () => {
     it("rejects archived=true with null archivedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -577,7 +578,7 @@ describe("SQLite structure schema", () => {
     it("rejects archived=false with non-null archivedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -592,7 +593,7 @@ describe("SQLite structure schema", () => {
     it("rejects version 0", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -612,7 +613,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -652,7 +653,7 @@ describe("SQLite structure schema", () => {
     it("rejects nonexistent entityTypeId FK (RESTRICT)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -674,7 +675,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -711,7 +712,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -749,7 +750,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -776,7 +777,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -803,7 +804,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -831,7 +832,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -873,7 +874,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -915,7 +916,7 @@ describe("SQLite structure schema", () => {
     it("rejects nonexistent entityId FK (RESTRICT)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -936,7 +937,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -974,7 +975,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const parentEntityId = newEntityId();
       const childEntityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1035,7 +1036,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1080,7 +1081,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const parentEntityId = newEntityId();
       const childEntityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1139,7 +1140,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const parentEntityId = newEntityId();
       const childEntityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1205,7 +1206,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1247,7 +1248,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const entityId = newEntityId();
       const linkId = newLinkId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1291,7 +1292,7 @@ describe("SQLite structure schema", () => {
       const memberId = insertMember(systemId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1340,7 +1341,7 @@ describe("SQLite structure schema", () => {
     it("rejects nonexistent memberId FK (RESTRICT)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1360,7 +1361,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
@@ -1383,7 +1384,7 @@ describe("SQLite structure schema", () => {
       const memberId = insertMember(systemId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1437,7 +1438,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
@@ -1468,7 +1469,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const linkId = newMemberLinkId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityMemberLinks)
         .values({
@@ -1491,7 +1492,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1518,7 +1519,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1580,7 +1581,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1645,7 +1646,7 @@ describe("SQLite structure schema", () => {
       const typeId = newTypeId();
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1701,7 +1702,7 @@ describe("SQLite structure schema", () => {
       const entityId1 = newEntityId();
       const entityId2 = newEntityId();
       const assocId = newAssocId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -1757,7 +1758,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(systemStructureEntityTypes)
         .values({

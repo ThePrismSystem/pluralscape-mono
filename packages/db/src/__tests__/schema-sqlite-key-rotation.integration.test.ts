@@ -8,6 +8,7 @@ import { bucketKeyRotations, bucketRotationItems } from "../schema/sqlite/key-ro
 import { buckets } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteKeyRotationTables,
   sqliteInsertAccount,
@@ -21,6 +22,7 @@ import type {
   BucketKeyRotationId,
   BucketRotationItemId,
   SystemId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -37,7 +39,7 @@ describe("SQLite key-rotation schema", () => {
     systemId: SystemId,
     id: BucketId = brandId<BucketId>(crypto.randomUUID()),
   ): BucketId {
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(buckets)
       .values({
         id,
@@ -58,7 +60,7 @@ describe("SQLite key-rotation schema", () => {
       fromKeyVersion: number;
       toKeyVersion: number;
       totalItems: number;
-      initiatedAt: number;
+      initiatedAt: UnixMillis;
     }> = {},
   ): BucketKeyRotationId {
     const id = overrides.id ?? brandId<BucketKeyRotationId>(crypto.randomUUID());
@@ -70,7 +72,7 @@ describe("SQLite key-rotation schema", () => {
         fromKeyVersion: overrides.fromKeyVersion ?? 1,
         toKeyVersion: overrides.toKeyVersion ?? 2,
         totalItems: overrides.totalItems ?? 10,
-        initiatedAt: overrides.initiatedAt ?? Date.now(),
+        initiatedAt: overrides.initiatedAt ?? fixtureNow(),
       })
       .run();
     return id;
@@ -92,7 +94,7 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = brandId<BucketKeyRotationId>(crypto.randomUUID());
 
       db.insert(bucketKeyRotations)
@@ -135,7 +137,7 @@ describe("SQLite key-rotation schema", () => {
             toKeyVersion: 2,
             state: "invalid" as "initiated",
             totalItems: 1,
-            initiatedAt: Date.now(),
+            initiatedAt: fixtureNow(),
           })
           .run(),
       ).toThrow();
@@ -156,7 +158,7 @@ describe("SQLite key-rotation schema", () => {
             fromKeyVersion: 3,
             toKeyVersion: 2,
             totalItems: 1,
-            initiatedAt: Date.now(),
+            initiatedAt: fixtureNow(),
           })
           .run(),
       ).toThrow();
@@ -177,7 +179,7 @@ describe("SQLite key-rotation schema", () => {
             fromKeyVersion: 2,
             toKeyVersion: 2,
             totalItems: 1,
-            initiatedAt: Date.now(),
+            initiatedAt: fixtureNow(),
           })
           .run(),
       ).toThrow();
@@ -197,7 +199,7 @@ describe("SQLite key-rotation schema", () => {
           fromKeyVersion: 1,
           toKeyVersion: 2,
           totalItems: 1,
-          initiatedAt: Date.now(),
+          initiatedAt: fixtureNow(),
         })
         .run();
 
@@ -229,7 +231,7 @@ describe("SQLite key-rotation schema", () => {
           fromKeyVersion: 1,
           toKeyVersion: 2,
           totalItems: 5,
-          initiatedAt: Date.now(),
+          initiatedAt: fixtureNow(),
         })
         .run();
 
@@ -276,7 +278,7 @@ describe("SQLite key-rotation schema", () => {
           entityId: crypto.randomUUID(),
           status: "claimed",
           claimedBy: "worker-1",
-          claimedAt: Date.now(),
+          claimedAt: fixtureNow(),
           attempts: 1,
         })
         .run();

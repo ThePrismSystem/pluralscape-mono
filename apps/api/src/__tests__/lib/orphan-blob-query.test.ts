@@ -1,5 +1,5 @@
 import { blobMetadata } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, eq, isNull, lt } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -37,7 +37,7 @@ describe("OrphanBlobQueryImpl", () => {
       and(
         eq(blobMetadata.systemId, SYSTEM_ID),
         isNull(blobMetadata.uploadedAt),
-        lt(blobMetadata.createdAt, now - ONE_HOUR_MS),
+        lt(blobMetadata.createdAt, toUnixMillis(now - ONE_HOUR_MS)),
         eq(blobMetadata.archived, false),
       ),
     );
@@ -68,7 +68,7 @@ describe("OrphanBlobQueryImpl", () => {
       and(
         eq(blobMetadata.systemId, SYSTEM_ID),
         isNull(blobMetadata.uploadedAt),
-        lt(blobMetadata.createdAt, now - customMs),
+        lt(blobMetadata.createdAt, toUnixMillis(now - customMs)),
         eq(blobMetadata.archived, false),
       ),
     );

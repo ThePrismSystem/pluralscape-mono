@@ -1,5 +1,5 @@
 import { frontingReports } from "@pluralscape/db/pg";
-import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateFrontingReportBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -42,7 +42,7 @@ export async function createFrontingReport(
         systemId,
         encryptedData: blob,
         format: parsed.format,
-        generatedAt: parsed.generatedAt,
+        generatedAt: toUnixMillis(parsed.generatedAt),
         createdAt: timestamp,
         updatedAt: timestamp,
       })

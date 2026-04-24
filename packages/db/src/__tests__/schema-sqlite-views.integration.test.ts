@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -32,6 +32,7 @@ import {
   getUnconfirmedAcknowledgements,
 } from "../views/sqlite.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   SQLITE_DDL,
   sqliteInsertAccount,
@@ -160,13 +161,13 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns sessions with null end_time", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(frontingSessions)
         .values({
           id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
-          startTime: now - 60000,
+          startTime: toUnixMillis(now - 60000),
           endTime: null,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -178,8 +179,8 @@ describe("SQLite views / query helpers", () => {
           id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
-          startTime: now - 120000,
-          endTime: now - 30000,
+          startTime: toUnixMillis(now - 120000),
+          endTime: toUnixMillis(now - 30000),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -199,13 +200,13 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns positive duration for active sessions", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(frontingSessions)
         .values({
           id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
-          startTime: now - 60000,
+          startTime: toUnixMillis(now - 60000),
           endTime: null,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -226,7 +227,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns non-revoked keys and excludes revoked", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(apiKeys)
         .values({
           id: brandId<ApiKeyId>(crypto.randomUUID()),
@@ -265,7 +266,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns only pending connections", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const otherAccountId1 = insertAccount();
       insertSystem(otherAccountId1);
       const otherAccountId2 = insertAccount();
@@ -304,7 +305,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns failed deliveries under max attempts and respects limit", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const webhookId = brandedWebhookId();
       const maxAttempts = 3;
       db.insert(webhookConfigs)
@@ -327,7 +328,7 @@ describe("SQLite views / query helpers", () => {
           eventType: "member.created",
           status: "failed",
           attemptCount: 2,
-          nextRetryAt: now - 60000,
+          nextRetryAt: toUnixMillis(now - 60000),
           encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         })
@@ -341,7 +342,7 @@ describe("SQLite views / query helpers", () => {
           eventType: "member.created",
           status: "failed",
           attemptCount: 5,
-          nextRetryAt: now - 60000,
+          nextRetryAt: toUnixMillis(now - 60000),
           encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         })
@@ -355,7 +356,7 @@ describe("SQLite views / query helpers", () => {
           eventType: "member.created",
           status: "failed",
           attemptCount: 2,
-          nextRetryAt: now + 60000,
+          nextRetryAt: toUnixMillis(now + 60000),
           encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         })
@@ -374,7 +375,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns only unconfirmed acknowledgements", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(acknowledgements)
         .values({
           id: brandId<AcknowledgementId>(crypto.randomUUID()),
@@ -408,7 +409,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns groups with correct member counts", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const memberId1 = crypto.randomUUID();
       const memberId2 = crypto.randomUUID();
       const groupId = brandId<GroupId>(crypto.randomUUID());
@@ -461,7 +462,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns only accepted connections", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const otherAccountId = insertAccount();
       insertSystem(otherAccountId);
 
@@ -488,7 +489,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns non-revoked tokens with tokenHash field", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const tokenHashValue = `tokenHash_${crypto.randomUUID()}`.slice(0, 64);
       db.insert(deviceTokens)
         .values({
@@ -525,7 +526,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns comments only for active sessions", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const activeSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
       const endedSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
 
@@ -535,7 +536,7 @@ describe("SQLite views / query helpers", () => {
             id: activeSessionId,
             systemId,
             memberId,
-            startTime: now - 60000,
+            startTime: toUnixMillis(now - 60000),
             endTime: null,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -545,8 +546,8 @@ describe("SQLite views / query helpers", () => {
             id: endedSessionId,
             systemId,
             memberId,
-            startTime: now - 120000,
-            endTime: now - 30000,
+            startTime: toUnixMillis(now - 120000),
+            endTime: toUnixMillis(now - 30000),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -589,7 +590,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns pending non-expired transfers", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const sourceSession = brandId<SessionId>(crypto.randomUUID());
       const targetSession = brandId<SessionId>(crypto.randomUUID());
 
@@ -610,7 +611,7 @@ describe("SQLite views / query helpers", () => {
           status: "pending",
           codeSalt: new Uint8Array(16),
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: toUnixMillis(now + 3600000),
         })
         .run();
 
@@ -641,8 +642,8 @@ describe("SQLite views / query helpers", () => {
           targetSessionId: targetSession2,
           status: "pending",
           codeSalt: new Uint8Array(16),
-          createdAt: now - 7200000,
-          expiresAt: now - 3600000,
+          createdAt: toUnixMillis(now - 7200000),
+          expiresAt: toUnixMillis(now - 3600000),
         })
         .run();
 
@@ -659,7 +660,7 @@ describe("SQLite views / query helpers", () => {
     });
 
     it("returns associations for a system", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       const entityTypeId = brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
       const entityId1 = brandId<SystemStructureEntityId>(crypto.randomUUID());
       const entityId2 = brandId<SystemStructureEntityId>(crypto.randomUUID());

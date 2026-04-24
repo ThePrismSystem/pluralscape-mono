@@ -1,5 +1,5 @@
 import { webhookDeliveries } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { now, toUnixMillis } from "@pluralscape/types";
 import { and, eq, inArray, lt, or, sql } from "drizzle-orm";
 
 import {
@@ -23,7 +23,7 @@ export async function cleanupWebhookDeliveries(
   retentionDays: number = WEBHOOK_DELIVERY_RETENTION_DAYS,
   batchSize: number = WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE,
 ): Promise<number> {
-  const cutoff = now() - retentionDays * MS_PER_DAY;
+  const cutoff = toUnixMillis(now() - retentionDays * MS_PER_DAY);
   let totalDeleted = 0;
   let deletedCount = 0;
 

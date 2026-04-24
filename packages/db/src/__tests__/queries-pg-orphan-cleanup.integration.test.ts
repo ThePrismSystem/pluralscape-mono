@@ -10,6 +10,7 @@ import { members } from "../schema/pg/members.js";
 import { bucketContentTags, buckets } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgGroupsTables,
   pgExec,
@@ -54,7 +55,7 @@ describe("pgCleanupOrphanedTags", () => {
 
   async function insertBucket(systemId: SystemId): Promise<BucketId> {
     const id = brandId<BucketId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
     await db.insert(buckets).values({
       id,
       systemId,

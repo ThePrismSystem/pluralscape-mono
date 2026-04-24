@@ -1,5 +1,5 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { PollVoteQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
@@ -56,12 +56,10 @@ export async function listVotes(
 
     if (opts.cursor) {
       const decoded = fromCompositeCursor(opts.cursor, "vote");
+      const sortValue = toUnixMillis(decoded.sortValue);
       const cursorCondition = or(
-        lt(pollVotes.createdAt, decoded.sortValue),
-        and(
-          eq(pollVotes.createdAt, decoded.sortValue),
-          lt(pollVotes.id, brandId<PollVoteId>(decoded.id)),
-        ),
+        lt(pollVotes.createdAt, sortValue),
+        and(eq(pollVotes.createdAt, sortValue), lt(pollVotes.id, brandId<PollVoteId>(decoded.id))),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

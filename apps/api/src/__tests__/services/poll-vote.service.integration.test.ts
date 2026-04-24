@@ -6,7 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -456,7 +456,7 @@ describe("poll-vote.service (PGlite integration)", () => {
       await castVote(asDb(db), systemId, poll.id, makeVoteParams(), auth, noopAudit);
 
       // Archive the vote directly via raw update
-      await db.update(pollVotes).set({ archived: true, archivedAt: Date.now() });
+      await db.update(pollVotes).set({ archived: true, archivedAt: toUnixMillis(Date.now()) });
 
       const result = await listVotes(asDb(db), systemId, poll.id, auth);
       expect(result.data).toHaveLength(0);

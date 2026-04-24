@@ -9,6 +9,7 @@ import { frontingSessions } from "../schema/pg/fronting.js";
 import { journalEntries, wikiPages } from "../schema/pg/journal.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgJournalTables,
   pgInsertAccount,
@@ -50,7 +51,7 @@ describe("PG journal schema", () => {
       const systemId = await insertSystem(accountId);
       const fsId = brandId<FrontingSessionId>(crypto.randomUUID());
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
       const memberId = await pgInsertMember(db, systemId);
@@ -84,7 +85,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(journalEntries).values({
         id,
@@ -102,7 +103,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(journalEntries).values({
         id,
@@ -122,7 +123,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(journalEntries).values({
         id,
@@ -143,7 +144,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(journalEntries).values({
         id,
@@ -153,7 +154,7 @@ describe("PG journal schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(journalEntries)
         .set({ archived: true, archivedAt: archiveTime })
@@ -168,7 +169,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<JournalEntryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(journalEntries).values({
         id,
@@ -186,7 +187,7 @@ describe("PG journal schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -199,7 +200,7 @@ describe("PG journal schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -215,7 +216,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30]));
       const hash = brandId<SlugHash>("a".repeat(64));
 
@@ -238,7 +239,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(wikiPages).values({
         id,
@@ -259,7 +260,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(wikiPages).values({
         id,
@@ -270,7 +271,7 @@ describe("PG journal schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(wikiPages)
         .set({ archived: true, archivedAt: archiveTime })
@@ -285,7 +286,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const slugHash = brandId<SlugHash>("b".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(wikiPages).values({
         id: brandId<WikiPageId>(crypto.randomUUID()),
@@ -313,7 +314,7 @@ describe("PG journal schema", () => {
       const systemId1 = await insertSystem(accountId);
       const systemId2 = await insertSystem(accountId);
       const slugHash = brandId<SlugHash>("c".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(wikiPages).values({
         id: brandId<WikiPageId>(crypto.randomUUID()),
@@ -343,7 +344,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WikiPageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(wikiPages).values({
         id,
@@ -362,7 +363,7 @@ describe("PG journal schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -375,7 +376,7 @@ describe("PG journal schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -388,7 +389,7 @@ describe("PG journal schema", () => {
     it("rejects slug_hash shorter than 64 chars", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(wikiPages).values({
@@ -406,7 +407,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const slugHash = brandId<SlugHash>("h".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(wikiPages).values({
         id: brandId<WikiPageId>(crypto.randomUUID()),
@@ -438,7 +439,7 @@ describe("PG journal schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const slugHash = brandId<SlugHash>("i".repeat(64));
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(wikiPages).values({
         id: brandId<WikiPageId>(crypto.randomUUID()),

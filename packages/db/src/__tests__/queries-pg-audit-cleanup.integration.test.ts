@@ -8,6 +8,7 @@ import { auditLog } from "../schema/pg/audit-log.js";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow, fixtureNowPlus } from "./fixtures/timestamps.js";
 import {
   createPgAuditLogTables,
   makeAuditLogEntryId,
@@ -16,7 +17,7 @@ import {
 } from "./helpers/pg-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
-import type { AccountId, AuditLogEntryId, SystemId } from "@pluralscape/types";
+import type { AccountId, AuditLogEntryId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, auditLog };
@@ -46,7 +47,7 @@ describe("pgCleanupAuditLog", () => {
   async function insertAuditEntry(opts: {
     accountId: string;
     systemId: string;
-    timestamp?: number;
+    timestamp?: UnixMillis;
   }): Promise<AuditLogEntryId> {
     const id = makeAuditLogEntryId();
     await db.insert(auditLog).values({
@@ -54,7 +55,7 @@ describe("pgCleanupAuditLog", () => {
       accountId: brandId<AccountId>(opts.accountId),
       systemId: brandId<SystemId>(opts.systemId),
       eventType: "auth.login",
-      timestamp: opts.timestamp ?? Date.now(),
+      timestamp: opts.timestamp ?? fixtureNow(),
       actor: testActor(opts.accountId),
     });
     return id;
@@ -64,7 +65,7 @@ describe("pgCleanupAuditLog", () => {
     const accountId = await pgInsertAccount(db);
     const systemId = await pgInsertSystem(db, accountId);
 
-    const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgoMs = fixtureNowPlus(-30 * 24 * 60 * 60 * 1000);
     const oldId = await insertAuditEntry({ accountId, systemId, timestamp: thirtyDaysAgoMs });
     const recentId = await insertAuditEntry({ accountId, systemId });
 

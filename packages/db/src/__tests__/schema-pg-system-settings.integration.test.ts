@@ -8,6 +8,7 @@ import { accounts } from "../schema/pg/auth.js";
 import { systemSettings } from "../schema/pg/system-settings.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgSystemSettingsTables,
   pgInsertAccount,
@@ -39,7 +40,7 @@ describe("PG system_settings schema", () => {
   it("inserts and retrieves with all columns", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(systemSettings).values({
@@ -68,7 +69,7 @@ describe("PG system_settings schema", () => {
   it("defaults boolean fields to false", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(systemSettings).values({
       id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
@@ -88,7 +89,7 @@ describe("PG system_settings schema", () => {
   it("allows nullable locale and pinHash", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(systemSettings).values({
       id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
@@ -109,7 +110,7 @@ describe("PG system_settings schema", () => {
   it("defaults version to 1", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(systemSettings).values({
       id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
@@ -129,7 +130,7 @@ describe("PG system_settings schema", () => {
   it("enforces 1:1 with systems (rejects duplicate systemId)", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(systemSettings).values({
       id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
@@ -153,7 +154,7 @@ describe("PG system_settings schema", () => {
   it("cascades on system deletion", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(systemSettings).values({
       id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
@@ -172,7 +173,7 @@ describe("PG system_settings schema", () => {
   });
 
   it("rejects nonexistent systemId FK", async () => {
-    const now = Date.now();
+    const now = fixtureNow();
     await expect(
       db.insert(systemSettings).values({
         id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
@@ -211,7 +212,7 @@ describe("PG system_settings schema", () => {
   it("round-trips encrypted_data binary correctly", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const blobCiphertext = new Uint8Array(256);
     for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
     const blob = testBlob(blobCiphertext);

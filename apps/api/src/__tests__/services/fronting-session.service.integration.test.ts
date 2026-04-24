@@ -6,7 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -89,7 +89,7 @@ describe("fronting-session.service (PGlite integration)", () => {
 
   async function insertCustomFront(sysId = systemId): Promise<string> {
     const id = genCustomFrontId();
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     await db.insert(customFronts).values({
       id,
       systemId: sysId,
@@ -110,7 +110,7 @@ describe("fronting-session.service (PGlite integration)", () => {
   ) {
     return {
       encryptedData: testEncryptedDataBase64(),
-      startTime: Date.now(),
+      startTime: toUnixMillis(Date.now()),
       memberId,
       ...overrides,
     };
@@ -166,7 +166,7 @@ describe("fronting-session.service (PGlite integration)", () => {
 
     it("rejects archived member as subject", async () => {
       const archivedMemberId = genMemberId();
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(members).values({
         id: archivedMemberId,
         systemId,
@@ -196,7 +196,7 @@ describe("fronting-session.service (PGlite integration)", () => {
         createFrontingSession(
           asDb(db),
           systemId,
-          { encryptedData: testEncryptedDataBase64(), startTime: Date.now() },
+          { encryptedData: testEncryptedDataBase64(), startTime: toUnixMillis(Date.now()) },
           auth,
           noopAudit,
         ),
@@ -225,14 +225,14 @@ describe("fronting-session.service (PGlite integration)", () => {
       await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ startTime: Date.now() - 2000 }),
+        createParams({ startTime: toUnixMillis(Date.now()) - 2000 }),
         auth,
         noopAudit,
       );
       await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ startTime: Date.now() - 1000 }),
+        createParams({ startTime: toUnixMillis(Date.now()) - 1000 }),
         auth,
         noopAudit,
       );
@@ -291,7 +291,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       const s1 = await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ startTime: Date.now() - 5000 }),
+        createParams({ startTime: toUnixMillis(Date.now()) - 5000 }),
         auth,
         noopAudit,
       );
@@ -301,7 +301,7 @@ describe("fronting-session.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         s1.id,
-        { endTime: Date.now(), version: 1 },
+        { endTime: toUnixMillis(Date.now()), version: 1 },
         auth,
         noopAudit,
       );
@@ -571,7 +571,7 @@ describe("fronting-session.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         created.id,
-        { endTime: Date.now(), version: 1 },
+        { endTime: toUnixMillis(Date.now()), version: 1 },
         auth,
         noopAudit,
       );
@@ -581,7 +581,7 @@ describe("fronting-session.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           created.id,
-          { endTime: Date.now(), version: 2 },
+          { endTime: toUnixMillis(Date.now()), version: 2 },
           auth,
           noopAudit,
         ),
@@ -639,7 +639,7 @@ describe("fronting-session.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           created.id,
-          { endTime: Date.now(), version: 1 },
+          { endTime: toUnixMillis(Date.now()), version: 1 },
           auth,
           noopAudit,
         ),
@@ -654,7 +654,7 @@ describe("fronting-session.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           genFrontingSessionId(),
-          { endTime: Date.now(), version: 1 },
+          { endTime: toUnixMillis(Date.now()), version: 1 },
           auth,
           noopAudit,
         ),
@@ -698,12 +698,12 @@ describe("fronting-session.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(frontingComments).values({
         id: genFrontingCommentId(),
         frontingSessionId: created.id,
         systemId,
-        sessionStartTime: Number(created.startTime),
+        sessionStartTime: toUnixMillis(Number(created.startTime)),
         memberId,
         encryptedData: testBlob(),
         createdAt: now,
@@ -839,7 +839,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ startTime: Date.now() - 5000 }),
+        createParams({ startTime: toUnixMillis(Date.now()) - 5000 }),
         auth,
         noopAudit,
       );
@@ -847,7 +847,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       const ended = await createFrontingSession(
         asDb(db),
         systemId,
-        createParams({ startTime: Date.now() - 10000 }),
+        createParams({ startTime: toUnixMillis(Date.now()) - 10000 }),
         auth,
         noopAudit,
       );
@@ -855,7 +855,7 @@ describe("fronting-session.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         ended.id,
-        { endTime: Date.now(), version: 1 },
+        { endTime: toUnixMillis(Date.now()), version: 1 },
         auth,
         noopAudit,
       );

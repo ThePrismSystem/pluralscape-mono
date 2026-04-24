@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { getSodium } from "@pluralscape/crypto";
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
-import { MS_PER_SECOND, now } from "@pluralscape/types";
+import { MS_PER_SECOND, now, toUnixMillis } from "@pluralscape/types";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
 import { buildIpPinnedFetchArgs, resolveAndValidateUrl } from "../lib/ip-validation.js";
@@ -202,7 +202,7 @@ export async function processWebhookDelivery(
     });
     await db
       .update(webhookDeliveries)
-      .set({ nextRetryAt: now() + WEBHOOK_HOST_THROTTLE_DELAY_MS })
+      .set({ nextRetryAt: toUnixMillis(now() + WEBHOOK_HOST_THROTTLE_DELAY_MS) })
       .where(eq(webhookDeliveries.id, deliveryId));
     return;
   }
@@ -255,7 +255,7 @@ export async function processWebhookDelivery(
     }
 
     const backoffMs = calculateBackoffMs(row.attemptCount + 1, WEBHOOK_BASE_BACKOFF_MS);
-    const nextRetryAt = timestamp + backoffMs;
+    const nextRetryAt = toUnixMillis(timestamp + backoffMs);
 
     await db
       .update(webhookDeliveries)

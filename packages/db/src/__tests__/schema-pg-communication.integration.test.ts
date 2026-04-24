@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -17,6 +17,7 @@ import {
 import { members } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgCommunicationTables,
   pgInsertAccount,
@@ -91,7 +92,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const data = testBlob(new Uint8Array([10, 20, 30]));
       const id = brandId<ChannelId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(channels).values({
         id,
@@ -113,7 +114,7 @@ describe("PG communication schema", () => {
     it("rejects invalid type via CHECK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(channels).values({
@@ -131,7 +132,7 @@ describe("PG communication schema", () => {
     it("rejects negative sort_order via CHECK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(channels).values({
@@ -180,7 +181,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<ChannelId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(channels).values({
         id,
@@ -204,7 +205,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(channels)
         .set({ archived: true, archivedAt: archiveTime })
@@ -218,7 +219,7 @@ describe("PG communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -231,7 +232,7 @@ describe("PG communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -248,7 +249,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
       const id = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([5, 6, 7]));
 
       await db.insert(messages).values({
@@ -274,7 +275,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
       const id = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(messages).values({
         id,
@@ -298,7 +299,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
       const id = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(messages).values({
         id,
@@ -310,7 +311,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(messages)
         .set({ archived: true, archivedAt: archiveTime })
@@ -326,8 +327,8 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
       const id = brandId<MessageId>(crypto.randomUUID());
-      const now = Date.now();
-      const editedAt = now + 1000;
+      const now = fixtureNow();
+      const editedAt = toUnixMillis(now + 1000);
 
       await db.insert(messages).values({
         id,
@@ -348,7 +349,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const msgId = brandId<MessageId>(crypto.randomUUID());
 
       await db.insert(messages).values({
@@ -368,7 +369,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const msgId = brandId<MessageId>(crypto.randomUUID());
 
       await db.insert(messages).values({
@@ -390,7 +391,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -404,7 +405,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -418,7 +419,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = brandId<MessageId>(crypto.randomUUID());
 
       await db.insert(messages).values({
@@ -441,7 +442,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = brandId<MessageId>(crypto.randomUUID());
 
       await db.insert(messages).values({
@@ -471,7 +472,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
       const id = brandId<MessageId>(crypto.randomUUID());
 
       await db.insert(messages).values({
@@ -488,7 +489,7 @@ describe("PG communication schema", () => {
         id,
         channelId,
         systemId,
-        timestamp: now + 1000,
+        timestamp: toUnixMillis(now + 1000),
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
@@ -504,7 +505,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(boardMessages).values({
         id,
@@ -526,7 +527,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(boardMessages).values({
         id,
@@ -545,7 +546,7 @@ describe("PG communication schema", () => {
     it("rejects negative sort_order via CHECK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(boardMessages).values({
@@ -563,7 +564,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(boardMessages).values({
         id,
@@ -583,7 +584,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(boardMessages).values({
         id,
@@ -603,7 +604,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(boardMessages).values({
         id,
@@ -625,7 +626,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<BoardMessageId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(boardMessages).values({
         id,
@@ -636,7 +637,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(boardMessages)
         .set({ archived: true, archivedAt: archiveTime })
@@ -650,7 +651,7 @@ describe("PG communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -663,7 +664,7 @@ describe("PG communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -679,7 +680,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notes).values({
         id,
@@ -700,7 +701,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notes).values({
         id,
@@ -747,7 +748,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notes).values({
         id,
@@ -766,7 +767,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notes).values({
         id,
@@ -787,7 +788,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notes).values({
         id,
@@ -797,7 +798,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(notes)
         .set({ archived: true, archivedAt: archiveTime })
@@ -812,7 +813,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notes).values({
         id,
@@ -830,7 +831,7 @@ describe("PG communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -843,7 +844,7 @@ describe("PG communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -859,7 +860,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(polls).values({
         id,
@@ -893,7 +894,7 @@ describe("PG communication schema", () => {
     it("rejects invalid status via CHECK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(polls).values({
@@ -927,7 +928,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(polls).values({
         id,
@@ -961,7 +962,7 @@ describe("PG communication schema", () => {
     it("rejects invalid kind via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(polls).values({
@@ -984,7 +985,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(polls).values({
         id,
@@ -1006,7 +1007,7 @@ describe("PG communication schema", () => {
     it("rejects nonexistent createdByMemberId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(polls).values({
@@ -1039,7 +1040,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<PollId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(polls).values({
         id,
@@ -1066,7 +1067,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(polls)
         .set({ archived: true, archivedAt: archiveTime })
@@ -1080,7 +1081,7 @@ describe("PG communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -1093,7 +1094,7 @@ describe("PG communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -1110,7 +1111,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20]));
 
       await db.insert(pollVotes).values({
@@ -1150,7 +1151,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const voteId = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(pollVotes).values({
         id: voteId,
@@ -1171,7 +1172,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const voteId = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(pollVotes).values({
         id: voteId,
@@ -1194,8 +1195,8 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
-      const votedAt = Date.now();
+      const now = fixtureNow();
+      const votedAt = fixtureNow();
 
       await db.insert(pollVotes).values({
         id,
@@ -1222,7 +1223,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(pollVotes).values({
         id,
@@ -1245,7 +1246,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(pollVotes).values({
         id,
@@ -1268,7 +1269,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(pollVotes).values({
         id,
@@ -1293,7 +1294,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
       const id = brandId<PollVoteId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(pollVotes).values({
         id,
@@ -1306,7 +1307,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(pollVotes)
         .set({ archived: true, archivedAt: archiveTime })
@@ -1321,7 +1322,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -1335,7 +1336,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -1351,7 +1352,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1370,7 +1371,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1389,7 +1390,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1409,7 +1410,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1428,7 +1429,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1447,7 +1448,7 @@ describe("PG communication schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1464,7 +1465,7 @@ describe("PG communication schema", () => {
     it("rejects nonexistent createdByMemberId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(acknowledgements).values({
@@ -1482,7 +1483,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1501,7 +1502,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1522,7 +1523,7 @@ describe("PG communication schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<AcknowledgementId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(acknowledgements).values({
         id,
@@ -1532,7 +1533,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(acknowledgements)
         .set({ archived: true, archivedAt: archiveTime })
@@ -1546,7 +1547,7 @@ describe("PG communication schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -1559,7 +1560,7 @@ describe("PG communication schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(

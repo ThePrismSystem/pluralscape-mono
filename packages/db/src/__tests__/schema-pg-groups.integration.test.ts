@@ -9,6 +9,7 @@ import { groupMemberships, groups } from "../schema/pg/groups.js";
 import { members } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgGroupsTables,
   pgInsertAccount,
@@ -42,7 +43,7 @@ describe("PG groups schema", () => {
     raw = crypto.randomUUID(),
   ): Promise<GroupId> {
     const id = brandId<GroupId>(raw);
-    const now = Date.now();
+    const now = fixtureNow();
     await db.insert(groups).values({
       id,
       systemId: brandId<SystemId>(systemId),
@@ -63,7 +64,7 @@ describe("PG groups schema", () => {
     memberId: string,
     systemId: string,
   ): Promise<void> {
-    const now = Date.now();
+    const now = fixtureNow();
     await db.insert(groupMemberships).values({
       groupId,
       memberId,
@@ -94,7 +95,7 @@ describe("PG groups schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<GroupId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(groups).values({
@@ -136,7 +137,7 @@ describe("PG groups schema", () => {
     it("rejects negative sort_order via CHECK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(groups).values({
@@ -154,7 +155,7 @@ describe("PG groups schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<GroupId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(groups).values({
         id,
@@ -175,7 +176,7 @@ describe("PG groups schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<GroupId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(groups).values({
         id,
@@ -197,7 +198,7 @@ describe("PG groups schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<GroupId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(groups).values({
         id,
@@ -208,7 +209,7 @@ describe("PG groups schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(groups)
         .set({ archived: true, archivedAt: archiveTime })
@@ -232,7 +233,7 @@ describe("PG groups schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -245,7 +246,7 @@ describe("PG groups schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -264,7 +265,7 @@ describe("PG groups schema", () => {
       const systemId = await insertSystem(accountId);
       const groupId = await insertGroup(systemId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(groupMemberships).values({
         groupId,
@@ -311,7 +312,7 @@ describe("PG groups schema", () => {
       const systemId = await insertSystem(accountId);
       const groupId = await insertGroup(systemId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(groupMemberships).values({
         groupId,

@@ -7,7 +7,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -195,7 +195,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     memberId: MemberId;
     bucketId: BucketId;
   }> {
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     const memberId = brandId<MemberId>(`mem_${crypto.randomUUID()}`);
     const bucketId = brandId<BucketId>(`bkt_${crypto.randomUUID()}`);
     const connectionId = brandId<FriendConnectionId>(`fc_${crypto.randomUUID()}`);
@@ -434,7 +434,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     const sessionId = brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`);
 
     // Revoke the device token
-    await db.update(deviceTokens).set({ revokedAt: Date.now() });
+    await db.update(deviceTokens).set({ revokedAt: toUnixMillis(Date.now()) });
 
     const { queue, enqueuedJobs } = createMockQueue();
     await dispatchSwitchAlertForSession(asDb(db), systemIdA, sessionId, memberId, null, queue);
@@ -486,8 +486,8 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
       systemId: systemIdB,
       platform: "android",
       tokenHash: `hash-${crypto.randomUUID()}`,
-      createdAt: Date.now(),
-      lastActiveAt: Date.now(),
+      createdAt: toUnixMillis(Date.now()),
+      lastActiveAt: toUnixMillis(Date.now()),
       revokedAt: null,
     });
 
@@ -515,7 +515,7 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     await db.delete(friendConnections);
     await db.delete(buckets).catch(() => {});
 
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     const sharedMemberId = brandId<MemberId>(`mem_${crypto.randomUUID()}`);
     const bucketId = brandId<BucketId>(`bkt_${crypto.randomUUID()}`);
 

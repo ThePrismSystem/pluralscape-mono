@@ -1,5 +1,5 @@
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -18,7 +18,7 @@ import type { BucketId } from "@pluralscape/types";
 
 describe("pgTimestamp mapping", () => {
   it("converts UnixMillis to ISO string", () => {
-    const ms = 1704067200000; // 2024-01-01T00:00:00.000Z
+    const ms = toUnixMillis(1704067200000); // 2024-01-01T00:00:00.000Z
     expect(timestampToDriver(ms)).toBe("2024-01-01T00:00:00.000Z");
   });
 
@@ -27,25 +27,31 @@ describe("pgTimestamp mapping", () => {
   });
 
   it("round-trips through toDriver/fromDriver", () => {
-    const ms = Date.now();
+    const ms = toUnixMillis(Date.now());
     expect(timestampFromDriver(timestampToDriver(ms))).toBe(ms);
   });
 
   it("accepts negative timestamps (dates before epoch)", () => {
-    const ms = -1000;
+    const ms = toUnixMillis(-1000);
     expect(timestampFromDriver(timestampToDriver(ms))).toBe(ms);
   });
 
   it("throws on NaN", () => {
-    expect(() => timestampToDriver(NaN)).toThrow("not a finite number");
+    expect(() => timestampToDriver(NaN as ReturnType<typeof toUnixMillis>)).toThrow(
+      "not a finite number",
+    );
   });
 
   it("throws on Infinity", () => {
-    expect(() => timestampToDriver(Infinity)).toThrow("not a finite number");
+    expect(() => timestampToDriver(Infinity as ReturnType<typeof toUnixMillis>)).toThrow(
+      "not a finite number",
+    );
   });
 
   it("throws on -Infinity", () => {
-    expect(() => timestampToDriver(-Infinity)).toThrow("not a finite number");
+    expect(() => timestampToDriver(-Infinity as ReturnType<typeof toUnixMillis>)).toThrow(
+      "not a finite number",
+    );
   });
 
   it("throws on unparseable date string", () => {

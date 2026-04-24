@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -9,6 +9,7 @@ import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/pg/webhooks.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   MS_PER_DAY,
   TTL_RETENTION_DAYS,
@@ -54,7 +55,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const s = secret([1, 2, 3]);
 
       await db.insert(webhookConfigs).values({
@@ -81,7 +82,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id,
@@ -101,7 +102,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id,
@@ -122,7 +123,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const keyId = brandId<ApiKeyId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(apiKeys).values({
         id: keyId,
@@ -153,7 +154,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id,
@@ -174,7 +175,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id,
@@ -195,7 +196,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id,
@@ -218,7 +219,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id,
@@ -230,7 +231,7 @@ describe("PG webhooks schema", () => {
         updatedAt: now,
       });
 
-      const updateNow = Date.now();
+      const updateNow = fixtureNow();
       await db
         .update(webhookConfigs)
         .set({ archived: true, archivedAt: updateNow })
@@ -243,7 +244,7 @@ describe("PG webhooks schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -256,7 +257,7 @@ describe("PG webhooks schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -273,7 +274,7 @@ describe("PG webhooks schema", () => {
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
       const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -305,7 +306,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -333,7 +334,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -362,7 +363,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -392,7 +393,7 @@ describe("PG webhooks schema", () => {
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
       const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -422,7 +423,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -451,8 +452,8 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
-      const thirtyOneDaysAgo = now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY;
+      const now = fixtureNow();
+      const thirtyOneDaysAgo = toUnixMillis(now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY);
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -516,7 +517,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -544,8 +545,8 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const now = Date.now();
-      const retryAt = now + 60_000;
+      const now = fixtureNow();
+      const retryAt = toUnixMillis(now + 60_000);
 
       await db.insert(webhookConfigs).values({
         id: whId,

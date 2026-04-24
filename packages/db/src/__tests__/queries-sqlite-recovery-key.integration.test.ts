@@ -11,9 +11,10 @@ import {
 } from "../queries/recovery-key.js";
 import { accounts, recoveryKeys } from "../schema/sqlite/auth.js";
 
+import { fixtureNow, fixtureNowPlus } from "./fixtures/timestamps.js";
 import { SQLITE_DDL, sqliteInsertAccount } from "./helpers/sqlite-helpers.js";
 
-import type { AccountId, RecoveryKeyId } from "@pluralscape/types";
+import type { AccountId, RecoveryKeyId, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, recoveryKeys };
@@ -46,13 +47,13 @@ describe("recovery key queries (SQLite)", () => {
 
   function makeRow(
     accountId: AccountId,
-    overrides: Partial<{ id: RecoveryKeyId; createdAt: number }> = {},
+    overrides: Partial<{ id: RecoveryKeyId; createdAt: UnixMillis }> = {},
   ) {
     return {
       id: overrides.id ?? brandId<RecoveryKeyId>(crypto.randomUUID()),
       accountId,
       encryptedMasterKey: makeEncryptedKey(),
-      createdAt: overrides.createdAt ?? Date.now(),
+      createdAt: overrides.createdAt ?? fixtureNow(),
     };
   }
 
@@ -108,7 +109,7 @@ describe("recovery key queries (SQLite)", () => {
       sqliteRevokeRecoveryKey(
         db as BetterSQLite3Database<Record<string, unknown>>,
         row.id,
-        Date.now(),
+        fixtureNow(),
       );
 
       const result = sqliteGetActiveRecoveryKey(
@@ -120,14 +121,14 @@ describe("recovery key queries (SQLite)", () => {
 
     it("ignores revoked keys and returns active one", () => {
       const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
-      const oldRow = makeRow(accountId, { createdAt: Date.now() - 10_000 });
+      const oldRow = makeRow(accountId, { createdAt: fixtureNowPlus(-10_000) });
       const newRow = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, oldRow);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, newRow);
       sqliteRevokeRecoveryKey(
         db as BetterSQLite3Database<Record<string, unknown>>,
         oldRow.id,
-        Date.now(),
+        fixtureNow(),
       );
 
       const result = sqliteGetActiveRecoveryKey(
@@ -144,7 +145,7 @@ describe("recovery key queries (SQLite)", () => {
       const row = makeRow(accountId);
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, row);
 
-      const revokedAt = Date.now();
+      const revokedAt = fixtureNow();
       sqliteRevokeRecoveryKey(
         db as BetterSQLite3Database<Record<string, unknown>>,
         row.id,
@@ -160,7 +161,7 @@ describe("recovery key queries (SQLite)", () => {
         sqliteRevokeRecoveryKey(
           db as BetterSQLite3Database<Record<string, unknown>>,
           brandId<RecoveryKeyId>("nonexistent-id"),
-          Date.now(),
+          fixtureNow(),
         );
       }).toThrow("Recovery key not found.");
     });
@@ -175,7 +176,7 @@ describe("recovery key queries (SQLite)", () => {
       sqliteRevokeRecoveryKey(
         db as BetterSQLite3Database<Record<string, unknown>>,
         row1.id,
-        Date.now(),
+        fixtureNow(),
       );
 
       const all = db.select().from(recoveryKeys).all();
@@ -191,7 +192,7 @@ describe("recovery key queries (SQLite)", () => {
       sqliteStoreRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, oldRow);
 
       const newRow = makeRow(accountId);
-      const revokedAt = Date.now();
+      const revokedAt = fixtureNow();
       sqliteReplaceRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, {
         revokeId: oldRow.id,
         revokedAt,
@@ -214,7 +215,7 @@ describe("recovery key queries (SQLite)", () => {
       expect(() => {
         sqliteReplaceRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, {
           revokeId: brandId<RecoveryKeyId>("nonexistent-id"),
-          revokedAt: Date.now(),
+          revokedAt: fixtureNow(),
           newRow,
         });
       }).toThrow("Recovery key not found.");
@@ -228,7 +229,7 @@ describe("recovery key queries (SQLite)", () => {
       const newRow = makeRow(accountId);
       sqliteReplaceRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, {
         revokeId: oldRow.id,
-        revokedAt: Date.now(),
+        revokedAt: fixtureNow(),
         newRow,
       });
 

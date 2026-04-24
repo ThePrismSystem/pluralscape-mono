@@ -8,6 +8,7 @@ import { accounts } from "../schema/sqlite/auth.js";
 import { nomenclatureSettings } from "../schema/sqlite/nomenclature-settings.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteNomenclatureSettingsTables,
   sqliteInsertAccount,
@@ -40,7 +41,7 @@ describe("SQLite nomenclature_settings schema", () => {
   it("inserts and retrieves with all columns", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     db.insert(nomenclatureSettings)
@@ -67,7 +68,7 @@ describe("SQLite nomenclature_settings schema", () => {
   it("defaults version to 1", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(nomenclatureSettings)
       .values({
@@ -89,7 +90,7 @@ describe("SQLite nomenclature_settings schema", () => {
   it("round-trips encrypted_data binary correctly", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const bigArray = new Uint8Array(256);
     for (let i = 0; i < 256; i++) bigArray[i] = i;
     const blob = testBlob(bigArray);
@@ -114,7 +115,7 @@ describe("SQLite nomenclature_settings schema", () => {
   it("enforces 1:1 with systems (rejects duplicate systemId)", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(nomenclatureSettings)
       .values({
@@ -141,7 +142,7 @@ describe("SQLite nomenclature_settings schema", () => {
   it("cascades on system deletion", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(nomenclatureSettings)
       .values({
@@ -162,7 +163,7 @@ describe("SQLite nomenclature_settings schema", () => {
   });
 
   it("rejects nonexistent systemId FK", () => {
-    const now = Date.now();
+    const now = fixtureNow();
     expect(() =>
       db
         .insert(nomenclatureSettings)
@@ -179,7 +180,7 @@ describe("SQLite nomenclature_settings schema", () => {
   it("supports version increment", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(nomenclatureSettings)
       .values({
@@ -191,7 +192,7 @@ describe("SQLite nomenclature_settings schema", () => {
       .run();
 
     db.update(nomenclatureSettings)
-      .set({ version: 2, updatedAt: Date.now() })
+      .set({ version: 2, updatedAt: fixtureNow() })
       .where(eq(nomenclatureSettings.systemId, systemId))
       .run();
 

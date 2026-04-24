@@ -1,5 +1,5 @@
 import { channels, messages } from "@pluralscape/db/pg";
-import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateMessageBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -65,7 +65,7 @@ export async function createMessage(
         channelId,
         systemId,
         replyToId: parsed.replyToId ?? null,
-        timestamp: parsed.timestamp,
+        timestamp: toUnixMillis(parsed.timestamp),
         encryptedData: blob,
         createdAt: ts,
         updatedAt: ts,

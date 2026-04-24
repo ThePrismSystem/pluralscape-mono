@@ -9,6 +9,7 @@ import { blobMetadata } from "../schema/pg/blob-metadata.js";
 import { buckets } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgBlobMetadataTables,
   pgInsertAccount,
@@ -46,7 +47,7 @@ describe("PG blob_metadata schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
       id,
@@ -75,7 +76,7 @@ describe("PG blob_metadata schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const storageKey = `blobs/${crypto.randomUUID()}`;
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
       id: brandId<BlobId>(crypto.randomUUID()),
@@ -107,7 +108,7 @@ describe("PG blob_metadata schema", () => {
   it("rejects size_bytes <= 0", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       db.insert(blobMetadata).values({
@@ -127,7 +128,7 @@ describe("PG blob_metadata schema", () => {
   it("rejects invalid encryption_tier", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       // @ts-expect-error — intentionally testing CHECK constraint with invalid tier value
@@ -148,7 +149,7 @@ describe("PG blob_metadata schema", () => {
   it("rejects invalid purpose", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       db.insert(blobMetadata).values({
@@ -169,7 +170,7 @@ describe("PG blob_metadata schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
       id,
@@ -192,7 +193,7 @@ describe("PG blob_metadata schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const bucketId = brandId<BucketId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(buckets).values({
       id: bucketId,
@@ -254,7 +255,7 @@ describe("PG blob_metadata schema", () => {
   it("rejects checksum not exactly 64 characters", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       db.insert(blobMetadata).values({
@@ -288,7 +289,7 @@ describe("PG blob_metadata schema", () => {
   it("accepts size_bytes at exactly 10 GB", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
       id: brandId<BlobId>(crypto.randomUUID()),
@@ -306,7 +307,7 @@ describe("PG blob_metadata schema", () => {
   it("rejects size_bytes exceeding 10 GB", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       db.insert(blobMetadata).values({
@@ -327,7 +328,7 @@ describe("PG blob_metadata schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
       id,
@@ -350,7 +351,7 @@ describe("PG blob_metadata schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
       id,
@@ -375,7 +376,7 @@ describe("PG blob_metadata schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const id = brandId<BlobId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(blobMetadata).values({
       id,
@@ -389,7 +390,7 @@ describe("PG blob_metadata schema", () => {
       uploadedAt: now,
     });
 
-    const archiveTime = Date.now();
+    const archiveTime = fixtureNow();
     await db
       .update(blobMetadata)
       .set({ archived: true, archivedAt: archiveTime })
@@ -403,7 +404,7 @@ describe("PG blob_metadata schema", () => {
   it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       client.query(
@@ -427,7 +428,7 @@ describe("PG blob_metadata schema", () => {
   it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     await expect(
       client.query(

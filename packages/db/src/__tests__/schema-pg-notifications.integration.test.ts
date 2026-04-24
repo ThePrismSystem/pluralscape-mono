@@ -13,6 +13,7 @@ import {
 import { friendConnections } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgNotificationTables,
   pgInsertAccount,
@@ -64,7 +65,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
         id,
@@ -89,7 +90,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
         id,
@@ -108,7 +109,7 @@ describe("PG notifications schema", () => {
     it("rejects invalid platform values", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(deviceTokens).values({
@@ -125,7 +126,7 @@ describe("PG notifications schema", () => {
     it("rejects duplicate tokenHash+platform pair", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       await db.insert(deviceTokens).values({
@@ -152,7 +153,7 @@ describe("PG notifications schema", () => {
     it("allows same tokenHash on different platforms", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       await db.insert(deviceTokens).values({
@@ -178,7 +179,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
         id,
@@ -198,7 +199,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
         id,
@@ -220,7 +221,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id,
@@ -242,7 +243,7 @@ describe("PG notifications schema", () => {
     it("enforces unique (system_id, event_type)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id: brandId<NotificationConfigId>(crypto.randomUUID()),
@@ -267,7 +268,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id,
@@ -288,7 +289,7 @@ describe("PG notifications schema", () => {
     it("rejects invalid event_type", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(notificationConfigs).values({
@@ -305,7 +306,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id,
@@ -329,7 +330,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id,
@@ -351,7 +352,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id,
@@ -375,7 +376,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = brandId<NotificationConfigId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id,
@@ -385,7 +386,7 @@ describe("PG notifications schema", () => {
         updatedAt: now,
       });
 
-      const updateNow = Date.now();
+      const updateNow = fixtureNow();
       await db
         .update(notificationConfigs)
         .set({ archived: true, archivedAt: updateNow })
@@ -401,7 +402,7 @@ describe("PG notifications schema", () => {
     it("allows duplicate (systemId, eventType) when both rows are archived", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id: brandId<NotificationConfigId>(crypto.randomUUID()),
@@ -427,7 +428,7 @@ describe("PG notifications schema", () => {
     it("rejects duplicate (systemId, eventType) when both rows are active", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(notificationConfigs).values({
         id: brandId<NotificationConfigId>(crypto.randomUUID()),
@@ -451,7 +452,7 @@ describe("PG notifications schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -464,7 +465,7 @@ describe("PG notifications schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -481,7 +482,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -514,7 +515,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -544,7 +545,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -581,7 +582,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -614,7 +615,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -649,7 +650,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
       const id = brandId<FriendNotificationPreferenceId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -669,7 +670,7 @@ describe("PG notifications schema", () => {
         updatedAt: now,
       });
 
-      const updateNow = Date.now();
+      const updateNow = fixtureNow();
       await db
         .update(friendNotificationPreferences)
         .set({ archived: true, archivedAt: updateNow })
@@ -687,7 +688,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -726,7 +727,7 @@ describe("PG notifications schema", () => {
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -762,7 +763,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,
@@ -785,7 +786,7 @@ describe("PG notifications schema", () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
       const fcId = brandId<FriendConnectionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(friendConnections).values({
         id: fcId,

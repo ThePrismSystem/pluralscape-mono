@@ -1,4 +1,5 @@
 import { deviceTokens } from "@pluralscape/db/pg";
+import { toUnixMillis } from "@pluralscape/types";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../../lib/pagination.js";
@@ -33,9 +34,10 @@ export async function listDeviceTokens(
 
     if (opts?.cursor) {
       const decoded = fromCompositeCursor(opts.cursor, "dt");
+      const sortValue = toUnixMillis(decoded.sortValue);
       const cursorCondition = or(
-        lt(deviceTokens.createdAt, decoded.sortValue),
-        and(eq(deviceTokens.createdAt, decoded.sortValue), lt(deviceTokens.id, decoded.id)),
+        lt(deviceTokens.createdAt, sortValue),
+        and(eq(deviceTokens.createdAt, sortValue), lt(deviceTokens.id, decoded.id)),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

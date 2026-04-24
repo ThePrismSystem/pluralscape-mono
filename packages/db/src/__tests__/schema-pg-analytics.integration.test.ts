@@ -8,6 +8,7 @@ import { frontingReports } from "../schema/pg/analytics.js";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgAnalyticsTables,
   makeFrontingReportId,
@@ -47,7 +48,7 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = makeFrontingReportId();
-      const ts = Date.now();
+      const ts = fixtureNow();
       const blob = testBlob();
 
       await db.insert(frontingReports).values({
@@ -77,7 +78,7 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = makeFrontingReportId();
-      const ts = Date.now();
+      const ts = fixtureNow();
 
       await db.insert(frontingReports).values({
         id,
@@ -96,7 +97,7 @@ describe("PG analytics schema", () => {
     it("rejects invalid format value", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const ts = Date.now();
+      const ts = fixtureNow();
 
       await expect(
         db.insert(frontingReports).values({
@@ -115,7 +116,7 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = makeFrontingReportId();
-      const ts = Date.now();
+      const ts = fixtureNow();
 
       await db.insert(frontingReports).values({
         id,
@@ -133,7 +134,7 @@ describe("PG analytics schema", () => {
     });
 
     it("rejects nonexistent systemId FK", async () => {
-      const ts = Date.now();
+      const ts = fixtureNow();
       await expect(
         db.insert(frontingReports).values({
           id: makeFrontingReportId(),
@@ -151,7 +152,7 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = makeFrontingReportId();
-      const ts = Date.now();
+      const ts = fixtureNow();
       const values = {
         id,
         systemId,
@@ -169,7 +170,7 @@ describe("PG analytics schema", () => {
     it("queries multiple reports by systemId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const ts = Date.now();
+      const ts = fixtureNow();
 
       await db.insert(frontingReports).values([
         {
@@ -203,7 +204,7 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = makeFrontingReportId();
-      const ts = Date.now();
+      const ts = fixtureNow();
       const blob = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(frontingReports).values({
@@ -223,7 +224,7 @@ describe("PG analytics schema", () => {
     it("enforces version >= 1 check constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const ts = Date.now();
+      const ts = fixtureNow();
 
       await expect(
         db.insert(frontingReports).values({
@@ -242,7 +243,7 @@ describe("PG analytics schema", () => {
     it("enforces archived consistency check", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const ts = Date.now();
+      const ts = fixtureNow();
 
       // archived=true but archivedAt=null should fail
       await expect(

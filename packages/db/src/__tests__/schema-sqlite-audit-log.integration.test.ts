@@ -7,6 +7,7 @@ import { auditLog } from "../schema/sqlite/audit-log.js";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteAuditLogTables,
   makeAuditLogEntryId,
@@ -43,7 +44,7 @@ describe("SQLite audit_log schema", () => {
   it("inserts and retrieves with all columns (detail as text)", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
     const actor = testActor("account", accountId);
 
@@ -74,7 +75,7 @@ describe("SQLite audit_log schema", () => {
   });
 
   it("allows nullable fields (accountId, systemId, ipAddress, userAgent, detail)", () => {
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
@@ -95,7 +96,7 @@ describe("SQLite audit_log schema", () => {
   });
 
   it("rejects invalid event_type via CHECK constraint", () => {
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db
@@ -135,7 +136,7 @@ describe("SQLite audit_log schema", () => {
     ] as const;
 
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     for (const eventType of eventTypes) {
       db.insert(auditLog)
         .values({
@@ -156,7 +157,7 @@ describe("SQLite audit_log schema", () => {
   });
 
   it("supports api-key actor type", () => {
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
     const actor = testActor("api-key", "key-123");
 
@@ -175,7 +176,7 @@ describe("SQLite audit_log schema", () => {
 
   it("sets account_id to NULL on account deletion (SET NULL)", () => {
     const accountId = insertAccount();
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
@@ -197,7 +198,7 @@ describe("SQLite audit_log schema", () => {
   it("sets system_id to NULL on system deletion (SET NULL)", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
@@ -218,7 +219,7 @@ describe("SQLite audit_log schema", () => {
   });
 
   it("rejects duplicate primary key", () => {
-    const now = Date.now();
+    const now = fixtureNow();
     const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
@@ -244,7 +245,7 @@ describe("SQLite audit_log schema", () => {
   });
 
   it("accepts detail at exactly 2048 characters", () => {
-    const now = Date.now();
+    const now = fixtureNow();
 
     db.insert(auditLog)
       .values({
@@ -258,7 +259,7 @@ describe("SQLite audit_log schema", () => {
   });
 
   it("rejects detail exceeding 2048 characters", () => {
-    const now = Date.now();
+    const now = fixtureNow();
 
     expect(() =>
       db

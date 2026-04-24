@@ -16,6 +16,7 @@ import { buckets } from "../schema/sqlite/privacy.js";
 import { systemStructureEntities, systemStructureEntityTypes } from "../schema/sqlite/structure.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteCustomFieldsTables,
   sqliteInsertAccount,
@@ -61,7 +62,7 @@ describe("SQLite custom fields schema", () => {
     systemId: SystemId,
     id: BucketId = brandId<BucketId>(crypto.randomUUID()),
   ): BucketId {
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(buckets)
       .values({
         id,
@@ -78,7 +79,7 @@ describe("SQLite custom fields schema", () => {
     systemId: SystemId,
     id: FieldDefinitionId = brandId<FieldDefinitionId>(crypto.randomUUID()),
   ): FieldDefinitionId {
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(fieldDefinitions)
       .values({
         id,
@@ -114,7 +115,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(fieldDefinitions)
@@ -138,7 +139,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitions)
         .values({
@@ -172,7 +173,7 @@ describe("SQLite custom fields schema", () => {
     });
 
     it("rejects nonexistent systemId FK", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       expect(() =>
         db
           .insert(fieldDefinitions)
@@ -192,7 +193,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitions)
         .values({
@@ -216,7 +217,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitions)
         .values({
@@ -241,7 +242,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitions)
         .values({
@@ -263,7 +264,7 @@ describe("SQLite custom fields schema", () => {
     it("rejects invalid fieldType via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -283,7 +284,7 @@ describe("SQLite custom fields schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -297,7 +298,7 @@ describe("SQLite custom fields schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -312,7 +313,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<FieldDefinitionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitions)
         .values({
@@ -342,7 +343,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(fieldValues)
@@ -368,7 +369,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -389,7 +390,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -412,7 +413,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -433,7 +434,7 @@ describe("SQLite custom fields schema", () => {
     it("rejects nonexistent fieldDefinitionId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -456,7 +457,7 @@ describe("SQLite custom fields schema", () => {
       const memberId = brandId<MemberId>(sqliteInsertMember(db, systemId));
       const fieldDefId = insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -480,7 +481,7 @@ describe("SQLite custom fields schema", () => {
       const memberId1 = brandId<MemberId>(sqliteInsertMember(db, systemId));
       const memberId2 = brandId<MemberId>(sqliteInsertMember(db, systemId));
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -518,7 +519,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = brandId<MemberId>(sqliteInsertMember(db, systemId));
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -552,7 +553,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -585,7 +586,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = brandId<MemberId>(sqliteInsertMember(db, systemId));
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -622,7 +623,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -789,7 +790,7 @@ describe("SQLite custom fields schema", () => {
       systemId: SystemId,
       id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
     ): SystemStructureEntityTypeId {
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(systemStructureEntityTypes)
         .values({
           id,
@@ -808,7 +809,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const id = brandId<FieldDefinitionScopeId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitionScopes)
         .values({
@@ -836,7 +837,7 @@ describe("SQLite custom fields schema", () => {
     it("rejects nonexistent field_definition_id FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -857,7 +858,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -879,7 +880,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -895,7 +896,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const entityTypeId = brandId<SystemStructureEntityTypeId>(insertEntityType(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -910,7 +911,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitionScopes)
         .values({
@@ -942,7 +943,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -958,7 +959,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const id = brandId<FieldDefinitionScopeId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitionScopes)
         .values({
@@ -984,7 +985,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldDefinitionScopes)
         .values({
@@ -1008,7 +1009,7 @@ describe("SQLite custom fields schema", () => {
       systemId: SystemId,
       id = brandId<SystemStructureEntityTypeId>(crypto.randomUUID()),
     ): SystemStructureEntityTypeId {
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(systemStructureEntityTypes)
         .values({
           id,
@@ -1027,7 +1028,7 @@ describe("SQLite custom fields schema", () => {
       entityTypeId: SystemStructureEntityTypeId,
       id = brandId<SystemStructureEntityId>(crypto.randomUUID()),
     ): SystemStructureEntityId {
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(systemStructureEntities)
         .values({
           id,
@@ -1044,7 +1045,7 @@ describe("SQLite custom fields schema", () => {
 
     function insertGroup(systemId: string, raw = crypto.randomUUID()): GroupId {
       const id = brandId<GroupId>(raw);
-      const now = Date.now();
+      const now = fixtureNow();
       db.insert(groups)
         .values({
           id,
@@ -1065,7 +1066,7 @@ describe("SQLite custom fields schema", () => {
       const entityTypeId = brandId<SystemStructureEntityTypeId>(insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(insertEntity(systemId, entityTypeId));
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -1092,7 +1093,7 @@ describe("SQLite custom fields schema", () => {
       const fieldDefId = insertFieldDefinition(systemId);
       const groupId = brandId<GroupId>(insertGroup(systemId));
       const id = brandId<FieldValueId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -1120,7 +1121,7 @@ describe("SQLite custom fields schema", () => {
       const memberId = brandId<MemberId>(sqliteInsertMember(db, systemId));
       const entityTypeId = brandId<SystemStructureEntityTypeId>(insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(insertEntity(systemId, entityTypeId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1145,7 +1146,7 @@ describe("SQLite custom fields schema", () => {
       const fieldDefId = insertFieldDefinition(systemId);
       const memberId = brandId<MemberId>(sqliteInsertMember(db, systemId));
       const groupId = brandId<GroupId>(insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1171,7 +1172,7 @@ describe("SQLite custom fields schema", () => {
       const entityTypeId = brandId<SystemStructureEntityTypeId>(insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(insertEntity(systemId, entityTypeId));
       const groupId = brandId<GroupId>(insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1198,7 +1199,7 @@ describe("SQLite custom fields schema", () => {
       const entityTypeId = brandId<SystemStructureEntityTypeId>(insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(insertEntity(systemId, entityTypeId));
       const groupId = brandId<GroupId>(insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1224,7 +1225,7 @@ describe("SQLite custom fields schema", () => {
       const fieldDefId = insertFieldDefinition(systemId);
       const entityTypeId = brandId<SystemStructureEntityTypeId>(insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(insertEntity(systemId, entityTypeId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -1248,7 +1249,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const groupId = brandId<GroupId>(insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -1271,7 +1272,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1293,7 +1294,7 @@ describe("SQLite custom fields schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1317,7 +1318,7 @@ describe("SQLite custom fields schema", () => {
       const fieldDefId = insertFieldDefinition(systemId);
       const entityTypeId = brandId<SystemStructureEntityTypeId>(insertEntityType(systemId));
       const entityId = brandId<SystemStructureEntityId>(insertEntity(systemId, entityTypeId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({
@@ -1352,7 +1353,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const groupId = brandId<GroupId>(insertGroup(systemId));
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(fieldValues)
         .values({

@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -6,9 +6,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { sqliteCleanupDeviceTransfers } from "../queries/device-transfer-cleanup.js";
 import { accounts, deviceTransferRequests, sessions } from "../schema/sqlite/auth.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import { createSqliteAuthTables, sqliteInsertAccount } from "./helpers/sqlite-helpers.js";
 
-import type { AccountId, DeviceTransferRequestId, SessionId } from "@pluralscape/types";
+import type { AccountId, DeviceTransferRequestId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const ONE_HOUR_MS = 3_600_000;
@@ -27,7 +28,7 @@ describe("sqliteCleanupDeviceTransfers", () => {
         id,
         accountId,
         tokenHash: `tok_${crypto.randomUUID()}`,
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       })
       .run();
     return id;
@@ -37,12 +38,12 @@ describe("sqliteCleanupDeviceTransfers", () => {
     accountId: AccountId;
     sourceSessionId: SessionId;
     status?: "pending" | "approved" | "expired";
-    createdAt?: number;
-    expiresAt?: number;
+    createdAt?: UnixMillis;
+    expiresAt?: UnixMillis;
     encryptedKeyMaterial?: Uint8Array;
   }): DeviceTransferRequestId {
     const id = brandId<DeviceTransferRequestId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(deviceTransferRequests)
       .values({
         id,
@@ -51,8 +52,8 @@ describe("sqliteCleanupDeviceTransfers", () => {
         status: opts.status ?? "pending",
         codeSalt: TEST_CODE_SALT,
         encryptedKeyMaterial: opts.encryptedKeyMaterial ?? null,
-        createdAt: opts.createdAt ?? now - ONE_HOUR_MS,
-        expiresAt: opts.expiresAt ?? now + ONE_HOUR_MS,
+        createdAt: opts.createdAt ?? toUnixMillis(now - ONE_HOUR_MS),
+        expiresAt: opts.expiresAt ?? toUnixMillis(now + ONE_HOUR_MS),
       })
       .run();
     return id;
@@ -78,15 +79,15 @@ describe("sqliteCleanupDeviceTransfers", () => {
   it("expires pending transfers past their expiresAt", () => {
     const accountId = sqliteInsertAccount(db);
     const sessionId = insertSession(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     // Expired pending transfer (expiresAt in the past)
     const expiredId = insertTransfer({
       accountId,
       sourceSessionId: sessionId,
       status: "pending",
-      createdAt: now - ONE_HOUR_MS * 2,
-      expiresAt: now - ONE_HOUR_MS,
+      createdAt: toUnixMillis(now - ONE_HOUR_MS * 2),
+      expiresAt: toUnixMillis(now - ONE_HOUR_MS),
     });
 
     // Non-expired pending transfer (expiresAt in the future)
@@ -94,8 +95,8 @@ describe("sqliteCleanupDeviceTransfers", () => {
       accountId,
       sourceSessionId: sessionId,
       status: "pending",
-      createdAt: now - ONE_HOUR_MS,
-      expiresAt: now + ONE_HOUR_MS,
+      createdAt: toUnixMillis(now - ONE_HOUR_MS),
+      expiresAt: toUnixMillis(now + ONE_HOUR_MS),
     });
 
     const result = sqliteCleanupDeviceTransfers(db);
@@ -112,15 +113,15 @@ describe("sqliteCleanupDeviceTransfers", () => {
   it("does not touch already-approved transfers", () => {
     const accountId = sqliteInsertAccount(db);
     const sessionId = insertSession(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     insertTransfer({
       accountId,
       sourceSessionId: sessionId,
       status: "approved",
       encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
-      createdAt: now - ONE_HOUR_MS * 2,
-      expiresAt: now - ONE_HOUR_MS,
+      createdAt: toUnixMillis(now - ONE_HOUR_MS * 2),
+      expiresAt: toUnixMillis(now - ONE_HOUR_MS),
     });
 
     const result = sqliteCleanupDeviceTransfers(db);
@@ -134,14 +135,14 @@ describe("sqliteCleanupDeviceTransfers", () => {
   it("does not touch already-expired transfers", () => {
     const accountId = sqliteInsertAccount(db);
     const sessionId = insertSession(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     insertTransfer({
       accountId,
       sourceSessionId: sessionId,
       status: "expired",
-      createdAt: now - ONE_HOUR_MS * 2,
-      expiresAt: now - ONE_HOUR_MS,
+      createdAt: toUnixMillis(now - ONE_HOUR_MS * 2),
+      expiresAt: toUnixMillis(now - ONE_HOUR_MS),
     });
 
     const result = sqliteCleanupDeviceTransfers(db);
@@ -156,22 +157,22 @@ describe("sqliteCleanupDeviceTransfers", () => {
   it("expires multiple pending transfers in a single pass", () => {
     const accountId = sqliteInsertAccount(db);
     const sessionId = insertSession(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     insertTransfer({
       accountId,
       sourceSessionId: sessionId,
       status: "pending",
-      createdAt: now - ONE_HOUR_MS * 3,
-      expiresAt: now - ONE_HOUR_MS * 2,
+      createdAt: toUnixMillis(now - ONE_HOUR_MS * 3),
+      expiresAt: toUnixMillis(now - ONE_HOUR_MS * 2),
     });
 
     insertTransfer({
       accountId,
       sourceSessionId: sessionId,
       status: "pending",
-      createdAt: now - ONE_HOUR_MS * 2,
-      expiresAt: now - ONE_HOUR_MS,
+      createdAt: toUnixMillis(now - ONE_HOUR_MS * 2),
+      expiresAt: toUnixMillis(now - ONE_HOUR_MS),
     });
 
     const result = sqliteCleanupDeviceTransfers(db);

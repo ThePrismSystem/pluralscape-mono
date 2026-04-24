@@ -1,5 +1,5 @@
 import { timerConfigs } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { now, toUnixMillis } from "@pluralscape/types";
 import { UpdateTimerConfigBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -85,14 +85,16 @@ export async function updateTimerConfig(
         const effectiveInterval = parsed.intervalMinutes ?? current.intervalMinutes;
 
         if (effectiveEnabled && effectiveInterval !== null) {
-          setClause.nextCheckInAt = computeNextCheckInAt(
-            {
-              intervalMinutes: effectiveInterval,
-              wakingHoursOnly: parsed.wakingHoursOnly ?? current.wakingHoursOnly,
-              wakingStart: parsed.wakingStart ?? current.wakingStart,
-              wakingEnd: parsed.wakingEnd ?? current.wakingEnd,
-            },
-            Date.now(),
+          setClause.nextCheckInAt = toUnixMillis(
+            computeNextCheckInAt(
+              {
+                intervalMinutes: effectiveInterval,
+                wakingHoursOnly: parsed.wakingHoursOnly ?? current.wakingHoursOnly,
+                wakingStart: parsed.wakingStart ?? current.wakingStart,
+                wakingEnd: parsed.wakingEnd ?? current.wakingEnd,
+              },
+              Date.now(),
+            ),
           );
         } else {
           setClause.nextCheckInAt = null;

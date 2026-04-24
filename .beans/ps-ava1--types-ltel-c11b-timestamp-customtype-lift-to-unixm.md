@@ -1,11 +1,11 @@
 ---
 # ps-ava1
 title: "types-ltel C11b: timestamp customType lift to UnixMillis"
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-04-24T09:27:12Z
-updated_at: 2026-04-24T09:28:50Z
+updated_at: 2026-04-24T13:52:17Z
 parent: types-ltel
 blocked_by:
   - ps-6hyr
@@ -17,13 +17,12 @@ Second of three sub-PRs closing out the types-ltel epic (C11).
 
 Flip `pgTimestamp` / `sqliteTimestamp` `customType` generics from `{ data: number }` to `{ data: UnixMillis }`.
 
-- [ ] Update `packages/db/src/columns/pg.ts` (line 61): `customType<{ data: UnixMillis; driverData: string }>`
-- [ ] Update `packages/db/src/columns/sqlite.ts` (line 45): `customType<{ data: UnixMillis; driverData: number }>`
-- [ ] Add fixture helper `packages/db/src/__tests__/fixtures/timestamps.ts` exporting `fixtureNow()` and `fixtureNowPlus(offsetMs)`
-- [ ] Replace ~126 `Date.now()` timestamp-insert sites across ~30 test files with `fixtureNow()` / `fixtureNowPlus(n)`
-- [ ] Top offenders (verify during implementation): `schema-{pg,sqlite}-auth.integration.test.ts` (20 each), `schema-*-key-rotation.integration.test.ts` (6 each), `schema-pg-sync.integration.test.ts` (6), `bullmq-queue.integration.test.ts` (6)
-- [ ] Verify `pnpm typecheck` green across all packages
-- [ ] Verify `pnpm test` + `pnpm test:integration` green
+- [x] Update `packages/db/src/columns/pg.ts`: `customType<{ data: UnixMillis; driverData: string }>`
+- [x] Update `packages/db/src/columns/sqlite.ts`: `customType<{ data: UnixMillis; driverData: number }>`
+- [x] Add fixture helper `packages/db/src/__tests__/fixtures/timestamps.ts` exporting `fixtureNow()` and `fixtureNowPlus(offsetMs)`
+- [x] Replace `Date.now()` timestamp-insert sites across PG + sqlite integration test suites with `fixtureNow()` / `fixtureNowPlus(n)`
+- [x] Verify `pnpm turbo typecheck --force` green across all packages
+- [x] Verify `/verify` full suite green (unit + integration + E2E + sp-import + pk-import)
 
 ## Why read-side needs no changes
 
@@ -54,3 +53,24 @@ Initial survey flagged `packages/sync/src/post-merge-validator.ts`, but its `det
 ## Spec
 
 `docs/superpowers/specs/2026-04-24-types-ltel-c11-cleanup-design.md`
+
+## Summary of Changes
+
+**Commits on feat/types-ltel-c11b-timestamp-lift:**
+
+- 5a0d3f28 test(db): add fixtureNow/fixtureNowPlus timestamp helpers
+- 0b77293c feat(db): lift timestamp customType to UnixMillis
+- cc779845 test(db): migrate PG fixture timestamps
+- e1fb6fa7 test(db): migrate sqlite fixture timestamps
+- 19799540 refactor(api,queue): narrow timestamp call-sites to UnixMillis
+
+**Scope evolution vs design spec:**
+The design claimed zero production write-sites affected. In practice, flipping the customType surfaced two additional production surfaces:
+
+1. `packages/db/src/columns/{pg,sqlite}.ts` mapper fn signatures (timestampToDriver / timestampFromDriver) — flipped to accept/return UnixMillis.
+2. `packages/db/src/queries/` production call-sites: audit-log-cleanup, device-transfer-cleanup, recovery-key (StoreRecoveryKeyInput, ReplaceRecoveryKeyInput, pg/sqliteRevokeRecoveryKey).
+3. `apps/api/` (~67 files) and `packages/queue/` row-mapper test — production cursor/comparison/threshold sites feeding Drizzle `.where` / `.values` / `.set` needed `toUnixMillis(...)` at the boundary.
+
+Parity tests untouched (C11c tightens them). `/verify` full suite green.
+
+Unblocks ps-z7j6 (C11c, epic closeout).

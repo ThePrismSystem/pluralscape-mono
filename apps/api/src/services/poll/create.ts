@@ -1,5 +1,5 @@
 import { polls } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, brandId, toUnixMillis } from "@pluralscape/types";
 import { CreatePollBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -45,7 +45,7 @@ export async function createPoll(
         kind: parsed.kind,
         status: POLL_STATUS_OPEN,
         closedAt: null,
-        endsAt: parsed.endsAt ?? null,
+        endsAt: parsed.endsAt !== undefined ? toUnixMillis(parsed.endsAt) : null,
         allowMultipleVotes: parsed.allowMultipleVotes,
         maxVotesPerMember: parsed.maxVotesPerMember,
         allowAbstain: parsed.allowAbstain,

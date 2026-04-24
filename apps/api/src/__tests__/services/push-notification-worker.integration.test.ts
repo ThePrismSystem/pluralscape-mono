@@ -5,7 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -17,6 +17,7 @@ import {
 import { asDb } from "../helpers/integration-setup.js";
 
 import type { PushProvider } from "../../services/push-notification-worker.js";
+import type { UnixMillis } from "@pluralscape/types";
 import type { AccountId, DeviceTokenId, SystemId } from "@pluralscape/types";
 import type { JobPayloadMap } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -49,11 +50,11 @@ describe("push-notification-worker (PGlite integration)", () => {
   });
 
   async function insertToken(opts?: {
-    revokedAt?: number;
+    revokedAt?: UnixMillis;
   }): Promise<{ id: DeviceTokenId; tokenHash: string }> {
     const id = brandId<DeviceTokenId>(`dt_${crypto.randomUUID()}`);
     const tokenHash = `hash-${crypto.randomUUID()}`;
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     await db.insert(deviceTokens).values({
       id,
       accountId,
@@ -123,7 +124,7 @@ describe("push-notification-worker (PGlite integration)", () => {
   });
 
   it("returns early without calling send when token is revoked", async () => {
-    const { id: tokenId } = await insertToken({ revokedAt: Date.now() });
+    const { id: tokenId } = await insertToken({ revokedAt: toUnixMillis(Date.now()) });
     const sendSpy = vi.fn();
     const provider: PushProvider = { send: sendSpy };
 

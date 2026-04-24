@@ -1,5 +1,5 @@
 import { messages } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, eq, gt, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -60,12 +60,10 @@ export async function listMessages(
     // Composite cursor: (timestamp, id) descending
     if (opts.cursor) {
       const decoded = fromCompositeCursor(opts.cursor, "message");
+      const sortValue = toUnixMillis(decoded.sortValue);
       const cursorCondition = or(
-        lt(messages.timestamp, decoded.sortValue),
-        and(
-          eq(messages.timestamp, decoded.sortValue),
-          lt(messages.id, brandId<MessageId>(decoded.id)),
-        ),
+        lt(messages.timestamp, sortValue),
+        and(eq(messages.timestamp, sortValue), lt(messages.id, brandId<MessageId>(decoded.id))),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

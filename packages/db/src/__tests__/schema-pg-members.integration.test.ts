@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import { accounts } from "../schema/pg/auth.js";
 import { members, memberPhotos } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgMemberTables,
   pgInsertAccount,
@@ -29,7 +30,7 @@ describe("PG members schema", () => {
 
   async function insertMember(systemId: string, raw = crypto.randomUUID()): Promise<MemberId> {
     const id = brandId<MemberId>(raw);
-    const now = Date.now();
+    const now = fixtureNow();
     await db.insert(members).values({
       id,
       systemId,
@@ -60,7 +61,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(members).values({
@@ -81,7 +82,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(members).values({
         id,
@@ -100,7 +101,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(members).values({
         id,
@@ -125,7 +126,7 @@ describe("PG members schema", () => {
     });
 
     it("rejects nonexistent systemId FK", async () => {
-      const now = Date.now();
+      const now = fixtureNow();
       await expect(
         db.insert(members).values({
           id: crypto.randomUUID(),
@@ -141,7 +142,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(members).values({
         id,
@@ -159,7 +160,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(members).values({
         id,
@@ -180,7 +181,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(members).values({
         id,
@@ -190,7 +191,7 @@ describe("PG members schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(members)
         .set({ archived: true, archivedAt: archiveTime })
@@ -205,7 +206,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(members).values({
         id,
@@ -215,7 +216,7 @@ describe("PG members schema", () => {
         updatedAt: now,
       });
 
-      const later = now + 1000;
+      const later = toUnixMillis(now + 1000);
       await db
         .update(members)
         .set({ version: sql`${members.version} + 1`, updatedAt: later })
@@ -229,7 +230,7 @@ describe("PG members schema", () => {
     it("rejects version < 1 via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -242,7 +243,7 @@ describe("PG members schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -255,7 +256,7 @@ describe("PG members schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -272,7 +273,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([100, 200]));
 
       await db.insert(memberPhotos).values({
@@ -296,7 +297,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(memberPhotos).values({
         id,
@@ -316,7 +317,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(memberPhotos).values({
         id,
@@ -335,7 +336,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(memberPhotos).values({
         id: brandId<MemberPhotoId>(crypto.randomUUID()),
@@ -354,7 +355,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const photoId = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(memberPhotos).values({
         id: photoId,
@@ -373,7 +374,7 @@ describe("PG members schema", () => {
     it("rejects nonexistent memberId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(memberPhotos).values({
@@ -391,7 +392,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(memberPhotos).values({
@@ -410,7 +411,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(memberPhotos).values({
         id,
@@ -431,7 +432,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(memberPhotos).values({
         id,
@@ -454,7 +455,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const id = brandId<MemberPhotoId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(memberPhotos).values({
         id,
@@ -465,7 +466,7 @@ describe("PG members schema", () => {
         updatedAt: now,
       });
 
-      const archiveTime = Date.now();
+      const archiveTime = fixtureNow();
       await db
         .update(memberPhotos)
         .set({ archived: true, archivedAt: archiveTime })
@@ -480,7 +481,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(
@@ -494,7 +495,7 @@ describe("PG members schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         client.query(

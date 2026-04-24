@@ -5,7 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -171,8 +171,8 @@ describe("webhook-config.service (PGlite integration)", () => {
         secret: new Uint8Array(Buffer.from("test-secret-key-pad-to-32-bytes!")) as ServerSecret,
         eventTypes: ["fronting.started" as const],
         enabled: true,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: toUnixMillis(Date.now()),
+        updatedAt: toUnixMillis(Date.now()),
       }));
       await db.insert(webhookConfigs).values(values);
 
@@ -319,7 +319,7 @@ describe("webhook-config.service (PGlite integration)", () => {
         status: "pending",
         attemptCount: 0,
         encryptedData: new Uint8Array([1, 2, 3]),
-        createdAt: Date.now(),
+        createdAt: toUnixMillis(Date.now()),
       });
 
       await assertApiError(
@@ -374,8 +374,8 @@ describe("webhook-config.service (PGlite integration)", () => {
         secret: new Uint8Array(Buffer.from("test-secret-key-pad-to-32-bytes!")) as ServerSecret,
         eventTypes: ["fronting.started" as const],
         enabled: true,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: toUnixMillis(Date.now()),
+        updatedAt: toUnixMillis(Date.now()),
       }));
       await db.insert(webhookConfigs).values(values);
 

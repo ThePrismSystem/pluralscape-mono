@@ -84,6 +84,7 @@ import { systemSettings } from "../../schema/pg/system-settings.js";
 import { systems } from "../../schema/pg/systems.js";
 import { checkInRecords, timerConfigs } from "../../schema/pg/timers.js";
 import { webhookConfigs, webhookDeliveries } from "../../schema/pg/webhooks.js";
+import { fixtureNow } from "../fixtures/timestamps.js";
 
 import { pgTableToCreateDDL, pgTableToIndexDDL } from "./schema-to-ddl.js";
 
@@ -377,7 +378,7 @@ export async function pgInsertAccount(
   id?: string,
 ): Promise<AccountId> {
   const resolvedId = brandId<AccountId>(id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   await db.insert(accounts).values({
     id: resolvedId,
     emailHash: `hash_${crypto.randomUUID()}`,
@@ -397,7 +398,7 @@ export async function pgInsertSystem(
   id?: string,
 ): Promise<SystemId> {
   const resolvedId = brandId<SystemId>(id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   await db.insert(systems).values({
     id: resolvedId,
     accountId: brandId<AccountId>(accountId),
@@ -548,7 +549,7 @@ export async function pgInsertMember(
   id?: string,
 ): Promise<string> {
   const resolvedId = id ?? crypto.randomUUID();
-  const now = Date.now();
+  const now = fixtureNow();
   await db.insert(members).values({
     id: resolvedId,
     systemId,
@@ -570,7 +571,7 @@ export async function pgInsertChannel(
   } = {},
 ): Promise<ChannelId> {
   const id = brandId<ChannelId>(opts.id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   await db.insert(channels).values({
     id,
     systemId: brandId<SystemId>(systemId),
@@ -593,7 +594,7 @@ export async function pgInsertPoll(
   opts: { id?: string } = {},
 ): Promise<PollId> {
   const id = brandId<PollId>(opts.id ?? crypto.randomUUID());
-  const now = Date.now();
+  const now = fixtureNow();
   await db.insert(polls).values({
     id,
     systemId: brandId<SystemId>(systemId),

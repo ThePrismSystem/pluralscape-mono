@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { systemSnapshots } from "../schema/pg/snapshots.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createPgSnapshotTables,
   pgInsertAccount,
@@ -40,7 +41,7 @@ describe("PG system_snapshots schema", () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const id = brandId<SystemSnapshotId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
 
     await db.insert(systemSnapshots).values({
       id,
@@ -66,7 +67,7 @@ describe("PG system_snapshots schema", () => {
       systemId,
       snapshotTrigger: "scheduled-daily",
       encryptedData: testBlob(),
-      createdAt: Date.now(),
+      createdAt: fixtureNow(),
     });
 
     const rows = await db.select().from(systemSnapshots).where(eq(systemSnapshots.id, id));
@@ -83,7 +84,7 @@ describe("PG system_snapshots schema", () => {
       systemId,
       snapshotTrigger: "scheduled-weekly",
       encryptedData: testBlob(),
-      createdAt: Date.now(),
+      createdAt: fixtureNow(),
     });
 
     const rows = await db.select().from(systemSnapshots).where(eq(systemSnapshots.id, id));
@@ -100,7 +101,7 @@ describe("PG system_snapshots schema", () => {
         systemId,
         snapshotTrigger: "invalid" as "manual",
         encryptedData: testBlob(),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       }),
     ).rejects.toThrow();
   });
@@ -115,7 +116,7 @@ describe("PG system_snapshots schema", () => {
       systemId,
       snapshotTrigger: "manual",
       encryptedData: testBlob(),
-      createdAt: Date.now(),
+      createdAt: fixtureNow(),
     });
 
     await db.delete(systems).where(eq(systems.id, systemId));
@@ -126,7 +127,7 @@ describe("PG system_snapshots schema", () => {
   it("supports index query by system_id and created_at", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const now = Date.now();
+    const now = fixtureNow();
 
     for (let i = 0; i < 3; i++) {
       await db.insert(systemSnapshots).values({
@@ -134,7 +135,7 @@ describe("PG system_snapshots schema", () => {
         systemId,
         snapshotTrigger: "manual",
         encryptedData: testBlob(),
-        createdAt: now + i * 1000,
+        createdAt: toUnixMillis(now + i * 1000),
       });
     }
 

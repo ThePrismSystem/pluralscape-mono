@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -9,6 +9,7 @@ import { customFronts, frontingComments, frontingSessions } from "../schema/sqli
 import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteFrontingTables,
   sqliteInsertAccount,
@@ -45,7 +46,7 @@ describe("SQLite fronting schema", () => {
 
   function insertCustomFront(systemId: string, raw = crypto.randomUUID()): CustomFrontId {
     const id = brandId<CustomFrontId>(raw);
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(customFronts)
       .values({
         id,
@@ -64,7 +65,7 @@ describe("SQLite fronting schema", () => {
     memberId?: string,
   ): FrontingSessionId {
     const sessionId = brandId<FrontingSessionId>(id);
-    const now = Date.now();
+    const now = fixtureNow();
     const resolvedMemberId = memberId ?? insertMember(systemId);
     db.insert(frontingSessions)
       .values({
@@ -103,7 +104,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<FrontingSessionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(frontingSessions)
@@ -112,7 +113,7 @@ describe("SQLite fronting schema", () => {
           systemId,
           memberId,
           startTime: now,
-          endTime: now + 1000,
+          endTime: toUnixMillis(now + 1000),
           encryptedData: data,
           createdAt: now,
           updatedAt: now,
@@ -132,7 +133,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<FrontingSessionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingSessions)
         .values({
@@ -155,7 +156,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<FrontingSessionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingSessions)
         .values({
@@ -188,7 +189,7 @@ describe("SQLite fronting schema", () => {
     });
 
     it("rejects nonexistent systemId FK", () => {
-      const now = Date.now();
+      const now = fixtureNow();
       expect(() =>
         db
           .insert(frontingSessions)
@@ -209,7 +210,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -235,7 +236,7 @@ describe("SQLite fronting schema", () => {
             systemId,
             memberId,
             startTime: now,
-            endTime: now - 1,
+            endTime: toUnixMillis(now - 1),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -249,7 +250,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId1 = insertMember(systemId);
       const memberId2 = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       const id1 = brandId<FrontingSessionId>(crypto.randomUUID());
       const id2 = brandId<FrontingSessionId>(crypto.randomUUID());
@@ -260,7 +261,7 @@ describe("SQLite fronting schema", () => {
           systemId,
           memberId: memberId1,
           startTime: now,
-          endTime: now + 2000,
+          endTime: toUnixMillis(now + 2000),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -272,8 +273,8 @@ describe("SQLite fronting schema", () => {
           id: id2,
           systemId,
           memberId: memberId2,
-          startTime: now + 1000,
-          endTime: now + 3000,
+          startTime: toUnixMillis(now + 1000),
+          endTime: toUnixMillis(now + 3000),
           encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
@@ -293,7 +294,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const cfId = insertCustomFront(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       const entityTypeId = crypto.randomUUID();
       const entityId = crypto.randomUUID();
@@ -330,7 +331,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const customFrontId = insertCustomFront(systemId);
       const id = brandId<FrontingSessionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingSessions)
         .values({
@@ -353,7 +354,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingSessions)
         .values({
@@ -375,7 +376,7 @@ describe("SQLite fronting schema", () => {
     it("rejects nonexistent memberId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -397,7 +398,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const customFrontId = insertCustomFront(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingSessions)
         .values({
@@ -419,7 +420,7 @@ describe("SQLite fronting schema", () => {
     it("rejects nonexistent customFrontId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -441,7 +442,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -455,7 +456,7 @@ describe("SQLite fronting schema", () => {
     it("rejects fronting session with no subject", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -471,7 +472,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const customFrontId = insertCustomFront(systemId);
       const id = brandId<FrontingSessionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingSessions)
         .values({
@@ -506,7 +507,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const id = brandId<FrontingSessionId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingSessions)
         .values({
@@ -531,7 +532,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -546,7 +547,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -561,7 +562,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = insertFrontingSession(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.update(frontingSessions)
         .set({ archived: true, archivedAt: now, updatedAt: now })
@@ -576,7 +577,7 @@ describe("SQLite fronting schema", () => {
     it("accepts fronting session with only structureEntityId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const entityTypeId = crypto.randomUUID();
       const entityId = crypto.randomUUID();
 
@@ -614,7 +615,7 @@ describe("SQLite fronting schema", () => {
     it("rejects nonexistent structureEntityId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -635,7 +636,7 @@ describe("SQLite fronting schema", () => {
     it("restricts deletion of structure entity with dependent fronting session", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
       const entityTypeId = crypto.randomUUID();
       const entityId = crypto.randomUUID();
 
@@ -673,7 +674,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<CustomFrontId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(customFronts)
@@ -696,7 +697,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<CustomFrontId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(customFronts)
         .values({
@@ -718,7 +719,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<CustomFrontId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(customFronts)
         .values({
@@ -739,7 +740,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = brandId<CustomFrontId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(customFronts)
         .values({
@@ -761,7 +762,7 @@ describe("SQLite fronting schema", () => {
     it("rejects version < 1 via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -775,7 +776,7 @@ describe("SQLite fronting schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -789,7 +790,7 @@ describe("SQLite fronting schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -804,7 +805,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = insertCustomFront(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.update(customFronts)
         .set({ archived: true, archivedAt: now, updatedAt: now })
@@ -824,7 +825,7 @@ describe("SQLite fronting schema", () => {
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(frontingComments)
@@ -852,7 +853,7 @@ describe("SQLite fronting schema", () => {
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -875,7 +876,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -900,7 +901,7 @@ describe("SQLite fronting schema", () => {
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const commentId = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -927,7 +928,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -951,7 +952,7 @@ describe("SQLite fronting schema", () => {
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -975,7 +976,7 @@ describe("SQLite fronting schema", () => {
       const customFrontId = insertCustomFront(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -998,7 +999,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -1021,7 +1022,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const sessionId = insertFrontingSession(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         db
@@ -1045,7 +1046,7 @@ describe("SQLite fronting schema", () => {
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -1070,7 +1071,7 @@ describe("SQLite fronting schema", () => {
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({
@@ -1096,7 +1097,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1112,7 +1113,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       expect(() =>
         client
@@ -1129,7 +1130,7 @@ describe("SQLite fronting schema", () => {
       const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = brandId<FrontingCommentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       db.insert(frontingComments)
         .values({

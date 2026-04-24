@@ -13,6 +13,7 @@ import { members } from "../schema/sqlite/members.js";
 import { bucketContentTags, buckets } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import {
   createSqliteGroupsTables,
   sqliteInsertAccount,
@@ -56,7 +57,7 @@ describe("sqliteCleanupOrphanedTags", () => {
 
   function insertBucket(systemId: SystemId): BucketId {
     const id = brandId<BucketId>(crypto.randomUUID());
-    const now = Date.now();
+    const now = fixtureNow();
     db.insert(buckets)
       .values({
         id,

@@ -8,6 +8,7 @@ import { accounts } from "../schema/pg/auth.js";
 import { syncChanges, syncDocuments, syncSnapshots } from "../schema/pg/sync.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { fixtureNow } from "./fixtures/timestamps.js";
 import { createPgSyncTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { NewSyncDocument } from "../schema/pg/sync.js";
@@ -45,8 +46,8 @@ describe("PG sync schema", () => {
       documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
       systemId,
       docType: "system-core",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: fixtureNow(),
+      updatedAt: fixtureNow(),
       ...overrides,
     };
   }
@@ -61,7 +62,7 @@ describe("PG sync schema", () => {
       authorPublicKey: new Uint8Array(32).fill(0x01),
       nonce: new Uint8Array(24).fill(seq),
       signature: new Uint8Array(64).fill(0x77),
-      createdAt: Date.now(),
+      createdAt: fixtureNow(),
     };
   }
 
@@ -74,7 +75,7 @@ describe("PG sync schema", () => {
       authorPublicKey: new Uint8Array(32).fill(0x02),
       nonce: new Uint8Array(24).fill(0xaa),
       signature: new Uint8Array(64).fill(0x88),
-      createdAt: Date.now(),
+      createdAt: fixtureNow(),
     };
   }
 
@@ -83,7 +84,7 @@ describe("PG sync schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(syncDocuments).values({
         documentId,
@@ -123,7 +124,7 @@ describe("PG sync schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(syncDocuments).values({
         documentId,
@@ -149,7 +150,7 @@ describe("PG sync schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(syncDocuments).values({
         documentId,
@@ -174,7 +175,7 @@ describe("PG sync schema", () => {
       async (docType) => {
         const accountId = await insertAccount();
         const systemId = await insertSystem(accountId);
-        const now = Date.now();
+        const now = fixtureNow();
 
         await expect(
           db.insert(syncDocuments).values({
@@ -191,7 +192,7 @@ describe("PG sync schema", () => {
     it("rejects invalid doc_type", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(syncDocuments).values({
@@ -207,7 +208,7 @@ describe("PG sync schema", () => {
     it("rejects invalid key_type", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(syncDocuments).values({
@@ -224,7 +225,7 @@ describe("PG sync schema", () => {
     it("rejects sizeBytes < 0", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(syncDocuments).values({
@@ -241,7 +242,7 @@ describe("PG sync schema", () => {
     it("rejects snapshotVersion < 0", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(syncDocuments).values({
@@ -258,7 +259,7 @@ describe("PG sync schema", () => {
     it("rejects lastSeq < 0", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       await expect(
         db.insert(syncDocuments).values({
@@ -276,7 +277,7 @@ describe("PG sync schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
-      const now = Date.now();
+      const now = fixtureNow();
 
       await db.insert(syncDocuments).values({
         documentId,
@@ -300,7 +301,7 @@ describe("PG sync schema", () => {
     it("round-trips all fields including binary columns", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
       const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
@@ -400,7 +401,7 @@ describe("PG sync schema", () => {
         authorPublicKey,
         nonce,
         signature: new Uint8Array(64).fill(0x77),
-        createdAt: Date.now(),
+        createdAt: fixtureNow(),
       });
 
       await expect(
@@ -412,7 +413,7 @@ describe("PG sync schema", () => {
           authorPublicKey,
           nonce,
           signature: new Uint8Array(64).fill(0x77),
-          createdAt: Date.now(),
+          createdAt: fixtureNow(),
         }),
       ).rejects.toThrow();
     });
@@ -438,7 +439,7 @@ describe("PG sync schema", () => {
     it("round-trips all fields including binary columns", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const now = fixtureNow();
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
       const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
@@ -498,7 +499,7 @@ describe("PG sync schema", () => {
 
       const newPayload = new Uint8Array([0x11, 0x22, 0x33]);
       const newNonce = new Uint8Array(24).fill(0xbb);
-      const updatedAt = Date.now();
+      const updatedAt = fixtureNow();
 
       const newSignature = new Uint8Array(64).fill(0x99);
       await db

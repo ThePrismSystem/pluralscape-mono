@@ -6,7 +6,7 @@ import {
   pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -405,7 +405,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
       );
 
       const memberId = brandId<MemberId>(await pgInsertMember(db, systemId));
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(systemStructureEntityMemberLinks).values({
         id: brandId<SystemStructureEntityMemberLinkId>(`steml_${crypto.randomUUID()}`),
         systemId,
@@ -444,7 +444,7 @@ describe("structure-entity-crud.service (PGlite integration)", () => {
         systemId,
         sourceEntityId: entityA.id,
         targetEntityId: entityB.id,
-        createdAt: Date.now(),
+        createdAt: toUnixMillis(Date.now()),
       });
 
       await assertApiError(

@@ -6,7 +6,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, eq, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -48,7 +48,7 @@ describe("checkDependents (PGlite integration)", () => {
   });
 
   async function insertMember(id: string): Promise<void> {
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     await db.insert(members).values({
       id: brandId<MemberId>(id),
       systemId,
@@ -62,7 +62,7 @@ describe("checkDependents (PGlite integration)", () => {
   }
 
   async function insertNote(id: string): Promise<void> {
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     await db.insert(notes).values({
       id: brandId<NoteId>(id),
       systemId,

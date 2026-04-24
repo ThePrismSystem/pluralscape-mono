@@ -121,11 +121,11 @@ export async function listWebhookDeliveries(
     }
 
     if (opts.fromDate !== undefined) {
-      conditions.push(gte(webhookDeliveries.createdAt, opts.fromDate));
+      conditions.push(gte(webhookDeliveries.createdAt, toUnixMillis(opts.fromDate)));
     }
 
     if (opts.toDate !== undefined) {
-      conditions.push(lte(webhookDeliveries.createdAt, opts.toDate));
+      conditions.push(lte(webhookDeliveries.createdAt, toUnixMillis(opts.toDate)));
     }
 
     if (opts.cursor) {

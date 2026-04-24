@@ -8,6 +8,7 @@ import { auditLog } from "../schema/sqlite/audit-log.js";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { fixtureNow, fixtureNowPlus } from "./fixtures/timestamps.js";
 import {
   createSqliteAuditLogTables,
   makeAuditLogEntryId,
@@ -16,7 +17,7 @@ import {
 } from "./helpers/sqlite-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
-import type { AccountId, AuditLogEntryId, SystemId } from "@pluralscape/types";
+import type { AccountId, AuditLogEntryId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, auditLog };
@@ -47,7 +48,7 @@ describe("sqliteCleanupAuditLog", () => {
   function insertAuditEntry(opts: {
     accountId: string;
     systemId: string;
-    timestamp?: number;
+    timestamp?: UnixMillis;
   }): AuditLogEntryId {
     const id = makeAuditLogEntryId();
     db.insert(auditLog)
@@ -56,7 +57,7 @@ describe("sqliteCleanupAuditLog", () => {
         accountId: brandId<AccountId>(opts.accountId),
         systemId: brandId<SystemId>(opts.systemId),
         eventType: "auth.login",
-        timestamp: opts.timestamp ?? Date.now(),
+        timestamp: opts.timestamp ?? fixtureNow(),
         actor: testActor(opts.accountId),
       })
       .run();
@@ -67,7 +68,7 @@ describe("sqliteCleanupAuditLog", () => {
     const accountId = sqliteInsertAccount(db);
     const systemId = sqliteInsertSystem(db, accountId);
 
-    const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgoMs = fixtureNowPlus(-(30 * 24 * 60 * 60 * 1000));
     const oldId = insertAuditEntry({ accountId, systemId, timestamp: thirtyDaysAgoMs });
     const recentId = insertAuditEntry({ accountId, systemId });
 
@@ -83,7 +84,7 @@ describe("sqliteCleanupAuditLog", () => {
     const accountId = sqliteInsertAccount(db);
     const systemId = sqliteInsertSystem(db, accountId);
 
-    const oldTs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const oldTs = fixtureNowPlus(-(30 * 24 * 60 * 60 * 1000));
     insertAuditEntry({ accountId, systemId, timestamp: oldTs });
     insertAuditEntry({ accountId, systemId, timestamp: oldTs });
     insertAuditEntry({ accountId, systemId, timestamp: oldTs });
