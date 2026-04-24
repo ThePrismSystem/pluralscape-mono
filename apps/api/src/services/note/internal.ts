@@ -22,7 +22,7 @@ export function toNoteResult(row: typeof notes.$inferSelect): NoteResult {
   return {
     id: brandId<NoteId>(row.id),
     systemId: brandId<SystemId>(row.systemId),
-    authorEntityType: row.authorEntityType as NoteAuthorEntityType | null,
+    authorEntityType: row.authorEntityType,
     authorEntityId: row.authorEntityId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
