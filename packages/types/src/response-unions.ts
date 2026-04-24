@@ -18,7 +18,6 @@ import type {
   ServerNote,
   ServerPoll,
   ServerPollVote,
-  ServerRelationship,
   ServerStructureEntity,
   ServerStructureEntityType,
   ServerTimerConfig,
@@ -44,7 +43,7 @@ import type { ChatMessage } from "./entities/message.js";
 import type { Note } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll } from "./entities/poll.js";
-import type { Relationship } from "./entities/relationship.js";
+import type { Relationship, RelationshipServerMetadata } from "./entities/relationship.js";
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
@@ -58,7 +57,7 @@ export type ServerResponseData =
   | GroupServerMetadata
   | ServerStructureEntityType
   | ServerStructureEntity
-  | ServerRelationship
+  | RelationshipServerMetadata
   | ServerChannel
   | ServerChatMessage
   | ServerBoardMessage

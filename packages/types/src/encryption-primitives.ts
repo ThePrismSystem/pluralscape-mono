@@ -14,7 +14,6 @@ import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
-import type { RelationshipType, Relationship } from "./entities/relationship.js";
 import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
 import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
@@ -40,7 +39,6 @@ import type {
   PollId,
   PollOptionId,
   PollVoteId,
-  RelationshipId,
   SystemId,
   SystemStructureEntityTypeId,
   SystemStructureEntityId,
@@ -198,26 +196,6 @@ export interface ServerStructureEntity extends AuditMetadata {
 
 /** Client-side structure entity — flat decrypted fields. */
 export type ClientStructureEntity = SystemStructureEntity;
-
-/**
- * Server-side relationship representation.
- * T1 encrypted: label
- * T3 plaintext: type, sourceMemberId, targetMemberId, bidirectional, archived
- */
-export interface ServerRelationship {
-  readonly id: RelationshipId;
-  readonly systemId: SystemId;
-  readonly sourceMemberId: MemberId | null;
-  readonly targetMemberId: MemberId | null;
-  readonly type: RelationshipType;
-  readonly bidirectional: boolean;
-  readonly createdAt: UnixMillis;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob | null;
-}
-
-/** Client-side relationship — flat decrypted fields. */
-export type ClientRelationship = Relationship;
 
 // ── Communication ──────────────────────────────────────────────
 

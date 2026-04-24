@@ -27,7 +27,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, MemberPhotoId, SystemId } from "@pluralscape/types";
+import type { AccountId, MemberPhotoId, RelationshipId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const {
@@ -534,7 +534,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(relationships).values({
-        id: `rel_${crypto.randomUUID()}`,
+        id: brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
         systemId,
         sourceMemberId: created.id,
         type: "sibling",

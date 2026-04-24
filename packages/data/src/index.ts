@@ -43,6 +43,14 @@ export {
 export type { CustomFrontEncryptedInput } from "./transforms/custom-front.js";
 
 export {
+  decryptRelationship,
+  decryptRelationshipPage,
+  encryptRelationshipInput,
+  encryptRelationshipUpdate,
+} from "./transforms/relationship.js";
+export type { RelationshipEncryptedInput } from "./transforms/relationship.js";
+
+export {
   decryptFieldDefinition,
   decryptFieldDefinitionPage,
   encryptFieldDefinitionInput,

@@ -50,7 +50,12 @@ import type {
   MemberServerMetadata,
   MemberWire,
 } from "./entities/member.js";
-import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
+import type {
+  Relationship,
+  RelationshipEncryptedFields,
+  RelationshipServerMetadata,
+  RelationshipWire,
+} from "./entities/relationship.js";
 import type {
   SystemStructureEntityAssociation,
   SystemStructureEntityAssociationEncryptedFields,
@@ -164,6 +169,8 @@ export type SotEntityManifest = {
   };
   Relationship: {
     domain: Relationship;
+    server: RelationshipServerMetadata;
+    wire: RelationshipWire;
     encryptedFields: RelationshipEncryptedFields;
   };
   StructureEntityType: {

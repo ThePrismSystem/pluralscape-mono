@@ -1,4 +1,5 @@
 import { relationships } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt, or } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -14,6 +15,7 @@ import { toRelationshipResult } from "./internal.js";
 import type { RelationshipResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
+  MemberId,
   PaginatedResult,
   RelationshipId,
   RelationshipType,
@@ -38,13 +40,14 @@ export async function listRelationships(
     const conditions = [eq(relationships.systemId, systemId), eq(relationships.archived, false)];
 
     if (cursor) {
-      conditions.push(gt(relationships.id, cursor));
+      conditions.push(gt(relationships.id, brandId<RelationshipId>(cursor)));
     }
 
     if (memberId) {
+      const branded = brandId<MemberId>(memberId);
       const memberFilter = or(
-        eq(relationships.sourceMemberId, memberId),
-        eq(relationships.targetMemberId, memberId),
+        eq(relationships.sourceMemberId, branded),
+        eq(relationships.targetMemberId, branded),
       );
       if (memberFilter) {
         conditions.push(memberFilter);

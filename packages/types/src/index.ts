@@ -129,8 +129,6 @@ export type {
   ClientStructureEntityType,
   ServerStructureEntity,
   ClientStructureEntity,
-  ServerRelationship,
-  ClientRelationship,
   ServerChannel,
   ClientChannel,
   ServerChatMessage,

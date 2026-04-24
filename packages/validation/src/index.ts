@@ -75,6 +75,7 @@ export {
 export {
   CreateRelationshipBodySchema,
   RELATIONSHIP_TYPES,
+  RelationshipEncryptedInputSchema,
   UpdateRelationshipBodySchema,
 } from "./relationship.js";
 export {

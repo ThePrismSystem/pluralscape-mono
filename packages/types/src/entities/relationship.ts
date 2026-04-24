@@ -1,6 +1,8 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { MemberId, RelationshipId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
-import type { Archived } from "../utility.js";
+import type { Serialize } from "../type-assertions.js";
+import type { Archived, AuditMetadata } from "../utility.js";
 
 /** The kind of relationship between two members. */
 export type RelationshipType =
@@ -40,3 +42,31 @@ export interface Relationship {
 export type RelationshipEncryptedFields = "label";
 
 export type ArchivedRelationship = Archived<Relationship>;
+
+/**
+ * Server-visible Relationship metadata — raw Drizzle row shape.
+ *
+ * Derived from `Relationship` by stripping the encrypted field key
+ * (`label` rides inside `encryptedData`) and `archived` (server tracks a
+ * mutable boolean with a companion `archivedAt` timestamp, domain uses
+ * `false` literal). Adds DB-only columns the domain doesn't carry:
+ * `encryptedData` (T1 blob), `archived`/`archivedAt`, and the rest of
+ * `AuditMetadata` (`updatedAt`/`version` — the domain carries only
+ * `createdAt`). Non-"custom" relationships carry an empty label inside
+ * the blob rather than a nullable column.
+ */
+export type RelationshipServerMetadata = Omit<
+  Relationship,
+  RelationshipEncryptedFields | "archived"
+> &
+  Omit<AuditMetadata, "createdAt"> & {
+    readonly encryptedData: EncryptedBlob;
+    readonly archived: boolean;
+    readonly archivedAt: UnixMillis | null;
+  };
+
+/**
+ * JSON-wire representation of a Relationship. Derived from the domain
+ * `Relationship` type via `Serialize<T>`; branded IDs become plain strings.
+ */
+export type RelationshipWire = Serialize<Relationship>;

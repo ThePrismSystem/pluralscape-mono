@@ -16,7 +16,6 @@ import type {
   ClientLifecycleEvent,
   ClientNote,
   ClientPoll,
-  ClientRelationship,
   ClientStructureEntity,
   ClientStructureEntityType,
   ClientTimerConfig,
@@ -41,7 +40,6 @@ import type {
   ServerInnerWorldRegion,
   ServerNote,
   ServerPoll,
-  ServerRelationship,
   ServerStructureEntity,
   ServerStructureEntityType,
   ServerTimerConfig,
@@ -74,7 +72,7 @@ import type { ChatMessage } from "../entities/message.js";
 import type { Note } from "../entities/note.js";
 import type { PollVote } from "../entities/poll-vote.js";
 import type { Poll } from "../entities/poll.js";
-import type { Relationship } from "../entities/relationship.js";
+import type { Relationship, RelationshipServerMetadata } from "../entities/relationship.js";
 import type { TimerConfig } from "../entities/timer-config.js";
 import type { WikiPage } from "../entities/wiki-page.js";
 import type {
@@ -196,8 +194,8 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("relationship pair", () => {
-    expectTypeOf<ServerRelationship>().toBeObject();
-    expectTypeOf<ClientRelationship>().toEqualTypeOf<Relationship>();
+    expectTypeOf<RelationshipServerMetadata>().toBeObject();
+    expectTypeOf<Relationship>().toEqualTypeOf<Relationship>();
   });
 
   it("custom front pair", () => {

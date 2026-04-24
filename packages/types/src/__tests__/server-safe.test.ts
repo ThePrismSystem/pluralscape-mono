@@ -18,7 +18,6 @@ import type {
   ClientNote,
   ClientPoll,
   ClientPollVote,
-  ClientRelationship,
   ClientStructureEntity,
   ClientStructureEntityType,
   ClientTimerConfig,
@@ -38,7 +37,6 @@ import type {
   ServerNote,
   ServerPoll,
   ServerPollVote,
-  ServerRelationship,
   ServerStructureEntity,
   ServerStructureEntityType,
   ServerTimerConfig,
@@ -49,6 +47,7 @@ import type { CustomFront, CustomFrontServerMetadata } from "../entities/custom-
 import type { Group, GroupServerMetadata } from "../entities/group.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
+import type { Relationship, RelationshipServerMetadata } from "../entities/relationship.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ClientResponseData, ServerResponseData } from "../response-unions.js";
 import type { ServerSafe } from "../server-safe.js";
@@ -63,7 +62,7 @@ type AllServerTypes = [
   GroupServerMetadata,
   ServerStructureEntityType,
   ServerStructureEntity,
-  ServerRelationship,
+  RelationshipServerMetadata,
   ServerChannel,
   ServerChatMessage,
   ServerBoardMessage,
@@ -113,8 +112,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerStructureEntity>().toExtend<ServerResponseData>();
   });
 
-  it("ServerRelationship extends ServerResponseData", () => {
-    expectTypeOf<ServerRelationship>().toExtend<ServerResponseData>();
+  it("RelationshipServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<RelationshipServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("ServerChannel extends ServerResponseData", () => {
@@ -200,7 +199,7 @@ type AllClientTypes = [
   Group,
   ClientStructureEntityType,
   ClientStructureEntity,
-  ClientRelationship,
+  Relationship,
   ClientChannel,
   ClientChatMessage,
   ClientBoardMessage,
@@ -250,8 +249,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientStructureEntity>().toExtend<ClientResponseData>();
   });
 
-  it("ClientRelationship extends ClientResponseData", () => {
-    expectTypeOf<ClientRelationship>().toExtend<ClientResponseData>();
+  it("Relationship extends ClientResponseData", () => {
+    expectTypeOf<Relationship>().toExtend<ClientResponseData>();
   });
 
   it("ClientChannel extends ClientResponseData", () => {
@@ -333,7 +332,7 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<GroupServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerStructureEntityType>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerStructureEntity>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerRelationship>().not.toExtend<ClientResponseData>();
+    expectTypeOf<RelationshipServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerChannel>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerChatMessage>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerBoardMessage>().not.toExtend<ClientResponseData>();
@@ -380,8 +379,8 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<ClientStructureEntity>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientRelationship does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientRelationship>().not.toExtend<ServerResponseData>();
+  it("Relationship does NOT extend ServerResponseData", () => {
+    expectTypeOf<Relationship>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientChannel does NOT extend ServerResponseData", () => {

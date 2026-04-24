@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -25,21 +25,19 @@ import { RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerRelationship } from "@pluralscape/types";
+import type { MemberId, Relationship, RelationshipId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = pgTable(
   "relationships",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<RelationshipId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceMemberId: varchar("source_member_id", { length: ID_MAX_LENGTH }),
-    targetMemberId: varchar("target_member_id", { length: ID_MAX_LENGTH }),
-    type: varchar("type", { length: ENUM_MAX_LENGTH })
-      .notNull()
-      .$type<ServerRelationship["type"]>(),
+    sourceMemberId: brandedId<MemberId>("source_member_id"),
+    targetMemberId: brandedId<MemberId>("target_member_id"),
+    type: varchar("type", { length: ENUM_MAX_LENGTH }).notNull().$type<Relationship["type"]>(),
     bidirectional: boolean("bidirectional").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
