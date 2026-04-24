@@ -8,7 +8,12 @@ import { auditLog } from "../schema/pg/audit-log.js";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgAuditLogTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgAuditLogTables,
+  makeAuditLogEntryId,
+  pgInsertAccount,
+  pgInsertSystem,
+} from "./helpers/pg-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
 import type { AccountId, AuditLogEntryId, SystemId } from "@pluralscape/types";
@@ -43,7 +48,7 @@ describe("pgCleanupAuditLog", () => {
     systemId: string;
     timestamp?: number;
   }): Promise<AuditLogEntryId> {
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
     await db.insert(auditLog).values({
       id,
       accountId: brandId<AccountId>(opts.accountId),

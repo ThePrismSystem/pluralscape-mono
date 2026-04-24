@@ -10,12 +10,13 @@ import { systems } from "../schema/pg/systems.js";
 
 import {
   createPgSafeModeContentTables,
+  makeSafeModeContentId,
   pgInsertAccount,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { SafeModeContentId, SystemId } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, safeModeContent };
@@ -40,7 +41,7 @@ describe("PG safe_mode_content schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`);
+    const id = makeSafeModeContentId();
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(safeModeContent).values({
@@ -65,7 +66,7 @@ describe("PG safe_mode_content schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`);
+    const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({
       id,
@@ -83,7 +84,7 @@ describe("PG safe_mode_content schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`);
+    const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({
       id,
@@ -103,9 +104,9 @@ describe("PG safe_mode_content schema", () => {
     const now = Date.now();
 
     const items = [
-      { id: brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`), sortOrder: 3 },
-      { id: brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`), sortOrder: 1 },
-      { id: brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`), sortOrder: 2 },
+      { id: makeSafeModeContentId(), sortOrder: 3 },
+      { id: makeSafeModeContentId(), sortOrder: 1 },
+      { id: makeSafeModeContentId(), sortOrder: 2 },
     ];
 
     for (const item of items) {
@@ -130,7 +131,7 @@ describe("PG safe_mode_content schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`);
+    const id = makeSafeModeContentId();
     const blobCiphertext = new Uint8Array(256);
     for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
     const blob = testBlob(blobCiphertext);
@@ -151,7 +152,7 @@ describe("PG safe_mode_content schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`);
+    const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({
       id,
@@ -170,7 +171,7 @@ describe("PG safe_mode_content schema", () => {
     const now = Date.now();
     await expect(
       db.insert(safeModeContent).values({
-        id: brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`),
+        id: makeSafeModeContentId(),
         systemId: brandId<SystemId>("nonexistent"),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -195,7 +196,7 @@ describe("PG safe_mode_content schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<SafeModeContentId>(`smc_${crypto.randomUUID()}`);
+    const id = makeSafeModeContentId();
 
     await db.insert(safeModeContent).values({
       id,

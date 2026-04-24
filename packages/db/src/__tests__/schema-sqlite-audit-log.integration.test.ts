@@ -1,4 +1,3 @@
-import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -10,12 +9,12 @@ import { systems } from "../schema/sqlite/systems.js";
 
 import {
   createSqliteAuditLogTables,
+  makeAuditLogEntryId,
   sqliteInsertAccount,
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
-import type { AuditLogEntryId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, auditLog };
@@ -45,7 +44,7 @@ describe("SQLite audit_log schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
     const actor = testActor("account", accountId);
 
     db.insert(auditLog)
@@ -76,7 +75,7 @@ describe("SQLite audit_log schema", () => {
 
   it("allows nullable fields (accountId, systemId, ipAddress, userAgent, detail)", () => {
     const now = Date.now();
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
       .values({
@@ -102,7 +101,7 @@ describe("SQLite audit_log schema", () => {
       db
         .insert(auditLog)
         .values({
-          id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
+          id: makeAuditLogEntryId(),
           eventType: "invalid.event" as "auth.login",
           timestamp: now,
           actor: testActor("account", "acc-123"),
@@ -140,7 +139,7 @@ describe("SQLite audit_log schema", () => {
     for (const eventType of eventTypes) {
       db.insert(auditLog)
         .values({
-          id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
+          id: makeAuditLogEntryId(),
           accountId,
           eventType,
           timestamp: now,
@@ -158,7 +157,7 @@ describe("SQLite audit_log schema", () => {
 
   it("supports api-key actor type", () => {
     const now = Date.now();
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
     const actor = testActor("api-key", "key-123");
 
     db.insert(auditLog)
@@ -177,7 +176,7 @@ describe("SQLite audit_log schema", () => {
   it("sets account_id to NULL on account deletion (SET NULL)", () => {
     const accountId = insertAccount();
     const now = Date.now();
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
       .values({
@@ -199,7 +198,7 @@ describe("SQLite audit_log schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
       .values({
@@ -220,7 +219,7 @@ describe("SQLite audit_log schema", () => {
 
   it("rejects duplicate primary key", () => {
     const now = Date.now();
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
 
     db.insert(auditLog)
       .values({
@@ -249,7 +248,7 @@ describe("SQLite audit_log schema", () => {
 
     db.insert(auditLog)
       .values({
-        id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
+        id: makeAuditLogEntryId(),
         eventType: "auth.login",
         timestamp: now,
         actor: testActor("account", "acc-123"),
@@ -265,7 +264,7 @@ describe("SQLite audit_log schema", () => {
       db
         .insert(auditLog)
         .values({
-          id: brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`),
+          id: makeAuditLogEntryId(),
           eventType: "auth.login",
           timestamp: now,
           actor: testActor("account", "acc-123"),

@@ -10,6 +10,7 @@ import { systems } from "../schema/sqlite/systems.js";
 
 import {
   createSqliteAuditLogTables,
+  makeAuditLogEntryId,
   sqliteInsertAccount,
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
@@ -48,7 +49,7 @@ describe("sqliteCleanupAuditLog", () => {
     systemId: string;
     timestamp?: number;
   }): AuditLogEntryId {
-    const id = brandId<AuditLogEntryId>(`al_${crypto.randomUUID()}`);
+    const id = makeAuditLogEntryId();
     db.insert(auditLog)
       .values({
         id,
