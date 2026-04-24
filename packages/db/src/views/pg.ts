@@ -245,7 +245,7 @@ export async function getActiveDeviceTransfers(
 /** Get all structure entity associations for a system. */
 export async function getStructureEntityAssociations(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<StructureEntityAssociationRow[]> {
   // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
   // (camelCase columns, `createdAt` as unix millis via `pgTimestamp`), so no

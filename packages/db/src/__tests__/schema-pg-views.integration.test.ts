@@ -47,8 +47,12 @@ import type {
   DeviceTransferRequestId,
   FrontingCommentId,
   FrontingSessionId,
+  GroupId,
   SessionId,
   SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -401,7 +405,7 @@ describe("PG views / query helpers", () => {
       const now = Date.now();
       const memberId1 = crypto.randomUUID();
       const memberId2 = crypto.randomUUID();
-      const groupId = crypto.randomUUID();
+      const groupId = brandId<GroupId>(crypto.randomUUID());
 
       await db.insert(members).values([
         {
@@ -421,7 +425,7 @@ describe("PG views / query helpers", () => {
       ]);
       await db.insert(groups).values({
         id: groupId,
-        systemId,
+        systemId: brandId<SystemId>(systemId),
         sortOrder: 0,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -683,9 +687,9 @@ describe("PG views / query helpers", () => {
   describe("getStructureEntityAssociations", () => {
     it("returns associations for a system", async () => {
       const now = Date.now();
-      const entityTypeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const entityTypeId = brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
+      const entityId1 = brandId<SystemStructureEntityId>(crypto.randomUUID());
+      const entityId2 = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       await db.insert(systemStructureEntityTypes).values({
         id: entityTypeId,
@@ -716,7 +720,7 @@ describe("PG views / query helpers", () => {
         },
       ]);
       await db.insert(systemStructureEntityAssociations).values({
-        id: brandId<FrontingSessionId>(crypto.randomUUID()),
+        id: brandId<SystemStructureEntityAssociationId>(crypto.randomUUID()),
         systemId,
         sourceEntityId: entityId1,
         targetEntityId: entityId2,

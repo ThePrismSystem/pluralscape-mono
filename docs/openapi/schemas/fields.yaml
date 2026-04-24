@@ -87,7 +87,19 @@ UpdateFieldValueRequest:
 
 FieldValueResponse:
   type: object
-  required: [id, fieldDefinitionId, systemId, encryptedData, version, createdAt, updatedAt]
+  required:
+    [
+      id,
+      fieldDefinitionId,
+      memberId,
+      groupId,
+      structureEntityId,
+      systemId,
+      encryptedData,
+      version,
+      createdAt,
+      updatedAt,
+    ]
   properties:
     id:
       type: string

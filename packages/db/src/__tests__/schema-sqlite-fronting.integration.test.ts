@@ -17,7 +17,12 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { FrontingCommentId, FrontingSessionId, SystemId } from "@pluralscape/types";
+import type {
+  CustomFrontId,
+  FrontingCommentId,
+  FrontingSessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -38,12 +43,13 @@ describe("SQLite fronting schema", () => {
   const insertMember = (systemId: SystemId, id?: string): string =>
     sqliteInsertMember(db, systemId, id);
 
-  function insertCustomFront(systemId: SystemId, id = crypto.randomUUID()): string {
+  function insertCustomFront(systemId: string, raw = crypto.randomUUID()): CustomFrontId {
+    const id = brandId<CustomFrontId>(raw);
     const now = Date.now();
     db.insert(customFronts)
       .values({
         id,
-        systemId,
+        systemId: brandId<SystemId>(systemId),
         encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
@@ -666,7 +672,7 @@ describe("SQLite fronting schema", () => {
     it("inserts with encrypted_data and round-trips binary", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -689,7 +695,7 @@ describe("SQLite fronting schema", () => {
     it("defaults archived to false, archivedAt to null, and version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(customFronts)
@@ -711,7 +717,7 @@ describe("SQLite fronting schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(customFronts)
@@ -732,7 +738,7 @@ describe("SQLite fronting schema", () => {
     it("round-trips archived: true with archivedAt timestamp", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = brandId<FrontingSessionId>(crypto.randomUUID());
+      const id = brandId<CustomFrontId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(customFronts)

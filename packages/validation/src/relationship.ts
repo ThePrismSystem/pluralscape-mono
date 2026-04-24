@@ -16,6 +16,18 @@ export const RELATIONSHIP_TYPES = [
   "custom",
 ] as const;
 
+/**
+ * Runtime validator for the pre-encryption Relationship input. Every field
+ * of `RelationshipEncryptedInput` (in `@pluralscape/data`) must be present
+ * and well-formed. Zod compile-time parity is checked in
+ * `__tests__/type-parity/relationship.type.test.ts`.
+ */
+export const RelationshipEncryptedInputSchema = z
+  .object({
+    label: z.string().nullable(),
+  })
+  .readonly();
+
 export const CreateRelationshipBodySchema = z
   .object({
     sourceMemberId: brandedString<"MemberId">(),

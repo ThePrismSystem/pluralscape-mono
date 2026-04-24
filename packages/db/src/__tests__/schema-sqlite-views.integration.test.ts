@@ -46,8 +46,12 @@ import type {
   DeviceTransferRequestId,
   FrontingCommentId,
   FrontingSessionId,
+  GroupId,
   SessionId,
   SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -400,7 +404,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       const memberId1 = crypto.randomUUID();
       const memberId2 = crypto.randomUUID();
-      const groupId = crypto.randomUUID();
+      const groupId = brandId<GroupId>(crypto.randomUUID());
 
       db.insert(members)
         .values([
@@ -423,7 +427,7 @@ describe("SQLite views / query helpers", () => {
       db.insert(groups)
         .values({
           id: groupId,
-          systemId,
+          systemId: brandId<SystemId>(systemId),
           sortOrder: 0,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -649,9 +653,9 @@ describe("SQLite views / query helpers", () => {
 
     it("returns associations for a system", () => {
       const now = Date.now();
-      const entityTypeId = crypto.randomUUID();
-      const entityId1 = crypto.randomUUID();
-      const entityId2 = crypto.randomUUID();
+      const entityTypeId = brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
+      const entityId1 = brandId<SystemStructureEntityId>(crypto.randomUUID());
+      const entityId2 = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       db.insert(systemStructureEntityTypes)
         .values({
@@ -687,7 +691,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(systemStructureEntityAssociations)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<SystemStructureEntityAssociationId>(crypto.randomUUID()),
           systemId,
           sourceEntityId: entityId1,
           targetEntityId: entityId2,

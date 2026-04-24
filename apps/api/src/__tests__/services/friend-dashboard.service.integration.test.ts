@@ -27,6 +27,7 @@ import type {
   MemberId,
   SystemId,
   SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -181,7 +182,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertCustomFront(): Promise<CustomFrontId> {
-    const id = createId(ID_PREFIXES.customFront);
+    const id = brandId<CustomFrontId>(createId(ID_PREFIXES.customFront));
     const ts = now();
     await db.insert(customFronts).values({
       id,
@@ -190,11 +191,11 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<CustomFrontId>(id);
+    return id;
   }
 
-  async function insertStructureEntityType(): Promise<string> {
-    const id = createId(ID_PREFIXES.structureEntityType);
+  async function insertStructureEntityType(): Promise<SystemStructureEntityTypeId> {
+    const id = brandId<SystemStructureEntityTypeId>(createId(ID_PREFIXES.structureEntityType));
     const ts = now();
     await db.insert(systemStructureEntityTypes).values({
       id,
@@ -208,10 +209,10 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertStructureEntity(
-    entityTypeId: string,
+    entityTypeId: SystemStructureEntityTypeId,
     sortOrder: number,
   ): Promise<SystemStructureEntityId> {
-    const id = createId(ID_PREFIXES.structureEntity);
+    const id = brandId<SystemStructureEntityId>(createId(ID_PREFIXES.structureEntity));
     const ts = now();
     await db.insert(systemStructureEntities).values({
       id,
@@ -222,7 +223,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<SystemStructureEntityId>(id);
+    return id;
   }
 
   async function insertBucketTag(

@@ -2,19 +2,11 @@ import type { KdfMasterKey } from "./crypto-keys.js";
 import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
-import type { CustomFront } from "./entities/custom-front.js";
-import type { FieldDefinition, FieldType } from "./entities/field-definition.js";
-import type { FieldValue } from "./entities/field-value.js";
-import type { Group } from "./entities/group.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
-import type { MemberPhoto } from "./entities/member-photo.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
 import type { Poll, PollKind, PollStatus } from "./entities/poll.js";
-import type { RelationshipType, Relationship } from "./entities/relationship.js";
-import type { SystemStructureEntityType } from "./entities/structure-entity-type.js";
-import type { SystemStructureEntity } from "./entities/structure-entity.js";
 import type { TimerConfig } from "./entities/timer-config.js";
 import type { WikiPage } from "./entities/wiki-page.js";
 import type {
@@ -22,23 +14,15 @@ import type {
   BoardMessageId,
   BucketId,
   ChannelId,
-  CustomFrontId,
-  FieldDefinitionId,
-  FieldValueId,
   FrontingSessionId,
-  GroupId,
   JournalEntryId,
   MemberId,
-  MemberPhotoId,
   MessageId,
   NoteId,
   PollId,
   PollOptionId,
   PollVoteId,
-  RelationshipId,
   SystemId,
-  SystemStructureEntityTypeId,
-  SystemStructureEntityId,
   TimerId,
   SlugHash,
   WikiPageId,
@@ -118,78 +102,6 @@ export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 // MemberServerMetadata / MemberWire live in entities/member.ts.
 // AuditLogEntryServerMetadata / AuditLogEntryWire live in entities/audit-log-entry.ts.
 
-/**
- * Server-side group representation.
- * T1 encrypted: name, description, imageSource, color, emoji
- * T3 plaintext: sortOrder, archived, parentGroupId
- */
-export interface ServerGroup extends AuditMetadata {
-  readonly id: GroupId;
-  readonly systemId: SystemId;
-  readonly parentGroupId: GroupId | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side group — flat decrypted fields. */
-export type ClientGroup = Group;
-
-// ── Structure entities ──────────────────────────────────────────
-
-/**
- * Server-side structure entity type representation.
- * T1 encrypted: name, description, emoji, color, imageSource
- * T3 plaintext: sortOrder, archived
- */
-export interface ServerStructureEntityType extends AuditMetadata {
-  readonly id: SystemStructureEntityTypeId;
-  readonly systemId: SystemId;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side structure entity type — flat decrypted fields. */
-export type ClientStructureEntityType = SystemStructureEntityType;
-
-/**
- * Server-side structure entity representation.
- * T1 encrypted: name, description, emoji, color, imageSource
- * T3 plaintext: entityTypeId, sortOrder, archived
- */
-export interface ServerStructureEntity extends AuditMetadata {
-  readonly id: SystemStructureEntityId;
-  readonly systemId: SystemId;
-  readonly entityTypeId: SystemStructureEntityTypeId;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side structure entity — flat decrypted fields. */
-export type ClientStructureEntity = SystemStructureEntity;
-
-/**
- * Server-side relationship representation.
- * T1 encrypted: label
- * T3 plaintext: type, sourceMemberId, targetMemberId, bidirectional, archived
- */
-export interface ServerRelationship {
-  readonly id: RelationshipId;
-  readonly systemId: SystemId;
-  readonly sourceMemberId: MemberId | null;
-  readonly targetMemberId: MemberId | null;
-  readonly type: RelationshipType;
-  readonly bidirectional: boolean;
-  readonly createdAt: UnixMillis;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob | null;
-}
-
-/** Client-side relationship — flat decrypted fields. */
-export type ClientRelationship = Relationship;
-
 // ── Communication ──────────────────────────────────────────────
 
 /**
@@ -263,61 +175,6 @@ export interface ServerNote extends AuditMetadata {
 /** Client-side note — flat decrypted fields. */
 export type ClientNote = Note;
 
-// ── Custom fields ──────────────────────────────────────────────
-
-/**
- * Server-side field definition representation.
- * T1 encrypted: name, description, options
- * T3 plaintext: fieldType, required, sortOrder, archived
- */
-export interface ServerFieldDefinition extends AuditMetadata {
-  readonly id: FieldDefinitionId;
-  readonly systemId: SystemId;
-  /** Required field type — must be set when creating a field definition. */
-  readonly fieldType: FieldType;
-  readonly required: boolean;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side field definition — flat decrypted fields. */
-export type ClientFieldDefinition = FieldDefinition;
-
-/**
- * Server-side field value representation.
- * T1 encrypted: value
- * T3 plaintext: fieldDefinitionId, memberId, structureEntityId, groupId
- */
-export interface ServerFieldValue extends AuditMetadata {
-  readonly id: FieldValueId;
-  readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly groupId: GroupId | null;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side field value — flat decrypted fields. */
-export type ClientFieldValue = FieldValue;
-
-// ── Custom fronts ──────────────────────────────────────────────
-
-/**
- * Server-side custom front representation.
- * T1 encrypted: name, description, color, emoji
- * T3 plaintext: archived
- */
-export interface ServerCustomFront extends AuditMetadata {
-  readonly id: CustomFrontId;
-  readonly systemId: SystemId;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side custom front — flat decrypted fields. */
-export type ClientCustomFront = CustomFront;
-
 // ── Journal ────────────────────────────────────────────────────
 
 /**
@@ -351,26 +208,6 @@ export interface ServerWikiPage extends AuditMetadata {
 
 /** Client-side wiki page — flat decrypted fields. */
 export type ClientWikiPage = WikiPage;
-
-// ── Member photos ──────────────────────────────────────────────
-
-/**
- * Server-side member photo representation.
- * T1 encrypted: imageSource, caption
- * T3 plaintext: memberId, sortOrder, archived
- *
- * Intentionally omits AuditMetadata — photos are append-only gallery items.
- */
-export interface ServerMemberPhoto {
-  readonly id: MemberPhotoId;
-  readonly memberId: MemberId;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side member photo — flat decrypted fields. */
-export type ClientMemberPhoto = MemberPhoto;
 
 // ── Polls ──────────────────────────────────────────────────────
 

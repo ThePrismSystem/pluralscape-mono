@@ -13030,6 +13030,9 @@ components:
       required:
         - id
         - fieldDefinitionId
+        - memberId
+        - groupId
+        - structureEntityId
         - systemId
         - encryptedData
         - version

@@ -15,14 +15,19 @@ import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
 import { systems } from "./systems.js";
 
-import type { FrontingCommentId, FrontingSessionId, SystemId } from "@pluralscape/types";
+import type {
+  CustomFrontId,
+  FrontingCommentId,
+  FrontingSessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = sqliteTable(
   "custom_fronts",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<CustomFrontId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),

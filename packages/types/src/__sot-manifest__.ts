@@ -16,7 +16,12 @@ import type {
   CheckInRecordServerMetadata,
   CheckInRecordWire,
 } from "./entities/check-in-record.js";
-import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
+import type {
+  CustomFront,
+  CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
+  CustomFrontWire,
+} from "./entities/custom-front.js";
 import type {
   DeviceToken,
   DeviceTokenServerMetadata,
@@ -28,10 +33,22 @@ import type {
   DeviceTransferRequestWire,
 } from "./entities/device-transfer-request.js";
 import type {
+  FieldDefinitionScope,
+  FieldDefinitionScopeServerMetadata,
+  FieldDefinitionScopeWire,
+} from "./entities/field-definition-scope.js";
+import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
+  FieldDefinitionServerMetadata,
+  FieldDefinitionWire,
 } from "./entities/field-definition.js";
-import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
+import type {
+  FieldValue,
+  FieldValueEncryptedFields,
+  FieldValueServerMetadata,
+  FieldValueWire,
+} from "./entities/field-value.js";
 import type {
   FrontingComment,
   FrontingCommentEncryptedFields,
@@ -44,7 +61,12 @@ import type {
   FrontingSessionServerMetadata,
   FrontingSessionWire,
 } from "./entities/fronting-session.js";
-import type { Group, GroupEncryptedFields } from "./entities/group.js";
+import type {
+  Group,
+  GroupEncryptedFields,
+  GroupServerMetadata,
+  GroupWire,
+} from "./entities/group.js";
 import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
@@ -69,7 +91,12 @@ import type {
   LifecycleEventServerMetadata,
   LifecycleEventWire,
 } from "./entities/lifecycle-event.js";
-import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
+import type {
+  MemberPhoto,
+  MemberPhotoEncryptedFields,
+  MemberPhotoServerMetadata,
+  MemberPhotoWire,
+} from "./entities/member-photo.js";
 import type {
   Member,
   MemberEncryptedFields,
@@ -81,23 +108,41 @@ import type {
   RecoveryKeyServerMetadata,
   RecoveryKeyWire,
 } from "./entities/recovery-key.js";
-import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
+import type {
+  Relationship,
+  RelationshipEncryptedFields,
+  RelationshipServerMetadata,
+  RelationshipWire,
+} from "./entities/relationship.js";
 import type { Session, SessionServerMetadata, SessionWire } from "./entities/session.js";
 import type {
   SystemStructureEntityAssociation,
   SystemStructureEntityAssociationEncryptedFields,
+  SystemStructureEntityAssociationServerMetadata,
+  SystemStructureEntityAssociationWire,
 } from "./entities/structure-entity-association.js";
+import type {
+  SystemStructureEntityLink,
+  SystemStructureEntityLinkServerMetadata,
+  SystemStructureEntityLinkWire,
+} from "./entities/structure-entity-link.js";
 import type {
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityMemberLinkServerMetadata,
+  SystemStructureEntityMemberLinkWire,
 } from "./entities/structure-entity-member-link.js";
 import type {
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
+  SystemStructureEntityTypeServerMetadata,
+  SystemStructureEntityTypeWire,
 } from "./entities/structure-entity-type.js";
 import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
+  SystemStructureEntityServerMetadata,
+  SystemStructureEntityWire,
 } from "./entities/structure-entity.js";
 import type {
   SystemSettings,
@@ -170,34 +215,57 @@ export type SotEntityManifest = {
   };
   MemberPhoto: {
     domain: MemberPhoto;
+    server: MemberPhotoServerMetadata;
+    wire: MemberPhotoWire;
     encryptedFields: MemberPhotoEncryptedFields;
   };
   Group: {
     domain: Group;
+    server: GroupServerMetadata;
+    wire: GroupWire;
     encryptedFields: GroupEncryptedFields;
   };
   CustomFront: {
     domain: CustomFront;
+    server: CustomFrontServerMetadata;
+    wire: CustomFrontWire;
     encryptedFields: CustomFrontEncryptedFields;
   };
   FieldDefinition: {
     domain: FieldDefinition;
+    server: FieldDefinitionServerMetadata;
+    wire: FieldDefinitionWire;
     encryptedFields: FieldDefinitionEncryptedFields;
+  };
+  FieldDefinitionScope: {
+    domain: FieldDefinitionScope;
+    server: FieldDefinitionScopeServerMetadata;
+    wire: FieldDefinitionScopeWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
   };
   FieldValue: {
     domain: FieldValue;
+    server: FieldValueServerMetadata;
+    wire: FieldValueWire;
     encryptedFields: FieldValueEncryptedFields;
   };
   Relationship: {
     domain: Relationship;
+    server: RelationshipServerMetadata;
+    wire: RelationshipWire;
     encryptedFields: RelationshipEncryptedFields;
   };
   StructureEntityType: {
     domain: SystemStructureEntityType;
+    server: SystemStructureEntityTypeServerMetadata;
+    wire: SystemStructureEntityTypeWire;
     encryptedFields: SystemStructureEntityTypeEncryptedFields;
   };
   StructureEntity: {
     domain: SystemStructureEntity;
+    server: SystemStructureEntityServerMetadata;
+    wire: SystemStructureEntityWire;
     encryptedFields: SystemStructureEntityEncryptedFields;
   };
   FrontingSession: {
@@ -253,10 +321,14 @@ export type SotEntityManifest = {
   };
   StructureEntityMemberLink: {
     domain: SystemStructureEntityMemberLink;
+    server: SystemStructureEntityMemberLinkServerMetadata;
+    wire: SystemStructureEntityMemberLinkWire;
     encryptedFields: SystemStructureEntityMemberLinkEncryptedFields;
   };
   StructureEntityAssociation: {
     domain: SystemStructureEntityAssociation;
+    server: SystemStructureEntityAssociationServerMetadata;
+    wire: SystemStructureEntityAssociationWire;
     encryptedFields: SystemStructureEntityAssociationEncryptedFields;
   };
   ApiKey: {
@@ -303,6 +375,13 @@ export type SotEntityManifest = {
     server: SessionServerMetadata;
     wire: SessionWire;
     // Plaintext entity — no encrypted fields in the domain keyset.
+    encryptedFields: never;
+  };
+  StructureEntityLink: {
+    domain: SystemStructureEntityLink;
+    server: SystemStructureEntityLinkServerMetadata;
+    wire: SystemStructureEntityLinkWire;
+    // Plaintext entity — no client-side encryption; never needed.
     encryptedFields: never;
   };
   Nomenclature: {

@@ -42,7 +42,7 @@ async function seedPhotos(
   const blob = testBlob();
   for (let i = 0; i < count; i++) {
     await db.insert(memberPhotos).values({
-      id: `mp_seed-${crypto.randomUUID()}`,
+      id: brandId<MemberPhotoId>(`mp_seed-${crypto.randomUUID()}`),
       memberId,
       systemId,
       sortOrder: i,

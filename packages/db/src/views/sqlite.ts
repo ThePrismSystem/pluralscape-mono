@@ -257,7 +257,7 @@ export function getActiveDeviceTransfers(
 /** Get all structure entity associations for a system. */
 export function getStructureEntityAssociations(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): StructureEntityAssociationRow[] {
   // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
   // (camelCase columns, `createdAt` as unix millis via `sqliteTimestamp`), so

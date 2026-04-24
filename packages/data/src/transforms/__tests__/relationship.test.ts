@@ -13,7 +13,7 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { RelationshipEncryptedFields, RelationshipRaw } from "../relationship.js";
+import type { RelationshipEncryptedInput, RelationshipRaw } from "../relationship.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { MemberId, RelationshipId, RelationshipType, SystemId } from "@pluralscape/types";
 
@@ -37,7 +37,7 @@ function makeRawRelationship(overrides?: Partial<RelationshipRaw>): Relationship
     bidirectional: true,
     createdAt: NOW,
     encryptedData: encryptAndEncodeT1(
-      { label: "Sibling bond" } satisfies RelationshipEncryptedFields,
+      { label: "Sibling bond" } satisfies RelationshipEncryptedInput,
       masterKey,
     ),
     archived: false,
@@ -109,7 +109,7 @@ describe("decryptRelationshipPage", () => {
 
 describe("encryptRelationshipInput", () => {
   it("round-trips through decrypt", () => {
-    const fields: RelationshipEncryptedFields = { label: "Test Label" };
+    const fields: RelationshipEncryptedInput = { label: "Test Label" };
     const { encryptedData } = encryptRelationshipInput(fields, masterKey);
     const raw = makeRawRelationship({ encryptedData });
     const result = decryptRelationship(raw, masterKey);
@@ -125,16 +125,16 @@ describe("encryptRelationshipUpdate", () => {
   });
 });
 
-describe("assertRelationshipEncryptedFields", () => {
+describe("RelationshipEncryptedInputSchema validation", () => {
   it("throws when blob is not an object", () => {
     const raw = makeRawRelationship({ encryptedData: makeBase64Blob("string", masterKey) });
-    expect(() => decryptRelationship(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptRelationship(raw, masterKey)).toThrow();
   });
 
   it("throws when label is missing", () => {
     const raw = makeRawRelationship({
       encryptedData: makeBase64Blob({ notLabel: "x" }, masterKey),
     });
-    expect(() => decryptRelationship(raw, masterKey)).toThrow("label");
+    expect(() => decryptRelationship(raw, masterKey)).toThrow();
   });
 });

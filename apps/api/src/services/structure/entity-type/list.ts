@@ -1,4 +1,5 @@
 import { systemStructureEntityTypes } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt } from "drizzle-orm";
 
 import { buildPaginatedResult } from "../../../lib/pagination.js";
@@ -10,7 +11,7 @@ import { DEFAULT_PAGE_LIMIT } from "../../../service.constants.js";
 import { toEntityTypeResult, type EntityTypeResult } from "./internal.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { PaginatedResult, SystemId } from "@pluralscape/types";
+import type { PaginatedResult, SystemId, SystemStructureEntityTypeId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listEntityTypes(
@@ -35,7 +36,9 @@ export async function listEntityTypes(
     }
 
     if (opts?.cursor) {
-      conditions.push(gt(systemStructureEntityTypes.id, opts.cursor));
+      conditions.push(
+        gt(systemStructureEntityTypes.id, brandId<SystemStructureEntityTypeId>(opts.cursor)),
+      );
     }
 
     const rows = await tx

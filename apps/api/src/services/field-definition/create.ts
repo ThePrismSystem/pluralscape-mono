@@ -1,5 +1,5 @@
 import { fieldDefinitions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
@@ -19,7 +19,7 @@ import {
 import type { FieldDefinitionResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createFieldDefinition(
@@ -37,7 +37,7 @@ export async function createFieldDefinition(
   }
 
   const blob = parseAndValidateFieldBlob(parsed.data.encryptedData);
-  const fieldId = createId(ID_PREFIXES.fieldDefinition);
+  const fieldId = brandId<FieldDefinitionId>(createId(ID_PREFIXES.fieldDefinition));
   const timestamp = now();
 
   const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
