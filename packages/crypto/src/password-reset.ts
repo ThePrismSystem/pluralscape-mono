@@ -7,7 +7,7 @@ import { getSodium } from "./sodium.js";
 
 import type { RecoveryKeyResult } from "./recovery.js";
 import type { EncryptedPayload } from "./symmetric.js";
-import type { AuthKey, KdfMasterKey, PwhashSalt } from "./types.js";
+import type { AuthKeyMaterial, KdfMasterKey, PwhashSalt } from "./types.js";
 import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 /** Input for a password reset via recovery key. */
@@ -31,7 +31,7 @@ export interface PasswordResetResult {
   /** Fresh recovery key — the old one was consumed and must be replaced. */
   readonly newRecoveryKey: RecoveryKeyResult;
   /** Auth key for server-side verification — zeroed automatically after callback completes. */
-  readonly authKey: AuthKey;
+  readonly authKey: AuthKeyMaterial;
 }
 
 /**

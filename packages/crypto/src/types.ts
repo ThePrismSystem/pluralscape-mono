@@ -19,11 +19,16 @@ export type Signature = CryptoBrand<"Signature">;
 export type { KdfMasterKey };
 export type PwhashSalt = CryptoBrand<"PwhashSalt">;
 export type EncryptedKeyGrant = CryptoBrand<"EncryptedKeyGrant">;
-export type AuthKey = CryptoBrand<"AuthKey">;
+/**
+ * Nominal brand for a 32-byte auth-key buffer (the client-side-derived proof
+ * of password knowledge). Named `AuthKeyMaterial` rather than `AuthKey` to
+ * avoid colliding with the domain `EncryptedBlob` namespace in types —
+ * everything here is key *material*, not a key abstraction.
+ */
+export type AuthKeyMaterial = CryptoBrand<"AuthKeyMaterial">;
 export type AuthKeyHash = CryptoBrand<"AuthKeyHash">;
 export type RecoveryKeyHash = CryptoBrand<"RecoveryKeyHash">;
 export type ChallengeNonce = CryptoBrand<"ChallengeNonce">;
-export type EncryptedBlob = CryptoBrand<"EncryptedBlob">;
 
 // ── Keypair types ────────────────────────────────────────────────────
 export interface BoxKeypair {

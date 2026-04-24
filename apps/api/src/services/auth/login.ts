@@ -30,7 +30,7 @@ import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "../auth.constants.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { ClientPlatform } from "../../routes/auth/auth.constants.js";
-import type { AuthKey, AuthKeyHash } from "@pluralscape/crypto";
+import type { AuthKeyHash, AuthKeyMaterial } from "@pluralscape/crypto";
 import type { AccountId, AccountType, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -82,7 +82,7 @@ export async function loginAccount(
 
   if (!account) {
     // Anti-enumeration: compute a dummy verify to equalize timing
-    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKey;
+    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyMaterial;
     const dummyHash = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyHash;
     verifyAuthKey(dummyKey, dummyHash);
     // Record failure for throttling
@@ -111,7 +111,7 @@ export async function loginAccount(
   // Reject placeholder accounts (phase 1 registrations that never completed)
   const isLoginPlaceholder = account.authKeyHash.every((b) => b === 0);
   if (isLoginPlaceholder) {
-    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKey;
+    const dummyKey = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyMaterial;
     const dummyHash = getSodium().randomBytes(AUTH_KEY_HASH_BYTES) as AuthKeyHash;
     verifyAuthKey(dummyKey, dummyHash);
     try {

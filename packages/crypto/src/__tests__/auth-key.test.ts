@@ -23,8 +23,8 @@ import { getSodium } from "../sodium.js";
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
 import type {
-  AuthKey,
   AuthKeyHash,
+  AuthKeyMaterial,
   ChallengeNonce,
   PwhashSalt,
   RecoveryKeyHash,
@@ -151,7 +151,7 @@ describe("verifyAuthKey", () => {
     const salt = adapter.randomBytes(16) as PwhashSalt;
     const { authKey } = await deriveAuthAndPasswordKeys(toBytes("validpassword"), salt);
     const stored = hashAuthKey(authKey);
-    const zeroKey = new Uint8Array(AUTH_KEY_BYTES) as AuthKey;
+    const zeroKey = new Uint8Array(AUTH_KEY_BYTES) as AuthKeyMaterial;
     expect(verifyAuthKey(zeroKey, stored)).toBe(false);
   });
 
