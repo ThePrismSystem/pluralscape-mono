@@ -36,7 +36,7 @@ export async function createCustomFront(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const cfId = createId(ID_PREFIXES.customFront);
+  const cfId = brandId<CustomFrontId>(createId(ID_PREFIXES.customFront));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

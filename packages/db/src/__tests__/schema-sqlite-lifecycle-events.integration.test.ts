@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { LifecycleEventId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, lifecycleEvents };
@@ -40,7 +42,7 @@ describe("SQLite lifecycle_events schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const occurred = Date.now() - 86400000;
     const recorded = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     db.insert(lifecycleEvents)
@@ -67,7 +69,7 @@ describe("SQLite lifecycle_events schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const bigArray = new Uint8Array(256);
     for (let i = 0; i < 256; i++) bigArray[i] = i;
     const blob = testBlob(bigArray);
@@ -95,7 +97,7 @@ describe("SQLite lifecycle_events schema", () => {
 
     db.insert(lifecycleEvents)
       .values({
-        id: crypto.randomUUID(),
+        id: brandId<LifecycleEventId>(crypto.randomUUID()),
         systemId,
         eventType: "discovery",
         occurredAt: now,
@@ -107,7 +109,7 @@ describe("SQLite lifecycle_events schema", () => {
 
     db.insert(lifecycleEvents)
       .values({
-        id: crypto.randomUUID(),
+        id: brandId<LifecycleEventId>(crypto.randomUUID()),
         systemId,
         eventType: "discovery",
         occurredAt: now + 1000,
@@ -130,7 +132,7 @@ describe("SQLite lifecycle_events schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const occurred = Date.now() - 3600000;
     const recorded = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
     db.insert(lifecycleEvents)
       .values({
@@ -154,7 +156,7 @@ describe("SQLite lifecycle_events schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
     db.insert(lifecycleEvents)
       .values({
@@ -179,8 +181,8 @@ describe("SQLite lifecycle_events schema", () => {
       db
         .insert(lifecycleEvents)
         .values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
+          id: brandId<LifecycleEventId>(crypto.randomUUID()),
+          systemId: brandId<SystemId>("nonexistent"),
           eventType: "discovery",
           occurredAt: now,
           recordedAt: now,
@@ -195,7 +197,7 @@ describe("SQLite lifecycle_events schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
     db.insert(lifecycleEvents)
       .values({
@@ -228,7 +230,7 @@ describe("SQLite lifecycle_events schema", () => {
   it("round-trips eventType T3 column", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(lifecycleEvents)
@@ -250,7 +252,7 @@ describe("SQLite lifecycle_events schema", () => {
   it("stores eventType when provided", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const now = Date.now();
 
     db.insert(lifecycleEvents)
@@ -278,7 +280,7 @@ describe("SQLite lifecycle_events schema", () => {
       db
         .insert(lifecycleEvents)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<LifecycleEventId>(crypto.randomUUID()),
           systemId,
           eventType: "invalid" as "discovery",
           occurredAt: now,
@@ -295,7 +297,7 @@ describe("SQLite lifecycle_events schema", () => {
       const accountId = insertAccount();
       const systemId = sqliteInsertSystem(db, accountId);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
       db.insert(lifecycleEvents)
         .values({
@@ -318,7 +320,7 @@ describe("SQLite lifecycle_events schema", () => {
       const accountId = insertAccount();
       const systemId = sqliteInsertSystem(db, accountId);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
       db.insert(lifecycleEvents)
         .values({
@@ -345,7 +347,7 @@ describe("SQLite lifecycle_events schema", () => {
         db
           .insert(lifecycleEvents)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<LifecycleEventId>(crypto.randomUUID()),
             systemId,
             eventType: "discovery",
             occurredAt: now,
@@ -368,7 +370,7 @@ describe("SQLite lifecycle_events schema", () => {
         db
           .insert(lifecycleEvents)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<LifecycleEventId>(crypto.randomUUID()),
             systemId,
             eventType: "discovery",
             occurredAt: now,

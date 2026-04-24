@@ -3,16 +3,6 @@ import { describe, expectTypeOf, it } from "vitest";
 import type { KdfMasterKey } from "../crypto-keys.js";
 import type {
   BucketEncrypted,
-  ClientCustomFront,
-  ClientFieldDefinition,
-  ClientFieldValue,
-  ClientFrontingSession,
-  ClientGroup,
-  ClientLifecycleEvent,
-  ClientMemberPhoto,
-  ClientRelationship,
-  ClientStructureEntity,
-  ClientStructureEntityType,
   DecryptFn,
   Encrypted,
   EncryptedBlob,
@@ -20,18 +10,6 @@ import type {
   EncryptFn,
   EncryptionAlgorithm,
   Plaintext,
-  ServerCustomFront,
-  ServerFieldDefinition,
-  ServerFieldValue,
-  ServerFrontingSession,
-  ServerGroup,
-  ServerLifecycleEvent,
-  ServerMemberPhoto,
-  ServerRelationship,
-  ServerStructureEntity,
-  ServerStructureEntityType,
-  ServerFrontingComment,
-  ClientFrontingComment,
   T1EncryptedBlob,
   T2EncryptedBlob,
 } from "../encryption-primitives.js";
@@ -47,10 +25,13 @@ import type {
 } from "../entities/audit-log-entry.js";
 import type { BoardMessage, BoardMessageServerMetadata } from "../entities/board-message.js";
 import type { Channel, ChannelServerMetadata } from "../entities/channel.js";
-import type { CustomFront } from "../entities/custom-front.js";
-import type { FrontingComment } from "../entities/fronting-comment.js";
-import type { FrontingSession } from "../entities/fronting-session.js";
-import type { Group } from "../entities/group.js";
+import type { CustomFront, CustomFrontServerMetadata } from "../entities/custom-front.js";
+import type {
+  FrontingComment,
+  FrontingCommentServerMetadata,
+} from "../entities/fronting-comment.js";
+import type { FrontingSessionServerMetadata } from "../entities/fronting-session.js";
+import type { Group, GroupServerMetadata } from "../entities/group.js";
 import type {
   InnerWorldEntity,
   InnerWorldEntityServerMetadata,
@@ -60,14 +41,22 @@ import type {
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
 import type { JournalEntry, JournalEntryServerMetadata } from "../entities/journal-entry.js";
-import type { LifecycleEvent } from "../entities/lifecycle-event.js";
-import type { MemberPhoto } from "../entities/member-photo.js";
+import type { LifecycleEvent, LifecycleEventServerMetadata } from "../entities/lifecycle-event.js";
+import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
 import type { ChatMessage, ChatMessageServerMetadata } from "../entities/message.js";
 import type { Note, NoteServerMetadata } from "../entities/note.js";
 import type { PollVote, PollVoteServerMetadata } from "../entities/poll-vote.js";
 import type { Poll, PollServerMetadata } from "../entities/poll.js";
-import type { Relationship } from "../entities/relationship.js";
+import type { Relationship, RelationshipServerMetadata } from "../entities/relationship.js";
+import type {
+  SystemStructureEntityType,
+  SystemStructureEntityTypeServerMetadata,
+} from "../entities/structure-entity-type.js";
+import type {
+  SystemStructureEntity,
+  SystemStructureEntityServerMetadata,
+} from "../entities/structure-entity.js";
 import type { TimerConfig, TimerConfigServerMetadata } from "../entities/timer-config.js";
 import type { WikiPage, WikiPageServerMetadata } from "../entities/wiki-page.js";
 import type {
@@ -165,39 +154,43 @@ describe("MemberServerMetadata", () => {
 
 describe("Server/Client pairs exist for completed domains", () => {
   it("fronting pair", () => {
-    expectTypeOf<ServerFrontingSession>().toBeObject();
-    expectTypeOf<ClientFrontingSession>().toEqualTypeOf<FrontingSession>();
+    expectTypeOf<FrontingSessionServerMetadata>().toBeObject();
+    expectTypeOf<FrontingSessionServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
   });
 
   it("group pair", () => {
-    expectTypeOf<ServerGroup>().toBeObject();
-    expectTypeOf<ClientGroup>().toEqualTypeOf<Group>();
+    expectTypeOf<GroupServerMetadata>().toBeObject();
+    expectTypeOf<Group>().toEqualTypeOf<Group>();
   });
 
   it("structure entity type pair", () => {
-    expectTypeOf<ServerStructureEntityType>().toBeObject();
-    expectTypeOf<ServerStructureEntityType["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientStructureEntityType>().toBeObject();
-    expectTypeOf<ClientStructureEntityType["name"]>().toBeString();
+    expectTypeOf<SystemStructureEntityTypeServerMetadata>().toBeObject();
+    expectTypeOf<
+      SystemStructureEntityTypeServerMetadata["encryptedData"]
+    >().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<SystemStructureEntityType>().toBeObject();
+    expectTypeOf<SystemStructureEntityType["name"]>().toBeString();
   });
 
   it("structure entity pair", () => {
-    expectTypeOf<ServerStructureEntity>().toBeObject();
-    expectTypeOf<ServerStructureEntity["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientStructureEntity>().toBeObject();
-    expectTypeOf<ClientStructureEntity["name"]>().toBeString();
+    expectTypeOf<SystemStructureEntityServerMetadata>().toBeObject();
+    expectTypeOf<
+      SystemStructureEntityServerMetadata["encryptedData"]
+    >().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<SystemStructureEntity>().toBeObject();
+    expectTypeOf<SystemStructureEntity["name"]>().toBeString();
   });
 
   it("relationship pair", () => {
-    expectTypeOf<ServerRelationship>().toBeObject();
-    expectTypeOf<ClientRelationship>().toEqualTypeOf<Relationship>();
+    expectTypeOf<RelationshipServerMetadata>().toBeObject();
+    expectTypeOf<Relationship>().toEqualTypeOf<Relationship>();
   });
 
   it("custom front pair", () => {
-    expectTypeOf<ServerCustomFront>().toBeObject();
-    expectTypeOf<ServerCustomFront["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerCustomFront["archived"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ClientCustomFront>().toEqualTypeOf<CustomFront>();
+    expectTypeOf<CustomFrontServerMetadata>().toBeObject();
+    expectTypeOf<CustomFrontServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<CustomFrontServerMetadata["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<CustomFront>().toEqualTypeOf<CustomFront>();
   });
 
   it("journal entry pair", () => {
@@ -218,11 +211,11 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("member photo pair", () => {
-    expectTypeOf<ServerMemberPhoto>().toBeObject();
-    expectTypeOf<ServerMemberPhoto["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerMemberPhoto["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<ServerMemberPhoto["sortOrder"]>().toEqualTypeOf<number>();
-    expectTypeOf<ClientMemberPhoto>().toEqualTypeOf<MemberPhoto>();
+    expectTypeOf<MemberPhotoServerMetadata>().toBeObject();
+    expectTypeOf<MemberPhotoServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<MemberPhotoServerMetadata["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<MemberPhotoServerMetadata["sortOrder"]>().toEqualTypeOf<number>();
+    expectTypeOf<MemberPhoto>().toEqualTypeOf<MemberPhoto>();
   });
 
   it("poll pair", () => {
@@ -270,13 +263,16 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("fronting comment pair", () => {
-    expectTypeOf<ServerFrontingComment>().toBeObject();
-    expectTypeOf<ServerFrontingComment["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerFrontingComment["id"]>().toEqualTypeOf<FrontingCommentId>();
-    expectTypeOf<ServerFrontingComment["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
-    expectTypeOf<ServerFrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ServerFrontingComment["memberId"]>().toEqualTypeOf<MemberId | null>();
-    expectTypeOf<ClientFrontingComment>().toEqualTypeOf<FrontingComment>();
+    expectTypeOf<FrontingCommentServerMetadata>().toBeObject();
+    expectTypeOf<FrontingCommentServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<FrontingCommentServerMetadata["id"]>().toEqualTypeOf<FrontingCommentId>();
+    expectTypeOf<
+      FrontingCommentServerMetadata["frontingSessionId"]
+    >().toEqualTypeOf<FrontingSessionId>();
+    expectTypeOf<FrontingCommentServerMetadata["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FrontingCommentServerMetadata["memberId"]>().toEqualTypeOf<MemberId | null>();
+    // FrontingComment (domain) still referenced via its type file — retained for import.
+    expectTypeOf<FrontingComment>().toBeObject();
   });
 
   it("poll vote pair", () => {
@@ -320,22 +316,10 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<Note>().toBeObject();
   });
 
-  it("field definition pair", () => {
-    expectTypeOf<ServerFieldDefinition>().toBeObject();
-    expectTypeOf<ServerFieldDefinition["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientFieldDefinition>().toBeObject();
-  });
-
-  it("field value pair", () => {
-    expectTypeOf<ServerFieldValue>().toBeObject();
-    expectTypeOf<ServerFieldValue["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientFieldValue>().toBeObject();
-  });
-
   it("lifecycle event pair", () => {
-    expectTypeOf<ServerLifecycleEvent>().toBeObject();
-    expectTypeOf<ServerLifecycleEvent["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
-    expectTypeOf<ClientLifecycleEvent>().toEqualTypeOf<LifecycleEvent>();
+    expectTypeOf<LifecycleEventServerMetadata>().toBeObject();
+    expectTypeOf<LifecycleEventServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<LifecycleEvent>().toBeObject();
   });
 
   it("innerworld entity pair", () => {
@@ -352,9 +336,9 @@ describe("Server/Client pairs exist for completed domains", () => {
 });
 
 describe("T1 encrypted field absence on server types", () => {
-  it("ServerJournalEntry must not have author", () => {
+  it("JournalEntryServerMetadata must not have author", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerJournalEntry["author"]>();
+    expectTypeOf<JournalEntryServerMetadata["author"]>();
   });
 
   it("InnerWorldRegionServerMetadata must not have gatekeeperMemberIds", () => {
@@ -362,14 +346,14 @@ describe("T1 encrypted field absence on server types", () => {
     expectTypeOf<InnerWorldRegionServerMetadata["gatekeeperMemberIds"]>();
   });
 
-  it("ServerChatMessage must not have senderId", () => {
+  it("ChatMessageServerMetadata must not have senderId", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerChatMessage["senderId"]>();
+    expectTypeOf<ChatMessageServerMetadata["senderId"]>();
   });
 
-  it("ServerBoardMessage must not have senderId", () => {
+  it("BoardMessageServerMetadata must not have senderId", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerBoardMessage["senderId"]>();
+    expectTypeOf<BoardMessageServerMetadata["senderId"]>();
   });
 
   it("InnerWorldEntityServerMetadata must not have entityType", () => {
@@ -392,14 +376,14 @@ describe("T1 encrypted field absence on server types", () => {
     expectTypeOf<InnerWorldRegionServerMetadata["accessType"]>();
   });
 
-  it("ServerAcknowledgementRequest must not have targetMemberId", () => {
+  it("AcknowledgementRequestServerMetadata must not have targetMemberId", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerAcknowledgementRequest["targetMemberId"]>();
+    expectTypeOf<AcknowledgementRequestServerMetadata["targetMemberId"]>();
   });
 
-  it("ServerAcknowledgementRequest must not have confirmedAt", () => {
+  it("AcknowledgementRequestServerMetadata must not have confirmedAt", () => {
     // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerAcknowledgementRequest["confirmedAt"]>();
+    expectTypeOf<AcknowledgementRequestServerMetadata["confirmedAt"]>();
   });
 });
 

@@ -1,3 +1,4 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   InnerWorldEntityId,
   InnerWorldRegionId,
@@ -7,6 +8,7 @@ import type {
   SystemStructureEntityId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { EntityReference } from "../utility.js";
 import type { InnerWorldEntityType } from "./innerworld-entity.js";
 
@@ -138,12 +140,46 @@ export type LifecycleEventType = LifecycleEvent["eventType"];
 /**
  * Keys of `LifecycleEvent` that are encrypted client-side before the
  * server sees them. Plaintext siblings (`eventType`, `occurredAt`, and
- * the event-specific `plaintextMetadata` — member/structure/entity/region
+ * the event-specific plaintext metadata — member/structure/entity/region
  * IDs) travel as separate request fields and are intentionally excluded.
  * Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `LifecycleEventServerMetadata` (derived via `Omit`)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextLifecycleEvent parity)
- * - Plan 2 fleet will consume when deriving
- *   `LifecycleEventServerMetadata`.
  */
 export type LifecycleEventEncryptedFields = "notes";
+
+/**
+ * Server-visible LifecycleEvent metadata — raw Drizzle row shape.
+ *
+ * Derived from the `LifecycleEvent` discriminated union by distributively
+ * removing every event-specific key (each variant's polymorphic target IDs
+ * — `sourceMemberId`, `resultMemberIds`, `memberIds`, `entity`, etc.) and
+ * `eventType` (re-added below as a plain union), leaving only the shared
+ * `LifecycleEventBase` columns. The DB stores variant-specific references
+ * in a `plaintextMetadata` JSONB column rather than typed columns. Adds
+ * `updatedAt`, `version`, `archived`/`archivedAt`, and the encrypted blob.
+ *
+ * LifecycleEvent does NOT extend `AuditMetadata` (append-only, no
+ * `createdAt`); `recordedAt` serves as the server-visible creation time.
+ */
+export type LifecycleEventServerMetadata = {
+  readonly id: LifecycleEventId;
+  readonly systemId: SystemId;
+  readonly eventType: LifecycleEventType;
+  readonly occurredAt: UnixMillis;
+  readonly recordedAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+  readonly encryptedData: EncryptedBlob;
+  readonly plaintextMetadata: Record<string, unknown> | null;
+  readonly version: number;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/**
+ * JSON-wire representation of LifecycleEvent. Derived from the domain
+ * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
+ */
+export type LifecycleEventWire = Serialize<LifecycleEvent>;

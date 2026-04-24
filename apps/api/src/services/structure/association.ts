@@ -78,7 +78,9 @@ export async function createEntityAssociation(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
   }
 
-  const assocId = createId(ID_PREFIXES.structureEntityAssociation);
+  const assocId = brandId<SystemStructureEntityAssociationId>(
+    createId(ID_PREFIXES.structureEntityAssociation),
+  );
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -125,7 +127,12 @@ export async function listEntityAssociations(
     const conditions = [eq(systemStructureEntityAssociations.systemId, systemId)];
 
     if (opts?.cursor) {
-      conditions.push(gt(systemStructureEntityAssociations.id, opts.cursor));
+      conditions.push(
+        gt(
+          systemStructureEntityAssociations.id,
+          brandId<SystemStructureEntityAssociationId>(opts.cursor),
+        ),
+      );
     }
 
     const rows = await tx
@@ -148,13 +155,15 @@ export async function deleteEntityAssociation(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
+  const assocIdBranded = brandId<SystemStructureEntityAssociationId>(assocId);
+
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: systemStructureEntityAssociations.id })
       .from(systemStructureEntityAssociations)
       .where(
         and(
-          eq(systemStructureEntityAssociations.id, assocId),
+          eq(systemStructureEntityAssociations.id, assocIdBranded),
           eq(systemStructureEntityAssociations.systemId, systemId),
         ),
       )
@@ -176,7 +185,7 @@ export async function deleteEntityAssociation(
       .delete(systemStructureEntityAssociations)
       .where(
         and(
-          eq(systemStructureEntityAssociations.id, assocId),
+          eq(systemStructureEntityAssociations.id, assocIdBranded),
           eq(systemStructureEntityAssociations.systemId, systemId),
         ),
       );
@@ -199,6 +208,8 @@ export async function getEntityHierarchy(
 ): Promise<readonly HierarchyNode[]> {
   assertSystemOwnership(systemId, auth);
 
+  const entityIdBranded = brandId<SystemStructureEntityId>(entityId);
+
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify entity exists
     const [entity] = await tx
@@ -206,7 +217,7 @@ export async function getEntityHierarchy(
       .from(systemStructureEntities)
       .where(
         and(
-          eq(systemStructureEntities.id, entityId),
+          eq(systemStructureEntities.id, entityIdBranded),
           eq(systemStructureEntities.systemId, systemId),
           eq(systemStructureEntities.archived, false),
         ),

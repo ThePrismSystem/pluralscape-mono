@@ -38,7 +38,7 @@ import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 type PgDb = PgDatabase<PgQueryResultHKT>;
 
 /** Get currently fronting members (end_time IS NULL). */
-export async function getCurrentFronters(db: PgDb, systemId: string): Promise<CurrentFronter[]> {
+export async function getCurrentFronters(db: PgDb, systemId: SystemId): Promise<CurrentFronter[]> {
   return db
     .select({
       id: frontingSessions.id,
@@ -52,7 +52,7 @@ export async function getCurrentFronters(db: PgDb, systemId: string): Promise<Cu
 /** Get currently fronting members with computed duration in milliseconds. */
 export async function getCurrentFrontersWithDuration(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<CurrentFronterWithDuration[]> {
   return db
     .select({
@@ -197,7 +197,7 @@ export async function getActiveDeviceTokens(
 /** Get fronting comments on currently active sessions (end_time IS NULL). */
 export async function getCurrentFrontingComments(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<CurrentFrontingComment[]> {
   return db
     .select({
@@ -245,7 +245,7 @@ export async function getActiveDeviceTransfers(
 /** Get all structure entity associations for a system. */
 export async function getStructureEntityAssociations(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<StructureEntityAssociationRow[]> {
   // Drizzle already returns rows in the shape of `StructureEntityAssociationRow`
   // (camelCase columns, `createdAt` as unix millis via `pgTimestamp`), so no

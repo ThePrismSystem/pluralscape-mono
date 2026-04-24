@@ -17,7 +17,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { CheckInRecordId, TimerId, MemberId } from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, TimerId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, timerConfigs, checkInRecords };

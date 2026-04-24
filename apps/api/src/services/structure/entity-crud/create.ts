@@ -3,7 +3,7 @@ import {
   systemStructureEntityLinks,
   systemStructureEntityTypes,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateStructureEntityBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -20,7 +20,11 @@ import { toStructureEntityResult } from "./internal.js";
 import type { StructureEntityResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createStructureEntity(
@@ -38,7 +42,7 @@ export async function createStructureEntity(
   }
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
-  const entityId = createId(ID_PREFIXES.structureEntity);
+  const entityId = brandId<SystemStructureEntityId>(createId(ID_PREFIXES.structureEntity));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -78,7 +82,9 @@ export async function createStructureEntity(
 
     // Auto-create an entity link if parentEntityId is provided
     if (parsed.data.parentEntityId !== null) {
-      const linkId = createId(ID_PREFIXES.structureEntityLink);
+      const linkId = brandId<SystemStructureEntityLinkId>(
+        createId(ID_PREFIXES.structureEntityLink),
+      );
       await tx.insert(systemStructureEntityLinks).values({
         id: linkId,
         systemId,

@@ -22,7 +22,7 @@ import { sqliteTimeFormatCheck } from "../../helpers/check.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { MemberId, SystemId, TimerId } from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = sqliteTable(
@@ -65,7 +65,7 @@ export const timerConfigs = sqliteTable(
 export const checkInRecords = sqliteTable(
   "check_in_records",
   {
-    id: text("id").primaryKey(),
+    id: brandedId<CheckInRecordId>("id").primaryKey(),
     systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

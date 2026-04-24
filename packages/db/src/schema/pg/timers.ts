@@ -19,12 +19,11 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { pgTimeFormatCheck } from "../../helpers/check.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { MemberId, SystemId, TimerId } from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = pgTable(
@@ -67,7 +66,7 @@ export const timerConfigs = pgTable(
 export const checkInRecords = pgTable(
   "check_in_records",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    id: brandedId<CheckInRecordId>("id").primaryKey(),
     systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

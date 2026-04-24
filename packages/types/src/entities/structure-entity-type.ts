@@ -1,4 +1,7 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { SystemId, SystemStructureEntityTypeId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 import type { StructureVisualProps } from "./structure-entity.js";
 
@@ -32,8 +35,7 @@ export interface SystemStructureEntityType extends AuditMetadata, StructureVisua
  * the server sees them. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextStructureEntityType parity)
- * - Plan 2 fleet will consume when deriving
- *   `SystemStructureEntityTypeServerMetadata`.
+ * - `SystemStructureEntityTypeServerMetadata` (derived via `Omit`)
  */
 export type SystemStructureEntityTypeEncryptedFields =
   | "name"
@@ -43,3 +45,28 @@ export type SystemStructureEntityTypeEncryptedFields =
   | "emoji";
 
 export type ArchivedSystemStructureEntityType = Archived<SystemStructureEntityType>;
+
+/**
+ * Server-visible SystemStructureEntityType metadata — raw Drizzle row shape.
+ *
+ * Derived from `SystemStructureEntityType` by stripping the encrypted field
+ * keys (bundled inside `encryptedData`) and `archived` (the domain literal
+ * `false` becomes a mutable boolean at the DB layer, paired with an
+ * `archivedAt` timestamp). The server sees everything in the domain type
+ * EXCEPT the encrypted keys, plus `encryptedData` + archive metadata.
+ */
+export type SystemStructureEntityTypeServerMetadata = Omit<
+  SystemStructureEntityType,
+  SystemStructureEntityTypeEncryptedFields | "archived"
+> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of SystemStructureEntityType. Derived from the
+ * domain `SystemStructureEntityType` type via `Serialize<T>`; branded IDs
+ * become plain strings, `UnixMillis` becomes `number`.
+ */
+export type SystemStructureEntityTypeWire = Serialize<SystemStructureEntityType>;

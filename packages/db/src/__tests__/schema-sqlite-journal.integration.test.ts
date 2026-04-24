@@ -18,7 +18,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { JournalEntryId, WikiPageId, FrontingSessionId, SlugHash } from "@pluralscape/types";
+import type { FrontingSessionId, JournalEntryId, SlugHash, WikiPageId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, frontingSessions, journalEntries, wikiPages };

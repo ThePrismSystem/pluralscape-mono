@@ -10,7 +10,7 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -22,16 +22,17 @@ import {
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
+import type { GroupId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const groups = sqliteTable(
   "groups",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<GroupId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentGroupId: text("parent_group_id"),
+    parentGroupId: brandedId<GroupId>("parent_group_id"),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),

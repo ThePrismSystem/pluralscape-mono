@@ -17,7 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { JournalEntryId, WikiPageId, FrontingSessionId, SlugHash } from "@pluralscape/types";
+import type { FrontingSessionId, JournalEntryId, SlugHash, WikiPageId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, frontingSessions, journalEntries, wikiPages };

@@ -1,4 +1,5 @@
 import { checkInRecords } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { CheckInRecordQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 
@@ -14,7 +15,7 @@ import { toCheckInRecordResult } from "./internal.js";
 
 import type { CheckInRecordListOptions, CheckInRecordResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, SystemId } from "@pluralscape/types";
+import type { CheckInRecordId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listCheckInRecords(
@@ -43,7 +44,7 @@ export async function listCheckInRecords(
     }
 
     if (opts.cursor) {
-      conditions.push(lt(checkInRecords.id, opts.cursor));
+      conditions.push(lt(checkInRecords.id, brandId<CheckInRecordId>(opts.cursor)));
     }
 
     const rows = await tx

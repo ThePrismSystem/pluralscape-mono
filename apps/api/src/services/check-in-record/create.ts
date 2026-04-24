@@ -1,5 +1,5 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId } from "@pluralscape/types";
 import { CreateCheckInRecordBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -16,7 +16,7 @@ import { toCheckInRecordResult } from "./internal.js";
 import type { CheckInRecordResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { CheckInRecordId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createCheckInRecord(
@@ -38,7 +38,7 @@ export async function createCheckInRecord(
     ? validateEncryptedBlob(parsed.encryptedData, MAX_ENCRYPTED_DATA_BYTES)
     : null;
 
-  const recordId = createId(ID_PREFIXES.checkInRecord);
+  const recordId = brandId<CheckInRecordId>(createId(ID_PREFIXES.checkInRecord));
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Validate timerConfigId belongs to this system

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { LifecycleEventId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, lifecycleEvents };
@@ -39,7 +41,7 @@ describe("PG lifecycle_events schema", () => {
     const systemId = await pgInsertSystem(db, accountId);
     const occurredAt = Date.now() - 86400000;
     const recordedAt = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(lifecycleEvents).values({
@@ -64,7 +66,7 @@ describe("PG lifecycle_events schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const blobCiphertext = new Uint8Array(256);
     for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
     const blob = testBlob(blobCiphertext);
@@ -90,7 +92,7 @@ describe("PG lifecycle_events schema", () => {
 
     for (let i = 0; i < 3; i++) {
       await db.insert(lifecycleEvents).values({
-        id: crypto.randomUUID(),
+        id: brandId<LifecycleEventId>(crypto.randomUUID()),
         systemId,
         eventType: "discovery",
         occurredAt: now + i * 1000,
@@ -111,7 +113,7 @@ describe("PG lifecycle_events schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
     await db.insert(lifecycleEvents).values({
       id,
@@ -132,8 +134,8 @@ describe("PG lifecycle_events schema", () => {
     const now = Date.now();
     await expect(
       db.insert(lifecycleEvents).values({
-        id: crypto.randomUUID(),
-        systemId: "nonexistent",
+        id: brandId<LifecycleEventId>(crypto.randomUUID()),
+        systemId: brandId<SystemId>("nonexistent"),
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
@@ -159,7 +161,7 @@ describe("PG lifecycle_events schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
     await db.insert(lifecycleEvents).values({
       id,
@@ -189,7 +191,7 @@ describe("PG lifecycle_events schema", () => {
     const systemId = await pgInsertSystem(db, accountId);
     const occurredAt = Date.now() - 604800000; // 1 week ago
     const recordedAt = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
     await db.insert(lifecycleEvents).values({
       id,
@@ -210,7 +212,7 @@ describe("PG lifecycle_events schema", () => {
   it("round-trips eventType T3 column", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(lifecycleEvents).values({
@@ -230,7 +232,7 @@ describe("PG lifecycle_events schema", () => {
   it("round-trips eventType when provided", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<LifecycleEventId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(lifecycleEvents).values({
@@ -254,7 +256,7 @@ describe("PG lifecycle_events schema", () => {
 
     await expect(
       db.insert(lifecycleEvents).values({
-        id: crypto.randomUUID(),
+        id: brandId<LifecycleEventId>(crypto.randomUUID()),
         systemId,
         eventType: "invalid" as "discovery",
         occurredAt: now,
@@ -270,7 +272,7 @@ describe("PG lifecycle_events schema", () => {
       const accountId = await insertAccount();
       const systemId = await pgInsertSystem(db, accountId);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
       const rows = await db
         .insert(lifecycleEvents)
@@ -293,7 +295,7 @@ describe("PG lifecycle_events schema", () => {
       const accountId = await insertAccount();
       const systemId = await pgInsertSystem(db, accountId);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = brandId<LifecycleEventId>(crypto.randomUUID());
 
       const rows = await db
         .insert(lifecycleEvents)
@@ -318,7 +320,7 @@ describe("PG lifecycle_events schema", () => {
 
       await expect(
         db.insert(lifecycleEvents).values({
-          id: crypto.randomUUID(),
+          id: brandId<LifecycleEventId>(crypto.randomUUID()),
           systemId,
           eventType: "discovery",
           occurredAt: now,
@@ -338,7 +340,7 @@ describe("PG lifecycle_events schema", () => {
 
       await expect(
         db.insert(lifecycleEvents).values({
-          id: crypto.randomUUID(),
+          id: brandId<LifecycleEventId>(crypto.randomUUID()),
           systemId,
           eventType: "discovery",
           occurredAt: now,

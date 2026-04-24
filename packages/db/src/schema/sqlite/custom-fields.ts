@@ -11,7 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -28,17 +28,28 @@ import { buckets } from "./privacy.js";
 import { systemStructureEntities, systemStructureEntityTypes } from "./structure.js";
 import { systems } from "./systems.js";
 
-import type { ServerFieldDefinition } from "@pluralscape/types";
+import type {
+  BucketId,
+  FieldDefinitionId,
+  FieldDefinitionScopeId,
+  FieldType,
+  FieldValueId,
+  GroupId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const fieldDefinitions = sqliteTable(
   "field_definitions",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<FieldDefinitionId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    fieldType: text("field_type").notNull().$type<ServerFieldDefinition["fieldType"]>(),
+    fieldType: text("field_type").notNull().$type<FieldType>(),
     required: integer("required", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -58,12 +69,12 @@ export const fieldDefinitions = sqliteTable(
 export const fieldValues = sqliteTable(
   "field_values",
   {
-    id: text("id").primaryKey(),
-    fieldDefinitionId: text("field_definition_id").notNull(),
-    memberId: text("member_id"),
-    structureEntityId: text("structure_entity_id"),
-    groupId: text("group_id"),
-    systemId: text("system_id")
+    id: brandedId<FieldValueId>("id").primaryKey(),
+    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
+    memberId: brandedId<MemberId>("member_id"),
+    structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
+    groupId: brandedId<GroupId>("group_id"),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -116,13 +127,13 @@ export const fieldValues = sqliteTable(
 export const fieldBucketVisibility = sqliteTable(
   "field_bucket_visibility",
   {
-    fieldDefinitionId: text("field_definition_id")
+    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id")
       .notNull()
       .references(() => fieldDefinitions.id, { onDelete: "restrict" }),
-    bucketId: text("bucket_id")
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
   },
@@ -136,11 +147,13 @@ export const fieldBucketVisibility = sqliteTable(
 export const fieldDefinitionScopes = sqliteTable(
   "field_definition_scopes",
   {
-    id: text("id").primaryKey(),
-    fieldDefinitionId: text("field_definition_id").notNull(),
-    scopeType: text("scope_type").notNull(),
-    scopeEntityTypeId: text("scope_entity_type_id"),
-    systemId: text("system_id")
+    id: brandedId<FieldDefinitionScopeId>("id").primaryKey(),
+    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
+    scopeType: text("scope_type")
+      .notNull()
+      .$type<"system" | "member" | "group" | "structure-entity-type">(),
+    scopeEntityTypeId: brandedId<SystemStructureEntityTypeId>("scope_entity_type_id"),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     ...timestamps(),

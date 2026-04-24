@@ -30,9 +30,16 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type {
   AccountId,
   AcknowledgementId,
+  CheckInRecordId,
+  FieldDefinitionId,
+  FieldValueId,
+  FrontingSessionId,
+  MemberPhotoId,
   NoteId,
   PollId,
+  RelationshipId,
   SystemId,
+  SystemStructureEntityMemberLinkId,
   TimerId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -485,7 +492,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(memberPhotos).values({
-        id: `mph_${crypto.randomUUID()}`,
+        id: brandId<MemberPhotoId>(`mph_${crypto.randomUUID()}`),
         memberId: created.id,
         systemId,
         sortOrder: 0,
@@ -513,7 +520,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(frontingSessions).values({
-        id: `fs_${crypto.randomUUID()}`,
+        id: brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`),
         systemId,
         memberId: created.id,
         startTime: now - 3_600_000,
@@ -541,7 +548,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(relationships).values({
-        id: `rel_${crypto.randomUUID()}`,
+        id: brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
         systemId,
         sourceMemberId: created.id,
         type: "sibling",
@@ -664,7 +671,7 @@ describe("member.service (PGlite integration)", () => {
         updatedAt: now,
       });
       await db.insert(checkInRecords).values({
-        id: `cir_${crypto.randomUUID()}`,
+        id: brandId<CheckInRecordId>(`cir_${crypto.randomUUID()}`),
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,
@@ -723,7 +730,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const fdId = `fd_${crypto.randomUUID()}`;
+      const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       // Insert field definition first (FK constraint)
       await db.insert(fieldDefinitions).values({
         id: fdId,
@@ -734,7 +741,7 @@ describe("member.service (PGlite integration)", () => {
         updatedAt: now,
       });
       await db.insert(fieldValues).values({
-        id: `fv_${crypto.randomUUID()}`,
+        id: brandId<FieldValueId>(`fv_${crypto.randomUUID()}`),
         fieldDefinitionId: fdId,
         memberId: created.id,
         systemId,
@@ -762,7 +769,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(systemStructureEntityMemberLinks).values({
-        id: `ssml_${crypto.randomUUID()}`,
+        id: brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`),
         systemId,
         memberId: created.id,
         sortOrder: 0,
@@ -844,7 +851,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(memberPhotos).values({
-        id: `mph_${crypto.randomUUID()}`,
+        id: brandId<MemberPhotoId>(`mph_${crypto.randomUUID()}`),
         memberId: source.id,
         systemId,
         sortOrder: 0,
@@ -903,7 +910,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const fdId = `fd_${crypto.randomUUID()}`;
+      const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       await db.insert(fieldDefinitions).values({
         id: fdId,
         systemId,
@@ -913,7 +920,7 @@ describe("member.service (PGlite integration)", () => {
         updatedAt: now,
       });
       await db.insert(fieldValues).values({
-        id: `fv_${crypto.randomUUID()}`,
+        id: brandId<FieldValueId>(`fv_${crypto.randomUUID()}`),
         fieldDefinitionId: fdId,
         memberId: source.id,
         systemId,
@@ -1087,7 +1094,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const linkId = `ssml_${crypto.randomUUID()}`;
+      const linkId = brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`);
       await db.insert(systemStructureEntityMemberLinks).values({
         id: linkId,
         systemId,
