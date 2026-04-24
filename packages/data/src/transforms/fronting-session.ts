@@ -8,6 +8,7 @@ import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
   OuttriggerSentiment,
+  PlaintextFields,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -16,7 +17,10 @@ import type {
  * Derived from `FrontingSession` by picking its encrypted-field keys —
  * SoT lives in `@pluralscape/types`.
  */
-export type FrontingSessionPlaintext = Pick<FrontingSession, FrontingSessionEncryptedFields>;
+export type FrontingSessionPlaintext = PlaintextFields<
+  FrontingSession,
+  FrontingSessionEncryptedFields
+>;
 
 // ── Wire types (derived from domain types) ──────────────────────────
 

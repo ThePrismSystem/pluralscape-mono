@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, MemberId, RelationshipId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -59,16 +60,16 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const BASE_URL = `/systems/${SYS_ID}/relationships`;
 
 const MOCK_RELATIONSHIP = {
-  id: REL_ID as never,
-  systemId: SYS_ID as never,
-  sourceMemberId: "mem_00000000-0000-0000-0000-000000000001" as never,
-  targetMemberId: "mem_00000000-0000-0000-0000-000000000002" as never,
+  id: brandId<RelationshipId>(REL_ID),
+  systemId: brandId<SystemId>(SYS_ID),
+  sourceMemberId: brandId<MemberId>("mem_00000000-0000-0000-0000-000000000001"),
+  targetMemberId: brandId<MemberId>("mem_00000000-0000-0000-0000-000000000002"),
   type: "partner" as const,
   bidirectional: true,
   encryptedData: "dGVzdA==",
   version: 1,
-  createdAt: 1000 as never,
-  updatedAt: 1000 as never,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
   archived: false,
   archivedAt: null,
 };

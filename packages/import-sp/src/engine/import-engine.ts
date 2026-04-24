@@ -134,10 +134,7 @@ export interface RunImportArgs {
   readonly abortSignal?: AbortSignal;
 }
 
-/**
- * Re-exports of the run-outcome types from `@pluralscape/import-core` so SP
- * consumers import from a single package.
- */
+// Re-export run-outcome types so SP consumers import from one package.
 export type { ImportRunOutcome, ImportRunResult } from "@pluralscape/import-core";
 
 /**

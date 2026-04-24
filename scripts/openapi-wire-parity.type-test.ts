@@ -58,6 +58,8 @@ import type {
   CustomFront,
   CustomFrontEncryptedFields,
   CustomFrontServerMetadata,
+  EncryptedBlob,
+  EncryptedWire,
   Equal,
   FieldDefinition,
   FieldDefinitionEncryptedFields,
@@ -94,6 +96,7 @@ import type {
   Serialize,
   System,
   SystemEncryptedFields,
+  SystemServerMetadata,
   SystemSettings,
   SystemSettingsEncryptedFields,
   SystemStructureEntity,
@@ -466,3 +469,24 @@ expectTypeOf<
 >().toEqualTypeOf<true>();
 
 expectTypeOf<CanvasResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── EncryptedWire<T> nullability bridging ──────────────────────────
+//
+// The whole reason `EncryptedWire<T>` is generic is the conditional
+// `null extends T["encryptedData"] ? string | null : string`. These
+// assertions pin both arms: a synthetic non-nullable / nullable pair,
+// plus one real-entity bridge per arm (Member is non-nullable;
+// System stores a nullable blob because bootstrap rows may precede
+// the first encrypted payload).
+
+expectTypeOf<
+  EncryptedWire<{ readonly encryptedData: EncryptedBlob }>["encryptedData"]
+>().toEqualTypeOf<string>();
+
+expectTypeOf<
+  EncryptedWire<{ readonly encryptedData: EncryptedBlob | null }>["encryptedData"]
+>().toEqualTypeOf<string | null>();
+
+expectTypeOf<EncryptedWire<MemberServerMetadata>["encryptedData"]>().toEqualTypeOf<string>();
+
+expectTypeOf<EncryptedWire<SystemServerMetadata>["encryptedData"]>().toEqualTypeOf<string | null>();

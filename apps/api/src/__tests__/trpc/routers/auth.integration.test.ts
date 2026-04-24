@@ -113,7 +113,7 @@ async function insertAccountWithKnownRecoveryKey(db: PostgresJsDatabase): Promis
   const accountId = `acct_${crypto.randomUUID()}`;
   const recoveryKeyId = brandId<RecoveryKeyId>(`rk_${crypto.randomUUID()}`);
   // randomBytes returns Node's Buffer; coerce to plain Uint8Array so the
-  // branded `AuthKey` assertion narrows correctly.
+  // branded `AuthKeyMaterial` assertion narrows correctly.
   const rawAuthKey = new Uint8Array(randomBytes(RECOVERY_KEY_BYTES));
   assertAuthKey(rawAuthKey);
   const rawRecoveryKey = new Uint8Array(randomBytes(RECOVERY_KEY_BYTES));

@@ -10,8 +10,6 @@ import {
   IMPORT_ENTITY_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
-  KNOWN_SATURATION_LEVELS,
-  POLL_KINDS,
   type AccountPurgeStatus,
   type AccountType,
   type ApiKey,
@@ -48,7 +46,7 @@ import {
 export { BUCKET_CONTENT_ENTITY_TYPES, IMPORT_ENTITY_TYPES, IMPORT_JOB_STATUSES, IMPORT_SOURCES };
 
 export const ACCOUNT_TYPES = ["system", "viewer"] as const satisfies readonly AccountType[];
-export { KNOWN_SATURATION_LEVELS };
+export { KNOWN_SATURATION_LEVELS } from "@pluralscape/types";
 export const RELATIONSHIP_TYPES = [
   "split-from",
   "fused-from",
@@ -359,7 +357,7 @@ export const CHANNEL_TYPES = [
   "channel",
 ] as const satisfies readonly ChannelServerMetadata["type"][];
 export { POLL_STATUSES } from "@pluralscape/types";
-export { POLL_KINDS };
+export { POLL_KINDS } from "@pluralscape/types";
 export const PK_SYNC_DIRECTIONS = [
   "ps-to-pk",
   "pk-to-ps",

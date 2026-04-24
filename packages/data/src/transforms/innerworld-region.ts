@@ -11,6 +11,7 @@ import type {
   Archived,
   InnerWorldRegion,
   InnerWorldRegionEncryptedFields,
+  PlaintextFields,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -18,7 +19,10 @@ import type {
  * Plaintext shape of a decrypted innerworld region blob — derived from the SoT
  * `InnerWorldRegion` domain type.
  */
-export type InnerWorldRegionPlaintext = Pick<InnerWorldRegion, InnerWorldRegionEncryptedFields>;
+export type InnerWorldRegionPlaintext = PlaintextFields<
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields
+>;
 
 /** Wire shape returned by `innerworld.region.get` — derived from `InnerWorldRegion`. */
 export type InnerWorldRegionRaw = Omit<

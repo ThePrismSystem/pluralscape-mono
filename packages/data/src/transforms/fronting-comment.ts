@@ -5,6 +5,7 @@ import type {
   Archived,
   FrontingComment,
   FrontingCommentEncryptedFields as FrontingCommentKeys,
+  PlaintextFields,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -14,7 +15,7 @@ import type {
  * The plaintext fields encrypted inside a fronting comment blob.
  * Pass this to `encryptFrontingCommentInput` when creating or updating a comment.
  */
-export type FrontingCommentPlaintext = Pick<FrontingComment, FrontingCommentKeys>;
+export type FrontingCommentPlaintext = PlaintextFields<FrontingComment, FrontingCommentKeys>;
 
 // ── Wire types (derived from domain types) ──────────────────────────
 

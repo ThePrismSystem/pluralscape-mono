@@ -1,30 +1,31 @@
 import type { EncryptedBlob } from "./encryption-primitives.js";
 
 /**
- * Wire-form envelope for any `XServerMetadata` type.
+ * Wire-form envelope for any `XServerMetadata` type. The domain carries
+ * `encryptedData: EncryptedBlob` (or `| null`); on the wire that field is
+ * base64 `string` (or `string | null`). Every other column passes through.
  *
- * Server metadata rows carry `encryptedData: EncryptedBlob`, a structured
- * discriminated union that cannot travel over JSON. The API layer base64-
- * encodes the blob before serializing, so the wire-visible shape swaps
- * `EncryptedBlob` (or `EncryptedBlob | null`) for `string` (or `string | null`).
- *
- * Collapsing every service's `XxxResult` interface to
- * `type XxxResult = EncryptedWire<XxxServerMetadata>` keeps the derivation
- * structural so rows and wire shapes cannot drift apart. The OpenAPI parity
- * test (`scripts/openapi-wire-parity.type-test.ts`) pins the envelope shape
- * against `components["schemas"]["EncryptedEntity"]`.
+ * @see docs/adr/023-zod-type-alignment.md
  *
  * Example:
  *   type MemberResult = EncryptedWire<MemberServerMetadata>;
  */
-export type EncryptedWire<
-  T extends
-    | { readonly encryptedData: EncryptedBlob }
-    | { readonly encryptedData: EncryptedBlob | null },
-> = Omit<T, "encryptedData"> & {
-  // Preserve nullability from T. `null extends T["encryptedData"]` is true only
-  // when T's encryptedData is `EncryptedBlob | null`, not when it's just
-  // `EncryptedBlob` — the opposite direction (`X extends Y | null`) would be
-  // vacuously true for the non-null case because of subtype assignability.
+export type EncryptedWire<T extends { readonly encryptedData: EncryptedBlob | null }> = Omit<
+  T,
+  "encryptedData"
+> & {
+  // null extends T["encryptedData"] is true only when the union actually contains null.
   readonly encryptedData: null extends T["encryptedData"] ? string | null : string;
 };
+
+/**
+ * The plaintext-fields projection of a domain type. Sibling to
+ * `EncryptedWire<T>`: where the wire envelope describes what leaves the
+ * server, `PlaintextFields<T, K>` describes what goes *into* the T1 blob
+ * before encryption. Used by per-entity encrypt/decrypt transforms in
+ * `@pluralscape/data`.
+ *
+ * Distinct from `Plaintext<T>` in `encryption-primitives.ts`, which is a
+ * nominal brand tagging a value as known-plaintext.
+ */
+export type PlaintextFields<T, K extends keyof T> = Pick<T, K>;

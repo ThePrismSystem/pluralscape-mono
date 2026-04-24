@@ -1,5 +1,6 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { decodeAndDecryptT1 } from "@pluralscape/data/transforms/decode-blob";
 import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -98,7 +99,12 @@ describe("memberPersister — avatar happy path", () => {
       contentType: "image/png",
     });
     const call = createFn.mock.calls[0];
-    expect(call?.[1]).toEqual({ encryptedData: expect.any(String) });
+    const encrypted = call?.[1]?.encryptedData;
+    expect(typeof encrypted).toBe("string");
+    const plaintext = decodeAndDecryptT1(encrypted as string, ctx.masterKey);
+    expect(plaintext).toMatchObject({
+      avatarSource: { kind: "blob", blobRef: "blob_1" },
+    });
   });
 });
 
