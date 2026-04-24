@@ -1,4 +1,4 @@
-import type { BlobId, SystemId } from "./ids.js";
+import type { BlobId, SafeModeContentId, SystemId } from "./ids.js";
 
 /** Feature flags controlling UI simplification in Littles Safe Mode. */
 export interface SafeModeUIFlags {
@@ -11,7 +11,7 @@ export interface SafeModeUIFlags {
 
 /** A content item for Littles Safe Mode — links, videos, or media. */
 export interface SafeModeContentItem {
-  readonly id: string;
+  readonly id: SafeModeContentId;
   readonly systemId: SystemId;
   readonly contentType: "link" | "video" | "media";
   readonly url: string | null;
@@ -24,6 +24,6 @@ export interface SafeModeContentItem {
 /** Configuration for Littles Safe Mode — simplified UI for littles. */
 export interface LittlesSafeModeConfig {
   readonly enabled: boolean;
-  readonly allowedContentIds: readonly string[];
+  readonly allowedContentIds: readonly SafeModeContentId[];
   readonly simplifiedUIFlags: SafeModeUIFlags;
 }

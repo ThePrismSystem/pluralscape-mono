@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { BlobId, SystemId } from "../ids.js";
+import type { BlobId, SafeModeContentId, SystemId } from "../ids.js";
 import type {
   LittlesSafeModeConfig,
   SafeModeContentItem,
@@ -19,7 +19,7 @@ describe("SafeModeUIFlags", () => {
 
 describe("SafeModeContentItem", () => {
   it("has correct field types", () => {
-    expectTypeOf<SafeModeContentItem["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<SafeModeContentItem["id"]>().toEqualTypeOf<SafeModeContentId>();
     expectTypeOf<SafeModeContentItem["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<SafeModeContentItem["contentType"]>().toEqualTypeOf<"link" | "video" | "media">();
     expectTypeOf<SafeModeContentItem["url"]>().toEqualTypeOf<string | null>();
@@ -46,8 +46,10 @@ describe("LittlesSafeModeConfig", () => {
     expectTypeOf<LittlesSafeModeConfig["enabled"]>().toEqualTypeOf<boolean>();
   });
 
-  it("has allowedContentIds as readonly string array", () => {
-    expectTypeOf<LittlesSafeModeConfig["allowedContentIds"]>().toEqualTypeOf<readonly string[]>();
+  it("has allowedContentIds as readonly SafeModeContentId array", () => {
+    expectTypeOf<LittlesSafeModeConfig["allowedContentIds"]>().toEqualTypeOf<
+      readonly SafeModeContentId[]
+    >();
   });
 
   it("has simplifiedUIFlags as SafeModeUIFlags", () => {
