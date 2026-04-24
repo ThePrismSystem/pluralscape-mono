@@ -141,8 +141,6 @@ export type {
   ClientFieldDefinition,
   ServerFieldValue,
   ClientFieldValue,
-  ServerLifecycleEvent,
-  ClientLifecycleEvent,
   ServerCustomFront,
   ClientCustomFront,
   ServerJournalEntry,

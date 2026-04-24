@@ -58,7 +58,12 @@ import type {
   InnerWorldRegionServerMetadata,
   InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
-import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
+import type {
+  LifecycleEvent,
+  LifecycleEventEncryptedFields,
+  LifecycleEventServerMetadata,
+  LifecycleEventWire,
+} from "./entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
 import type {
   Member,
@@ -204,6 +209,8 @@ export type SotEntityManifest = {
   };
   LifecycleEvent: {
     domain: LifecycleEvent;
+    server: LifecycleEventServerMetadata;
+    wire: LifecycleEventWire;
     encryptedFields: LifecycleEventEncryptedFields;
   };
   InnerworldRegion: {

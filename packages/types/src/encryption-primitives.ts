@@ -7,7 +7,6 @@ import type { FieldDefinition, FieldType } from "./entities/field-definition.js"
 import type { FieldValue } from "./entities/field-value.js";
 import type { Group } from "./entities/group.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
-import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
@@ -24,7 +23,6 @@ import type {
   BucketId,
   ChannelId,
   CustomFrontId,
-  LifecycleEventId,
   FieldDefinitionId,
   FieldValueId,
   FrontingSessionId,
@@ -302,29 +300,6 @@ export interface ServerFieldValue extends AuditMetadata {
 
 /** Client-side field value — flat decrypted fields. */
 export type ClientFieldValue = FieldValue;
-
-// ── Lifecycle ──────────────────────────────────────────────────
-
-/**
- * Server-side lifecycle event representation.
- * T1 encrypted: notes
- */
-export interface ServerLifecycleEvent {
-  readonly id: LifecycleEventId;
-  readonly systemId: SystemId;
-  readonly eventType: LifecycleEventType;
-  readonly occurredAt: UnixMillis;
-  readonly recordedAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly encryptedData: EncryptedBlob | null;
-  readonly plaintextMetadata: Record<string, unknown> | null;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
-/** Client-side lifecycle event — flat decrypted fields. */
-export type ClientLifecycleEvent = LifecycleEvent;
 
 // ── Custom fronts ──────────────────────────────────────────────
 

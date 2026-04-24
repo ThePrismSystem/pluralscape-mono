@@ -12,7 +12,6 @@ import type {
   ServerFieldValue,
   ServerGroup,
   ServerJournalEntry,
-  ServerLifecycleEvent,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -48,7 +47,7 @@ import type {
   InnerWorldRegionServerMetadata,
 } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
-import type { LifecycleEvent } from "./entities/lifecycle-event.js";
+import type { LifecycleEvent, LifecycleEventServerMetadata } from "./entities/lifecycle-event.js";
 import type { MemberPhoto } from "./entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "./entities/member.js";
 import type { ChatMessage } from "./entities/message.js";
@@ -78,7 +77,7 @@ export type ServerResponseData =
   | ServerFieldValue
   | InnerWorldEntityServerMetadata
   | InnerWorldRegionServerMetadata
-  | ServerLifecycleEvent
+  | LifecycleEventServerMetadata
   | ServerCustomFront
   | ServerJournalEntry
   | ServerWikiPage

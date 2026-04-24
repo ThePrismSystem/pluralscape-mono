@@ -12,7 +12,6 @@ import type {
   ClientFieldValue,
   ClientGroup,
   ClientJournalEntry,
-  ClientLifecycleEvent,
   ClientMemberPhoto,
   ClientNote,
   ClientPoll,
@@ -37,7 +36,6 @@ import type {
   ServerFieldValue,
   ServerGroup,
   ServerJournalEntry,
-  ServerLifecycleEvent,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -76,7 +74,10 @@ import type {
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
 import type { JournalEntry } from "../entities/journal-entry.js";
-import type { LifecycleEvent } from "../entities/lifecycle-event.js";
+import type {
+  LifecycleEvent,
+  LifecycleEventServerMetadata,
+} from "../entities/lifecycle-event.js";
 import type { MemberPhoto } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
 import type { ChatMessage } from "../entities/message.js";
@@ -340,9 +341,9 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("lifecycle event pair", () => {
-    expectTypeOf<ServerLifecycleEvent>().toBeObject();
-    expectTypeOf<ServerLifecycleEvent["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
-    expectTypeOf<ClientLifecycleEvent>().toEqualTypeOf<LifecycleEvent>();
+    expectTypeOf<LifecycleEventServerMetadata>().toBeObject();
+    expectTypeOf<LifecycleEventServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<LifecycleEvent>().toBeObject();
   });
 
   it("innerworld entity pair", () => {

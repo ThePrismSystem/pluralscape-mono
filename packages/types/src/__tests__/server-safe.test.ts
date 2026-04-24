@@ -12,7 +12,6 @@ import type {
   ClientFieldValue,
   ClientGroup,
   ClientJournalEntry,
-  ClientLifecycleEvent,
   ClientMemberPhoto,
   ClientNote,
   ClientPoll,
@@ -31,7 +30,6 @@ import type {
   ServerFieldValue,
   ServerGroup,
   ServerJournalEntry,
-  ServerLifecycleEvent,
   ServerMemberPhoto,
   ServerNote,
   ServerPoll,
@@ -59,6 +57,10 @@ import type {
   InnerWorldRegion,
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
+import type {
+  LifecycleEvent,
+  LifecycleEventServerMetadata,
+} from "../entities/lifecycle-event.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
 import type { PaginatedResult } from "../pagination.js";
 import type { ClientResponseData, ServerResponseData } from "../response-unions.js";
@@ -83,7 +85,7 @@ type AllServerTypes = [
   ServerFieldValue,
   InnerWorldEntityServerMetadata,
   InnerWorldRegionServerMetadata,
-  ServerLifecycleEvent,
+  LifecycleEventServerMetadata,
   ServerCustomFront,
   ServerJournalEntry,
   ServerWikiPage,
@@ -160,8 +162,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<InnerWorldRegionServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerLifecycleEvent extends ServerResponseData", () => {
-    expectTypeOf<ServerLifecycleEvent>().toExtend<ServerResponseData>();
+  it("LifecycleEventServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<LifecycleEventServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("ServerCustomFront extends ServerResponseData", () => {
@@ -220,7 +222,7 @@ type AllClientTypes = [
   ClientFieldValue,
   InnerWorldEntity,
   InnerWorldRegion,
-  ClientLifecycleEvent,
+  LifecycleEvent,
   ClientCustomFront,
   ClientJournalEntry,
   ClientWikiPage,
@@ -297,8 +299,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<InnerWorldRegion>().toExtend<ClientResponseData>();
   });
 
-  it("ClientLifecycleEvent extends ClientResponseData", () => {
-    expectTypeOf<ClientLifecycleEvent>().toExtend<ClientResponseData>();
+  it("LifecycleEvent extends ClientResponseData", () => {
+    expectTypeOf<LifecycleEvent>().toExtend<ClientResponseData>();
   });
 
   it("ClientCustomFront extends ClientResponseData", () => {
@@ -353,7 +355,7 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ServerFieldValue>().not.toExtend<ClientResponseData>();
     expectTypeOf<InnerWorldEntityServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<InnerWorldRegionServerMetadata>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerLifecycleEvent>().not.toExtend<ClientResponseData>();
+    expectTypeOf<LifecycleEventServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerCustomFront>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerJournalEntry>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerWikiPage>().not.toExtend<ClientResponseData>();
@@ -427,8 +429,8 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<InnerWorldRegion>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientLifecycleEvent does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientLifecycleEvent>().not.toExtend<ServerResponseData>();
+  it("LifecycleEvent does NOT extend ServerResponseData", () => {
+    expectTypeOf<LifecycleEvent>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientCustomFront does NOT extend ServerResponseData", () => {
