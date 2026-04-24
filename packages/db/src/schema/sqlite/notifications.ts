@@ -10,7 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -26,9 +26,14 @@ import { friendConnections } from "./privacy.js";
 import { systems } from "./systems.js";
 
 import type {
+  AccountId,
   DeviceTokenPlatform,
+  FriendConnectionId,
   FriendNotificationEventType,
+  FriendNotificationPreferenceId,
+  NotificationConfigId,
   NotificationEventType,
+  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -60,8 +65,8 @@ export const deviceTokens = sqliteTable(
 export const notificationConfigs = sqliteTable(
   "notification_configs",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<NotificationConfigId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     eventType: text("event_type").notNull().$type<NotificationEventType>(),
@@ -87,11 +92,11 @@ export const notificationConfigs = sqliteTable(
 export const friendNotificationPreferences = sqliteTable(
   "friend_notification_preferences",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<FriendNotificationPreferenceId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    friendConnectionId: text("friend_connection_id").notNull(),
+    friendConnectionId: brandedId<FriendConnectionId>("friend_connection_id").notNull(),
     enabledEventTypes: sqliteJson("enabled_event_types")
       .notNull()
       .$type<readonly FriendNotificationEventType[]>(),

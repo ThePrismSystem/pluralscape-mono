@@ -1,4 +1,7 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BucketId, SystemId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 
 /** A privacy bucket — a named container for access-controlled content. */
@@ -12,6 +15,39 @@ export interface PrivacyBucket extends AuditMetadata {
 
 /** An archived privacy bucket. */
 export type ArchivedPrivacyBucket = Archived<PrivacyBucket>;
+
+/**
+ * Keys of `PrivacyBucket` that are encrypted client-side before the server
+ * sees them. `name` and `description` are bundled into the T1 `encryptedData`
+ * blob. Consumed by:
+ * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
+ * - `PrivacyBucketServerMetadata` (derived via `Omit`)
+ */
+export type PrivacyBucketEncryptedFields = "name" | "description";
+
+/**
+ * Server-visible PrivacyBucket metadata — raw Drizzle row shape.
+ *
+ * Derived from `PrivacyBucket` by stripping the encrypted field keys
+ * (bundled inside `encryptedData`). Relaxes `archived` from the domain's
+ * `false` literal to the raw boolean column and adds the nullable
+ * `archivedAt` that the archivable-consistency check requires.
+ */
+export type PrivacyBucketServerMetadata = Omit<
+  PrivacyBucket,
+  PrivacyBucketEncryptedFields | "archived"
+> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of a PrivacyBucket. Derived from the domain
+ * `PrivacyBucket` type via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`.
+ */
+export type PrivacyBucketWire = Serialize<PrivacyBucket>;
 
 /**
  * Entity types that can be tagged in privacy buckets.

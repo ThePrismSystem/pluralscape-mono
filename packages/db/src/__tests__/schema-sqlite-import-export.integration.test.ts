@@ -21,7 +21,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { BlobId, ChecksumHex, ImportJobId } from "@pluralscape/types";
+import type { BlobId, BucketId, ChecksumHex, ImportJobId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -429,7 +429,7 @@ describe("SQLite import-export schema", () => {
 
       db.insert(buckets)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BucketId>(crypto.randomUUID()),
           systemId,
           encryptedData: testBlob(),
           createdAt: now,
@@ -586,7 +586,7 @@ describe("SQLite import-export schema", () => {
 
       db.insert(buckets)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<BucketId>(crypto.randomUUID()),
           systemId,
           encryptedData: testBlob(),
           createdAt: now,

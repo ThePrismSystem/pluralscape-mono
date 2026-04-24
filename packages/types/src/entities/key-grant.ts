@@ -1,5 +1,6 @@
 import type { AccountId, BucketId, KeyGrantId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 
 /**
  * An immutable grant of a bucket's encryption key to a friend.
@@ -15,6 +16,26 @@ export interface KeyGrant {
   readonly createdAt: UnixMillis;
   readonly revokedAt: UnixMillis | null;
 }
+
+/**
+ * Server-visible KeyGrant metadata — raw Drizzle row shape.
+ *
+ * Plaintext entity — `encryptedBucketKey` is an end-to-end ciphertext the
+ * server treats opaquely, not a client-side encrypted field. The row
+ * renames the column to `encryptedKey` and adds the owning `systemId` FK
+ * (cascade) so ownership is enforced alongside the friend cascade.
+ */
+export type KeyGrantServerMetadata = Omit<KeyGrant, "encryptedBucketKey"> & {
+  readonly systemId: SystemId;
+  readonly encryptedKey: Uint8Array;
+};
+
+/**
+ * JSON-wire representation of a KeyGrant. Derived from the domain type via
+ * `Serialize<T>`; branded IDs become plain strings, `UnixMillis` becomes
+ * `number`, and `Uint8Array` becomes `string` (base64).
+ */
+export type KeyGrantWire = Serialize<KeyGrant>;
 
 /** An active key grant as seen by the recipient account (across all friends). */
 export interface ReceivedKeyGrant {

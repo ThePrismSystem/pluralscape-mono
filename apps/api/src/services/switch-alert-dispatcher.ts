@@ -21,8 +21,10 @@ import { QueryCache } from "../lib/query-cache.js";
 import type { JobQueue } from "@pluralscape/queue";
 import type {
   AccountId,
+  BucketId,
   CustomFrontId,
   DeviceTokenId,
+  FriendConnectionId,
   FriendNotificationEventType,
   FrontingSessionId,
   MemberId,
@@ -205,7 +207,9 @@ export async function dispatchSwitchAlertForSession(
       }
     }
 
-    const connectionIds = [...friendToConnectionId.values()];
+    const connectionIds = [...friendToConnectionId.values()].map((id) =>
+      brandId<FriendConnectionId>(id),
+    );
 
     // 7. Batch: get all bucket assignments for eligible connections
     const allBucketAssignments = await db
@@ -251,7 +255,7 @@ export async function dispatchSwitchAlertForSession(
     const friendsWithVisibility = [...friendToConnectionId.entries()]
       .filter(([, connId]) => {
         const bucketIds = connectionBuckets.get(connId) ?? [];
-        return bucketIds.some((b) => visibleBucketSet.has(b));
+        return bucketIds.some((b) => visibleBucketSet.has(brandId<BucketId>(b)));
       })
       .map(([friendAcctId]) => friendAcctId);
 

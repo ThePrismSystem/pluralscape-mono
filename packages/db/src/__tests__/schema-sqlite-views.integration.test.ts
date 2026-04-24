@@ -45,6 +45,7 @@ import type {
   AcknowledgementId,
   ApiKeyId,
   DeviceTransferRequestId,
+  FriendConnectionId,
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
@@ -64,7 +65,7 @@ describe("SQLite views / query helpers", () => {
   let db: BetterSQLite3Database;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: AccountId, id?: string) => sqliteInsertSystem(db, accountId, id);
   const brandedWebhookId = (): WebhookId => brandId<WebhookId>(crypto.randomUUID());
   const webhookSecret = (): ServerSecret => new Uint8Array([1, 2, 3]) as ServerSecret;
 
@@ -272,7 +273,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId: otherAccountId1,
           friendAccountId: accountId,
           status: "pending",
@@ -282,7 +283,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(friendConnections)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId: otherAccountId2,
           friendAccountId: accountId,
           status: "accepted",
@@ -466,7 +467,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId,
           friendAccountId: otherAccountId,
           status: "accepted",

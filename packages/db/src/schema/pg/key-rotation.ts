@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js";
@@ -9,17 +9,25 @@ import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js"
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { EntityType, RotationItemStatus, RotationState } from "@pluralscape/types";
+import type {
+  BucketId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  EntityType,
+  RotationItemStatus,
+  RotationState,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const bucketKeyRotations = pgTable(
   "bucket_key_rotations",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
+    id: brandedId<BucketKeyRotationId>("id").primaryKey(),
+    bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     fromKeyVersion: integer("from_key_version").notNull(),
@@ -49,14 +57,17 @@ export const bucketKeyRotations = pgTable(
 export const bucketRotationItems = pgTable(
   "bucket_rotation_items",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    rotationId: varchar("rotation_id", { length: ID_MAX_LENGTH })
+    id: brandedId<BucketRotationItemId>("id").primaryKey(),
+    rotationId: brandedId<BucketKeyRotationId>("rotation_id")
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "restrict" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
+    // Polymorphic row reference — domain `BucketRotationItem.entityId` is a
+    // plain string, so this column stays as a plain varchar (the actual
+    // brand is discriminated at app-layer by `entity_type`).
     entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()

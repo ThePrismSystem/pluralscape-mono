@@ -29,7 +29,14 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, BucketId, BucketKeyRotationId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  KeyGrantId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { buckets, bucketContentTags, bucketKeyRotations, bucketRotationItems, keyGrants } = schema;
@@ -72,7 +79,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
   // ── Helpers ─────────────────────────────────────────────────────────
 
-  async function insertBucket(id?: string): Promise<BucketId> {
+  async function insertBucket(id?: BucketId): Promise<BucketId> {
     const resolvedId = id ?? genBucketId();
     const ts = Date.now();
     await db.insert(buckets).values({
@@ -164,7 +171,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 1);
 
       // Insert an existing key grant
-      const grantId = `kg_${crypto.randomUUID()}`;
+      const grantId = brandId<KeyGrantId>(`kg_${crypto.randomUUID()}`);
       await db.insert(keyGrants).values({
         id: grantId,
         bucketId,
@@ -207,7 +214,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Insert an active rotation in migrating state
       await db.insert(bucketKeyRotations).values({
-        id: `bkr_${crypto.randomUUID()}`,
+        id: brandId<BucketKeyRotationId>(`bkr_${crypto.randomUUID()}`),
         bucketId,
         systemId,
         fromKeyVersion: 1,
@@ -230,7 +237,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       const bucketId = await insertBucket();
       await insertContentTags(bucketId, 1);
 
-      const oldRotationId = `bkr_${crypto.randomUUID()}`;
+      const oldRotationId = brandId<BucketKeyRotationId>(`bkr_${crypto.randomUUID()}`);
       await db.insert(bucketKeyRotations).values({
         id: oldRotationId,
         bucketId,
@@ -497,7 +504,12 @@ describe("key-rotation.service (PGlite integration)", () => {
       const items = await db
         .select()
         .from(bucketRotationItems)
-        .where(eq(bucketRotationItems.id, (claim.data[1] as { id: string }).id));
+        .where(
+          eq(
+            bucketRotationItems.id,
+            brandId<BucketRotationItemId>((claim.data[1] as { id: string }).id),
+          ),
+        );
       expect(items[0]?.status).toBe(ROTATION_ITEM_STATUSES.pending);
       expect(items[0]?.attempts).toBe(1);
     });
@@ -691,8 +703,8 @@ describe("key-rotation.service (PGlite integration)", () => {
           | (typeof ROTATION_ITEM_STATUSES)["completed"]
           | (typeof ROTATION_ITEM_STATUSES)["failed"],
         completedAt: number | null,
-      ): Promise<string> => {
-        const itemId = `bri_${crypto.randomUUID()}`;
+      ): Promise<BucketRotationItemId> => {
+        const itemId = brandId<BucketRotationItemId>(`bri_${crypto.randomUUID()}`);
         await db.insert(bucketRotationItems).values({
           id: itemId,
           systemId,
@@ -777,7 +789,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Only completed items — nothing to reset.
       await db.insert(bucketRotationItems).values({
-        id: `bri_${crypto.randomUUID()}`,
+        id: brandId<BucketRotationItemId>(`bri_${crypto.randomUUID()}`),
         systemId,
         rotationId,
         entityType: "member",

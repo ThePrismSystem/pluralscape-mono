@@ -4,6 +4,7 @@ import {
   KEY_ROTATION,
   ROTATION_ITEM_STATUSES,
   ROTATION_STATES,
+  brandId,
   createId,
   now,
 } from "@pluralscape/types";
@@ -23,6 +24,7 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
   BucketId,
   BucketKeyRotationId,
+  BucketRotationItemId,
   ChunkCompletionResponse,
   RotationItemStatus,
   SystemId,
@@ -79,11 +81,11 @@ export async function completeRotationChunk(
     // Batch update items by outcome to avoid N individual round-trips
     const completedIds = parsed.data.items
       .filter((item) => item.status === ROTATION_ITEM_STATUSES.completed)
-      .map((item) => item.itemId);
+      .map((item) => brandId<BucketRotationItemId>(item.itemId));
 
     const pendingIds = parsed.data.items
       .filter((item) => item.status !== ROTATION_ITEM_STATUSES.completed)
-      .map((item) => item.itemId);
+      .map((item) => brandId<BucketRotationItemId>(item.itemId));
 
     if (completedIds.length > 0) {
       await tx
@@ -144,7 +146,7 @@ export async function completeRotationChunk(
         // Add new items and stay in migrating
         await tx.insert(bucketRotationItems).values(
           newItems.map((tag) => ({
-            id: createId(ID_PREFIXES.bucketRotationItem),
+            id: brandId<BucketRotationItemId>(createId(ID_PREFIXES.bucketRotationItem)),
             rotationId,
             systemId,
             entityType: tag.entityType,

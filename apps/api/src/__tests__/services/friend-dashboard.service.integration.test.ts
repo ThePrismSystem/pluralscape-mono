@@ -131,7 +131,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertBucket(): Promise<BucketId> {
-    const id = createId(ID_PREFIXES.bucket);
+    const id = brandId<BucketId>(createId(ID_PREFIXES.bucket));
     const ts = now();
     await db.insert(buckets).values({
       id,
@@ -155,7 +155,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertKeyGrant(bucketId: BucketId): Promise<KeyGrantId> {
-    const id = createId(ID_PREFIXES.keyGrant);
+    const id = brandId<KeyGrantId>(createId(ID_PREFIXES.keyGrant));
     await db.insert(keyGrants).values({
       id,
       bucketId,
@@ -169,7 +169,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertMember(): Promise<MemberId> {
-    const id = createId(ID_PREFIXES.member);
+    const id = brandId<MemberId>(createId(ID_PREFIXES.member));
     const ts = now();
     await db.insert(members).values({
       id,

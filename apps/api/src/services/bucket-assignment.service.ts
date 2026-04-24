@@ -13,7 +13,13 @@ import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { AccountId, BucketId, FriendConnectionId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketId,
+  FriendConnectionId,
+  KeyGrantId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -109,7 +115,7 @@ export async function assignBucketToFriend(
 
     if (inserted) {
       // Only create key grant and emit audit for new assignments
-      const keyGrantId = createId(ID_PREFIXES.keyGrant);
+      const keyGrantId = brandId<KeyGrantId>(createId(ID_PREFIXES.keyGrant));
       const timestamp = now();
       const encryptedKeyBinary = Buffer.from(params.encryptedBucketKey, "base64");
 

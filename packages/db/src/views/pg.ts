@@ -83,7 +83,7 @@ export async function getActiveApiKeys(db: PgDb, accountId: AccountId): Promise<
 /** Get pending friend requests (received by this account). */
 export async function getPendingFriendRequests(
   db: PgDb,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<PendingFriendRequest[]> {
   return db
     .select({
@@ -162,7 +162,7 @@ export async function getMemberGroupSummary(
 /** Get active (accepted) friend connections. */
 export async function getActiveFriendConnections(
   db: PgDb,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<ActiveFriendConnection[]> {
   return db
     .select({

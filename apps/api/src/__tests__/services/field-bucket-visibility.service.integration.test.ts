@@ -75,7 +75,7 @@ describe("field-bucket-visibility.service (PGlite integration)", () => {
   // ── Helpers ──────────────────────────────────────────────────────────
 
   async function insertBucket(): Promise<BucketId> {
-    const id = createId(ID_PREFIXES.bucket);
+    const id = brandId<BucketId>(createId(ID_PREFIXES.bucket));
     const ts = now();
     await db.insert(buckets).values({
       id,

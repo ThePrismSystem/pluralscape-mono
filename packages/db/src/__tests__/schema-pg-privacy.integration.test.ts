@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -22,6 +23,14 @@ import {
   testBlobT2,
 } from "./helpers/pg-helpers.js";
 
+import type {
+  AccountId,
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  KeyGrantId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -40,9 +49,12 @@ describe("PG privacy schema", () => {
   let db: PgliteDatabase<typeof schema>;
 
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
-  const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
+  const insertSystem = (accountId: AccountId, id?: string) => pgInsertSystem(db, accountId, id);
 
-  async function insertBucket(systemId: string, id = crypto.randomUUID()): Promise<string> {
+  async function insertBucket(
+    systemId: SystemId,
+    id: BucketId = brandId<BucketId>(crypto.randomUUID()),
+  ): Promise<BucketId> {
     const now = Date.now();
     await db.insert(buckets).values({
       id,
@@ -55,10 +67,10 @@ describe("PG privacy schema", () => {
   }
 
   async function insertFriendConnection(
-    accountId: string,
-    friendAccountId: string,
-    id = crypto.randomUUID(),
-  ): Promise<string> {
+    accountId: AccountId,
+    friendAccountId: AccountId,
+    id: FriendConnectionId = brandId<FriendConnectionId>(crypto.randomUUID()),
+  ): Promise<FriendConnectionId> {
     const now = Date.now();
     await db.insert(friendConnections).values({
       id,
@@ -93,7 +105,7 @@ describe("PG privacy schema", () => {
     it("inserts with encrypted_data and round-trips binary", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -114,7 +126,7 @@ describe("PG privacy schema", () => {
     it("round-trips T2 blob with keyVersion and bucketId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlobT2();
 
@@ -134,7 +146,7 @@ describe("PG privacy schema", () => {
     it("defaults version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(buckets).values({
@@ -163,8 +175,8 @@ describe("PG privacy schema", () => {
       const now = Date.now();
       await expect(
         db.insert(buckets).values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
+          id: brandId<BucketId>(crypto.randomUUID()),
+          systemId: brandId<SystemId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -175,7 +187,7 @@ describe("PG privacy schema", () => {
     it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(buckets).values({
@@ -194,7 +206,7 @@ describe("PG privacy schema", () => {
     it("round-trips archived: true with archivedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BucketId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(buckets).values({
@@ -347,8 +359,8 @@ describe("PG privacy schema", () => {
         db.insert(bucketContentTags).values({
           entityType: "member",
           entityId: crypto.randomUUID(),
-          bucketId: "nonexistent",
-          systemId: "nonexistent",
+          bucketId: brandId<BucketId>("nonexistent"),
+          systemId: brandId<SystemId>("nonexistent"),
         }),
       ).rejects.toThrow();
     });
@@ -373,7 +385,7 @@ describe("PG privacy schema", () => {
       const bucketId = await insertBucket(systemId);
       const friendAccountId = await insertAccount();
       await insertSystem(friendAccountId);
-      const id = crypto.randomUUID();
+      const id = brandId<KeyGrantId>(crypto.randomUUID());
       const now = Date.now();
       const keyData = new Uint8Array([99, 88, 77]);
 
@@ -401,7 +413,7 @@ describe("PG privacy schema", () => {
       const bucketId = await insertBucket(systemId);
       const friendAccountId = await insertAccount();
       await insertSystem(friendAccountId);
-      const id = crypto.randomUUID();
+      const id = brandId<KeyGrantId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(keyGrants).values({
@@ -427,7 +439,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(keyGrants).values({
-        id: crypto.randomUUID(),
+        id: brandId<KeyGrantId>(crypto.randomUUID()),
         bucketId,
         systemId,
         friendAccountId,
@@ -449,7 +461,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(keyGrants).values({
-          id: crypto.randomUUID(),
+          id: brandId<KeyGrantId>(crypto.randomUUID()),
           bucketId,
           systemId,
           friendAccountId,
@@ -469,7 +481,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(keyGrants).values({
-        id: crypto.randomUUID(),
+        id: brandId<KeyGrantId>(crypto.randomUUID()),
         bucketId,
         systemId,
         friendAccountId,
@@ -480,7 +492,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(keyGrants).values({
-          id: crypto.randomUUID(),
+          id: brandId<KeyGrantId>(crypto.randomUUID()),
           bucketId,
           systemId,
           friendAccountId,
@@ -499,10 +511,10 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(keyGrants).values({
-          id: crypto.randomUUID(),
+          id: brandId<KeyGrantId>(crypto.randomUUID()),
           bucketId,
           systemId,
-          friendAccountId: "nonexistent",
+          friendAccountId: brandId<AccountId>("nonexistent"),
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
           createdAt: now,
@@ -517,7 +529,7 @@ describe("PG privacy schema", () => {
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
       await insertSystem(friendAccountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -571,7 +583,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendConnections).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId,
           friendAccountId: accountId,
           createdAt: now,
@@ -588,7 +600,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId,
         friendAccountId,
         createdAt: now,
@@ -597,7 +609,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendConnections).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId,
           friendAccountId,
           createdAt: now,
@@ -611,7 +623,7 @@ describe("PG privacy schema", () => {
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
       await insertSystem(friendAccountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -632,7 +644,7 @@ describe("PG privacy schema", () => {
       await insertSystem(accountId);
       const friendAccountId = await insertAccount();
       await insertSystem(friendAccountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendConnectionId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendConnections).values({
@@ -675,7 +687,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId,
         friendAccountId,
         createdAt: now,
@@ -685,7 +697,7 @@ describe("PG privacy schema", () => {
       });
 
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId,
         friendAccountId,
         createdAt: now,
@@ -703,7 +715,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(friendConnections).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendConnectionId>(crypto.randomUUID()),
         accountId,
         friendAccountId,
         createdAt: now,
@@ -712,7 +724,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendConnections).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendConnectionId>(crypto.randomUUID()),
           accountId,
           friendAccountId,
           createdAt: now,
@@ -756,7 +768,7 @@ describe("PG privacy schema", () => {
     it("inserts and queries by id", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendCodeId>(crypto.randomUUID());
       const code = `CODE_${crypto.randomUUID()}`;
       const now = Date.now();
 
@@ -776,7 +788,7 @@ describe("PG privacy schema", () => {
     it("allows nullable expiresAt", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendCodeId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendCodes).values({
@@ -797,7 +809,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(friendCodes).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendCodeId>(crypto.randomUUID()),
         accountId,
         code,
         createdAt: now,
@@ -805,7 +817,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendCodes).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendCodeId>(crypto.randomUUID()),
           accountId,
           code,
           createdAt: now,
@@ -816,7 +828,7 @@ describe("PG privacy schema", () => {
     it("cascades on account deletion", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const codeId = crypto.randomUUID();
+      const codeId = brandId<FriendCodeId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendCodes).values({
@@ -838,7 +850,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendCodes).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendCodeId>(crypto.randomUUID()),
           accountId,
           code: "SHORT",
           createdAt: now,
@@ -852,7 +864,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(friendCodes).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendCodeId>(crypto.randomUUID()),
         accountId,
         code: "ABCD1234",
         createdAt: now,
@@ -866,7 +878,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendCodes).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendCodeId>(crypto.randomUUID()),
           accountId,
           code: `CODE_${crypto.randomUUID()}`,
           createdAt: now,
@@ -882,7 +894,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendCodes).values({
-          id: crypto.randomUUID(),
+          id: brandId<FriendCodeId>(crypto.randomUUID()),
           accountId,
           code: `CODE_${crypto.randomUUID()}`,
           createdAt: now,
@@ -894,7 +906,7 @@ describe("PG privacy schema", () => {
     it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendCodeId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendCodes).values({
@@ -912,7 +924,7 @@ describe("PG privacy schema", () => {
     it("round-trips archived: true with archivedAt", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendCodeId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendCodes).values({
@@ -932,7 +944,7 @@ describe("PG privacy schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<FriendCodeId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(friendCodes).values({
@@ -985,7 +997,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(friendCodes).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendCodeId>(crypto.randomUUID()),
         accountId,
         code,
         createdAt: now,
@@ -994,7 +1006,7 @@ describe("PG privacy schema", () => {
       });
 
       await db.insert(friendCodes).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendCodeId>(crypto.randomUUID()),
         accountId,
         code,
         createdAt: now,
@@ -1013,7 +1025,7 @@ describe("PG privacy schema", () => {
       const now = Date.now();
 
       await db.insert(friendCodes).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendCodeId>(crypto.randomUUID()),
         accountId,
         code,
         createdAt: now,
@@ -1022,7 +1034,7 @@ describe("PG privacy schema", () => {
       });
 
       await db.insert(friendCodes).values({
-        id: crypto.randomUUID(),
+        id: brandId<FriendCodeId>(crypto.randomUUID()),
         accountId,
         code,
         createdAt: now,
@@ -1123,7 +1135,7 @@ describe("PG privacy schema", () => {
 
       await expect(
         db.insert(friendBucketAssignments).values({
-          friendConnectionId: "nonexistent",
+          friendConnectionId: brandId<FriendConnectionId>("nonexistent"),
           bucketId,
           systemId,
         }),
@@ -1140,7 +1152,7 @@ describe("PG privacy schema", () => {
       await expect(
         db.insert(friendBucketAssignments).values({
           friendConnectionId: connectionId,
-          bucketId: "nonexistent",
+          bucketId: brandId<BucketId>("nonexistent"),
           systemId,
         }),
       ).rejects.toThrow();
