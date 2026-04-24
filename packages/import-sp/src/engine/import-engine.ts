@@ -32,15 +32,12 @@ import {
   markRealPrivacyBucketsMapped,
   resumeStartCollection,
   type AdvanceDelta,
+  type ImportRunResult,
 } from "@pluralscape/import-core";
 
 import { CHECKPOINT_CHUNK_SIZE } from "../import-sp.constants.js";
 import { synthesizeLegacyBuckets, type MappedPrivacyBucket } from "../mappers/bucket.mapper.js";
-import {
-  createMappingContext,
-  type MappingContext,
-  type MappingWarning,
-} from "../mappers/context.js";
+import { createMappingContext, type MappingContext } from "../mappers/context.js";
 
 import { DEPENDENCY_ORDER } from "./dependency-order.js";
 import { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine-errors.js";
@@ -137,14 +134,11 @@ export interface RunImportArgs {
   readonly abortSignal?: AbortSignal;
 }
 
-export type ImportRunOutcome = "completed" | "aborted";
-
-export interface ImportRunResult {
-  readonly finalState: ImportCheckpointState;
-  readonly warnings: readonly MappingWarning[];
-  readonly errors: readonly ImportError[];
-  readonly outcome: ImportRunOutcome;
-}
+/**
+ * Re-exports of the run-outcome types from `@pluralscape/import-core` so SP
+ * consumers import from a single package.
+ */
+export type { ImportRunOutcome, ImportRunResult } from "@pluralscape/import-core";
 
 /**
  * Find the index in `DEPENDENCY_ORDER` of the collection corresponding to a
