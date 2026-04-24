@@ -96,6 +96,7 @@ import type {
   ChannelId,
   EncryptedBlob,
   FrontingReportId,
+  MemberId,
   PKBridgeConfigId,
   PollId,
   SafeModeContentId,
@@ -547,12 +548,12 @@ export async function pgInsertMember(
   db: PgliteDatabase<Record<string, unknown>>,
   systemId: string,
   id?: string,
-): Promise<string> {
-  const resolvedId = id ?? crypto.randomUUID();
+): Promise<MemberId> {
+  const resolvedId = brandId<MemberId>(id ?? crypto.randomUUID());
   const now = fixtureNow();
   await db.insert(members).values({
     id: resolvedId,
-    systemId,
+    systemId: brandId<SystemId>(systemId),
     encryptedData: testBlob(),
     createdAt: now,
     updatedAt: now,

@@ -16,7 +16,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { frontingSessions } from "../../schema/pg/fronting.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, FrontingSessionServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -26,10 +25,8 @@ describe("FrontingSession Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof FrontingSessionServerMetadata>();
   });
 
-  it("fronting_sessions Drizzle row equals FrontingSessionServerMetadata modulo brands and readonly", () => {
+  it("fronting_sessions Drizzle row equals FrontingSessionServerMetadata", () => {
     type Row = InferSelectModel<typeof frontingSessions>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<FrontingSessionServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, FrontingSessionServerMetadata>>().toEqualTypeOf<true>();
   });
 });

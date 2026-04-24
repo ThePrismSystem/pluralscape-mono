@@ -42,6 +42,7 @@ import type {
   ChannelId,
   MemberId,
   MessageId,
+  NoteAuthorEntityType,
   NoteId,
   PollId,
   PollOptionId,
@@ -146,7 +147,7 @@ export const notes = sqliteTable(
     systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    authorEntityType: text("author_entity_type"),
+    authorEntityType: text("author_entity_type").$type<NoteAuthorEntityType>(),
     // Polymorphic: targets member or structure-entity — discriminator lives in
     // `authorEntityType`. Brand-level narrowing happens at the application
     // layer (`brandedId<AnyBrandedId>` intentionally permissive here).

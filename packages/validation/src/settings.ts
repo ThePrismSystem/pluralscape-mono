@@ -1,17 +1,19 @@
+import { SUPPORTED_LOCALES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import {
   MAX_BIOMETRIC_TOKEN_LENGTH,
   MAX_ENCRYPTED_SYSTEM_DATA_SIZE,
-  MAX_LOCALE_LENGTH,
 } from "./validation.constants.js";
+
+const LocaleSchema = z.enum(SUPPORTED_LOCALES);
 
 // ── System Settings ────────────────────────────────────────────────
 
 export const UpdateSystemSettingsBodySchema = z
   .object({
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_SYSTEM_DATA_SIZE),
-    locale: z.string().min(1).max(MAX_LOCALE_LENGTH).optional(),
+    locale: LocaleSchema.optional(),
     biometricEnabled: z.boolean().optional(),
     version: z.int().min(1),
   })
@@ -79,7 +81,7 @@ export const SetupProfileStepBodySchema = z
 export const SetupCompleteBodySchema = z
   .object({
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_SYSTEM_DATA_SIZE),
-    locale: z.string().min(1).max(MAX_LOCALE_LENGTH).optional(),
+    locale: LocaleSchema.optional(),
     biometricEnabled: z.boolean().optional(),
     recoveryKeyBackupConfirmed: z.literal(true),
   })

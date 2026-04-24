@@ -6,7 +6,7 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.j
 
 import { systems } from "./systems.js";
 
-import type { SystemId, SystemSettingsId } from "@pluralscape/types";
+import type { Locale, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSettings = pgTable(
@@ -17,7 +17,7 @@ export const systemSettings = pgTable(
       .notNull()
       .unique()
       .references(() => systems.id, { onDelete: "cascade" }),
-    locale: varchar("locale", { length: 255 }),
+    locale: varchar("locale", { length: 255 }).$type<Locale>(),
     /** Must use Argon2id — PINs are low-entropy (4-6 digits) and trivially reversible with weak hashes. */
     pinHash: varchar("pin_hash", { length: 512 }),
     /**

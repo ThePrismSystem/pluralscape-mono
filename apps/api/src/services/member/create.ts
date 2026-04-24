@@ -36,7 +36,7 @@ export async function createMember(
   }
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
-  const memberId = createId(ID_PREFIXES.member);
+  const memberId = brandId<MemberId>(createId(ID_PREFIXES.member));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -100,7 +100,7 @@ export async function duplicateMember(
   }
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
-  const newMemberId = createId(ID_PREFIXES.member);
+  const newMemberId = brandId<MemberId>(createId(ID_PREFIXES.member));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

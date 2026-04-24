@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { deviceTransferRequests } from "../../schema/pg/auth.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { DeviceTransferRequestServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("DeviceTransferRequest Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof DeviceTransferRequestServerMetadata>();
   });
 
-  it("device_transfer_requests Drizzle row equals DeviceTransferRequestServerMetadata modulo brands and readonly", () => {
+  it("device_transfer_requests Drizzle row equals DeviceTransferRequestServerMetadata", () => {
     type Row = InferSelectModel<typeof deviceTransferRequests>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<DeviceTransferRequestServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, DeviceTransferRequestServerMetadata>>().toEqualTypeOf<true>();
   });
 });

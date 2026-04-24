@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { recoveryKeys } from "../../schema/pg/auth.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, RecoveryKeyServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("RecoveryKey Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof RecoveryKeyServerMetadata>();
   });
 
-  it("recovery_keys Drizzle row equals RecoveryKeyServerMetadata modulo brands and readonly", () => {
+  it("recovery_keys Drizzle row equals RecoveryKeyServerMetadata", () => {
     type Row = InferSelectModel<typeof recoveryKeys>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<RecoveryKeyServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, RecoveryKeyServerMetadata>>().toEqualTypeOf<true>();
   });
 });

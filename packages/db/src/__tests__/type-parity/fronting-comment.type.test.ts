@@ -15,7 +15,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { frontingComments } from "../../schema/pg/fronting.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, FrontingCommentServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -25,10 +24,8 @@ describe("FrontingComment Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof FrontingCommentServerMetadata>();
   });
 
-  it("fronting_comments Drizzle row equals FrontingCommentServerMetadata modulo brands and readonly", () => {
+  it("fronting_comments Drizzle row equals FrontingCommentServerMetadata", () => {
     type Row = InferSelectModel<typeof frontingComments>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<FrontingCommentServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, FrontingCommentServerMetadata>>().toEqualTypeOf<true>();
   });
 });

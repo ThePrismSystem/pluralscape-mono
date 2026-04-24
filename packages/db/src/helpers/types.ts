@@ -1,5 +1,13 @@
-/** DB-level actor type — uses plain string IDs (branded types are an app-layer concern). */
+import type { AccountId, ApiKeyId, SystemId } from "@pluralscape/types";
+
+/**
+ * DB-level actor type — aligned with the domain `AuditActor` shape so that
+ * `InferSelectModel` on the `audit_log` table yields the same `actor` type
+ * as `AuditLogEntryServerMetadata.actor`. The underlying PG column is
+ * `jsonb` with `.$type<DbAuditActor>()` so branded IDs are preserved from
+ * serialization to deserialization.
+ */
 export type DbAuditActor =
-  | { readonly kind: "account"; readonly id: string }
-  | { readonly kind: "api-key"; readonly id: string }
-  | { readonly kind: "system"; readonly id: string };
+  | { readonly kind: "account"; readonly id: AccountId }
+  | { readonly kind: "api-key"; readonly id: ApiKeyId }
+  | { readonly kind: "system"; readonly id: SystemId };

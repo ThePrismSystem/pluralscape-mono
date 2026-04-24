@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { bucketRotationItems } from "../../schema/pg/key-rotation.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { BucketRotationItemServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("BucketRotationItem Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof BucketRotationItemServerMetadata>();
   });
 
-  it("bucket_rotation_items Drizzle row equals BucketRotationItemServerMetadata modulo brands and readonly", () => {
+  it("bucket_rotation_items Drizzle row equals BucketRotationItemServerMetadata", () => {
     type Row = InferSelectModel<typeof bucketRotationItems>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<BucketRotationItemServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, BucketRotationItemServerMetadata>>().toEqualTypeOf<true>();
   });
 });

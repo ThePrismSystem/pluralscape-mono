@@ -32,6 +32,7 @@ import { systems } from "./systems.js";
 
 import type {
   AccountId,
+  AccountPurgeRequestId,
   AccountPurgeStatus,
   ExportFormat,
   ExportRequestStatus,
@@ -176,8 +177,8 @@ export const exportRequests = pgTable(
 export const accountPurgeRequests = pgTable(
   "account_purge_requests",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<AccountPurgeRequestId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     status: varchar("status", { length: ENUM_MAX_LENGTH })

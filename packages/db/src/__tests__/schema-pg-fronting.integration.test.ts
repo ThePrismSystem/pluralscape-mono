@@ -22,7 +22,9 @@ import type {
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
+  MemberId,
   SystemId,
+  SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -235,7 +237,7 @@ describe("PG fronting schema", () => {
           id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId: brandId<SystemId>("nonexistent"),
           startTime: now,
-          memberId: "nonexistent-member",
+          memberId: brandId<MemberId>("nonexistent-member"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -323,7 +325,7 @@ describe("PG fronting schema", () => {
       const now = fixtureNow();
 
       const entityTypeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const entityId = brandId<SystemStructureEntityId>(crypto.randomUUID());
       await client.query(
         "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, false)",
         [entityTypeId, systemId, now, now],
@@ -404,7 +406,7 @@ describe("PG fronting schema", () => {
           id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           startTime: now,
-          memberId: "nonexistent",
+          memberId: brandId<MemberId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -444,7 +446,7 @@ describe("PG fronting schema", () => {
           id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           startTime: now,
-          customFrontId: "nonexistent",
+          customFrontId: brandId<CustomFrontId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -583,7 +585,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const now = fixtureNow();
       const entityTypeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const entityId = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       await client.query(
         "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, false)",
@@ -622,7 +624,7 @@ describe("PG fronting schema", () => {
           id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           startTime: now,
-          structureEntityId: "nonexistent",
+          structureEntityId: brandId<SystemStructureEntityId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -635,7 +637,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const now = fixtureNow();
       const entityTypeId = crypto.randomUUID();
-      const entityId = crypto.randomUUID();
+      const entityId = brandId<SystemStructureEntityId>(crypto.randomUUID());
 
       await client.query(
         "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, false)",
@@ -1029,7 +1031,7 @@ describe("PG fronting schema", () => {
           frontingSessionId: sessionId,
           systemId,
           sessionStartTime,
-          memberId: "nonexistent",
+          memberId: brandId<MemberId>("nonexistent"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,

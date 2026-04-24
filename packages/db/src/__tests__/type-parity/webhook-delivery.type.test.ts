@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { webhookDeliveries } from "../../schema/pg/webhooks.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, WebhookDeliveryServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("WebhookDelivery Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof WebhookDeliveryServerMetadata>();
   });
 
-  it("webhook_deliveries row equals WebhookDeliveryServerMetadata modulo brands and readonly", () => {
+  it("webhook_deliveries row equals WebhookDeliveryServerMetadata", () => {
     type Row = InferSelectModel<typeof webhookDeliveries>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<WebhookDeliveryServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, WebhookDeliveryServerMetadata>>().toEqualTypeOf<true>();
   });
 });

@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { deviceTokens } from "../../schema/pg/notifications.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { DeviceTokenServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("DeviceToken Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof DeviceTokenServerMetadata>();
   });
 
-  it("device_tokens Drizzle row equals DeviceTokenServerMetadata modulo brands and readonly", () => {
+  it("device_tokens Drizzle row equals DeviceTokenServerMetadata", () => {
     type Row = InferSelectModel<typeof deviceTokens>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<DeviceTokenServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, DeviceTokenServerMetadata>>().toEqualTypeOf<true>();
   });
 });

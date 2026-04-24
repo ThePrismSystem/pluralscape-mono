@@ -15,7 +15,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { fieldValues } from "../../schema/pg/custom-fields.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, FieldValueServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -25,10 +24,8 @@ describe("FieldValue Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof FieldValueServerMetadata>();
   });
 
-  it("field_values Drizzle row equals FieldValueServerMetadata modulo brands and readonly", () => {
+  it("field_values Drizzle row equals FieldValueServerMetadata", () => {
     type Row = InferSelectModel<typeof fieldValues>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<FieldValueServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, FieldValueServerMetadata>>().toEqualTypeOf<true>();
   });
 });

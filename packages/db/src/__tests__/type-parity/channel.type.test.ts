@@ -13,7 +13,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { channels } from "../../schema/pg/communication.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { ChannelServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -23,10 +22,8 @@ describe("Channel Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof ChannelServerMetadata>();
   });
 
-  it("channels Drizzle row equals ChannelServerMetadata modulo brands and readonly", () => {
+  it("channels Drizzle row equals ChannelServerMetadata", () => {
     type Row = InferSelectModel<typeof channels>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<ChannelServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, ChannelServerMetadata>>().toEqualTypeOf<true>();
   });
 });

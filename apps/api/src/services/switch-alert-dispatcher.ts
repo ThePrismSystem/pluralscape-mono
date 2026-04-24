@@ -270,7 +270,13 @@ export async function dispatchSwitchAlertForSession(
       })
       .from(deviceTokens)
       .where(
-        and(inArray(deviceTokens.accountId, friendsWithVisibility), isNull(deviceTokens.revokedAt)),
+        and(
+          inArray(
+            deviceTokens.accountId,
+            friendsWithVisibility.map((id) => brandId<AccountId>(id)),
+          ),
+          isNull(deviceTokens.revokedAt),
+        ),
       );
 
     // 10. Enqueue one job per device token with bounded concurrency

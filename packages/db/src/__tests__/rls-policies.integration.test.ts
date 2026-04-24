@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -29,6 +30,7 @@ import {
 } from "./helpers/pg-helpers.js";
 
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
+import type { AccountId, MemberId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 // ---------------------------------------------------------------------------
@@ -228,13 +230,13 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
-  const memberIdA1 = crypto.randomUUID();
-  const memberIdA2 = crypto.randomUUID();
-  const memberIdB1 = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
+  const memberIdA1 = brandId<MemberId>(crypto.randomUUID());
+  const memberIdA2 = brandId<MemberId>(crypto.randomUUID());
+  const memberIdB1 = brandId<MemberId>(crypto.randomUUID());
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -345,7 +347,7 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
   it("WITH CHECK prevents cross-tenant INSERT", async () => {
     await setSessionSystemId(db, systemIdA);
 
-    const crossTenantId = crypto.randomUUID();
+    const crossTenantId = brandId<MemberId>(crypto.randomUUID());
     const now = fixtureNow();
 
     await expect(
@@ -581,10 +583,10 @@ describe("RLS cross-tenant isolation — system-pk scope (PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -686,10 +688,10 @@ describe("RLS cross-tenant isolation — dual scope (PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
   const apiKeyIdA = crypto.randomUUID();
   const apiKeyIdB = crypto.randomUUID();
 
@@ -867,10 +869,10 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
   const bucketIdA = crypto.randomUUID();
   const bucketIdB = crypto.randomUUID();
   const grantIdA = crypto.randomUUID();
@@ -1176,10 +1178,10 @@ describe("RLS cross-tenant isolation — bucket_rotation_items (system scope, PG
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
   const bucketIdA = crypto.randomUUID();
   const bucketIdB = crypto.randomUUID();
   const rotationIdA = crypto.randomUUID();
@@ -1505,10 +1507,10 @@ describe("RLS cross-tenant isolation — import_jobs (PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
   const jobIdA = crypto.randomUUID();
   const jobIdB = crypto.randomUUID();
 
@@ -1660,10 +1662,10 @@ describe("RLS cross-tenant isolation — import_entity_refs (PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
   const refIdA = crypto.randomUUID();
   const refIdB = crypto.randomUUID();
 
@@ -1818,10 +1820,10 @@ describe("RLS cross-tenant isolation — system-fk scope (sync tables, PGlite)",
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
   const docIdA = `doc-${crypto.randomUUID()}`;
   const docIdB = `doc-${crypto.randomUUID()}`;
   const changeIdA = crypto.randomUUID();
@@ -2198,10 +2200,10 @@ describe("RLS cross-tenant isolation — systems PK with account ownership (PGli
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -2286,10 +2288,10 @@ describe("RLS audit_log NULL-aware tenant isolation (PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
-  const accountIdA = crypto.randomUUID();
-  const accountIdB = crypto.randomUUID();
-  const systemIdA = crypto.randomUUID();
-  const systemIdB = crypto.randomUUID();
+  const accountIdA = brandId<AccountId>(crypto.randomUUID());
+  const accountIdB = brandId<AccountId>(crypto.randomUUID());
+  const systemIdA = brandId<SystemId>(crypto.randomUUID());
+  const systemIdB = brandId<SystemId>(crypto.randomUUID());
   const liveEntryId = crypto.randomUUID();
   const nulledEntryId = crypto.randomUUID();
   const crossTenantEntryId = crypto.randomUUID();

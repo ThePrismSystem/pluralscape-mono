@@ -22,6 +22,7 @@ import {
 
 import type {
   AccountId,
+  DeviceTokenId,
   FriendConnectionId,
   FriendNotificationPreferenceId,
   NotificationConfigId,
@@ -64,7 +65,7 @@ describe("PG notifications schema", () => {
     it("round-trips all fields", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
@@ -89,7 +90,7 @@ describe("PG notifications schema", () => {
     it("allows nullable lastActiveAt and revokedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
@@ -113,7 +114,7 @@ describe("PG notifications schema", () => {
 
       await expect(
         db.insert(deviceTokens).values({
-          id: crypto.randomUUID(),
+          id: brandId<DeviceTokenId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "desktop" as "ios",
@@ -130,7 +131,7 @@ describe("PG notifications schema", () => {
       const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       await db.insert(deviceTokens).values({
-        id: crypto.randomUUID(),
+        id: brandId<DeviceTokenId>(crypto.randomUUID()),
         accountId,
         systemId,
         platform: "ios",
@@ -140,7 +141,7 @@ describe("PG notifications schema", () => {
 
       await expect(
         db.insert(deviceTokens).values({
-          id: crypto.randomUUID(),
+          id: brandId<DeviceTokenId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "ios",
@@ -157,7 +158,7 @@ describe("PG notifications schema", () => {
       const tokenHash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
 
       await db.insert(deviceTokens).values({
-        id: crypto.randomUUID(),
+        id: brandId<DeviceTokenId>(crypto.randomUUID()),
         accountId,
         systemId,
         platform: "ios",
@@ -166,7 +167,7 @@ describe("PG notifications schema", () => {
       });
 
       await db.insert(deviceTokens).values({
-        id: crypto.randomUUID(),
+        id: brandId<DeviceTokenId>(crypto.randomUUID()),
         accountId,
         systemId,
         platform: "android",
@@ -178,7 +179,7 @@ describe("PG notifications schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(deviceTokens).values({
@@ -198,7 +199,7 @@ describe("PG notifications schema", () => {
     it("cascades on account deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<DeviceTokenId>(crypto.randomUUID());
       const now = fixtureNow();
 
       await db.insert(deviceTokens).values({

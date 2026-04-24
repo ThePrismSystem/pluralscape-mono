@@ -15,7 +15,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { blobMetadata } from "../../schema/pg/blob-metadata.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { BlobMetadataServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -25,10 +24,8 @@ describe("BlobMetadata Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof BlobMetadataServerMetadata>();
   });
 
-  it("blob_metadata Drizzle row equals BlobMetadataServerMetadata modulo brands and readonly", () => {
+  it("blob_metadata Drizzle row equals BlobMetadataServerMetadata", () => {
     type Row = InferSelectModel<typeof blobMetadata>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<BlobMetadataServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, BlobMetadataServerMetadata>>().toEqualTypeOf<true>();
   });
 });

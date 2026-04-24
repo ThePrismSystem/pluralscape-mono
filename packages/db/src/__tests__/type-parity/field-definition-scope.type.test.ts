@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { fieldDefinitionScopes } from "../../schema/pg/custom-fields.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, FieldDefinitionScopeServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("FieldDefinitionScope Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof FieldDefinitionScopeServerMetadata>();
   });
 
-  it("field_definition_scopes Drizzle row equals FieldDefinitionScopeServerMetadata modulo brands and readonly", () => {
+  it("field_definition_scopes Drizzle row equals FieldDefinitionScopeServerMetadata", () => {
     type Row = InferSelectModel<typeof fieldDefinitionScopes>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<FieldDefinitionScopeServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, FieldDefinitionScopeServerMetadata>>().toEqualTypeOf<true>();
   });
 });

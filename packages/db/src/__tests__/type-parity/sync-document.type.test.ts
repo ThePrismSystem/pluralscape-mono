@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { syncDocuments } from "../../schema/pg/sync.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, SyncDocument } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,8 +23,8 @@ describe("SyncDocument Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof SyncDocument>();
   });
 
-  it("sync_documents Drizzle row equals SyncDocument modulo brands and readonly", () => {
+  it("sync_documents Drizzle row equals SyncDocument", () => {
     type Row = InferSelectModel<typeof syncDocuments>;
-    expectTypeOf<Equal<StripBrands<Row>, StripBrands<SyncDocument>>>().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, SyncDocument>>().toEqualTypeOf<true>();
   });
 });

@@ -1,13 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  check,
-  foreignKey,
-  index,
-  pgTable,
-  primaryKey,
-  unique,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { check, foreignKey, index, pgTable, primaryKey, unique } from "drizzle-orm/pg-core";
 
 import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
@@ -18,7 +10,6 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { atLeastOneNotNull } from "../../helpers/check.js";
-import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
@@ -28,7 +19,9 @@ import type {
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
+  MemberId,
   SystemId,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -64,9 +57,9 @@ export const frontingSessions = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
-    memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
-    customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
-    structureEntityId: varchar("structure_entity_id", { length: ID_MAX_LENGTH }),
+    memberId: brandedId<MemberId>("member_id"),
+    customFrontId: brandedId<CustomFrontId>("custom_front_id"),
+    structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -130,9 +123,9 @@ export const frontingComments = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
     sessionStartTime: pgTimestamp("session_start_time").notNull(),
-    memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
-    customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
-    structureEntityId: varchar("structure_entity_id", { length: ID_MAX_LENGTH }),
+    memberId: brandedId<MemberId>("member_id"),
+    customFrontId: brandedId<CustomFrontId>("custom_front_id"),
+    structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

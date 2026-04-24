@@ -19,6 +19,7 @@ import type {
   ChannelId,
   EncryptedBlob,
   FrontingReportId,
+  MemberId,
   PKBridgeConfigId,
   PollId,
   SafeModeContentId,
@@ -1665,13 +1666,13 @@ export function sqliteInsertMember(
   db: BetterSQLite3Database<Record<string, unknown>>,
   systemId: string,
   id?: string,
-): string {
-  const resolvedId = id ?? crypto.randomUUID();
+): MemberId {
+  const resolvedId = brandId<MemberId>(id ?? crypto.randomUUID());
   const now = fixtureNow();
   db.insert(members)
     .values({
       id: resolvedId,
-      systemId,
+      systemId: brandId<SystemId>(systemId),
       encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,

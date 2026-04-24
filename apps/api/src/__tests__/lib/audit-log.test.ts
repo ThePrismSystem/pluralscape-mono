@@ -32,7 +32,7 @@ function baseParams(overrides?: Partial<WriteAuditLogParams>): WriteAuditLogPara
     accountId: brandId<AccountId>("acc_test-account"),
     systemId: brandId<SystemId>("sys_test-system"),
     eventType: "auth.login",
-    actor: { kind: "account", id: "acc_test-account" },
+    actor: { kind: "account", id: brandId<AccountId>("acc_test-account") },
     ...overrides,
   };
 }

@@ -11,7 +11,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { wikiPages } from "../../schema/pg/journal.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, WikiPageServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -21,10 +20,8 @@ describe("WikiPage Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof WikiPageServerMetadata>();
   });
 
-  it("wikiPages Drizzle row equals WikiPageServerMetadata modulo brands and readonly", () => {
+  it("wikiPages Drizzle row equals WikiPageServerMetadata", () => {
     type Row = InferSelectModel<typeof wikiPages>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<WikiPageServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, WikiPageServerMetadata>>().toEqualTypeOf<true>();
   });
 });

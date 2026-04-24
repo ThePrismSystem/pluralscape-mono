@@ -40,6 +40,7 @@ import type {
   ChannelId,
   MemberId,
   MessageId,
+  NoteAuthorEntityType,
   NoteId,
   PollId,
   PollOptionId,
@@ -146,7 +147,9 @@ export const notes = pgTable(
     systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    authorEntityType: varchar("author_entity_type", { length: ENUM_MAX_LENGTH }),
+    authorEntityType: varchar("author_entity_type", {
+      length: ENUM_MAX_LENGTH,
+    }).$type<NoteAuthorEntityType>(),
     // Polymorphic: targets member or structure-entity — discriminator lives in
     // `authorEntityType`. Brand-level narrowing happens at the application
     // layer (`brandedId<AnyBrandedId>` intentionally permissive here).

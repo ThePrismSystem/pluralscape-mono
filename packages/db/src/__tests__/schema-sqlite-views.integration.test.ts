@@ -48,8 +48,10 @@ import type {
   DeviceTransferRequestId,
   FriendConnectionId,
   FrontingCommentId,
+  DeviceTokenId,
   FrontingSessionId,
   GroupId,
+  MemberId,
   ServerSecret,
   SessionId,
   SystemId,
@@ -122,7 +124,7 @@ describe("SQLite views / query helpers", () => {
 
   let accountId: AccountId;
   let systemId: SystemId;
-  let memberId: string;
+  let memberId: MemberId;
 
   beforeEach(() => {
     // Clean up tables for each test (FK-safe order: children first)
@@ -410,8 +412,8 @@ describe("SQLite views / query helpers", () => {
 
     it("returns groups with correct member counts", () => {
       const now = fixtureNow();
-      const memberId1 = crypto.randomUUID();
-      const memberId2 = crypto.randomUUID();
+      const memberId1 = brandId<MemberId>(crypto.randomUUID());
+      const memberId2 = brandId<MemberId>(crypto.randomUUID());
       const groupId = brandId<GroupId>(crypto.randomUUID());
 
       db.insert(members)
@@ -493,7 +495,7 @@ describe("SQLite views / query helpers", () => {
       const tokenHashValue = `tokenHash_${crypto.randomUUID()}`.slice(0, 64);
       db.insert(deviceTokens)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<DeviceTokenId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "ios",
@@ -503,7 +505,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(deviceTokens)
         .values({
-          id: brandId<FrontingSessionId>(crypto.randomUUID()),
+          id: brandId<DeviceTokenId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "android",

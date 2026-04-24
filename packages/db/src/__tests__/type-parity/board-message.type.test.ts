@@ -11,7 +11,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { boardMessages } from "../../schema/pg/communication.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { BoardMessageServerMetadata, Equal } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -21,10 +20,8 @@ describe("BoardMessage Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof BoardMessageServerMetadata>();
   });
 
-  it("boardMessages Drizzle row equals BoardMessageServerMetadata modulo brands and readonly", () => {
+  it("boardMessages Drizzle row equals BoardMessageServerMetadata", () => {
     type Row = InferSelectModel<typeof boardMessages>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<BoardMessageServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, BoardMessageServerMetadata>>().toEqualTypeOf<true>();
   });
 });

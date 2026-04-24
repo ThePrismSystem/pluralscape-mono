@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { innerworldRegions } from "../../schema/pg/innerworld.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, InnerWorldRegionServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("InnerWorldRegion Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof InnerWorldRegionServerMetadata>();
   });
 
-  it("innerworld_regions Drizzle row equals InnerWorldRegionServerMetadata modulo brands and readonly", () => {
+  it("innerworld_regions Drizzle row equals InnerWorldRegionServerMetadata", () => {
     type Row = InferSelectModel<typeof innerworldRegions>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<InnerWorldRegionServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, InnerWorldRegionServerMetadata>>().toEqualTypeOf<true>();
   });
 });

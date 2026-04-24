@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { buckets } from "../../schema/pg/privacy.js";
 
-import type { StripBrands } from "./__helpers__.js";
 import type { Equal, PrivacyBucketServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -24,10 +23,8 @@ describe("PrivacyBucket Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof PrivacyBucketServerMetadata>();
   });
 
-  it("buckets Drizzle row equals PrivacyBucketServerMetadata modulo brands and readonly", () => {
+  it("buckets Drizzle row equals PrivacyBucketServerMetadata", () => {
     type Row = InferSelectModel<typeof buckets>;
-    expectTypeOf<
-      Equal<StripBrands<Row>, StripBrands<PrivacyBucketServerMetadata>>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, PrivacyBucketServerMetadata>>().toEqualTypeOf<true>();
   });
 });
