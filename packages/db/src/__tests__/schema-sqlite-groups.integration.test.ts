@@ -51,9 +51,10 @@ describe("SQLite groups schema", () => {
       .values({
         id,
         systemId: brandId<SystemId>(systemId),
-        parentGroupId: opts.parentGroupId === null || opts.parentGroupId === undefined
-          ? null
-          : brandId<GroupId>(opts.parentGroupId),
+        parentGroupId:
+          opts.parentGroupId === null || opts.parentGroupId === undefined
+            ? null
+            : brandId<GroupId>(opts.parentGroupId),
         sortOrder: opts.sortOrder ?? 0,
         encryptedData: testBlob(),
         createdAt: now,
