@@ -26,10 +26,7 @@ export type ArchivedBoardMessage = Archived<BoardMessage>;
  * `content`. `archived: false` on the domain flips to a mutable boolean
  * here, with a companion `archivedAt` timestamp.
  */
-export type BoardMessageServerMetadata = Omit<
-  BoardMessage,
-  "senderId" | "content" | "archived"
-> & {
+export type BoardMessageServerMetadata = Omit<BoardMessage, "senderId" | "content" | "archived"> & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;

@@ -59,10 +59,7 @@ export type ArchivedPoll = Archived<Poll>;
  * FK for referential integrity. `archived: false` on the domain flips to a
  * mutable boolean here, with a companion `archivedAt` timestamp.
  */
-export type PollServerMetadata = Omit<
-  Poll,
-  "title" | "description" | "options" | "archived"
-> & {
+export type PollServerMetadata = Omit<Poll, "title" | "description" | "options" | "archived"> & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;

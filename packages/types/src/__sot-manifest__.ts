@@ -80,11 +80,7 @@ import type {
   ChatMessageWire,
 } from "./entities/message.js";
 import type { Note, NoteServerMetadata, NoteWire } from "./entities/note.js";
-import type {
-  PollVote,
-  PollVoteServerMetadata,
-  PollVoteWire,
-} from "./entities/poll-vote.js";
+import type { PollVote, PollVoteServerMetadata, PollVoteWire } from "./entities/poll-vote.js";
 import type { Poll, PollServerMetadata, PollWire } from "./entities/poll.js";
 import type {
   RecoveryKey,
@@ -131,11 +127,7 @@ import type {
   TimerConfigServerMetadata,
   TimerConfigWire,
 } from "./entities/timer-config.js";
-import type {
-  WikiPage,
-  WikiPageServerMetadata,
-  WikiPageWire,
-} from "./entities/wiki-page.js";
+import type { WikiPage, WikiPageServerMetadata, WikiPageWire } from "./entities/wiki-page.js";
 import type {
   NomenclatureEncryptedFields,
   NomenclatureServerMetadata,
