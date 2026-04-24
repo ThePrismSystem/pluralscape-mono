@@ -1,11 +1,11 @@
 ---
 # types-ltel
 title: Types single source of truth
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-24T09:07:38Z
+updated_at: 2026-04-24T18:48:25Z
 parent: ps-cd6x
 ---
 
@@ -154,4 +154,13 @@ Pilot (Member) landed in types-tef0 as a reference implementation. The 18 non-pi
 - [x] Cluster 8 — Communication + engagement (PR #547, merged as e6261998)
 - [x] Cluster 9 — Operational (PR #551, merged as 59ef63d5)
 - [x] Cluster 10 — Privacy + social (PR #546, merged as b70c896c)
-- [ ] Cluster 11 — Cleanup (timestamp lift + StripBrands deletion; pending)
+- [x] Cluster 11 — Cleanup (timestamp lift + StripBrands deletion; C11a #554, C11b #555, C11c feat/types-ltel-c11c-parity-closeout)
+
+## Epic Closeout
+
+All 11 clusters landed. Types package is the single source of truth for all server-owned entities. Drizzle rows structurally match `XxxServerMetadata` exactly — parity tests enforce via `Equal<Row, XxxServerMetadata>` with no StripBrands escape hatch. C11 surfaced and fixed 8 accumulated drifts (branded-ID columns, aligned actor union, narrowed locale/note-author types).
+
+Follow-ups (separate beans):
+
+- ps-6lwp — audit hand-rolled types across the codebase
+- types-cfp6 — wire `pnpm types:check-sot` into `.github/workflows/ci.yml`

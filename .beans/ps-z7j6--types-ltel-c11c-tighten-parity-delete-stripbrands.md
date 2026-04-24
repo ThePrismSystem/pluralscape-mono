@@ -1,11 +1,11 @@
 ---
 # ps-z7j6
 title: "types-ltel C11c: tighten parity + delete StripBrands (epic closeout)"
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-04-24T09:27:17Z
-updated_at: 2026-04-24T18:03:23Z
+updated_at: 2026-04-24T18:48:12Z
 parent: types-ltel
 blocked_by:
   - ps-ava1
@@ -45,3 +45,28 @@ Introduce a deliberate drift (e.g. change a `SystemId` column to plain `text()`)
 ## Spec
 
 `docs/superpowers/specs/2026-04-24-types-ltel-c11-cleanup-design.md`
+
+## Summary of Changes
+
+**Commits on feat/types-ltel-c11c-parity-closeout:**
+
+- 86160a5c refactor(types,db): resolve 8 parity drifts from StripBrands removal
+- 39230ede test(db,api): update fixtures for branded-ID schema columns
+
+**Mechanical changes:**
+
+- Deleted `packages/db/src/__tests__/type-parity/__helpers__.ts` (StripBrands helper).
+- Rewrote 56 parity test files: `Equal<StripBrands<Row>, StripBrands<X>>` → `Equal<Row, X>`.
+
+**Drift fixes surfaced by strict parity:**
+
+- AccountPurgeRequest, DeviceToken, FrontingComment, FrontingSession, Member — plain `varchar` ID columns flipped to `brandedId<XxxId>` (both PG and sqlite).
+- AuditLogEntry — `DbAuditActor` now uses branded IDs, aligned with domain `AuditActor`.
+- Note — `author_entity_type` typed `NoteAuthorEntityType`; `NoteServerMetadata.authorEntityId: string → AnyBrandedId`.
+- SystemSettings — `locale` typed `Locale`; validation narrows to `z.enum(SUPPORTED_LOCALES)`.
+
+**Fixture/API fallout:** pg-helpers, sqlite-helpers, 12 integration tests, 2 audit tests, 5 api service files, auth.constants, validation/settings. No migrations touched (type-only narrowing).
+
+**/verify full suite green:** unit + integration + E2E (507 passed) + sp-import + pk-import.
+
+**types-ltel epic closes with this commit.**
