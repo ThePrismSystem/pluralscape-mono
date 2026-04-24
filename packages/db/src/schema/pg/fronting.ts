@@ -9,7 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -24,13 +24,14 @@ import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
 import { systems } from "./systems.js";
 
+import type { CustomFrontId, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = pgTable(
   "custom_fronts",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<CustomFrontId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

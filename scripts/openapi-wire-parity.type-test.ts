@@ -57,6 +57,7 @@ import type {
   AuditLogEntryWire,
   CustomFront,
   CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
   Equal,
   FieldDefinition,
   FieldDefinitionEncryptedFields,
@@ -185,6 +186,19 @@ expectTypeOf<
 >().toEqualTypeOf<true>();
 
 expectTypeOf<GroupResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: CustomFrontResponse (split) ────────────
+
+type CustomFrontResponseOpenApi = components["schemas"]["CustomFrontResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<CustomFrontResponseOpenApi, "encryptedData">,
+    Omit<Serialize<CustomFrontServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<CustomFrontResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 // ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
 //

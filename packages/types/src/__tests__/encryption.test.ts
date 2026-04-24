@@ -7,7 +7,6 @@ import type {
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
-  ClientCustomFront,
   ClientFieldDefinition,
   ClientFieldValue,
   ClientFrontingSession,
@@ -33,7 +32,6 @@ import type {
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
-  ServerCustomFront,
   ServerFieldDefinition,
   ServerFieldValue,
   ServerFrontingSession,
@@ -64,7 +62,7 @@ import type {
 } from "../entities/audit-log-entry.js";
 import type { BoardMessage } from "../entities/board-message.js";
 import type { Channel } from "../entities/channel.js";
-import type { CustomFront } from "../entities/custom-front.js";
+import type { CustomFront, CustomFrontServerMetadata } from "../entities/custom-front.js";
 import type { FrontingComment } from "../entities/fronting-comment.js";
 import type { FrontingSession } from "../entities/fronting-session.js";
 import type { Group, GroupServerMetadata } from "../entities/group.js";
@@ -203,10 +201,10 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("custom front pair", () => {
-    expectTypeOf<ServerCustomFront>().toBeObject();
-    expectTypeOf<ServerCustomFront["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerCustomFront["archived"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ClientCustomFront>().toEqualTypeOf<CustomFront>();
+    expectTypeOf<CustomFrontServerMetadata>().toBeObject();
+    expectTypeOf<CustomFrontServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<CustomFrontServerMetadata["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<CustomFront>().toEqualTypeOf<CustomFront>();
   });
 
   it("journal entry pair", () => {

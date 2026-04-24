@@ -40,7 +40,7 @@ export {
   encryptCustomFrontInput,
   encryptCustomFrontUpdate,
 } from "./transforms/custom-front.js";
-export type { CustomFrontEncryptedFields } from "./transforms/custom-front.js";
+export type { CustomFrontEncryptedInput } from "./transforms/custom-front.js";
 
 export {
   decryptFieldDefinition,

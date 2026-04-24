@@ -23,7 +23,11 @@ export {
   AddGroupMemberBodySchema,
 } from "./group.js";
 export { CreateChannelBodySchema, UpdateChannelBodySchema, ChannelQuerySchema } from "./channel.js";
-export { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "./custom-front.js";
+export {
+  CreateCustomFrontBodySchema,
+  CustomFrontEncryptedInputSchema,
+  UpdateCustomFrontBodySchema,
+} from "./custom-front.js";
 export {
   BiometricEnrollBodySchema,
   BiometricVerifyBodySchema,

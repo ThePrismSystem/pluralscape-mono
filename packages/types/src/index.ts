@@ -149,8 +149,6 @@ export type {
   ClientInnerWorldRegion,
   ServerLifecycleEvent,
   ClientLifecycleEvent,
-  ServerCustomFront,
-  ClientCustomFront,
   ServerJournalEntry,
   ClientJournalEntry,
   ServerWikiPage,

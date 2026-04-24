@@ -4,7 +4,12 @@ import type {
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
-import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
+import type {
+  CustomFront,
+  CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
+  CustomFrontWire,
+} from "./entities/custom-front.js";
 import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
@@ -145,6 +150,8 @@ export type SotEntityManifest = {
   };
   CustomFront: {
     domain: CustomFront;
+    server: CustomFrontServerMetadata;
+    wire: CustomFrontWire;
     encryptedFields: CustomFrontEncryptedFields;
   };
   FieldDefinition: {

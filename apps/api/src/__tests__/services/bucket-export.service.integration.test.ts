@@ -165,7 +165,7 @@ describe("bucket-export.service (PGlite integration)", () => {
   }
 
   async function insertCustomFront(updatedAt?: number): Promise<CustomFrontId> {
-    const id = createId(ID_PREFIXES.customFront);
+    const id = brandId<CustomFrontId>(createId(ID_PREFIXES.customFront));
     const ts = updatedAt ?? now();
     await db.insert(customFronts).values({
       id,
@@ -174,7 +174,7 @@ describe("bucket-export.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<CustomFrontId>(id);
+    return id;
   }
 
   async function insertBucketTag(

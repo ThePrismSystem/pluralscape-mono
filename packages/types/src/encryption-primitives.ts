@@ -2,7 +2,6 @@ import type { KdfMasterKey } from "./crypto-keys.js";
 import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
-import type { CustomFront } from "./entities/custom-front.js";
 import type { FieldDefinition, FieldType } from "./entities/field-definition.js";
 import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
@@ -388,23 +387,6 @@ export interface ServerLifecycleEvent {
 
 /** Client-side lifecycle event — flat decrypted fields. */
 export type ClientLifecycleEvent = LifecycleEvent;
-
-// ── Custom fronts ──────────────────────────────────────────────
-
-/**
- * Server-side custom front representation.
- * T1 encrypted: name, description, color, emoji
- * T3 plaintext: archived
- */
-export interface ServerCustomFront extends AuditMetadata {
-  readonly id: CustomFrontId;
-  readonly systemId: SystemId;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side custom front — flat decrypted fields. */
-export type ClientCustomFront = CustomFront;
 
 // ── Journal ────────────────────────────────────────────────────
 

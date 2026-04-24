@@ -181,7 +181,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   }
 
   async function insertCustomFront(): Promise<CustomFrontId> {
-    const id = createId(ID_PREFIXES.customFront);
+    const id = brandId<CustomFrontId>(createId(ID_PREFIXES.customFront));
     const ts = now();
     await db.insert(customFronts).values({
       id,
@@ -190,7 +190,7 @@ describe("friend-dashboard.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<CustomFrontId>(id);
+    return id;
   }
 
   async function insertStructureEntityType(): Promise<string> {
