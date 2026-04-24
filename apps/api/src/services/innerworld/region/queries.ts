@@ -1,4 +1,5 @@
 import { innerworldRegions } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -38,7 +39,7 @@ export async function listRegions(
     }
 
     if (opts?.cursor) {
-      conditions.push(gt(innerworldRegions.id, opts.cursor));
+      conditions.push(gt(innerworldRegions.id, brandId<InnerWorldRegionId>(opts.cursor)));
     }
 
     const rows = await tx

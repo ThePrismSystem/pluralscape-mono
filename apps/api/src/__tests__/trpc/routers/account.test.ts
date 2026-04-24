@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { BiometricTokenId, UnixMillis } from "@pluralscape/types";
+import type { BiometricTokenId, DeviceTransferRequestId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -599,7 +599,7 @@ describe("account router", () => {
     };
 
     const mockTransferResult = {
-      transferId: "xfer_001",
+      transferId: brandId<DeviceTransferRequestId>("xfer_001"),
       expiresAt: 1_700_003_600_000 as import("@pluralscape/types").UnixMillis,
     };
 

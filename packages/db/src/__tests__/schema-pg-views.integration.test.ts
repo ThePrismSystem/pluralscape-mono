@@ -41,7 +41,14 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { GroupId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ApiKeyId,
+  DeviceTransferRequestId,
+  GroupId,
+  SessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 describe("PG views / query helpers", () => {
@@ -51,8 +58,8 @@ describe("PG views / query helpers", () => {
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
-  let accountId: string;
-  let systemId: string;
+  let accountId: AccountId;
+  let systemId: SystemId;
   let memberId: string;
 
   beforeAll(async () => {
@@ -210,7 +217,7 @@ describe("PG views / query helpers", () => {
       const now = Date.now();
 
       await db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         encryptedData: testBlob(),
@@ -220,7 +227,7 @@ describe("PG views / query helpers", () => {
         createdAt: now,
       });
       await db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         encryptedData: testBlob(),
@@ -244,7 +251,7 @@ describe("PG views / query helpers", () => {
       const now = Date.now();
 
       await db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
+        id: brandId<ApiKeyId>(crypto.randomUUID()),
         accountId,
         systemId,
         keyType: "metadata",
@@ -496,8 +503,8 @@ describe("PG views / query helpers", () => {
   describe("getActiveDeviceTransfers", () => {
     it("returns pending non-expired transfers", async () => {
       const now = Date.now();
-      const sourceSession = crypto.randomUUID();
-      const targetSession = crypto.randomUUID();
+      const sourceSession = brandId<SessionId>(crypto.randomUUID());
+      const targetSession = brandId<SessionId>(crypto.randomUUID());
 
       await db.insert(sessions).values([
         { id: sourceSession, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
@@ -506,7 +513,7 @@ describe("PG views / query helpers", () => {
 
       // Pending, not expired
       await db.insert(deviceTransferRequests).values({
-        id: crypto.randomUUID(),
+        id: brandId<DeviceTransferRequestId>(crypto.randomUUID()),
         accountId,
         sourceSessionId: sourceSession,
         targetSessionId: targetSession,
@@ -517,14 +524,14 @@ describe("PG views / query helpers", () => {
       });
 
       // Pending but expired
-      const sourceSession2 = crypto.randomUUID();
-      const targetSession2 = crypto.randomUUID();
+      const sourceSession2 = brandId<SessionId>(crypto.randomUUID());
+      const targetSession2 = brandId<SessionId>(crypto.randomUUID());
       await db.insert(sessions).values([
         { id: sourceSession2, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
         { id: targetSession2, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
       ]);
       await db.insert(deviceTransferRequests).values({
-        id: crypto.randomUUID(),
+        id: brandId<DeviceTransferRequestId>(crypto.randomUUID()),
         accountId,
         sourceSessionId: sourceSession2,
         targetSessionId: targetSession2,

@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { InnerWorldEntityId, InnerWorldRegionId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 describe("PG Innerworld Schema", () => {
@@ -37,15 +39,23 @@ describe("PG Innerworld Schema", () => {
     await db.delete(innerworldRegions);
   });
 
-  async function setupSystem(): Promise<string> {
+  async function setupSystem(): Promise<SystemId> {
     const accountId = await pgInsertAccount(db);
     return pgInsertSystem(db, accountId);
+  }
+
+  function newRegionId(): InnerWorldRegionId {
+    return brandId<InnerWorldRegionId>(crypto.randomUUID());
+  }
+
+  function newEntityId(): InnerWorldEntityId {
+    return brandId<InnerWorldEntityId>(crypto.randomUUID());
   }
 
   it("round-trips innerworldRegions with all fields", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
       id: regionId,
@@ -76,7 +86,7 @@ describe("PG Innerworld Schema", () => {
   it("innerworld_regions defaults archived to false and archivedAt to null", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
       id: regionId,
@@ -97,7 +107,7 @@ describe("PG Innerworld Schema", () => {
   it("innerworld_regions round-trips archived: true with archivedAt", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
       id: regionId,
@@ -120,7 +130,7 @@ describe("PG Innerworld Schema", () => {
   it("innerworld_regions updates archived from false to true", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
       id: regionId,
@@ -171,7 +181,7 @@ describe("PG Innerworld Schema", () => {
   it("round-trips innerworldEntities with all fields", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
       id: entityId,
@@ -198,7 +208,7 @@ describe("PG Innerworld Schema", () => {
   it("innerworld_entities defaults archived to false and archivedAt to null", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
       id: entityId,
@@ -219,7 +229,7 @@ describe("PG Innerworld Schema", () => {
   it("innerworld_entities round-trips archived: true with archivedAt", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
       id: entityId,
@@ -242,7 +252,7 @@ describe("PG Innerworld Schema", () => {
   it("innerworld_entities updates archived from false to true", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const entityId = crypto.randomUUID();
+    const entityId = newEntityId();
 
     await db.insert(innerworldEntities).values({
       id: entityId,
@@ -314,7 +324,7 @@ describe("PG Innerworld Schema", () => {
   it("restricts parent region deletion when referenced by child region", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const parentId = crypto.randomUUID();
+    const parentId = newRegionId();
 
     await db.insert(innerworldRegions).values({
       id: parentId,
@@ -325,7 +335,7 @@ describe("PG Innerworld Schema", () => {
     });
 
     await db.insert(innerworldRegions).values({
-      id: crypto.randomUUID(),
+      id: newRegionId(),
       systemId,
       parentRegionId: parentId,
       encryptedData: testBlob(new Uint8Array([2])),
@@ -341,7 +351,7 @@ describe("PG Innerworld Schema", () => {
   it("restricts region deletion when referenced by entity", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
       id: regionId,
@@ -352,7 +362,7 @@ describe("PG Innerworld Schema", () => {
     });
 
     await db.insert(innerworldEntities).values({
-      id: crypto.randomUUID(),
+      id: newEntityId(),
       systemId,
       regionId,
       encryptedData: testBlob(new Uint8Array([2])),
@@ -368,7 +378,7 @@ describe("PG Innerworld Schema", () => {
   it("cascades system delete to all 3 innerworld tables", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
-    const regionId = crypto.randomUUID();
+    const regionId = newRegionId();
 
     await db.insert(innerworldRegions).values({
       id: regionId,
@@ -379,7 +389,7 @@ describe("PG Innerworld Schema", () => {
     });
 
     await db.insert(innerworldEntities).values({
-      id: crypto.randomUUID(),
+      id: newEntityId(),
       systemId,
       regionId,
       encryptedData: testBlob(new Uint8Array([2])),

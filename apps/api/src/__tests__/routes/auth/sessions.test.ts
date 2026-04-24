@@ -1,4 +1,4 @@
-import { PAGINATION } from "@pluralscape/types";
+import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor, toCursor } from "../../../lib/pagination.js";
@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, SessionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -106,8 +106,8 @@ describe("sessions route", () => {
     it("returns session list for authenticated user", async () => {
       const mockSessions = {
         sessions: [
-          { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 9000 },
-          { id: "sess_2", createdAt: 1500, lastActive: 2500, expiresAt: 9500 },
+          { id: brandId<SessionId>("sess_1"), createdAt: 1000, lastActive: 2000, expiresAt: 9000 },
+          { id: brandId<SessionId>("sess_2"), createdAt: 1500, lastActive: 2500, expiresAt: 9500 },
         ],
         nextCursor: toCursor("sess_2"),
       };

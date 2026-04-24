@@ -14034,6 +14034,8 @@ components:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
+          required:
+            - parentRegionId
           properties:
             parentRegionId:
               type: string
@@ -14073,6 +14075,8 @@ components:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
+          required:
+            - regionId
           properties:
             regionId:
               type: string
@@ -14094,8 +14098,41 @@ components:
           type: integer
           minimum: 1
     CanvasResponse:
-      allOf:
-        - $ref: "#/components/schemas/EncryptedEntity"
+      type: object
+      description: |
+        Singleton per-system innerworld canvas. Keyed by `systemId` (not a
+        standalone `id`) and without archive state — the client only ever
+        has one canvas per system and restores fresh state on delete rather
+        than archiving.
+      required:
+        - systemId
+        - encryptedData
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        systemId:
+          type: string
+          description: System identifier (sys_ prefix)
+          example: sys_abc123def456
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          description: |
+            Base64-encoded XChaCha20-Poly1305 ciphertext of
+            `PlaintextInnerworldCanvas`. Opaque to the server.
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic concurrency version
+        createdAt:
+          type: integer
+          format: int64
+          description: Creation timestamp (UnixMillis)
+        updatedAt:
+          type: integer
+          format: int64
+          description: Last update timestamp (UnixMillis)
     BucketResponse:
       description: |
         A privacy bucket. Buckets scope T2-encrypted content for friend sharing.

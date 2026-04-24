@@ -6,8 +6,6 @@ import type { FieldDefinition, FieldType } from "./entities/field-definition.js"
 import type { FieldValue } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
-import type { InnerWorldEntity } from "./entities/innerworld-entity.js";
-import type { InnerWorldRegion } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
 import type { ChatMessage } from "./entities/message.js";
@@ -30,8 +28,6 @@ import type {
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
-  InnerWorldEntityId,
-  InnerWorldRegionId,
   JournalEntryId,
   MemberId,
   MessageId,
@@ -307,41 +303,6 @@ export interface ServerFieldValue extends AuditMetadata {
 
 /** Client-side field value — flat decrypted fields. */
 export type ClientFieldValue = FieldValue;
-
-// ── Innerworld ─────────────────────────────────────────────────
-
-/**
- * Server-side innerworld entity representation.
- * T1 encrypted: name/linkedMemberId/linkedStructureEntityId, description, visual,
- *   entityType, positionX, positionY
- * T3 plaintext: regionId, archived
- */
-export interface ServerInnerWorldEntity extends AuditMetadata {
-  readonly id: InnerWorldEntityId;
-  readonly systemId: SystemId;
-  readonly regionId: InnerWorldRegionId | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side innerworld entity — flat decrypted fields. */
-export type ClientInnerWorldEntity = InnerWorldEntity;
-
-/**
- * Server-side innerworld region representation.
- * T1 encrypted: name, description, boundaryData, visual, gatekeeperMemberIds, accessType
- * T3 plaintext: parentRegionId, archived
- */
-export interface ServerInnerWorldRegion extends AuditMetadata {
-  readonly id: InnerWorldRegionId;
-  readonly systemId: SystemId;
-  readonly parentRegionId: InnerWorldRegionId | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side innerworld region — flat decrypted fields. */
-export type ClientInnerWorldRegion = InnerWorldRegion;
 
 // ── Lifecycle ──────────────────────────────────────────────────
 

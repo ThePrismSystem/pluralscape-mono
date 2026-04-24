@@ -4,10 +4,19 @@ import { boolean, check, index, integer, pgTable, uniqueIndex, varchar } from "d
 import { brandedId, pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { ACCOUNT_TYPES, AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AccountId, AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
+import type {
+  AccountId,
+  AccountType,
+  AuthKeyId,
+  AuthKeyType,
+  DeviceTransferRequestId,
+  DeviceTransferStatus,
+  RecoveryKeyId,
+  SessionId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = pgTable(
@@ -49,8 +58,8 @@ export const accounts = pgTable(
 export const authKeys = pgTable(
   "auth_keys",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<AuthKeyId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedPrivateKey: pgBinary("encrypted_private_key").notNull(),
@@ -67,8 +76,8 @@ export const authKeys = pgTable(
 export const sessions = pgTable(
   "sessions",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SessionId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 128 }).notNull(),
@@ -97,8 +106,8 @@ export const sessions = pgTable(
 export const recoveryKeys = pgTable(
   "recovery_keys",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<RecoveryKeyId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
@@ -122,17 +131,16 @@ export const recoveryKeys = pgTable(
 export const deviceTransferRequests = pgTable(
   "device_transfer_requests",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+    id: brandedId<DeviceTransferRequestId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    sourceSessionId: varchar("source_session_id", { length: ID_MAX_LENGTH })
+    sourceSessionId: brandedId<SessionId>("source_session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
-    targetSessionId: varchar("target_session_id", { length: ID_MAX_LENGTH }).references(
-      () => sessions.id,
-      { onDelete: "cascade" },
-    ),
+    targetSessionId: brandedId<SessionId>("target_session_id").references(() => sessions.id, {
+      onDelete: "cascade",
+    }),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("pending")

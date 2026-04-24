@@ -1,5 +1,5 @@
 import { innerworldRegions, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateRegionBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
@@ -17,7 +17,7 @@ import { toRegionResult } from "./internal.js";
 import type { RegionResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { InnerWorldRegionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createRegion(
@@ -35,7 +35,7 @@ export async function createRegion(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const regionId = createId(ID_PREFIXES.innerWorldRegion);
+  const regionId = brandId<InnerWorldRegionId>(createId(ID_PREFIXES.innerWorldRegion));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

@@ -11,8 +11,6 @@ import type {
   ClientFieldValue,
   ClientFrontingComment,
   ClientFrontingSession,
-  ClientInnerWorldEntity,
-  ClientInnerWorldRegion,
   ClientJournalEntry,
   ClientLifecycleEvent,
   ClientNote,
@@ -30,8 +28,6 @@ import type {
   ServerFieldValue,
   ServerFrontingComment,
   ServerFrontingSession,
-  ServerInnerWorldEntity,
-  ServerInnerWorldRegion,
   ServerJournalEntry,
   ServerLifecycleEvent,
   ServerNote,
@@ -45,6 +41,14 @@ import type {
 import type { AuditLogEntry, AuditLogEntryServerMetadata } from "../entities/audit-log-entry.js";
 import type { CustomFront, CustomFrontServerMetadata } from "../entities/custom-front.js";
 import type { Group, GroupServerMetadata } from "../entities/group.js";
+import type {
+  InnerWorldEntity,
+  InnerWorldEntityServerMetadata,
+} from "../entities/innerworld-entity.js";
+import type {
+  InnerWorldRegion,
+  InnerWorldRegionServerMetadata,
+} from "../entities/innerworld-region.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
 import type { Relationship, RelationshipServerMetadata } from "../entities/relationship.js";
@@ -69,8 +73,8 @@ type AllServerTypes = [
   ServerNote,
   ServerFieldDefinition,
   ServerFieldValue,
-  ServerInnerWorldEntity,
-  ServerInnerWorldRegion,
+  InnerWorldEntityServerMetadata,
+  InnerWorldRegionServerMetadata,
   ServerLifecycleEvent,
   CustomFrontServerMetadata,
   ServerJournalEntry,
@@ -140,12 +144,12 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerFieldValue>().toExtend<ServerResponseData>();
   });
 
-  it("ServerInnerWorldEntity extends ServerResponseData", () => {
-    expectTypeOf<ServerInnerWorldEntity>().toExtend<ServerResponseData>();
+  it("InnerWorldEntityServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<InnerWorldEntityServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerInnerWorldRegion extends ServerResponseData", () => {
-    expectTypeOf<ServerInnerWorldRegion>().toExtend<ServerResponseData>();
+  it("InnerWorldRegionServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<InnerWorldRegionServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("ServerLifecycleEvent extends ServerResponseData", () => {
@@ -206,8 +210,8 @@ type AllClientTypes = [
   ClientNote,
   ClientFieldDefinition,
   ClientFieldValue,
-  ClientInnerWorldEntity,
-  ClientInnerWorldRegion,
+  InnerWorldEntity,
+  InnerWorldRegion,
   ClientLifecycleEvent,
   CustomFront,
   ClientJournalEntry,
@@ -277,12 +281,12 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientFieldValue>().toExtend<ClientResponseData>();
   });
 
-  it("ClientInnerWorldEntity extends ClientResponseData", () => {
-    expectTypeOf<ClientInnerWorldEntity>().toExtend<ClientResponseData>();
+  it("InnerWorldEntity extends ClientResponseData", () => {
+    expectTypeOf<InnerWorldEntity>().toExtend<ClientResponseData>();
   });
 
-  it("ClientInnerWorldRegion extends ClientResponseData", () => {
-    expectTypeOf<ClientInnerWorldRegion>().toExtend<ClientResponseData>();
+  it("InnerWorldRegion extends ClientResponseData", () => {
+    expectTypeOf<InnerWorldRegion>().toExtend<ClientResponseData>();
   });
 
   it("ClientLifecycleEvent extends ClientResponseData", () => {
@@ -339,8 +343,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ServerNote>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerFieldDefinition>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerFieldValue>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerInnerWorldEntity>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerInnerWorldRegion>().not.toExtend<ClientResponseData>();
+    expectTypeOf<InnerWorldEntityServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<InnerWorldRegionServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerLifecycleEvent>().not.toExtend<ClientResponseData>();
     expectTypeOf<CustomFrontServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerJournalEntry>().not.toExtend<ClientResponseData>();
@@ -407,12 +411,12 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<ClientFieldValue>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientInnerWorldEntity does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientInnerWorldEntity>().not.toExtend<ServerResponseData>();
+  it("InnerWorldEntity does NOT extend ServerResponseData", () => {
+    expectTypeOf<InnerWorldEntity>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientInnerWorldRegion does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientInnerWorldRegion>().not.toExtend<ServerResponseData>();
+  it("InnerWorldRegion does NOT extend ServerResponseData", () => {
+    expectTypeOf<InnerWorldRegion>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientLifecycleEvent does NOT extend ServerResponseData", () => {

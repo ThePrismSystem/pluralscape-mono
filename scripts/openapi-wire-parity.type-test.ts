@@ -70,10 +70,13 @@ import type {
   GroupServerMetadata,
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
+  InnerWorldCanvasServerMetadata,
   InnerWorldEntity,
   InnerWorldEntityEncryptedFields,
+  InnerWorldEntityServerMetadata,
   InnerWorldRegion,
   InnerWorldRegionEncryptedFields,
+  InnerWorldRegionServerMetadata,
   LifecycleEvent,
   LifecycleEventEncryptedFields,
   Member,
@@ -369,3 +372,43 @@ expectTypeOf<
     >
   >
 >().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: InnerWorld*Response plaintext columns ──
+//
+// Split parity (same pattern as MemberResponse above): plaintext columns
+// on both sides minus `encryptedData`, then asserting `encryptedData` on
+// the wire is the opaque base64 `string`. Fleet-level tripwire for
+// per-entity plaintext column drift on innerworld tables.
+
+type RegionResponseOpenApi = components["schemas"]["RegionResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<RegionResponseOpenApi, "encryptedData">,
+    Omit<Serialize<InnerWorldRegionServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<RegionResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+type EntityResponseOpenApi = components["schemas"]["EntityResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<EntityResponseOpenApi, "encryptedData">,
+    Omit<Serialize<InnerWorldEntityServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<EntityResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+type CanvasResponseOpenApi = components["schemas"]["CanvasResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<CanvasResponseOpenApi, "encryptedData">,
+    Omit<Serialize<InnerWorldCanvasServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<CanvasResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();

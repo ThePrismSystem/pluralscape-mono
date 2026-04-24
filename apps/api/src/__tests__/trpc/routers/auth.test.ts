@@ -318,7 +318,9 @@ describe("auth router", () => {
 
     it("returns paginated sessions", async () => {
       const mockResult = {
-        sessions: [{ id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: null }],
+        sessions: [
+          { id: brandId<SessionId>("sess_1"), createdAt: 1000, lastActive: 2000, expiresAt: null },
+        ],
         nextCursor: null,
       };
       vi.mocked(listSessions).mockResolvedValue(mockResult);

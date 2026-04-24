@@ -6853,7 +6853,7 @@ export interface components {
     };
     RegionResponse: components["schemas"]["EncryptedEntity"] & {
       /** @description ID of the parent region, null for top-level regions */
-      parentRegionId?: string | null;
+      parentRegionId: string | null;
     };
     CreateEntityRequest: {
       /** @description T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity) */
@@ -6868,14 +6868,43 @@ export interface components {
     };
     EntityResponse: components["schemas"]["EncryptedEntity"] & {
       /** @description ID of the region this entity belongs to */
-      regionId?: string | null;
+      regionId: string | null;
     };
     UpdateCanvasRequest: {
       /** @description T1-encrypted PlaintextInnerworldCanvas (see ./plaintext.yaml#/PlaintextInnerworldCanvas) */
       encryptedData: string;
       version: number;
     };
-    CanvasResponse: components["schemas"]["EncryptedEntity"];
+    /**
+     * @description Singleton per-system innerworld canvas. Keyed by `systemId` (not a
+     *     standalone `id`) and without archive state — the client only ever
+     *     has one canvas per system and restores fresh state on delete rather
+     *     than archiving.
+     */
+    CanvasResponse: {
+      /**
+       * @description System identifier (sys_ prefix)
+       * @example sys_abc123def456
+       */
+      systemId: string;
+      /**
+       * @description Base64-encoded XChaCha20-Poly1305 ciphertext of
+       *     `PlaintextInnerworldCanvas`. Opaque to the server.
+       */
+      encryptedData: string;
+      /** @description Optimistic concurrency version */
+      version: number;
+      /**
+       * Format: int64
+       * @description Creation timestamp (UnixMillis)
+       */
+      createdAt: number;
+      /**
+       * Format: int64
+       * @description Last update timestamp (UnixMillis)
+       */
+      updatedAt: number;
+    };
     /**
      * @description A privacy bucket. Buckets scope T2-encrypted content for friend sharing.
      *     Each bucket has its own symmetric key (XChaCha20-Poly1305) and controls

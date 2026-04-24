@@ -1,4 +1,7 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { InnerWorldRegionId, MemberId, SystemId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 import type { VisualProperties } from "./innerworld-entity.js";
 
@@ -22,8 +25,7 @@ export interface InnerWorldRegion extends AuditMetadata {
  * it for hierarchy queries) and is intentionally excluded. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextInnerworldRegion parity)
- * - Plan 2 fleet will consume when deriving
- *   `InnerWorldRegionServerMetadata`.
+ * - `InnerWorldRegionServerMetadata` (derived via `Omit`)
  */
 export type InnerWorldRegionEncryptedFields =
   | "name"
@@ -35,3 +37,27 @@ export type InnerWorldRegionEncryptedFields =
 
 /** An archived innerworld region. */
 export type ArchivedInnerWorldRegion = Archived<InnerWorldRegion>;
+
+/**
+ * Server-visible InnerWorldRegion metadata — raw Drizzle row shape.
+ *
+ * Derived from `InnerWorldRegion` by stripping the encrypted field keys
+ * (bundled inside `encryptedData`) plus `archived` (domain uses a
+ * `false` literal that `Archived<T>` flips to `true`; the server tracks a
+ * mutable boolean with a companion `archivedAt` timestamp).
+ */
+export type InnerWorldRegionServerMetadata = Omit<
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields | "archived"
+> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of an InnerWorldRegion. Derived from the domain
+ * `InnerWorldRegion` type via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`.
+ */
+export type InnerWorldRegionWire = Serialize<InnerWorldRegion>;

@@ -1,6 +1,6 @@
 import { PWHASH_SALT_BYTES, TRANSFER_TIMEOUT_MS } from "@pluralscape/crypto";
 import { deviceTransferRequests } from "@pluralscape/db/pg";
-import { createId, now, toUnixMillis } from "@pluralscape/types";
+import { brandId, createId, now, toUnixMillis } from "@pluralscape/types";
 
 import { deserializeEncryptedPayload } from "../../lib/encrypted-payload.js";
 import { fromHex } from "../../lib/hex.js";
@@ -9,7 +9,7 @@ import { withAccountTransaction } from "../../lib/rls-context.js";
 import { TransferValidationError } from "./errors.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AccountId, SessionId, UnixMillis } from "@pluralscape/types";
+import type { AccountId, DeviceTransferRequestId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface InitiateTransferInput {
@@ -18,7 +18,7 @@ interface InitiateTransferInput {
 }
 
 export interface InitiateTransferResult {
-  readonly transferId: string;
+  readonly transferId: DeviceTransferRequestId;
   readonly expiresAt: UnixMillis;
 }
 
@@ -51,7 +51,7 @@ export async function initiateTransfer(
     throw new TransferValidationError("Invalid input format", { cause: error });
   }
 
-  const transferId = createId("dtr_");
+  const transferId = brandId<DeviceTransferRequestId>(createId("dtr_"));
   const createdAt = now();
   // Security: expired transfer records retain their encrypted key material in
   // the DB until completeTransfer's WHERE clause filters them out by expiresAt.

@@ -26,7 +26,14 @@ import { EMAIL_SALT_BYTES, CHALLENGE_NONCE_TTL_MS } from "../../routes/auth/auth
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { ClientPlatform } from "../../routes/auth/auth.constants.js";
 import type { ChallengeNonce } from "@pluralscape/crypto";
-import type { AccountId, AccountType, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  AccountType,
+  AuthKeyId,
+  RecoveryKeyId,
+  SessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Registration Phase 1: Initiate ────────────────────────────────
@@ -202,7 +209,7 @@ export async function commitRegistration(
   const publicEncKeyBytes = fromHex(parsed.publicEncryptionKey);
   const recoveryEncMasterKeyBytes = fromHex(parsed.recoveryEncryptedMasterKey);
 
-  const sessionId = createId(ID_PREFIXES.session);
+  const sessionId = brandId<SessionId>(createId(ID_PREFIXES.session));
   const rawToken = generateSessionToken();
   const tokenHash = hashSessionToken(rawToken);
   const timestamp = now();
@@ -239,7 +246,7 @@ export async function commitRegistration(
 
     await tx.insert(authKeys).values([
       {
-        id: createId(ID_PREFIXES.authKey),
+        id: brandId<AuthKeyId>(createId(ID_PREFIXES.authKey)),
         accountId: account.id,
         encryptedPrivateKey: encEncPrivKeyBytes,
         publicKey: publicEncKeyBytes,
@@ -247,7 +254,7 @@ export async function commitRegistration(
         createdAt: timestamp,
       },
       {
-        id: createId(ID_PREFIXES.authKey),
+        id: brandId<AuthKeyId>(createId(ID_PREFIXES.authKey)),
         accountId: account.id,
         encryptedPrivateKey: encSignPrivKeyBytes,
         publicKey: publicSigningKeyBytes,
@@ -257,7 +264,7 @@ export async function commitRegistration(
     ]);
 
     await tx.insert(recoveryKeys).values({
-      id: createId(ID_PREFIXES.recoveryKey),
+      id: brandId<RecoveryKeyId>(createId(ID_PREFIXES.recoveryKey)),
       accountId: account.id,
       encryptedMasterKey: recoveryEncMasterKeyBytes,
       recoveryKeyHash: fromHex(parsed.recoveryKeyHash),

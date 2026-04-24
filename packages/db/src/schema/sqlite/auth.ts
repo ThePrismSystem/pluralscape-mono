@@ -11,7 +11,16 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 import { enumCheck } from "../../helpers/check.js";
 import { ACCOUNT_TYPES, AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AccountId, AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
+import type {
+  AccountId,
+  AccountType,
+  AuthKeyId,
+  AuthKeyType,
+  DeviceTransferRequestId,
+  DeviceTransferStatus,
+  RecoveryKeyId,
+  SessionId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = sqliteTable(
@@ -52,8 +61,8 @@ export const accounts = sqliteTable(
 export const authKeys = sqliteTable(
   "auth_keys",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<AuthKeyId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedPrivateKey: sqliteBinary("encrypted_private_key").notNull(),
@@ -70,8 +79,8 @@ export const authKeys = sqliteTable(
 export const sessions = sqliteTable(
   "sessions",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<SessionId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull(),
@@ -98,8 +107,8 @@ export const sessions = sqliteTable(
 export const recoveryKeys = sqliteTable(
   "recovery_keys",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<RecoveryKeyId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: sqliteBinary("encrypted_master_key").notNull(),
@@ -123,14 +132,14 @@ export const recoveryKeys = sqliteTable(
 export const deviceTransferRequests = sqliteTable(
   "device_transfer_requests",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<DeviceTransferRequestId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    sourceSessionId: text("source_session_id")
+    sourceSessionId: brandedId<SessionId>("source_session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
-    targetSessionId: text("target_session_id").references(() => sessions.id, {
+    targetSessionId: brandedId<SessionId>("target_session_id").references(() => sessions.id, {
       onDelete: "cascade",
     }),
     status: text("status").notNull().default("pending").$type<DeviceTransferStatus>(),
