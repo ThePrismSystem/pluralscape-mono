@@ -1,15 +1,17 @@
 /**
  * Member persister (with inline avatar upload and field-value fan-out).
  *
- * Receives the `MappedMemberOutput` the engine hands it — `{ encrypted,
- * archived, fieldValues, bucketIds }`. The helper:
+ * Receives the `MappedMember` the engine hands it — `{ encrypted, archived,
+ * fieldValues, bucketIds }`, where `encrypted` is a `MemberEncryptedInput`
+ * from `@pluralscape/data` (derived from the SoT `Member` type). The helper:
  *
- * 1. Resolves the avatar URL if present and the mode is not "skip". The
+ * 1. Resolves `encrypted.avatarSource` when it's an external URL. The
  *    caller's `AvatarFetcher` returns raw bytes; those are uploaded via
- *    `blob.uploadAvatar` and the resulting `blobId` is attached to the
- *    member create/update payload. Avatar failures NEVER fail the member
- *    — they are recorded via `recordError` and the member persists
- *    without an avatar reference.
+ *    `blob.uploadAvatar` and the resulting `BlobId` replaces the external
+ *    URL inside the encrypted plaintext (so the server sees a consistent
+ *    `ImageSource` discriminated union after decryption). Avatar failures
+ *    NEVER fail the member — they are recorded via `recordError` and the
+ *    member persists with `avatarSource` cleared.
  * 2. Encrypts the member core and issues `member.create` / `member.update`.
  * 3. Fans out `field.setValue` for every extracted field value. Each
  *    field value depends on the field definition being present in the
@@ -22,6 +24,8 @@
  * `member.assignBucket` procedure, and Phase C scope is already dense.
  */
 
+import { brandId } from "@pluralscape/types";
+
 import { assertPayloadShape, encryptForCreate, encryptForUpdate } from "./persister-helpers.js";
 
 import type {
@@ -30,20 +34,10 @@ import type {
   PersisterCreateResult,
   PersisterUpdateResult,
 } from "./persister.types.js";
+import type { MemberEncryptedInput } from "@pluralscape/data";
+import type { BlobId, ImageSource } from "@pluralscape/types";
 
 // ── Narrowed payload shape ───────────────────────────────────────────
-
-export interface MemberEncryptedFields {
-  readonly name: string;
-  readonly pronouns: string[];
-  readonly description: string | null;
-  readonly avatarSource: string | null;
-  readonly colors: readonly string[];
-  readonly saturationLevel: number | null;
-  readonly tags: readonly string[];
-  readonly suppressFriendFrontNotification: boolean | null;
-  readonly boardMessageNotificationOnFront: boolean | null;
-}
 
 export interface ExtractedFieldValuePayload {
   readonly memberSourceId: string;
@@ -52,7 +46,7 @@ export interface ExtractedFieldValuePayload {
 }
 
 export interface MemberPayload {
-  readonly encrypted: MemberEncryptedFields;
+  readonly encrypted: MemberEncryptedInput;
   readonly archived: boolean;
   readonly fieldValues: readonly ExtractedFieldValuePayload[];
   readonly bucketIds: readonly string[];
@@ -72,30 +66,38 @@ function isMemberPayload(value: unknown): value is MemberPayload {
 
 // ── Avatar handling ──────────────────────────────────────────────────
 
-async function tryUploadAvatar(
+/**
+ * Resolves the plaintext `avatarSource` before encryption. For external
+ * URLs the bytes are fetched and uploaded, converting the union to a
+ * `blob` variant so the encrypted blob is self-contained. `blob` variants
+ * pass through unchanged. Any failure records a non-fatal error and
+ * clears the avatar — the member itself still imports.
+ */
+async function resolveAvatarSource(
   ctx: PersisterContext,
   memberSourceId: string,
-  avatarUrl: string,
-): Promise<string | null> {
-  const result = await ctx.avatarFetcher.fetchAvatar(avatarUrl);
-  if (result.status === "not-found") {
-    return null;
-  }
-  if (result.status === "error") {
+  avatarSource: ImageSource | null,
+): Promise<ImageSource | null> {
+  if (avatarSource === null) return null;
+  if (avatarSource.kind === "blob") return avatarSource;
+
+  const fetchResult = await ctx.avatarFetcher.fetchAvatar(avatarSource.url);
+  if (fetchResult.status === "not-found") return null;
+  if (fetchResult.status === "error") {
     ctx.recordError({
       entityType: "member",
       entityId: memberSourceId,
-      message: `avatar fetch failed: ${result.message}`,
+      message: `avatar fetch failed: ${fetchResult.message}`,
       fatal: false,
     });
     return null;
   }
   try {
     const blob = await ctx.api.blob.uploadAvatar(ctx.systemId, {
-      bytes: result.bytes,
-      contentType: result.contentType,
+      bytes: fetchResult.bytes,
+      contentType: fetchResult.contentType,
     });
-    return blob.blobId;
+    return { kind: "blob" as const, blobRef: brandId<BlobId>(blob.blobId) };
   } catch (err) {
     ctx.recordError({
       entityType: "member",
@@ -154,17 +156,12 @@ async function create(ctx: PersisterContext, payload: unknown): Promise<Persiste
   // the member name.
   const sourceId = output.encrypted.name;
 
-  let avatarBlobId: string | null = null;
-  if (output.encrypted.avatarSource !== null) {
-    avatarBlobId = await tryUploadAvatar(ctx, sourceId, output.encrypted.avatarSource);
-  }
-
-  const encrypted = encryptForCreate(output.encrypted, ctx.masterKey);
-  const createInput =
-    avatarBlobId === null
-      ? { encryptedData: encrypted.encryptedData }
-      : { encryptedData: encrypted.encryptedData, avatarBlobId };
-  const result = await ctx.api.member.create(ctx.systemId, createInput);
+  const resolvedAvatar = await resolveAvatarSource(ctx, sourceId, output.encrypted.avatarSource);
+  const plaintext: MemberEncryptedInput = { ...output.encrypted, avatarSource: resolvedAvatar };
+  const encrypted = encryptForCreate(plaintext, ctx.masterKey);
+  const result = await ctx.api.member.create(ctx.systemId, {
+    encryptedData: encrypted.encryptedData,
+  });
 
   await fanOutFieldValues(ctx, result.id, output.fieldValues);
 
@@ -180,17 +177,13 @@ async function update(
 
   const sourceId = output.encrypted.name;
 
-  let avatarBlobId: string | null = null;
-  if (output.encrypted.avatarSource !== null) {
-    avatarBlobId = await tryUploadAvatar(ctx, sourceId, output.encrypted.avatarSource);
-  }
-
-  const encrypted = encryptForUpdate(output.encrypted, 1, ctx.masterKey);
-  const updateInput =
-    avatarBlobId === null
-      ? { encryptedData: encrypted.encryptedData, version: encrypted.version }
-      : { encryptedData: encrypted.encryptedData, version: encrypted.version, avatarBlobId };
-  const result = await ctx.api.member.update(ctx.systemId, existingId, updateInput);
+  const resolvedAvatar = await resolveAvatarSource(ctx, sourceId, output.encrypted.avatarSource);
+  const plaintext: MemberEncryptedInput = { ...output.encrypted, avatarSource: resolvedAvatar };
+  const encrypted = encryptForUpdate(plaintext, 1, ctx.masterKey);
+  const result = await ctx.api.member.update(ctx.systemId, existingId, {
+    encryptedData: encrypted.encryptedData,
+    version: encrypted.version,
+  });
 
   await fanOutFieldValues(ctx, result.id, output.fieldValues);
 

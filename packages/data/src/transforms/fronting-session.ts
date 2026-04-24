@@ -6,30 +6,28 @@ import type {
   Archived,
   CompletedFrontingSession,
   FrontingSession,
+  FrontingSessionEncryptedFields,
   OuttriggerSentiment,
+  PlaintextFields,
   UnixMillis,
 } from "@pluralscape/types";
 
-/** The T1-encrypted fields stored inside a fronting session blob. */
-export interface FrontingSessionEncryptedFields {
-  readonly comment: string | null;
-  readonly positionality: string | null;
-  readonly outtrigger: string | null;
-  readonly outtriggerSentiment: OuttriggerSentiment | null;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertFrontingSessionFieldsSubset =
-  FrontingSessionEncryptedFields extends Pick<FrontingSession, keyof FrontingSessionEncryptedFields>
-    ? true
-    : never;
+/**
+ * The T1-encrypted plaintext payload for a fronting session.
+ * Derived from `FrontingSession` by picking its encrypted-field keys —
+ * SoT lives in `@pluralscape/types`.
+ */
+export type FrontingSessionPlaintext = PlaintextFields<
+  FrontingSession,
+  FrontingSessionEncryptedFields
+>;
 
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape for a single fronting session — derived from `ActiveFrontingSession`. */
 export type FrontingSessionRaw = Omit<
   ActiveFrontingSession,
-  keyof FrontingSessionEncryptedFields | "archived" | "endTime"
+  FrontingSessionEncryptedFields | "archived" | "endTime"
 > & {
   readonly endTime: UnixMillis | null;
   readonly encryptedData: string;
@@ -51,9 +49,7 @@ function isOuttriggerSentiment(value: unknown): value is OuttriggerSentiment {
 
 // ── Validator ────────────────────────────────────────────────────────────────
 
-function assertFrontingSessionEncryptedFields(
-  raw: unknown,
-): asserts raw is FrontingSessionEncryptedFields {
+function assertFrontingSessionPlaintext(raw: unknown): asserts raw is FrontingSessionPlaintext {
   if (raw === null || typeof raw !== "object") {
     throw new Error("Decrypted fronting session blob is not an object");
   }
@@ -86,7 +82,7 @@ export function decryptFrontingSession(
   masterKey: KdfMasterKey,
 ): FrontingSession | Archived<FrontingSession> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertFrontingSessionEncryptedFields(plaintext);
+  assertFrontingSessionPlaintext(plaintext);
 
   const base = {
     id: raw.id,
@@ -141,7 +137,7 @@ export function decryptFrontingSessionPage(
  * Returns `{ encryptedData }` ready for `frontingSession.create` input.
  */
 export function encryptFrontingSessionInput(
-  data: FrontingSessionEncryptedFields,
+  data: FrontingSessionPlaintext,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
@@ -152,7 +148,7 @@ export function encryptFrontingSessionInput(
  * Returns `{ encryptedData, version }` ready for `frontingSession.update` input.
  */
 export function encryptFrontingSessionUpdate(
-  data: FrontingSessionEncryptedFields,
+  data: FrontingSessionPlaintext,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

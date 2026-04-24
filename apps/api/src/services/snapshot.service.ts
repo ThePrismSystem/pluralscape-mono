@@ -20,23 +20,18 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EncryptedBlob,
+  EncryptedWire,
   PaginatedResult,
   SnapshotTrigger,
   SystemId,
   SystemSnapshotId,
-  UnixMillis,
+  SystemSnapshotServerMetadata,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface SnapshotResult {
-  readonly id: SystemSnapshotId;
-  readonly systemId: SystemId;
-  readonly snapshotTrigger: SnapshotTrigger;
-  readonly encryptedData: string;
-  readonly createdAt: UnixMillis;
-}
+export type SnapshotResult = EncryptedWire<SystemSnapshotServerMetadata>;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 

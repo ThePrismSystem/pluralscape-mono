@@ -4,24 +4,14 @@ import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
 
 import type {
   EncryptedBlob,
+  EncryptedWire,
   MemberId,
   MemberPhotoId,
+  MemberPhotoServerMetadata,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 
-export interface MemberPhotoResult {
-  readonly id: MemberPhotoId;
-  readonly memberId: MemberId;
-  readonly systemId: SystemId;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
+export type MemberPhotoResult = EncryptedWire<MemberPhotoServerMetadata>;
 
 export function toPhotoResult(row: {
   id: string;

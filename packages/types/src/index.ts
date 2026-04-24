@@ -163,6 +163,9 @@ export type {
 // ── Image source ─────────────────────────────────────────────────
 export type { ImageSource } from "./image-source.js";
 
+// ── Encrypted wire envelope ──────────────────────────────────────
+export type { EncryptedWire, PlaintextFields } from "./encrypted-wire.js";
+
 // ── Server-safe enforcement ──────────────────────────────────────
 export type { ServerSafe } from "./server-safe.js";
 export { serverSafe } from "./server-safe.js";

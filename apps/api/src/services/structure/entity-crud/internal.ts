@@ -5,26 +5,16 @@ import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
 
 import type {
   EncryptedBlob,
+  EncryptedWire,
   SystemId,
   SystemStructureEntityId,
+  SystemStructureEntityServerMetadata,
   SystemStructureEntityTypeId,
-  UnixMillis,
 } from "@pluralscape/types";
 
 // ── Result types ───────────────────────────────────────────────────
 
-export interface StructureEntityResult {
-  readonly id: SystemStructureEntityId;
-  readonly systemId: SystemId;
-  readonly entityTypeId: SystemStructureEntityTypeId;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type StructureEntityResult = EncryptedWire<SystemStructureEntityServerMetadata>;
 
 // ── Row mapper ────────────────────────────────────────────────────
 

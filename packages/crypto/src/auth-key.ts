@@ -15,8 +15,8 @@ import { assertAeadKey, assertAuthKey } from "./validation.js";
 
 import type {
   AeadKey,
-  AuthKey,
   AuthKeyHash,
+  AuthKeyMaterial,
   ChallengeNonce,
   PwhashSalt,
   RecoveryKeyHash,
@@ -28,7 +28,7 @@ import type {
 /** Result of split key derivation from a password. */
 export interface SplitKeyResult {
   /** First 32 bytes of derivation — used for server-side auth (never stored). */
-  readonly authKey: AuthKey;
+  readonly authKey: AuthKeyMaterial;
   /** Last 32 bytes of derivation — used as AEAD key-encryption key on device. */
   readonly passwordKey: AeadKey;
 }
@@ -86,7 +86,7 @@ export function deriveAuthAndPasswordKeys(
  *
  * The hash is stored server-side so the raw authKey never leaves the client.
  */
-export function hashAuthKey(authKey: AuthKey): AuthKeyHash {
+export function hashAuthKey(authKey: AuthKeyMaterial): AuthKeyHash {
   const adapter = getSodium();
   return adapter.genericHash(AUTH_KEY_HASH_BYTES, authKey) as AuthKeyHash;
 }
@@ -99,7 +99,7 @@ export function hashAuthKey(authKey: AuthKey): AuthKeyHash {
  *
  * @returns true if `authKey` produces the same hash as `storedHash`.
  */
-export function verifyAuthKey(authKey: AuthKey, storedHash: AuthKeyHash): boolean {
+export function verifyAuthKey(authKey: AuthKeyMaterial, storedHash: AuthKeyHash): boolean {
   if (storedHash.length !== AUTH_KEY_HASH_BYTES) {
     throw new InvalidInputError(
       `storedHash must be ${String(AUTH_KEY_HASH_BYTES)} bytes, got ${String(storedHash.length)}`,

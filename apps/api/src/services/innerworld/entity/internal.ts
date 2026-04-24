@@ -4,23 +4,14 @@ import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
 
 import type {
   EncryptedBlob,
+  EncryptedWire,
   InnerWorldEntityId,
+  InnerWorldEntityServerMetadata,
   InnerWorldRegionId,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 
-export interface EntityResult {
-  readonly id: InnerWorldEntityId;
-  readonly systemId: SystemId;
-  readonly regionId: InnerWorldRegionId | null;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
+export type EntityResult = EncryptedWire<InnerWorldEntityServerMetadata>;
 
 export function toEntityResult(row: {
   id: string;

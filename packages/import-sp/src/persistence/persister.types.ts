@@ -25,6 +25,7 @@ import type { MappedMember } from "../mappers/member.mapper.js";
 import type { MappedPoll } from "../mappers/poll.mapper.js";
 import type { MappedSystemProfile } from "../mappers/system-profile.mapper.js";
 import type { MappedSystemSettings } from "../mappers/system-settings.mapper.js";
+import type { PersisterUpsertAction, PersisterUpsertResult } from "@pluralscape/import-core";
 import type { ImportError, ImportSourceFormat } from "@pluralscape/types";
 
 interface PersistableEntityBase {
@@ -91,18 +92,11 @@ export type PersistableEntity =
 export type PersistableEntityType = PersistableEntity["entityType"];
 
 /**
- * The result of a persister upsert call.
- *
- * - `created`: a new Pluralscape entity was inserted.
- * - `updated`: an existing entity (matched via the IdTranslationTable) was updated.
- * - `skipped`: the persister determined no write was necessary (e.g., identical content).
+ * Re-exports of the upsert action/result types from `@pluralscape/import-core`
+ * so SP consumers can import from a single package without having to know the
+ * types are defined in the generic engine layer.
  */
-export type PersisterUpsertAction = "created" | "updated" | "skipped";
-
-export interface PersisterUpsertResult {
-  readonly action: PersisterUpsertAction;
-  readonly pluralscapeEntityId: string;
-}
+export type { PersisterUpsertAction, PersisterUpsertResult };
 
 /**
  * Hook the engine uses to persist mapped entities and record errors.

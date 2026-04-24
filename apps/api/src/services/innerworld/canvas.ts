@@ -13,18 +13,17 @@ import { MAX_ENCRYPTED_DATA_BYTES } from "../../service.constants.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBlob,
+  EncryptedWire,
+  InnerWorldCanvasServerMetadata,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface CanvasResult {
-  readonly systemId: SystemId;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type CanvasResult = EncryptedWire<InnerWorldCanvasServerMetadata>;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 

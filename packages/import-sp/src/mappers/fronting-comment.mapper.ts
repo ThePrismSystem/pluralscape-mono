@@ -12,7 +12,7 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPComment } from "../sources/sp-types.js";
-import type { FrontingCommentEncryptedFields } from "@pluralscape/data";
+import type { FrontingCommentPlaintext } from "@pluralscape/data";
 import type { CustomFrontId, MemberId } from "@pluralscape/types";
 import type { CreateFrontingCommentBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
@@ -21,7 +21,7 @@ export type MappedFrontingComment = Omit<
   z.infer<typeof CreateFrontingCommentBodySchema>,
   "encryptedData"
 > & {
-  readonly encrypted: FrontingCommentEncryptedFields;
+  readonly encrypted: FrontingCommentPlaintext;
   readonly frontingSessionId: string;
   readonly createdAt: number;
 };
@@ -57,7 +57,7 @@ export function mapFrontingComment(
     });
   }
 
-  const encrypted: FrontingCommentEncryptedFields = {
+  const encrypted: FrontingCommentPlaintext = {
     content: sp.text,
   };
 

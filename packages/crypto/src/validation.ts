@@ -8,7 +8,6 @@ import {
   BOX_SECRET_KEY_BYTES,
   BOX_SEED_BYTES,
   CHALLENGE_NONCE_BYTES,
-  ENCRYPTED_BLOB_MIN_BYTES,
   GENERIC_HASH_BYTES_MAX,
   GENERIC_HASH_BYTES_MIN,
   KDF_BYTES_MAX,
@@ -27,12 +26,11 @@ import { InvalidInputError } from "./errors.js";
 import type {
   AeadKey,
   AeadNonce,
-  AuthKey,
   AuthKeyHash,
+  AuthKeyMaterial,
   BoxPublicKey,
   BoxSecretKey,
   ChallengeNonce,
-  EncryptedBlob,
   KdfMasterKey,
   KeyVersion,
   PwhashSalt,
@@ -122,7 +120,7 @@ export function assertGenericHashLength(len: number): void {
   }
 }
 
-export function assertAuthKey(key: Uint8Array): asserts key is AuthKey {
+export function assertAuthKey(key: Uint8Array): asserts key is AuthKeyMaterial {
   assertBufferLength(key, AUTH_KEY_BYTES, "Auth key");
 }
 
@@ -136,14 +134,6 @@ export function assertRecoveryKeyHash(hash: Uint8Array): asserts hash is Recover
 
 export function assertChallengeNonce(nonce: Uint8Array): asserts nonce is ChallengeNonce {
   assertBufferLength(nonce, CHALLENGE_NONCE_BYTES, "Challenge nonce");
-}
-
-export function assertEncryptedBlob(blob: Uint8Array): asserts blob is EncryptedBlob {
-  if (blob.length < ENCRYPTED_BLOB_MIN_BYTES) {
-    throw new InvalidInputError(
-      `Encrypted blob must be at least ${String(ENCRYPTED_BLOB_MIN_BYTES)} bytes, got ${String(blob.length)}`,
-    );
-  }
 }
 
 export function validateKeyVersion(keyVersion: number): KeyVersion {

@@ -60,13 +60,13 @@ interface OfflineFirstSetup {
 
 /** Page shape returned by every tRPC list procedure. */
 interface RawPage<TRaw> {
-  readonly data: TRaw[];
+  readonly data: readonly TRaw[];
   readonly nextCursor: string | null;
 }
 
 /** Page shape after decryption / identity transform. */
 interface DecPage<TDec> {
-  readonly data: TDec[];
+  readonly data: readonly TDec[];
   readonly nextCursor: string | null;
 }
 

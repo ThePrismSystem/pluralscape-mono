@@ -1,15 +1,26 @@
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, FrontingComment, UnixMillis } from "@pluralscape/types";
+import type {
+  Archived,
+  FrontingComment,
+  FrontingCommentEncryptedFields as FrontingCommentKeys,
+  PlaintextFields,
+  UnixMillis,
+} from "@pluralscape/types";
+
+// ── Encrypted payload types ───────────────────────────────────────────
+
+/**
+ * The plaintext fields encrypted inside a fronting comment blob.
+ * Pass this to `encryptFrontingCommentInput` when creating or updating a comment.
+ */
+export type FrontingCommentPlaintext = PlaintextFields<FrontingComment, FrontingCommentKeys>;
 
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `frontingComment.get` — derived from the `FrontingComment` domain type. */
-export type FrontingCommentRaw = Omit<
-  FrontingComment,
-  keyof FrontingCommentEncryptedFields | "archived"
-> & {
+export type FrontingCommentRaw = Omit<FrontingComment, FrontingCommentKeys | "archived"> & {
   readonly encryptedData: string;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -21,27 +32,9 @@ export interface FrontingCommentPage {
   readonly nextCursor: string | null;
 }
 
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a fronting comment blob.
- * Pass this to `encryptFrontingCommentInput` when creating or updating a comment.
- */
-export interface FrontingCommentEncryptedFields {
-  readonly content: string;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertFrontingCommentFieldsSubset =
-  FrontingCommentEncryptedFields extends Pick<FrontingComment, keyof FrontingCommentEncryptedFields>
-    ? true
-    : never;
-
 // ── Validators ────────────────────────────────────────────────────────
 
-function assertFrontingCommentEncryptedFields(
-  raw: unknown,
-): asserts raw is FrontingCommentEncryptedFields {
+function assertFrontingCommentPlaintext(raw: unknown): asserts raw is FrontingCommentPlaintext {
   if (raw === null || typeof raw !== "object") {
     throw new Error("Decrypted fronting comment blob is not an object");
   }
@@ -64,7 +57,7 @@ export function decryptFrontingComment(
   masterKey: KdfMasterKey,
 ): FrontingComment | Archived<FrontingComment> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertFrontingCommentEncryptedFields(plaintext);
+  assertFrontingCommentPlaintext(plaintext);
 
   const base = {
     id: raw.id,
@@ -106,7 +99,7 @@ export function decryptFrontingCommentPage(
  * `CreateFrontingCommentBodySchema`.
  */
 export function encryptFrontingCommentInput(
-  data: FrontingCommentEncryptedFields,
+  data: FrontingCommentPlaintext,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
@@ -119,7 +112,7 @@ export function encryptFrontingCommentInput(
  * into the `UpdateFrontingCommentBodySchema`.
  */
 export function encryptFrontingCommentUpdate(
-  data: FrontingCommentEncryptedFields,
+  data: FrontingCommentPlaintext,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

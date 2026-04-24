@@ -8,21 +8,17 @@ import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type { BucketId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  BucketId,
+  EncryptedWire,
+  PrivacyBucketServerMetadata,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface BucketResult {
-  readonly id: BucketId;
-  readonly systemId: SystemId;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type BucketResult = EncryptedWire<PrivacyBucketServerMetadata>;
 
 export interface ListBucketOpts {
   readonly cursor?: string;

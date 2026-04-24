@@ -9,50 +9,25 @@ import {
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
-  InnerWorldRegionId,
-  MemberId,
-  SystemId,
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields,
+  PlaintextFields,
   UnixMillis,
 } from "@pluralscape/types";
-import type { VisualProperties } from "@pluralscape/types";
 
-export interface InnerWorldRegionEncryptedFields {
-  readonly name: string;
-  readonly description: string | null;
-  readonly boundaryData: readonly { readonly x: number; readonly y: number }[];
-  readonly visual: VisualProperties;
-  readonly gatekeeperMemberIds: readonly MemberId[];
-  readonly accessType: "open" | "gatekept";
-}
+/**
+ * Plaintext shape of a decrypted innerworld region blob — derived from the SoT
+ * `InnerWorldRegion` domain type.
+ */
+export type InnerWorldRegionPlaintext = PlaintextFields<
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields
+>;
 
-export interface InnerWorldRegionDecrypted {
-  readonly id: InnerWorldRegionId;
-  readonly systemId: SystemId;
-  readonly parentRegionId: InnerWorldRegionId | null;
-  readonly name: string;
-  readonly description: string | null;
-  readonly boundaryData: readonly { readonly x: number; readonly y: number }[];
-  readonly visual: VisualProperties;
-  readonly gatekeeperMemberIds: readonly MemberId[];
-  readonly accessType: "open" | "gatekept";
-  readonly archived: false;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertInnerWorldRegionFieldsSubset =
-  InnerWorldRegionEncryptedFields extends Pick<
-    InnerWorldRegionDecrypted,
-    keyof InnerWorldRegionEncryptedFields
-  >
-    ? true
-    : never;
-
+/** Wire shape returned by `innerworld.region.get` — derived from `InnerWorldRegion`. */
 export type InnerWorldRegionRaw = Omit<
-  InnerWorldRegionDecrypted,
-  keyof InnerWorldRegionEncryptedFields | "archived"
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields | "archived"
 > & {
   readonly encryptedData: string;
   readonly archived: boolean;
@@ -64,9 +39,7 @@ export interface InnerWorldRegionPage {
   readonly nextCursor: string | null;
 }
 
-function assertInnerWorldRegionEncryptedFields(
-  raw: unknown,
-): asserts raw is InnerWorldRegionEncryptedFields {
+function assertInnerWorldRegionPlaintext(raw: unknown): asserts raw is InnerWorldRegionPlaintext {
   const obj = assertObjectBlob(raw, "innerworldRegion");
   assertStringField(obj, "innerworldRegion", "name");
 }
@@ -74,9 +47,9 @@ function assertInnerWorldRegionEncryptedFields(
 export function decryptInnerWorldRegion(
   raw: InnerWorldRegionRaw,
   masterKey: KdfMasterKey,
-): InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted> {
+): InnerWorldRegion | Archived<InnerWorldRegion> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertInnerWorldRegionEncryptedFields(plaintext);
+  assertInnerWorldRegionPlaintext(plaintext);
 
   const base = {
     id: raw.id,
@@ -104,7 +77,7 @@ export function decryptInnerWorldRegionPage(
   raw: InnerWorldRegionPage,
   masterKey: KdfMasterKey,
 ): {
-  data: (InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>)[];
+  data: (InnerWorldRegion | Archived<InnerWorldRegion>)[];
   nextCursor: string | null;
 } {
   return {
@@ -114,14 +87,14 @@ export function decryptInnerWorldRegionPage(
 }
 
 export function encryptInnerWorldRegionInput(
-  data: InnerWorldRegionEncryptedFields,
+  data: InnerWorldRegionPlaintext,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 export function encryptInnerWorldRegionUpdate(
-  data: InnerWorldRegionEncryptedFields,
+  data: InnerWorldRegionPlaintext,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

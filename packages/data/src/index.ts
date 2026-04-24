@@ -78,7 +78,7 @@ export {
   encryptFrontingSessionInput,
   encryptFrontingSessionUpdate,
 } from "./transforms/fronting-session.js";
-export type { FrontingSessionEncryptedFields } from "./transforms/fronting-session.js";
+export type { FrontingSessionPlaintext } from "./transforms/fronting-session.js";
 
 export {
   decryptFrontingComment,
@@ -86,7 +86,7 @@ export {
   encryptFrontingCommentInput,
   encryptFrontingCommentUpdate,
 } from "./transforms/fronting-comment.js";
-export type { FrontingCommentEncryptedFields } from "./transforms/fronting-comment.js";
+export type { FrontingCommentPlaintext } from "./transforms/fronting-comment.js";
 
 export {
   decryptFrontingReport,

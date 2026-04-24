@@ -10,36 +10,18 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
 import type {
+  EncryptedWire,
   MemberId,
   PollId,
-  PollKind,
+  PollServerMetadata,
   PollStatus,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface PollResult {
-  readonly id: PollId;
-  readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId | null;
-  readonly kind: PollKind;
-  readonly status: PollStatus;
-  readonly closedAt: UnixMillis | null;
-  readonly endsAt: UnixMillis | null;
-  readonly allowMultipleVotes: boolean;
-  readonly maxVotesPerMember: number;
-  readonly allowAbstain: boolean;
-  readonly allowVeto: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type PollResult = EncryptedWire<PollServerMetadata>;
 
 export interface ListPollOpts {
   readonly cursor?: string;

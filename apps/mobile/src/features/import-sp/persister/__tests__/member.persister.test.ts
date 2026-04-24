@@ -1,5 +1,7 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { decodeAndDecryptT1 } from "@pluralscape/data/transforms/decode-blob";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,9 +9,10 @@ import {
   makeTestIdTranslation,
   makeTestPersisterContext,
 } from "../../__tests__/persister-test-helpers.js";
-import { memberPersister } from "../member.persister.js";
+import { memberPersister, type MemberPayload } from "../member.persister.js";
 
 import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
+import type { HexColor } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -18,34 +21,34 @@ beforeAll(async () => {
 
 const AVATAR_BYTES = new Uint8Array([1, 2, 3, 4]);
 
-const MEMBER_NO_AVATAR = {
+const MEMBER_NO_AVATAR: MemberPayload = {
   encrypted: {
     name: "Aurora",
     pronouns: [],
     description: null,
     avatarSource: null,
-    colors: ["#aabbcc"],
-    saturationLevel: null,
+    colors: [brandId<HexColor>("#aabbcc")],
+    saturationLevel: { kind: "known", level: "highly-elaborated" },
     tags: [],
-    suppressFriendFrontNotification: null,
-    boardMessageNotificationOnFront: null,
+    suppressFriendFrontNotification: false,
+    boardMessageNotificationOnFront: false,
   },
   archived: false,
   fieldValues: [],
   bucketIds: [],
 };
 
-const MEMBER_WITH_AVATAR = {
+const MEMBER_WITH_AVATAR: MemberPayload = {
   encrypted: {
     name: "Bellamy",
     pronouns: [],
     description: "the dreamer",
-    avatarSource: "https://example.com/avatar.png",
+    avatarSource: { kind: "external", url: "https://example.com/avatar.png" },
     colors: [],
-    saturationLevel: null,
+    saturationLevel: { kind: "known", level: "highly-elaborated" },
     tags: [],
-    suppressFriendFrontNotification: null,
-    boardMessageNotificationOnFront: null,
+    suppressFriendFrontNotification: false,
+    boardMessageNotificationOnFront: false,
   },
   archived: false,
   fieldValues: [],
@@ -79,7 +82,7 @@ describe("memberPersister — no avatar path", () => {
 });
 
 describe("memberPersister — avatar happy path", () => {
-  it("fetches, uploads, and attaches the blob ID to the member create", async () => {
+  it("fetches, uploads, and embeds the blob reference inside the encrypted plaintext", async () => {
     const avatarFetcher = makeAvatarFetcher({
       status: "ok",
       bytes: AVATAR_BYTES,
@@ -96,9 +99,11 @@ describe("memberPersister — avatar happy path", () => {
       contentType: "image/png",
     });
     const call = createFn.mock.calls[0];
-    expect(call?.[1]).toEqual({
-      encryptedData: expect.any(String),
-      avatarBlobId: "blob_1",
+    const encrypted = call?.[1]?.encryptedData;
+    expect(typeof encrypted).toBe("string");
+    const plaintext = decodeAndDecryptT1(encrypted as string, ctx.masterKey);
+    expect(plaintext).toMatchObject({
+      avatarSource: { kind: "blob", blobRef: "blob_1" },
     });
   });
 });
