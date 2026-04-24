@@ -20,7 +20,11 @@ import { toStructureEntityResult } from "./internal.js";
 import type { StructureEntityResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { SystemId, SystemStructureEntityId } from "@pluralscape/types";
+import type {
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createStructureEntity(
@@ -78,7 +82,9 @@ export async function createStructureEntity(
 
     // Auto-create an entity link if parentEntityId is provided
     if (parsed.data.parentEntityId !== null) {
-      const linkId = createId(ID_PREFIXES.structureEntityLink);
+      const linkId = brandId<SystemStructureEntityLinkId>(
+        createId(ID_PREFIXES.structureEntityLink),
+      );
       await tx.insert(systemStructureEntityLinks).values({
         id: linkId,
         systemId,

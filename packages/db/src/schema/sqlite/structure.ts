@@ -30,6 +30,7 @@ import type {
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
+  SystemStructureEntityLinkId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
@@ -118,12 +119,12 @@ export const systemStructureEntities = sqliteTable(
 export const systemStructureEntityLinks = sqliteTable(
   "system_structure_entity_links",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<SystemStructureEntityLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityId: text("entity_id").notNull(),
-    parentEntityId: text("parent_entity_id"),
+    entityId: brandedId<SystemStructureEntityId>("entity_id").notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
     sortOrder: integer("sort_order").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },

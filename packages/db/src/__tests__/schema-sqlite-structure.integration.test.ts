@@ -29,6 +29,7 @@ import type {
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
+  SystemStructureEntityLinkId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
@@ -38,6 +39,8 @@ const newTypeId = (): SystemStructureEntityTypeId =>
   brandId<SystemStructureEntityTypeId>(crypto.randomUUID());
 const newEntityId = (): SystemStructureEntityId =>
   brandId<SystemStructureEntityId>(crypto.randomUUID());
+const newLinkId = (): SystemStructureEntityLinkId =>
+  brandId<SystemStructureEntityLinkId>(crypto.randomUUID());
 const newMemberLinkId = (): SystemStructureEntityMemberLinkId =>
   brandId<SystemStructureEntityMemberLinkId>(crypto.randomUUID());
 const newAssocId = (): SystemStructureEntityAssociationId =>
@@ -891,7 +894,7 @@ describe("SQLite structure schema", () => {
         })
         .run();
 
-      const linkId = crypto.randomUUID();
+      const linkId = newLinkId();
       db.insert(systemStructureEntityLinks)
         .values({ id: linkId, systemId, entityId, sortOrder: 0, createdAt: now })
         .run();
@@ -915,9 +918,9 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: newLinkId(),
             systemId,
-            entityId: "nonexistent",
+            entityId: brandId<SystemStructureEntityId>("nonexistent"),
             sortOrder: 0,
             createdAt: now,
           })
@@ -954,7 +957,7 @@ describe("SQLite structure schema", () => {
         })
         .run();
       db.insert(systemStructureEntityLinks)
-        .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 0, createdAt: now })
+        .values({ id: newLinkId(), systemId, entityId, sortOrder: 0, createdAt: now })
         .run();
 
       expect(() =>
@@ -1003,7 +1006,7 @@ describe("SQLite structure schema", () => {
         ])
         .run();
 
-      const linkId = crypto.randomUUID();
+      const linkId = newLinkId();
       db.insert(systemStructureEntityLinks)
         .values({
           id: linkId,
@@ -1057,10 +1060,10 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: newLinkId(),
             systemId,
             entityId,
-            parentEntityId: "nonexistent",
+            parentEntityId: brandId<SystemStructureEntityId>("nonexistent"),
             sortOrder: 0,
             createdAt: now,
           })
@@ -1110,7 +1113,7 @@ describe("SQLite structure schema", () => {
         .run();
       db.insert(systemStructureEntityLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: newLinkId(),
           systemId,
           entityId: childEntityId,
           parentEntityId,
@@ -1170,7 +1173,7 @@ describe("SQLite structure schema", () => {
 
       db.insert(systemStructureEntityLinks)
         .values({
-          id: crypto.randomUUID(),
+          id: newLinkId(),
           systemId,
           entityId: childEntityId,
           parentEntityId,
@@ -1183,7 +1186,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(systemStructureEntityLinks)
           .values({
-            id: crypto.randomUUID(),
+            id: newLinkId(),
             systemId,
             entityId: childEntityId,
             parentEntityId,
@@ -1224,13 +1227,13 @@ describe("SQLite structure schema", () => {
         .run();
 
       db.insert(systemStructureEntityLinks)
-        .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 0, createdAt: now })
+        .values({ id: newLinkId(), systemId, entityId, sortOrder: 0, createdAt: now })
         .run();
 
       expect(() =>
         db
           .insert(systemStructureEntityLinks)
-          .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 1, createdAt: now })
+          .values({ id: newLinkId(), systemId, entityId, sortOrder: 1, createdAt: now })
           .run(),
       ).toThrow(/UNIQUE|constraint/i);
     });
@@ -1240,7 +1243,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const typeId = newTypeId();
       const entityId = newEntityId();
-      const linkId = crypto.randomUUID();
+      const linkId = newLinkId();
       const now = Date.now();
 
       db.insert(systemStructureEntityTypes)

@@ -72,6 +72,11 @@ import type {
   SystemStructureEntityAssociationWire,
 } from "./entities/structure-entity-association.js";
 import type {
+  SystemStructureEntityLink,
+  SystemStructureEntityLinkServerMetadata,
+  SystemStructureEntityLinkWire,
+} from "./entities/structure-entity-link.js";
+import type {
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
   SystemStructureEntityMemberLinkServerMetadata,
@@ -291,6 +296,13 @@ export type SotEntityManifest = {
     server: SessionServerMetadata;
     wire: SessionWire;
     // Plaintext entity — no encrypted fields in the domain keyset.
+    encryptedFields: never;
+  };
+  StructureEntityLink: {
+    domain: SystemStructureEntityLink;
+    server: SystemStructureEntityLinkServerMetadata;
+    wire: SystemStructureEntityLinkWire;
+    // Plaintext entity — no client-side encryption; never needed.
     encryptedFields: never;
   };
   Nomenclature: {

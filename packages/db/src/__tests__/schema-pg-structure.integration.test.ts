@@ -883,9 +883,9 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityLinks).values({
-          id: crypto.randomUUID(),
+          id: newLinkId(),
           systemId,
-          entityId: "nonexistent",
+          entityId: brandId<SystemStructureEntityId>("nonexistent"),
           sortOrder: 0,
           createdAt: now,
         }),
@@ -917,7 +917,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
       await db.insert(systemStructureEntityLinks).values({
-        id: crypto.randomUUID(),
+        id: newLinkId(),
         systemId,
         entityId,
         sortOrder: 0,
@@ -1012,10 +1012,10 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityLinks).values({
-          id: crypto.randomUUID(),
+          id: newLinkId(),
           systemId,
           entityId,
-          parentEntityId: "nonexistent",
+          parentEntityId: brandId<SystemStructureEntityId>("nonexistent"),
           sortOrder: 0,
           createdAt: now,
         }),
@@ -1059,7 +1059,7 @@ describe("PG structure schema", () => {
         },
       ]);
       await db.insert(systemStructureEntityLinks).values({
-        id: crypto.randomUUID(),
+        id: newLinkId(),
         systemId,
         entityId: childEntityId,
         parentEntityId,
@@ -1110,7 +1110,7 @@ describe("PG structure schema", () => {
       ]);
 
       await db.insert(systemStructureEntityLinks).values({
-        id: crypto.randomUUID(),
+        id: newLinkId(),
         systemId,
         entityId: childEntityId,
         parentEntityId,
@@ -1120,7 +1120,7 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityLinks).values({
-          id: crypto.randomUUID(),
+          id: newLinkId(),
           systemId,
           entityId: childEntityId,
           parentEntityId,
@@ -1156,7 +1156,7 @@ describe("PG structure schema", () => {
       });
 
       await db.insert(systemStructureEntityLinks).values({
-        id: crypto.randomUUID(),
+        id: newLinkId(),
         systemId,
         entityId,
         sortOrder: 0,
@@ -1165,7 +1165,7 @@ describe("PG structure schema", () => {
 
       await expect(
         db.insert(systemStructureEntityLinks).values({
-          id: crypto.randomUUID(),
+          id: newLinkId(),
           systemId,
           entityId,
           sortOrder: 1,

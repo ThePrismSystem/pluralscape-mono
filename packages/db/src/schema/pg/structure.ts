@@ -31,6 +31,7 @@ import type {
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
+  SystemStructureEntityLinkId,
   SystemStructureEntityMemberLinkId,
   SystemStructureEntityTypeId,
 } from "@pluralscape/types";
@@ -121,12 +122,12 @@ export const systemStructureEntities = pgTable(
 export const systemStructureEntityLinks = pgTable(
   "system_structure_entity_links",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
-    parentEntityId: varchar("parent_entity_id", { length: ID_MAX_LENGTH }),
+    entityId: brandedId<SystemStructureEntityId>("entity_id").notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
     sortOrder: integer("sort_order").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
