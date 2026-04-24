@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:18Z
-updated_at: 2026-04-24T00:36:27Z
+updated_at: 2026-04-24T09:07:38Z
 parent: ps-cd6x
 ---
 
@@ -146,12 +146,12 @@ Pilot (Member) landed in types-tef0 as a reference implementation. The 18 non-pi
 
 - [x] Cluster 1 — Foundation (Account, System, SystemSettings, SystemSnapshot, Nomenclature; PR #542, merged as 1a3e8d35)
 - [x] Cluster 2 — Auth + devices (session, api-key, auth-key, device-token, recovery-key, account-purge-request, device-transfer-request; PR #545, merged as 3a4d4bca)
-- [ ] Cluster 3 — Members + identity (pending)
-- [ ] Cluster 4 — Fields (pending)
-- [ ] Cluster 5 — Structure graph (pending)
-- [ ] Cluster 6 — Fronting + lifecycle (pending)
+- [x] Cluster 3 — Members + identity (PR #550, merged as ead21c46)
+- [x] Cluster 4 — Fields (PR #543, merged as 73da3ea8)
+- [x] Cluster 5 — Structure graph (PR #549, merged as bf912ecd)
+- [x] Cluster 6 — Fronting + lifecycle (PR #548, merged as 61729d50)
 - [x] Cluster 7 — Innerworld (innerworld-region, innerworld-entity, innerworld-canvas; PR #544, merged as dcaa91cd)
-- [ ] Cluster 8 — Communication + engagement (pending)
-- [ ] Cluster 9 — Operational (pending)
-- [ ] Cluster 10 — Privacy + social (pending)
+- [x] Cluster 8 — Communication + engagement (PR #547, merged as e6261998)
+- [x] Cluster 9 — Operational (PR #551, merged as 59ef63d5)
+- [x] Cluster 10 — Privacy + social (PR #546, merged as b70c896c)
 - [ ] Cluster 11 — Cleanup (timestamp lift + StripBrands deletion; pending)

@@ -1,11 +1,11 @@
 ---
 # db-j1nv
 title: Drizzle-to-types structural-equality integration tests
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:55:39Z
-updated_at: 2026-04-22T23:06:07Z
+updated_at: 2026-04-24T09:07:54Z
 parent: types-ltel
 blocked_by:
   - types-f62m
@@ -55,3 +55,9 @@ These are compile-time assertions, not runtime tests — they live in **tests** 
 Pilot Drizzle parity delivered: `packages/db/src/__tests__/type-parity/member.type.test.ts` and `audit-log-entry.type.test.ts` assert `InferSelectModel<typeof table>` structurally equals `<Entity>ServerMetadata` modulo brand-stripping (see `__helpers__.ts`). Brand-drift follow-up tracked as `db-drq1`. Manifest completeness gate added in `__manifest-completeness__.type.test.ts`.
 
 Remaining (fleet, Phase 2): parity tests for the remaining ~23 entities. Pattern is established — copy the pilot files, rename, point at the target Drizzle table.
+
+## Summary of Changes
+
+Per-entity Drizzle structural-equality tests landed for all 58 published entities in packages/db/src/**tests**/type-parity/<entity>.type.test.ts. Each test asserts InferSelectModel<typeof table> structurally equals <Entity>ServerMetadata via Equal<> + expectTypeOf. Manifest completeness gate (**manifest-completeness**.type.test.ts) prevents silent entity drop-off. Typecheck enforcement: running packages/db typecheck catches any drift.
+
+Note: StripBrands<T> wrapper helper in **helpers**.ts is still in use pending Drizzle table brandedId lift for the remaining clusters (C11 scope — separate bean). Once every table uses brandedId<B>() directly, StripBrands can be deleted and assertions tightened to strict brand equality.

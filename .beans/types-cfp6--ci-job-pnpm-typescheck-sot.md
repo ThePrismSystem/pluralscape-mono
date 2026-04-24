@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-04-21T13:56:03Z
-updated_at: 2026-04-22T23:06:07Z
+updated_at: 2026-04-24T09:08:20Z
 parent: types-ltel
 blocked_by:
   - types-f62m
@@ -27,8 +27,8 @@ This task ties them into a single gated pipeline so the SoT contract becomes a f
 
 ## Scope
 
-- [ ] Add pnpm script types:check-sot to root package.json that runs typecheck on packages/types + packages/validation + packages/db + the OpenAPI reconcile script, and reports a unified success/failure
-- [ ] Extend scripts/reconcile-openapi.ts (or add a sibling scripts/check-types-sot.ts) to also verify that OpenAPI-derived response types for each entity match <Entity> / <Entity>ServerMetadata
+- [x] Add pnpm script types:check-sot to root package.json that runs typecheck on packages/types + packages/validation + packages/db + the OpenAPI reconcile script, and reports a unified success/failure
+- [x] Extend scripts/reconcile-openapi.ts (or add a sibling scripts/check-types-sot.ts) to also verify that OpenAPI-derived response types for each entity match <Entity> / <Entity>ServerMetadata
 - [ ] Add a CI step in .github/workflows/ci.yml running pnpm types:check-sot after the existing typecheck step
 - [ ] Document the command in CLAUDE.md under the Commands table
 
@@ -65,3 +65,16 @@ High — gates the rest of the SoT enforcement.
 All four green on clean main; gate bites on each when drift is introduced (verified Task 18). Not yet wired to `.github/workflows/ci.yml` as a required blocking check — Phase 4 (lock-in) flips it to blocking after fleet coverage reaches 100%.
 
 Remaining: Phase 4 CI wiring. No more code changes to the orchestrator expected until fleet completeness drives additions.
+
+## Progress 2026-04-24
+
+Script + OpenAPI parity step landed:
+
+- scripts/check-types-sot.ts runs 4 typecheck steps (types, db parity, validation parity, openapi-wire-parity)
+- package.json script pnpm types:check-sot wired
+- scripts/openapi-wire-parity.type-test.ts covers all 20 entity wire shapes via split-form encrypted parity
+
+Remaining:
+
+- [ ] Wire pnpm types:check-sot as a dedicated step in .github/workflows/ci.yml (currently only pnpm typecheck runs — transitively typechecks parity tests, but not the dedicated OpenAPI-wire-parity.type-test.ts file which tsc skips unless explicitly requested)
+- [ ] Document pnpm types:check-sot in CLAUDE.md Commands table

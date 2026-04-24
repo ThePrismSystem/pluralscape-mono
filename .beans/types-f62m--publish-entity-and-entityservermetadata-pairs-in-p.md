@@ -1,11 +1,11 @@
 ---
 # types-f62m
 title: Publish <Entity> and <Entity>ServerMetadata pairs in packages/types
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:55:29Z
-updated_at: 2026-04-22T23:06:07Z
+updated_at: 2026-04-24T09:07:46Z
 parent: types-ltel
 ---
 
@@ -43,3 +43,7 @@ This task is a prerequisite for the Drizzle-parity and Zod-parity tasks. Expect 
 Pilot-scope delivered: `MemberServerMetadata` + `MemberWire` and `AuditLogEntryServerMetadata` + `AuditLogEntryWire` published in `@pluralscape/types`. `ClientMember` / `ClientAuditLogEntry` aliases removed. `__brand` symbol marked `@internal`; `PendingAccountId` migrated to canonical `Brand<T, B>`.
 
 Remaining (fleet, Phase 2): ~23 entities across the six clusters in the spec. Pattern is established — rename existing `Server<Entity>` to `<Entity>ServerMetadata`, drop `Client<Entity>` aliases, add `<Entity>Wire = Serialize<Entity>`.
+
+## Summary of Changes
+
+All 20 domain entity pairs now published in packages/types/src/entities/ with <Entity> and <Entity>ServerMetadata shapes. Landed across Phase 0/1 pilot (#538), types-tef0 (#540), and fleet clusters C1-C10 (#542-#551). 58 entity files total in packages/types/src/entities/. Branded IDs consolidated in packages/types/src/ids.ts; validation's brandedString re-exports from types. Wire forms (<Entity>Wire = Serialize<Entity>) published alongside each pair.
