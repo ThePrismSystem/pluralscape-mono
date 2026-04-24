@@ -90,7 +90,10 @@ export interface FieldDefinitionPage {
 }
 
 /** Wire shape returned by `field.value.list` — derived from `FieldValueDecrypted`. */
-export type FieldValueRaw = Omit<FieldValueDecrypted, keyof FieldValueUnion | FieldValueEncryptedFields> & {
+export type FieldValueRaw = Omit<
+  FieldValueDecrypted,
+  keyof FieldValueUnion | FieldValueEncryptedFields
+> & {
   readonly encryptedData: string;
 };
 

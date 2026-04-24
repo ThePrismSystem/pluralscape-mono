@@ -27,12 +27,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type {
-  AccountId,
-  FieldDefinitionId,
-  FieldValueId,
-  SystemId,
-} from "@pluralscape/types";
+import type { AccountId, FieldDefinitionId, FieldValueId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const {

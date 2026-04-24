@@ -28,7 +28,10 @@ import type { AuditLogEntry, AuditLogEntryServerMetadata } from "./entities/audi
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
 import type { CustomFront } from "./entities/custom-front.js";
-import type { FieldDefinition, FieldDefinitionServerMetadata } from "./entities/field-definition.js";
+import type {
+  FieldDefinition,
+  FieldDefinitionServerMetadata,
+} from "./entities/field-definition.js";
 import type { FieldValue, FieldValueServerMetadata } from "./entities/field-value.js";
 import type { FrontingComment } from "./entities/fronting-comment.js";
 import type { FrontingSession } from "./entities/fronting-session.js";
