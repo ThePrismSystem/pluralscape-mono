@@ -1,11 +1,11 @@
 ---
 # ps-6hyr
-title: "types-ltel C11a: brandedId lift for 6 remaining tables"
+title: "types-ltel C11a: brandedId lift for 5 remaining Drizzle tables"
 status: completed
 type: task
 priority: high
 created_at: 2026-04-24T09:26:42Z
-updated_at: 2026-04-24T10:59:31Z
+updated_at: 2026-04-24T11:36:56Z
 parent: types-ltel
 ---
 
