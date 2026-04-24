@@ -26,6 +26,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
+import type { SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 /** Get currently fronting members (end_time IS NULL). */
@@ -104,7 +105,7 @@ export function getPendingFriendRequests(
 /** Get webhook deliveries pending retry (status = 'failed', under max attempts, due for retry). */
 export function getPendingWebhookRetries(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
   maxAttempts: number,
 ): PendingWebhookRetry[] {
   const now = Date.now();

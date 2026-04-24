@@ -18,7 +18,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { ApiKeyId, ServerSecret, WebhookId } from "@pluralscape/types";
+import type { ApiKeyId, ServerSecret, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
@@ -272,7 +272,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
@@ -319,7 +319,7 @@ describe("PG webhooks schema", () => {
 
       await expect(
         db.insert(webhookDeliveries).values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId: whId,
           systemId,
           eventType: "invalid.event" as "member.created",
@@ -347,7 +347,7 @@ describe("PG webhooks schema", () => {
 
       await expect(
         db.insert(webhookDeliveries).values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId: whId,
           systemId,
           eventType: "member.created",
@@ -376,7 +376,7 @@ describe("PG webhooks schema", () => {
 
       await expect(
         db.insert(webhookDeliveries).values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId: whId,
           systemId,
           eventType: "member.created",
@@ -391,7 +391,7 @@ describe("PG webhooks schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = brandId<WebhookId>(crypto.randomUUID());
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
@@ -436,7 +436,7 @@ describe("PG webhooks schema", () => {
 
       await expect(
         db.insert(webhookDeliveries).values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId: whId,
           systemId,
           eventType: "member.created",
@@ -464,9 +464,9 @@ describe("PG webhooks schema", () => {
         updatedAt: now,
       });
 
-      const oldId = crypto.randomUUID();
-      const recentId = crypto.randomUUID();
-      const pendingOldId = crypto.randomUUID();
+      const oldId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const recentId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const pendingOldId = brandId<WebhookDeliveryId>(crypto.randomUUID());
 
       await db.insert(webhookDeliveries).values([
         {
@@ -529,7 +529,7 @@ describe("PG webhooks schema", () => {
       });
 
       await db.insert(webhookDeliveries).values({
-        id: crypto.randomUUID(),
+        id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
         webhookId: whId,
         systemId,
         eventType: "member.created",
@@ -557,9 +557,9 @@ describe("PG webhooks schema", () => {
         updatedAt: now,
       });
 
-      const pendingId = crypto.randomUUID();
-      const successId = crypto.randomUUID();
-      const failedId = crypto.randomUUID();
+      const pendingId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const successId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const failedId = brandId<WebhookDeliveryId>(crypto.randomUUID());
 
       await db.insert(webhookDeliveries).values([
         {

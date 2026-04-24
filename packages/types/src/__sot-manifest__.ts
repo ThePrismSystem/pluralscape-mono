@@ -80,6 +80,11 @@ import type {
   WebhookConfigWire,
 } from "./entities/webhook-config.js";
 import type {
+  WebhookDelivery,
+  WebhookDeliveryServerMetadata,
+  WebhookDeliveryWire,
+} from "./entities/webhook-delivery.js";
+import type {
   NomenclatureEncryptedFields,
   NomenclatureServerMetadata,
   NomenclatureSettings,
@@ -226,6 +231,14 @@ export type SotEntityManifest = {
     wire: WebhookConfigWire;
     // Plaintext entity — the T3 HMAC `secret` is readable by the server
     // but is not E2E encrypted user data. No encryptedFields union.
+    encryptedFields: never;
+  };
+  WebhookDelivery: {
+    domain: WebhookDelivery;
+    server: WebhookDeliveryServerMetadata;
+    wire: WebhookDeliveryWire;
+    // Plaintext domain — the `encryptedData` payload is server-held T3
+    // (not E2E), attached only to the server-side metadata.
     encryptedFields: never;
   };
 };

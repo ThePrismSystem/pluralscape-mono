@@ -32,6 +32,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
+import type { SystemId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 type PgDb = PgDatabase<PgQueryResultHKT>;
@@ -103,7 +104,7 @@ export async function getPendingFriendRequests(
 /** Get webhook deliveries pending retry (status = 'failed', under max attempts, due for retry). */
 export async function getPendingWebhookRetries(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
   maxAttempts: number,
 ): Promise<PendingWebhookRetry[]> {
   return db

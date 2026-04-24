@@ -41,7 +41,13 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ServerSecret,
+  SystemId,
+  WebhookDeliveryId,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { webhookConfigs, webhookDeliveries } = schema;
@@ -306,7 +312,7 @@ describe("webhook-config.service (PGlite integration)", () => {
         noopAudit,
       );
       await db.insert(webhookDeliveries).values({
-        id: `wd_${crypto.randomUUID()}`,
+        id: brandId<WebhookDeliveryId>(`wd_${crypto.randomUUID()}`),
         webhookId: created.id,
         systemId,
         eventType: "fronting.started",

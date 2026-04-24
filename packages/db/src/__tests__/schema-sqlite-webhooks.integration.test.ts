@@ -18,7 +18,13 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { ApiKeyId, ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
+import type {
+  ApiKeyId,
+  ServerSecret,
+  SystemId,
+  WebhookDeliveryId,
+  WebhookId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
@@ -314,7 +320,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("round-trips with defaults", () => {
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookDeliveries)
@@ -404,7 +410,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("cascades on system deletion", () => {
-      const id = crypto.randomUUID();
+      const id = brandId<WebhookDeliveryId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(webhookDeliveries)
@@ -440,9 +446,9 @@ describe("SQLite webhooks schema", () => {
         })
         .run();
 
-      const oldId = crypto.randomUUID();
-      const recentId = crypto.randomUUID();
-      const pendingOldId = crypto.randomUUID();
+      const oldId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const recentId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const pendingOldId = brandId<WebhookDeliveryId>(crypto.randomUUID());
 
       db.insert(webhookDeliveries)
         .values([
@@ -497,7 +503,7 @@ describe("SQLite webhooks schema", () => {
 
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId: deliveryWhId,
           systemId: deliverySystemId,
           eventType: "member.created",
@@ -515,9 +521,9 @@ describe("SQLite webhooks schema", () => {
       const now = Date.now();
       const retryAt = now + 60_000;
 
-      const pendingId = crypto.randomUUID();
-      const successId = crypto.randomUUID();
-      const failedId = crypto.randomUUID();
+      const pendingId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const successId = brandId<WebhookDeliveryId>(crypto.randomUUID());
+      const failedId = brandId<WebhookDeliveryId>(crypto.randomUUID());
 
       db.insert(webhookDeliveries)
         .values([

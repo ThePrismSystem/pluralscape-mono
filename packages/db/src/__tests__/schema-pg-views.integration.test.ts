@@ -41,7 +41,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
+import type { ServerSecret, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 describe("PG views / query helpers", () => {
@@ -311,7 +311,7 @@ describe("PG views / query helpers", () => {
       });
       // Under limit, nextRetryAt in the past
       await db.insert(webhookDeliveries).values({
-        id: crypto.randomUUID(),
+        id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
         webhookId,
         systemId,
         eventType: "member.created",
@@ -323,7 +323,7 @@ describe("PG views / query helpers", () => {
       });
       // Over limit, nextRetryAt in the past
       await db.insert(webhookDeliveries).values({
-        id: crypto.randomUUID(),
+        id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
         webhookId,
         systemId,
         eventType: "member.created",
@@ -335,7 +335,7 @@ describe("PG views / query helpers", () => {
       });
       // Under limit but nextRetryAt in the future — should NOT be returned
       await db.insert(webhookDeliveries).values({
-        id: crypto.randomUUID(),
+        id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
         webhookId,
         systemId,
         eventType: "member.created",

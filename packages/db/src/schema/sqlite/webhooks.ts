@@ -27,6 +27,7 @@ import type {
   ApiKeyId,
   ServerSecret,
   SystemId,
+  WebhookDeliveryId,
   WebhookDeliveryStatus,
   WebhookEventType,
   WebhookId,
@@ -63,9 +64,9 @@ export const webhookConfigs = sqliteTable(
 export const webhookDeliveries = sqliteTable(
   "webhook_deliveries",
   {
-    id: text("id").primaryKey(),
-    webhookId: text("webhook_id").notNull(),
-    systemId: text("system_id")
+    id: brandedId<WebhookDeliveryId>("id").primaryKey(),
+    webhookId: brandedId<WebhookId>("webhook_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     eventType: text("event_type").notNull().$type<WebhookEventType>(),

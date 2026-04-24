@@ -40,7 +40,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { ServerSecret, SystemId, WebhookId } from "@pluralscape/types";
+import type { ServerSecret, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 describe("SQLite views / query helpers", () => {
@@ -304,7 +304,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -318,7 +318,7 @@ describe("SQLite views / query helpers", () => {
       // Over limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -332,7 +332,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit but nextRetryAt in the future — should NOT be returned
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<WebhookDeliveryId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
