@@ -1,7 +1,14 @@
 import { randomBytes } from "node:crypto";
 
 import { apiKeys } from "@pluralscape/db/pg";
-import { API_KEY_TOKEN_PREFIX, ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
+import {
+  API_KEY_TOKEN_PREFIX,
+  ID_PREFIXES,
+  brandId,
+  createId,
+  now,
+  toUnixMillis,
+} from "@pluralscape/types";
 import { CreateApiKeyBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
@@ -86,7 +93,7 @@ export async function createApiKey(
         createdAt: timestamp,
         lastUsedAt: null,
         revokedAt: null,
-        expiresAt: expiresAt ?? null,
+        expiresAt: expiresAt !== undefined ? toUnixMillis(expiresAt) : null,
         scopedBucketIds: scopedBucketIds?.map((id) => brandId<BucketId>(id)) ?? null,
       })
       .returning(API_KEY_SELECT_COLUMNS);

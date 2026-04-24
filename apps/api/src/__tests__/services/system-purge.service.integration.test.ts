@@ -7,7 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -77,7 +77,7 @@ describe("system-purge.service (PGlite integration)", () => {
     const memberB = await pgInsertMember(db, systemId);
 
     // Add a relationship
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     await db.insert(relationships).values({
       id: brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
       systemId,

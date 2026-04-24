@@ -1,5 +1,5 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, brandId, createId } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, toUnixMillis } from "@pluralscape/types";
 import { CreateCheckInRecordBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -68,7 +68,7 @@ export async function createCheckInRecord(
         id: recordId,
         systemId,
         timerConfigId: parsed.timerConfigId,
-        scheduledAt: parsed.scheduledAt,
+        scheduledAt: toUnixMillis(parsed.scheduledAt),
         encryptedData: blob,
       })
       .returning();

@@ -1,5 +1,5 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, MS_PER_SECOND, brandId, createId } from "@pluralscape/types";
+import { ID_PREFIXES, MS_PER_SECOND, brandId, createId, toUnixMillis } from "@pluralscape/types";
 import { and, asc, eq, gt, isNull, lte } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
@@ -47,7 +47,7 @@ export function createCheckInGenerateHandler(
   return async (_job, ctx) => {
     if (isAborted(ctx.signal)) return;
 
-    const nowMs = Date.now();
+    const nowMs = toUnixMillis(Date.now());
 
     let cursor: string | null = null;
     let errorCount = 0;
@@ -103,14 +103,16 @@ export function createCheckInGenerateHandler(
           await db
             .update(timerConfigs)
             .set({
-              nextCheckInAt: computeNextCheckInAt(
-                {
-                  intervalMinutes: config.intervalMinutes,
-                  wakingHoursOnly: config.wakingHoursOnly,
-                  wakingStart: config.wakingStart,
-                  wakingEnd: config.wakingEnd,
-                },
-                nowMs,
+              nextCheckInAt: toUnixMillis(
+                computeNextCheckInAt(
+                  {
+                    intervalMinutes: config.intervalMinutes,
+                    wakingHoursOnly: config.wakingHoursOnly,
+                    wakingStart: config.wakingStart,
+                    wakingEnd: config.wakingEnd,
+                  },
+                  nowMs,
+                ),
               ),
             })
             .where(eq(timerConfigs.id, config.id));

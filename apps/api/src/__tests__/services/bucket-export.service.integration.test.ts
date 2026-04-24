@@ -14,6 +14,7 @@ import {
   ID_PREFIXES,
   now,
   brandId,
+  toUnixMillis,
 } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
@@ -26,6 +27,7 @@ import {
 import { asDb, assertApiError, makeAuth } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { UnixMillis } from "@pluralscape/types";
 import type {
   AccountId,
   BucketContentEntityType,
@@ -137,7 +139,7 @@ describe("bucket-export.service (PGlite integration)", () => {
     return brandId<BucketId>(id);
   }
 
-  async function insertMember(updatedAt?: number): Promise<MemberId> {
+  async function insertMember(updatedAt?: UnixMillis): Promise<MemberId> {
     const id = brandId<MemberId>(createId(ID_PREFIXES.member));
     const ts = updatedAt ?? now();
     await db.insert(members).values({
@@ -150,7 +152,7 @@ describe("bucket-export.service (PGlite integration)", () => {
     return brandId<MemberId>(id);
   }
 
-  async function insertGroup(updatedAt?: number): Promise<GroupId> {
+  async function insertGroup(updatedAt?: UnixMillis): Promise<GroupId> {
     const id = brandId<GroupId>(createId(ID_PREFIXES.group));
     const ts = updatedAt ?? now();
     await db.insert(groups).values({
@@ -164,7 +166,7 @@ describe("bucket-export.service (PGlite integration)", () => {
     return id;
   }
 
-  async function insertCustomFront(updatedAt?: number): Promise<CustomFrontId> {
+  async function insertCustomFront(updatedAt?: UnixMillis): Promise<CustomFrontId> {
     const id = brandId<CustomFrontId>(createId(ID_PREFIXES.customFront));
     const ts = updatedAt ?? now();
     await db.insert(customFronts).values({
@@ -221,7 +223,7 @@ describe("bucket-export.service (PGlite integration)", () => {
   it("returns correct maxUpdatedAt timestamp", async () => {
     const bucketId = await insertBucket();
     const baseTs = now();
-    const laterTs = baseTs + 5000;
+    const laterTs = toUnixMillis(baseTs + 5000);
 
     const m1 = await insertMember(baseTs);
     const m2 = await insertMember(laterTs);
@@ -350,7 +352,7 @@ describe("bucket-export.service (PGlite integration)", () => {
     const bucketId = await insertBucket();
     const baseTs = now();
     for (let i = 0; i < 3; i++) {
-      const mid = await insertMember(baseTs + i * 1000);
+      const mid = await insertMember(toUnixMillis(baseTs + i * 1000));
       await insertBucketTag("member", mid, bucketId);
     }
 
@@ -366,7 +368,7 @@ describe("bucket-export.service (PGlite integration)", () => {
     const baseTs = now();
     const memberIds: MemberId[] = [];
     for (let i = 0; i < 3; i++) {
-      const mid = await insertMember(baseTs + i * 1000);
+      const mid = await insertMember(toUnixMillis(baseTs + i * 1000));
       await insertBucketTag("member", mid, bucketId);
       memberIds.push(mid);
     }
@@ -417,8 +419,8 @@ describe("bucket-export.service (PGlite integration)", () => {
     const bucketId = await insertBucket();
     const baseTs = now();
     const m1 = await insertMember(baseTs);
-    const m2 = await insertMember(baseTs + 2000);
-    const m3 = await insertMember(baseTs + 1000);
+    const m2 = await insertMember(toUnixMillis(baseTs + 2000));
+    const m3 = await insertMember(toUnixMillis(baseTs + 1000));
     await insertBucketTag("member", m1, bucketId);
     await insertBucketTag("member", m2, bucketId);
     await insertBucketTag("member", m3, bucketId);
@@ -524,7 +526,7 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const manifest1 = await getBucketExportManifest(asDb(db), systemId, bucketId, ownerAuth);
 
-    const m2 = await insertMember(now() + 5000);
+    const m2 = await insertMember(toUnixMillis(now() + 5000));
     await insertBucketTag("member", m2, bucketId);
 
     const manifest2 = await getBucketExportManifest(asDb(db), systemId, bucketId, ownerAuth);

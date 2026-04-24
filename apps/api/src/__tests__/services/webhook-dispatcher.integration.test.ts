@@ -6,7 +6,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -133,7 +133,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
     // Archive directly
     await db
       .update(webhookConfigs)
-      .set({ archived: true, archivedAt: Date.now() })
+      .set({ archived: true, archivedAt: toUnixMillis(Date.now()) })
       .where(eq(webhookConfigs.id, wh.id));
 
     const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {

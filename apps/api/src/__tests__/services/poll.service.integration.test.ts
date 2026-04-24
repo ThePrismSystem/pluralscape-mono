@@ -7,7 +7,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -448,7 +448,7 @@ describe("poll.service (PGlite integration)", () => {
       const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
 
       // Insert a vote row directly
-      const voteNow = Date.now();
+      const voteNow = toUnixMillis(Date.now());
       await db.insert(pollVotes).values({
         id: genPollVoteId(),
         pollId: created.id,

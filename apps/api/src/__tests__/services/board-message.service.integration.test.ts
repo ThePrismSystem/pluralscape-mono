@@ -6,7 +6,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -693,7 +693,7 @@ describe("board-message.service (PGlite integration)", () => {
     it("creates webhook delivery records for each reordered message", async () => {
       // Insert a webhook config subscribed to board-message.reordered
       const webhookId = brandId<WebhookId>(`wh_${crypto.randomUUID()}`);
-      const ts = Date.now();
+      const ts = toUnixMillis(Date.now());
       await db.insert(webhookConfigs).values({
         id: webhookId,
         systemId,

@@ -184,7 +184,7 @@ export async function loginAccount(
   const tokenHash = hashSessionToken(rawToken);
   const timestamp = now();
   const timeouts = SESSION_TIMEOUTS[platform];
-  const expiresAt = timestamp + timeouts.absoluteTtlMs;
+  const expiresAt = toUnixMillis(timestamp + timeouts.absoluteTtlMs);
 
   const systemId = await withAccountTransaction(db, brandId<AccountId>(account.id), async (tx) => {
     // Enforce per-account session limit: evict oldest session if at capacity

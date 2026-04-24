@@ -6,7 +6,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -285,7 +285,7 @@ describe("member.service (PGlite integration)", () => {
       );
 
       const groupId = genGroupId();
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(groups).values({
         id: groupId,
         systemId,
@@ -490,7 +490,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(memberPhotos).values({
         id: brandId<MemberPhotoId>(`mph_${crypto.randomUUID()}`),
         memberId: created.id,
@@ -518,12 +518,12 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(frontingSessions).values({
         id: brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`),
         systemId,
         memberId: created.id,
-        startTime: now - 3_600_000,
+        startTime: toUnixMillis(now - 3_600_000),
         encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
@@ -546,7 +546,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(relationships).values({
         id: brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
         systemId,
@@ -574,7 +574,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(notes).values({
         id: brandId<NoteId>(`note_${crypto.randomUUID()}`),
         systemId,
@@ -602,7 +602,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(acknowledgements).values({
         id: brandId<AcknowledgementId>(`ack_${crypto.randomUUID()}`),
         systemId,
@@ -629,7 +629,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(polls).values({
         id: brandId<PollId>(`poll_${crypto.randomUUID()}`),
         systemId,
@@ -661,7 +661,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       const timerId = brandId<TimerId>(`tmr_${crypto.randomUUID()}`);
       await db.insert(timerConfigs).values({
         id: timerId,
@@ -696,7 +696,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const groupId = genGroupId();
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(groups).values({
         id: groupId,
         systemId,
@@ -729,7 +729,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       // Insert field definition first (FK constraint)
       await db.insert(fieldDefinitions).values({
@@ -767,7 +767,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(systemStructureEntityMemberLinks).values({
         id: brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`),
         systemId,
@@ -849,7 +849,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(memberPhotos).values({
         id: brandId<MemberPhotoId>(`mph_${crypto.randomUUID()}`),
         memberId: source.id,
@@ -909,7 +909,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       await db.insert(fieldDefinitions).values({
         id: fdId,
@@ -979,7 +979,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const groupId = genGroupId();
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(groups).values({
         id: groupId,
         systemId,
@@ -1063,7 +1063,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const groupId = genGroupId();
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       await db.insert(groups).values({
         id: groupId,
         systemId,
@@ -1093,7 +1093,7 @@ describe("member.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
       const linkId = brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`);
       await db.insert(systemStructureEntityMemberLinks).values({
         id: linkId,

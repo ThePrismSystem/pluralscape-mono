@@ -1,5 +1,5 @@
 import { buckets } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { BucketQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
@@ -39,12 +39,10 @@ export async function listBuckets(
 
     if (opts.cursor) {
       const decoded = fromCompositeCursor(opts.cursor, "bucket");
+      const sortValue = toUnixMillis(decoded.sortValue);
       const cursorCondition = or(
-        lt(buckets.createdAt, decoded.sortValue),
-        and(
-          eq(buckets.createdAt, decoded.sortValue),
-          lt(buckets.id, brandId<BucketId>(decoded.id)),
-        ),
+        lt(buckets.createdAt, sortValue),
+        and(eq(buckets.createdAt, sortValue), lt(buckets.id, brandId<BucketId>(decoded.id))),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

@@ -8,7 +8,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { ROTATION_ITEM_STATUSES, ROTATION_STATES, brandId } from "@pluralscape/types";
+import { ROTATION_ITEM_STATUSES, ROTATION_STATES, brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -29,6 +29,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { UnixMillis } from "@pluralscape/types";
 import type {
   AccountId,
   BucketId,
@@ -81,7 +82,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
   async function insertBucket(id?: BucketId): Promise<BucketId> {
     const resolvedId = id ?? genBucketId();
-    const ts = Date.now();
+    const ts = toUnixMillis(Date.now());
     await db.insert(buckets).values({
       id: resolvedId,
       systemId,
@@ -179,7 +180,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         friendAccountId: accountId,
         encryptedKey: Buffer.from("old-key"),
         keyVersion: 1,
-        createdAt: Date.now(),
+        createdAt: toUnixMillis(Date.now()),
       });
 
       await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
@@ -220,7 +221,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         state: ROTATION_STATES.migrating,
-        initiatedAt: Date.now(),
+        initiatedAt: toUnixMillis(Date.now()),
         totalItems: 1,
         completedItems: 0,
         failedItems: 0,
@@ -245,7 +246,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         state: ROTATION_STATES.initiated,
-        initiatedAt: Date.now(),
+        initiatedAt: toUnixMillis(Date.now()),
         totalItems: 1,
         completedItems: 0,
         failedItems: 0,
@@ -395,8 +396,8 @@ describe("key-rotation.service (PGlite integration)", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         state: ROTATION_STATES.completed,
-        initiatedAt: Date.now(),
-        completedAt: Date.now(),
+        initiatedAt: toUnixMillis(Date.now()),
+        completedAt: toUnixMillis(Date.now()),
         totalItems: 0,
         completedItems: 0,
         failedItems: 0,
@@ -545,7 +546,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         state: ROTATION_STATES.initiated,
-        initiatedAt: Date.now(),
+        initiatedAt: toUnixMillis(Date.now()),
         totalItems: 0,
         completedItems: 0,
         failedItems: 0,
@@ -690,7 +691,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         state: ROTATION_STATES.failed,
-        initiatedAt: Date.now(),
+        initiatedAt: toUnixMillis(Date.now()),
         totalItems: 5,
         completedItems: 2,
         failedItems: 3,
@@ -702,7 +703,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         status:
           | (typeof ROTATION_ITEM_STATUSES)["completed"]
           | (typeof ROTATION_ITEM_STATUSES)["failed"],
-        completedAt: number | null,
+        completedAt: UnixMillis | null,
       ): Promise<BucketRotationItemId> => {
         const itemId = brandId<BucketRotationItemId>(`bri_${crypto.randomUUID()}`);
         await db.insert(bucketRotationItems).values({
@@ -713,7 +714,7 @@ describe("key-rotation.service (PGlite integration)", () => {
           entityId: crypto.randomUUID(),
           status,
           claimedBy: status === ROTATION_ITEM_STATUSES.failed ? "sess_prior-claim" : null,
-          claimedAt: status === ROTATION_ITEM_STATUSES.failed ? Date.now() : null,
+          claimedAt: status === ROTATION_ITEM_STATUSES.failed ? toUnixMillis(Date.now()) : null,
           completedAt,
           attempts: status === ROTATION_ITEM_STATUSES.failed ? 3 : 1,
         });
@@ -721,8 +722,8 @@ describe("key-rotation.service (PGlite integration)", () => {
       };
 
       const completedIds = [
-        await seedItem(ROTATION_ITEM_STATUSES.completed, Date.now()),
-        await seedItem(ROTATION_ITEM_STATUSES.completed, Date.now()),
+        await seedItem(ROTATION_ITEM_STATUSES.completed, toUnixMillis(Date.now())),
+        await seedItem(ROTATION_ITEM_STATUSES.completed, toUnixMillis(Date.now())),
       ];
       const failedIds = [
         await seedItem(ROTATION_ITEM_STATUSES.failed, null),
@@ -781,7 +782,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         fromKeyVersion: 1,
         toKeyVersion: 2,
         state: ROTATION_STATES.failed,
-        initiatedAt: Date.now(),
+        initiatedAt: toUnixMillis(Date.now()),
         totalItems: 2,
         completedItems: 2,
         failedItems: 0,
@@ -797,7 +798,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         status: ROTATION_ITEM_STATUSES.completed,
         claimedBy: null,
         claimedAt: null,
-        completedAt: Date.now(),
+        completedAt: toUnixMillis(Date.now()),
         attempts: 1,
       });
 

@@ -5,7 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -249,11 +249,11 @@ describe("friend-code.service (PGlite integration)", () => {
       // so that expiresAt > createdAt (satisfying the CHECK constraint) but
       // expiresAt < Date.now() (making it expired at redemption time).
       const created = await generateFriendCode(asDb(db), accountIdA, authA, noopAudit, {
-        expiresAt: Date.now() + 86_400_000,
+        expiresAt: toUnixMillis(Date.now()) + 86_400_000,
       });
 
-      const pastCreated = Date.now() - 172_800_000;
-      const pastExpiry = Date.now() - 86_400_000;
+      const pastCreated = toUnixMillis(Date.now() - 172_800_000);
+      const pastExpiry = toUnixMillis(Date.now() - 86_400_000);
       await db
         .update(friendCodes)
         .set({ createdAt: pastCreated, expiresAt: pastExpiry })

@@ -5,7 +5,14 @@ import {
   verifyRecoveryKey,
 } from "@pluralscape/crypto";
 import { accounts, recoveryKeys, sessions } from "@pluralscape/db/pg";
-import { brandId, ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types";
+import {
+  brandId,
+  ID_PREFIXES,
+  SESSION_TIMEOUTS,
+  createId,
+  now,
+  toUnixMillis,
+} from "@pluralscape/types";
 import { PasswordResetViaRecoveryKeySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -102,7 +109,7 @@ export async function resetPasswordWithRecoveryKey(
     const sessionId = brandId<SessionId>(createId(ID_PREFIXES.session));
     const newRecoveryKeyId = brandId<RecoveryKeyId>(createId(ID_PREFIXES.recoveryKey));
     const timeouts = SESSION_TIMEOUTS[platform];
-    const expiresAt = timestamp + timeouts.absoluteTtlMs;
+    const expiresAt = toUnixMillis(timestamp + timeouts.absoluteTtlMs);
 
     await withAccountTransaction(db, brandId<AccountId>(account.id), async (tx) => {
       // Update account: new auth key hash, KDF salt, encrypted master key

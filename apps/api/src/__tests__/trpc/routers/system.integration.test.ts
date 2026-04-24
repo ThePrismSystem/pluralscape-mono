@@ -1,6 +1,6 @@
 import { systemSnapshots } from "@pluralscape/db/pg";
 import { pgInsertSystem, testBlob } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
@@ -69,7 +69,7 @@ async function seedSnapshot(
   systemIdRaw: string,
 ): Promise<SystemSnapshotId> {
   const snapshotIdRaw = `snap_${crypto.randomUUID()}`;
-  const timestamp = Date.now();
+  const timestamp = toUnixMillis(Date.now());
   await db.insert(systemSnapshots).values({
     id: brandId<SystemSnapshotId>(snapshotIdRaw),
     systemId: brandId<SystemId>(systemIdRaw),

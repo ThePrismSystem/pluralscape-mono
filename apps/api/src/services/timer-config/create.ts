@@ -1,5 +1,5 @@
 import { timerConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, brandId, toUnixMillis } from "@pluralscape/types";
 import { CreateTimerConfigBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -40,14 +40,16 @@ export async function createTimerConfig(
   // Compute initial nextCheckInAt if the timer is enabled with a valid interval
   const nextCheckInAt =
     isEnabled && intervalMinutes !== null
-      ? computeNextCheckInAt(
-          {
-            intervalMinutes,
-            wakingHoursOnly: parsed.wakingHoursOnly ?? null,
-            wakingStart: parsed.wakingStart ?? null,
-            wakingEnd: parsed.wakingEnd ?? null,
-          },
-          Date.now(),
+      ? toUnixMillis(
+          computeNextCheckInAt(
+            {
+              intervalMinutes,
+              wakingHoursOnly: parsed.wakingHoursOnly ?? null,
+              wakingStart: parsed.wakingStart ?? null,
+              wakingEnd: parsed.wakingEnd ?? null,
+            },
+            Date.now(),
+          ),
         )
       : null;
 

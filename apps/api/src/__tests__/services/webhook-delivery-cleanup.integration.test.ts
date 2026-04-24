@@ -5,7 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -46,8 +46,8 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
       secret: new Uint8Array(Buffer.from("test-secret")) as ServerSecret,
       eventTypes: ["fronting.started"],
       enabled: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: toUnixMillis(Date.now()),
+      updatedAt: toUnixMillis(Date.now()),
     });
   });
 
@@ -64,7 +64,7 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
     ageInDays: number,
   ): Promise<WebhookDeliveryId> {
     const id = genWebhookDeliveryId();
-    const createdAt = Date.now() - ageInDays * MS_PER_DAY;
+    const createdAt = toUnixMillis(Date.now() - ageInDays * MS_PER_DAY);
     await db.insert(webhookDeliveries).values({
       id,
       webhookId,

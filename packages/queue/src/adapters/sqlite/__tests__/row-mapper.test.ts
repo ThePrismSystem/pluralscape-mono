@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { QueueCorruptionError } from "../../../errors.js";
@@ -7,7 +7,7 @@ import { rowToJob } from "../row-mapper.js";
 import type { JobRow } from "@pluralscape/db/sqlite";
 import type { JobId, JobPayload, JobType } from "@pluralscape/types";
 
-const BASE_CREATED_AT = 1_700_000_000_000;
+const BASE_CREATED_AT = toUnixMillis(1_700_000_000_000);
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 function baseRow(overrides: Partial<JobRow>): JobRow {

@@ -8,7 +8,7 @@ import {
   toHex,
 } from "@pluralscape/crypto";
 import { accounts, recoveryKeys } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Ensure EMAIL_HASH_PEPPER is available before env.ts is evaluated. The env
@@ -118,7 +118,7 @@ async function insertAccountWithKnownRecoveryKey(db: PostgresJsDatabase): Promis
   assertAuthKey(rawAuthKey);
   const rawRecoveryKey = new Uint8Array(randomBytes(RECOVERY_KEY_BYTES));
   const recoveryKeyHash = hashRecoveryKey(rawRecoveryKey);
-  const timestamp = Date.now();
+  const timestamp = toUnixMillis(Date.now());
 
   await db.insert(accounts).values({
     id: brandId<AccountId>(accountId),

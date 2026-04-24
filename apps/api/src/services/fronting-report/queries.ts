@@ -1,5 +1,5 @@
 import { frontingReports } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -13,7 +13,7 @@ import { toFrontingReportResult } from "./internal.js";
 
 import type { FrontingReportResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FrontingReportId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type { FrontingReportId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export interface FrontingReportListOptions {
@@ -24,7 +24,7 @@ export interface FrontingReportListOptions {
 // ── Cursor ───────────────────────────────────────────────────────────
 
 interface CursorData {
-  readonly t: number;
+  readonly t: UnixMillis;
   readonly i: FrontingReportId;
 }
 
@@ -46,7 +46,7 @@ function decodeCursor(cursor: string): CursorData {
       (parsed as { i: string }).i.length > 0
     ) {
       const raw = parsed as { t: number; i: string };
-      return { t: raw.t, i: brandId<FrontingReportId>(raw.i) };
+      return { t: toUnixMillis(raw.t), i: brandId<FrontingReportId>(raw.i) };
     }
   } catch {
     // fall through
@@ -94,7 +94,7 @@ export async function listFrontingReports(
       nextCursor:
         hasMore && lastItem
           ? (encodeCursor({
-              t: lastItem.generatedAt as number,
+              t: lastItem.generatedAt,
               i: lastItem.id,
             }) as PaginatedResult<FrontingReportResult>["nextCursor"])
           : null,

@@ -1,5 +1,5 @@
 import { lifecycleEvents } from "@pluralscape/db/pg";
-import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
   CreateLifecycleEventBodySchema,
   validateLifecycleMetadata,
@@ -62,7 +62,7 @@ export async function createLifecycleEvent(
         id: eventId,
         systemId,
         eventType: parsed.eventType,
-        occurredAt: parsed.occurredAt,
+        occurredAt: toUnixMillis(parsed.occurredAt),
         recordedAt: timestamp,
         updatedAt: timestamp,
         encryptedData: blob,

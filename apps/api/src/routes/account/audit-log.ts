@@ -1,4 +1,4 @@
-import { AUDIT_RETENTION, MS_PER_DAY } from "@pluralscape/types";
+import { AUDIT_RETENTION, MS_PER_DAY, toUnixMillis } from "@pluralscape/types";
 import { AuditLogQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
@@ -25,8 +25,8 @@ auditLogRoute.get("/", async (c) => {
   }
 
   const now = Date.now();
-  const to = parsed.data.to ?? now;
-  const from = parsed.data.from ?? to - MAX_RANGE_MS;
+  const to = toUnixMillis(parsed.data.to ?? now);
+  const from = toUnixMillis(parsed.data.from ?? to - MAX_RANGE_MS);
 
   if (to < from) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "'to' must be >= 'from'");

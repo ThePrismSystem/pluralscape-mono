@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import * as schema from "@pluralscape/db/pg";
 import { SnapshotVersionConflictError } from "@pluralscape/sync";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -123,7 +123,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
   /** Insert a sync document row and return its documentId. */
   async function insertDoc(id?: string): Promise<SyncDocumentId> {
     const raw = id ?? `system-core-sys_${crypto.randomUUID().slice(0, 8)}`;
-    const now = Date.now();
+    const now = toUnixMillis(Date.now());
     await db.insert(syncDocuments).values({
       documentId: asSyncDocId(raw),
       systemId,

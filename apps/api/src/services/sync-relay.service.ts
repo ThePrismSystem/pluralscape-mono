@@ -1,7 +1,7 @@
 import { assertAeadNonce, assertSignature, assertSignPublicKey } from "@pluralscape/crypto";
 import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
 import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscape/sync";
-import { brandId, createId, ID_PREFIXES } from "@pluralscape/types";
+import { brandId, createId, ID_PREFIXES, toUnixMillis } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
@@ -47,7 +47,7 @@ export class PgSyncRelayService implements SyncRelayService {
 
   async submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<number> {
     return this.withCtx(async (tx) => {
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
 
       // M8: Atomically increment last_seq and get the new value (query 1 of 2)
       const [updated] = await tx
@@ -145,7 +145,7 @@ export class PgSyncRelayService implements SyncRelayService {
 
   async submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {
     await this.withCtx(async (tx) => {
-      const now = Date.now();
+      const now = toUnixMillis(Date.now());
 
       // Atomic conditional UPDATE eliminates TOCTOU race
       const [atomicResult] = await tx

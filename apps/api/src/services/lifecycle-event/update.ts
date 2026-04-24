@@ -1,5 +1,5 @@
 import { lifecycleEvents } from "@pluralscape/db/pg";
-import { brandId, now } from "@pluralscape/types";
+import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import {
   UpdateLifecycleEventBodySchema,
   validateLifecycleMetadata,
@@ -82,7 +82,8 @@ export async function updateLifecycleEvent(
         updatedAt: timestamp,
         version: sql`${lifecycleEvents.version} + 1`,
         eventType: parsed.eventType ?? current.eventType,
-        occurredAt: parsed.occurredAt ?? current.occurredAt,
+        occurredAt:
+          parsed.occurredAt !== undefined ? toUnixMillis(parsed.occurredAt) : current.occurredAt,
         plaintextMetadata: metadata ?? current.plaintextMetadata,
       })
       .where(

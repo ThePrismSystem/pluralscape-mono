@@ -45,8 +45,8 @@ export interface AuditLogEntryResult {
 export interface AuditLogQueryParams {
   readonly eventType?: string;
   readonly resourceType?: string;
-  readonly from: number;
-  readonly to: number;
+  readonly from: UnixMillis;
+  readonly to: UnixMillis;
   readonly cursor?: string;
   readonly limit: number;
 }
@@ -54,7 +54,7 @@ export interface AuditLogQueryParams {
 // ── Cursor encoding ────────────────────────────────────────────────
 
 interface CursorData {
-  readonly t: number;
+  readonly t: UnixMillis;
   readonly i: AuditLogEntryId;
 }
 
@@ -76,7 +76,7 @@ function decodeCursor(cursor: string): CursorData {
       (parsed as { i: string }).i.length > 0
     ) {
       const raw = parsed as { t: number; i: string };
-      return { t: raw.t, i: brandId<AuditLogEntryId>(raw.i) };
+      return { t: toUnixMillis(raw.t), i: brandId<AuditLogEntryId>(raw.i) };
     }
   } catch {
     // fall through

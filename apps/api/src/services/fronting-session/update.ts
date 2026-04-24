@@ -1,5 +1,5 @@
 import { frontingSessions } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { now, toUnixMillis } from "@pluralscape/types";
 import {
   EndFrontingSessionBodySchema,
   UpdateFrontingSessionBodySchema,
@@ -144,7 +144,7 @@ export async function endFrontingSession(
     const updated = await tx
       .update(frontingSessions)
       .set({
-        endTime,
+        endTime: toUnixMillis(endTime),
         updatedAt: timestamp,
         version: sql`${frontingSessions.version} + 1`,
       })

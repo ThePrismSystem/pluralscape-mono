@@ -8,7 +8,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -80,8 +80,8 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       secret: webhookSecret,
       eventTypes: ["fronting.started"],
       enabled: true,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: toUnixMillis(Date.now()),
+      updatedAt: toUnixMillis(Date.now()),
     });
   });
 
@@ -107,7 +107,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       status: "pending" as const,
       attemptCount: 0,
       encryptedData: encryptWebhookPayload(TEST_PAYLOAD_JSON, key),
-      createdAt: Date.now(),
+      createdAt: toUnixMillis(Date.now()),
       ...overrides,
     };
     await db.insert(webhookDeliveries).values(values as typeof webhookDeliveries.$inferInsert);
@@ -189,8 +189,8 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
         secret: new Uint8Array(randomBytes(32)) as ServerSecret,
         eventTypes: ["fronting.started"],
         enabled: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: toUnixMillis(Date.now()),
+        updatedAt: toUnixMillis(Date.now()),
       });
 
       const deliveryId = await insertDelivery({ webhookId: disabledWhId });
@@ -248,13 +248,13 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
     });
 
     it("excludes deliveries with future nextRetryAt", async () => {
-      await insertDelivery({ nextRetryAt: Date.now() + 60000 });
+      await insertDelivery({ nextRetryAt: toUnixMillis(Date.now() + 60000) });
       const results = await findPendingDeliveries(asDb(db), 10);
       expect(results.length).toBe(0);
     });
 
     it("includes deliveries with past nextRetryAt", async () => {
-      const deliveryId = await insertDelivery({ nextRetryAt: Date.now() - 1000 });
+      const deliveryId = await insertDelivery({ nextRetryAt: toUnixMillis(Date.now() - 1000) });
       const results = await findPendingDeliveries(asDb(db), 10);
       expect(results.length).toBe(1);
       expect(results[0]?.id).toBe(deliveryId);

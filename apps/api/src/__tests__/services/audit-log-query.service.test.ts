@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -14,8 +14,8 @@ const { queryAuditLog } = await import("../../services/audit-log-query.service.j
 const ACCOUNT_ID = brandId<AccountId>("acct_test-account");
 
 const BASE_PARAMS = {
-  from: 1_000_000,
-  to: 9_000_000,
+  from: toUnixMillis(1_000_000),
+  to: toUnixMillis(9_000_000),
   limit: 10,
 };
 
