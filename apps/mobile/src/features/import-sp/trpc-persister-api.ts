@@ -454,20 +454,13 @@ export function createTRPCPersisterApi(
     },
 
     member: {
-      create: async (
-        sysId: SystemId,
-        payload: EncryptedInput & { readonly avatarBlobId?: string },
-      ) => {
+      create: async (sysId: SystemId, payload: EncryptedInput) => {
         return client.member.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
         });
       },
-      update: async (
-        sysId: SystemId,
-        memberId: string,
-        payload: EncryptedUpdate & { readonly avatarBlobId?: string },
-      ) => {
+      update: async (sysId: SystemId, memberId: string, payload: EncryptedUpdate) => {
         return client.member.update.mutate({
           systemId: sysId,
           memberId,

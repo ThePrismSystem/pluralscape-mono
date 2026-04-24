@@ -89,12 +89,12 @@ export type PersisterProcFieldSetValue = (
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcMemberCreate = (
   systemId: SystemId,
-  payload: EncryptedInput & { readonly avatarBlobId?: string },
+  payload: EncryptedInput,
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcMemberUpdate = (
   systemId: SystemId,
   memberId: string,
-  payload: EncryptedUpdate & { readonly avatarBlobId?: string },
+  payload: EncryptedUpdate,
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcFriendRecord = (
   systemId: SystemId,

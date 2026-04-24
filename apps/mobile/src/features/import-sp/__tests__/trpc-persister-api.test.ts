@@ -504,7 +504,7 @@ describe("customFront", () => {
 // ── member ──────────────────────────────────────────────────────────
 
 describe("member", () => {
-  it("create calls member.create with encryptedData only (no avatarBlobId)", async () => {
+  it("create calls member.create with encryptedData", async () => {
     const client = makeMockClient();
     client.member.create.mutate.mockResolvedValue({ id: "mem_1", version: 1 });
     const api = createTRPCPersisterApi(client);
@@ -512,23 +512,6 @@ describe("member", () => {
     const result = await api.member.create(TEST_SYSTEM_ID, { encryptedData: "enc_member" });
 
     expect(result).toEqual({ id: "mem_1", version: 1 });
-    expect(client.member.create.mutate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      encryptedData: "enc_member",
-    });
-  });
-
-  it("create passes encryptedData even when avatarBlobId is provided", async () => {
-    const client = makeMockClient();
-    client.member.create.mutate.mockResolvedValue({ id: "mem_2", version: 1 });
-    const api = createTRPCPersisterApi(client);
-
-    const result = await api.member.create(TEST_SYSTEM_ID, {
-      encryptedData: "enc_member",
-      avatarBlobId: "blob_1",
-    });
-
-    expect(result).toEqual({ id: "mem_2", version: 1 });
     expect(client.member.create.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_member",
@@ -546,25 +529,6 @@ describe("member", () => {
     });
 
     expect(result).toEqual({ id: "mem_1", version: 2 });
-    expect(client.member.update.mutate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      memberId: "mem_1",
-      encryptedData: "enc_member_v2",
-      version: 1,
-    });
-  });
-
-  it("update ignores avatarBlobId since tRPC endpoint does not accept it", async () => {
-    const client = makeMockClient();
-    client.member.update.mutate.mockResolvedValue({ id: "mem_1", version: 2 });
-    const api = createTRPCPersisterApi(client);
-
-    await api.member.update(TEST_SYSTEM_ID, "mem_1", {
-      encryptedData: "enc_member_v2",
-      version: 1,
-      avatarBlobId: "blob_1",
-    });
-
     expect(client.member.update.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
       memberId: "mem_1",
