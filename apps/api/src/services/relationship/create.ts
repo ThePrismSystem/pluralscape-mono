@@ -1,5 +1,5 @@
 import { members, relationships } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateRelationshipBodySchema } from "@pluralscape/validation";
 import { and, eq, or } from "drizzle-orm";
 
@@ -16,7 +16,7 @@ import { toRelationshipResult } from "./internal.js";
 import type { RelationshipResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { MemberId, RelationshipId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createRelationship(
@@ -43,8 +43,10 @@ export async function createRelationship(
     );
   }
 
-  const relationshipId = createId(ID_PREFIXES.relationship);
+  const relationshipId = brandId<RelationshipId>(createId(ID_PREFIXES.relationship));
   const timestamp = now();
+  const sourceMemberId = brandId<MemberId>(parsed.sourceMemberId);
+  const targetMemberId = brandId<MemberId>(parsed.targetMemberId);
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Validate both members exist in the same system
@@ -54,15 +56,15 @@ export async function createRelationship(
       .where(
         and(
           eq(members.systemId, systemId),
-          or(eq(members.id, parsed.sourceMemberId), eq(members.id, parsed.targetMemberId)),
+          or(eq(members.id, sourceMemberId), eq(members.id, targetMemberId)),
         ),
       );
 
     const foundIds = new Set(memberRows.map((m) => m.id));
-    if (!foundIds.has(parsed.sourceMemberId)) {
+    if (!foundIds.has(sourceMemberId)) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Source member not found in this system");
     }
-    if (!foundIds.has(parsed.targetMemberId)) {
+    if (!foundIds.has(targetMemberId)) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Target member not found in this system");
     }
 
@@ -71,8 +73,8 @@ export async function createRelationship(
       .values({
         id: relationshipId,
         systemId,
-        sourceMemberId: parsed.sourceMemberId,
-        targetMemberId: parsed.targetMemberId,
+        sourceMemberId,
+        targetMemberId,
         type: parsed.type,
         bidirectional: parsed.bidirectional,
         encryptedData: blob,

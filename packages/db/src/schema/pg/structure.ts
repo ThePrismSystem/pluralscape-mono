@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -19,27 +19,35 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerRelationship } from "@pluralscape/types";
+import type {
+  MemberId,
+  Relationship,
+  RelationshipId,
+  SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+  SystemStructureEntityMemberLinkId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = pgTable(
   "relationships",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<RelationshipId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceMemberId: varchar("source_member_id", { length: ID_MAX_LENGTH }),
-    targetMemberId: varchar("target_member_id", { length: ID_MAX_LENGTH }),
-    type: varchar("type", { length: ENUM_MAX_LENGTH })
-      .notNull()
-      .$type<ServerRelationship["type"]>(),
+    sourceMemberId: brandedId<MemberId>("source_member_id"),
+    targetMemberId: brandedId<MemberId>("target_member_id"),
+    type: varchar("type", { length: ENUM_MAX_LENGTH }).notNull().$type<Relationship["type"]>(),
     bidirectional: boolean("bidirectional").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -65,8 +73,8 @@ export const relationships = pgTable(
 export const systemStructureEntityTypes = pgTable(
   "system_structure_entity_types",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityTypeId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull(),
@@ -86,11 +94,11 @@ export const systemStructureEntityTypes = pgTable(
 export const systemStructureEntities = pgTable(
   "system_structure_entities",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityTypeId: varchar("entity_type_id", { length: ID_MAX_LENGTH }).notNull(),
+    entityTypeId: brandedId<SystemStructureEntityTypeId>("entity_type_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -113,12 +121,12 @@ export const systemStructureEntities = pgTable(
 export const systemStructureEntityLinks = pgTable(
   "system_structure_entity_links",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
-    parentEntityId: varchar("parent_entity_id", { length: ID_MAX_LENGTH }),
+    entityId: brandedId<SystemStructureEntityId>("entity_id").notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
     sortOrder: integer("sort_order").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
@@ -142,12 +150,12 @@ export const systemStructureEntityLinks = pgTable(
 export const systemStructureEntityMemberLinks = pgTable(
   "system_structure_entity_member_links",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityMemberLinkId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentEntityId: varchar("parent_entity_id", { length: ID_MAX_LENGTH }),
-    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
+    parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
+    memberId: brandedId<MemberId>("member_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
@@ -180,12 +188,12 @@ export const systemStructureEntityMemberLinks = pgTable(
 export const systemStructureEntityAssociations = pgTable(
   "system_structure_entity_associations",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<SystemStructureEntityAssociationId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceEntityId: varchar("source_entity_id", { length: ID_MAX_LENGTH }).notNull(),
-    targetEntityId: varchar("target_entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    sourceEntityId: brandedId<SystemStructureEntityId>("source_entity_id").notNull(),
+    targetEntityId: brandedId<SystemStructureEntityId>("target_entity_id").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [

@@ -106,9 +106,10 @@ export { toChecksumHex } from "./checksum.js";
 
 // ── Encryption primitives ────────────────────────────────────────
 // Server*/Client* wrappers for non-pilot entities live alongside the
-// primitives until Plan 2 renames each to <Entity>ServerMetadata per
-// entity file. MemberServerMetadata/MemberWire and AuditLogEntry*
-// already live in their entity files.
+// primitives until each cluster renames them to <Entity>ServerMetadata
+// per entity file. MemberServerMetadata/MemberWire,
+// AuditLogEntry{ServerMetadata,Wire}, and the Cluster 8 communication +
+// engagement renames already live in their entity files.
 export type {
   Encrypted,
   BucketEncrypted,
@@ -121,48 +122,6 @@ export type {
   ServerSecret,
   DecryptFn,
   EncryptFn,
-  ServerFrontingSession,
-  ClientFrontingSession,
-  ServerFrontingComment,
-  ClientFrontingComment,
-  ServerGroup,
-  ClientGroup,
-  ServerStructureEntityType,
-  ClientStructureEntityType,
-  ServerStructureEntity,
-  ClientStructureEntity,
-  ServerRelationship,
-  ClientRelationship,
-  ServerChannel,
-  ClientChannel,
-  ServerChatMessage,
-  ClientChatMessage,
-  ServerBoardMessage,
-  ClientBoardMessage,
-  ServerNote,
-  ClientNote,
-  ServerFieldDefinition,
-  ClientFieldDefinition,
-  ServerFieldValue,
-  ClientFieldValue,
-  ServerLifecycleEvent,
-  ClientLifecycleEvent,
-  ServerCustomFront,
-  ClientCustomFront,
-  ServerJournalEntry,
-  ClientJournalEntry,
-  ServerWikiPage,
-  ClientWikiPage,
-  ServerMemberPhoto,
-  ClientMemberPhoto,
-  ServerPoll,
-  ClientPoll,
-  ServerPollVote,
-  ClientPollVote,
-  ServerAcknowledgementRequest,
-  ClientAcknowledgementRequest,
-  ServerTimerConfig,
-  ClientTimerConfig,
 } from "./encryption-primitives.js";
 
 // ── Response unions ──────────────────────────────────────────────

@@ -16,7 +16,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { BucketId } from "@pluralscape/types";
+import type { BlobId, BucketId, ChecksumHex } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, buckets, blobMetadata };
@@ -45,7 +45,7 @@ describe("PG blob_metadata schema", () => {
   it("round-trips all fields", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(blobMetadata).values({
@@ -56,7 +56,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 1024,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
       uploadedAt: now,
     });
@@ -78,26 +78,26 @@ describe("PG blob_metadata schema", () => {
     const now = Date.now();
 
     await db.insert(blobMetadata).values({
-      id: crypto.randomUUID(),
+      id: brandId<BlobId>(crypto.randomUUID()),
       systemId,
       storageKey,
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
       uploadedAt: now,
     });
 
     await expect(
       db.insert(blobMetadata).values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey,
         sizeBytes: 200,
         encryptionTier: 1,
         purpose: "attachment",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       }),
@@ -111,13 +111,13 @@ describe("PG blob_metadata schema", () => {
 
     await expect(
       db.insert(blobMetadata).values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 0,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       }),
@@ -132,13 +132,13 @@ describe("PG blob_metadata schema", () => {
     await expect(
       // @ts-expect-error — intentionally testing CHECK constraint with invalid tier value
       db.insert(blobMetadata).values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 100,
         encryptionTier: 3,
         purpose: "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       }),
@@ -152,13 +152,13 @@ describe("PG blob_metadata schema", () => {
 
     await expect(
       db.insert(blobMetadata).values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "invalid" as "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       }),
@@ -168,7 +168,7 @@ describe("PG blob_metadata schema", () => {
   it("cascades on system deletion", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(blobMetadata).values({
@@ -178,7 +178,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 2,
       purpose: "member-photo",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
       uploadedAt: now,
     });
@@ -203,13 +203,13 @@ describe("PG blob_metadata schema", () => {
     });
 
     await db.insert(blobMetadata).values({
-      id: crypto.randomUUID(),
+      id: brandId<BlobId>(crypto.randomUUID()),
       systemId,
       storageKey: `blobs/${crypto.randomUUID()}`,
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       bucketId,
       createdAt: now,
       uploadedAt: now,
@@ -221,7 +221,7 @@ describe("PG blob_metadata schema", () => {
   it("allows null checksum when uploadedAt is also null (pending upload)", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = new Date().toISOString();
 
     // NULL checksum + NULL uploadedAt = valid pending upload
@@ -258,13 +258,13 @@ describe("PG blob_metadata schema", () => {
 
     await expect(
       db.insert(blobMetadata).values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(63),
+        checksum: brandId<ChecksumHex>("a".repeat(63)),
         createdAt: now,
         uploadedAt: now,
       }),
@@ -272,13 +272,13 @@ describe("PG blob_metadata schema", () => {
 
     await expect(
       db.insert(blobMetadata).values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(65),
+        checksum: brandId<ChecksumHex>("a".repeat(65)),
         createdAt: now,
         uploadedAt: now,
       }),
@@ -291,13 +291,13 @@ describe("PG blob_metadata schema", () => {
     const now = Date.now();
 
     await db.insert(blobMetadata).values({
-      id: crypto.randomUUID(),
+      id: brandId<BlobId>(crypto.randomUUID()),
       systemId,
       storageKey: `blobs/${crypto.randomUUID()}`,
       sizeBytes: 10737418240,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
       uploadedAt: now,
     });
@@ -310,13 +310,13 @@ describe("PG blob_metadata schema", () => {
 
     await expect(
       db.insert(blobMetadata).values({
-        id: crypto.randomUUID(),
+        id: brandId<BlobId>(crypto.randomUUID()),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 10737418241,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "a".repeat(64),
+        checksum: brandId<ChecksumHex>("a".repeat(64)),
         createdAt: now,
         uploadedAt: now,
       }),
@@ -326,7 +326,7 @@ describe("PG blob_metadata schema", () => {
   it("defaults archived to false and archivedAt to null", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(blobMetadata).values({
@@ -336,7 +336,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
       uploadedAt: now,
     });
@@ -349,7 +349,7 @@ describe("PG blob_metadata schema", () => {
   it("round-trips archived: true with archivedAt timestamp", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(blobMetadata).values({
@@ -359,7 +359,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
       uploadedAt: now,
       archived: true,
@@ -374,7 +374,7 @@ describe("PG blob_metadata schema", () => {
   it("updates archived from false to true", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<BlobId>(crypto.randomUUID());
     const now = Date.now();
 
     await db.insert(blobMetadata).values({
@@ -384,7 +384,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "a".repeat(64),
+      checksum: brandId<ChecksumHex>("a".repeat(64)),
       createdAt: now,
       uploadedAt: now,
     });

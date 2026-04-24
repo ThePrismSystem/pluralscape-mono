@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { MAX_ERROR_LOG_ENTRIES } from "../../helpers/db.constants.js";
 import {
@@ -18,31 +18,35 @@ import { blobMetadata } from "./blob-metadata.js";
 import { systems } from "./systems.js";
 
 import type {
+  AccountId,
   AccountPurgeStatus,
   ExportFormat,
   ExportRequestStatus,
   ImportCheckpointState,
   ImportEntityType,
+  ImportError,
+  ImportJobId,
   ImportJobStatus,
   ImportSourceFormat,
+  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const importJobs = sqliteTable(
   "import_jobs",
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
+    id: brandedId<ImportJobId>("id").primaryKey(),
+    accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: text("system_id")
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     source: text("source").notNull().$type<ImportSourceFormat>(),
     status: text("status").notNull().default("pending").$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
     /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
-    errorLog: sqliteJson("error_log"),
+    errorLog: sqliteJson("error_log").$type<readonly ImportError[]>(),
     /** Resumption state for interrupted imports. See ImportCheckpointState in @pluralscape/types. */
     checkpointState: sqliteJson("checkpoint_state").$type<ImportCheckpointState>(),
     warningCount: integer("warning_count").notNull().default(0),

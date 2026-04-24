@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { systems, webhookConfigs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateWebhookConfigBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
@@ -19,7 +19,7 @@ import { toServerSecret, toWebhookConfigResult, validateWebhookUrl } from "./int
 import type { WebhookConfigCreateResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { ApiKeyId, SystemId, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createWebhookConfig(
@@ -39,7 +39,8 @@ export async function createWebhookConfig(
   const { url, eventTypes, enabled, cryptoKeyId } = result.data;
   await validateWebhookUrl(url);
 
-  const whId = createId(ID_PREFIXES.webhook);
+  const whId = brandId<WebhookId>(createId(ID_PREFIXES.webhook));
+  const cryptoKeyIdBranded = cryptoKeyId ? brandId<ApiKeyId>(cryptoKeyId) : null;
   const timestamp = now();
 
   const created = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -70,7 +71,7 @@ export async function createWebhookConfig(
         secret: secretBytes,
         eventTypes,
         enabled,
-        cryptoKeyId: cryptoKeyId ?? null,
+        cryptoKeyId: cryptoKeyIdBranded,
         createdAt: timestamp,
         updatedAt: timestamp,
       })

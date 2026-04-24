@@ -1,12 +1,18 @@
 /**
  * Shared return types for views and query helpers across PG and SQLite.
  *
- * IDs are plain `string` rather than branded types (e.g. `SystemId`) because these types
- * live at the database layer. Branded IDs are applied at the application layer when
- * converting query results into domain objects.
+ * IDs on most views are plain `string` rather than branded types — these types
+ * historically lived at the database layer before brand lift. Brand-lifted
+ * view types (per cluster) import their branded IDs directly and propagate
+ * the brand through the select().
  */
 
-import type { DeviceTokenPlatform, WebhookEventType } from "@pluralscape/types";
+import type {
+  AcknowledgementId,
+  DeviceTokenPlatform,
+  SystemId,
+  WebhookEventType,
+} from "@pluralscape/types";
 
 /** A currently fronting member (end_time IS NULL). */
 export interface CurrentFronter {
@@ -54,8 +60,8 @@ export interface PendingWebhookRetry {
 
 /** An unconfirmed acknowledgement. */
 export interface UnconfirmedAcknowledgement {
-  readonly id: string;
-  readonly systemId: string;
+  readonly id: AcknowledgementId;
+  readonly systemId: SystemId;
   readonly createdAt: number;
 }
 

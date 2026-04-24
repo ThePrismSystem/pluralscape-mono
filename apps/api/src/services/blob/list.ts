@@ -1,4 +1,5 @@
 import { blobMetadata } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import { buildPaginatedResult } from "../../lib/pagination.js";
@@ -11,7 +12,7 @@ import { toBlobResult } from "./internal.js";
 
 import type { BlobResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, SystemId } from "@pluralscape/types";
+import type { BlobId, PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listBlobs(
@@ -39,7 +40,7 @@ export async function listBlobs(
     }
 
     if (opts?.cursor) {
-      conditions.push(gt(blobMetadata.id, opts.cursor));
+      conditions.push(gt(blobMetadata.id, brandId<BlobId>(opts.cursor)));
     }
 
     const rows = await tx

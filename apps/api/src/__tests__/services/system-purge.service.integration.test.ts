@@ -34,7 +34,16 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ChannelId,
+  GroupId,
+  MemberId,
+  MessageId,
+  NoteId,
+  RelationshipId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { systems, members, groups, groupMemberships, relationships, notes, channels, messages } =
@@ -70,10 +79,10 @@ describe("system-purge.service (PGlite integration)", () => {
     // Add a relationship
     const now = Date.now();
     await db.insert(relationships).values({
-      id: `rel_${crypto.randomUUID()}`,
+      id: brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
       systemId,
-      sourceMemberId: memberA,
-      targetMemberId: memberB,
+      sourceMemberId: brandId<MemberId>(memberA),
+      targetMemberId: brandId<MemberId>(memberB),
       type: "sibling",
       bidirectional: true,
       encryptedData: testBlob(),
@@ -82,7 +91,7 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     // Add a group with membership
-    const groupId = `grp_${crypto.randomUUID()}`;
+    const groupId = brandId<GroupId>(`grp_${crypto.randomUUID()}`);
     await db.insert(groups).values({
       id: groupId,
       systemId,
@@ -101,7 +110,7 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     // Add a channel with a message
-    const channelId = `ch_${crypto.randomUUID()}`;
+    const channelId = brandId<ChannelId>(`ch_${crypto.randomUUID()}`);
     await db.insert(channels).values({
       id: channelId,
       systemId,
@@ -114,7 +123,7 @@ describe("system-purge.service (PGlite integration)", () => {
     });
 
     await db.insert(messages).values({
-      id: `msg_${crypto.randomUUID()}`,
+      id: brandId<MessageId>(`msg_${crypto.randomUUID()}`),
       channelId,
       systemId,
       timestamp: now,
@@ -125,7 +134,7 @@ describe("system-purge.service (PGlite integration)", () => {
 
     // Add a note
     await db.insert(notes).values({
-      id: `note_${crypto.randomUUID()}`,
+      id: brandId<NoteId>(`note_${crypto.randomUUID()}`),
       systemId,
       encryptedData: testBlob(),
       createdAt: now,

@@ -20,6 +20,8 @@ import type {
   SystemId,
   WebhookId,
 } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
 import type { BucketContentEntityType } from "./bucket.js";
 
@@ -260,3 +262,23 @@ export interface WebhookConfig extends AuditMetadata {
 
 /** An archived webhook config. */
 export type ArchivedWebhookConfig = Archived<WebhookConfig>;
+
+/**
+ * Server-visible webhook config metadata — raw Drizzle row shape.
+ *
+ * Derived from `WebhookConfig` by replacing the domain's `archived: false`
+ * literal with the DB-boolean plus the companion `archivedAt`. The
+ * `secret` field is an HMAC signing key the server reads at delivery
+ * time — carried as the same `ServerSecret` brand as the domain type.
+ */
+export type WebhookConfigServerMetadata = Omit<WebhookConfig, "archived"> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/**
+ * JSON-wire representation of WebhookConfig. Derived from the domain
+ * type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`, `Uint8Array` becomes base64 string.
+ */
+export type WebhookConfigWire = Serialize<WebhookConfig>;

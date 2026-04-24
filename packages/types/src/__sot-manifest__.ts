@@ -4,6 +4,11 @@ import type {
   AccountPurgeRequestWire,
 } from "./entities/account-purge-request.js";
 import type { Account, AccountServerMetadata, AccountWire } from "./entities/account.js";
+import type {
+  AcknowledgementRequest,
+  AcknowledgementRequestServerMetadata,
+  AcknowledgementRequestWire,
+} from "./entities/acknowledgement.js";
 import type { ApiKey, ApiKeyServerMetadata, ApiKeyWire } from "./entities/api-key.js";
 import type {
   AuditLogEntry,
@@ -11,6 +16,16 @@ import type {
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
+import type {
+  BlobMetadata,
+  BlobMetadataServerMetadata,
+  BlobMetadataWire,
+} from "./entities/blob.js";
+import type {
+  BoardMessage,
+  BoardMessageServerMetadata,
+  BoardMessageWire,
+} from "./entities/board-message.js";
 import type {
   BucketKeyRotation,
   BucketKeyRotationServerMetadata,
@@ -27,7 +42,18 @@ import type {
   PrivacyBucketServerMetadata,
   PrivacyBucketWire,
 } from "./entities/bucket.js";
-import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
+import type { Channel, ChannelServerMetadata, ChannelWire } from "./entities/channel.js";
+import type {
+  CheckInRecord,
+  CheckInRecordServerMetadata,
+  CheckInRecordWire,
+} from "./entities/check-in-record.js";
+import type {
+  CustomFront,
+  CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
+  CustomFrontWire,
+} from "./entities/custom-front.js";
 import type {
   DeviceToken,
   DeviceTokenServerMetadata,
@@ -39,10 +65,22 @@ import type {
   DeviceTransferRequestWire,
 } from "./entities/device-transfer-request.js";
 import type {
+  FieldDefinitionScope,
+  FieldDefinitionScopeServerMetadata,
+  FieldDefinitionScopeWire,
+} from "./entities/field-definition-scope.js";
+import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
+  FieldDefinitionServerMetadata,
+  FieldDefinitionWire,
 } from "./entities/field-definition.js";
-import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
+import type {
+  FieldValue,
+  FieldValueEncryptedFields,
+  FieldValueServerMetadata,
+  FieldValueWire,
+} from "./entities/field-value.js";
 import type {
   FriendCode,
   FriendCodeServerMetadata,
@@ -59,10 +97,24 @@ import type {
   FriendNotificationPreferenceWire,
 } from "./entities/friend-notification-preference.js";
 import type {
+  FrontingComment,
+  FrontingCommentEncryptedFields,
+  FrontingCommentServerMetadata,
+  FrontingCommentWire,
+} from "./entities/fronting-comment.js";
+import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
+  FrontingSessionServerMetadata,
+  FrontingSessionWire,
 } from "./entities/fronting-session.js";
-import type { Group, GroupEncryptedFields } from "./entities/group.js";
+import type {
+  Group,
+  GroupEncryptedFields,
+  GroupServerMetadata,
+  GroupWire,
+} from "./entities/group.js";
+import type { ImportJob, ImportJobServerMetadata, ImportJobWire } from "./entities/import-job.js";
 import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
@@ -81,9 +133,24 @@ import type {
   InnerWorldRegionServerMetadata,
   InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
+import type {
+  JournalEntry,
+  JournalEntryServerMetadata,
+  JournalEntryWire,
+} from "./entities/journal-entry.js";
 import type { KeyGrant, KeyGrantServerMetadata, KeyGrantWire } from "./entities/key-grant.js";
-import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
-import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
+import type {
+  LifecycleEvent,
+  LifecycleEventEncryptedFields,
+  LifecycleEventServerMetadata,
+  LifecycleEventWire,
+} from "./entities/lifecycle-event.js";
+import type {
+  MemberPhoto,
+  MemberPhotoEncryptedFields,
+  MemberPhotoServerMetadata,
+  MemberPhotoWire,
+} from "./entities/member-photo.js";
 import type {
   Member,
   MemberEncryptedFields,
@@ -91,33 +158,60 @@ import type {
   MemberWire,
 } from "./entities/member.js";
 import type {
+  ChatMessage,
+  ChatMessageServerMetadata,
+  ChatMessageWire,
+} from "./entities/message.js";
+import type { Note, NoteServerMetadata, NoteWire } from "./entities/note.js";
+import type {
   NotificationConfig,
   NotificationConfigServerMetadata,
   NotificationConfigWire,
 } from "./entities/notification-config.js";
+import type { PollVote, PollVoteServerMetadata, PollVoteWire } from "./entities/poll-vote.js";
+import type { Poll, PollServerMetadata, PollWire } from "./entities/poll.js";
 import type {
   RecoveryKey,
   RecoveryKeyServerMetadata,
   RecoveryKeyWire,
 } from "./entities/recovery-key.js";
-import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
+import type {
+  Relationship,
+  RelationshipEncryptedFields,
+  RelationshipServerMetadata,
+  RelationshipWire,
+} from "./entities/relationship.js";
 import type { Session, SessionServerMetadata, SessionWire } from "./entities/session.js";
 import type {
   SystemStructureEntityAssociation,
   SystemStructureEntityAssociationEncryptedFields,
+  SystemStructureEntityAssociationServerMetadata,
+  SystemStructureEntityAssociationWire,
 } from "./entities/structure-entity-association.js";
+import type {
+  SystemStructureEntityLink,
+  SystemStructureEntityLinkServerMetadata,
+  SystemStructureEntityLinkWire,
+} from "./entities/structure-entity-link.js";
 import type {
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityMemberLinkServerMetadata,
+  SystemStructureEntityMemberLinkWire,
 } from "./entities/structure-entity-member-link.js";
 import type {
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
+  SystemStructureEntityTypeServerMetadata,
+  SystemStructureEntityTypeWire,
 } from "./entities/structure-entity-type.js";
 import type {
   SystemStructureEntity,
   SystemStructureEntityEncryptedFields,
+  SystemStructureEntityServerMetadata,
+  SystemStructureEntityWire,
 } from "./entities/structure-entity.js";
+import type { SyncDocument, SyncDocumentWire } from "./entities/sync-document.js";
 import type {
   SystemSettings,
   SystemSettingsEncryptedFields,
@@ -135,6 +229,22 @@ import type {
   SystemServerMetadata,
   SystemWire,
 } from "./entities/system.js";
+import type {
+  TimerConfig,
+  TimerConfigServerMetadata,
+  TimerConfigWire,
+} from "./entities/timer-config.js";
+import type {
+  WebhookConfig,
+  WebhookConfigServerMetadata,
+  WebhookConfigWire,
+} from "./entities/webhook-config.js";
+import type {
+  WebhookDelivery,
+  WebhookDeliveryServerMetadata,
+  WebhookDeliveryWire,
+} from "./entities/webhook-delivery.js";
+import type { WikiPage, WikiPageServerMetadata, WikiPageWire } from "./entities/wiki-page.js";
 import type {
   NomenclatureEncryptedFields,
   NomenclatureServerMetadata,
@@ -181,6 +291,14 @@ export type SotEntityManifest = {
     // Plaintext entity — no encrypted fields.
     encryptedFields: never;
   };
+  BlobMetadata: {
+    domain: BlobMetadata;
+    server: BlobMetadataServerMetadata;
+    wire: BlobMetadataWire;
+    // Plaintext entity — no encrypted fields. The blob contents are
+    // encrypted, but the metadata row itself is server-visible.
+    encryptedFields: never;
+  };
   System: {
     domain: System;
     server: SystemServerMetadata;
@@ -189,42 +307,75 @@ export type SotEntityManifest = {
   };
   MemberPhoto: {
     domain: MemberPhoto;
+    server: MemberPhotoServerMetadata;
+    wire: MemberPhotoWire;
     encryptedFields: MemberPhotoEncryptedFields;
   };
   Group: {
     domain: Group;
+    server: GroupServerMetadata;
+    wire: GroupWire;
     encryptedFields: GroupEncryptedFields;
   };
   CustomFront: {
     domain: CustomFront;
+    server: CustomFrontServerMetadata;
+    wire: CustomFrontWire;
     encryptedFields: CustomFrontEncryptedFields;
   };
   FieldDefinition: {
     domain: FieldDefinition;
+    server: FieldDefinitionServerMetadata;
+    wire: FieldDefinitionWire;
     encryptedFields: FieldDefinitionEncryptedFields;
+  };
+  FieldDefinitionScope: {
+    domain: FieldDefinitionScope;
+    server: FieldDefinitionScopeServerMetadata;
+    wire: FieldDefinitionScopeWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
   };
   FieldValue: {
     domain: FieldValue;
+    server: FieldValueServerMetadata;
+    wire: FieldValueWire;
     encryptedFields: FieldValueEncryptedFields;
   };
   Relationship: {
     domain: Relationship;
+    server: RelationshipServerMetadata;
+    wire: RelationshipWire;
     encryptedFields: RelationshipEncryptedFields;
   };
   StructureEntityType: {
     domain: SystemStructureEntityType;
+    server: SystemStructureEntityTypeServerMetadata;
+    wire: SystemStructureEntityTypeWire;
     encryptedFields: SystemStructureEntityTypeEncryptedFields;
   };
   StructureEntity: {
     domain: SystemStructureEntity;
+    server: SystemStructureEntityServerMetadata;
+    wire: SystemStructureEntityWire;
     encryptedFields: SystemStructureEntityEncryptedFields;
   };
   FrontingSession: {
     domain: FrontingSession;
+    server: FrontingSessionServerMetadata;
+    wire: FrontingSessionWire;
     encryptedFields: FrontingSessionEncryptedFields;
+  };
+  FrontingComment: {
+    domain: FrontingComment;
+    server: FrontingCommentServerMetadata;
+    wire: FrontingCommentWire;
+    encryptedFields: FrontingCommentEncryptedFields;
   };
   LifecycleEvent: {
     domain: LifecycleEvent;
+    server: LifecycleEventServerMetadata;
+    wire: LifecycleEventWire;
     encryptedFields: LifecycleEventEncryptedFields;
   };
   InnerworldRegion: {
@@ -262,10 +413,14 @@ export type SotEntityManifest = {
   };
   StructureEntityMemberLink: {
     domain: SystemStructureEntityMemberLink;
+    server: SystemStructureEntityMemberLinkServerMetadata;
+    wire: SystemStructureEntityMemberLinkWire;
     encryptedFields: SystemStructureEntityMemberLinkEncryptedFields;
   };
   StructureEntityAssociation: {
     domain: SystemStructureEntityAssociation;
+    server: SystemStructureEntityAssociationServerMetadata;
+    wire: SystemStructureEntityAssociationWire;
     encryptedFields: SystemStructureEntityAssociationEncryptedFields;
   };
   ApiKey: {
@@ -314,12 +469,126 @@ export type SotEntityManifest = {
     // Plaintext entity — no encrypted fields in the domain keyset.
     encryptedFields: never;
   };
+  StructureEntityLink: {
+    domain: SystemStructureEntityLink;
+    server: SystemStructureEntityLinkServerMetadata;
+    wire: SystemStructureEntityLinkWire;
+    // Plaintext entity — no client-side encryption; never needed.
+    encryptedFields: never;
+  };
   Nomenclature: {
     domain: NomenclatureSettings;
     server: NomenclatureServerMetadata;
     wire: NomenclatureWire;
     encryptedFields: NomenclatureEncryptedFields;
   };
+  CheckInRecord: {
+    domain: CheckInRecord;
+    server: CheckInRecordServerMetadata;
+    wire: CheckInRecordWire;
+    // Hybrid entity: plaintext domain with optional `encryptedData` blob
+    // (server-only column; no keys-subset of `CheckInRecord`).
+    encryptedFields: never;
+  };
+  // ── Cluster 8: Communication + engagement ─────────────────────────────
+  // 10 hybrid entities: plaintext metadata + opaque `encryptedData` blob
+  // whose decrypted shape is the full domain type, not a keys-subset. No
+  // `<X>EncryptedFields` keys union exists for these — they follow the
+  // SystemSnapshot pattern with `encryptedFields: never`.
+  Channel: {
+    domain: Channel;
+    server: ChannelServerMetadata;
+    wire: ChannelWire;
+    encryptedFields: never;
+  };
+  ChatMessage: {
+    domain: ChatMessage;
+    server: ChatMessageServerMetadata;
+    wire: ChatMessageWire;
+    encryptedFields: never;
+  };
+  Note: {
+    domain: Note;
+    server: NoteServerMetadata;
+    wire: NoteWire;
+    encryptedFields: never;
+  };
+  BoardMessage: {
+    domain: BoardMessage;
+    server: BoardMessageServerMetadata;
+    wire: BoardMessageWire;
+    encryptedFields: never;
+  };
+  Poll: {
+    domain: Poll;
+    server: PollServerMetadata;
+    wire: PollWire;
+    encryptedFields: never;
+  };
+  PollVote: {
+    domain: PollVote;
+    server: PollVoteServerMetadata;
+    wire: PollVoteWire;
+    encryptedFields: never;
+  };
+  AcknowledgementRequest: {
+    domain: AcknowledgementRequest;
+    server: AcknowledgementRequestServerMetadata;
+    wire: AcknowledgementRequestWire;
+    encryptedFields: never;
+  };
+  TimerConfig: {
+    domain: TimerConfig;
+    server: TimerConfigServerMetadata;
+    wire: TimerConfigWire;
+    encryptedFields: never;
+  };
+  JournalEntry: {
+    domain: JournalEntry;
+    server: JournalEntryServerMetadata;
+    wire: JournalEntryWire;
+    encryptedFields: never;
+  };
+  WikiPage: {
+    domain: WikiPage;
+    server: WikiPageServerMetadata;
+    wire: WikiPageWire;
+    encryptedFields: never;
+  };
+  // ── Cluster 9: Operational ────────────────────────────────────────────
+  WebhookConfig: {
+    domain: WebhookConfig;
+    server: WebhookConfigServerMetadata;
+    wire: WebhookConfigWire;
+    // Plaintext entity — the T3 HMAC `secret` is readable by the server
+    // but is not E2E encrypted user data. No encryptedFields union.
+    encryptedFields: never;
+  };
+  WebhookDelivery: {
+    domain: WebhookDelivery;
+    server: WebhookDeliveryServerMetadata;
+    wire: WebhookDeliveryWire;
+    // Plaintext domain — the `encryptedData` payload is server-held T3
+    // (not E2E), attached only to the server-side metadata.
+    encryptedFields: never;
+  };
+  SyncDocument: {
+    domain: SyncDocument;
+    // SyncDocument has no server-only columns — the server sees the same
+    // document-metadata shape as the client.
+    server: SyncDocument;
+    wire: SyncDocumentWire;
+    encryptedFields: never;
+  };
+  ImportJob: {
+    domain: ImportJob;
+    server: ImportJobServerMetadata;
+    wire: ImportJobWire;
+    // Plaintext domain — `checkpointState` is server-only resumption
+    // state, attached only to the server-side metadata.
+    encryptedFields: never;
+  };
+  // ── Cluster 10: Privacy-social ────────────────────────────────────────
   PrivacyBucket: {
     domain: PrivacyBucket;
     server: PrivacyBucketServerMetadata;

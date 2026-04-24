@@ -18,11 +18,14 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
-  StructureEntityTypeDecrypted,
   StructureEntityTypePage as StructureEntityTypeRawPage,
   StructureEntityTypeRaw,
 } from "@pluralscape/data/transforms/structure-entity-type";
-import type { Archived, SystemStructureEntityTypeId } from "@pluralscape/types";
+import type {
+  Archived,
+  SystemStructureEntityType,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 
 interface StructureEntityTypeListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -32,10 +35,10 @@ interface StructureEntityTypeListOpts extends SystemIdOverride {
 export function useStructureEntityType(
   entityTypeId: SystemStructureEntityTypeId,
   opts?: SystemIdOverride,
-): DataQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>> {
+): DataQuery<SystemStructureEntityType | Archived<SystemStructureEntityType>> {
   return useOfflineFirstQuery<
     StructureEntityTypeRaw,
-    StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>
+    SystemStructureEntityType | Archived<SystemStructureEntityType>
   >({
     queryKey: ["structure_entity_types", entityTypeId],
     table: "structure_entity_types",
@@ -47,16 +50,16 @@ export function useStructureEntityType(
       trpc.structure.entityType.get.useQuery(
         { systemId, entityTypeId },
         { enabled, select },
-      ) as DataQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>>,
+      ) as DataQuery<SystemStructureEntityType | Archived<SystemStructureEntityType>>,
   });
 }
 
 export function useStructureEntityTypesList(
   opts?: StructureEntityTypeListOpts,
-): DataListQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>> {
+): DataListQuery<SystemStructureEntityType | Archived<SystemStructureEntityType>> {
   return useOfflineFirstInfiniteQuery<
     StructureEntityTypeRaw,
-    StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>
+    SystemStructureEntityType | Archived<SystemStructureEntityType>
   >({
     queryKey: ["structure_entity_types", "list", opts?.includeArchived ?? false],
     table: "structure_entity_types",
@@ -83,7 +86,7 @@ export function useStructureEntityTypesList(
           getNextPageParam: (lastPage: StructureEntityTypeRawPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>>,
+      ) as DataListQuery<SystemStructureEntityType | Archived<SystemStructureEntityType>>,
   });
 }
 

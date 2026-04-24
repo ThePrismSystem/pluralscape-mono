@@ -1,11 +1,12 @@
 import { customFronts, members, systemStructureEntities } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 
-import type { SystemId } from "@pluralscape/types";
+import type { CustomFrontId, SystemId, SystemStructureEntityId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface SubjectIds {
@@ -50,7 +51,7 @@ export async function validateSubjectIds(
       .from(customFronts)
       .where(
         and(
-          eq(customFronts.id, subjects.customFrontId),
+          eq(customFronts.id, brandId<CustomFrontId>(subjects.customFrontId)),
           eq(customFronts.systemId, systemId),
           eq(customFronts.archived, false),
         ),
@@ -71,7 +72,10 @@ export async function validateSubjectIds(
       .from(systemStructureEntities)
       .where(
         and(
-          eq(systemStructureEntities.id, subjects.structureEntityId),
+          eq(
+            systemStructureEntities.id,
+            brandId<SystemStructureEntityId>(subjects.structureEntityId),
+          ),
           eq(systemStructureEntities.systemId, systemId),
           eq(systemStructureEntities.archived, false),
         ),

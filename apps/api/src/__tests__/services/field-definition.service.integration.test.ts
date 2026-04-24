@@ -25,6 +25,7 @@ import type {
   AccountId,
   BucketId,
   FieldDefinitionId,
+  FieldDefinitionScopeId,
   FieldValueId,
   SystemId,
 } from "@pluralscape/types";
@@ -97,10 +98,10 @@ describe("field-definition.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<FieldDefinitionId>(id);
+    return id;
   }
 
-  async function insertBucket(): Promise<string> {
+  async function insertBucket(): Promise<BucketId> {
     const id = brandId<BucketId>(createId(ID_PREFIXES.bucket));
     const ts = now();
     await db.insert(buckets).values({
@@ -371,7 +372,7 @@ describe("field-definition.service (PGlite integration)", () => {
       const id = await insertFieldDef();
       const ts = now();
       await db.insert(fieldDefinitionScopes).values({
-        id: createId(ID_PREFIXES.fieldDefinitionScope),
+        id: brandId<FieldDefinitionScopeId>(createId(ID_PREFIXES.fieldDefinitionScope)),
         fieldDefinitionId: id,
         systemId,
         scopeType: "member",
@@ -421,7 +422,7 @@ describe("field-definition.service (PGlite integration)", () => {
       const id = await insertFieldDef();
       const ts = now();
       await db.insert(fieldDefinitionScopes).values({
-        id: createId(ID_PREFIXES.fieldDefinitionScope),
+        id: brandId<FieldDefinitionScopeId>(createId(ID_PREFIXES.fieldDefinitionScope)),
         fieldDefinitionId: id,
         systemId,
         scopeType: "member",

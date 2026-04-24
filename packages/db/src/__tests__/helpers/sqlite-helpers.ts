@@ -11,7 +11,14 @@ import { channels, polls } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
 
-import type { AccountId, BucketId, EncryptedBlob, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketId,
+  ChannelId,
+  EncryptedBlob,
+  PollId,
+  SystemId,
+} from "@pluralscape/types";
 import type Database from "better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -1660,15 +1667,18 @@ export function sqliteInsertChannel(
     parentId?: string | null;
     sortOrder?: number;
   } = {},
-): string {
-  const id = opts.id ?? crypto.randomUUID();
+): ChannelId {
+  const id = brandId<ChannelId>(opts.id ?? crypto.randomUUID());
   const now = Date.now();
   db.insert(channels)
     .values({
       id,
-      systemId,
+      systemId: brandId<SystemId>(systemId),
       type: opts.type ?? "channel",
-      parentId: opts.parentId ?? null,
+      parentId:
+        opts.parentId === null || opts.parentId === undefined
+          ? null
+          : brandId<ChannelId>(opts.parentId),
       sortOrder: opts.sortOrder ?? 0,
       encryptedData: testBlob(),
       createdAt: now,
@@ -1682,13 +1692,13 @@ export function sqliteInsertPoll(
   db: BetterSQLite3Database<Record<string, unknown>>,
   systemId: string,
   opts: { id?: string } = {},
-): string {
-  const id = opts.id ?? crypto.randomUUID();
+): PollId {
+  const id = brandId<PollId>(opts.id ?? crypto.randomUUID());
   const now = Date.now();
   db.insert(polls)
     .values({
       id,
-      systemId,
+      systemId: brandId<SystemId>(systemId),
       kind: "standard",
       encryptedData: testBlob(),
       allowMultipleVotes: false,

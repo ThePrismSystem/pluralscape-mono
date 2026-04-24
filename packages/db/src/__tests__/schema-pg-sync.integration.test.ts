@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -10,6 +11,7 @@ import { systems } from "../schema/pg/systems.js";
 import { createPgSyncTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { NewSyncDocument } from "../schema/pg/sync.js";
+import type { BucketId, ChannelId, SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, syncDocuments, syncChanges, syncSnapshots };
@@ -38,9 +40,9 @@ describe("PG sync schema", () => {
   });
 
   /** Build a minimal valid syncDocuments insert payload. */
-  function makeDoc(systemId: string, overrides: Partial<NewSyncDocument> = {}): NewSyncDocument {
+  function makeDoc(systemId: SystemId, overrides: Partial<NewSyncDocument> = {}): NewSyncDocument {
     return {
-      documentId: crypto.randomUUID(),
+      documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
       systemId,
       docType: "system-core",
       createdAt: Date.now(),
@@ -50,7 +52,7 @@ describe("PG sync schema", () => {
   }
 
   /** Build a minimal valid syncChanges insert payload. */
-  function makeChange(documentId: string, seq: number) {
+  function makeChange(documentId: SyncDocumentId, seq: number) {
     return {
       id: crypto.randomUUID(),
       documentId,
@@ -64,7 +66,7 @@ describe("PG sync schema", () => {
   }
 
   /** Build a minimal valid syncSnapshots insert payload. */
-  function makeSnapshot(documentId: string) {
+  function makeSnapshot(documentId: SyncDocumentId) {
     return {
       documentId,
       snapshotVersion: 1,
@@ -80,7 +82,7 @@ describe("PG sync schema", () => {
     it("round-trips all fields", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const documentId = crypto.randomUUID();
+      const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(syncDocuments).values({
@@ -93,8 +95,8 @@ describe("PG sync schema", () => {
         archived: true,
         timePeriod: "2024-01",
         keyType: "bucket",
-        bucketId: crypto.randomUUID(),
-        channelId: crypto.randomUUID(),
+        bucketId: brandId<BucketId>(crypto.randomUUID()),
+        channelId: brandId<ChannelId>(crypto.randomUUID()),
         createdAt: now,
         updatedAt: now,
       });
@@ -120,7 +122,7 @@ describe("PG sync schema", () => {
     it("defaults sizeBytes=0, snapshotVersion=0, lastSeq=0, archived=false, keyType='derived'", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const documentId = crypto.randomUUID();
+      const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(syncDocuments).values({
@@ -146,7 +148,7 @@ describe("PG sync schema", () => {
     it("allows nullable timePeriod, bucketId, channelId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const documentId = crypto.randomUUID();
+      const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(syncDocuments).values({
@@ -176,7 +178,7 @@ describe("PG sync schema", () => {
 
         await expect(
           db.insert(syncDocuments).values({
-            documentId: crypto.randomUUID(),
+            documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
             systemId,
             docType,
             createdAt: now,
@@ -193,7 +195,7 @@ describe("PG sync schema", () => {
 
       await expect(
         db.insert(syncDocuments).values({
-          documentId: crypto.randomUUID(),
+          documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
           systemId,
           docType: "invalid-type" as "system-core",
           createdAt: now,
@@ -209,7 +211,7 @@ describe("PG sync schema", () => {
 
       await expect(
         db.insert(syncDocuments).values({
-          documentId: crypto.randomUUID(),
+          documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
           systemId,
           docType: "system-core",
           keyType: "invalid-key" as "derived",
@@ -226,7 +228,7 @@ describe("PG sync schema", () => {
 
       await expect(
         db.insert(syncDocuments).values({
-          documentId: crypto.randomUUID(),
+          documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
           systemId,
           docType: "system-core",
           sizeBytes: -1,
@@ -243,7 +245,7 @@ describe("PG sync schema", () => {
 
       await expect(
         db.insert(syncDocuments).values({
-          documentId: crypto.randomUUID(),
+          documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
           systemId,
           docType: "system-core",
           snapshotVersion: -1,
@@ -260,7 +262,7 @@ describe("PG sync schema", () => {
 
       await expect(
         db.insert(syncDocuments).values({
-          documentId: crypto.randomUUID(),
+          documentId: brandId<SyncDocumentId>(crypto.randomUUID()),
           systemId,
           docType: "system-core",
           lastSeq: -1,
@@ -273,7 +275,7 @@ describe("PG sync schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const documentId = crypto.randomUUID();
+      const documentId = brandId<SyncDocumentId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(syncDocuments).values({
@@ -301,7 +303,7 @@ describe("PG sync schema", () => {
       const now = Date.now();
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       const encryptedPayload = new Uint8Array([0xde, 0xad, 0xbe, 0xef, 0x01, 0x02]);
       const authorPublicKey = new Uint8Array(32).fill(0x03);
@@ -337,7 +339,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       const encryptedPayload = new Uint8Array([0xff, 0x00, 0xab, 0xcd, 0xef]);
 
@@ -359,7 +361,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       await db.insert(syncChanges).values(makeChange(documentId, 1));
 
@@ -373,8 +375,8 @@ describe("PG sync schema", () => {
 
       const [doc1] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
       const [doc2] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const docId1 = doc1?.documentId ?? "";
-      const docId2 = doc2?.documentId ?? "";
+      const docId1 = doc1?.documentId ?? brandId<SyncDocumentId>("");
+      const docId2 = doc2?.documentId ?? brandId<SyncDocumentId>("");
 
       await db.insert(syncChanges).values(makeChange(docId1, 1));
       await expect(db.insert(syncChanges).values(makeChange(docId2, 1))).resolves.not.toThrow();
@@ -385,7 +387,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       const authorPublicKey = new Uint8Array(32).fill(0x05);
       const nonce = new Uint8Array(24).fill(0x06);
@@ -420,7 +422,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       const change = makeChange(documentId, 1);
       await db.insert(syncChanges).values(change);
@@ -439,7 +441,7 @@ describe("PG sync schema", () => {
       const now = Date.now();
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       const encryptedPayload = new Uint8Array([0xca, 0xfe, 0xba, 0xbe]);
       const authorPublicKey = new Uint8Array(32).fill(0x07);
@@ -475,7 +477,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       await db.insert(syncSnapshots).values(makeSnapshot(documentId));
 
@@ -490,7 +492,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       await db.insert(syncSnapshots).values(makeSnapshot(documentId));
 
@@ -535,7 +537,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       await expect(
         db.insert(syncSnapshots).values({
@@ -550,7 +552,7 @@ describe("PG sync schema", () => {
       const systemId = await insertSystem(accountId);
 
       const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
-      const documentId = doc?.documentId ?? "";
+      const documentId = doc?.documentId ?? brandId<SyncDocumentId>("");
 
       await db.insert(syncSnapshots).values(makeSnapshot(documentId));
 

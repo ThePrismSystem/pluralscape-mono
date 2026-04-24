@@ -1,13 +1,20 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { SYNC_DOC_TYPES, SYNC_KEY_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
+import type {
+  BucketId,
+  ChannelId,
+  DocumentKeyType,
+  SyncDocumentId,
+  SyncDocumentType,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /** Conflict resolution strategies — mirrors @pluralscape/sync ConflictResolutionStrategy to avoid circular dep. */
@@ -23,8 +30,8 @@ type ConflictResolutionStrategy =
 export const syncDocuments = sqliteTable(
   "sync_documents",
   {
-    documentId: text("document_id").primaryKey(),
-    systemId: text("system_id")
+    documentId: text("document_id").primaryKey().$type<SyncDocumentId>(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     docType: text("doc_type").notNull().$type<SyncDocumentType>(),
@@ -34,8 +41,8 @@ export const syncDocuments = sqliteTable(
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
     timePeriod: text("time_period"),
     keyType: text("key_type").notNull().default("derived").$type<DocumentKeyType>(),
-    bucketId: text("bucket_id"),
-    channelId: text("channel_id"),
+    bucketId: brandedId<BucketId>("bucket_id"),
+    channelId: brandedId<ChannelId>("channel_id"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     updatedAt: sqliteTimestamp("updated_at").notNull(),
   },

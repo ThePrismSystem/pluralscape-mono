@@ -1,4 +1,5 @@
 import { systemStructureEntities } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -48,7 +49,9 @@ export async function listStructureEntities(
     }
 
     if (opts?.cursor) {
-      conditions.push(gt(systemStructureEntities.id, opts.cursor));
+      conditions.push(
+        gt(systemStructureEntities.id, brandId<SystemStructureEntityId>(opts.cursor)),
+      );
     }
 
     const rows = await tx

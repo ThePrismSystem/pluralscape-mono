@@ -57,15 +57,19 @@ import type {
   AuditLogEntryWire,
   CustomFront,
   CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
   Equal,
   FieldDefinition,
   FieldDefinitionEncryptedFields,
+  FieldDefinitionServerMetadata,
   FieldValue,
   FieldValueEncryptedFields,
+  FieldValueServerMetadata,
   FrontingSession,
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
+  GroupServerMetadata,
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
   InnerWorldCanvasServerMetadata,
@@ -98,8 +102,10 @@ import type {
   SystemStructureEntityEncryptedFields,
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
+  SystemStructureEntityServerMetadata,
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
+  SystemStructureEntityTypeServerMetadata,
 } from "../packages/types/src/index.js";
 import { expectTypeOf } from "vitest";
 
@@ -175,6 +181,67 @@ expectTypeOf<
 
 expectTypeOf<MemberResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
+// ── OpenAPI ↔ domain parity: FieldDefinitionResponse split parity ──
+
+type FieldDefinitionResponseOpenApi = components["schemas"]["FieldDefinitionResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<FieldDefinitionResponseOpenApi, "encryptedData">,
+    Omit<Serialize<FieldDefinitionServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<FieldDefinitionResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: FieldValueResponse split parity ───────
+
+type FieldValueResponseOpenApi = components["schemas"]["FieldValueResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<FieldValueResponseOpenApi, "encryptedData">,
+    Omit<Serialize<FieldValueServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<FieldValueResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: GroupResponse (split) ──────────────────
+
+type GroupResponseOpenApi = components["schemas"]["GroupResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<GroupResponseOpenApi, "encryptedData">,
+    Omit<Serialize<GroupServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<GroupResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: CustomFrontResponse (split) ────────────
+
+type CustomFrontResponseOpenApi = components["schemas"]["CustomFrontResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<CustomFrontResponseOpenApi, "encryptedData">,
+    Omit<Serialize<CustomFrontServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<CustomFrontResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: RelationshipResponse ──────────────────
+//
+// The full split-parity assertion is deferred: the OpenAPI wire spec
+// currently marks `sourceMemberId`/`targetMemberId` non-nullable, while
+// `Relationship` models them as `MemberId | null`. Reconciling that is a
+// follow-up (either tighten the domain or widen the spec). The
+// `PlaintextRelationship` equality below still enforces the
+// label-field parity that Cluster 3 owns.
+
 // ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
 //
 // AuditLogEntry is plaintext on the wire (not encrypted), so the OpenAPI
@@ -241,12 +308,36 @@ expectTypeOf<
   >
 >().toEqualTypeOf<true>();
 
+// ── OpenAPI ↔ domain parity: StructureEntityTypeResponse plaintext columns ──
+type StructureEntityTypeResponseOpenApi = components["schemas"]["StructureEntityTypeResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<StructureEntityTypeResponseOpenApi, "encryptedData">,
+    Omit<Serialize<SystemStructureEntityTypeServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<StructureEntityTypeResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
 expectTypeOf<
   Equal<
     components["schemas"]["PlaintextStructureEntity"],
     Serialize<Pick<SystemStructureEntity, SystemStructureEntityEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ domain parity: StructureEntityResponse plaintext columns ──
+type StructureEntityResponseOpenApi = components["schemas"]["StructureEntityResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<StructureEntityResponseOpenApi, "encryptedData">,
+    Omit<Serialize<SystemStructureEntityServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<StructureEntityResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 expectTypeOf<
   Equal<

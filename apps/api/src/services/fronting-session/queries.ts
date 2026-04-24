@@ -1,4 +1,5 @@
 import { frontingSessions, systemStructureEntityMemberLinks } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { FrontingSessionQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, lte } from "drizzle-orm";
 
@@ -109,7 +110,7 @@ export async function listFrontingSessions(
     }
 
     if (opts.cursor) {
-      conditions.push(lt(frontingSessions.id, opts.cursor));
+      conditions.push(lt(frontingSessions.id, brandId<FrontingSessionId>(opts.cursor)));
     }
 
     const rows = await tx
@@ -178,7 +179,7 @@ export async function getActiveFronting(
     // Collect structure entity IDs from active sessions
     const entityIds = rows
       .map((r) => r.structureEntityId)
-      .filter((id): id is string => id !== null);
+      .filter((id): id is SystemStructureEntityId => id !== null);
 
     // Resolve member associations for fronting structure entities
     const entityMemberMap: Record<string, readonly string[]> = {};

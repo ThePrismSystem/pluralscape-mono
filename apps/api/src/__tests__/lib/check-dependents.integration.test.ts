@@ -6,6 +6,7 @@ import {
   pgInsertSystem,
   testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { brandId } from "@pluralscape/types";
 import { and, eq, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -13,6 +14,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { checkDependents } from "../../lib/check-dependents.js";
 import { asDb } from "../helpers/integration-setup.js";
 
+import type { MemberId, NoteId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { members, notes } = schema;
@@ -25,7 +27,7 @@ const { members, notes } = schema;
 describe("checkDependents (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
-  let systemId: string;
+  let systemId: SystemId;
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -48,7 +50,7 @@ describe("checkDependents (PGlite integration)", () => {
   async function insertMember(id: string): Promise<void> {
     const now = Date.now();
     await db.insert(members).values({
-      id,
+      id: brandId<MemberId>(id),
       systemId,
       encryptedData: testBlob(),
       createdAt: now,
@@ -62,7 +64,7 @@ describe("checkDependents (PGlite integration)", () => {
   async function insertNote(id: string): Promise<void> {
     const now = Date.now();
     await db.insert(notes).values({
-      id,
+      id: brandId<NoteId>(id),
       systemId,
       authorEntityType: null,
       authorEntityId: null,
@@ -126,7 +128,7 @@ describe("checkDependents (PGlite integration)", () => {
       {
         // Zero-count predicate: restrict to an impossible systemId.
         table: members,
-        predicate: eq(members.systemId, "nonexistent-system"),
+        predicate: eq(members.systemId, brandId<SystemId>("nonexistent-system")),
         typeName: "archived-member",
       },
       {
@@ -156,7 +158,10 @@ describe("checkDependents (PGlite integration)", () => {
 
     const predicate = and(
       eq(members.systemId, systemId),
-      or(eq(members.id, "mem_arbitrary_a"), sql`${members.id} = 'mem_arbitrary_c'`),
+      or(
+        eq(members.id, brandId<MemberId>("mem_arbitrary_a")),
+        sql`${members.id} = 'mem_arbitrary_c'`,
+      ),
     );
     if (!predicate) {
       expect.unreachable("drizzle `and` returned undefined for a non-empty input");

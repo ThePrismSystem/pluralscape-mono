@@ -100,7 +100,7 @@ describe("field-bucket-visibility.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<FieldDefinitionId>(id);
+    return id;
   }
 
   // ── setFieldBucketVisibility ─────────────────────────────────────────

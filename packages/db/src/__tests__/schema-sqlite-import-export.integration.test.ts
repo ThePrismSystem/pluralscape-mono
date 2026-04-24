@@ -21,7 +21,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { BucketId } from "@pluralscape/types";
+import type { BlobId, BucketId, ChecksumHex, ImportJobId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -62,7 +62,7 @@ describe("SQLite import-export schema", () => {
     it("round-trips with all fields", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(importJobs)
@@ -73,7 +73,14 @@ describe("SQLite import-export schema", () => {
           source: "simply-plural",
           status: "importing",
           progressPercent: 42,
-          errorLog: [{ line: 5, message: "duplicate entry" }],
+          errorLog: [
+            {
+              entityType: "unknown" as const,
+              entityId: null,
+              message: "duplicate entry",
+              fatal: false as const,
+            },
+          ],
           warningCount: 3,
           chunksTotal: 10,
           chunksCompleted: 4,
@@ -101,7 +108,7 @@ describe("SQLite import-export schema", () => {
     it("applies default values for status, progressPercent, warningCount, chunksCompleted", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(importJobs)
@@ -130,11 +137,21 @@ describe("SQLite import-export schema", () => {
     it("round-trips JSON error_log", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
       const errors = [
-        { code: "INVALID_FORMAT", detail: "bad date" },
-        { code: "MISSING_FIELD", detail: "name required" },
+        {
+          entityType: "unknown" as const,
+          entityId: null,
+          message: "INVALID_FORMAT: bad date",
+          fatal: false as const,
+        },
+        {
+          entityType: "unknown" as const,
+          entityId: null,
+          message: "MISSING_FIELD: name required",
+          fatal: false as const,
+        },
       ];
 
       db.insert(importJobs)
@@ -162,7 +179,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(importJobs)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             source: "invalid-source" as "simply-plural",
@@ -182,7 +199,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(importJobs)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             source: "pluralkit",
@@ -203,7 +220,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(importJobs)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             source: "pluralscape",
@@ -218,7 +235,7 @@ describe("SQLite import-export schema", () => {
     it("accepts progressPercent at 0", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(importJobs)
@@ -240,7 +257,7 @@ describe("SQLite import-export schema", () => {
     it("accepts progressPercent at 100", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(importJobs)
@@ -268,7 +285,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(importJobs)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             source: "pluralscape",
@@ -283,7 +300,7 @@ describe("SQLite import-export schema", () => {
     it.each(["validating", "failed"] as const)("exercises %s status", (status) => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(importJobs)
@@ -311,7 +328,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(importJobs)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             source: "pluralscape",
@@ -327,7 +344,7 @@ describe("SQLite import-export schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(importJobs)
@@ -349,11 +366,13 @@ describe("SQLite import-export schema", () => {
     it("accepts errorLog with 1000 entries", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
       const errors = Array.from({ length: 1000 }, (_, i) => ({
-        line: i,
+        entityType: "unknown" as const,
+        entityId: null,
         message: `error ${String(i)}`,
+        fatal: false as const,
       }));
 
       db.insert(importJobs)
@@ -377,15 +396,17 @@ describe("SQLite import-export schema", () => {
       const systemId = insertSystem(accountId);
       const now = Date.now();
       const errors = Array.from({ length: 1001 }, (_, i) => ({
-        line: i,
+        entityType: "unknown" as const,
+        entityId: null,
         message: `error ${String(i)}`,
+        fatal: false as const,
       }));
 
       expect(() =>
         db
           .insert(importJobs)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             source: "simply-plural",
@@ -402,8 +423,8 @@ describe("SQLite import-export schema", () => {
     it("round-trips with all fields", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const blobId = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
+      const blobId = brandId<BlobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(buckets)
@@ -424,7 +445,7 @@ describe("SQLite import-export schema", () => {
           sizeBytes: 1024,
           encryptionTier: 1,
           purpose: "export",
-          checksum: "a".repeat(64),
+          checksum: brandId<ChecksumHex>("a".repeat(64)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -458,7 +479,7 @@ describe("SQLite import-export schema", () => {
     it("applies default value for status", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(exportRequests)
@@ -482,7 +503,7 @@ describe("SQLite import-export schema", () => {
     it("cascades on account deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(exportRequests)
@@ -510,7 +531,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(exportRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             format: "xml" as "json",
@@ -530,7 +551,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(exportRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             systemId,
             format: "json",
@@ -545,7 +566,7 @@ describe("SQLite import-export schema", () => {
     it.each(["processing", "failed"] as const)("exercises %s status", (status) => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(exportRequests)
@@ -559,7 +580,7 @@ describe("SQLite import-export schema", () => {
     it("sets blobId to null when blob is deleted", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const blobId = crypto.randomUUID();
+      const blobId = brandId<BlobId>(crypto.randomUUID());
       const exportId = crypto.randomUUID();
       const now = Date.now();
 
@@ -581,7 +602,7 @@ describe("SQLite import-export schema", () => {
           sizeBytes: 1024,
           encryptionTier: 1,
           purpose: "export",
-          checksum: "a".repeat(64),
+          checksum: brandId<ChecksumHex>("a".repeat(64)),
           createdAt: now,
           uploadedAt: now,
         })
@@ -610,7 +631,7 @@ describe("SQLite import-export schema", () => {
     it("allows null blobId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(exportRequests)
@@ -634,7 +655,7 @@ describe("SQLite import-export schema", () => {
   describe("account_purge_requests", () => {
     it("round-trips with all fields", () => {
       const accountId = insertAccount();
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(accountPurgeRequests)
@@ -675,7 +696,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(accountPurgeRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             status: "invalid-status" as "pending",
             confirmationPhrase: "DELETE MY ACCOUNT",
@@ -688,7 +709,7 @@ describe("SQLite import-export schema", () => {
 
     it("applies default status of pending", () => {
       const accountId = insertAccount();
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(accountPurgeRequests)
@@ -711,7 +732,7 @@ describe("SQLite import-export schema", () => {
 
     it("cascades on account deletion", () => {
       const accountId = insertAccount();
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(accountPurgeRequests)
@@ -758,7 +779,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(accountPurgeRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             status: "pending",
             confirmationPhrase: "DELETE MY ACCOUNT",
@@ -875,7 +896,7 @@ describe("SQLite import-export schema", () => {
         db
           .insert(accountPurgeRequests)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ImportJobId>(crypto.randomUUID()),
             accountId,
             status: "pending",
             confirmationPhrase: "DELETE MY ACCOUNT",

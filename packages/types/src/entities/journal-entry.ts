@@ -1,3 +1,4 @@
+import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   BlobId,
   CustomFrontId,
@@ -9,6 +10,7 @@ import type {
   SystemStructureEntityId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata, EntityReference } from "../utility.js";
 
 // ── Journal Block types (discriminated union) ──────────────────────
@@ -155,3 +157,30 @@ export interface JournalEntry extends AuditMetadata {
 
 /** An archived journal entry. */
 export type ArchivedJournalEntry = Archived<JournalEntry>;
+
+/**
+ * Server-visible JournalEntry metadata — raw Drizzle row shape.
+ *
+ * Hybrid entity: the only plaintext column (besides the audit triple and
+ * `systemId`/`id`) is `frontingSessionId`, kept in the clear as a FK into
+ * the partitioned fronting-sessions table for efficient joins. Everything
+ * else (title, author, blocks, tags, linkedEntities, frontingSnapshots) is
+ * bundled inside the opaque `encryptedData` blob. `archived: false` on the
+ * domain flips to a mutable boolean here, with a companion `archivedAt`
+ * timestamp.
+ */
+export type JournalEntryServerMetadata = Omit<
+  JournalEntry,
+  "author" | "title" | "blocks" | "tags" | "linkedEntities" | "frontingSnapshots" | "archived"
+> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+};
+
+/**
+ * JSON-wire representation of a JournalEntry. Derived from the domain
+ * `JournalEntry` type via `Serialize<T>`; branded IDs become plain strings,
+ * `UnixMillis` becomes `number`.
+ */
+export type JournalEntryWire = Serialize<JournalEntry>;

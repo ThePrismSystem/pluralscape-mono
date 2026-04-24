@@ -1,5 +1,11 @@
 import { importJobs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, IMPORT_CHECKPOINT_SCHEMA_VERSION, createId, now } from "@pluralscape/types";
+import {
+  ID_PREFIXES,
+  IMPORT_CHECKPOINT_SCHEMA_VERSION,
+  brandId,
+  createId,
+  now,
+} from "@pluralscape/types";
 import { CreateImportJobBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
@@ -13,7 +19,12 @@ import { toImportJobResult } from "./internal.js";
 import type { ImportJobResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { ImportCheckpointState, ImportCollectionType, SystemId } from "@pluralscape/types";
+import type {
+  ImportCheckpointState,
+  ImportCollectionType,
+  ImportJobId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Canonical order for deciding which collection to start on when seeding
@@ -66,7 +77,7 @@ export async function createImportJob(
   }
   const parsed = parseResult.data;
 
-  const id = createId(ID_PREFIXES.importJob);
+  const id = brandId<ImportJobId>(createId(ID_PREFIXES.importJob));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

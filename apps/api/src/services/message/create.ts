@@ -36,7 +36,7 @@ export async function createMessage(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const messageId = createId(ID_PREFIXES.message);
+  const messageId = brandId<MessageId>(createId(ID_PREFIXES.message));
   const ts = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
