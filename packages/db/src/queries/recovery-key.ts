@@ -4,7 +4,7 @@ import { recoveryKeys as pgRecoveryKeys } from "../schema/pg/auth.js";
 import { recoveryKeys as sqliteRecoveryKeys } from "../schema/sqlite/auth.js";
 
 import type { NewRecoveryKey, RecoveryKeyRow } from "../schema/pg/auth.js";
-import type { AccountId, RecoveryKeyId } from "@pluralscape/types";
+import type { AccountId, RecoveryKeyId, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -16,13 +16,13 @@ export interface StoreRecoveryKeyInput {
   readonly id: RecoveryKeyId;
   readonly accountId: AccountId;
   readonly encryptedMasterKey: Uint8Array;
-  readonly createdAt: number;
+  readonly createdAt: UnixMillis;
 }
 
 /** Input for atomically replacing a recovery key backup. */
 export interface ReplaceRecoveryKeyInput {
   readonly revokeId: RecoveryKeyId;
-  readonly revokedAt: number;
+  readonly revokedAt: UnixMillis;
   readonly newRow: StoreRecoveryKeyInput;
 }
 
@@ -65,7 +65,7 @@ export async function pgRevokeRecoveryKey<
 >(
   db: PostgresJsDatabase<TSchema> | PgliteDatabase<TSchema>,
   id: RecoveryKeyId,
-  revokedAt: number,
+  revokedAt: UnixMillis,
 ): Promise<void> {
   const rows = await db
     .update(pgRecoveryKeys)
@@ -138,7 +138,7 @@ export function sqliteGetActiveRecoveryKey<
 /** Set revokedAt on a recovery key row. Throws if no matching row exists. */
 export function sqliteRevokeRecoveryKey<
   TSchema extends Record<string, unknown> = Record<string, never>,
->(db: BetterSQLite3Database<TSchema>, id: RecoveryKeyId, revokedAt: number): void {
+>(db: BetterSQLite3Database<TSchema>, id: RecoveryKeyId, revokedAt: UnixMillis): void {
   const result = db
     .update(sqliteRecoveryKeys)
     .set({ revokedAt })

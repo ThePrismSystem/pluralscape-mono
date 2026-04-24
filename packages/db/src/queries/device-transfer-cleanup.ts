@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { and, eq, lte, sql } from "drizzle-orm";
 
 import { deviceTransferRequests as pgDeviceTransferRequests } from "../schema/pg/auth.js";
@@ -44,7 +45,7 @@ export async function pgCleanupDeviceTransfers<
 export function sqliteCleanupDeviceTransfers<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(db: BetterSQLite3Database<TSchema>): CleanupResult {
-  const cutoffMs = Date.now();
+  const cutoffMs = toUnixMillis(Date.now());
 
   const result = db
     .update(sqliteDeviceTransferRequests)

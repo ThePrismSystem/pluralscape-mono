@@ -1,26 +1,26 @@
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "@pluralscape/crypto";
 import { customType, text } from "drizzle-orm/sqlite-core";
 
-import type { AnyBrandedId, EncryptedBlob } from "@pluralscape/types";
+import type { AnyBrandedId, EncryptedBlob, UnixMillis } from "@pluralscape/types";
 
 const JSON_PREVIEW_LENGTH = 100;
 
 // ── Mapping functions (exported for independent testing) ───────
 
-/** SQLite timestamp: passthrough (integer to integer). */
-export function timestampToDriver(ms: number): number {
+/** SQLite timestamp: passthrough (UnixMillis in, raw number out to driver). */
+export function timestampToDriver(ms: UnixMillis): number {
   if (!Number.isFinite(ms)) {
     throw new Error(`Invalid timestamp: ${String(ms)} is not a finite number`);
   }
   return ms;
 }
 
-/** SQLite timestamp: passthrough (integer to integer). */
-export function timestampFromDriver(val: number): number {
+/** SQLite timestamp: passthrough (raw number from driver, branded out). */
+export function timestampFromDriver(val: number): UnixMillis {
   if (!Number.isFinite(val)) {
     throw new Error(`Invalid timestamp: ${String(val)} is not a finite number`);
   }
-  return val;
+  return val as UnixMillis;
 }
 
 /** SQLite JSON: stringify for text storage. */
@@ -42,7 +42,7 @@ export function jsonFromDriver(val: string): unknown {
 // ── Custom column types ────────────────────────────────────────
 
 /** SQLite integer column that stores UnixMillis (passthrough). */
-export const sqliteTimestamp = customType<{ data: number; driverData: number }>({
+export const sqliteTimestamp = customType<{ data: UnixMillis; driverData: number }>({
   dataType() {
     return "integer";
   },

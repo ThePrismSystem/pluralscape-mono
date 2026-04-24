@@ -3,14 +3,14 @@ import { customType, varchar } from "drizzle-orm/pg-core";
 
 import { ID_MAX_LENGTH } from "../helpers/db.constants.js";
 
-import type { AnyBrandedId, EncryptedBlob } from "@pluralscape/types";
+import type { AnyBrandedId, EncryptedBlob, UnixMillis } from "@pluralscape/types";
 
 const JSON_PREVIEW_LENGTH = 100;
 
 // ── Mapping functions (exported for independent testing) ───────
 
 /** Converts UnixMillis to ISO string for PG timestamptz storage. */
-export function timestampToDriver(ms: number): string {
+export function timestampToDriver(ms: UnixMillis): string {
   if (!Number.isFinite(ms)) {
     throw new Error(`Invalid timestamp: ${String(ms)} is not a finite number`);
   }
@@ -18,12 +18,12 @@ export function timestampToDriver(ms: number): string {
 }
 
 /** Converts PG timestamptz string back to UnixMillis. */
-export function timestampFromDriver(val: string): number {
+export function timestampFromDriver(val: string): UnixMillis {
   const ms = Date.parse(val);
   if (Number.isNaN(ms)) {
     throw new Error(`Invalid timestamp string: "${val}" could not be parsed`);
   }
-  return ms;
+  return ms as UnixMillis;
 }
 
 /** Converts Uint8Array to Buffer for PG bytea storage. */
@@ -58,7 +58,7 @@ export function jsonFromDriver(val: unknown): unknown {
 // ── Custom column types ────────────────────────────────────────
 
 /** PG timestamptz column that maps to/from UnixMillis (number). */
-export const pgTimestamp = customType<{ data: number; driverData: string }>({
+export const pgTimestamp = customType<{ data: UnixMillis; driverData: string }>({
   dataType() {
     return "timestamptz";
   },

@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { lt, sql } from "drizzle-orm";
 
 import { auditLog as pgAuditLog } from "../schema/pg/audit-log.js";
@@ -52,7 +53,7 @@ export function sqliteCleanupAuditLog<
   options: { olderThanDays: number; batchSize?: number },
 ): CleanupResult {
   validateOlderThanDays(options.olderThanDays);
-  const cutoffMs = Date.now() - options.olderThanDays * MS_PER_DAY;
+  const cutoffMs = toUnixMillis(Date.now() - options.olderThanDays * MS_PER_DAY);
 
   if (options.batchSize !== undefined && options.batchSize > 0) {
     // Batch delete: delete up to batchSize rows per invocation
