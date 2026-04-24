@@ -25,6 +25,7 @@ Every PR must pass these checks locally before it is opened; CI enforces them as
 - `pnpm format` — Prettier formatting
 - `pnpm lint` — ESLint with zero warnings (`--max-warnings 0`)
 - `pnpm typecheck` — TypeScript strict type-checking
+- `pnpm types:check-sot` — Types-as-SoT parity gate (types + Drizzle + Zod + OpenAPI-Wire parity; CI-enforced, any drift fails)
 - `pnpm test` — unit + integration suites
 - `pnpm openapi:check` — REST spec reconciler; the checked-in `docs/openapi.yaml` must match generated output
 - `pnpm trpc:parity` — REST route / tRPC procedure parity (see [Adding API Endpoints](#adding-api-endpoints))

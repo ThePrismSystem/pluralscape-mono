@@ -167,6 +167,7 @@ pnpm dev               # Start all dev servers (turbo)
 pnpm dev               # Start all dev servers
 pnpm build             # Build all packages
 pnpm typecheck         # TypeScript type-checking (all packages)
+pnpm types:check-sot   # Types-as-SoT parity gate (types/Drizzle/Zod/OpenAPI)
 pnpm lint              # Lint all packages (zero warnings enforced)
 pnpm lint:fix          # Lint and auto-fix
 pnpm format            # Check formatting (Prettier)

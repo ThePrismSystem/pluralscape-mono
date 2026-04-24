@@ -1,11 +1,11 @@
 ---
 # types-cfp6
 title: "CI job: pnpm types:check-sot"
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-04-21T13:56:03Z
-updated_at: 2026-04-24T09:08:20Z
+updated_at: 2026-04-24T19:18:53Z
 parent: types-ltel
 blocked_by:
   - types-f62m
@@ -76,5 +76,12 @@ Script + OpenAPI parity step landed:
 
 Remaining:
 
-- [ ] Wire pnpm types:check-sot as a dedicated step in .github/workflows/ci.yml (currently only pnpm typecheck runs — transitively typechecks parity tests, but not the dedicated OpenAPI-wire-parity.type-test.ts file which tsc skips unless explicitly requested)
-- [ ] Document pnpm types:check-sot in CLAUDE.md Commands table
+- [x] Wire pnpm types:check-sot as a dedicated step in .github/workflows/ci.yml (typecheck job, runs after pnpm typecheck in the same job to share the setup)
+- [x] Document pnpm types:check-sot in CLAUDE.md Commands table
+
+## Summary of Changes
+
+- `.github/workflows/ci.yml`: added "Types SoT parity gate" step in the `typecheck` job, runs `pnpm types:check-sot` after `pnpm typecheck`.
+- `CLAUDE.md`: Commands table row added for `pnpm types:check-sot`.
+
+Script + OpenAPI parity step (landed 2026-04-22) unchanged. Gate now blocking on every PR.

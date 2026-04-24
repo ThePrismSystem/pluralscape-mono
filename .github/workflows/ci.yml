@@ -39,6 +39,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Types SoT parity gate
+        run: pnpm types:check-sot
+
   test:
     name: Tests (coverage)
     runs-on: ubuntu-latest
