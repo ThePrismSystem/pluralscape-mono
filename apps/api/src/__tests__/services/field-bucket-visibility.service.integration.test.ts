@@ -88,7 +88,7 @@ describe("field-bucket-visibility.service (PGlite integration)", () => {
   }
 
   async function insertFieldDefinition(): Promise<FieldDefinitionId> {
-    const id = createId(ID_PREFIXES.fieldDefinition);
+    const id = brandId<FieldDefinitionId>(createId(ID_PREFIXES.fieldDefinition));
     const ts = now();
     await db.insert(fieldDefinitions).values({
       id,
@@ -100,7 +100,7 @@ describe("field-bucket-visibility.service (PGlite integration)", () => {
       createdAt: ts,
       updatedAt: ts,
     });
-    return brandId<FieldDefinitionId>(id);
+    return id;
   }
 
   // ── setFieldBucketVisibility ─────────────────────────────────────────

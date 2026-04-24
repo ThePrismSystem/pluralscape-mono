@@ -1,4 +1,5 @@
 import { memberPhotos } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { and, eq, gt, or } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../../../http.constants.js";
@@ -82,7 +83,10 @@ export async function listMemberPhotos(
     if (opts.cursor) {
       const cursorCondition = or(
         gt(memberPhotos.sortOrder, opts.cursor.sortValue),
-        and(eq(memberPhotos.sortOrder, opts.cursor.sortValue), gt(memberPhotos.id, opts.cursor.id)),
+        and(
+          eq(memberPhotos.sortOrder, opts.cursor.sortValue),
+          gt(memberPhotos.id, brandId<MemberPhotoId>(opts.cursor.id)),
+        ),
       );
       if (cursorCondition) conditions.push(cursorCondition);
     }

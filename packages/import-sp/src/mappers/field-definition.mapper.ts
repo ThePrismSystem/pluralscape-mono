@@ -27,7 +27,7 @@ import { mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPCustomField, SPCustomFieldType } from "../sources/sp-types.js";
-import type { FieldDefinitionEncryptedFields } from "@pluralscape/data";
+import type { FieldDefinitionEncryptedInput } from "@pluralscape/data";
 import type { FieldType } from "@pluralscape/types";
 import type { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
@@ -36,7 +36,7 @@ export type MappedFieldDefinition = Omit<
   z.infer<typeof CreateFieldDefinitionBodySchema>,
   "encryptedData"
 > & {
-  readonly encrypted: FieldDefinitionEncryptedFields;
+  readonly encrypted: FieldDefinitionEncryptedInput;
 };
 
 /**
@@ -108,7 +108,7 @@ export function mapFieldDefinition(
       message: `unparseable SP custom-field order "${sp.order}"; defaulting to 0 — reorder manually after import`,
     });
   }
-  const encrypted: FieldDefinitionEncryptedFields = {
+  const encrypted: FieldDefinitionEncryptedInput = {
     name: sp.name,
     description: null,
     options: null,

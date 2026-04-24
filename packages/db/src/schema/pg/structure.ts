@@ -19,7 +19,7 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -27,7 +27,8 @@ import { systems } from "./systems.js";
 
 import type {
   MemberId,
-  ServerRelationship,
+  Relationship,
+  RelationshipId,
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
@@ -40,15 +41,13 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const relationships = pgTable(
   "relationships",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<RelationshipId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceMemberId: varchar("source_member_id", { length: ID_MAX_LENGTH }),
-    targetMemberId: varchar("target_member_id", { length: ID_MAX_LENGTH }),
-    type: varchar("type", { length: ENUM_MAX_LENGTH })
-      .notNull()
-      .$type<ServerRelationship["type"]>(),
+    sourceMemberId: brandedId<MemberId>("source_member_id"),
+    targetMemberId: brandedId<MemberId>("target_member_id"),
+    type: varchar("type", { length: ENUM_MAX_LENGTH }).notNull().$type<Relationship["type"]>(),
     bidirectional: boolean("bidirectional").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),

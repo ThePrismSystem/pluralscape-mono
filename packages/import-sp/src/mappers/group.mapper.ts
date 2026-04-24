@@ -11,12 +11,12 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPGroup } from "../sources/sp-types.js";
-import type { GroupEncryptedFields } from "@pluralscape/data";
+import type { GroupEncryptedInput } from "@pluralscape/data";
 import type { CreateGroupBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 export type MappedGroup = Omit<z.infer<typeof CreateGroupBodySchema>, "encryptedData"> & {
-  readonly encrypted: GroupEncryptedFields;
+  readonly encrypted: GroupEncryptedInput;
   readonly memberIds: readonly string[];
 };
 
@@ -60,7 +60,7 @@ export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedG
     });
   }
 
-  const encrypted: GroupEncryptedFields = {
+  const encrypted: GroupEncryptedInput = {
     name: sp.name,
     description: sp.desc ?? null,
     imageSource: null,

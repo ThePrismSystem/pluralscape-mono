@@ -32,7 +32,7 @@ export {
   encryptGroupInput,
   encryptGroupUpdate,
 } from "./transforms/group.js";
-export type { GroupEncryptedFields } from "./transforms/group.js";
+export type { GroupEncryptedInput } from "./transforms/group.js";
 
 export {
   decryptCustomFront,
@@ -40,7 +40,15 @@ export {
   encryptCustomFrontInput,
   encryptCustomFrontUpdate,
 } from "./transforms/custom-front.js";
-export type { CustomFrontEncryptedFields } from "./transforms/custom-front.js";
+export type { CustomFrontEncryptedInput } from "./transforms/custom-front.js";
+
+export {
+  decryptRelationship,
+  decryptRelationshipPage,
+  encryptRelationshipInput,
+  encryptRelationshipUpdate,
+} from "./transforms/relationship.js";
+export type { RelationshipEncryptedInput } from "./transforms/relationship.js";
 
 export {
   decryptFieldDefinition,
@@ -51,8 +59,9 @@ export {
   encryptFieldValueInput,
 } from "./transforms/custom-field.js";
 export type {
-  FieldDefinitionEncryptedFields,
+  FieldDefinitionEncryptedInput,
   FieldValueDecrypted,
+  FieldValueEncryptedInput,
 } from "./transforms/custom-field.js";
 
 export {

@@ -11,7 +11,12 @@ import type {
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
-import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
+import type {
+  CustomFront,
+  CustomFrontEncryptedFields,
+  CustomFrontServerMetadata,
+  CustomFrontWire,
+} from "./entities/custom-front.js";
 import type {
   DeviceToken,
   DeviceTokenServerMetadata,
@@ -23,15 +28,32 @@ import type {
   DeviceTransferRequestWire,
 } from "./entities/device-transfer-request.js";
 import type {
+  FieldDefinitionScope,
+  FieldDefinitionScopeServerMetadata,
+  FieldDefinitionScopeWire,
+} from "./entities/field-definition-scope.js";
+import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
+  FieldDefinitionServerMetadata,
+  FieldDefinitionWire,
 } from "./entities/field-definition.js";
-import type { FieldValue, FieldValueEncryptedFields } from "./entities/field-value.js";
+import type {
+  FieldValue,
+  FieldValueEncryptedFields,
+  FieldValueServerMetadata,
+  FieldValueWire,
+} from "./entities/field-value.js";
 import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
 } from "./entities/fronting-session.js";
-import type { Group, GroupEncryptedFields } from "./entities/group.js";
+import type {
+  Group,
+  GroupEncryptedFields,
+  GroupServerMetadata,
+  GroupWire,
+} from "./entities/group.js";
 import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
@@ -51,7 +73,12 @@ import type {
   InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
 import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
-import type { MemberPhoto, MemberPhotoEncryptedFields } from "./entities/member-photo.js";
+import type {
+  MemberPhoto,
+  MemberPhotoEncryptedFields,
+  MemberPhotoServerMetadata,
+  MemberPhotoWire,
+} from "./entities/member-photo.js";
 import type {
   Member,
   MemberEncryptedFields,
@@ -63,7 +90,12 @@ import type {
   RecoveryKeyServerMetadata,
   RecoveryKeyWire,
 } from "./entities/recovery-key.js";
-import type { Relationship, RelationshipEncryptedFields } from "./entities/relationship.js";
+import type {
+  Relationship,
+  RelationshipEncryptedFields,
+  RelationshipServerMetadata,
+  RelationshipWire,
+} from "./entities/relationship.js";
 import type { Session, SessionServerMetadata, SessionWire } from "./entities/session.js";
 import type {
   SystemStructureEntityAssociation,
@@ -165,26 +197,45 @@ export type SotEntityManifest = {
   };
   MemberPhoto: {
     domain: MemberPhoto;
+    server: MemberPhotoServerMetadata;
+    wire: MemberPhotoWire;
     encryptedFields: MemberPhotoEncryptedFields;
   };
   Group: {
     domain: Group;
+    server: GroupServerMetadata;
+    wire: GroupWire;
     encryptedFields: GroupEncryptedFields;
   };
   CustomFront: {
     domain: CustomFront;
+    server: CustomFrontServerMetadata;
+    wire: CustomFrontWire;
     encryptedFields: CustomFrontEncryptedFields;
   };
   FieldDefinition: {
     domain: FieldDefinition;
+    server: FieldDefinitionServerMetadata;
+    wire: FieldDefinitionWire;
     encryptedFields: FieldDefinitionEncryptedFields;
+  };
+  FieldDefinitionScope: {
+    domain: FieldDefinitionScope;
+    server: FieldDefinitionScopeServerMetadata;
+    wire: FieldDefinitionScopeWire;
+    // Plaintext entity — no encrypted fields.
+    encryptedFields: never;
   };
   FieldValue: {
     domain: FieldValue;
+    server: FieldValueServerMetadata;
+    wire: FieldValueWire;
     encryptedFields: FieldValueEncryptedFields;
   };
   Relationship: {
     domain: Relationship;
+    server: RelationshipServerMetadata;
+    wire: RelationshipWire;
     encryptedFields: RelationshipEncryptedFields;
   };
   StructureEntityType: {

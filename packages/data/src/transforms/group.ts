@@ -1,21 +1,25 @@
+import { GroupEncryptedInputSchema } from "@pluralscape/validation";
+
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { GroupId, HexColor, ImageSource, SystemId, UnixMillis } from "@pluralscape/types";
-
-// ── Encrypted payload types ───────────────────────────────────────────
+import type {
+  Group,
+  GroupEncryptedFields,
+  GroupId,
+  HexColor,
+  ImageSource,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 /**
- * The plaintext fields encrypted inside a group blob.
- * Pass this to `encryptGroupInput` or `encryptGroupUpdate`.
+ * Shape passed to `encryptGroupInput()` / `encryptGroupUpdate()` before
+ * encryption. Derived from the `Group` domain type by picking the
+ * encrypted-field keys — single source of truth lives in
+ * `@pluralscape/types`.
  */
-export interface GroupEncryptedFields {
-  readonly name: string;
-  readonly description: string | null;
-  readonly imageSource: ImageSource | null;
-  readonly color: HexColor | null;
-  readonly emoji: string | null;
-}
+export type GroupEncryptedInput = Pick<Group, GroupEncryptedFields>;
 
 // ── Decrypted output type ─────────────────────────────────────────────
 
@@ -37,14 +41,10 @@ export interface GroupDecrypted {
   readonly updatedAt: UnixMillis;
 }
 
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertGroupFieldsSubset =
-  GroupEncryptedFields extends Pick<GroupDecrypted, keyof GroupEncryptedFields> ? true : never;
-
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `group.get` — derived from `GroupDecrypted`. */
-export type GroupRaw = Omit<GroupDecrypted, keyof GroupEncryptedFields> & {
+export type GroupRaw = Omit<GroupDecrypted, GroupEncryptedFields> & {
   readonly encryptedData: string;
 };
 
@@ -52,30 +52,6 @@ export type GroupRaw = Omit<GroupDecrypted, keyof GroupEncryptedFields> & {
 export interface GroupPage {
   readonly data: readonly GroupRaw[];
   readonly nextCursor: string | null;
-}
-
-// ── Validator ─────────────────────────────────────────────────────────
-
-function assertGroupEncryptedFields(raw: unknown): asserts raw is GroupEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted group blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["name"] !== "string") {
-    throw new Error("Decrypted group blob missing required string field: name");
-  }
-  if (obj["description"] !== null && typeof obj["description"] !== "string") {
-    throw new Error("Decrypted group blob: description must be string or null");
-  }
-  if (obj["color"] !== null && typeof obj["color"] !== "string") {
-    throw new Error("Decrypted group blob: color must be string or null");
-  }
-  if (obj["emoji"] !== null && typeof obj["emoji"] !== "string") {
-    throw new Error("Decrypted group blob: emoji must be string or null");
-  }
-  if (obj["imageSource"] !== null && typeof obj["imageSource"] !== "object") {
-    throw new Error("Decrypted group blob: imageSource must be object or null");
-  }
 }
 
 // ── Group transforms ──────────────────────────────────────────────────
@@ -88,17 +64,17 @@ function assertGroupEncryptedFields(raw: unknown): asserts raw is GroupEncrypted
  */
 export function decryptGroup(raw: GroupRaw, masterKey: KdfMasterKey): GroupDecrypted {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertGroupEncryptedFields(plaintext);
+  const validated = GroupEncryptedInputSchema.parse(plaintext);
   return {
     id: raw.id,
     systemId: raw.systemId,
     parentGroupId: raw.parentGroupId,
     sortOrder: raw.sortOrder,
-    name: plaintext.name,
-    description: plaintext.description,
-    imageSource: plaintext.imageSource,
-    color: plaintext.color,
-    emoji: plaintext.emoji,
+    name: validated.name,
+    description: validated.description,
+    imageSource: validated.imageSource,
+    color: validated.color,
+    emoji: validated.emoji,
     archived: raw.archived,
     archivedAt: raw.archivedAt,
     version: raw.version,
@@ -127,7 +103,7 @@ export function decryptGroupPage(
  * `CreateGroupBodySchema`.
  */
 export function encryptGroupInput(
-  data: GroupEncryptedFields,
+  data: GroupEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
@@ -140,7 +116,7 @@ export function encryptGroupInput(
  * of this into `UpdateGroupBodySchema`.
  */
 export function encryptGroupUpdate(
-  data: GroupEncryptedFields,
+  data: GroupEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

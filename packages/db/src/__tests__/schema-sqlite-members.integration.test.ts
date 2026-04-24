@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, memberPhotos };
@@ -25,7 +27,8 @@ describe("SQLite members schema", () => {
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
 
-  function insertMember(systemId: string, id = crypto.randomUUID()): string {
+  function insertMember(systemId: string, raw = crypto.randomUUID()): MemberId {
+    const id = brandId<MemberId>(raw);
     const now = Date.now();
     db.insert(members)
       .values({
@@ -287,7 +290,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([100, 200]));
 
@@ -313,7 +316,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(memberPhotos)
@@ -335,7 +338,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(memberPhotos)
@@ -357,7 +360,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const photoId = crypto.randomUUID();
+      const photoId = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(memberPhotos)
@@ -380,7 +383,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const photoId = crypto.randomUUID();
+      const photoId = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(memberPhotos)
@@ -408,8 +411,8 @@ describe("SQLite members schema", () => {
         db
           .insert(memberPhotos)
           .values({
-            id: crypto.randomUUID(),
-            memberId: "nonexistent",
+            id: brandId<MemberPhotoId>(crypto.randomUUID()),
+            memberId: brandId<MemberId>("nonexistent"),
             systemId,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -429,9 +432,9 @@ describe("SQLite members schema", () => {
         db
           .insert(memberPhotos)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<MemberPhotoId>(crypto.randomUUID()),
             memberId,
-            systemId: "nonexistent",
+            systemId: brandId<SystemId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -444,7 +447,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(memberPhotos)
@@ -467,7 +470,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(memberPhotos)
@@ -522,7 +525,7 @@ describe("SQLite members schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberPhotoId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(memberPhotos)

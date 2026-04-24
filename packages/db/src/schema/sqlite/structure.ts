@@ -26,7 +26,8 @@ import { systems } from "./systems.js";
 
 import type {
   MemberId,
-  ServerRelationship,
+  Relationship,
+  RelationshipId,
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
@@ -39,13 +40,13 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const relationships = sqliteTable(
   "relationships",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<RelationshipId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceMemberId: text("source_member_id"),
-    targetMemberId: text("target_member_id"),
-    type: text("type").notNull().$type<ServerRelationship["type"]>(),
+    sourceMemberId: brandedId<MemberId>("source_member_id"),
+    targetMemberId: brandedId<MemberId>("target_member_id"),
+    type: text("type").notNull().$type<Relationship["type"]>(),
     bidirectional: integer("bidirectional", { mode: "boolean" }).notNull().default(false),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),

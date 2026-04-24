@@ -1,12 +1,29 @@
+import { CustomFrontEncryptedInputSchema } from "@pluralscape/validation";
+
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, CustomFront, HexColor, UnixMillis } from "@pluralscape/types";
+import type {
+  Archived,
+  CustomFront,
+  CustomFrontEncryptedFields,
+  UnixMillis,
+} from "@pluralscape/types";
+
+// ── Encrypted payload type ────────────────────────────────────────────
+
+/**
+ * Shape passed to `encryptCustomFrontInput()` / `encryptCustomFrontUpdate()`
+ * before encryption. Derived from the `CustomFront` domain type by picking
+ * the encrypted-field keys — single source of truth lives in
+ * `@pluralscape/types`.
+ */
+export type CustomFrontEncryptedInput = Pick<CustomFront, CustomFrontEncryptedFields>;
 
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `customFront.get` — derived from the `CustomFront` domain type. */
-export type CustomFrontRaw = Omit<CustomFront, keyof CustomFrontEncryptedFields | "archived"> & {
+export type CustomFrontRaw = Omit<CustomFront, CustomFrontEncryptedFields | "archived"> & {
   readonly encryptedData: string;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -16,47 +33,6 @@ export type CustomFrontRaw = Omit<CustomFront, keyof CustomFrontEncryptedFields 
 export interface CustomFrontPage {
   readonly data: readonly CustomFrontRaw[];
   readonly nextCursor: string | null;
-}
-
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a custom front blob.
- * Pass this to `encryptCustomFrontInput` when creating a custom front, or
- * `encryptCustomFrontUpdate` when updating one.
- */
-export interface CustomFrontEncryptedFields {
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: HexColor | null;
-  readonly emoji: string | null;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertCustomFrontFieldsSubset =
-  CustomFrontEncryptedFields extends Pick<CustomFront, keyof CustomFrontEncryptedFields>
-    ? true
-    : never;
-
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertCustomFrontEncryptedFields(raw: unknown): asserts raw is CustomFrontEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted custom front blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["name"] !== "string") {
-    throw new Error("Decrypted custom front blob missing required string field: name");
-  }
-  if (obj["description"] !== null && typeof obj["description"] !== "string") {
-    throw new Error("Decrypted custom front blob: description must be string or null");
-  }
-  if (obj["color"] !== null && typeof obj["color"] !== "string") {
-    throw new Error("Decrypted custom front blob: color must be string or null");
-  }
-  if (obj["emoji"] !== null && typeof obj["emoji"] !== "string") {
-    throw new Error("Decrypted custom front blob: emoji must be string or null");
-  }
 }
 
 // ── Transforms ────────────────────────────────────────────────────────
@@ -72,15 +48,15 @@ export function decryptCustomFront(
   masterKey: KdfMasterKey,
 ): CustomFront | Archived<CustomFront> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertCustomFrontEncryptedFields(plaintext);
+  const validated = CustomFrontEncryptedInputSchema.parse(plaintext);
 
   const base = {
     id: raw.id,
     systemId: raw.systemId,
-    name: plaintext.name,
-    description: plaintext.description,
-    color: plaintext.color,
-    emoji: plaintext.emoji,
+    name: validated.name,
+    description: validated.description,
+    color: validated.color,
+    emoji: validated.emoji,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
@@ -113,7 +89,7 @@ export function decryptCustomFrontPage(
  * `CreateCustomFrontBodySchema`.
  */
 export function encryptCustomFrontInput(
-  data: CustomFrontEncryptedFields,
+  data: CustomFrontEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
@@ -126,7 +102,7 @@ export function encryptCustomFrontInput(
  * this into the `UpdateCustomFrontBodySchema`.
  */
 export function encryptCustomFrontUpdate(
-  data: CustomFrontEncryptedFields,
+  data: CustomFrontEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

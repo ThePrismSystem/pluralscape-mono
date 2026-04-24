@@ -26,6 +26,7 @@ import {
 
 import type {
   MemberId,
+  RelationshipId,
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
@@ -64,9 +65,11 @@ describe("SQLite structure schema", () => {
   let db: BetterSQLite3Database<typeof schema>;
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
-  const insertMember = (systemId: string, id?: string): string =>
-    sqliteInsertMember(db, systemId, id);
-  const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string): MemberId =>
+    brandId<MemberId>(sqliteInsertMember(db, systemId, id));
+  const insertSystem = (accountId: string, id?: string): SystemId =>
+    sqliteInsertSystem(db, accountId, id);
+  const newRelId = (): RelationshipId => brandId<RelationshipId>(crypto.randomUUID());
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -92,7 +95,7 @@ describe("SQLite structure schema", () => {
     it("inserts and round-trips encrypted data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -116,7 +119,7 @@ describe("SQLite structure schema", () => {
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -137,7 +140,7 @@ describe("SQLite structure schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -162,8 +165,8 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
-            systemId: "nonexistent",
+            id: brandId<RelationshipId>(crypto.randomUUID()),
+            systemId: brandId<SystemId>("nonexistent"),
             type: "sibling",
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -178,7 +181,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const sourceMemberId = insertMember(systemId);
       const targetMemberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -205,7 +208,7 @@ describe("SQLite structure schema", () => {
     it("defaults T3 metadata to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -234,7 +237,7 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             type: "invalid" as "sibling",
             encryptedData: testBlob(new Uint8Array([1])),
@@ -249,7 +252,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -278,10 +281,10 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             type: "sibling",
-            sourceMemberId: "nonexistent",
+            sourceMemberId: brandId<MemberId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -294,7 +297,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -323,10 +326,10 @@ describe("SQLite structure schema", () => {
         db
           .insert(relationships)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<RelationshipId>(crypto.randomUUID()),
             systemId,
             type: "sibling",
-            targetMemberId: "nonexistent",
+            targetMemberId: brandId<MemberId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -338,7 +341,7 @@ describe("SQLite structure schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -360,7 +363,7 @@ describe("SQLite structure schema", () => {
     it("round-trips archived: true with archivedAt timestamp", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
@@ -414,7 +417,7 @@ describe("SQLite structure schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = newRelId();
       const now = Date.now();
 
       db.insert(relationships)
