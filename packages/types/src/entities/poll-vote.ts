@@ -24,28 +24,23 @@ export type ArchivedPollVote = Archived<PollVote>;
  *
  * Hybrid entity: the polymorphic `voter` reference is stored as jsonb on the
  * DB row so the discriminator and ID travel together for efficient queries;
- * the value is nullable at rest to accommodate provisional rows. The
- * optional `comment` is bundled inside the opaque `encryptedData` blob,
- * which itself is nullable (a no-comment vote needs no ciphertext).
+ * the column is nullable in Drizzle (a CHECK constraint enforces non-null at
+ * the DB level, but Drizzle's inferred type remains nullable). The optional
+ * `comment` is bundled inside the opaque `encryptedData` blob.
  * `archived: false` on the domain flips to a mutable boolean here, with a
  * companion `archivedAt` timestamp. The server row also carries the
  * owning `systemId` FK (denormalized for partition-safe cascades) and the
  * full `AuditMetadata` triple, neither of which appears on the domain.
  */
-export type PollVoteServerMetadata = Omit<
-  PollVote,
-  "comment" | "voter" | "isVeto" | "votedAt" | "archived"
-> & {
+export type PollVoteServerMetadata = Omit<PollVote, "comment" | "voter" | "archived"> & {
   readonly systemId: SystemId;
   readonly voter: EntityReference<"member" | "structure-entity"> | null;
-  readonly isVeto: boolean | null;
-  readonly votedAt: UnixMillis | null;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
   readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
-  readonly encryptedData: EncryptedBlob | null;
+  readonly encryptedData: EncryptedBlob;
 };
 
 /**

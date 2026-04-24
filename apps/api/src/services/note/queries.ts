@@ -1,4 +1,5 @@
 import { notes } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { NoteQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
@@ -15,7 +16,13 @@ import { toNoteResult } from "./internal.js";
 
 import type { NoteResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { NoteAuthorEntityType, NoteId, PaginatedResult, SystemId } from "@pluralscape/types";
+import type {
+  AnyBrandedId,
+  NoteAuthorEntityType,
+  NoteId,
+  PaginatedResult,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 interface ListNoteOpts {
@@ -87,7 +94,7 @@ export async function listNotes(
     }
 
     if (opts.authorEntityId !== undefined) {
-      conditions.push(eq(notes.authorEntityId, opts.authorEntityId));
+      conditions.push(eq(notes.authorEntityId, brandId<AnyBrandedId>(opts.authorEntityId)));
     }
 
     if (opts.cursor) {
@@ -95,7 +102,7 @@ export async function listNotes(
       // or() returns SQL | undefined in drizzle types; always defined with concrete args
       const cursorCondition = or(
         lt(notes.createdAt, decoded.sortValue),
-        and(eq(notes.createdAt, decoded.sortValue), lt(notes.id, decoded.id)),
+        and(eq(notes.createdAt, decoded.sortValue), lt(notes.id, brandId<NoteId>(decoded.id))),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

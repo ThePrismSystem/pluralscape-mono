@@ -1,5 +1,5 @@
 import { acknowledgements } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
 import { CreateAcknowledgementBodySchema } from "@pluralscape/validation";
 
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
@@ -13,7 +13,7 @@ import { toAcknowledgementResult, type AcknowledgementResult } from "./internal.
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SystemId, AcknowledgementId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createAcknowledgement(
@@ -31,7 +31,7 @@ export async function createAcknowledgement(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const ackId = createId(ID_PREFIXES.acknowledgement);
+  const ackId = brandId<AcknowledgementId>(createId(ID_PREFIXES.acknowledgement));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

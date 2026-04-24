@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -13,16 +13,23 @@ import {
 import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
 
+import type {
+  FrontingSessionId,
+  JournalEntryId,
+  SlugHash,
+  SystemId,
+  WikiPageId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const journalEntries = sqliteTable(
   "journal_entries",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<JournalEntryId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    frontingSessionId: text("fronting_session_id"),
+    frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -44,11 +51,14 @@ export const journalEntries = sqliteTable(
 export const wikiPages = sqliteTable(
   "wiki_pages",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<WikiPageId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    slugHash: text("slug_hash").notNull(),
+    // slugHash is a SHA-256 hex digest of the decrypted slug — server-visible
+    // for uniqueness enforcement without ever reading the slug. Branded
+    // `SlugHash` to prevent accidental mixing with other 64-char hex values.
+    slugHash: text("slug_hash").notNull().$type<SlugHash>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

@@ -32,7 +32,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 type PgDb = PgDatabase<PgQueryResultHKT>;
@@ -131,7 +131,7 @@ export async function getPendingWebhookRetries(
 /** Get unconfirmed acknowledgements. */
 export async function getUnconfirmedAcknowledgements(
   db: PgDb,
-  systemId: string,
+  systemId: SystemId,
 ): Promise<UnconfirmedAcknowledgement[]> {
   return db
     .select({

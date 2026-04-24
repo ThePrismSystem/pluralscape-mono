@@ -1,4 +1,5 @@
 import { acknowledgements } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { AcknowledgementQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
@@ -78,7 +79,10 @@ export async function listAcknowledgements(
       const decoded = fromCompositeCursor(opts.cursor, "ack");
       const cursorCondition = or(
         lt(acknowledgements.createdAt, decoded.sortValue),
-        and(eq(acknowledgements.createdAt, decoded.sortValue), lt(acknowledgements.id, decoded.id)),
+        and(
+          eq(acknowledgements.createdAt, decoded.sortValue),
+          lt(acknowledgements.id, brandId<AcknowledgementId>(decoded.id)),
+        ),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

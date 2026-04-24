@@ -27,7 +27,17 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { MemberId } from "@pluralscape/types";
+import type {
+  MemberId,
+  AcknowledgementId,
+  BoardMessageId,
+  ChannelId,
+  MessageId,
+  NoteId,
+  PollId,
+  PollVoteId,
+  PollOptionId,
+} from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -49,13 +59,10 @@ describe("SQLite communication schema", () => {
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
-  const insertMember = (systemId: string, id?: string): string =>
-    sqliteInsertMember(db, systemId, id);
-  const insertChannel = (
-    systemId: string,
-    opts?: Parameters<typeof sqliteInsertChannel>[2],
-  ): string => sqliteInsertChannel(db, systemId, opts);
-  const insertPoll = (systemId: string, opts?: Parameters<typeof sqliteInsertPoll>[2]): string =>
+  const insertMember = (systemId: string, id?: string) => sqliteInsertMember(db, systemId, id);
+  const insertChannel = (systemId: string, opts?: Parameters<typeof sqliteInsertChannel>[2]) =>
+    sqliteInsertChannel(db, systemId, opts);
+  const insertPoll = (systemId: string, opts?: Parameters<typeof sqliteInsertPoll>[2]) =>
     sqliteInsertPoll(db, systemId, opts);
 
   beforeAll(() => {
@@ -84,7 +91,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const data = testBlob(new Uint8Array([10, 20, 30]));
-      const id = crypto.randomUUID();
+      const id = brandId<ChannelId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(channels)
@@ -114,7 +121,7 @@ describe("SQLite communication schema", () => {
         db
           .insert(channels)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ChannelId>(crypto.randomUUID()),
             systemId,
             type: "invalid" as "channel",
             sortOrder: 0,
@@ -135,7 +142,7 @@ describe("SQLite communication schema", () => {
         db
           .insert(channels)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<ChannelId>(crypto.randomUUID()),
             systemId,
             type: "channel",
             sortOrder: -1,
@@ -229,7 +236,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MessageId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([5, 6, 7]));
 
@@ -256,7 +263,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const msgId = crypto.randomUUID();
+      const msgId = brandId<MessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(messages)
@@ -280,7 +287,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const msgId = crypto.randomUUID();
+      const msgId = brandId<MessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(messages)
@@ -334,7 +341,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(messages)
@@ -360,7 +367,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const channelId = insertChannel(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<MessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(messages)
@@ -369,7 +376,7 @@ describe("SQLite communication schema", () => {
           channelId,
           systemId,
           timestamp: now,
-          replyToId: "nonexistent-message-id",
+          replyToId: brandId<MessageId>("nonexistent-message-id"),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -386,7 +393,7 @@ describe("SQLite communication schema", () => {
     it("round-trips with defaults", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BoardMessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(boardMessages)
@@ -410,7 +417,7 @@ describe("SQLite communication schema", () => {
     it("round-trips pinned=true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BoardMessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(boardMessages)
@@ -438,7 +445,7 @@ describe("SQLite communication schema", () => {
         db
           .insert(boardMessages)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<BoardMessageId>(crypto.randomUUID()),
             systemId,
             sortOrder: -1,
             encryptedData: testBlob(new Uint8Array([1])),
@@ -452,7 +459,7 @@ describe("SQLite communication schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BoardMessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(boardMessages)
@@ -474,7 +481,7 @@ describe("SQLite communication schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BoardMessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(boardMessages)
@@ -496,7 +503,7 @@ describe("SQLite communication schema", () => {
     it("round-trips archived state", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BoardMessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(boardMessages)
@@ -548,7 +555,7 @@ describe("SQLite communication schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<BoardMessageId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(boardMessages)
@@ -577,7 +584,7 @@ describe("SQLite communication schema", () => {
     it("round-trips system-wide note (null author)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(notes)
@@ -600,7 +607,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<NoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(notes)
@@ -608,7 +615,7 @@ describe("SQLite communication schema", () => {
           id,
           systemId,
           authorEntityType: "member",
-          authorEntityId: memberId,
+          authorEntityId: brandId<MemberId>(memberId),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -623,7 +630,7 @@ describe("SQLite communication schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(notes)
@@ -644,7 +651,7 @@ describe("SQLite communication schema", () => {
     it("round-trips archived state", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(notes)
@@ -667,7 +674,7 @@ describe("SQLite communication schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(notes)
@@ -716,7 +723,7 @@ describe("SQLite communication schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<NoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(notes)
@@ -741,7 +748,7 @@ describe("SQLite communication schema", () => {
     it("round-trips with status and closedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(polls)
@@ -784,7 +791,7 @@ describe("SQLite communication schema", () => {
         db
           .insert(polls)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<PollId>(crypto.randomUUID()),
             systemId,
             status: "invalid" as "open",
             kind: "standard",
@@ -814,14 +821,14 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(polls)
         .values({
           id,
           systemId,
-          createdByMemberId: memberId,
+          createdByMemberId: brandId<MemberId>(memberId),
           kind: "standard",
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
@@ -857,7 +864,7 @@ describe("SQLite communication schema", () => {
         db
           .insert(polls)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<PollId>(crypto.randomUUID()),
             systemId,
             kind: "invalid" as "standard",
             allowMultipleVotes: false,
@@ -876,14 +883,14 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(polls)
         .values({
           id,
           systemId,
-          createdByMemberId: memberId,
+          createdByMemberId: brandId<MemberId>(memberId),
           kind: "standard",
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
@@ -909,9 +916,9 @@ describe("SQLite communication schema", () => {
         db
           .insert(polls)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<PollId>(crypto.randomUUID()),
             systemId,
-            createdByMemberId: "nonexistent",
+            createdByMemberId: brandId<MemberId>("nonexistent"),
             kind: "standard",
             allowMultipleVotes: false,
             maxVotesPerMember: 1,
@@ -938,7 +945,7 @@ describe("SQLite communication schema", () => {
     it("round-trips archived state", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(polls)
@@ -1010,7 +1017,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20]));
 
@@ -1052,7 +1059,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const voteId = crypto.randomUUID();
+      const voteId = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(pollVotes)
@@ -1076,7 +1083,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const voteId = crypto.randomUUID();
+      const voteId = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(pollVotes)
@@ -1100,7 +1107,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
       const votedAt = Date.now();
 
@@ -1109,7 +1116,7 @@ describe("SQLite communication schema", () => {
           id,
           pollId,
           systemId,
-          optionId: "opt-1",
+          optionId: brandId<PollOptionId>("opt-1"),
           voter: { entityType: "member", entityId: brandId<MemberId>("m-1") },
           isVeto: true,
           votedAt,
@@ -1130,7 +1137,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(pollVotes)
@@ -1155,7 +1162,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(pollVotes)
@@ -1179,7 +1186,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(pollVotes)
@@ -1235,7 +1242,7 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<PollVoteId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(pollVotes)
@@ -1265,7 +1272,7 @@ describe("SQLite communication schema", () => {
     it("round-trips with defaults", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
@@ -1286,7 +1293,7 @@ describe("SQLite communication schema", () => {
     it("round-trips confirmed state", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
@@ -1307,7 +1314,7 @@ describe("SQLite communication schema", () => {
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
@@ -1329,14 +1336,14 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
         .values({
           id,
           systemId,
-          createdByMemberId: memberId,
+          createdByMemberId: brandId<MemberId>(memberId),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -1350,7 +1357,7 @@ describe("SQLite communication schema", () => {
     it("defaults createdByMemberId to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
@@ -1371,14 +1378,14 @@ describe("SQLite communication schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
         .values({
           id,
           systemId,
-          createdByMemberId: memberId,
+          createdByMemberId: brandId<MemberId>(memberId),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -1399,9 +1406,9 @@ describe("SQLite communication schema", () => {
         db
           .insert(acknowledgements)
           .values({
-            id: crypto.randomUUID(),
+            id: brandId<AcknowledgementId>(crypto.randomUUID()),
             systemId,
-            createdByMemberId: "nonexistent",
+            createdByMemberId: brandId<MemberId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -1413,7 +1420,7 @@ describe("SQLite communication schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
@@ -1434,7 +1441,7 @@ describe("SQLite communication schema", () => {
     it("round-trips archived state", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)
@@ -1485,7 +1492,7 @@ describe("SQLite communication schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<AcknowledgementId>(crypto.randomUUID());
       const now = Date.now();
 
       db.insert(acknowledgements)

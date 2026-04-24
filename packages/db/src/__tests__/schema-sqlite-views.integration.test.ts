@@ -42,6 +42,7 @@ import {
 
 import type {
   AccountId,
+  AcknowledgementId,
   ApiKeyId,
   DeviceTransferRequestId,
   SessionId,
@@ -364,7 +365,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(acknowledgements)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<AcknowledgementId>(crypto.randomUUID()),
           systemId,
           confirmed: false,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -374,7 +375,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(acknowledgements)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<AcknowledgementId>(crypto.randomUUID()),
           systemId,
           confirmed: true,
           encryptedData: testBlob(new Uint8Array([1])),

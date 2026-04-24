@@ -281,11 +281,11 @@ describe("Server/Client pairs exist for completed domains", () => {
 
   it("poll vote pair", () => {
     expectTypeOf<PollVoteServerMetadata>().toBeObject();
-    expectTypeOf<PollVoteServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
+    expectTypeOf<PollVoteServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<PollVoteServerMetadata["id"]>().toEqualTypeOf<PollVoteId>();
     expectTypeOf<PollVoteServerMetadata["pollId"]>().toEqualTypeOf<PollId>();
     expectTypeOf<PollVoteServerMetadata["optionId"]>().toEqualTypeOf<PollOptionId | null>();
-    expectTypeOf<PollVoteServerMetadata["isVeto"]>().toEqualTypeOf<boolean | null>();
+    expectTypeOf<PollVoteServerMetadata["isVeto"]>().toEqualTypeOf<boolean>();
     // PollVote is the domain type (was ClientPollVote alias).
     expectTypeOf<PollVote>().toBeObject();
   });

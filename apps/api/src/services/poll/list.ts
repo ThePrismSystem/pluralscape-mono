@@ -1,4 +1,5 @@
 import { polls } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { PollQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 
@@ -13,7 +14,7 @@ import { toPollResult } from "./internal.js";
 
 import type { ListPollOpts, PollResult } from "./internal.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { PaginatedResult, PollStatus, SystemId } from "@pluralscape/types";
+import type { PaginatedResult, PollStatus, SystemId, PollId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function listPolls(
@@ -41,7 +42,7 @@ export async function listPolls(
       const decoded = fromCompositeCursor(opts.cursor, "poll");
       const cursorCondition = or(
         lt(polls.createdAt, decoded.sortValue),
-        and(eq(polls.createdAt, decoded.sortValue), lt(polls.id, decoded.id)),
+        and(eq(polls.createdAt, decoded.sortValue), lt(polls.id, brandId<PollId>(decoded.id))),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);

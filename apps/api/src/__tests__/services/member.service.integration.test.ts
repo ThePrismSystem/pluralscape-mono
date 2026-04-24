@@ -27,7 +27,14 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  AcknowledgementId,
+  NoteId,
+  PollId,
+  SystemId,
+  TimerId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const {
@@ -562,7 +569,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(notes).values({
-        id: `note_${crypto.randomUUID()}`,
+        id: brandId<NoteId>(`note_${crypto.randomUUID()}`),
         systemId,
         authorEntityType: "member",
         authorEntityId: created.id,
@@ -590,7 +597,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(acknowledgements).values({
-        id: `ack_${crypto.randomUUID()}`,
+        id: brandId<AcknowledgementId>(`ack_${crypto.randomUUID()}`),
         systemId,
         createdByMemberId: created.id,
         encryptedData: testBlob(),
@@ -617,7 +624,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(polls).values({
-        id: `poll_${crypto.randomUUID()}`,
+        id: brandId<PollId>(`poll_${crypto.randomUUID()}`),
         systemId,
         createdByMemberId: created.id,
         kind: "standard",
@@ -648,7 +655,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const timerId = `tmr_${crypto.randomUUID()}`;
+      const timerId = brandId<TimerId>(`tmr_${crypto.randomUUID()}`);
       await db.insert(timerConfigs).values({
         id: timerId,
         systemId,

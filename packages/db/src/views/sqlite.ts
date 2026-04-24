@@ -26,7 +26,7 @@ import type {
   StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 /** Get currently fronting members (end_time IS NULL). */
@@ -134,7 +134,7 @@ export function getPendingWebhookRetries(
 /** Get unconfirmed acknowledgements. */
 export function getUnconfirmedAcknowledgements(
   db: BetterSQLite3Database,
-  systemId: string,
+  systemId: SystemId,
 ): UnconfirmedAcknowledgement[] {
   return db
     .select({

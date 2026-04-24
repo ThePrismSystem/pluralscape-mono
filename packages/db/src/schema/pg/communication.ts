@@ -12,7 +12,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -21,7 +21,7 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { enumCheck, nullPairCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import {
   CHANNEL_TYPES,
   NOTE_AUTHOR_ENTITY_TYPES,
@@ -33,23 +33,34 @@ import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type {
+  AcknowledgementId,
+  AnyBrandedId,
+  BoardMessageId,
   ChannelServerMetadata,
+  ChannelId,
+  MemberId,
+  MessageId,
+  NoteId,
+  PollId,
+  PollOptionId,
   PollServerMetadata,
+  PollVoteId,
   PollVoteServerMetadata,
+  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const channels = pgTable(
   "channels",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<ChannelId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     type: varchar("type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<ChannelServerMetadata["type"]>(),
-    parentId: varchar("parent_id", { length: ID_MAX_LENGTH }),
+    parentId: brandedId<ChannelId>("parent_id"),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -77,12 +88,12 @@ export const channels = pgTable(
 export const messages = pgTable(
   "messages",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
-    channelId: varchar("channel_id", { length: ID_MAX_LENGTH }).notNull(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<MessageId>("id").notNull(),
+    channelId: brandedId<ChannelId>("channel_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    replyToId: varchar("reply_to_id", { length: ID_MAX_LENGTH }),
+    replyToId: brandedId<MessageId>("reply_to_id"),
     timestamp: pgTimestamp("timestamp").notNull(),
     editedAt: pgTimestamp("edited_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -108,8 +119,8 @@ export const messages = pgTable(
 export const boardMessages = pgTable(
   "board_messages",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<BoardMessageId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     pinned: boolean("pinned").notNull().default(false),
@@ -131,12 +142,15 @@ export const boardMessages = pgTable(
 export const notes = pgTable(
   "notes",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<NoteId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     authorEntityType: varchar("author_entity_type", { length: ENUM_MAX_LENGTH }),
-    authorEntityId: varchar("author_entity_id", { length: ID_MAX_LENGTH }),
+    // Polymorphic: targets member or structure-entity — discriminator lives in
+    // `authorEntityType`. Brand-level narrowing happens at the application
+    // layer (`brandedId<AnyBrandedId>` intentionally permissive here).
+    authorEntityId: brandedId<AnyBrandedId>("author_entity_id"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -160,11 +174,11 @@ export const notes = pgTable(
 export const polls = pgTable(
   "polls",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<PollId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: varchar("created_by_member_id", { length: ID_MAX_LENGTH }),
+    createdByMemberId: brandedId<MemberId>("created_by_member_id"),
     kind: varchar("kind", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<PollServerMetadata["kind"]>(),
@@ -202,12 +216,12 @@ export const polls = pgTable(
 export const pollVotes = pgTable(
   "poll_votes",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    pollId: varchar("poll_id", { length: ID_MAX_LENGTH }).notNull(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<PollVoteId>("id").primaryKey(),
+    pollId: brandedId<PollId>("poll_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    optionId: varchar("option_id", { length: ID_MAX_LENGTH }),
+    optionId: brandedId<PollOptionId>("option_id"),
     voter: jsonb("voter").$type<PollVoteServerMetadata["voter"]>(),
     isVeto: boolean("is_veto").notNull().default(false),
     votedAt: pgTimestamp("voted_at").notNull(),
@@ -234,11 +248,11 @@ export const pollVotes = pgTable(
 export const acknowledgements = pgTable(
   "acknowledgements",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<AcknowledgementId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: varchar("created_by_member_id", { length: ID_MAX_LENGTH }),
+    createdByMemberId: brandedId<MemberId>("created_by_member_id"),
     confirmed: boolean("confirmed").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),

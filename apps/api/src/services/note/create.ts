@@ -1,5 +1,5 @@
 import { notes, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, brandId } from "@pluralscape/types";
 import { CreateNoteBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
@@ -18,7 +18,7 @@ import { toNoteResult } from "./internal.js";
 import type { NoteResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { AnyBrandedId, NoteId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export async function createNote(
@@ -36,7 +36,7 @@ export async function createNote(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
-  const noteId = createId(ID_PREFIXES.note);
+  const noteId = brandId<NoteId>(createId(ID_PREFIXES.note));
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -62,7 +62,10 @@ export async function createNote(
         id: noteId,
         systemId,
         authorEntityType: parsed.author?.entityType ?? null,
-        authorEntityId: parsed.author?.entityId ?? null,
+        authorEntityId:
+          parsed.author?.entityId === undefined
+            ? null
+            : brandId<AnyBrandedId>(parsed.author.entityId),
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,
