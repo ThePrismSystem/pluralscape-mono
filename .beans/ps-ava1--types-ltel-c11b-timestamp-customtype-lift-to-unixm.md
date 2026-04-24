@@ -54,5 +54,3 @@ Initial survey flagged `packages/sync/src/post-merge-validator.ts`, but its `det
 ## Spec
 
 `docs/superpowers/specs/2026-04-24-types-ltel-c11-cleanup-design.md`
-</content>
-</invoke>

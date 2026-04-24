@@ -45,5 +45,3 @@ Introduce a deliberate drift (e.g. change a `SystemId` column to plain `text()`)
 ## Spec
 
 `docs/superpowers/specs/2026-04-24-types-ltel-c11-cleanup-design.md`
-</content>
-</invoke>
