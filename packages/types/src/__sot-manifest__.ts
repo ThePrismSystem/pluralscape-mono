@@ -11,6 +11,11 @@ import type {
   AuditLogEntryWire,
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
+import type {
+  CheckInRecord,
+  CheckInRecordServerMetadata,
+  CheckInRecordWire,
+} from "./entities/check-in-record.js";
 import type { CustomFront, CustomFrontEncryptedFields } from "./entities/custom-front.js";
 import type {
   DeviceToken,
@@ -305,5 +310,13 @@ export type SotEntityManifest = {
     server: NomenclatureServerMetadata;
     wire: NomenclatureWire;
     encryptedFields: NomenclatureEncryptedFields;
+  };
+  CheckInRecord: {
+    domain: CheckInRecord;
+    server: CheckInRecordServerMetadata;
+    wire: CheckInRecordWire;
+    // Hybrid entity: plaintext domain with optional `encryptedData` blob
+    // (server-only column; no keys-subset of `CheckInRecord`).
+    encryptedFields: never;
   };
 };
