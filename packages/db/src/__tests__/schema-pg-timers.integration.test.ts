@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { CheckInRecordId, TimerId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, members, timerConfigs, checkInRecords };
@@ -307,8 +309,8 @@ describe("PG timers schema", () => {
     it("round-trips with defaults", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -336,8 +338,8 @@ describe("PG timers schema", () => {
     it("round-trips with responded and encrypted data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
       const data = testBlob(new Uint8Array([5, 6, 7]));
 
@@ -368,7 +370,7 @@ describe("PG timers schema", () => {
     it("restricts timer config deletion when referenced by check-in record", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -380,7 +382,7 @@ describe("PG timers schema", () => {
       });
 
       await db.insert(checkInRecords).values({
-        id: crypto.randomUUID(),
+        id: brandId<CheckInRecordId>(crypto.randomUUID()),
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,
@@ -392,8 +394,8 @@ describe("PG timers schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -419,8 +421,8 @@ describe("PG timers schema", () => {
     it("stores dismissed as false explicitly", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -447,8 +449,8 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -474,8 +476,8 @@ describe("PG timers schema", () => {
     it("defaults respondedByMemberId to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -501,7 +503,7 @@ describe("PG timers schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const timerId = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -513,7 +515,7 @@ describe("PG timers schema", () => {
       });
 
       await db.insert(checkInRecords).values({
-        id: crypto.randomUUID(),
+        id: brandId<CheckInRecordId>(crypto.randomUUID()),
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,
@@ -526,7 +528,7 @@ describe("PG timers schema", () => {
     it("rejects nonexistent respondedByMemberId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -539,7 +541,7 @@ describe("PG timers schema", () => {
 
       await expect(
         db.insert(checkInRecords).values({
-          id: crypto.randomUUID(),
+          id: brandId<CheckInRecordId>(crypto.randomUUID()),
           systemId,
           timerConfigId: timerId,
           scheduledAt: now,
@@ -551,7 +553,7 @@ describe("PG timers schema", () => {
     it("queries pending check-ins by system_id", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -562,9 +564,9 @@ describe("PG timers schema", () => {
         updatedAt: now,
       });
 
-      const pendingId = crypto.randomUUID();
-      const respondedId = crypto.randomUUID();
-      const dismissedId = crypto.randomUUID();
+      const pendingId = brandId<CheckInRecordId>(crypto.randomUUID());
+      const respondedId = brandId<CheckInRecordId>(crypto.randomUUID());
+      const dismissedId = brandId<CheckInRecordId>(crypto.randomUUID());
 
       await db.insert(checkInRecords).values([
         { id: pendingId, systemId, timerConfigId: timerId, scheduledAt: now },
@@ -595,8 +597,8 @@ describe("PG timers schema", () => {
     it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -619,8 +621,8 @@ describe("PG timers schema", () => {
     it("round-trips archived: true with archivedAt timestamp", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -648,8 +650,8 @@ describe("PG timers schema", () => {
     it("updates archived from false to true", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
+      const id = brandId<CheckInRecordId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -677,7 +679,7 @@ describe("PG timers schema", () => {
     it("excludes archived pending check-ins from system_pending partial index", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -688,8 +690,8 @@ describe("PG timers schema", () => {
         updatedAt: now,
       });
 
-      const activeId = crypto.randomUUID();
-      const archivedId = crypto.randomUUID();
+      const activeId = brandId<CheckInRecordId>(crypto.randomUUID());
+      const archivedId = brandId<CheckInRecordId>(crypto.randomUUID());
 
       await db.insert(checkInRecords).values([
         { id: activeId, systemId, timerConfigId: timerId, scheduledAt: now },
@@ -714,7 +716,7 @@ describe("PG timers schema", () => {
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -736,7 +738,7 @@ describe("PG timers schema", () => {
     it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const timerId = crypto.randomUUID();
+      const timerId = brandId<TimerId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(timerConfigs).values({

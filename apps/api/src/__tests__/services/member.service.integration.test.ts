@@ -29,12 +29,15 @@ import {
 import type { AuthContext } from "../../lib/auth-context.js";
 import type {
   AccountId,
+  CheckInRecordId,
   FieldDefinitionId,
   FieldValueId,
+  FrontingSessionId,
   MemberPhotoId,
   RelationshipId,
   SystemId,
   SystemStructureEntityMemberLinkId,
+  TimerId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -514,7 +517,7 @@ describe("member.service (PGlite integration)", () => {
       );
       const now = Date.now();
       await db.insert(frontingSessions).values({
-        id: `fs_${crypto.randomUUID()}`,
+        id: brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`),
         systemId,
         memberId: created.id,
         startTime: now - 3_600_000,
@@ -656,7 +659,7 @@ describe("member.service (PGlite integration)", () => {
         noopAudit,
       );
       const now = Date.now();
-      const timerId = `tmr_${crypto.randomUUID()}`;
+      const timerId = brandId<TimerId>(`tmr_${crypto.randomUUID()}`);
       await db.insert(timerConfigs).values({
         id: timerId,
         systemId,
@@ -665,7 +668,7 @@ describe("member.service (PGlite integration)", () => {
         updatedAt: now,
       });
       await db.insert(checkInRecords).values({
-        id: `cir_${crypto.randomUUID()}`,
+        id: brandId<CheckInRecordId>(`cir_${crypto.randomUUID()}`),
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,

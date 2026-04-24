@@ -15,7 +15,12 @@ import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
 import { systems } from "./systems.js";
 
-import type { CustomFrontId, SystemId } from "@pluralscape/types";
+import type {
+  CustomFrontId,
+  FrontingCommentId,
+  FrontingSessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = sqliteTable(
@@ -43,8 +48,8 @@ export const customFronts = sqliteTable(
 export const frontingSessions = sqliteTable(
   "fronting_sessions",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<FrontingSessionId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: sqliteTimestamp("start_time").notNull(),
@@ -102,9 +107,9 @@ export const frontingSessions = sqliteTable(
 export const frontingComments = sqliteTable(
   "fronting_comments",
   {
-    id: text("id").primaryKey(),
-    frontingSessionId: text("fronting_session_id").notNull(),
-    systemId: text("system_id")
+    id: brandedId<FrontingCommentId>("id").primaryKey(),
+    frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     memberId: text("member_id"),

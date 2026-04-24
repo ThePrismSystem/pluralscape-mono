@@ -2,10 +2,7 @@ import type { KdfMasterKey } from "./crypto-keys.js";
 import type { AcknowledgementRequest } from "./entities/acknowledgement.js";
 import type { BoardMessage } from "./entities/board-message.js";
 import type { Channel } from "./entities/channel.js";
-import type { FrontingComment } from "./entities/fronting-comment.js";
-import type { FrontingSession } from "./entities/fronting-session.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
-import type { LifecycleEvent, LifecycleEventType } from "./entities/lifecycle-event.js";
 import type { ChatMessage } from "./entities/message.js";
 import type { Note, NoteAuthorEntityType } from "./entities/note.js";
 import type { PollVote } from "./entities/poll-vote.js";
@@ -17,9 +14,6 @@ import type {
   BoardMessageId,
   BucketId,
   ChannelId,
-  CustomFrontId,
-  LifecycleEventId,
-  FrontingCommentId,
   FrontingSessionId,
   JournalEntryId,
   MemberId,
@@ -29,7 +23,6 @@ import type {
   PollOptionId,
   PollVoteId,
   SystemId,
-  SystemStructureEntityId,
   TimerId,
   SlugHash,
   WikiPageId,
@@ -109,47 +102,6 @@ export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 // MemberServerMetadata / MemberWire live in entities/member.ts.
 // AuditLogEntryServerMetadata / AuditLogEntryWire live in entities/audit-log-entry.ts.
 
-/**
- * Server-side fronting session representation.
- * T1 encrypted: comment, positionality, outtrigger, outtriggerSentiment
- * T3 plaintext: timestamps, memberId, customFrontId, structureEntityId, archived
- */
-export interface ServerFrontingSession extends AuditMetadata {
-  readonly id: FrontingSessionId;
-  readonly systemId: SystemId;
-  readonly memberId: MemberId | null;
-  readonly startTime: UnixMillis;
-  readonly endTime: UnixMillis | null;
-  readonly customFrontId: CustomFrontId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side fronting session — flat decrypted fields. */
-export type ClientFrontingSession = FrontingSession;
-
-/**
- * Server-side fronting comment representation.
- * T1 encrypted: content
- * T3 plaintext: frontingSessionId, sessionStartTime, memberId, customFrontId, structureEntityId, archived
- */
-export interface ServerFrontingComment extends AuditMetadata {
-  readonly id: FrontingCommentId;
-  readonly frontingSessionId: FrontingSessionId;
-  readonly systemId: SystemId;
-  /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
-  readonly sessionStartTime: UnixMillis;
-  readonly memberId: MemberId | null;
-  readonly customFrontId: CustomFrontId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side fronting comment — flat decrypted fields. */
-export type ClientFrontingComment = FrontingComment;
-
 // ── Communication ──────────────────────────────────────────────
 
 /**
@@ -222,29 +174,6 @@ export interface ServerNote extends AuditMetadata {
 
 /** Client-side note — flat decrypted fields. */
 export type ClientNote = Note;
-
-// ── Lifecycle ──────────────────────────────────────────────────
-
-/**
- * Server-side lifecycle event representation.
- * T1 encrypted: notes
- */
-export interface ServerLifecycleEvent {
-  readonly id: LifecycleEventId;
-  readonly systemId: SystemId;
-  readonly eventType: LifecycleEventType;
-  readonly occurredAt: UnixMillis;
-  readonly recordedAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly encryptedData: EncryptedBlob | null;
-  readonly plaintextMetadata: Record<string, unknown> | null;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
-/** Client-side lifecycle event — flat decrypted fields. */
-export type ClientLifecycleEvent = LifecycleEvent;
 
 // ── Journal ────────────────────────────────────────────────────
 

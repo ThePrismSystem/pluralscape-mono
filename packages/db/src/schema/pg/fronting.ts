@@ -24,7 +24,12 @@ import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
 import { systems } from "./systems.js";
 
-import type { CustomFrontId, SystemId } from "@pluralscape/types";
+import type {
+  CustomFrontId,
+  FrontingCommentId,
+  FrontingSessionId,
+  SystemId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = pgTable(
@@ -53,8 +58,8 @@ export const customFronts = pgTable(
 export const frontingSessions = pgTable(
   "fronting_sessions",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FrontingSessionId>("id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: pgTimestamp("start_time").notNull(),
@@ -118,9 +123,9 @@ export const frontingSessions = pgTable(
 export const frontingComments = pgTable(
   "fronting_comments",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    frontingSessionId: varchar("fronting_session_id", { length: ID_MAX_LENGTH }).notNull(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<FrontingCommentId>("id").primaryKey(),
+    frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id").notNull(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */

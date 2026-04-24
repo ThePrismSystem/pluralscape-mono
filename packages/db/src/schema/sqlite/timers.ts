@@ -9,7 +9,7 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -22,6 +22,7 @@ import { sqliteTimeFormatCheck } from "../../helpers/check.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
+import type { CheckInRecordId, SystemId, TimerId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = sqliteTable(
@@ -61,11 +62,11 @@ export const timerConfigs = sqliteTable(
 export const checkInRecords = sqliteTable(
   "check_in_records",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
+    id: brandedId<CheckInRecordId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    timerConfigId: text("timer_config_id").notNull(),
+    timerConfigId: brandedId<TimerId>("timer_config_id").notNull(),
     scheduledAt: sqliteTimestamp("scheduled_at").notNull(),
     respondedAt: sqliteTimestamp("responded_at"),
     dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),

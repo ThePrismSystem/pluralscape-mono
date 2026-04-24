@@ -28,6 +28,7 @@ import type {
   ChartDataset,
   DateRange,
   EntityType,
+  FrontingSessionId,
   MemberFrontingBreakdown,
   SystemId,
   SystemSettingsId,
@@ -662,15 +663,15 @@ describe("Type-level assertions", () => {
     expectTypeOf<Row["sortOrder"]>().toEqualTypeOf<number>();
   });
 
-  // Fix 3 — frontingComments.frontingSessionId is string (non-nullable)
-  it("PG frontingComments.frontingSessionId infers as string", () => {
+  // Fix 3 — frontingComments.frontingSessionId is branded (FrontingSessionId, non-nullable)
+  it("PG frontingComments.frontingSessionId is branded (FrontingSessionId)", () => {
     type Row = InferSelectModel<typeof pg.frontingComments>;
-    expectTypeOf<Row["frontingSessionId"]>().toEqualTypeOf<string>();
+    expectTypeOf<Row["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
   });
 
-  it("SQLite frontingComments.frontingSessionId infers as string", () => {
+  it("SQLite frontingComments.frontingSessionId is branded (FrontingSessionId)", () => {
     type Row = InferSelectModel<typeof sqlite.frontingComments>;
-    expectTypeOf<Row["frontingSessionId"]>().toEqualTypeOf<string>();
+    expectTypeOf<Row["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
   });
 
   // Fix 6 — systemSettings has both id and systemId as branded IDs

@@ -12,6 +12,11 @@ import type {
 } from "./entities/audit-log-entry.js";
 import type { AuthKey, AuthKeyServerMetadata, AuthKeyWire } from "./entities/auth-key.js";
 import type {
+  CheckInRecord,
+  CheckInRecordServerMetadata,
+  CheckInRecordWire,
+} from "./entities/check-in-record.js";
+import type {
   CustomFront,
   CustomFrontEncryptedFields,
   CustomFrontServerMetadata,
@@ -45,8 +50,16 @@ import type {
   FieldValueWire,
 } from "./entities/field-value.js";
 import type {
+  FrontingComment,
+  FrontingCommentEncryptedFields,
+  FrontingCommentServerMetadata,
+  FrontingCommentWire,
+} from "./entities/fronting-comment.js";
+import type {
   FrontingSession,
   FrontingSessionEncryptedFields,
+  FrontingSessionServerMetadata,
+  FrontingSessionWire,
 } from "./entities/fronting-session.js";
 import type {
   Group,
@@ -72,7 +85,12 @@ import type {
   InnerWorldRegionServerMetadata,
   InnerWorldRegionWire,
 } from "./entities/innerworld-region.js";
-import type { LifecycleEvent, LifecycleEventEncryptedFields } from "./entities/lifecycle-event.js";
+import type {
+  LifecycleEvent,
+  LifecycleEventEncryptedFields,
+  LifecycleEventServerMetadata,
+  LifecycleEventWire,
+} from "./entities/lifecycle-event.js";
 import type {
   MemberPhoto,
   MemberPhotoEncryptedFields,
@@ -252,10 +270,20 @@ export type SotEntityManifest = {
   };
   FrontingSession: {
     domain: FrontingSession;
+    server: FrontingSessionServerMetadata;
+    wire: FrontingSessionWire;
     encryptedFields: FrontingSessionEncryptedFields;
+  };
+  FrontingComment: {
+    domain: FrontingComment;
+    server: FrontingCommentServerMetadata;
+    wire: FrontingCommentWire;
+    encryptedFields: FrontingCommentEncryptedFields;
   };
   LifecycleEvent: {
     domain: LifecycleEvent;
+    server: LifecycleEventServerMetadata;
+    wire: LifecycleEventWire;
     encryptedFields: LifecycleEventEncryptedFields;
   };
   InnerworldRegion: {
@@ -361,5 +389,13 @@ export type SotEntityManifest = {
     server: NomenclatureServerMetadata;
     wire: NomenclatureWire;
     encryptedFields: NomenclatureEncryptedFields;
+  };
+  CheckInRecord: {
+    domain: CheckInRecord;
+    server: CheckInRecordServerMetadata;
+    wire: CheckInRecordWire;
+    // Hybrid entity: plaintext domain with optional `encryptedData` blob
+    // (server-only column; no keys-subset of `CheckInRecord`).
+    encryptedFields: never;
   };
 };

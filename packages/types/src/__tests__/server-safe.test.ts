@@ -7,10 +7,7 @@ import type {
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
-  ClientFrontingComment,
-  ClientFrontingSession,
   ClientJournalEntry,
-  ClientLifecycleEvent,
   ClientNote,
   ClientPoll,
   ClientPollVote,
@@ -20,10 +17,7 @@ import type {
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
-  ServerFrontingComment,
-  ServerFrontingSession,
   ServerJournalEntry,
-  ServerLifecycleEvent,
   ServerNote,
   ServerPoll,
   ServerPollVote,
@@ -37,6 +31,14 @@ import type {
   FieldDefinitionServerMetadata,
 } from "../entities/field-definition.js";
 import type { FieldValue, FieldValueServerMetadata } from "../entities/field-value.js";
+import type {
+  FrontingComment,
+  FrontingCommentServerMetadata,
+} from "../entities/fronting-comment.js";
+import type {
+  FrontingSession,
+  FrontingSessionServerMetadata,
+} from "../entities/fronting-session.js";
 import type { Group, GroupServerMetadata } from "../entities/group.js";
 import type {
   InnerWorldEntity,
@@ -46,6 +48,7 @@ import type {
   InnerWorldRegion,
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
+import type { LifecycleEvent, LifecycleEventServerMetadata } from "../entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "../entities/member.js";
 import type { Relationship, RelationshipServerMetadata } from "../entities/relationship.js";
@@ -66,8 +69,8 @@ import type { ServerSafe } from "../server-safe.js";
 // ServerResponseData, this tuple will have the wrong length.
 type AllServerTypes = [
   MemberServerMetadata,
-  ServerFrontingSession,
-  ServerFrontingComment,
+  FrontingSessionServerMetadata,
+  FrontingCommentServerMetadata,
   GroupServerMetadata,
   SystemStructureEntityTypeServerMetadata,
   SystemStructureEntityServerMetadata,
@@ -80,7 +83,7 @@ type AllServerTypes = [
   FieldValueServerMetadata,
   InnerWorldEntityServerMetadata,
   InnerWorldRegionServerMetadata,
-  ServerLifecycleEvent,
+  LifecycleEventServerMetadata,
   CustomFrontServerMetadata,
   ServerJournalEntry,
   ServerWikiPage,
@@ -101,12 +104,12 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<MemberServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerFrontingSession extends ServerResponseData", () => {
-    expectTypeOf<ServerFrontingSession>().toExtend<ServerResponseData>();
+  it("FrontingSessionServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<FrontingSessionServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerFrontingComment extends ServerResponseData", () => {
-    expectTypeOf<ServerFrontingComment>().toExtend<ServerResponseData>();
+  it("FrontingCommentServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<FrontingCommentServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("GroupServerMetadata extends ServerResponseData", () => {
@@ -157,8 +160,8 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<InnerWorldRegionServerMetadata>().toExtend<ServerResponseData>();
   });
 
-  it("ServerLifecycleEvent extends ServerResponseData", () => {
-    expectTypeOf<ServerLifecycleEvent>().toExtend<ServerResponseData>();
+  it("LifecycleEventServerMetadata extends ServerResponseData", () => {
+    expectTypeOf<LifecycleEventServerMetadata>().toExtend<ServerResponseData>();
   });
 
   it("CustomFrontServerMetadata extends ServerResponseData", () => {
@@ -203,8 +206,8 @@ describe("serverSafe() — Server* types accepted", () => {
 // ClientResponseData, this tuple will have the wrong length.
 type AllClientTypes = [
   Member,
-  ClientFrontingSession,
-  ClientFrontingComment,
+  FrontingSession,
+  FrontingComment,
   Group,
   SystemStructureEntityType,
   SystemStructureEntity,
@@ -217,7 +220,7 @@ type AllClientTypes = [
   FieldValue,
   InnerWorldEntity,
   InnerWorldRegion,
-  ClientLifecycleEvent,
+  LifecycleEvent,
   CustomFront,
   ClientJournalEntry,
   ClientWikiPage,
@@ -238,12 +241,12 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<Member>().toExtend<ClientResponseData>();
   });
 
-  it("ClientFrontingSession extends ClientResponseData", () => {
-    expectTypeOf<ClientFrontingSession>().toExtend<ClientResponseData>();
+  it("FrontingSession (domain) extends ClientResponseData", () => {
+    expectTypeOf<FrontingSession>().toExtend<ClientResponseData>();
   });
 
-  it("ClientFrontingComment extends ClientResponseData", () => {
-    expectTypeOf<ClientFrontingComment>().toExtend<ClientResponseData>();
+  it("FrontingComment (domain) extends ClientResponseData", () => {
+    expectTypeOf<FrontingComment>().toExtend<ClientResponseData>();
   });
 
   it("Group extends ClientResponseData", () => {
@@ -294,8 +297,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<InnerWorldRegion>().toExtend<ClientResponseData>();
   });
 
-  it("ClientLifecycleEvent extends ClientResponseData", () => {
-    expectTypeOf<ClientLifecycleEvent>().toExtend<ClientResponseData>();
+  it("LifecycleEvent extends ClientResponseData", () => {
+    expectTypeOf<LifecycleEvent>().toExtend<ClientResponseData>();
   });
 
   it("CustomFront extends ClientResponseData", () => {
@@ -336,8 +339,8 @@ describe("ClientResponseData union completeness", () => {
 
   it("no Server* type extends ClientResponseData", () => {
     expectTypeOf<MemberServerMetadata>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerFrontingSession>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerFrontingComment>().not.toExtend<ClientResponseData>();
+    expectTypeOf<FrontingSessionServerMetadata>().not.toExtend<ClientResponseData>();
+    expectTypeOf<FrontingCommentServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<GroupServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<SystemStructureEntityTypeServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<SystemStructureEntityServerMetadata>().not.toExtend<ClientResponseData>();
@@ -350,7 +353,7 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<FieldValueServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<InnerWorldEntityServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<InnerWorldRegionServerMetadata>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerLifecycleEvent>().not.toExtend<ClientResponseData>();
+    expectTypeOf<LifecycleEventServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<CustomFrontServerMetadata>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerJournalEntry>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerWikiPage>().not.toExtend<ClientResponseData>();
@@ -368,12 +371,12 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<Member>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientFrontingSession does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientFrontingSession>().not.toExtend<ServerResponseData>();
+  it("FrontingSession (domain) does NOT extend ServerResponseData", () => {
+    expectTypeOf<FrontingSession>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientFrontingComment does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientFrontingComment>().not.toExtend<ServerResponseData>();
+  it("FrontingComment (domain) does NOT extend ServerResponseData", () => {
+    expectTypeOf<FrontingComment>().not.toExtend<ServerResponseData>();
   });
 
   it("Group does NOT extend ServerResponseData", () => {
@@ -424,8 +427,8 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<InnerWorldRegion>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientLifecycleEvent does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientLifecycleEvent>().not.toExtend<ServerResponseData>();
+  it("LifecycleEvent does NOT extend ServerResponseData", () => {
+    expectTypeOf<LifecycleEvent>().not.toExtend<ServerResponseData>();
   });
 
   it("CustomFront does NOT extend ServerResponseData", () => {

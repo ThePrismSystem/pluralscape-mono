@@ -7,9 +7,7 @@ import type {
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
-  ClientFrontingSession,
   ClientJournalEntry,
-  ClientLifecycleEvent,
   ClientNote,
   ClientPoll,
   ClientTimerConfig,
@@ -25,14 +23,10 @@ import type {
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
-  ServerFrontingSession,
   ServerJournalEntry,
-  ServerLifecycleEvent,
   ServerNote,
   ServerPoll,
   ServerTimerConfig,
-  ServerFrontingComment,
-  ClientFrontingComment,
   ServerPollVote,
   ClientPollVote,
   ServerWikiPage,
@@ -49,8 +43,11 @@ import type {
 import type { BoardMessage } from "../entities/board-message.js";
 import type { Channel } from "../entities/channel.js";
 import type { CustomFront, CustomFrontServerMetadata } from "../entities/custom-front.js";
-import type { FrontingComment } from "../entities/fronting-comment.js";
-import type { FrontingSession } from "../entities/fronting-session.js";
+import type {
+  FrontingComment,
+  FrontingCommentServerMetadata,
+} from "../entities/fronting-comment.js";
+import type { FrontingSessionServerMetadata } from "../entities/fronting-session.js";
 import type { Group, GroupServerMetadata } from "../entities/group.js";
 import type {
   InnerWorldEntity,
@@ -61,7 +58,7 @@ import type {
   InnerWorldRegionServerMetadata,
 } from "../entities/innerworld-region.js";
 import type { JournalEntry } from "../entities/journal-entry.js";
-import type { LifecycleEvent } from "../entities/lifecycle-event.js";
+import type { LifecycleEvent, LifecycleEventServerMetadata } from "../entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
 import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
 import type { ChatMessage } from "../entities/message.js";
@@ -174,8 +171,8 @@ describe("MemberServerMetadata", () => {
 
 describe("Server/Client pairs exist for completed domains", () => {
   it("fronting pair", () => {
-    expectTypeOf<ServerFrontingSession>().toBeObject();
-    expectTypeOf<ClientFrontingSession>().toEqualTypeOf<FrontingSession>();
+    expectTypeOf<FrontingSessionServerMetadata>().toBeObject();
+    expectTypeOf<FrontingSessionServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
   });
 
   it("group pair", () => {
@@ -276,13 +273,16 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("fronting comment pair", () => {
-    expectTypeOf<ServerFrontingComment>().toBeObject();
-    expectTypeOf<ServerFrontingComment["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerFrontingComment["id"]>().toEqualTypeOf<FrontingCommentId>();
-    expectTypeOf<ServerFrontingComment["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
-    expectTypeOf<ServerFrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ServerFrontingComment["memberId"]>().toEqualTypeOf<MemberId | null>();
-    expectTypeOf<ClientFrontingComment>().toEqualTypeOf<FrontingComment>();
+    expectTypeOf<FrontingCommentServerMetadata>().toBeObject();
+    expectTypeOf<FrontingCommentServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<FrontingCommentServerMetadata["id"]>().toEqualTypeOf<FrontingCommentId>();
+    expectTypeOf<
+      FrontingCommentServerMetadata["frontingSessionId"]
+    >().toEqualTypeOf<FrontingSessionId>();
+    expectTypeOf<FrontingCommentServerMetadata["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FrontingCommentServerMetadata["memberId"]>().toEqualTypeOf<MemberId | null>();
+    // FrontingComment (domain) still referenced via its type file — retained for import.
+    expectTypeOf<FrontingComment>().toBeObject();
   });
 
   it("poll vote pair", () => {
@@ -322,9 +322,9 @@ describe("Server/Client pairs exist for completed domains", () => {
   });
 
   it("lifecycle event pair", () => {
-    expectTypeOf<ServerLifecycleEvent>().toBeObject();
-    expectTypeOf<ServerLifecycleEvent["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
-    expectTypeOf<ClientLifecycleEvent>().toEqualTypeOf<LifecycleEvent>();
+    expectTypeOf<LifecycleEventServerMetadata>().toBeObject();
+    expectTypeOf<LifecycleEventServerMetadata["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<LifecycleEvent>().toBeObject();
   });
 
   it("innerworld entity pair", () => {

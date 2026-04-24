@@ -44,6 +44,8 @@ import type {
   AccountId,
   ApiKeyId,
   DeviceTransferRequestId,
+  FrontingCommentId,
+  FrontingSessionId,
   GroupId,
   SessionId,
   SystemId,
@@ -154,7 +156,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(frontingSessions)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
           startTime: now - 60000,
@@ -166,7 +168,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(frontingSessions)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
           startTime: now - 120000,
@@ -193,7 +195,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(frontingSessions)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           memberId,
           startTime: now - 60000,
@@ -264,7 +266,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           accountId: otherAccountId1,
           friendAccountId: accountId,
           status: "pending",
@@ -274,7 +276,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           accountId: otherAccountId2,
           friendAccountId: accountId,
           status: "accepted",
@@ -312,7 +314,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -326,7 +328,7 @@ describe("SQLite views / query helpers", () => {
       // Over limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -340,7 +342,7 @@ describe("SQLite views / query helpers", () => {
       // Under limit but nextRetryAt in the future — should NOT be returned
       db.insert(webhookDeliveries)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           webhookId,
           systemId,
           eventType: "member.created",
@@ -368,7 +370,7 @@ describe("SQLite views / query helpers", () => {
       const now = Date.now();
       db.insert(acknowledgements)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           confirmed: false,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -378,7 +380,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(acknowledgements)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           systemId,
           confirmed: true,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -458,7 +460,7 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(friendConnections)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           accountId,
           friendAccountId: otherAccountId,
           status: "accepted",
@@ -483,7 +485,7 @@ describe("SQLite views / query helpers", () => {
       const tokenHashValue = `tokenHash_${crypto.randomUUID()}`.slice(0, 64);
       db.insert(deviceTokens)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "ios",
@@ -493,7 +495,7 @@ describe("SQLite views / query helpers", () => {
         .run();
       db.insert(deviceTokens)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<FrontingSessionId>(crypto.randomUUID()),
           accountId,
           systemId,
           platform: "android",
@@ -517,8 +519,8 @@ describe("SQLite views / query helpers", () => {
 
     it("returns comments only for active sessions", () => {
       const now = Date.now();
-      const activeSessionId = crypto.randomUUID();
-      const endedSessionId = crypto.randomUUID();
+      const activeSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
+      const endedSessionId = brandId<FrontingSessionId>(crypto.randomUUID());
 
       db.insert(frontingSessions)
         .values([
@@ -547,7 +549,7 @@ describe("SQLite views / query helpers", () => {
       db.insert(frontingComments)
         .values([
           {
-            id: crypto.randomUUID(),
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: activeSessionId,
             systemId,
             memberId,
@@ -556,7 +558,7 @@ describe("SQLite views / query helpers", () => {
             updatedAt: now,
           },
           {
-            id: crypto.randomUUID(),
+            id: brandId<FrontingCommentId>(crypto.randomUUID()),
             frontingSessionId: endedSessionId,
             systemId,
             memberId,

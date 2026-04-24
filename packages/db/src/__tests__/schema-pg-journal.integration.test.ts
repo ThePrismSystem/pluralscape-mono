@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { FrontingSessionId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, frontingSessions, journalEntries, wikiPages };
@@ -46,7 +48,7 @@ describe("PG journal schema", () => {
     it("round-trips with encrypted_data and frontingSessionId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const fsId = crypto.randomUUID();
+      const fsId = brandId<FrontingSessionId>(crypto.randomUUID());
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));

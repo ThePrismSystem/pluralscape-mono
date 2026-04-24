@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -24,6 +24,7 @@ import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
+import type { CheckInRecordId, SystemId, TimerId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = pgTable(
@@ -63,11 +64,11 @@ export const timerConfigs = pgTable(
 export const checkInRecords = pgTable(
   "check_in_records",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<CheckInRecordId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    timerConfigId: varchar("timer_config_id", { length: ID_MAX_LENGTH }).notNull(),
+    timerConfigId: brandedId<TimerId>("timer_config_id").notNull(),
     scheduledAt: pgTimestamp("scheduled_at").notNull(),
     respondedAt: pgTimestamp("responded_at"),
     dismissed: boolean("dismissed").notNull().default(false),

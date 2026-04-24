@@ -7,10 +7,7 @@ import type {
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
-  ServerFrontingComment,
-  ServerFrontingSession,
   ServerJournalEntry,
-  ServerLifecycleEvent,
   ServerNote,
   ServerPoll,
   ServerPollVote,
@@ -27,8 +24,14 @@ import type {
   FieldDefinitionServerMetadata,
 } from "./entities/field-definition.js";
 import type { FieldValue, FieldValueServerMetadata } from "./entities/field-value.js";
-import type { FrontingComment } from "./entities/fronting-comment.js";
-import type { FrontingSession } from "./entities/fronting-session.js";
+import type {
+  FrontingComment,
+  FrontingCommentServerMetadata,
+} from "./entities/fronting-comment.js";
+import type {
+  FrontingSession,
+  FrontingSessionServerMetadata,
+} from "./entities/fronting-session.js";
 import type { Group, GroupServerMetadata } from "./entities/group.js";
 import type {
   InnerWorldEntity,
@@ -39,7 +42,7 @@ import type {
   InnerWorldRegionServerMetadata,
 } from "./entities/innerworld-region.js";
 import type { JournalEntry } from "./entities/journal-entry.js";
-import type { LifecycleEvent } from "./entities/lifecycle-event.js";
+import type { LifecycleEvent, LifecycleEventServerMetadata } from "./entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "./entities/member-photo.js";
 import type { Member, MemberServerMetadata } from "./entities/member.js";
 import type { ChatMessage } from "./entities/message.js";
@@ -61,8 +64,8 @@ import type { WikiPage } from "./entities/wiki-page.js";
 /** Union of all server-side types safe to return from API routes. */
 export type ServerResponseData =
   | MemberServerMetadata
-  | ServerFrontingSession
-  | ServerFrontingComment
+  | FrontingSessionServerMetadata
+  | FrontingCommentServerMetadata
   | GroupServerMetadata
   | SystemStructureEntityTypeServerMetadata
   | SystemStructureEntityServerMetadata
@@ -75,7 +78,7 @@ export type ServerResponseData =
   | FieldValueServerMetadata
   | InnerWorldEntityServerMetadata
   | InnerWorldRegionServerMetadata
-  | ServerLifecycleEvent
+  | LifecycleEventServerMetadata
   | CustomFrontServerMetadata
   | ServerJournalEntry
   | ServerWikiPage
