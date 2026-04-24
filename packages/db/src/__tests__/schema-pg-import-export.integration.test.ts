@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -18,7 +19,7 @@ import {
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
 
-import type { ImportCheckpointState } from "@pluralscape/types";
+import type { ImportCheckpointState, ImportJobId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -57,7 +58,7 @@ describe("PG import-export schema", () => {
     it("round-trips all fields", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importJobs).values({
@@ -67,7 +68,9 @@ describe("PG import-export schema", () => {
         source: "simply-plural",
         status: "importing",
         progressPercent: 42,
-        errorLog: [{ line: 1, message: "bad row" }],
+        errorLog: [
+          { entityType: "unknown", entityId: null, message: "bad row", fatal: false },
+        ],
         warningCount: 3,
         chunksTotal: 10,
         chunksCompleted: 4,
@@ -83,7 +86,9 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.source).toBe("simply-plural");
       expect(rows[0]?.status).toBe("importing");
       expect(rows[0]?.progressPercent).toBe(42);
-      expect(rows[0]?.errorLog).toEqual([{ line: 1, message: "bad row" }]);
+      expect(rows[0]?.errorLog).toEqual([
+        { entityType: "unknown", entityId: null, message: "bad row", fatal: false },
+      ]);
       expect(rows[0]?.warningCount).toBe(3);
       expect(rows[0]?.chunksTotal).toBe(10);
       expect(rows[0]?.chunksCompleted).toBe(4);
@@ -93,7 +98,7 @@ describe("PG import-export schema", () => {
     it("applies default values for status, progressPercent, warningCount, chunksCompleted", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importJobs).values({
@@ -124,7 +129,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importJobs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "pluralscape",
@@ -138,7 +143,7 @@ describe("PG import-export schema", () => {
     it("accepts progressPercent at 0", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importJobs).values({
@@ -158,7 +163,7 @@ describe("PG import-export schema", () => {
     it("accepts progressPercent at 100", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importJobs).values({
@@ -182,7 +187,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importJobs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "pluralscape",
@@ -200,7 +205,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importJobs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "invalid-source" as "simply-plural",
@@ -217,7 +222,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importJobs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "pluralkit",
@@ -231,7 +236,7 @@ describe("PG import-export schema", () => {
     it.each(["validating", "failed"] as const)("exercises %s status", async (status) => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importJobs).values({
@@ -255,7 +260,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importJobs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "pluralscape",
@@ -270,7 +275,7 @@ describe("PG import-export schema", () => {
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importJobs).values({
@@ -295,7 +300,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importJobs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId: accountA,
           systemId: systemOfB,
           source: "pluralscape",
@@ -308,11 +313,21 @@ describe("PG import-export schema", () => {
     it("round-trips JSON error_log array", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
       const errors = [
-        { code: "PARSE_FAIL", row: 12, detail: "unexpected token" },
-        { code: "MISSING_FIELD", row: 45, detail: "name is required" },
+        {
+          entityType: "unknown" as const,
+          entityId: null,
+          message: "unexpected token",
+          fatal: false as const,
+        },
+        {
+          entityType: "unknown" as const,
+          entityId: null,
+          message: "name is required",
+          fatal: false as const,
+        },
       ];
 
       await db.insert(importJobs).values({
@@ -333,11 +348,13 @@ describe("PG import-export schema", () => {
     it("accepts errorLog with 1000 entries", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
       const errors = Array.from({ length: 1000 }, (_, i) => ({
-        line: i,
+        entityType: "unknown" as const,
+        entityId: null,
         message: `error ${String(i)}`,
+        fatal: false as const,
       }));
 
       await db.insert(importJobs).values({
@@ -359,13 +376,15 @@ describe("PG import-export schema", () => {
       const systemId = await insertSystem(accountId);
       const now = Date.now();
       const errors = Array.from({ length: 1001 }, (_, i) => ({
-        line: i,
+        entityType: "unknown" as const,
+        entityId: null,
         message: `error ${String(i)}`,
+        fatal: false as const,
       }));
 
       await expect(
         db.insert(importJobs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "simply-plural",
@@ -381,7 +400,7 @@ describe("PG import-export schema", () => {
     it("round-trips all fields", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(exportRequests).values({
@@ -408,7 +427,7 @@ describe("PG import-export schema", () => {
     it("applies default status of pending", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(exportRequests).values({
@@ -429,7 +448,7 @@ describe("PG import-export schema", () => {
     it.each(["processing", "failed"] as const)("exercises %s status", async (status) => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(exportRequests).values({
@@ -453,7 +472,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(exportRequests).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           format: "xml" as "json",
@@ -466,7 +485,7 @@ describe("PG import-export schema", () => {
     it("cascades on account deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(exportRequests).values({
@@ -491,7 +510,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(exportRequests).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId: accountA,
           systemId: systemOfB,
           format: "json",
@@ -504,7 +523,7 @@ describe("PG import-export schema", () => {
     it("allows nullable blobId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(exportRequests).values({
@@ -525,7 +544,7 @@ describe("PG import-export schema", () => {
   describe("account_purge_requests", () => {
     it("round-trips all fields including all timestamps", async () => {
       const accountId = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(accountPurgeRequests).values({
@@ -557,7 +576,7 @@ describe("PG import-export schema", () => {
 
     it("applies default status of pending", async () => {
       const accountId = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(accountPurgeRequests).values({
@@ -581,7 +600,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(accountPurgeRequests).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           status: "invalid-status" as "pending",
           confirmationPhrase: "DELETE MY ACCOUNT",
@@ -593,7 +612,7 @@ describe("PG import-export schema", () => {
 
     it("cascades on account deletion", async () => {
       const accountId = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(accountPurgeRequests).values({
@@ -615,7 +634,7 @@ describe("PG import-export schema", () => {
 
     it("allows nullable confirmedAt, completedAt, and cancelledAt", async () => {
       const accountId = await insertAccount();
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(accountPurgeRequests).values({
@@ -657,7 +676,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(accountPurgeRequests).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           status: "pending",
           confirmationPhrase: "DELETE MY ACCOUNT",
@@ -759,7 +778,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(accountPurgeRequests).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           status: "pending",
           confirmationPhrase: "DELETE MY ACCOUNT",
@@ -774,7 +793,7 @@ describe("PG import-export schema", () => {
     it("persists a full ImportCheckpointState as JSONB", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       const state: ImportCheckpointState = {
@@ -823,7 +842,7 @@ describe("PG import-export schema", () => {
     it("allows null checkpoint_state for jobs that have not started", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importJobs).values({
@@ -851,7 +870,7 @@ describe("PG import-export schema", () => {
     it("inserts and retrieves a ref", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<ImportJobId>(crypto.randomUUID());
       const now = Date.now();
 
       await db.insert(importEntityRefs).values({
@@ -890,7 +909,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importEntityRefs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "simply-plural",
@@ -908,7 +927,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importEntityRefs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "not-a-valid-source" as "simply-plural",
@@ -950,7 +969,7 @@ describe("PG import-export schema", () => {
 
       await expect(
         db.insert(importEntityRefs).values({
-          id: crypto.randomUUID(),
+          id: brandId<ImportJobId>(crypto.randomUUID()),
           accountId,
           systemId,
           source: "simply-plural",

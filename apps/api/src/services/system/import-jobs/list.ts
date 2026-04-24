@@ -1,4 +1,5 @@
 import { importJobs } from "@pluralscape/db/pg";
+import { brandId } from "@pluralscape/types";
 import { ImportJobQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
@@ -13,6 +14,7 @@ import { toImportJobResult } from "./internal.js";
 import type { ImportJobResult } from "./internal.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
+  ImportJobId,
   ImportJobStatus,
   ImportSourceFormat,
   PaginatedResult,
@@ -46,7 +48,7 @@ export async function listImportJobs(
     if (parsedQuery.status) conditions.push(eq(importJobs.status, parsedQuery.status));
     if (parsedQuery.source) conditions.push(eq(importJobs.source, parsedQuery.source));
     const decodedCursor = parseCursor(opts.cursor);
-    if (decodedCursor) conditions.push(lt(importJobs.id, decodedCursor));
+    if (decodedCursor) conditions.push(lt(importJobs.id, brandId<ImportJobId>(decodedCursor)));
 
     const rows = await tx
       .select()

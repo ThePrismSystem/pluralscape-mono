@@ -21,6 +21,11 @@ import type {
 } from "./entities/fronting-session.js";
 import type { Group, GroupEncryptedFields } from "./entities/group.js";
 import type {
+  ImportJob,
+  ImportJobServerMetadata,
+  ImportJobWire,
+} from "./entities/import-job.js";
+import type {
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
 } from "./entities/innerworld-canvas.js";
@@ -248,6 +253,14 @@ export type SotEntityManifest = {
     // document-metadata shape as the client.
     server: SyncDocument;
     wire: SyncDocumentWire;
+    encryptedFields: never;
+  };
+  ImportJob: {
+    domain: ImportJob;
+    server: ImportJobServerMetadata;
+    wire: ImportJobWire;
+    // Plaintext domain — `checkpointState` is server-only resumption
+    // state, attached only to the server-side metadata.
     encryptedFields: never;
   };
 };
