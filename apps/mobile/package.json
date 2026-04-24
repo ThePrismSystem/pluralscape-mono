@@ -44,7 +44,7 @@
     "jszip": "catalog:",
     "react": "^19.2.5",
     "react-dom": "catalog:",
-    "react-native": "0.85.1",
+    "react-native": "0.85.2",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "~4.24.0",
     "react-native-svg": "^15.15.4",
