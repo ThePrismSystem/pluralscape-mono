@@ -1,21 +1,21 @@
 import { boolean, check, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { PKSyncDirection } from "@pluralscape/types";
+import type { PKBridgeConfigId, PKSyncDirection, SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const pkBridgeConfigs = pgTable(
   "pk_bridge_configs",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    id: brandedId<PKBridgeConfigId>("id").primaryKey(),
+    systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     enabled: boolean("enabled").notNull().default(true),

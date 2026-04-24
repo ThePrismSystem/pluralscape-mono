@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { brandId } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
+import type { PKBridgeConfigId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, pkBridgeConfigs };
@@ -41,7 +43,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("round-trips insert and select with all fields", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
     const syncAt = now - 60_000;
     const tokenCiphertext = new Uint8Array([10, 20, 30, 40]);
@@ -82,7 +84,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("defaults enabled to true when omitted", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
 
     await db.insert(pkBridgeConfigs).values({
@@ -106,7 +108,7 @@ describe("PG pk_bridge_configs schema", () => {
     for (const dir of directions) {
       const accountId = await insertAccount();
       const systemId = await pgInsertSystem(db, accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
       const now = Date.now();
       await db.insert(pkBridgeConfigs).values({
         id,
@@ -132,7 +134,7 @@ describe("PG pk_bridge_configs schema", () => {
       client.query(
         `INSERT INTO pk_bridge_configs (id, system_id, enabled, sync_direction, pk_token_encrypted, entity_mappings, error_log, created_at, updated_at, version)
          VALUES ($1, $2, true, 'invalid-dir', '\\x01', '\\x02', '\\x03', NOW(), NOW(), 1)`,
-        [crypto.randomUUID(), systemId],
+        [brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`), systemId],
       ),
     ).rejects.toThrow();
   });
@@ -140,7 +142,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("allows null lastSyncAt", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
 
     await db.insert(pkBridgeConfigs).values({
@@ -162,7 +164,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("persists a non-null lastSyncAt value", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
     const syncAt = now - 120_000;
 
@@ -185,7 +187,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("round-trips larger binary data for all BYTEA columns", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
 
     const tokenCiphertext = new Uint8Array(256);
@@ -218,7 +220,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("cascades delete when parent system is deleted", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
 
     await db.insert(pkBridgeConfigs).values({
@@ -246,7 +248,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("defaults version to 1 when omitted", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
 
     await db.insert(pkBridgeConfigs).values({
@@ -268,8 +270,8 @@ describe("PG pk_bridge_configs schema", () => {
     const now = Date.now();
     await expect(
       db.insert(pkBridgeConfigs).values({
-        id: crypto.randomUUID(),
-        systemId: "nonexistent-system-id",
+        id: brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`),
+        systemId: brandId<SystemId>("nonexistent-system-id"),
         syncDirection: "ps-to-pk",
         pkTokenEncrypted: testBlob(new Uint8Array([1])),
         entityMappings: testBlob(),
@@ -283,7 +285,7 @@ describe("PG pk_bridge_configs schema", () => {
   it("stores enabled as false and retrieves it correctly", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const now = Date.now();
 
     await db.insert(pkBridgeConfigs).values({

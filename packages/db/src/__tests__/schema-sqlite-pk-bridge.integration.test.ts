@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -13,6 +14,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
+import type { PKBridgeConfigId, SystemId } from "@pluralscape/types";
 import type DatabaseConstructor from "better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -39,7 +41,7 @@ describe("SQLite PK Bridge Schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
     const pkTokenCiphertext = new Uint8Array([10, 20, 30]);
     const pkToken = testBlob(pkTokenCiphertext);
     const entityMappings = testBlob(new Uint8Array([40, 50, 60]));
@@ -79,7 +81,7 @@ describe("SQLite PK Bridge Schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
     db.insert(pkBridgeConfigs)
       .values({
@@ -106,7 +108,7 @@ describe("SQLite PK Bridge Schema", () => {
       const accountId = insertAccount();
       const systemId = sqliteInsertSystem(db, accountId);
       const now = Date.now();
-      const id = crypto.randomUUID();
+      const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
       db.insert(pkBridgeConfigs)
         .values({
@@ -135,7 +137,7 @@ describe("SQLite PK Bridge Schema", () => {
       db
         .insert(pkBridgeConfigs)
         .values({
-          id: crypto.randomUUID(),
+          id: brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`),
           systemId,
           syncDirection: "invalid-direction" as "bidirectional",
           pkTokenEncrypted: testBlob(new Uint8Array([1])),
@@ -152,7 +154,7 @@ describe("SQLite PK Bridge Schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
     db.insert(pkBridgeConfigs)
       .values({
@@ -177,7 +179,7 @@ describe("SQLite PK Bridge Schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
     const syncTime = now - 60000;
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
     db.insert(pkBridgeConfigs)
       .values({
@@ -201,7 +203,7 @@ describe("SQLite PK Bridge Schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
     const largePkTokenCiphertext = new Uint8Array(256);
     const largeEntityCiphertext = new Uint8Array(512);
@@ -236,7 +238,7 @@ describe("SQLite PK Bridge Schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
     db.insert(pkBridgeConfigs)
       .values({
@@ -266,7 +268,7 @@ describe("SQLite PK Bridge Schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
     db.insert(pkBridgeConfigs)
       .values({
@@ -292,8 +294,8 @@ describe("SQLite PK Bridge Schema", () => {
       db
         .insert(pkBridgeConfigs)
         .values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent-system-id",
+          id: brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`),
+          systemId: brandId<SystemId>("nonexistent-system-id"),
           syncDirection: "ps-to-pk",
           pkTokenEncrypted: testBlob(new Uint8Array([1])),
           entityMappings: testBlob(),
@@ -309,7 +311,7 @@ describe("SQLite PK Bridge Schema", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = brandId<PKBridgeConfigId>(`pkb_${crypto.randomUUID()}`);
 
     db.insert(pkBridgeConfigs)
       .values({
