@@ -18,11 +18,10 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
-  InnerWorldRegionDecrypted,
   InnerWorldRegionPage as InnerWorldRegionRawPage,
   InnerWorldRegionRaw,
 } from "@pluralscape/data/transforms/innerworld-region";
-import type { Archived, InnerWorldRegionId } from "@pluralscape/types";
+import type { Archived, InnerWorldRegion, InnerWorldRegionId } from "@pluralscape/types";
 
 interface InnerWorldRegionListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -32,11 +31,8 @@ interface InnerWorldRegionListOpts extends SystemIdOverride {
 export function useInnerWorldRegion(
   regionId: InnerWorldRegionId,
   opts?: SystemIdOverride,
-): DataQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>> {
-  return useOfflineFirstQuery<
-    InnerWorldRegionRaw,
-    InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>
-  >({
+): DataQuery<InnerWorldRegion | Archived<InnerWorldRegion>> {
+  return useOfflineFirstQuery<InnerWorldRegionRaw, InnerWorldRegion | Archived<InnerWorldRegion>>({
     queryKey: ["innerworld_regions", regionId],
     table: "innerworld_regions",
     entityId: regionId,
@@ -45,17 +41,17 @@ export function useInnerWorldRegion(
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
       trpc.innerworld.region.get.useQuery({ systemId, regionId }, { enabled, select }) as DataQuery<
-        InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>
+        InnerWorldRegion | Archived<InnerWorldRegion>
       >,
   });
 }
 
 export function useInnerWorldRegionsList(
   opts?: InnerWorldRegionListOpts,
-): DataListQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>> {
+): DataListQuery<InnerWorldRegion | Archived<InnerWorldRegion>> {
   return useOfflineFirstInfiniteQuery<
     InnerWorldRegionRaw,
-    InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>
+    InnerWorldRegion | Archived<InnerWorldRegion>
   >({
     queryKey: ["innerworld_regions", "list", opts?.includeArchived ?? false],
     table: "innerworld_regions",
@@ -75,7 +71,7 @@ export function useInnerWorldRegionsList(
           getNextPageParam: (lastPage: InnerWorldRegionRawPage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>>,
+      ) as DataListQuery<InnerWorldRegion | Archived<InnerWorldRegion>>,
   });
 }
 

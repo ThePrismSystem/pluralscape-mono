@@ -13,7 +13,7 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { InnerWorldRegionEncryptedFields, InnerWorldRegionRaw } from "../innerworld-region.js";
+import type { InnerWorldRegionPlaintext, InnerWorldRegionRaw } from "../innerworld-region.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { InnerWorldRegionId, MemberId, SystemId } from "@pluralscape/types";
 
@@ -27,7 +27,7 @@ beforeAll(async () => {
 
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeRegionFields(): InnerWorldRegionEncryptedFields {
+function makeRegionFields(): InnerWorldRegionPlaintext {
   return {
     name: "Safe Haven",
     description: "A peaceful region",
@@ -148,7 +148,7 @@ describe("encryptInnerWorldRegionUpdate", () => {
   });
 });
 
-describe("assertInnerWorldRegionEncryptedFields", () => {
+describe("assertInnerWorldRegionPlaintext", () => {
   it("throws when blob is not an object", () => {
     const raw = makeRawRegion({ encryptedData: makeBase64Blob("string", masterKey) });
     expect(() => decryptInnerWorldRegion(raw, masterKey)).toThrow("not an object");

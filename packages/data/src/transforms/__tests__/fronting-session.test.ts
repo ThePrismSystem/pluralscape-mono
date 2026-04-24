@@ -12,7 +12,7 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { FrontingSessionEncryptedFields } from "../fronting-session.js";
+import type { FrontingSessionPlaintext } from "../fronting-session.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   FrontingSessionId,
@@ -34,12 +34,12 @@ beforeAll(async () => {
 function makeRawSession(
   overrides: Partial<{
     endTime: UnixMillis | null;
-    encryptedFields: FrontingSessionEncryptedFields;
+    encryptedFields: FrontingSessionPlaintext;
     archived: boolean;
     archivedAt: UnixMillis | null;
   }> = {},
 ) {
-  const fields: FrontingSessionEncryptedFields = overrides.encryptedFields ?? {
+  const fields: FrontingSessionPlaintext = overrides.encryptedFields ?? {
     comment: "feeling good",
     positionality: "close",
     outtrigger: "stress",
@@ -94,7 +94,7 @@ describe("decryptFrontingSession", () => {
   });
 
   it("decrypts null encrypted fields", () => {
-    const nullFields: FrontingSessionEncryptedFields = {
+    const nullFields: FrontingSessionPlaintext = {
       comment: null,
       positionality: null,
       outtrigger: null,
@@ -168,7 +168,7 @@ describe("decryptFrontingSessionPage", () => {
 
 describe("encryptFrontingSessionInput", () => {
   it("encrypts fields and returns encryptedData string", () => {
-    const fields: FrontingSessionEncryptedFields = {
+    const fields: FrontingSessionPlaintext = {
       comment: "hello",
       positionality: null,
       outtrigger: "joy",
@@ -181,7 +181,7 @@ describe("encryptFrontingSessionInput", () => {
   });
 
   it("round-trips: encrypted data can be decrypted back", () => {
-    const fields: FrontingSessionEncryptedFields = {
+    const fields: FrontingSessionPlaintext = {
       comment: "round-trip",
       positionality: "far",
       outtrigger: null,
@@ -200,7 +200,7 @@ describe("encryptFrontingSessionInput", () => {
 
 describe("encryptFrontingSessionUpdate", () => {
   it("encrypts fields and includes version", () => {
-    const fields: FrontingSessionEncryptedFields = {
+    const fields: FrontingSessionPlaintext = {
       comment: "updated",
       positionality: null,
       outtrigger: null,
@@ -213,7 +213,7 @@ describe("encryptFrontingSessionUpdate", () => {
   });
 
   it("round-trips: update data can be decrypted back", () => {
-    const fields: FrontingSessionEncryptedFields = {
+    const fields: FrontingSessionPlaintext = {
       comment: "updated comment",
       positionality: "very close",
       outtrigger: "music",
@@ -233,7 +233,7 @@ describe("encryptFrontingSessionUpdate", () => {
 
 // ── Assertion guard tests ────────────────────────────────────────────
 
-describe("assertFrontingSessionEncryptedFields", () => {
+describe("assertFrontingSessionPlaintext", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = { ...makeRawSession(), encryptedData: makeBase64Blob("not-an-object", masterKey) };
     expect(() => decryptFrontingSession(raw, masterKey)).toThrow("not an object");
