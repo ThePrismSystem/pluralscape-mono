@@ -6,22 +6,16 @@ import { MAX_GROUPS_PER_SYSTEM } from "../../quota.constants.js";
 import { createHierarchyService } from "../hierarchy-service-factory.js";
 import { mapBaseFields } from "../hierarchy-service-helpers.js";
 
-import type { EncryptedBlob, GroupId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBlob,
+  EncryptedWire,
+  GroupId,
+  GroupServerMetadata,
+} from "@pluralscape/types";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface GroupResult {
-  readonly id: GroupId;
-  readonly systemId: SystemId;
-  readonly parentGroupId: GroupId | null;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
+export type GroupResult = EncryptedWire<GroupServerMetadata>;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 

@@ -61,8 +61,8 @@ const BASE_URL = `/systems/${SYS_ID}/relationships`;
 const MOCK_RELATIONSHIP = {
   id: REL_ID as never,
   systemId: SYS_ID as never,
-  sourceMemberId: "mem_00000000-0000-0000-0000-000000000001",
-  targetMemberId: "mem_00000000-0000-0000-0000-000000000002",
+  sourceMemberId: "mem_00000000-0000-0000-0000-000000000001" as never,
+  targetMemberId: "mem_00000000-0000-0000-0000-000000000002" as never,
   type: "partner" as const,
   bidirectional: true,
   encryptedData: "dGVzdA==",

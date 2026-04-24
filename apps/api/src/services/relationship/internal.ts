@@ -4,26 +4,15 @@ import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
 import type {
   EncryptedBlob,
+  EncryptedWire,
+  MemberId,
   RelationshipId,
+  RelationshipServerMetadata,
   RelationshipType,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 
-export interface RelationshipResult {
-  readonly id: RelationshipId;
-  readonly systemId: SystemId;
-  readonly sourceMemberId: string | null;
-  readonly targetMemberId: string | null;
-  readonly type: RelationshipType;
-  readonly bidirectional: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
+export type RelationshipResult = EncryptedWire<RelationshipServerMetadata>;
 
 export function toRelationshipResult(row: {
   id: string;
@@ -42,8 +31,8 @@ export function toRelationshipResult(row: {
   return {
     id: brandId<RelationshipId>(row.id),
     systemId: brandId<SystemId>(row.systemId),
-    sourceMemberId: row.sourceMemberId,
-    targetMemberId: row.targetMemberId,
+    sourceMemberId: row.sourceMemberId ? brandId<MemberId>(row.sourceMemberId) : null,
+    targetMemberId: row.targetMemberId ? brandId<MemberId>(row.targetMemberId) : null,
     type: row.type,
     bidirectional: row.bidirectional,
     encryptedData: encryptedBlobToBase64(row.encryptedData),

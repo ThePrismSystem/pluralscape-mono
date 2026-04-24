@@ -2,19 +2,15 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
 
-import type { EncryptedBlob, InnerWorldRegionId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBlob,
+  EncryptedWire,
+  InnerWorldRegionId,
+  InnerWorldRegionServerMetadata,
+  SystemId,
+} from "@pluralscape/types";
 
-export interface RegionResult {
-  readonly id: InnerWorldRegionId;
-  readonly systemId: SystemId;
-  readonly parentRegionId: InnerWorldRegionId | null;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
+export type RegionResult = EncryptedWire<InnerWorldRegionServerMetadata>;
 
 export function toRegionResult(row: {
   id: string;
