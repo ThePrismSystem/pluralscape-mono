@@ -3,8 +3,6 @@ import { brandId, now } from "@pluralscape/types";
 import { UpdateMemberBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
 import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
@@ -20,23 +18,19 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { MemberId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateMember(
   db: PostgresJsDatabase,
   systemId: SystemId,
   memberId: MemberId,
-  params: unknown,
+  body: z.infer<typeof UpdateMemberBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = UpdateMemberBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -51,7 +45,7 @@ export async function updateMember(
         and(
           eq(members.id, memberId),
           eq(members.systemId, systemId),
-          eq(members.version, parsed.data.version),
+          eq(members.version, body.version),
           eq(members.archived, false),
         ),
       )

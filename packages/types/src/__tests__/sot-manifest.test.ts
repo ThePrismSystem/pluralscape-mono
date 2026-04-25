@@ -6,7 +6,13 @@ import type {
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
 } from "../entities/audit-log-entry.js";
-import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
+import type {
+  Member,
+  MemberEncryptedInput,
+  MemberResult,
+  MemberServerMetadata,
+  MemberWire,
+} from "../entities/member.js";
 import type { Extends } from "../type-assertions.js";
 
 describe("SotEntityManifest", () => {
@@ -20,9 +26,13 @@ describe("SotEntityManifest", () => {
     >().toEqualTypeOf<true>();
   });
 
-  it("registers Member with the canonical triple", () => {
+  it("registers Member with the canonical chain", () => {
     expectTypeOf<SotEntityManifest["Member"]["domain"]>().toEqualTypeOf<Member>();
+    expectTypeOf<
+      SotEntityManifest["Member"]["encryptedInput"]
+    >().toEqualTypeOf<MemberEncryptedInput>();
     expectTypeOf<SotEntityManifest["Member"]["server"]>().toEqualTypeOf<MemberServerMetadata>();
+    expectTypeOf<SotEntityManifest["Member"]["result"]>().toEqualTypeOf<MemberResult>();
     expectTypeOf<SotEntityManifest["Member"]["wire"]>().toEqualTypeOf<MemberWire>();
   });
 

@@ -2,26 +2,12 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type {
-  EncryptedBlob,
-  EncryptedWire,
-  MemberId,
-  MemberServerMetadata,
-  SystemId,
-} from "@pluralscape/types";
+import type { MemberRow } from "@pluralscape/db/pg";
+import type { MemberId, MemberResult, SystemId } from "@pluralscape/types";
 
-export type MemberResult = EncryptedWire<MemberServerMetadata>;
+export type { MemberResult };
 
-export function toMemberResult(row: {
-  id: string;
-  systemId: string;
-  encryptedData: EncryptedBlob;
-  version: number;
-  createdAt: number;
-  updatedAt: number;
-  archived: boolean;
-  archivedAt: number | null;
-}): MemberResult {
+export function toMemberResult(row: MemberRow): MemberResult {
   return {
     id: brandId<MemberId>(row.id),
     systemId: brandId<SystemId>(row.systemId),

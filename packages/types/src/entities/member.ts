@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { HexColor, MemberId, SystemId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
@@ -102,6 +103,13 @@ export type MemberEncryptedFields =
   | "suppressFriendFrontNotification"
   | "boardMessageNotificationOnFront";
 
+/**
+ * Pre-encryption shape — what `encryptMemberInput` accepts before
+ * producing the wire-form `{ encryptedData: string }`. Single source of
+ * truth: derived from `Member` via `Pick<>` over the encrypted-keys union.
+ */
+export type MemberEncryptedInput = Pick<Member, MemberEncryptedFields>;
+
 /** An archived member — preserves all data with archive metadata. */
 export type ArchivedMember = Archived<Member>;
 
@@ -112,27 +120,6 @@ export interface MemberListItem {
   readonly avatarSource: ImageSource | null;
   readonly colors: readonly HexColor[];
   readonly archived: boolean;
-}
-
-// ── Request body types ──────────────────────────────────────────
-
-/** Request body for creating a member. */
-export interface CreateMemberBody {
-  readonly encryptedData: string;
-}
-
-/** Request body for updating a member. */
-export interface UpdateMemberBody {
-  readonly encryptedData: string;
-  readonly version: number;
-}
-
-/** Request body for duplicating a member. */
-export interface DuplicateMemberBody {
-  readonly encryptedData: string;
-  readonly copyPhotos: boolean;
-  readonly copyFields: boolean;
-  readonly copyMemberships: boolean;
 }
 
 /**
@@ -151,11 +138,16 @@ export type MemberServerMetadata = Omit<Member, MemberEncryptedFields | "archive
 };
 
 /**
- * JSON-wire representation of a Member. Derived from the domain `Member`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- *
- * This is what crosses the HTTP boundary for Member payloads. The OpenAPI
- * parity gate asserts `components["schemas"]["Member"]` ≡ `MemberWire`.
+ * Server-emit shape — what `toMemberResult` returns. Branded IDs
+ * preserved; `encryptedData` is `EncryptedBase64` (base64-encoded).
+ * Consumed by the API layer; not the JSON wire shape.
  */
-export type MemberWire = Serialize<Member>;
+export type MemberResult = EncryptedWire<MemberServerMetadata>;
+
+/**
+ * JSON-wire representation of a Member response. `Serialize<>` over
+ * `MemberResult`: branded IDs become plain strings; `EncryptedBase64`
+ * becomes `string`; `UnixMillis` becomes `number`. The OpenAPI
+ * parity gate asserts `components["schemas"]["MemberResponse"]` ≡ `MemberWire`.
+ */
+export type MemberWire = Serialize<MemberResult>;
