@@ -45,10 +45,13 @@ export type SystemStructureEntityTypeEncryptedFields =
   | "imageSource"
   | "emoji";
 
-/**
- * Pre-encryption shape — what `encryptStructureEntityTypeInput` accepts. Single source
- * of truth: derived from `SystemStructureEntityType` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// SystemStructureEntityTypeEncryptedInput → SystemStructureEntityTypeServerMetadata
+//                                        → SystemStructureEntityTypeResult → SystemStructureEntityTypeWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type SystemStructureEntityTypeEncryptedInput = Pick<
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields
@@ -74,15 +77,7 @@ export type SystemStructureEntityTypeServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toEntityTypeResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type SystemStructureEntityTypeResult =
   EncryptedWire<SystemStructureEntityTypeServerMetadata>;
 
-/**
- * JSON-serialized wire form of `SystemStructureEntityTypeResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type SystemStructureEntityTypeWire = Serialize<SystemStructureEntityTypeResult>;

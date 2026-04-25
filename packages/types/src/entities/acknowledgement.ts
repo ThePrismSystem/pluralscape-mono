@@ -68,25 +68,18 @@ export type AcknowledgementRequestServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — what `encryptAcknowledgementInput` accepts.
- * Single source of truth: derived from `AcknowledgementRequest` via `Pick<>`
- * over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// AcknowledgementRequestEncryptedInput → AcknowledgementRequestServerMetadata
+//                                     → AcknowledgementRequestResult → AcknowledgementRequestWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type AcknowledgementRequestEncryptedInput = Pick<
   AcknowledgementRequest,
   AcknowledgementRequestEncryptedFields
 >;
 
-/**
- * Server-emit shape — what `toAcknowledgementRequestResult` returns. Branded
- * IDs and timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type AcknowledgementRequestResult = EncryptedWire<AcknowledgementRequestServerMetadata>;
 
-/**
- * JSON-serialized wire form of `AcknowledgementRequestResult`: branded IDs
- * become plain strings; `EncryptedBase64` becomes plain `string`; timestamps
- * become numbers.
- */
 export type AcknowledgementRequestWire = Serialize<AcknowledgementRequestResult>;

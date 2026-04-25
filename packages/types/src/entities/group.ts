@@ -29,10 +29,13 @@ export interface Group extends AuditMetadata {
  */
 export type GroupEncryptedFields = "name" | "description" | "imageSource" | "color" | "emoji";
 
-/**
- * Pre-encryption shape — what `encryptGroupInput` accepts. Single source
- * of truth: derived from `Group` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// GroupEncryptedInput → GroupServerMetadata
+//                    → GroupResult → GroupWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type GroupEncryptedInput = Pick<Group, GroupEncryptedFields>;
 
 /** An archived group — preserves all data with archive metadata. */
@@ -70,14 +73,6 @@ export type GroupServerMetadata = Omit<Group, GroupEncryptedFields | "archived">
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * Server-emit shape — what `toGroupResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type GroupResult = EncryptedWire<GroupServerMetadata>;
 
-/**
- * JSON-serialized wire form of `GroupResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type GroupWire = Serialize<GroupResult>;

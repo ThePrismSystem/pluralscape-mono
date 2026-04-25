@@ -154,11 +154,14 @@ export type LifecycleEventType = LifecycleEvent["eventType"];
  */
 export type LifecycleEventEncryptedFields = "notes";
 
-/**
- * Pre-encryption shape — what `encryptLifecycleEventInput` accepts. Single source
- * of truth: derived from `LifecycleEvent` via `Pick<>` over the encrypted-keys union.
- * Single-key projection over `"notes"` — not truncated.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// LifecycleEventEncryptedInput → LifecycleEventServerMetadata
+//                             → LifecycleEventResult → LifecycleEventWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+/** Single-key projection over `"notes"` — not truncated. */
 export type LifecycleEventEncryptedInput = Pick<LifecycleEvent, LifecycleEventEncryptedFields>;
 
 /**
@@ -189,14 +192,6 @@ export type LifecycleEventServerMetadata = {
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * Server-emit shape — what `toLifecycleEventResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type LifecycleEventResult = EncryptedWire<LifecycleEventServerMetadata>;
 
-/**
- * JSON-serialized wire form of `LifecycleEventResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type LifecycleEventWire = Serialize<LifecycleEventResult>;

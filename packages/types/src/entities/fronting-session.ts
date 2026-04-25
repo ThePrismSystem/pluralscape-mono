@@ -63,10 +63,13 @@ export type FrontingSessionEncryptedFields =
   | "outtrigger"
   | "outtriggerSentiment";
 
-/**
- * Pre-encryption shape — what `encryptFrontingSessionInput` accepts. Single source
- * of truth: derived from `FrontingSession` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FrontingSessionEncryptedInput → FrontingSessionServerMetadata
+//                              → FrontingSessionResult → FrontingSessionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type FrontingSessionEncryptedInput = Pick<FrontingSession, FrontingSessionEncryptedFields>;
 
 /** An archived fronting session. */
@@ -102,14 +105,6 @@ export type FrontingSessionServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toFrontingSessionResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type FrontingSessionResult = EncryptedWire<FrontingSessionServerMetadata>;
 
-/**
- * JSON-serialized wire form of `FrontingSessionResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type FrontingSessionWire = Serialize<FrontingSessionResult>;

@@ -86,10 +86,14 @@ export type InnerWorldEntityEncryptedFields =
   | "linkedMemberId"
   | "linkedStructureEntityId";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// InnerWorldEntityEncryptedInput → InnerWorldEntityServerMetadata
+//                               → InnerWorldEntityResult → InnerWorldEntityWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 /**
- * Pre-encryption shape — what `encryptInnerWorldEntityInput` accepts. Single source
- * of truth: derived from `InnerWorldEntity` via distributive `Pick<>` over the
- * encrypted-keys union (each variant independently contributes its subset of keys).
  * Distributive `Pick`: result is a union of per-variant projections (one `Pick<...>`
  * per discriminated variant — `MemberEntity`, `LandmarkEntity`, `StructureEntityEntity`),
  * not a single intersected object type.
@@ -127,14 +131,6 @@ export type InnerWorldEntityServerMetadata = DistributiveOmit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toEntityResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type InnerWorldEntityResult = EncryptedWire<InnerWorldEntityServerMetadata>;
 
-/**
- * JSON-serialized wire form of `InnerWorldEntityResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type InnerWorldEntityWire = Serialize<InnerWorldEntityResult>;

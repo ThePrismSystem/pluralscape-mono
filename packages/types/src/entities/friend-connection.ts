@@ -38,11 +38,13 @@ export type ArchivedFriendConnection = Archived<FriendConnection>;
  */
 export type FriendConnectionEncryptedFields = "visibility";
 
-/**
- * Pre-encryption shape — what `encryptFriendConnectionInput` accepts.
- * Single source of truth: derived from `FriendConnection` via `Pick<>`
- * over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FriendConnectionEncryptedInput → FriendConnectionServerMetadata
+//                               → FriendConnectionResult → FriendConnectionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type FriendConnectionEncryptedInput = Pick<
   FriendConnection,
   FriendConnectionEncryptedFields
@@ -79,18 +81,11 @@ export type FriendConnectionServerMetadata = Omit<
 };
 
 /**
- * Server-emit shape — what `toFriendConnectionResult` returns. Branded
- * IDs and timestamps preserved; `encryptedData` is wire-form
- * `EncryptedBase64 | null` (nullable because pending connections have
- * no visibility blob yet).
+ * `encryptedData` is `EncryptedBase64 | null` (nullable because pending
+ * connections have no visibility blob yet).
  */
 export type FriendConnectionResult = EncryptedWire<FriendConnectionServerMetadata>;
 
-/**
- * JSON-serialized wire form of `FriendConnectionResult`: branded IDs
- * become plain strings; `EncryptedBase64 | null` becomes `string | null`;
- * timestamps become numbers.
- */
 export type FriendConnectionWire = Serialize<FriendConnectionResult>;
 
 /** A junction mapping a friend connection to a privacy bucket. */

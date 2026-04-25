@@ -47,21 +47,15 @@ export type BoardMessageServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — what `encryptBoardMessageInput` accepts. Single
- * source of truth: derived from `BoardMessage` via `Pick<>` over the
- * encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// BoardMessageEncryptedInput → BoardMessageServerMetadata
+//                           → BoardMessageResult → BoardMessageWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type BoardMessageEncryptedInput = Pick<BoardMessage, BoardMessageEncryptedFields>;
 
-/**
- * Server-emit shape — what `toBoardMessageResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type BoardMessageResult = EncryptedWire<BoardMessageServerMetadata>;
 
-/**
- * JSON-serialized wire form of `BoardMessageResult`: branded IDs become plain
- * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type BoardMessageWire = Serialize<BoardMessageResult>;

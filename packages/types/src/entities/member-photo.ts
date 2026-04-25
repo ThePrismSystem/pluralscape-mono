@@ -25,11 +25,13 @@ export interface MemberPhoto {
  */
 export type MemberPhotoEncryptedFields = "imageSource" | "sortOrder" | "caption";
 
-/**
- * Pre-encryption shape — the projection of `MemberPhoto` over its
- * encrypted-keys union. The transform layer (when added) will accept
- * this shape and produce the encrypted wire body.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// MemberPhotoEncryptedInput → MemberPhotoServerMetadata
+//                          → MemberPhotoResult → MemberPhotoWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type MemberPhotoEncryptedInput = Pick<MemberPhoto, MemberPhotoEncryptedFields>;
 
 /** An archived member photo — preserves all data with archive metadata. */
@@ -56,14 +58,6 @@ export type MemberPhotoServerMetadata = Omit<MemberPhoto, MemberPhotoEncryptedFi
     readonly archivedAt: UnixMillis | null;
   };
 
-/**
- * Server-emit shape — what `toPhotoResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type MemberPhotoResult = EncryptedWire<MemberPhotoServerMetadata>;
 
-/**
- * JSON-serialized wire form of `MemberPhotoResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type MemberPhotoWire = Serialize<MemberPhotoResult>;

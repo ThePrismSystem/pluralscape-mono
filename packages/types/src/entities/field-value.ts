@@ -44,10 +44,13 @@ export interface FieldValue extends AuditMetadata {
  */
 export type FieldValueEncryptedFields = "value";
 
-/**
- * Pre-encryption shape — what `encryptFieldValueInput` accepts. Single source
- * of truth: derived from `FieldValue` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FieldValueEncryptedInput → FieldValueServerMetadata
+//                         → FieldValueResult → FieldValueWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type FieldValueEncryptedInput = Pick<FieldValue, FieldValueEncryptedFields>;
 
 /**
@@ -64,14 +67,6 @@ export type FieldValueServerMetadata = Omit<FieldValue, FieldValueEncryptedField
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toFieldValueResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type FieldValueResult = EncryptedWire<FieldValueServerMetadata>;
 
-/**
- * JSON-serialized wire form of `FieldValueResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type FieldValueWire = Serialize<FieldValueResult>;

@@ -96,11 +96,13 @@ export type SystemSettingsEncryptedFields =
   | "snapshotSchedule"
   | "onboardingComplete";
 
-/**
- * Pre-encryption shape — the projection of `SystemSettings` over its
- * encrypted-keys union. The transform layer (when added) will accept
- * this shape and produce the encrypted wire body.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// SystemSettingsEncryptedInput → SystemSettingsServerMetadata
+//                             → SystemSettingsResult → SystemSettingsWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type SystemSettingsEncryptedInput = Pick<SystemSettings, SystemSettingsEncryptedFields>;
 
 /**
@@ -123,15 +125,6 @@ export type SystemSettingsServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — server's view of `SystemSettings` after applying
- * `EncryptedWire<T>` to `SystemSettingsServerMetadata`. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type SystemSettingsResult = EncryptedWire<SystemSettingsServerMetadata>;
 
-/**
- * JSON-serialized wire form of `SystemSettingsResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type SystemSettingsWire = Serialize<SystemSettingsResult>;

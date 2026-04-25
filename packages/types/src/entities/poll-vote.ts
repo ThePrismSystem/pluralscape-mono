@@ -69,20 +69,15 @@ export type PollVoteServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — what `encryptPollVoteInput` accepts. Single source of
- * truth: derived from `PollVote` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// PollVoteEncryptedInput → PollVoteServerMetadata
+//                       → PollVoteResult → PollVoteWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type PollVoteEncryptedInput = Pick<PollVote, PollVoteEncryptedFields>;
 
-/**
- * Server-emit shape — what `toPollVoteResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type PollVoteResult = EncryptedWire<PollVoteServerMetadata>;
 
-/**
- * JSON-serialized wire form of `PollVoteResult`: branded IDs become plain
- * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type PollVoteWire = Serialize<PollVoteResult>;

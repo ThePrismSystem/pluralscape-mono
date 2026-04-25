@@ -77,20 +77,15 @@ export type NoteServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — what `encryptNoteInput` accepts. Single source of
- * truth: derived from `Note` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// NoteEncryptedInput → NoteServerMetadata
+//                   → NoteResult → NoteWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type NoteEncryptedInput = Pick<Note, NoteEncryptedFields>;
 
-/**
- * Server-emit shape — what `toNoteResult` returns. Branded IDs and timestamps
- * preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type NoteResult = EncryptedWire<NoteServerMetadata>;
 
-/**
- * JSON-serialized wire form of `NoteResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type NoteWire = Serialize<NoteResult>;

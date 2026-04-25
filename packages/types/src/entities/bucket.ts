@@ -26,10 +26,13 @@ export type ArchivedPrivacyBucket = Archived<PrivacyBucket>;
  */
 export type PrivacyBucketEncryptedFields = "name" | "description";
 
-/**
- * Pre-encryption shape — what `encryptBucketInput` accepts. Single source
- * of truth: derived from `PrivacyBucket` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// PrivacyBucketEncryptedInput → PrivacyBucketServerMetadata
+//                            → PrivacyBucketResult → PrivacyBucketWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type PrivacyBucketEncryptedInput = Pick<PrivacyBucket, PrivacyBucketEncryptedFields>;
 
 /**
@@ -49,16 +52,8 @@ export type PrivacyBucketServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toPrivacyBucketResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type PrivacyBucketResult = EncryptedWire<PrivacyBucketServerMetadata>;
 
-/**
- * JSON-serialized wire form of `PrivacyBucketResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type PrivacyBucketWire = Serialize<PrivacyBucketResult>;
 
 /**

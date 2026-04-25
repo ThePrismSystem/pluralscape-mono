@@ -55,21 +55,16 @@ export type TimerConfigServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — what `encryptTimerConfigInput` accepts. Single source
- * of truth: derived from `TimerConfig` via `Pick<>` over the encrypted-keys union.
- * Single-key projection over `"promptText"` — not truncated.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// TimerConfigEncryptedInput → TimerConfigServerMetadata
+//                          → TimerConfigResult → TimerConfigWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+/** Single-key projection over `"promptText"` — not truncated. */
 export type TimerConfigEncryptedInput = Pick<TimerConfig, TimerConfigEncryptedFields>;
 
-/**
- * Server-emit shape — what `toTimerConfigResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type TimerConfigResult = EncryptedWire<TimerConfigServerMetadata>;
 
-/**
- * JSON-serialized wire form of `TimerConfigResult`: branded IDs become plain
- * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type TimerConfigWire = Serialize<TimerConfigResult>;

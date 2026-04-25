@@ -49,10 +49,13 @@ export interface FieldDefinition extends AuditMetadata {
  */
 export type FieldDefinitionEncryptedFields = "name" | "description" | "options";
 
-/**
- * Pre-encryption shape — what `encryptFieldDefinitionInput` accepts. Single source
- * of truth: derived from `FieldDefinition` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FieldDefinitionEncryptedInput → FieldDefinitionServerMetadata
+//                              → FieldDefinitionResult → FieldDefinitionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type FieldDefinitionEncryptedInput = Pick<FieldDefinition, FieldDefinitionEncryptedFields>;
 
 /** An archived field definition. */
@@ -76,14 +79,6 @@ export type FieldDefinitionServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toFieldDefinitionResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type FieldDefinitionResult = EncryptedWire<FieldDefinitionServerMetadata>;
 
-/**
- * JSON-serialized wire form of `FieldDefinitionResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type FieldDefinitionWire = Serialize<FieldDefinitionResult>;

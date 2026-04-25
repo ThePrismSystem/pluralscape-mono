@@ -42,11 +42,14 @@ export interface Relationship {
  */
 export type RelationshipEncryptedFields = "label";
 
-/**
- * Pre-encryption shape — what `encryptRelationshipInput` accepts. Single source
- * of truth: derived from `Relationship` via `Pick<>` over the encrypted-keys union.
- * Single-key projection over `"label"` — not truncated.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// RelationshipEncryptedInput → RelationshipServerMetadata
+//                           → RelationshipResult → RelationshipWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+/** Single-key projection over `"label"` — not truncated. */
 export type RelationshipEncryptedInput = Pick<Relationship, RelationshipEncryptedFields>;
 
 export type ArchivedRelationship = Archived<Relationship>;
@@ -73,14 +76,6 @@ export type RelationshipServerMetadata = Omit<
     readonly archivedAt: UnixMillis | null;
   };
 
-/**
- * Server-emit shape — what `toRelationshipResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type RelationshipResult = EncryptedWire<RelationshipServerMetadata>;
 
-/**
- * JSON-serialized wire form of `RelationshipResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type RelationshipWire = Serialize<RelationshipResult>;

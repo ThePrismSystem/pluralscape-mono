@@ -46,20 +46,15 @@ export type ChannelServerMetadata = Omit<Channel, ChannelEncryptedFields | "arch
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — what `encryptChannelInput` accepts. Single source of
- * truth: derived from `Channel` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// ChannelEncryptedInput → ChannelServerMetadata
+//                      → ChannelResult → ChannelWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type ChannelEncryptedInput = Pick<Channel, ChannelEncryptedFields>;
 
-/**
- * Server-emit shape — what `toChannelResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type ChannelResult = EncryptedWire<ChannelServerMetadata>;
 
-/**
- * JSON-serialized wire form of `ChannelResult`: branded IDs become plain
- * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type ChannelWire = Serialize<ChannelResult>;

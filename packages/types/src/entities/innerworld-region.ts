@@ -36,10 +36,13 @@ export type InnerWorldRegionEncryptedFields =
   | "accessType"
   | "gatekeeperMemberIds";
 
-/**
- * Pre-encryption shape — what `encryptInnerWorldRegionInput` accepts. Single source
- * of truth: derived from `InnerWorldRegion` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// InnerWorldRegionEncryptedInput → InnerWorldRegionServerMetadata
+//                               → InnerWorldRegionResult → InnerWorldRegionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type InnerWorldRegionEncryptedInput = Pick<
   InnerWorldRegion,
   InnerWorldRegionEncryptedFields
@@ -65,14 +68,6 @@ export type InnerWorldRegionServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toRegionResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type InnerWorldRegionResult = EncryptedWire<InnerWorldRegionServerMetadata>;
 
-/**
- * JSON-serialized wire form of `InnerWorldRegionResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type InnerWorldRegionWire = Serialize<InnerWorldRegionResult>;

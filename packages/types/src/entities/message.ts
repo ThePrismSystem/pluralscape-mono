@@ -52,20 +52,15 @@ export type ChatMessageServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — what `encryptMessageInput` accepts. Single source
- * of truth: derived from `ChatMessage` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// ChatMessageEncryptedInput → ChatMessageServerMetadata
+//                          → ChatMessageResult → ChatMessageWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type ChatMessageEncryptedInput = Pick<ChatMessage, ChatMessageEncryptedFields>;
 
-/**
- * Server-emit shape — what `toMessageResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type ChatMessageResult = EncryptedWire<ChatMessageServerMetadata>;
 
-/**
- * JSON-serialized wire form of `ChatMessageResult`: branded IDs become plain
- * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type ChatMessageWire = Serialize<ChatMessageResult>;

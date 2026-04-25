@@ -25,10 +25,13 @@ export interface System extends AuditMetadata {
  */
 export type SystemEncryptedFields = "name" | "displayName" | "description" | "avatarSource";
 
-/**
- * Pre-encryption shape — what `encryptSystemInput` accepts. Single source
- * of truth: derived from `System` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// SystemEncryptedInput → SystemServerMetadata
+//                     → SystemResult → SystemWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type SystemEncryptedInput = Pick<System, SystemEncryptedFields>;
 
 /** @future Multi-system switcher list item — not yet implemented. */
@@ -56,14 +59,6 @@ export type SystemServerMetadata = Omit<System, SystemEncryptedFields | "setting
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * Server-emit shape — what `toSystemProfileResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type SystemResult = EncryptedWire<SystemServerMetadata>;
 
-/**
- * JSON-serialized wire form of `SystemResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type SystemWire = Serialize<SystemResult>;

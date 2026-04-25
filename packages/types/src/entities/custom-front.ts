@@ -25,10 +25,13 @@ export interface CustomFront extends AuditMetadata {
  */
 export type CustomFrontEncryptedFields = "name" | "description" | "color" | "emoji";
 
-/**
- * Pre-encryption shape — what `encryptCustomFrontInput` accepts. Single source
- * of truth: derived from `CustomFront` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// CustomFrontEncryptedInput → CustomFrontServerMetadata
+//                          → CustomFrontResult → CustomFrontWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type CustomFrontEncryptedInput = Pick<CustomFront, CustomFrontEncryptedFields>;
 
 /** An archived custom front — preserves all data with archive metadata. */
@@ -52,14 +55,6 @@ export type CustomFrontServerMetadata = Omit<
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * Server-emit shape — what `toCustomFrontResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type CustomFrontResult = EncryptedWire<CustomFrontServerMetadata>;
 
-/**
- * JSON-serialized wire form of `CustomFrontResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type CustomFrontWire = Serialize<CustomFrontResult>;

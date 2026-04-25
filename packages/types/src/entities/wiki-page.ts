@@ -55,21 +55,15 @@ export type WikiPageServerMetadata = Omit<WikiPage, WikiPageEncryptedFields | "a
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — the projection of `WikiPage` over its
- * encrypted-keys union. The transform layer (when added) will accept
- * this shape and produce the encrypted wire body.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// WikiPageEncryptedInput → WikiPageServerMetadata
+//                       → WikiPageResult → WikiPageWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type WikiPageEncryptedInput = Pick<WikiPage, WikiPageEncryptedFields>;
 
-/**
- * Server-emit shape for `WikiPage`: branded IDs and timestamps preserved;
- * `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type WikiPageResult = EncryptedWire<WikiPageServerMetadata>;
 
-/**
- * JSON-serialized wire form of `WikiPageResult`: branded IDs become plain
- * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type WikiPageWire = Serialize<WikiPageResult>;

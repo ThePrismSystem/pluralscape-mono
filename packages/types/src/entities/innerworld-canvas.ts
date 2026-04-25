@@ -23,11 +23,13 @@ export interface InnerWorldCanvas {
  */
 export type InnerWorldCanvasEncryptedFields = "viewportX" | "viewportY" | "zoom" | "dimensions";
 
-/**
- * Pre-encryption shape — the projection of `InnerWorldCanvas` over its
- * encrypted-keys union. The transform layer (when added) will accept
- * this shape and produce the encrypted wire body.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// InnerWorldCanvasEncryptedInput → InnerWorldCanvasServerMetadata
+//                               → InnerWorldCanvasResult → InnerWorldCanvasWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type InnerWorldCanvasEncryptedInput = Pick<
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields
@@ -53,14 +55,6 @@ export type InnerWorldCanvasServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape for `InnerWorldCanvas`: branded IDs and timestamps
- * preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type InnerWorldCanvasResult = EncryptedWire<InnerWorldCanvasServerMetadata>;
 
-/**
- * JSON-serialized wire form of `InnerWorldCanvasResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type InnerWorldCanvasWire = Serialize<InnerWorldCanvasResult>;

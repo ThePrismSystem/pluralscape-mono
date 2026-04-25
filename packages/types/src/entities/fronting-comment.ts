@@ -36,10 +36,13 @@ export interface FrontingComment extends AuditMetadata {
  */
 export type FrontingCommentEncryptedFields = "content";
 
-/**
- * Pre-encryption shape — what `encryptFrontingCommentInput` accepts. Single source
- * of truth: derived from `FrontingComment` via `Pick<>` over the encrypted-keys union.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FrontingCommentEncryptedInput → FrontingCommentServerMetadata
+//                              → FrontingCommentResult → FrontingCommentWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type FrontingCommentEncryptedInput = Pick<FrontingComment, FrontingCommentEncryptedFields>;
 
 /** An archived fronting comment. */
@@ -70,14 +73,6 @@ export type FrontingCommentServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Server-emit shape — what `toFrontingCommentResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type FrontingCommentResult = EncryptedWire<FrontingCommentServerMetadata>;
 
-/**
- * JSON-serialized wire form of `FrontingCommentResult`: branded IDs become plain strings;
- * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type FrontingCommentWire = Serialize<FrontingCommentResult>;

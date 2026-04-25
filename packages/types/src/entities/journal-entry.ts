@@ -197,21 +197,15 @@ export type JournalEntryServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * Pre-encryption shape — the projection of `JournalEntry` over its
- * encrypted-keys union. The transform layer (when added) will accept
- * this shape and produce the encrypted wire body.
- */
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// JournalEntryEncryptedInput → JournalEntryServerMetadata
+//                           → JournalEntryResult → JournalEntryWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
 export type JournalEntryEncryptedInput = Pick<JournalEntry, JournalEntryEncryptedFields>;
 
-/**
- * Server-emit shape for `JournalEntry`: branded IDs and timestamps
- * preserved; `encryptedData` is wire-form `EncryptedBase64`.
- */
 export type JournalEntryResult = EncryptedWire<JournalEntryServerMetadata>;
 
-/**
- * JSON-serialized wire form of `JournalEntryResult`: branded IDs become plain
- * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
- */
 export type JournalEntryWire = Serialize<JournalEntryResult>;
