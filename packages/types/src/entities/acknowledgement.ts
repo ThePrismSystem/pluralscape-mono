@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { AcknowledgementId, MemberId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -20,6 +21,17 @@ export interface AcknowledgementRequest extends AuditMetadata {
 export type ArchivedAcknowledgementRequest = Archived<AcknowledgementRequest>;
 
 /**
+ * Keys of `AcknowledgementRequest` that are encrypted client-side before the
+ * server sees them. The server stores ciphertext in `encryptedData`; the
+ * plaintext columns are `confirmed` and `createdByMemberId` (nullable FK).
+ * Consumed by:
+ * - `AcknowledgementRequestServerMetadata` (derived via `Omit`)
+ * - `AcknowledgementRequestEncryptedInput = Pick<AcknowledgementRequest, AcknowledgementRequestEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextAcknowledgementRequest parity)
+ */
+export type AcknowledgementRequestEncryptedFields = "message" | "targetMemberId" | "confirmedAt";
+
+/**
  * Server-visible AcknowledgementRequest metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the `message`, `targetMemberId`, and `confirmedAt` fields
@@ -33,7 +45,7 @@ export type ArchivedAcknowledgementRequest = Archived<AcknowledgementRequest>;
  */
 export type AcknowledgementRequestServerMetadata = Omit<
   AcknowledgementRequest,
-  "createdByMemberId" | "targetMemberId" | "message" | "confirmedAt" | "archived"
+  AcknowledgementRequestEncryptedFields | "createdByMemberId" | "archived"
 > & {
   readonly createdByMemberId: MemberId | null;
   readonly archived: boolean;
@@ -42,8 +54,24 @@ export type AcknowledgementRequestServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of an AcknowledgementRequest. Derived from the
- * domain `AcknowledgementRequest` type via `Serialize<T>`; branded IDs
- * become plain strings, `UnixMillis` becomes `number`.
+ * Pre-encryption shape — what `encryptAcknowledgementRequestInput` accepts.
+ * Single source of truth: derived from `AcknowledgementRequest` via `Pick<>`
+ * over the encrypted-keys union.
  */
-export type AcknowledgementRequestWire = Serialize<AcknowledgementRequest>;
+export type AcknowledgementRequestEncryptedInput = Pick<
+  AcknowledgementRequest,
+  AcknowledgementRequestEncryptedFields
+>;
+
+/**
+ * Server-emit shape — what `toAcknowledgementRequestResult` returns. Branded
+ * IDs and timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
+ */
+export type AcknowledgementRequestResult = EncryptedWire<AcknowledgementRequestServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `AcknowledgementRequestResult`: branded IDs
+ * become plain strings; `EncryptedBase64` becomes plain `string`; timestamps
+ * become numbers.
+ */
+export type AcknowledgementRequestWire = Serialize<AcknowledgementRequestResult>;

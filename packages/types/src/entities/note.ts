@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { AnyBrandedId, HexColor, NoteId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -28,6 +29,18 @@ export interface Note extends AuditMetadata {
 export type ArchivedNote = Archived<Note>;
 
 /**
+ * Keys of `Note` that are encrypted client-side before the server sees them.
+ * The server stores ciphertext in `encryptedData`; the `author` reference is
+ * flattened into plaintext columns (`authorEntityType` + `authorEntityId`) for
+ * indexing by author type.
+ * Consumed by:
+ * - `NoteServerMetadata` (derived via `Omit`)
+ * - `NoteEncryptedInput = Pick<Note, NoteEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextNote parity)
+ */
+export type NoteEncryptedFields = "title" | "content" | "backgroundColor";
+
+/**
  * Server-visible Note metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the polymorphic `author` reference is flattened on the DB
@@ -39,10 +52,7 @@ export type ArchivedNote = Archived<Note>;
  * carries `string` at the type level. `archived: false` on the domain flips
  * to a mutable boolean here, with a companion `archivedAt` timestamp.
  */
-export type NoteServerMetadata = Omit<
-  Note,
-  "author" | "title" | "content" | "backgroundColor" | "archived"
-> & {
+export type NoteServerMetadata = Omit<Note, NoteEncryptedFields | "author" | "archived"> & {
   readonly authorEntityType: NoteAuthorEntityType | null;
   readonly authorEntityId: AnyBrandedId | null;
   readonly archived: boolean;
@@ -51,8 +61,19 @@ export type NoteServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of a Note. Derived from the domain `Note` type
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * Pre-encryption shape — what `encryptNoteInput` accepts. Single source of
+ * truth: derived from `Note` via `Pick<>` over the encrypted-keys union.
  */
-export type NoteWire = Serialize<Note>;
+export type NoteEncryptedInput = Pick<Note, NoteEncryptedFields>;
+
+/**
+ * Server-emit shape — what `toNoteResult` returns. Branded IDs and timestamps
+ * preserved; `encryptedData` is wire-form `EncryptedBase64`.
+ */
+export type NoteResult = EncryptedWire<NoteServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `NoteResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type NoteWire = Serialize<NoteResult>;

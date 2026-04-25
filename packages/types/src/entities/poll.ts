@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { HexColor, MemberId, PollId, PollOptionId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -51,6 +52,18 @@ export interface Poll extends AuditMetadata {
 export type ArchivedPoll = Archived<Poll>;
 
 /**
+ * Keys of `Poll` that are encrypted client-side before the server sees them.
+ * The server stores ciphertext in `encryptedData`; the plaintext columns are
+ * scheduling and status flags plus `createdByMemberId` (FK for referential
+ * integrity).
+ * Consumed by:
+ * - `PollServerMetadata` (derived via `Omit`)
+ * - `PollEncryptedInput = Pick<Poll, PollEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextPoll parity)
+ */
+export type PollEncryptedFields = "title" | "description" | "options";
+
+/**
  * Server-visible Poll metadata — raw Drizzle row shape.
  *
  * Hybrid entity: plaintext columns for scheduling and status flags alongside
@@ -59,15 +72,26 @@ export type ArchivedPoll = Archived<Poll>;
  * FK for referential integrity. `archived: false` on the domain flips to a
  * mutable boolean here, with a companion `archivedAt` timestamp.
  */
-export type PollServerMetadata = Omit<Poll, "title" | "description" | "options" | "archived"> & {
+export type PollServerMetadata = Omit<Poll, PollEncryptedFields | "archived"> & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 };
 
 /**
- * JSON-wire representation of a Poll. Derived from the domain `Poll` type
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * Pre-encryption shape — what `encryptPollInput` accepts. Single source of
+ * truth: derived from `Poll` via `Pick<>` over the encrypted-keys union.
  */
-export type PollWire = Serialize<Poll>;
+export type PollEncryptedInput = Pick<Poll, PollEncryptedFields>;
+
+/**
+ * Server-emit shape — what `toPollResult` returns. Branded IDs and timestamps
+ * preserved; `encryptedData` is wire-form `EncryptedBase64`.
+ */
+export type PollResult = EncryptedWire<PollServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `PollResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type PollWire = Serialize<PollResult>;

@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BlobId, ChannelId, MemberId, MessageId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -23,6 +24,17 @@ export interface ChatMessage extends AuditMetadata {
 export type ArchivedChatMessage = Archived<ChatMessage>;
 
 /**
+ * Keys of `ChatMessage` that are encrypted client-side before the server sees
+ * them. The server stores ciphertext in `encryptedData`; the plaintext columns
+ * are `channelId`, `replyToId`, `timestamp`, and `editedAt`.
+ * Consumed by:
+ * - `ChatMessageServerMetadata` (derived via `Omit`)
+ * - `ChatMessageEncryptedInput = Pick<ChatMessage, ChatMessageEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextChatMessage parity)
+ */
+export type ChatMessageEncryptedFields = "content" | "senderId" | "attachments" | "mentions";
+
+/**
  * Server-visible ChatMessage metadata — raw Drizzle row shape.
  *
  * Hybrid entity: plaintext columns (`channelId`, `replyToId`, `timestamp`,
@@ -33,7 +45,7 @@ export type ArchivedChatMessage = Archived<ChatMessage>;
  */
 export type ChatMessageServerMetadata = Omit<
   ChatMessage,
-  "senderId" | "content" | "attachments" | "mentions" | "archived"
+  ChatMessageEncryptedFields | "archived"
 > & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -41,8 +53,19 @@ export type ChatMessageServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of a ChatMessage. Derived from the domain
- * `ChatMessage` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
+ * Pre-encryption shape — what `encryptChatMessageInput` accepts. Single source
+ * of truth: derived from `ChatMessage` via `Pick<>` over the encrypted-keys union.
  */
-export type ChatMessageWire = Serialize<ChatMessage>;
+export type ChatMessageEncryptedInput = Pick<ChatMessage, ChatMessageEncryptedFields>;
+
+/**
+ * Server-emit shape — what `toChatMessageResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
+ */
+export type ChatMessageResult = EncryptedWire<ChatMessageServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `ChatMessageResult`: branded IDs become plain
+ * strings; `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type ChatMessageWire = Serialize<ChatMessageResult>;
