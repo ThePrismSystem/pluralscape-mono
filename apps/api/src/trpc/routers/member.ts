@@ -30,14 +30,7 @@ export const memberRouter = router({
     .input(CreateMemberBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      // Service validates params internally; pass the domain fields only.
-      return createMember(
-        ctx.db,
-        ctx.systemId,
-        { encryptedData: input.encryptedData },
-        ctx.auth,
-        audit,
-      );
+      return createMember(ctx.db, ctx.systemId, input, ctx.auth, audit);
     }),
 
   get: systemProcedure
@@ -71,14 +64,8 @@ export const memberRouter = router({
     .input(MemberIdSchema.and(UpdateMemberBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return updateMember(
-        ctx.db,
-        ctx.systemId,
-        input.memberId,
-        { encryptedData: input.encryptedData, version: input.version },
-        ctx.auth,
-        audit,
-      );
+      const { memberId, ...body } = input;
+      return updateMember(ctx.db, ctx.systemId, memberId, body, ctx.auth, audit);
     }),
 
   duplicate: systemProcedure
@@ -86,19 +73,8 @@ export const memberRouter = router({
     .input(MemberIdSchema.and(DuplicateMemberBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return duplicateMember(
-        ctx.db,
-        ctx.systemId,
-        input.memberId,
-        {
-          encryptedData: input.encryptedData,
-          copyPhotos: input.copyPhotos,
-          copyFields: input.copyFields,
-          copyMemberships: input.copyMemberships,
-        },
-        ctx.auth,
-        audit,
-      );
+      const { memberId, ...body } = input;
+      return duplicateMember(ctx.db, ctx.systemId, memberId, body, ctx.auth, audit);
     }),
 
   archive: systemProcedure
