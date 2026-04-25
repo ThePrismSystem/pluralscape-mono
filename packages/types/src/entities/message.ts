@@ -53,13 +53,13 @@ export type ChatMessageServerMetadata = Omit<
 };
 
 /**
- * Pre-encryption shape — what `encryptChatMessageInput` accepts. Single source
+ * Pre-encryption shape — what `encryptMessageInput` accepts. Single source
  * of truth: derived from `ChatMessage` via `Pick<>` over the encrypted-keys union.
  */
 export type ChatMessageEncryptedInput = Pick<ChatMessage, ChatMessageEncryptedFields>;
 
 /**
- * Server-emit shape — what `toChatMessageResult` returns. Branded IDs and
+ * Server-emit shape — what `toMessageResult` returns. Branded IDs and
  * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type ChatMessageResult = EncryptedWire<ChatMessageServerMetadata>;

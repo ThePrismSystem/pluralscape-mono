@@ -66,7 +66,7 @@ export type InnerWorldRegionServerMetadata = Omit<
 };
 
 /**
- * Server-emit shape — what `toInnerWorldRegionResult` returns. Branded IDs and
+ * Server-emit shape — what `toRegionResult` returns. Branded IDs and
  * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type InnerWorldRegionResult = EncryptedWire<InnerWorldRegionServerMetadata>;

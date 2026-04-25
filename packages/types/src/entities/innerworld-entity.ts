@@ -90,6 +90,9 @@ export type InnerWorldEntityEncryptedFields =
  * Pre-encryption shape — what `encryptInnerWorldEntityInput` accepts. Single source
  * of truth: derived from `InnerWorldEntity` via distributive `Pick<>` over the
  * encrypted-keys union (each variant independently contributes its subset of keys).
+ * Distributive `Pick`: result is a union of per-variant projections (one `Pick<...>`
+ * per discriminated variant — `MemberEntity`, `LandmarkEntity`, `StructureEntityEntity`),
+ * not a single intersected object type.
  */
 export type InnerWorldEntityEncryptedInput = InnerWorldEntity extends unknown
   ? Pick<InnerWorldEntity, InnerWorldEntityEncryptedFields & keyof InnerWorldEntity>
@@ -125,7 +128,7 @@ export type InnerWorldEntityServerMetadata = DistributiveOmit<
 };
 
 /**
- * Server-emit shape — what `toInnerWorldEntityResult` returns. Branded IDs and
+ * Server-emit shape — what `toEntityResult` returns. Branded IDs and
  * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type InnerWorldEntityResult = EncryptedWire<InnerWorldEntityServerMetadata>;

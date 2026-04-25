@@ -23,7 +23,8 @@ export type ArchivedAcknowledgementRequest = Archived<AcknowledgementRequest>;
 /**
  * Keys of `AcknowledgementRequest` that are encrypted client-side before the
  * server sees them. The server stores ciphertext in `encryptedData`; the
- * plaintext columns are `confirmed` and `createdByMemberId` (nullable FK).
+ * plaintext columns on the server row are `confirmed` and `createdByMemberId`
+ * (nullable on the server row to support imported acknowledgements).
  * Consumed by:
  * - `AcknowledgementRequestServerMetadata` (derived via `Omit`)
  * - `AcknowledgementRequestEncryptedInput = Pick<AcknowledgementRequest, AcknowledgementRequestEncryptedFields>`
@@ -54,7 +55,7 @@ export type AcknowledgementRequestServerMetadata = Omit<
 };
 
 /**
- * Pre-encryption shape — what `encryptAcknowledgementRequestInput` accepts.
+ * Pre-encryption shape — what `encryptAcknowledgementInput` accepts.
  * Single source of truth: derived from `AcknowledgementRequest` via `Pick<>`
  * over the encrypted-keys union.
  */

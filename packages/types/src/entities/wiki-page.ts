@@ -59,14 +59,15 @@ export type WikiPageServerMetadata = Omit<WikiPage, WikiPageEncryptedFields | "a
 };
 
 /**
- * Pre-encryption shape — what `encryptWikiPageInput` accepts. Single source of
- * truth: derived from `WikiPage` via `Pick<>` over the encrypted-keys union.
+ * Pre-encryption shape — the projection of `WikiPage` over its
+ * encrypted-keys union. The transform layer (when added) will accept
+ * this shape and produce the encrypted wire body.
  */
 export type WikiPageEncryptedInput = Pick<WikiPage, WikiPageEncryptedFields>;
 
 /**
- * Server-emit shape — what `toWikiPageResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
+ * Server-emit shape for `WikiPage`: branded IDs and timestamps preserved;
+ * `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type WikiPageResult = EncryptedWire<WikiPageServerMetadata>;
 

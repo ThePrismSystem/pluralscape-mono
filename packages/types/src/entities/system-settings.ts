@@ -97,8 +97,9 @@ export type SystemSettingsEncryptedFields =
   | "onboardingComplete";
 
 /**
- * Pre-encryption shape — what `encryptSystemSettingsInput` accepts. Single source
- * of truth: derived from `SystemSettings` via `Pick<>` over the encrypted-keys union.
+ * Pre-encryption shape — the projection of `SystemSettings` over its
+ * encrypted-keys union. The transform layer (when added) will accept
+ * this shape and produce the encrypted wire body.
  */
 export type SystemSettingsEncryptedInput = Pick<SystemSettings, SystemSettingsEncryptedFields>;
 
@@ -123,7 +124,8 @@ export type SystemSettingsServerMetadata = Omit<
 };
 
 /**
- * Server-emit shape — what `toSystemSettingsResult` returns. Branded IDs and
+ * Server-emit shape — server's view of `SystemSettings` after applying
+ * `EncryptedWire<T>` to `SystemSettingsServerMetadata`. Branded IDs and
  * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type SystemSettingsResult = EncryptedWire<SystemSettingsServerMetadata>;

@@ -198,15 +198,15 @@ export type JournalEntryServerMetadata = Omit<
 };
 
 /**
- * Pre-encryption shape — what `encryptJournalEntryInput` accepts. Single
- * source of truth: derived from `JournalEntry` via `Pick<>` over the
- * encrypted-keys union.
+ * Pre-encryption shape — the projection of `JournalEntry` over its
+ * encrypted-keys union. The transform layer (when added) will accept
+ * this shape and produce the encrypted wire body.
  */
 export type JournalEntryEncryptedInput = Pick<JournalEntry, JournalEntryEncryptedFields>;
 
 /**
- * Server-emit shape — what `toJournalEntryResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
+ * Server-emit shape for `JournalEntry`: branded IDs and timestamps
+ * preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type JournalEntryResult = EncryptedWire<JournalEntryServerMetadata>;
 

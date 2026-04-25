@@ -45,6 +45,7 @@ export type RelationshipEncryptedFields = "label";
 /**
  * Pre-encryption shape — what `encryptRelationshipInput` accepts. Single source
  * of truth: derived from `Relationship` via `Pick<>` over the encrypted-keys union.
+ * Single-key projection over `"label"` — not truncated.
  */
 export type RelationshipEncryptedInput = Pick<Relationship, RelationshipEncryptedFields>;
 

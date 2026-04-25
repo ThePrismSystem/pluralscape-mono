@@ -57,7 +57,7 @@ export type SystemServerMetadata = Omit<System, SystemEncryptedFields | "setting
 };
 
 /**
- * Server-emit shape — what `toSystemResult` returns. Branded IDs and
+ * Server-emit shape — what `toSystemProfileResult` returns. Branded IDs and
  * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type SystemResult = EncryptedWire<SystemServerMetadata>;

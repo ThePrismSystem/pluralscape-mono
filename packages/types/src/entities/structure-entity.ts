@@ -65,7 +65,7 @@ export type SystemStructureEntityEncryptedFields =
   | "emoji";
 
 /**
- * Pre-encryption shape — what `encryptSystemStructureEntityInput` accepts. Single source
+ * Pre-encryption shape — what `encryptStructureEntityInput` accepts. Single source
  * of truth: derived from `SystemStructureEntity` via `Pick<>` over the encrypted-keys union.
  */
 export type SystemStructureEntityEncryptedInput = Pick<
@@ -94,7 +94,7 @@ export type SystemStructureEntityServerMetadata = Omit<
 };
 
 /**
- * Server-emit shape — what `toSystemStructureEntityResult` returns. Branded IDs and
+ * Server-emit shape — what `toStructureEntityResult` returns. Branded IDs and
  * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type SystemStructureEntityResult = EncryptedWire<SystemStructureEntityServerMetadata>;

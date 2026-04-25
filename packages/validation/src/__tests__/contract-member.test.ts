@@ -11,7 +11,7 @@ import type { Equal } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("CreateMemberBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<z.infer<typeof CreateMemberBodySchema>, { encryptedData: string }>
     >().toEqualTypeOf<true>();
@@ -42,7 +42,7 @@ describe("CreateMemberBodySchema", () => {
 });
 
 describe("UpdateMemberBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<z.infer<typeof UpdateMemberBodySchema>, { encryptedData: string; version: number }>
     >().toEqualTypeOf<true>();
@@ -65,7 +65,7 @@ describe("UpdateMemberBodySchema", () => {
 });
 
 describe("DuplicateMemberBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<
         z.infer<typeof DuplicateMemberBodySchema>,
@@ -106,7 +106,7 @@ describe("DuplicateMemberBodySchema", () => {
 });
 
 describe("CreateMemberPhotoBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<
         z.infer<typeof CreateMemberPhotoBodySchema>,

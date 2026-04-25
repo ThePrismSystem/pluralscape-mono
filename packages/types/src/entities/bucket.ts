@@ -27,7 +27,7 @@ export type ArchivedPrivacyBucket = Archived<PrivacyBucket>;
 export type PrivacyBucketEncryptedFields = "name" | "description";
 
 /**
- * Pre-encryption shape — what `encryptPrivacyBucketInput` accepts. Single source
+ * Pre-encryption shape — what `encryptBucketInput` accepts. Single source
  * of truth: derived from `PrivacyBucket` via `Pick<>` over the encrypted-keys union.
  */
 export type PrivacyBucketEncryptedInput = Pick<PrivacyBucket, PrivacyBucketEncryptedFields>;

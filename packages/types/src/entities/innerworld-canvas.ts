@@ -24,8 +24,9 @@ export interface InnerWorldCanvas {
 export type InnerWorldCanvasEncryptedFields = "viewportX" | "viewportY" | "zoom" | "dimensions";
 
 /**
- * Pre-encryption shape — what `encryptInnerWorldCanvasInput` accepts. Single source
- * of truth: derived from `InnerWorldCanvas` via `Pick<>` over the encrypted-keys union.
+ * Pre-encryption shape — the projection of `InnerWorldCanvas` over its
+ * encrypted-keys union. The transform layer (when added) will accept
+ * this shape and produce the encrypted wire body.
  */
 export type InnerWorldCanvasEncryptedInput = Pick<
   InnerWorldCanvas,
@@ -53,8 +54,8 @@ export type InnerWorldCanvasServerMetadata = Omit<
 };
 
 /**
- * Server-emit shape — what `toInnerWorldCanvasResult` returns. Branded IDs and
- * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
+ * Server-emit shape for `InnerWorldCanvas`: branded IDs and timestamps
+ * preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type InnerWorldCanvasResult = EncryptedWire<InnerWorldCanvasServerMetadata>;
 

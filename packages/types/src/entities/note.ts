@@ -37,6 +37,9 @@ export type ArchivedNote = Archived<Note>;
  * - `NoteServerMetadata` (derived via `Omit`)
  * - `NoteEncryptedInput = Pick<Note, NoteEncryptedFields>`
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextNote parity)
+ *
+ * Unlike `JournalEntry`, `Note`'s `author` is a server-side flattened plaintext column
+ * (split into `authorEntityType` + `authorEntityId`), not part of the encrypted blob.
  */
 export type NoteEncryptedFields = "title" | "content" | "backgroundColor";
 

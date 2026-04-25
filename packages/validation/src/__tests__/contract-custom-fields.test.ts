@@ -11,7 +11,7 @@ import type { Equal, FieldType } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("CreateFieldDefinitionBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<
         z.infer<typeof CreateFieldDefinitionBodySchema>,
@@ -88,7 +88,7 @@ describe("CreateFieldDefinitionBodySchema", () => {
 });
 
 describe("UpdateFieldDefinitionBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<
         z.infer<typeof UpdateFieldDefinitionBodySchema>,
@@ -131,7 +131,7 @@ describe("UpdateFieldDefinitionBodySchema", () => {
 });
 
 describe("SetFieldValueBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<z.infer<typeof SetFieldValueBodySchema>, { encryptedData: string }>
     >().toEqualTypeOf<true>();
@@ -149,7 +149,7 @@ describe("SetFieldValueBodySchema", () => {
 });
 
 describe("UpdateFieldValueBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<z.infer<typeof UpdateFieldValueBodySchema>, { encryptedData: string; version: number }>
     >().toEqualTypeOf<true>();

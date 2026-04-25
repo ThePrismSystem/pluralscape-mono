@@ -90,7 +90,9 @@ export interface StructureEntityFormationEvent extends LifecycleEventBase {
 export interface FormChangeEvent extends LifecycleEventBase {
   readonly eventType: "form-change";
   readonly memberId: MemberId;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly previousForm: string | null;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly newForm: string | null;
 }
 
@@ -98,7 +100,9 @@ export interface FormChangeEvent extends LifecycleEventBase {
 export interface NameChangeEvent extends LifecycleEventBase {
   readonly eventType: "name-change";
   readonly memberId: MemberId;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly previousName: string | null;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly newName: string;
 }
 
@@ -153,6 +157,7 @@ export type LifecycleEventEncryptedFields = "notes";
 /**
  * Pre-encryption shape — what `encryptLifecycleEventInput` accepts. Single source
  * of truth: derived from `LifecycleEvent` via `Pick<>` over the encrypted-keys union.
+ * Single-key projection over `"notes"` — not truncated.
  */
 export type LifecycleEventEncryptedInput = Pick<LifecycleEvent, LifecycleEventEncryptedFields>;
 

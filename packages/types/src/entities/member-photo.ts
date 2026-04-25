@@ -26,8 +26,9 @@ export interface MemberPhoto {
 export type MemberPhotoEncryptedFields = "imageSource" | "sortOrder" | "caption";
 
 /**
- * Pre-encryption shape — what `encryptMemberPhotoInput` accepts. Single source
- * of truth: derived from `MemberPhoto` via `Pick<>` over the encrypted-keys union.
+ * Pre-encryption shape — the projection of `MemberPhoto` over its
+ * encrypted-keys union. The transform layer (when added) will accept
+ * this shape and produce the encrypted wire body.
  */
 export type MemberPhotoEncryptedInput = Pick<MemberPhoto, MemberPhotoEncryptedFields>;
 
@@ -66,7 +67,7 @@ export type MemberPhotoServerMetadata = Omit<MemberPhoto, MemberPhotoEncryptedFi
   };
 
 /**
- * Server-emit shape — what `toMemberPhotoResult` returns. Branded IDs and
+ * Server-emit shape — what `toPhotoResult` returns. Branded IDs and
  * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
 export type MemberPhotoResult = EncryptedWire<MemberPhotoServerMetadata>;

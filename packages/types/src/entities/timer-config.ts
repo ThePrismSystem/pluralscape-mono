@@ -58,6 +58,7 @@ export type TimerConfigServerMetadata = Omit<
 /**
  * Pre-encryption shape — what `encryptTimerConfigInput` accepts. Single source
  * of truth: derived from `TimerConfig` via `Pick<>` over the encrypted-keys union.
+ * Single-key projection over `"promptText"` — not truncated.
  */
 export type TimerConfigEncryptedInput = Pick<TimerConfig, TimerConfigEncryptedFields>;
 
