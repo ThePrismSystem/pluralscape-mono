@@ -9,7 +9,12 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { InnerWorldEntityId, InnerWorldRegionId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBase64,
+  InnerWorldEntityId,
+  InnerWorldRegionId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -88,7 +93,7 @@ const MOCK_ENTITY_RESULT = {
   id: ENTITY_ID,
   systemId: MOCK_SYSTEM_ID,
   regionId: null,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,
@@ -100,7 +105,7 @@ const MOCK_REGION_RESULT = {
   id: REGION_ID,
   systemId: MOCK_SYSTEM_ID,
   parentRegionId: null,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,
@@ -110,7 +115,7 @@ const MOCK_REGION_RESULT = {
 
 const MOCK_CANVAS_RESULT = {
   systemId: MOCK_SYSTEM_ID,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,

@@ -10,6 +10,7 @@ import {
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
 import type { MessageResult } from "../../../services/message/internal.js";
+import type { EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ const MOCK_RESULT: MessageResult = {
   replyToId: null,
   timestamp: 1000 as never,
   editedAt: null,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,
@@ -92,7 +93,7 @@ describe("POST /systems/:id/channels/:channelId/messages (create)", () => {
     vi.mocked(createMessage).mockResolvedValueOnce(MOCK_RESULT);
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       timestamp: 1000,
     });
 
@@ -105,7 +106,7 @@ describe("POST /systems/:id/channels/:channelId/messages (create)", () => {
     vi.mocked(createMessage).mockResolvedValueOnce(MOCK_RESULT);
 
     await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       timestamp: 1000,
     });
 
@@ -113,7 +114,7 @@ describe("POST /systems/:id/channels/:channelId/messages (create)", () => {
       expect.anything(),
       SYS_ID,
       CH_ID,
-      expect.objectContaining({ encryptedData: "dGVzdA==", timestamp: 1000 }),
+      expect.objectContaining({ encryptedData: "dGVzdA==" as EncryptedBase64, timestamp: 1000 }),
       MOCK_AUTH,
       expect.any(Function),
     );
@@ -125,7 +126,7 @@ describe("POST /systems/:id/channels/:channelId/messages (create)", () => {
     );
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       timestamp: 1000,
     });
 
@@ -186,7 +187,7 @@ describe("PUT /systems/:id/channels/:channelId/messages/:messageId", () => {
     vi.mocked(updateMessage).mockResolvedValueOnce({ ...MOCK_RESULT, version: 2 });
 
     const res = await putJSON(createApp(), `${BASE}/${MSG_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -199,7 +200,7 @@ describe("PUT /systems/:id/channels/:channelId/messages/:messageId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${MSG_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -212,7 +213,7 @@ describe("PUT /systems/:id/channels/:channelId/messages/:messageId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${MSG_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 

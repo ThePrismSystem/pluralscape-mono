@@ -11,7 +11,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { FieldDefinitionResult } from "../../../services/field-definition/internal.js";
-import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ describe("GET /systems/:systemId/fields", () => {
           fieldType: "text",
           required: false,
           sortOrder: 0,
-          encryptedData: "dGVzdA==",
+          encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
           createdAt: 1000 as never,
           updatedAt: 1000 as never,
@@ -183,7 +183,7 @@ describe("GET /systems/:systemId/fields", () => {
           fieldType: "text",
           required: false,
           sortOrder: 0,
-          encryptedData: "dGVzdA==",
+          encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
           createdAt: 1000 as never,
           updatedAt: 1000 as never,

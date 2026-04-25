@@ -57,6 +57,23 @@ declare const __encStr: unique symbol;
 /** Branded string to prevent accidental logging or display of ciphertext. */
 export type EncryptedString = string & { readonly [__encStr]: true };
 
+// ── EncryptedBase64 ────────────────────────────────────────────
+
+/**
+ * @internal — symbol is exported only so sibling type-level helpers
+ * (`UnbrandedEquivalence<T>` in `type-assertions.ts`) can structurally
+ * pattern-match the marker. Not for direct consumption.
+ */
+export declare const __encBase64: unique symbol;
+
+/**
+ * Branded base64 string for ciphertext on the wire. Prevents accidentally
+ * passing a raw string (e.g. an ID) where wire-form encrypted payload is
+ * expected. Produced by `encryptedBlobToBase64` /
+ * `encryptedBlobToBase64OrNull` and threaded through `EncryptedWire<T>`.
+ */
+export type EncryptedBase64 = string & { readonly [__encBase64]: true };
+
 // ── ServerSecret ───────────────────────────────────────────────
 
 declare const __serverSecret: unique symbol;

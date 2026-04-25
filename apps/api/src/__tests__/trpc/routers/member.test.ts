@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { MemberId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, MemberId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -57,7 +57,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const MOCK_MEMBER_RESULT = {
   id: MEMBER_ID,
   systemId: MOCK_SYSTEM_ID,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,
@@ -159,7 +159,7 @@ describe("member router", () => {
         caller.member.update({
           systemId: MOCK_SYSTEM_ID,
           memberId: MEMBER_ID,
-          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=",
+          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=" as EncryptedBase64,
           version: 1,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
@@ -173,7 +173,7 @@ describe("member router", () => {
       await expect(
         caller.member.create({
           systemId: MOCK_SYSTEM_ID,
-          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=",
+          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=" as EncryptedBase64,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { ApiKeyId, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, ApiKeyId, SystemId } from "@pluralscape/types";
 
 // ── Mock tx chain ─────────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     keyType: "keyType",
     tokenHash: "tokenHash",
     scopes: "scopes",
-    encryptedData: "encryptedData",
+    encryptedData: "encryptedData" as EncryptedBase64,
     encryptedKeyMaterial: "encryptedKeyMaterial",
     createdAt: "createdAt",
     lastUsedAt: "lastUsedAt",

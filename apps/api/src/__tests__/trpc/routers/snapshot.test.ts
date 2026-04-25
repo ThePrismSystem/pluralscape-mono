@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { SystemSnapshotId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, SystemSnapshotId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -39,14 +39,14 @@ const MOCK_SNAPSHOT_RESULT = {
   id: SNAPSHOT_ID,
   systemId: MOCK_SYSTEM_ID,
   snapshotTrigger: "manual" as const,
-  encryptedData: "dGVzdGVuY3J5cHRlZGRhdGE=",
+  encryptedData: "dGVzdGVuY3J5cHRlZGRhdGE=" as EncryptedBase64,
   createdAt: 1_700_000_000_000 as UnixMillis,
 };
 
 const VALID_CREATE_INPUT = {
   systemId: MOCK_SYSTEM_ID,
   snapshotTrigger: "manual" as const,
-  encryptedData: "dGVzdGVuY3J5cHRlZGRhdGE=",
+  encryptedData: "dGVzdGVuY3J5cHRlZGRhdGE=" as EncryptedBase64,
 };
 
 describe("snapshot router", () => {

@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MOCK_AUTH, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
-import type { AccountId, FriendConnectionId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBase64,
+  AccountId,
+  FriendConnectionId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -259,14 +264,17 @@ describe("friend router", () => {
       const caller = createCaller();
       await caller.friend.updateVisibility({
         connectionId: CONNECTION_ID,
-        encryptedData: "dXBkYXRlZA==",
+        encryptedData: "dXBkYXRlZA==" as EncryptedBase64,
         version: 2,
       });
 
       expect(vi.mocked(updateFriendVisibility)).toHaveBeenCalledOnce();
       const callArgs = vi.mocked(updateFriendVisibility).mock.calls[0];
       expect(callArgs?.[2]).toBe(CONNECTION_ID);
-      expect(callArgs?.[3]).toEqual({ encryptedData: "dXBkYXRlZA==", version: 2 });
+      expect(callArgs?.[3]).toEqual({
+        encryptedData: "dXBkYXRlZA==" as EncryptedBase64,
+        version: 2,
+      });
     });
 
     it("rejects body with version 0 (zod min(1))", async () => {
@@ -274,7 +282,7 @@ describe("friend router", () => {
       await expect(
         caller.friend.updateVisibility({
           connectionId: CONNECTION_ID,
-          encryptedData: "dGVzdA==",
+          encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 0,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));

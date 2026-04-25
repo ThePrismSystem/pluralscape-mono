@@ -2,6 +2,7 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AuditEventType,
+  EncryptedBase64,
   PaginatedResult,
   SystemId,
   UnixMillis,
@@ -113,7 +114,7 @@ export interface HierarchyServiceConfig<
 export interface BaseHierarchyResult {
   readonly id: string;
   readonly systemId: SystemId;
-  readonly encryptedData: string;
+  readonly encryptedData: EncryptedBase64;
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;

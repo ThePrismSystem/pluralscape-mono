@@ -28,7 +28,7 @@ vi.mock("@pluralscape/db/pg", () => ({
   },
   customFronts: {
     id: "id",
-    encryptedData: "encryptedData",
+    encryptedData: "encryptedData" as EncryptedBase64,
     systemId: "systemId",
     archived: "archived",
   },
@@ -38,7 +38,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     customFrontId: "customFrontId",
     structureEntityId: "structureEntityId",
     startTime: "startTime",
-    encryptedData: "encryptedData",
+    encryptedData: "encryptedData" as EncryptedBase64,
     systemId: "systemId",
     endTime: "endTime",
     archived: "archived",
@@ -52,10 +52,15 @@ vi.mock("@pluralscape/db/pg", () => ({
     friendAccountId: "friendAccountId",
     revokedAt: "revokedAt",
   },
-  members: { id: "id", encryptedData: "encryptedData", systemId: "systemId", archived: "archived" },
+  members: {
+    id: "id",
+    encryptedData: "encryptedData" as EncryptedBase64,
+    systemId: "systemId",
+    archived: "archived",
+  },
   systemStructureEntities: {
     id: "id",
-    encryptedData: "encryptedData",
+    encryptedData: "encryptedData" as EncryptedBase64,
     systemId: "systemId",
     archived: "archived",
   },
@@ -85,6 +90,7 @@ import { asDb } from "../helpers/mock-db.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { BucketTagCache } from "../../services/friend-dashboard/internal.js";
 import type {
+  EncryptedBase64,
   AccountId,
   BucketId,
   FriendAccessContext,

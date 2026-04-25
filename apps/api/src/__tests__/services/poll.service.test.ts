@@ -6,7 +6,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { ArchivableEntityConfig, DeletableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type { PollId, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, PollId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     maxVotesPerMember: "max_votes_per_member",
     allowAbstain: "allow_abstain",
     allowVeto: "allow_veto",
-    encryptedData: "encrypted_data",
+    encryptedData: "encrypted_data" as EncryptedBase64,
     version: "version",
     archived: "archived",
     archivedAt: "archived_at",

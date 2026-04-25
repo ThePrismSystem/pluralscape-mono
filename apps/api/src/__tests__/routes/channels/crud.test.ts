@@ -10,6 +10,7 @@ import {
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
 import type { ChannelResult } from "../../../services/channel/internal.js";
+import type { EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ const MOCK_RESULT: ChannelResult = {
   type: "channel",
   parentId: null,
   sortOrder: 0,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,
@@ -89,7 +90,7 @@ describe("POST /systems/:id/channels (create)", () => {
 
     const res = await postJSON(createApp(), BASE, {
       type: "channel",
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
     });
 
@@ -103,14 +104,14 @@ describe("POST /systems/:id/channels (create)", () => {
 
     await postJSON(createApp(), BASE, {
       type: "channel",
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
     });
 
     expect(vi.mocked(createChannel)).toHaveBeenCalledWith(
       expect.anything(),
       "sys_550e8400-e29b-41d4-a716-446655440000",
-      expect.objectContaining({ type: "channel", encryptedData: "dGVzdA==" }),
+      expect.objectContaining({ type: "channel", encryptedData: "dGVzdA==" as EncryptedBase64 }),
       MOCK_AUTH,
       expect.any(Function),
     );
@@ -122,7 +123,7 @@ describe("POST /systems/:id/channels (create)", () => {
 
     const res = await postJSON(createApp(), BASE, {
       type: "channel",
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
     });
 
@@ -183,7 +184,7 @@ describe("PUT /systems/:id/channels/:channelId", () => {
     vi.mocked(updateChannel).mockResolvedValueOnce({ ...MOCK_RESULT, version: 2 });
 
     const res = await putJSON(createApp(), `${BASE}/${CH_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -196,7 +197,7 @@ describe("PUT /systems/:id/channels/:channelId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${CH_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -209,7 +210,7 @@ describe("PUT /systems/:id/channels/:channelId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${CH_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 

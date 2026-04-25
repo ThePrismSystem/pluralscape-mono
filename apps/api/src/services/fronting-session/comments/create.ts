@@ -20,6 +20,7 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type {
   FrontingCommentId,
   FrontingSessionId,
+  ServerInternal,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -33,7 +34,7 @@ async function resolveSessionStartTime(
   tx: PostgresJsDatabase,
   sessionId: FrontingSessionId,
   systemId: SystemId,
-): Promise<UnixMillis> {
+): Promise<ServerInternal<UnixMillis>> {
   const [session] = await tx
     .select({ startTime: frontingSessions.startTime, archived: frontingSessions.archived })
     .from(frontingSessions)
@@ -52,7 +53,9 @@ async function resolveSessionStartTime(
     );
   }
 
-  return session.startTime;
+  // Brand-construction site for sessionStartTime: lifts the parent session's
+  // startTime to the ServerInternal<UnixMillis> brand for partition-FK use.
+  return session.startTime as ServerInternal<UnixMillis>;
 }
 
 export async function createFrontingComment(

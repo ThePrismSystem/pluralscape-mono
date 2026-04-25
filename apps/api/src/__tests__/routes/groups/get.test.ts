@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ describe("GET /systems/:id/groups/:groupId", () => {
       systemId: MOCK_AUTH.systemId as never,
       parentGroupId: null,
       sortOrder: 0,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
       createdAt: 1000 as never,
       updatedAt: 1000 as never,

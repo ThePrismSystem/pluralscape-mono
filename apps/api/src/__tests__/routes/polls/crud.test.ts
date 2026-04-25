@@ -11,6 +11,7 @@ import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/rout
 
 import type { PollResult } from "../../../services/poll/internal.js";
 import type { PollVoteResult } from "../../../services/poll-vote/internal.js";
+import type { EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ const MOCK_POLL: PollResult = {
   maxVotesPerMember: 1,
   allowAbstain: false,
   allowVeto: false,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,
@@ -96,7 +97,7 @@ const MOCK_VOTE: PollVoteResult = {
   voter: null,
   isVeto: false,
   votedAt: 1000 as never,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,
@@ -127,7 +128,7 @@ describe("POST /systems/:id/polls (create)", () => {
 
     const res = await postJSON(createApp(), BASE, {
       kind: "standard",
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       allowMultipleVotes: false,
       maxVotesPerMember: 1,
       allowAbstain: false,
@@ -144,7 +145,7 @@ describe("POST /systems/:id/polls (create)", () => {
 
     await postJSON(createApp(), BASE, {
       kind: "standard",
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       allowMultipleVotes: false,
       maxVotesPerMember: 1,
       allowAbstain: false,
@@ -154,7 +155,7 @@ describe("POST /systems/:id/polls (create)", () => {
     expect(vi.mocked(createPoll)).toHaveBeenCalledWith(
       expect.anything(),
       "sys_550e8400-e29b-41d4-a716-446655440000",
-      expect.objectContaining({ kind: "standard", encryptedData: "dGVzdA==" }),
+      expect.objectContaining({ kind: "standard", encryptedData: "dGVzdA==" as EncryptedBase64 }),
       MOCK_AUTH,
       expect.any(Function),
     );
@@ -166,7 +167,7 @@ describe("POST /systems/:id/polls (create)", () => {
 
     const res = await postJSON(createApp(), BASE, {
       kind: "standard",
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       allowMultipleVotes: false,
       maxVotesPerMember: 1,
       allowAbstain: false,
@@ -228,7 +229,7 @@ describe("PUT /systems/:id/polls/:pollId", () => {
     vi.mocked(updatePoll).mockResolvedValueOnce({ ...MOCK_POLL, version: 2 });
 
     const res = await putJSON(createApp(), `${BASE}/${POLL_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -241,7 +242,7 @@ describe("PUT /systems/:id/polls/:pollId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${POLL_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -254,7 +255,7 @@ describe("PUT /systems/:id/polls/:pollId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${POLL_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -267,7 +268,7 @@ describe("PUT /systems/:id/polls/:pollId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${POLL_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -436,7 +437,7 @@ describe("POST /systems/:id/polls/:pollId/votes (cast vote)", () => {
     vi.mocked(castVote).mockResolvedValueOnce(MOCK_VOTE);
 
     const res = await postJSON(createApp(), `${BASE}/${POLL_ID}/votes`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       optionId: null,
       isVeto: false,
       voter: { entityType: "member", entityId: "mbr_test" },
@@ -453,7 +454,7 @@ describe("POST /systems/:id/polls/:pollId/votes (cast vote)", () => {
     );
 
     const res = await postJSON(createApp(), `${BASE}/${POLL_ID}/votes`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       optionId: null,
       isVeto: false,
       voter: { entityType: "member", entityId: "mbr_test" },
@@ -468,7 +469,7 @@ describe("POST /systems/:id/polls/:pollId/votes (cast vote)", () => {
     );
 
     const res = await postJSON(createApp(), `${BASE}/${POLL_ID}/votes`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       optionId: null,
       isVeto: false,
       voter: { entityType: "member", entityId: "mbr_test" },

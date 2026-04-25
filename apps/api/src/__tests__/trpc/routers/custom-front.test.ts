@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { CustomFrontId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, CustomFrontId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -55,7 +55,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JjZg==";
 const MOCK_CUSTOM_FRONT_RESULT = {
   id: CUSTOM_FRONT_ID,
   systemId: MOCK_SYSTEM_ID,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ const GET_URL = `/systems/${SYS_ID}/fronting-reports/${REPORT_ID}`;
 const MOCK_RESULT = {
   id: REPORT_ID as never,
   systemId: MOCK_AUTH.systemId as never,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   format: "html" as const,
   generatedAt: 5000 as never,
   version: 1,

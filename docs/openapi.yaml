@@ -14742,12 +14742,17 @@ components:
       description: |
         A comment attached to a fronting session. Extends EncryptedEntity with the
         parent session ID and the authoring subject (member, custom front, or
-        structure entity).
+        structure entity). The three subject IDs are always present in the
+        response payload — exactly one is non-null per the database CHECK
+        constraint; the other two are explicitly null.
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
           required:
             - frontingSessionId
+            - memberId
+            - customFrontId
+            - structureEntityId
           properties:
             frontingSessionId:
               type: string
@@ -14755,15 +14760,15 @@ components:
             memberId:
               type: string
               nullable: true
-              description: Authoring member ID (mem_ prefix), if set
+              description: Authoring member ID (mem_ prefix), null when not the subject
             customFrontId:
               type: string
               nullable: true
-              description: Authoring custom front ID (cf_ prefix), if set
+              description: Authoring custom front ID (cf_ prefix), null when not the subject
             structureEntityId:
               type: string
               nullable: true
-              description: Authoring structure entity ID (ste_ prefix), if set
+              description: Authoring structure entity ID (ste_ prefix), null when not the subject
     CreateFrontingCommentRequest:
       type: object
       required:

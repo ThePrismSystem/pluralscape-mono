@@ -10,7 +10,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { GroupResult } from "../../../services/group/queries.js";
-import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ describe("GET /systems/:id/groups", () => {
           systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
           parentGroupId: null,
           sortOrder: 0,
-          encryptedData: "dGVzdA==",
+          encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
           createdAt: 1000 as never,
           updatedAt: 1000 as never,

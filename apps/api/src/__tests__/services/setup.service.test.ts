@@ -6,7 +6,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     id: "id",
     accountId: "accountId",
     archived: "archived",
-    encryptedData: "encryptedData",
+    encryptedData: "encryptedData" as EncryptedBase64,
   },
 }));
 
@@ -124,7 +124,7 @@ describe("setup service", () => {
     it("returns all true when setup is fully complete", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
-      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
+      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" as EncryptedBase64 }]);
       chain.limit.mockResolvedValueOnce([{ id: "ss_abc" }]);
       vi.mocked(getRecoveryKeyStatus).mockResolvedValueOnce({
         hasActiveKey: true,
@@ -319,7 +319,7 @@ describe("setup service", () => {
       const { db, chain } = mockDb();
       // Precondition checks: nomenclature, system profile
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
-      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
+      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" as EncryptedBase64 }]);
       // Transaction: insert with onConflictDoNothing
       const onConflictDoNothing = vi.fn().mockReturnValue(chain);
       chain.values.mockReturnValueOnce({ onConflictDoNothing });
@@ -354,7 +354,7 @@ describe("setup service", () => {
     it("throws PRECONDITION_FAILED when nomenclature is missing", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
-      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
+      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" as EncryptedBase64 }]);
 
       await expect(
         setupComplete(db, SYSTEM_ID, VALID_PARAMS, AUTH, mockAudit),
@@ -381,7 +381,7 @@ describe("setup service", () => {
       const { db, chain } = mockDb();
       // Precondition checks
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
-      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
+      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" as EncryptedBase64 }]);
       // Transaction: insert returns empty (conflict)
       const onConflictDoNothing = vi.fn().mockReturnValue(chain);
       chain.values.mockReturnValueOnce({ onConflictDoNothing });
@@ -408,7 +408,7 @@ describe("setup service", () => {
 
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
-      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
+      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" as EncryptedBase64 }]);
 
       await expect(
         setupComplete(db, SYSTEM_ID, VALID_PARAMS, AUTH, mockAudit),

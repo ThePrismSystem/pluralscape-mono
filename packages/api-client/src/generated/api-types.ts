@@ -7275,17 +7275,19 @@ export interface components {
     /**
      * @description A comment attached to a fronting session. Extends EncryptedEntity with the
      *     parent session ID and the authoring subject (member, custom front, or
-     *     structure entity).
+     *     structure entity). The three subject IDs are always present in the
+     *     response payload — exactly one is non-null per the database CHECK
+     *     constraint; the other two are explicitly null.
      */
     FrontingCommentResponse: components["schemas"]["EncryptedEntity"] & {
       /** @description ID of the parent fronting session (fs_ prefix) */
       frontingSessionId: string;
-      /** @description Authoring member ID (mem_ prefix), if set */
-      memberId?: string | null;
-      /** @description Authoring custom front ID (cf_ prefix), if set */
-      customFrontId?: string | null;
-      /** @description Authoring structure entity ID (ste_ prefix), if set */
-      structureEntityId?: string | null;
+      /** @description Authoring member ID (mem_ prefix), null when not the subject */
+      memberId: string | null;
+      /** @description Authoring custom front ID (cf_ prefix), null when not the subject */
+      customFrontId: string | null;
+      /** @description Authoring structure entity ID (ste_ prefix), null when not the subject */
+      structureEntityId: string | null;
     };
     CreateFrontingCommentRequest: {
       /** @description T1-encrypted comment content */

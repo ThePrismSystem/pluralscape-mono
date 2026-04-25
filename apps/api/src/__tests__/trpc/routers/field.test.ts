@@ -5,6 +5,7 @@ import { ApiHttpError } from "../../../lib/api-error.js";
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type {
+  EncryptedBase64,
   BucketId,
   FieldDefinitionId,
   FieldValueId,
@@ -97,7 +98,7 @@ const MOCK_FIELD_DEF_RESULT = {
   fieldType: "text" as const,
   required: false,
   sortOrder: 0,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -114,7 +115,7 @@ const MOCK_FIELD_VALUE_RESULT = {
   structureEntityId: null,
   groupId: null,
   systemId: MOCK_SYSTEM_ID,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,

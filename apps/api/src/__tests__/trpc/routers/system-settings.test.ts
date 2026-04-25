@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
-import type { SystemSettingsId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, SystemSettingsId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -59,7 +59,7 @@ const MOCK_SETTINGS_RESULT = {
   systemId: MOCK_SYSTEM_ID,
   locale: "en",
   biometricEnabled: false,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,
@@ -67,7 +67,7 @@ const MOCK_SETTINGS_RESULT = {
 
 const MOCK_NOMENCLATURE_RESULT = {
   systemId: MOCK_SYSTEM_ID,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,

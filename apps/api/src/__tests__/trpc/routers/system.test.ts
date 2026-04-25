@@ -10,7 +10,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -178,7 +178,7 @@ describe("system router", () => {
       const caller = createCaller();
       const result = await caller.system.update({
         systemId: MOCK_SYSTEM_ID,
-        encryptedData: "dGVzdGRhdGFmb3JzeXN0ZW0=",
+        encryptedData: "dGVzdGRhdGFmb3JzeXN0ZW0=" as EncryptedBase64,
         version: 1,
       });
 
@@ -195,7 +195,7 @@ describe("system router", () => {
       await expect(
         caller.system.update({
           systemId: MOCK_SYSTEM_ID,
-          encryptedData: "dGVzdGRhdGFmb3JzeXN0ZW0=",
+          encryptedData: "dGVzdGRhdGFmb3JzeXN0ZW0=" as EncryptedBase64,
           version: 1,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));

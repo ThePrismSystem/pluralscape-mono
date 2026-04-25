@@ -9,7 +9,12 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, SystemId, SystemSettingsId } from "@pluralscape/types";
+import type {
+  EncryptedBase64,
+  ApiErrorResponse,
+  SystemId,
+  SystemSettingsId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -51,7 +56,7 @@ const MOCK_SETTINGS = {
   systemId: brandId<SystemId>(SYS_ID),
   locale: "en-US",
   biometricEnabled: false,
-  encryptedData: "base64data",
+  encryptedData: "base64data" as EncryptedBase64,
   version: 1,
   createdAt: toUnixMillis(1700000000000),
   updatedAt: toUnixMillis(1700000000000),
@@ -110,7 +115,10 @@ describe("PUT /:id/settings", () => {
     vi.mocked(updateSystemSettings).mockResolvedValueOnce(MOCK_SETTINGS);
 
     const app = createApp();
-    const res = await putJSON(app, `/${SYS_ID}/settings`, { encryptedData: "data", version: 1 });
+    const res = await putJSON(app, `/${SYS_ID}/settings`, {
+      encryptedData: "data" as EncryptedBase64,
+      version: 1,
+    });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: typeof MOCK_SETTINGS };
@@ -136,7 +144,10 @@ describe("PUT /:id/settings", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();
-    const res = await putJSON(app, `/${SYS_ID}/settings`, { encryptedData: "data", version: 1 });
+    const res = await putJSON(app, `/${SYS_ID}/settings`, {
+      encryptedData: "data" as EncryptedBase64,
+      version: 1,
+    });
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;

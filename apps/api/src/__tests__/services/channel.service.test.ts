@@ -6,7 +6,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
-import type { ChannelId, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, ChannelId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     type: "type",
     parentId: "parent_id",
     sortOrder: "sort_order",
-    encryptedData: "encrypted_data",
+    encryptedData: "encrypted_data" as EncryptedBase64,
     version: "version",
     archived: "archived",
     archivedAt: "archived_at",

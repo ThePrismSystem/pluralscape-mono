@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ const CF_URL = `${BASE_URL}/cf_660e8400-e29b-41d4-a716-446655440000`;
 const MOCK_CF = {
   id: "cf_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -80,7 +80,7 @@ describe("POST /systems/:id/custom-fronts", () => {
     const res = await app.request(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ encryptedData: "dGVzdA==" }),
+      body: JSON.stringify({ encryptedData: "dGVzdA==" as EncryptedBase64 }),
     });
 
     expect(res.status).toBe(201);
@@ -176,7 +176,7 @@ describe("PUT /systems/:id/custom-fronts/:customFrontId", () => {
     const res = await app.request(CF_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ encryptedData: "dGVzdA==", version: 1 }),
+      body: JSON.stringify({ encryptedData: "dGVzdA==" as EncryptedBase64, version: 1 }),
     });
 
     expect(res.status).toBe(200);
@@ -194,7 +194,7 @@ describe("PUT /systems/:id/custom-fronts/:customFrontId", () => {
     const res = await app.request(CF_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ encryptedData: "dGVzdA==", version: 1 }),
+      body: JSON.stringify({ encryptedData: "dGVzdA==" as EncryptedBase64, version: 1 }),
     });
 
     expect(res.status).toBe(409);

@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
-const VALID_BODY = { encryptedData: "dGVzdA==" };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ describe("POST /systems/:systemId/members", () => {
     vi.mocked(createMember).mockResolvedValueOnce({
       id: "mem_new" as never,
       systemId: SYS_ID as never,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
       createdAt: 1000 as never,
       updatedAt: 1000 as never,
@@ -76,7 +76,7 @@ describe("POST /systems/:systemId/members", () => {
     vi.mocked(createMember).mockResolvedValueOnce({
       id: "mem_new" as never,
       systemId: SYS_ID as never,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
       createdAt: 1000 as never,
       updatedAt: 1000 as never,

@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { ApiKeyId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, ApiKeyId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -65,7 +65,7 @@ const VALID_CREATE_INPUT = {
   systemId: MOCK_SYSTEM_ID,
   keyType: "metadata" as const,
   scopes: SCOPES,
-  encryptedData: "dGVzdGRhdGFmb3JrZXk=",
+  encryptedData: "dGVzdGRhdGFmb3JrZXk=" as EncryptedBase64,
 };
 
 describe("apiKey router", () => {

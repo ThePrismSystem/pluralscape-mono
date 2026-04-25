@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -88,7 +88,7 @@ const MOCK_COMMENT = {
   memberId: "mem_880e8400-e29b-41d4-a716-446655440000" as never,
   customFrontId: null,
   structureEntityId: null,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -113,7 +113,7 @@ describe("POST .../fronting-sessions/:sessionId/comments", () => {
 
     const app = createApp();
     const res = await postJSON(app, BASE_URL, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       memberId: "mem_880e8400-e29b-41d4-a716-446655440000",
     });
 
@@ -130,7 +130,7 @@ describe("POST .../fronting-sessions/:sessionId/comments", () => {
 
     const app = createApp();
     const res = await postJSON(app, BASE_URL, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       memberId: "mem_880e8400-e29b-41d4-a716-446655440000",
     });
 
@@ -259,7 +259,10 @@ describe("PUT .../comments/:commentId", () => {
     vi.mocked(updateFrontingComment).mockResolvedValueOnce({ ...MOCK_COMMENT, version: 2 });
 
     const app = createApp();
-    const res = await putJSON(app, COMMENT_URL, { encryptedData: "dGVzdA==", version: 1 });
+    const res = await putJSON(app, COMMENT_URL, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      version: 1,
+    });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { version: number } };
@@ -273,7 +276,10 @@ describe("PUT .../comments/:commentId", () => {
     );
 
     const app = createApp();
-    const res = await putJSON(app, COMMENT_URL, { encryptedData: "dGVzdA==", version: 1 });
+    const res = await putJSON(app, COMMENT_URL, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      version: 1,
+    });
 
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;

@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
-const VALID_BODY = { encryptedData: "dGVzdA==", version: 1 };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64, version: 1 };
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ describe("PUT /systems/:id", () => {
   it("returns 200 with updated profile", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
       id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 2,
       createdAt: 1000 as never,
       updatedAt: 2000 as never,
@@ -66,7 +66,7 @@ describe("PUT /systems/:id", () => {
   it("forwards systemId, body, auth, and audit writer to service", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
       id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 2,
       createdAt: 1000 as never,
       updatedAt: 2000 as never,

@@ -5,6 +5,7 @@ import type {
   ActiveFrontingSession,
   Archived,
   CompletedFrontingSession,
+  EncryptedBase64,
   FrontingSession,
   FrontingSessionEncryptedFields,
   OuttriggerSentiment,
@@ -30,7 +31,7 @@ export type FrontingSessionRaw = Omit<
   FrontingSessionEncryptedFields | "archived" | "endTime"
 > & {
   readonly endTime: UnixMillis | null;
-  readonly encryptedData: string;
+  readonly encryptedData: EncryptedBase64;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
 };

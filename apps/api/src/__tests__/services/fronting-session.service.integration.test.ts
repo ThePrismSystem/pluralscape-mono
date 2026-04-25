@@ -50,7 +50,14 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, CustomFrontId, MemberId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  CustomFrontId,
+  MemberId,
+  ServerInternal,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { members, customFronts, frontingSessions, frontingComments } = schema;
@@ -703,7 +710,7 @@ describe("fronting-session.service (PGlite integration)", () => {
         id: genFrontingCommentId(),
         frontingSessionId: created.id,
         systemId,
-        sessionStartTime: toUnixMillis(Number(created.startTime)),
+        sessionStartTime: toUnixMillis(Number(created.startTime)) as ServerInternal<UnixMillis>,
         memberId,
         encryptedData: testBlob(),
         createdAt: now,

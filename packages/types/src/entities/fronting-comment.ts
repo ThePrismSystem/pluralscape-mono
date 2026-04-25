@@ -7,6 +7,7 @@ import type {
   SystemId,
   SystemStructureEntityId,
 } from "../ids.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
@@ -52,8 +53,11 @@ export type FrontingCommentServerMetadata = Omit<
   FrontingComment,
   FrontingCommentEncryptedFields | "archived"
 > & {
-  /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
-  readonly sessionStartTime: UnixMillis;
+  /**
+   * Denormalized from parent fronting session for FK on partitioned table
+   * (ADR 019). Server-internal — stripped from the wire by `EncryptedWire<T>`.
+   */
+  readonly sessionStartTime: ServerInternal<UnixMillis>;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;

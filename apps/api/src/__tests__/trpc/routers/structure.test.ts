@@ -10,6 +10,7 @@ import {
 } from "../test-helpers.js";
 
 import type {
+  EncryptedBase64,
   MemberId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
@@ -139,7 +140,7 @@ const MOCK_ENTITY_TYPE_RESULT = {
   id: ENTITY_TYPE_ID,
   systemId: MOCK_SYSTEM_ID,
   sortOrder: 0,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -152,7 +153,7 @@ const MOCK_ENTITY_RESULT = {
   systemId: MOCK_SYSTEM_ID,
   entityTypeId: ENTITY_TYPE_ID,
   sortOrder: 0,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

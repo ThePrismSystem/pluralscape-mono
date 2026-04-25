@@ -33,6 +33,38 @@ Downstream layers derive-or-assert-equal rather than redefine:
 
 Pluralscape's canonical brand is symbol-keyed: `type Brand<T, B> = T & { readonly [__brand]: B }` where `__brand` is a module-internal `unique symbol` in `packages/types/src/ids.ts`. Literal-keyed forms (`{ readonly __brand: "Name" }`) are drift and must be migrated to `Brand<T, B>`. The `__brand` symbol is module-internal (marked `@internal` in JSDoc) — consumers should not import it. Construction of branded IDs goes through `brandId()` and `assertBrandedTargetId()`.
 
+Sibling module-internal symbols follow the same pattern: `__encBase64` (in `encryption-primitives.ts`) brands wire-form base64 ciphertext, and `__serverInternal` (in `server-internal.ts`) marks server-fill-only fields. Both are `@internal` and exported only so co-located type-level helpers (`UnbrandedEquivalence<T>` and the `Serialize<T>` / `EncryptedWire<T>` strip rules) can structurally match the marker.
+
+### `ServerInternal<T>` convention
+
+`ServerInternal<T>` (defined in `packages/types/src/server-internal.ts`) marks
+fields on `*ServerMetadata` types that are server-fill-only and must not leak
+onto the wire. `EncryptedWire<T>` strips all top-level `ServerInternal<…>`-
+marked fields automatically, and `Serialize<T>` strips those same fields
+recursively at every nesting level so OpenAPI ↔ wire parity assertions remain
+coherent.
+
+Reference case: `FrontingComment.sessionStartTime` is denormalized from the
+parent fronting session for the partition-FK in the partitioned
+`fronting_sessions` table (ADR-019). It is server-internal and must never
+appear in client-visible JSON.
+
+### `EncryptedBase64` brand
+
+`EncryptedBase64` (defined in `packages/types/src/encryption-primitives.ts`)
+is a phantom brand on `string` for ciphertext on the wire. `EncryptedWire<T>`
+threads the brand through `encryptedData` so the type system distinguishes
+wire-form ciphertext from arbitrary strings (e.g. IDs). The brand is
+constructed exclusively at the encoder boundary (`encryptedBlobToBase64` /
+`encryptedBlobToBase64OrNull` in `apps/api/src/lib/encrypted-blob.ts`).
+
+The OpenAPI generator emits raw `string` for `encryptedData` fields. The
+parity bridge is `UnbrandedEquivalence<T>` (in `type-assertions.ts`) plus
+the documented one-way subtype relation `EncryptedBase64 extends string`,
+asserted explicitly in `scripts/openapi-wire-parity.type-test.ts`. This
+preserves the canonical "brands on domain, not wire" model from the core
+ADR while letting the wire envelope keep the brand internally.
+
 ### Optional-vs-`| undefined` semantics
 
 `packages/types` uses `?:` (key may be missing) for optional fields. Zod's `.optional()` infers `T | undefined` (key present, value undefined).

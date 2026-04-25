@@ -5,7 +5,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 vi.mock("@pluralscape/db/pg", () => ({
   innerworldCanvas: {
     systemId: "system_id",
-    encryptedData: "encrypted_data",
+    encryptedData: "encrypted_data" as EncryptedBase64,
     version: "version",
     createdAt: "created_at",
     updatedAt: "updated_at",

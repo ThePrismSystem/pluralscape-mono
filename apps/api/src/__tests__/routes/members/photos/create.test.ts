@@ -9,7 +9,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -39,14 +39,14 @@ const MEM_ID = "mem_550e8400-e29b-41d4-a716-446655440000";
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
-const VALID_BODY = { encryptedData: "dGVzdA==" };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
 
 const PHOTO_RESULT = {
   id: "mp_550e8400-e29b-41d4-a716-446655440000" as never,
   memberId: MEM_ID as never,
   systemId: SYS_ID as never,
   sortOrder: 0,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,

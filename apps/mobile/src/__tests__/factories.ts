@@ -90,6 +90,7 @@ import type {
   LifecycleEventId,
   MemberId,
   MessageId,
+  EncryptedBase64,
   NoteId,
   PollId,
   PollOptionId,
@@ -336,7 +337,7 @@ export function makeRawFrontingSession(
     updatedAt: NOW,
     archived: false,
     archivedAt: null,
-    ...encrypted,
+    encryptedData: encrypted.encryptedData as EncryptedBase64,
     ...overrides,
   };
 }

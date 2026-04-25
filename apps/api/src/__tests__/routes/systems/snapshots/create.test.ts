@@ -8,7 +8,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ const SNAPSHOT_ID = "snap_660e8400-e29b-41d4-a716-446655440000";
 const CREATE_URL = `/systems/${SYS_ID}/snapshots`;
 
 const VALID_BODY = {
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   snapshotTrigger: "manual" as const,
 };
 
@@ -42,7 +42,7 @@ const MOCK_RESULT = {
   id: SNAPSHOT_ID as never,
   systemId: SYS_ID as never,
   snapshotTrigger: "manual" as const,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   createdAt: 1000 as never,
 };
 

@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_RESULT = {
   systemId: brandId<SystemId>(SYS_ID),
-  encryptedData: "base64data",
+  encryptedData: "base64data" as EncryptedBase64,
   version: 1,
   createdAt: toUnixMillis(1700000000000),
   updatedAt: toUnixMillis(1700000000000),
@@ -102,7 +102,7 @@ describe("PUT /:id/nomenclature", () => {
 
     const app = createApp();
     const res = await putJSON(app, `/${SYS_ID}/nomenclature`, {
-      encryptedData: "data",
+      encryptedData: "data" as EncryptedBase64,
       version: 1,
     });
 
@@ -133,7 +133,7 @@ describe("PUT /:id/nomenclature", () => {
 
     const app = createApp();
     const res = await putJSON(app, `/${SYS_ID}/nomenclature`, {
-      encryptedData: "data",
+      encryptedData: "data" as EncryptedBase64,
       version: 1,
     });
 

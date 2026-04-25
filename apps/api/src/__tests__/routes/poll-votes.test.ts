@@ -9,7 +9,7 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, MemberId } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse, MemberId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ const MOCK_VOTE = {
   voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem_test") },
   isVeto: false,
   votedAt: 1000 as never,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,
@@ -75,7 +75,7 @@ const MOCK_VOTE = {
 
 const VALID_UPDATE_BODY = {
   optionId: "opt_550e8400-e29b-41d4-a716-446655440003",
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
 };
 
 const MOCK_RESULTS = {

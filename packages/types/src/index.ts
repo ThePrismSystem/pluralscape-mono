@@ -6,7 +6,7 @@
 export * from "./entities/index.js";
 
 // ── Type-level assertions (SoT parity) ───────────────────────────
-export type { Assert, Equal, Extends, Serialize } from "./type-assertions.js";
+export type { Assert, Equal, Extends, Serialize, UnbrandedEquivalence } from "./type-assertions.js";
 
 // ── SoT manifest ─────────────────────────────────────────────────
 export type { SotEntityManifest } from "./__sot-manifest__.js";
@@ -120,10 +120,14 @@ export type {
   T1EncryptedBlob,
   T2EncryptedBlob,
   EncryptedString,
+  EncryptedBase64,
   ServerSecret,
   DecryptFn,
   EncryptFn,
 } from "./encryption-primitives.js";
+
+// ── Server-internal marker ───────────────────────────────────────
+export type { ServerInternal } from "./server-internal.js";
 
 // ── Response unions ──────────────────────────────────────────────
 export type { ServerResponseData, ClientResponseData } from "./response-unions.js";

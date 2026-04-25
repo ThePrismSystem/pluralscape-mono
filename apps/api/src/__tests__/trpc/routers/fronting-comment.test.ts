@@ -9,7 +9,12 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { FrontingCommentId, FrontingSessionId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBase64,
+  FrontingCommentId,
+  FrontingSessionId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -63,7 +68,7 @@ const MOCK_COMMENT_RESULT = {
   memberId: null,
   customFrontId: null,
   structureEntityId: null,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

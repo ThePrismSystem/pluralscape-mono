@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../helpers/mock-db.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AccountId, FriendConnectionId } from "@pluralscape/types";
+import type { EncryptedBase64, AccountId, FriendConnectionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     accountId: "account_id",
     friendAccountId: "friend_account_id",
     status: "status",
-    encryptedData: "encrypted_data",
+    encryptedData: "encrypted_data" as EncryptedBase64,
     version: "version",
     archived: "archived",
     archivedAt: "archived_at",

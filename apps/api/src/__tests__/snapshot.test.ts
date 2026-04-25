@@ -9,6 +9,7 @@ import { mockOwnershipFailure } from "./helpers/mock-ownership.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext, SessionAuthContext } from "../lib/auth-context.js";
 import type {
+  EncryptedBase64,
   AccountId,
   EncryptedBlob,
   SessionId,
@@ -124,7 +125,7 @@ describe("createSnapshot", () => {
       createSnapshot(
         db,
         SYSTEM_ID,
-        { snapshotTrigger: "manual", encryptedData: "abc" },
+        { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
         stubAuth(),
         stubAudit(),
       ),
@@ -134,7 +135,7 @@ describe("createSnapshot", () => {
   it("creates snapshot and writes audit on success", async () => {
     const { db, chain } = mockDb();
     mockParseAndValidateBlob.mockReturnValue({
-      parsed: { snapshotTrigger: "manual", encryptedData: "abc" },
+      parsed: { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
       blob: FAKE_BLOB,
     });
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
@@ -144,7 +145,7 @@ describe("createSnapshot", () => {
     const result = await createSnapshot(
       db,
       SYSTEM_ID,
-      { snapshotTrigger: "manual", encryptedData: "abc" },
+      { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
       stubAuth(),
       audit,
     );
@@ -160,7 +161,7 @@ describe("createSnapshot", () => {
   it("throws when INSERT returns no rows", async () => {
     const { db, chain } = mockDb();
     mockParseAndValidateBlob.mockReturnValue({
-      parsed: { snapshotTrigger: "manual", encryptedData: "abc" },
+      parsed: { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
       blob: FAKE_BLOB,
     });
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
@@ -170,7 +171,7 @@ describe("createSnapshot", () => {
       createSnapshot(
         db,
         SYSTEM_ID,
-        { snapshotTrigger: "manual", encryptedData: "abc" },
+        { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
         stubAuth(),
         stubAudit(),
       ),

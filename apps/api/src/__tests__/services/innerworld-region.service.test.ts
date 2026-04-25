@@ -6,7 +6,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { InnerWorldRegionId, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, InnerWorldRegionId, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     id: "id",
     systemId: "system_id",
     parentRegionId: "parent_region_id",
-    encryptedData: "encrypted_data",
+    encryptedData: "encrypted_data" as EncryptedBase64,
     version: "version",
     archived: "archived",
     archivedAt: "archived_at",

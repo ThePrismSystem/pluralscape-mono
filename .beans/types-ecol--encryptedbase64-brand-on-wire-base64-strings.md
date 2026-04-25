@@ -1,10 +1,11 @@
 ---
 # types-ecol
 title: EncryptedBase64 brand on wire base64 strings
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-24T22:55:22Z
-updated_at: 2026-04-24T22:55:22Z
+updated_at: 2026-04-25T05:48:22Z
 parent: types-ltel
 ---
 
@@ -35,3 +36,13 @@ Requires a parity-test design call before implementation.
 - `openapi-wire-parity.type-test.ts` passes with `encryptedData: EncryptedBase64` (or branded equivalent).
 - Zero regression in existing 19 `EncryptedWire<T>` consumers.
 - ADR note in `docs/adr/023-zod-type-alignment.md` documenting the parity bridge.
+
+## Summary of Changes
+
+- Introduced EncryptedBase64 brand in @pluralscape/types
+- Threaded EncryptedBase64 through EncryptedWire<T> for encryptedData typing
+- Branded encryptedBlobToBase64 / encryptedBlobToBase64OrNull return types
+- Added UnbrandedEquivalence<T> helper in type-assertions.ts as the OpenAPI parity bridge
+- Updated OpenAPI parity test with EncryptedBase64 brand assertions
+- Added FrontingCommentResponse split-parity assertion (and aligned spec subject-ID required-ness)
+- Updated ADR-023 with EncryptedBase64 convention

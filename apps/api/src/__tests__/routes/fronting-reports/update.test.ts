@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -33,12 +33,12 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const UPDATE_URL = `/systems/${SYS_ID}/fronting-reports/${REPORT_ID}`;
 
-const MOCK_UPDATE_BODY = { encryptedData: "dXBkYXRlZA==", version: 2 };
+const MOCK_UPDATE_BODY = { encryptedData: "dXBkYXRlZA==" as EncryptedBase64, version: 2 };
 
 const MOCK_UPDATE_RESULT = {
   id: "fr_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  encryptedData: "dXBkYXRlZA==",
+  encryptedData: "dXBkYXRlZA==" as EncryptedBase64,
   format: "html" as const,
   generatedAt: 5000 as never,
   version: 2,

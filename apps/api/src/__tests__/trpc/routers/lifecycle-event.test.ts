@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { LifecycleEventId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, LifecycleEventId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -62,7 +62,7 @@ const MOCK_EVENT_RESULT = {
   eventType: "discovery" as const,
   occurredAt: 1_700_000_000_000 as UnixMillis,
   recordedAt: 1_700_000_000_000 as UnixMillis,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   plaintextMetadata: null,
   version: 1,
   archived: false,
