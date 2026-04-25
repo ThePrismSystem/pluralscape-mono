@@ -7,19 +7,22 @@ import {
   UpdateFieldValueBodySchema,
 } from "../custom-fields.js";
 
-import type {
-  CreateFieldDefinitionBody,
-  SetFieldValueBody,
-  UpdateFieldDefinitionBody,
-  UpdateFieldValueBody,
-} from "@pluralscape/types";
+import type { Equal, FieldType } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("CreateFieldDefinitionBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
+  it("infers the documented body shape", () => {
     expectTypeOf<
-      z.infer<typeof CreateFieldDefinitionBodySchema>
-    >().toEqualTypeOf<CreateFieldDefinitionBody>();
+      Equal<
+        z.infer<typeof CreateFieldDefinitionBodySchema>,
+        {
+          fieldType: FieldType;
+          required: boolean;
+          sortOrder: number;
+          encryptedData: string;
+        }
+      >
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -85,10 +88,18 @@ describe("CreateFieldDefinitionBodySchema", () => {
 });
 
 describe("UpdateFieldDefinitionBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
+  it("infers the documented body shape", () => {
     expectTypeOf<
-      z.infer<typeof UpdateFieldDefinitionBodySchema>
-    >().toEqualTypeOf<UpdateFieldDefinitionBody>();
+      Equal<
+        z.infer<typeof UpdateFieldDefinitionBodySchema>,
+        {
+          required?: boolean;
+          sortOrder?: number;
+          encryptedData: string;
+          version: number;
+        }
+      >
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -120,8 +131,10 @@ describe("UpdateFieldDefinitionBodySchema", () => {
 });
 
 describe("SetFieldValueBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
-    expectTypeOf<z.infer<typeof SetFieldValueBodySchema>>().toEqualTypeOf<SetFieldValueBody>();
+  it("infers the documented body shape", () => {
+    expectTypeOf<
+      Equal<z.infer<typeof SetFieldValueBodySchema>, { encryptedData: string }>
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -136,10 +149,10 @@ describe("SetFieldValueBodySchema", () => {
 });
 
 describe("UpdateFieldValueBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
+  it("infers the documented body shape", () => {
     expectTypeOf<
-      z.infer<typeof UpdateFieldValueBodySchema>
-    >().toEqualTypeOf<UpdateFieldValueBody>();
+      Equal<z.infer<typeof UpdateFieldValueBodySchema>, { encryptedData: string; version: number }>
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {

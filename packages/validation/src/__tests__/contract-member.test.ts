@@ -7,7 +7,7 @@ import {
   UpdateMemberBodySchema,
 } from "../member.js";
 
-import type { CreateMemberPhotoBody, Equal } from "@pluralscape/types";
+import type { Equal } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("CreateMemberBodySchema", () => {
@@ -108,8 +108,11 @@ describe("DuplicateMemberBodySchema", () => {
 describe("CreateMemberPhotoBodySchema", () => {
   it("infers the documented body shape", () => {
     expectTypeOf<
-      z.infer<typeof CreateMemberPhotoBodySchema>
-    >().toEqualTypeOf<CreateMemberPhotoBody>();
+      Equal<
+        z.infer<typeof CreateMemberPhotoBodySchema>,
+        { encryptedData: string; sortOrder?: number }
+      >
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input without sortOrder", () => {
