@@ -1,18 +1,25 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { MemberEncryptedInputSchema } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, Member, MemberEncryptedFields, UnixMillis } from "@pluralscape/types";
+import type {
+  Archived,
+  Member,
+  MemberEncryptedInput,
+  MemberId,
+  MemberWire,
+  SystemId,
+} from "@pluralscape/types";
 
-// ── Wire types (derived from domain types) ──────────────────────────
+export type { MemberEncryptedInput };
 
-/** Wire shape returned by `member.get` — derived from the `Member` domain type. */
-export type MemberRaw = Omit<Member, MemberEncryptedFields | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+/**
+ * Wire shape returned by `member.get` and `member.list` — derived from
+ * the canonical types-package alias.
+ */
+export type MemberRaw = MemberWire;
 
 /** Shape returned by `member.list`. */
 export interface MemberPage {
@@ -20,32 +27,27 @@ export interface MemberPage {
   readonly nextCursor: string | null;
 }
 
-/**
- * Shape passed to `encryptMemberInput()` before encryption. Derived from the
- * `Member` domain type by picking the encrypted-field keys — single source
- * of truth lives in `@pluralscape/types`.
- */
-export type MemberEncryptedInput = Pick<Member, MemberEncryptedFields>;
-
 // ── Member transforms ────────────────────────────────────────────────
 
 /**
  * Decrypt a single member wire object to the canonical domain type.
  *
  * Passthrough fields (id, systemId, archived, version, createdAt, updatedAt)
- * are copied directly; all other fields are decrypted from encryptedData and
- * validated by `MemberEncryptedInputSchema`.
+ * are re-branded from the JSON-wire shape (where `Serialize<>` strips brands
+ * and timestamps to plain primitives) back into the canonical branded
+ * domain types; all encrypted fields are decrypted from `encryptedData`
+ * and validated by `MemberEncryptedInputSchema`.
  */
 export function decryptMember(raw: MemberRaw, masterKey: KdfMasterKey): Member | Archived<Member> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = MemberEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
+    id: brandId<MemberId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
     name: validated.name,
     pronouns: validated.pronouns,
     description: validated.description,
@@ -59,7 +61,7 @@ export function decryptMember(raw: MemberRaw, masterKey: KdfMasterKey): Member |
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived member missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
