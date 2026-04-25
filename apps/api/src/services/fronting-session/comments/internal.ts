@@ -5,31 +5,16 @@ import { encryptedBlobToBase64 } from "../../../lib/encrypted-blob.js";
 import type {
   CustomFrontId,
   EncryptedBlob,
+  EncryptedWire,
   FrontingCommentId,
+  FrontingCommentServerMetadata,
   FrontingSessionId,
   MemberId,
   SystemId,
   SystemStructureEntityId,
-  UnixMillis,
 } from "@pluralscape/types";
 
-// Intentionally hand-rolled: FrontingCommentServerMetadata carries a denormalized
-// `sessionStartTime` (ADR 019 FK for partitioned table) that is server-internal
-// and must NOT leak onto the wire. `EncryptedWire<T>` would surface it.
-export interface FrontingCommentResult {
-  readonly id: FrontingCommentId;
-  readonly frontingSessionId: FrontingSessionId;
-  readonly systemId: SystemId;
-  readonly memberId: MemberId | null;
-  readonly customFrontId: CustomFrontId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type FrontingCommentResult = EncryptedWire<FrontingCommentServerMetadata>;
 
 export function toFrontingCommentResult(row: {
   id: string;

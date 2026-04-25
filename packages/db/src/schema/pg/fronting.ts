@@ -20,8 +20,10 @@ import type {
   FrontingCommentId,
   FrontingSessionId,
   MemberId,
+  ServerInternal,
   SystemId,
   SystemStructureEntityId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -121,8 +123,14 @@ export const frontingComments = pgTable(
     systemId: brandedId<SystemId>("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
-    sessionStartTime: pgTimestamp("session_start_time").notNull(),
+    /**
+     * Denormalized from parent fronting session for FK on partitioned table
+     * (ADR 019). Branded `ServerInternal<UnixMillis>` to keep the field
+     * server-only — `EncryptedWire<T>` strips it from the wire envelope.
+     */
+    sessionStartTime: pgTimestamp("session_start_time")
+      .$type<ServerInternal<UnixMillis>>()
+      .notNull(),
     memberId: brandedId<MemberId>("member_id"),
     customFrontId: brandedId<CustomFrontId>("custom_front_id"),
     structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
