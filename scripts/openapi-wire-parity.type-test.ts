@@ -89,6 +89,7 @@ import type {
   MemberEncryptedFields,
   MemberPhoto,
   MemberPhotoEncryptedFields,
+  MemberResult,
   MemberServerMetadata,
   MemberWire,
   NomenclatureEncryptedFields,
@@ -120,7 +121,10 @@ import { expectTypeOf } from "vitest";
 // from the helper-derived form. This bites if someone hand-redefines
 // `MemberWire` to diverge from `Serialize<Member>`.
 
-expectTypeOf<Equal<MemberWire, Serialize<Member>>>().toEqualTypeOf<true>();
+// `MemberWire` is the JSON-form of `MemberResult`. Brands are stripped and
+// `encryptedData` collapses to wire-form base64 string (not the structured
+// EncryptedBlob).
+expectTypeOf<Equal<MemberWire, Serialize<MemberResult>>>().toEqualTypeOf<true>();
 expectTypeOf<Equal<AuditLogEntryWire, Serialize<AuditLogEntry>>>().toEqualTypeOf<true>();
 
 // ── OpenAPI ↔ Wire parity: EncryptedEntity envelope ─────────────────
@@ -177,14 +181,12 @@ expectTypeOf<
 
 type MemberResponseOpenApi = components["schemas"]["MemberResponse"];
 
-expectTypeOf<
-  Equal<
-    Omit<MemberResponseOpenApi, "encryptedData">,
-    Omit<Serialize<MemberServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<MemberResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+// G7 — full equality between the OpenAPI response and the canonical wire
+// type. `MemberWire = Serialize<MemberResult>` collapses the encryptedData
+// blob to the wire-form base64 string and strips brands, so the split
+// parity carve-out (Omit<…, "encryptedData"> + opaque-string check) is
+// no longer needed.
+expectTypeOf<Equal<MemberResponseOpenApi, MemberWire>>().toEqualTypeOf<true>();
 
 // ── OpenAPI ↔ domain parity: FieldDefinitionResponse split parity ──
 
