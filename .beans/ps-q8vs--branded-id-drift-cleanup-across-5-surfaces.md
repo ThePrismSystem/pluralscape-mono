@@ -5,10 +5,10 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-21T14:00:15Z
-updated_at: 2026-04-25T05:03:15Z
+updated_at: 2026-04-25T05:06:06Z
 parent: ps-cd6x
 blocked_by:
-    - types-f62m
+  - types-f62m
 ---
 
 Replace bare string / string | null with branded ID types at the 5 surfaces the 2026-04-20 audit flagged in its recurring "Branded-type drift at API/DB boundaries" pattern. Consumes the <Entity> / <Entity>ServerMetadata pairs published by types-f62m.
@@ -22,7 +22,7 @@ The 2026-04-20 audit SUMMARY enumerated 5 specific drift sites. Each uses a raw 
 - [x] Surface 1 — fixed in cbf22ac2 (api-hgd2, 2026-04-20). cryptoKeyId now ApiKeyId | null.
 - [x] Surface 2 — fixed in 59ef63d5 (types-ltel C9, 2026-04-24). bucketId/channelId now BucketId/ChannelId | null.
 - [ ] Surface 3 — packages/types: BucketContentTag.entityId typed as plain string. Replace with the union of entity-ID brands it can validly hold (MemberId | GroupId | …) or a dedicated TaggedEntityId brand.
-- [ ] Surface 4 — packages/validation: DuplicateSystemBodySchema.snapshotId uses bare string. Replace with the branded SystemSnapshotId.
+- [x] Surface 4 — DuplicateSystemBodySchema.snapshotId now uses brandedIdQueryParam('snap\_'). Redundant brandId calls removed from system-duplicate.service.ts.
 - [ ] Surface 5 — packages/validation: brandedString base helper redefines the branding pattern rather than re-exporting from packages/types/src/ids.ts. Replace with a re-export.
 - [ ] Run pnpm typecheck; fix any downstream callers that receive narrower types
 

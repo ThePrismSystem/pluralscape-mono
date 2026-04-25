@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 
+import { brandedIdQueryParam } from "./branded-id.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
 export const CreateSnapshotBodySchema = z
@@ -11,6 +12,6 @@ export const CreateSnapshotBodySchema = z
 
 export const DuplicateSystemBodySchema = z
   .object({
-    snapshotId: z.string().min(1),
+    snapshotId: brandedIdQueryParam("snap_"),
   })
   .readonly();
