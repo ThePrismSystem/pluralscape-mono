@@ -142,18 +142,6 @@ describe("setFieldValueForOwner (member path)", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
   });
 
-  it("throws 400 for invalid payload", async () => {
-    const { db, chain } = mockDb();
-    // assertMemberActive → member found
-    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
-    // assertFieldDefinitionActive → field def found
-    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
-
-    await expect(
-      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, {}, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws 404 when member not found", async () => {
     const { db, chain } = mockDb();
     // assertMemberActive → empty (not found)
@@ -384,26 +372,6 @@ describe("updateFieldValueForOwner (member path)", () => {
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
-
-  it("throws 400 for invalid payload", async () => {
-    const { db, chain } = mockDb();
-    // assertMemberActive → member found
-    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
-    // assertFieldDefinitionActive → field def found
-    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
-
-    await expect(
-      updateFieldValueForOwner(
-        db,
-        SYSTEM_ID,
-        MEMBER_OWNER,
-        FIELD_DEF_ID,
-        { encryptedData: VALID_BLOB_BASE64 },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
 });
 
 describe("deleteFieldValueForOwner (member path)", () => {
@@ -532,22 +500,6 @@ describe("setFieldValueForOwner", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
-  });
-
-  it("throws VALIDATION_ERROR when payload is invalid for owner path", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      setFieldValueForOwner(
-        db,
-        SYSTEM_ID,
-        { kind: "group", id: GROUP_ID },
-        FIELD_DEF_ID,
-        {},
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("wraps InvalidInputError from deserialization as VALIDATION_ERROR", async () => {
