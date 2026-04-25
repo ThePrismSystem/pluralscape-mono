@@ -59,32 +59,6 @@ export type FieldDefinitionEncryptedInput = Pick<FieldDefinition, FieldDefinitio
 export type ArchivedFieldDefinition = Archived<FieldDefinition>;
 
 /**
- * Request body for creating a field definition.
- *
- * @deprecated Use `z.infer<typeof CreateFieldDefinitionBodySchema>` from
- * `@pluralscape/validation`. Kept until consumers in services / routes /
- * tRPC routers are migrated; tracked by ps-y4tb fleet rollout (Tasks 4.6+).
- */
-export interface CreateFieldDefinitionBody {
-  readonly fieldType: FieldType;
-  readonly required: boolean;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-}
-
-/**
- * Request body for updating a field definition.
- *
- * @deprecated Use `z.infer<typeof UpdateFieldDefinitionBodySchema>`.
- */
-export interface UpdateFieldDefinitionBody {
-  readonly required?: boolean;
-  readonly sortOrder?: number;
-  readonly encryptedData: string;
-  readonly version: number;
-}
-
-/**
  * Server-visible FieldDefinition metadata — raw Drizzle row shape.
  *
  * Derived from `FieldDefinition` by stripping the encrypted field keys
