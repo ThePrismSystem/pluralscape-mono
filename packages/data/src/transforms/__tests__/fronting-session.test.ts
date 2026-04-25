@@ -15,6 +15,7 @@ import { makeBase64Blob } from "./helpers.js";
 import type { FrontingSessionPlaintext } from "../fronting-session.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  EncryptedBase64,
   FrontingSessionId,
   MemberId,
   PaginationCursor,
@@ -111,7 +112,7 @@ describe("decryptFrontingSession", () => {
 
   it("throws on invalid encryptedData", () => {
     const raw = makeRawSession();
-    const bad = { ...raw, encryptedData: "not-valid!!!" };
+    const bad = { ...raw, encryptedData: "not-valid!!!" as EncryptedBase64 };
     expect(() => decryptFrontingSession(bad, masterKey)).toThrow();
   });
 
@@ -188,7 +189,7 @@ describe("encryptFrontingSessionInput", () => {
       outtriggerSentiment: null,
     };
     const { encryptedData } = encryptFrontingSessionInput(fields, masterKey);
-    const rawWithData = { ...makeRawSession(), encryptedData };
+    const rawWithData = { ...makeRawSession(), encryptedData: encryptedData as EncryptedBase64 };
     const result = decryptFrontingSession(rawWithData, masterKey);
 
     expect(result.comment).toBe("round-trip");
@@ -220,7 +221,11 @@ describe("encryptFrontingSessionUpdate", () => {
       outtriggerSentiment: "positive",
     };
     const { encryptedData, version } = encryptFrontingSessionUpdate(fields, 3, masterKey);
-    const rawWithData = { ...makeRawSession(), encryptedData, version };
+    const rawWithData = {
+      ...makeRawSession(),
+      encryptedData: encryptedData as EncryptedBase64,
+      version,
+    };
     const result = decryptFrontingSession(rawWithData, masterKey);
 
     expect(result.comment).toBe("updated comment");
