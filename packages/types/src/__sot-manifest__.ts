@@ -154,6 +154,8 @@ import type {
 import type {
   Member,
   MemberEncryptedFields,
+  MemberEncryptedInput,
+  MemberResult,
   MemberServerMetadata,
   MemberWire,
 } from "./entities/member.js";
@@ -273,9 +275,11 @@ import type {
 export type SotEntityManifest = {
   Member: {
     domain: Member;
-    server: MemberServerMetadata;
-    wire: MemberWire;
     encryptedFields: MemberEncryptedFields;
+    encryptedInput: MemberEncryptedInput;
+    server: MemberServerMetadata;
+    result: MemberResult;
+    wire: MemberWire;
   };
   AuditLogEntry: {
     domain: AuditLogEntry;

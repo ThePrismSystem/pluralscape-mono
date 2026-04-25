@@ -24,6 +24,8 @@ export type Extends<A, B> = A extends B ? true : false;
  * Rules (applied recursively):
  * - `Date`                  → `string`
  * - `Uint8Array`            → `string` (base64-encoded at runtime)
+ * - `EncryptedBase64`       → `string` (wire-form base64 brand stripped; the
+ *   JSON wire can't carry phantom markers, so consumers see a plain string)
  * - `Brand<T, _>`           → `T` (brand stripped, since JSON can't carry phantom types)
  * - `Plaintext<T>`          → `Serialize<T>` (plaintext brand stripped; same rationale)
  * - `Map<K, V>`             → `Record<K extends string ? K : string, Serialize<V>>`
@@ -44,23 +46,25 @@ export type Serialize<T> = T extends Date
   ? string
   : T extends Uint8Array
     ? string
-    : T extends { readonly [__brand]: unknown }
-      ? ExtractPrimitive<T>
-      : T extends { readonly [__plaintext]: true }
+    : T extends { readonly [__encBase64]: unknown }
+      ? string
+      : T extends { readonly [__brand]: unknown }
         ? ExtractPrimitive<T>
-        : T extends Map<infer K, infer V>
-          ? Record<K extends string ? K : string, Serialize<V>>
-          : T extends Set<infer U>
-            ? Serialize<U>[]
-            : T extends ReadonlyArray<infer U>
+        : T extends { readonly [__plaintext]: true }
+          ? ExtractPrimitive<T>
+          : T extends Map<infer K, infer V>
+            ? Record<K extends string ? K : string, Serialize<V>>
+            : T extends Set<infer U>
               ? Serialize<U>[]
-              : T extends object
-                ? {
-                    [K in keyof T as T[K] extends { readonly [__serverInternal]: true }
-                      ? never
-                      : K]: Serialize<T[K]>;
-                  }
-                : T;
+              : T extends ReadonlyArray<infer U>
+                ? Serialize<U>[]
+                : T extends object
+                  ? {
+                      [K in keyof T as T[K] extends { readonly [__serverInternal]: true }
+                        ? never
+                        : K]: Serialize<T[K]>;
+                    }
+                  : T;
 
 /** Extract the primitive type from a branded type (e.g., strip the brand marker). */
 type ExtractPrimitive<T> = T extends string

@@ -43,7 +43,7 @@ import type {
 import type { JournalEntry, JournalEntryServerMetadata } from "../entities/journal-entry.js";
 import type { LifecycleEvent, LifecycleEventServerMetadata } from "../entities/lifecycle-event.js";
 import type { MemberPhoto, MemberPhotoServerMetadata } from "../entities/member-photo.js";
-import type { Member, MemberServerMetadata, MemberWire } from "../entities/member.js";
+import type { Member, MemberResult, MemberServerMetadata, MemberWire } from "../entities/member.js";
 import type { ChatMessage, ChatMessageServerMetadata } from "../entities/message.js";
 import type { Note, NoteServerMetadata } from "../entities/note.js";
 import type { PollVote, PollVoteServerMetadata } from "../entities/poll-vote.js";
@@ -406,8 +406,11 @@ describe("DecryptFn and EncryptFn", () => {
 });
 
 describe("MemberWire", () => {
-  it("equals Serialize<Member>", () => {
-    expectTypeOf<MemberWire>().toEqualTypeOf<Serialize<Member>>();
+  it("equals Serialize<MemberResult>", () => {
+    // MemberWire is the JSON-form of MemberResult (the server-emit shape).
+    // Plaintext fields are bundled inside encryptedData, so the wire shape
+    // does NOT equal Serialize<Member> — it equals Serialize<MemberResult>.
+    expectTypeOf<MemberWire>().toEqualTypeOf<Serialize<MemberResult>>();
   });
 
   it("has `id` as plain string (brand stripped)", () => {
@@ -415,9 +418,14 @@ describe("MemberWire", () => {
   });
 
   it("has audit timestamps serialized to number (UnixMillis → number)", () => {
-    // Domain Member includes audit UnixMillis fields (createdAt, updatedAt);
+    // MemberResult includes audit UnixMillis fields (createdAt, updatedAt);
     // Wire should have them as plain number after Serialize.
     expectTypeOf<MemberWire["createdAt"]>().toEqualTypeOf<number>();
+  });
+
+  it("does NOT expose the plaintext `name` field on the wire (encrypted blob bundles it)", () => {
+    // Compile-time guarantee that plaintext keys never leak onto the wire.
+    expectTypeOf<MemberWire>().not.toHaveProperty("name");
   });
 });
 
