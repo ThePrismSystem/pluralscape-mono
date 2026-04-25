@@ -120,10 +120,14 @@ export type {
   T1EncryptedBlob,
   T2EncryptedBlob,
   EncryptedString,
+  EncryptedBase64,
   ServerSecret,
   DecryptFn,
   EncryptFn,
 } from "./encryption-primitives.js";
+
+// ── Server-internal marker ───────────────────────────────────────
+export type { ServerInternal } from "./server-internal.js";
 
 // ── Response unions ──────────────────────────────────────────────
 export type { ServerResponseData, ClientResponseData } from "./response-unions.js";
