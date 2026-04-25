@@ -60,12 +60,14 @@ describe("EncryptedWire<T>", () => {
 });
 
 describe("Serialize<T> + ServerInternal", () => {
-  it("strips ServerInternal markers from nested fields", () => {
+  it("strips entire fields whose value is ServerInternal<…>", () => {
     interface Sample {
       readonly id: string;
       readonly secret: ServerInternal<string>;
     }
     type Out = Serialize<Sample>;
-    expectTypeOf<Out>().toEqualTypeOf<{ readonly id: string; readonly secret: string }>();
+    type HasSecret = "secret" extends keyof Out ? true : false;
+    expectTypeOf<HasSecret>().toEqualTypeOf<false>();
+    expectTypeOf<Out>().toEqualTypeOf<{ readonly id: string }>();
   });
 });

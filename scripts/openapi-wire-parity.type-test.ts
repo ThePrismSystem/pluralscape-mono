@@ -58,6 +58,7 @@ import type {
   CustomFront,
   CustomFrontEncryptedFields,
   CustomFrontServerMetadata,
+  EncryptedBase64,
   EncryptedBlob,
   EncryptedWire,
   Equal,
@@ -67,6 +68,7 @@ import type {
   FieldValue,
   FieldValueEncryptedFields,
   FieldValueServerMetadata,
+  FrontingCommentServerMetadata,
   FrontingSession,
   FrontingSessionEncryptedFields,
   Group,
@@ -209,6 +211,25 @@ expectTypeOf<
 >().toEqualTypeOf<true>();
 
 expectTypeOf<FieldValueResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+
+// ── OpenAPI ↔ domain parity: FrontingCommentResponse split parity ──
+//
+// `FrontingCommentResult` is now `EncryptedWire<FrontingCommentServerMetadata>`
+// (collapsed in types-u87m). The OpenAPI generator emits raw `string` for
+// `encryptedData`; `Serialize<T>` strips both brand markers and
+// `ServerInternal<…>` markers from the domain side, so the plaintext
+// projections compare equal.
+
+type FrontingCommentResponseOpenApi = components["schemas"]["FrontingCommentResponse"];
+
+expectTypeOf<
+  Equal<
+    Omit<FrontingCommentResponseOpenApi, "encryptedData">,
+    Omit<Serialize<FrontingCommentServerMetadata>, "encryptedData">
+  >
+>().toEqualTypeOf<true>();
+
+expectTypeOf<FrontingCommentResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 // ── OpenAPI ↔ domain parity: GroupResponse (split) ──────────────────
 
@@ -481,12 +502,22 @@ expectTypeOf<CanvasResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 expectTypeOf<
   EncryptedWire<{ readonly encryptedData: EncryptedBlob }>["encryptedData"]
->().toEqualTypeOf<string>();
+>().toEqualTypeOf<EncryptedBase64>();
 
 expectTypeOf<
   EncryptedWire<{ readonly encryptedData: EncryptedBlob | null }>["encryptedData"]
->().toEqualTypeOf<string | null>();
+>().toEqualTypeOf<EncryptedBase64 | null>();
 
-expectTypeOf<EncryptedWire<MemberServerMetadata>["encryptedData"]>().toEqualTypeOf<string>();
+expectTypeOf<
+  EncryptedWire<MemberServerMetadata>["encryptedData"]
+>().toEqualTypeOf<EncryptedBase64>();
 
-expectTypeOf<EncryptedWire<SystemServerMetadata>["encryptedData"]>().toEqualTypeOf<string | null>();
+expectTypeOf<
+  EncryptedWire<SystemServerMetadata>["encryptedData"]
+>().toEqualTypeOf<EncryptedBase64 | null>();
+
+// Brand-to-OpenAPI bridge: `EncryptedBase64` is a subtype of `string`, so
+// the OpenAPI-side `encryptedData: string` assertions remain valid even as
+// `EncryptedWire<T>` brands the field. This explicit subtype assertion
+// documents the bridge for future readers.
+expectTypeOf<EncryptedBase64 extends string ? true : false>().toEqualTypeOf<true>();
