@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { AccountId, BucketId, FriendConnectionId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -30,6 +31,24 @@ export interface FriendConnection extends AuditMetadata {
 export type ArchivedFriendConnection = Archived<FriendConnection>;
 
 /**
+ * Keys of `FriendConnection` that are encrypted client-side before the
+ * server sees them. The `visibility` blob is the only domain field that
+ * lives inside `encryptedData`; `assignedBucketIds` is plaintext but
+ * derived from a junction table, not a column on this entity.
+ */
+export type FriendConnectionEncryptedFields = "visibility";
+
+/**
+ * Pre-encryption shape — what `encryptFriendConnectionInput` accepts.
+ * Single source of truth: derived from `FriendConnection` via `Pick<>`
+ * over the encrypted-keys union.
+ */
+export type FriendConnectionEncryptedInput = Pick<
+  FriendConnection,
+  FriendConnectionEncryptedFields
+>;
+
+/**
  * Server-visible FriendConnection metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the domain carries derived fields (`assignedBucketIds`
@@ -43,7 +62,7 @@ export type ArchivedFriendConnection = Archived<FriendConnection>;
  */
 export type FriendConnectionServerMetadata = Omit<
   FriendConnection,
-  "assignedBucketIds" | "visibility" | "archived"
+  FriendConnectionEncryptedFields | "assignedBucketIds" | "archived"
 > & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -51,11 +70,19 @@ export type FriendConnectionServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of a FriendConnection. Derived from the domain
- * `FriendConnection` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
+ * Server-emit shape — what `toFriendConnectionResult` returns. Branded
+ * IDs and timestamps preserved; `encryptedData` is wire-form
+ * `EncryptedBase64 | null` (nullable because pending connections have
+ * no visibility blob yet).
  */
-export type FriendConnectionWire = Serialize<FriendConnection>;
+export type FriendConnectionResult = EncryptedWire<FriendConnectionServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `FriendConnectionResult`: branded IDs
+ * become plain strings; `EncryptedBase64 | null` becomes `string | null`;
+ * timestamps become numbers.
+ */
+export type FriendConnectionWire = Serialize<FriendConnectionResult>;
 
 /** A junction mapping a friend connection to a privacy bucket. */
 export interface FriendBucketAssignment {
