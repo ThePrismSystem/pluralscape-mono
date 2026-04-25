@@ -7,17 +7,14 @@ import {
   UpdateMemberBodySchema,
 } from "../member.js";
 
-import type {
-  CreateMemberBody,
-  CreateMemberPhotoBody,
-  DuplicateMemberBody,
-  UpdateMemberBody,
-} from "@pluralscape/types";
+import type { CreateMemberPhotoBody, Equal } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("CreateMemberBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
-    expectTypeOf<z.infer<typeof CreateMemberBodySchema>>().toEqualTypeOf<CreateMemberBody>();
+  it("infers the documented body shape", () => {
+    expectTypeOf<
+      Equal<z.infer<typeof CreateMemberBodySchema>, { encryptedData: string }>
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -45,8 +42,10 @@ describe("CreateMemberBodySchema", () => {
 });
 
 describe("UpdateMemberBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
-    expectTypeOf<z.infer<typeof UpdateMemberBodySchema>>().toEqualTypeOf<UpdateMemberBody>();
+  it("infers the documented body shape", () => {
+    expectTypeOf<
+      Equal<z.infer<typeof UpdateMemberBodySchema>, { encryptedData: string; version: number }>
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -66,8 +65,18 @@ describe("UpdateMemberBodySchema", () => {
 });
 
 describe("DuplicateMemberBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
-    expectTypeOf<z.infer<typeof DuplicateMemberBodySchema>>().toEqualTypeOf<DuplicateMemberBody>();
+  it("infers the documented body shape", () => {
+    expectTypeOf<
+      Equal<
+        z.infer<typeof DuplicateMemberBodySchema>,
+        {
+          encryptedData: string;
+          copyPhotos: boolean;
+          copyFields: boolean;
+          copyMemberships: boolean;
+        }
+      >
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input with defaults", () => {
@@ -90,12 +99,14 @@ describe("DuplicateMemberBodySchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.copyPhotos).toBe(true);
+      expect(result.data.copyFields).toBe(true);
+      expect(result.data.copyMemberships).toBe(true);
     }
   });
 });
 
 describe("CreateMemberPhotoBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
+  it("infers the documented body shape", () => {
     expectTypeOf<
       z.infer<typeof CreateMemberPhotoBodySchema>
     >().toEqualTypeOf<CreateMemberPhotoBody>();
