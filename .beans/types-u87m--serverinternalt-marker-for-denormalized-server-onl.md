@@ -1,10 +1,11 @@
 ---
 # types-u87m
 title: ServerInternal<T> marker for denormalized server-only fields
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-24T22:55:29Z
-updated_at: 2026-04-24T22:55:29Z
+updated_at: 2026-04-25T05:48:22Z
 parent: types-ltel
 ---
 
@@ -25,3 +26,14 @@ Some `*ServerMetadata` types include denormalized fields the server fills after 
 
 - Every retained hand-rolled `*Result` either has a non-`ServerInternal` divergence from its `ServerMetadata` source, or is collapsed to `EncryptedWire<…>`.
 - Added field-level audit listing each retained divergence with rationale.
+
+## Summary of Changes
+
+- Introduced ServerInternal<T> marker in @pluralscape/types
+- Modified EncryptedWire<T> to strip top-level ServerInternal-marked fields
+- Extended Serialize<T> to strip ServerInternal-marked fields recursively for parity coherence
+- Marked FrontingComment.sessionStartTime as ServerInternal<UnixMillis>
+- Lifted Drizzle frontingComments.sessionStartTime to the same brand
+- Collapsed FrontingCommentResult to EncryptedWire<FrontingCommentServerMetadata>
+- Added field-level audit (docs/local-audits/2026-04-24-hand-rolled-result-audit.md, gitignored)
+- Updated ADR-023 with ServerInternal convention
