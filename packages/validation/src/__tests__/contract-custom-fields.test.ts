@@ -6,20 +6,27 @@ import {
   UpdateFieldDefinitionBodySchema,
   UpdateFieldValueBodySchema,
 } from "../custom-fields.js";
+import {
+  MAX_ENCRYPTED_FIELD_DATA_SIZE,
+  MAX_ENCRYPTED_FIELD_VALUE_SIZE,
+} from "../validation.constants.js";
 
-import type {
-  CreateFieldDefinitionBody,
-  SetFieldValueBody,
-  UpdateFieldDefinitionBody,
-  UpdateFieldValueBody,
-} from "@pluralscape/types";
+import type { Equal, FieldType } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("CreateFieldDefinitionBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
-      z.infer<typeof CreateFieldDefinitionBodySchema>
-    >().toEqualTypeOf<CreateFieldDefinitionBody>();
+      Equal<
+        z.infer<typeof CreateFieldDefinitionBodySchema>,
+        {
+          fieldType: FieldType;
+          required: boolean;
+          sortOrder: number;
+          encryptedData: string;
+        }
+      >
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -71,6 +78,15 @@ describe("CreateFieldDefinitionBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects encryptedData over MAX_ENCRYPTED_FIELD_DATA_SIZE", () => {
+    const oversized = "a".repeat(MAX_ENCRYPTED_FIELD_DATA_SIZE + 1);
+    const result = CreateFieldDefinitionBodySchema.safeParse({
+      fieldType: "text",
+      encryptedData: oversized,
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("strips unknown properties", () => {
     const result = CreateFieldDefinitionBodySchema.safeParse({
       fieldType: "text",
@@ -85,10 +101,18 @@ describe("CreateFieldDefinitionBodySchema", () => {
 });
 
 describe("UpdateFieldDefinitionBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
-      z.infer<typeof UpdateFieldDefinitionBodySchema>
-    >().toEqualTypeOf<UpdateFieldDefinitionBody>();
+      Equal<
+        z.infer<typeof UpdateFieldDefinitionBodySchema>,
+        {
+          required?: boolean;
+          sortOrder?: number;
+          encryptedData: string;
+          version: number;
+        }
+      >
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -117,11 +141,22 @@ describe("UpdateFieldDefinitionBodySchema", () => {
     const result = UpdateFieldDefinitionBodySchema.safeParse({ encryptedData: "dGVzdA==" });
     expect(result.success).toBe(false);
   });
+
+  it("rejects encryptedData over MAX_ENCRYPTED_FIELD_DATA_SIZE", () => {
+    const oversized = "a".repeat(MAX_ENCRYPTED_FIELD_DATA_SIZE + 1);
+    const result = UpdateFieldDefinitionBodySchema.safeParse({
+      encryptedData: oversized,
+      version: 1,
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("SetFieldValueBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
-    expectTypeOf<z.infer<typeof SetFieldValueBodySchema>>().toEqualTypeOf<SetFieldValueBody>();
+  it("infers the correct body shape", () => {
+    expectTypeOf<
+      Equal<z.infer<typeof SetFieldValueBodySchema>, { encryptedData: string }>
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -133,13 +168,19 @@ describe("SetFieldValueBodySchema", () => {
     const result = SetFieldValueBodySchema.safeParse({ encryptedData: "" });
     expect(result.success).toBe(false);
   });
+
+  it("rejects encryptedData over MAX_ENCRYPTED_FIELD_VALUE_SIZE", () => {
+    const oversized = "a".repeat(MAX_ENCRYPTED_FIELD_VALUE_SIZE + 1);
+    const result = SetFieldValueBodySchema.safeParse({ encryptedData: oversized });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("UpdateFieldValueBodySchema", () => {
-  it("schema infers the correct type (compile-time)", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
-      z.infer<typeof UpdateFieldValueBodySchema>
-    >().toEqualTypeOf<UpdateFieldValueBody>();
+      Equal<z.infer<typeof UpdateFieldValueBodySchema>, { encryptedData: string; version: number }>
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input", () => {
@@ -149,6 +190,15 @@ describe("UpdateFieldValueBodySchema", () => {
 
   it("rejects missing version", () => {
     const result = UpdateFieldValueBodySchema.safeParse({ encryptedData: "dGVzdA==" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects encryptedData over MAX_ENCRYPTED_FIELD_VALUE_SIZE", () => {
+    const oversized = "a".repeat(MAX_ENCRYPTED_FIELD_VALUE_SIZE + 1);
+    const result = UpdateFieldValueBodySchema.safeParse({
+      encryptedData: oversized,
+      version: 1,
+    });
     expect(result.success).toBe(false);
   });
 });

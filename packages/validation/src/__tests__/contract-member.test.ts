@@ -6,12 +6,13 @@ import {
   DuplicateMemberBodySchema,
   UpdateMemberBodySchema,
 } from "../member.js";
+import { MAX_ENCRYPTED_PHOTO_DATA_SIZE } from "../validation.constants.js";
 
-import type { CreateMemberPhotoBody, Equal } from "@pluralscape/types";
+import type { Equal } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("CreateMemberBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<z.infer<typeof CreateMemberBodySchema>, { encryptedData: string }>
     >().toEqualTypeOf<true>();
@@ -42,7 +43,7 @@ describe("CreateMemberBodySchema", () => {
 });
 
 describe("UpdateMemberBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<z.infer<typeof UpdateMemberBodySchema>, { encryptedData: string; version: number }>
     >().toEqualTypeOf<true>();
@@ -65,7 +66,7 @@ describe("UpdateMemberBodySchema", () => {
 });
 
 describe("DuplicateMemberBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
       Equal<
         z.infer<typeof DuplicateMemberBodySchema>,
@@ -106,10 +107,13 @@ describe("DuplicateMemberBodySchema", () => {
 });
 
 describe("CreateMemberPhotoBodySchema", () => {
-  it("infers the documented body shape", () => {
+  it("infers the correct body shape", () => {
     expectTypeOf<
-      z.infer<typeof CreateMemberPhotoBodySchema>
-    >().toEqualTypeOf<CreateMemberPhotoBody>();
+      Equal<
+        z.infer<typeof CreateMemberPhotoBodySchema>,
+        { encryptedData: string; sortOrder?: number }
+      >
+    >().toEqualTypeOf<true>();
   });
 
   it("parses valid input without sortOrder", () => {
@@ -136,6 +140,12 @@ describe("CreateMemberPhotoBodySchema", () => {
       encryptedData: "dGVzdA==",
       sortOrder: -1,
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects encryptedData over MAX_ENCRYPTED_PHOTO_DATA_SIZE", () => {
+    const oversized = "a".repeat(MAX_ENCRYPTED_PHOTO_DATA_SIZE + 1);
+    const result = CreateMemberPhotoBodySchema.safeParse({ encryptedData: oversized });
     expect(result.success).toBe(false);
   });
 });

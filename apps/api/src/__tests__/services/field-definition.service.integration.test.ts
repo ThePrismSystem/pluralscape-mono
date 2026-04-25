@@ -121,7 +121,7 @@ describe("field-definition.service (PGlite integration)", () => {
       const result = await createFieldDefinition(
         asDb(db),
         systemId,
-        { fieldType: "text", encryptedData: validBlobBase64() },
+        { fieldType: "text", required: false, sortOrder: 0, encryptedData: validBlobBase64() },
         auth,
         noopAudit,
       );
@@ -137,7 +137,7 @@ describe("field-definition.service (PGlite integration)", () => {
         createFieldDefinition(
           asDb(db),
           systemId,
-          { fieldType: "text", encryptedData: invalidBlobBase64() },
+          { fieldType: "text", required: false, sortOrder: 0, encryptedData: invalidBlobBase64() },
           auth,
           noopAudit,
         ),

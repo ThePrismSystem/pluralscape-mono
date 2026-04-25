@@ -94,7 +94,7 @@ describe("createFieldDefinition", () => {
     const result = await createFieldDefinition(
       db,
       SYSTEM_ID,
-      { fieldType: "text", encryptedData: VALID_BLOB_BASE64 },
+      { fieldType: "text", required: false, sortOrder: 0, encryptedData: VALID_BLOB_BASE64 },
       AUTH,
       mockAudit,
     );
@@ -109,14 +109,6 @@ describe("createFieldDefinition", () => {
     );
   });
 
-  it("throws validation error for invalid payload", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createFieldDefinition(db, SYSTEM_ID, { fieldType: "invalid-type" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws quota exceeded when at max field definitions", async () => {
     const { db, chain } = mockDb();
     // count query returns max
@@ -126,26 +118,11 @@ describe("createFieldDefinition", () => {
       createFieldDefinition(
         db,
         SYSTEM_ID,
-        { fieldType: "text", encryptedData: VALID_BLOB_BASE64 },
+        { fieldType: "text", required: false, sortOrder: 0, encryptedData: VALID_BLOB_BASE64 },
         AUTH,
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "QUOTA_EXCEEDED" }));
-  });
-
-  it("throws 400 for oversized blob (rejected by schema)", async () => {
-    const { db } = mockDb();
-    const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
-
-    await expect(
-      createFieldDefinition(
-        db,
-        SYSTEM_ID,
-        { fieldType: "text", encryptedData: oversized },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("rejects cross-system access", async () => {
@@ -155,7 +132,7 @@ describe("createFieldDefinition", () => {
       createFieldDefinition(
         db,
         SYSTEM_ID,
-        { fieldType: "text", encryptedData: VALID_BLOB_BASE64 },
+        { fieldType: "text", required: false, sortOrder: 0, encryptedData: VALID_BLOB_BASE64 },
         AUTH,
         mockAudit,
       ),
@@ -305,14 +282,6 @@ describe("updateFieldDefinition", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws validation error for invalid payload", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateFieldDefinition(db, SYSTEM_ID, FIELD_ID, { version: 1 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("updates with optional required and sortOrder fields", async () => {
@@ -634,7 +603,7 @@ describe("field definition cache lifecycle", () => {
     await createFieldDefinition(
       db,
       SYSTEM_ID,
-      { fieldType: "text", encryptedData: VALID_BLOB_BASE64 },
+      { fieldType: "text", required: false, sortOrder: 0, encryptedData: VALID_BLOB_BASE64 },
       AUTH,
       mockAudit,
     );

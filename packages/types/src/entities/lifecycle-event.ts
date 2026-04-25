@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   InnerWorldEntityId,
@@ -89,7 +90,9 @@ export interface StructureEntityFormationEvent extends LifecycleEventBase {
 export interface FormChangeEvent extends LifecycleEventBase {
   readonly eventType: "form-change";
   readonly memberId: MemberId;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly previousForm: string | null;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly newForm: string | null;
 }
 
@@ -97,7 +100,9 @@ export interface FormChangeEvent extends LifecycleEventBase {
 export interface NameChangeEvent extends LifecycleEventBase {
   readonly eventType: "name-change";
   readonly memberId: MemberId;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly previousName: string | null;
+  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
   readonly newName: string;
 }
 
@@ -149,6 +154,16 @@ export type LifecycleEventType = LifecycleEvent["eventType"];
  */
 export type LifecycleEventEncryptedFields = "notes";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// LifecycleEventEncryptedInput → LifecycleEventServerMetadata
+//                             → LifecycleEventResult → LifecycleEventWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+/** Single-key projection over `"notes"` — not truncated. */
+export type LifecycleEventEncryptedInput = Pick<LifecycleEvent, LifecycleEventEncryptedFields>;
+
 /**
  * Server-visible LifecycleEvent metadata — raw Drizzle row shape.
  *
@@ -177,9 +192,6 @@ export type LifecycleEventServerMetadata = {
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * JSON-wire representation of LifecycleEvent. Derived from the domain
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
-export type LifecycleEventWire = Serialize<LifecycleEvent>;
+export type LifecycleEventResult = EncryptedWire<LifecycleEventServerMetadata>;
+
+export type LifecycleEventWire = Serialize<LifecycleEventResult>;

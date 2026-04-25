@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   FieldDefinitionId,
@@ -43,6 +44,15 @@ export interface FieldValue extends AuditMetadata {
  */
 export type FieldValueEncryptedFields = "value";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FieldValueEncryptedInput → FieldValueServerMetadata
+//                         → FieldValueResult → FieldValueWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type FieldValueEncryptedInput = Pick<FieldValue, FieldValueEncryptedFields>;
+
 /**
  * Server-visible FieldValue metadata — raw Drizzle row shape.
  *
@@ -57,20 +67,6 @@ export type FieldValueServerMetadata = Omit<FieldValue, FieldValueEncryptedField
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a FieldValue. Derived from the domain
- * `FieldValue` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
- */
-export type FieldValueWire = Serialize<FieldValue>;
+export type FieldValueResult = EncryptedWire<FieldValueServerMetadata>;
 
-/** Request body for setting a field value. */
-export interface SetFieldValueBody {
-  readonly encryptedData: string;
-}
-
-/** Request body for updating a field value. */
-export interface UpdateFieldValueBody {
-  readonly encryptedData: string;
-  readonly version: number;
-}
+export type FieldValueWire = Serialize<FieldValueResult>;

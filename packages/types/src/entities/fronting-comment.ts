@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   CustomFrontId,
@@ -35,6 +36,15 @@ export interface FrontingComment extends AuditMetadata {
  */
 export type FrontingCommentEncryptedFields = "content";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FrontingCommentEncryptedInput → FrontingCommentServerMetadata
+//                              → FrontingCommentResult → FrontingCommentWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type FrontingCommentEncryptedInput = Pick<FrontingComment, FrontingCommentEncryptedFields>;
+
 /** An archived fronting comment. */
 export type ArchivedFrontingComment = Archived<FrontingComment>;
 
@@ -63,9 +73,6 @@ export type FrontingCommentServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of FrontingComment. Derived from the domain
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
-export type FrontingCommentWire = Serialize<FrontingComment>;
+export type FrontingCommentResult = EncryptedWire<FrontingCommentServerMetadata>;
+
+export type FrontingCommentWire = Serialize<FrontingCommentResult>;

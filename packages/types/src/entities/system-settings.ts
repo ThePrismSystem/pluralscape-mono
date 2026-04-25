@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { Locale } from "../i18n.js";
 import type { BucketId, SystemSettingsId, SystemId } from "../ids.js";
@@ -95,6 +96,15 @@ export type SystemSettingsEncryptedFields =
   | "snapshotSchedule"
   | "onboardingComplete";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// SystemSettingsEncryptedInput → SystemSettingsServerMetadata
+//                             → SystemSettingsResult → SystemSettingsWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type SystemSettingsEncryptedInput = Pick<SystemSettings, SystemSettingsEncryptedFields>;
+
 /**
  * Server-visible SystemSettings metadata — raw Drizzle row shape.
  *
@@ -115,9 +125,6 @@ export type SystemSettingsServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of SystemSettings. Derived from the domain
- * `SystemSettings` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
- */
-export type SystemSettingsWire = Serialize<SystemSettings>;
+export type SystemSettingsResult = EncryptedWire<SystemSettingsServerMetadata>;
+
+export type SystemSettingsWire = Serialize<SystemSettingsResult>;

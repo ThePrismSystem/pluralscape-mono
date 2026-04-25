@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BucketId, FieldDefinitionId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -48,6 +49,15 @@ export interface FieldDefinition extends AuditMetadata {
  */
 export type FieldDefinitionEncryptedFields = "name" | "description" | "options";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FieldDefinitionEncryptedInput → FieldDefinitionServerMetadata
+//                              → FieldDefinitionResult → FieldDefinitionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type FieldDefinitionEncryptedInput = Pick<FieldDefinition, FieldDefinitionEncryptedFields>;
+
 /** An archived field definition. */
 export type ArchivedFieldDefinition = Archived<FieldDefinition>;
 
@@ -69,27 +79,6 @@ export type FieldDefinitionServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a FieldDefinition. Derived from the domain
- * `FieldDefinition` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
- */
-export type FieldDefinitionWire = Serialize<FieldDefinition>;
+export type FieldDefinitionResult = EncryptedWire<FieldDefinitionServerMetadata>;
 
-// ── Request body types ──────────────────────────────────────────
-
-/** Request body for creating a field definition. */
-export interface CreateFieldDefinitionBody {
-  readonly fieldType: FieldType;
-  readonly required: boolean;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-}
-
-/** Request body for updating a field definition. */
-export interface UpdateFieldDefinitionBody {
-  readonly required?: boolean;
-  readonly sortOrder?: number;
-  readonly encryptedData: string;
-  readonly version: number;
-}
+export type FieldDefinitionWire = Serialize<FieldDefinitionResult>;

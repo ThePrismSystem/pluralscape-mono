@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -22,6 +23,18 @@ export interface InnerWorldCanvas {
  */
 export type InnerWorldCanvasEncryptedFields = "viewportX" | "viewportY" | "zoom" | "dimensions";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// InnerWorldCanvasEncryptedInput → InnerWorldCanvasServerMetadata
+//                               → InnerWorldCanvasResult → InnerWorldCanvasWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type InnerWorldCanvasEncryptedInput = Pick<
+  InnerWorldCanvas,
+  InnerWorldCanvasEncryptedFields
+>;
+
 /**
  * Server-visible InnerWorldCanvas metadata — raw Drizzle row shape.
  *
@@ -42,9 +55,6 @@ export type InnerWorldCanvasServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of an InnerWorldCanvas. Derived from the
- * domain `InnerWorldCanvas` type via `Serialize<T>`; branded IDs become
- * plain strings.
- */
-export type InnerWorldCanvasWire = Serialize<InnerWorldCanvas>;
+export type InnerWorldCanvasResult = EncryptedWire<InnerWorldCanvasServerMetadata>;
+
+export type InnerWorldCanvasWire = Serialize<InnerWorldCanvasResult>;

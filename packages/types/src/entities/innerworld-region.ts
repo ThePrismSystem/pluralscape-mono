@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { InnerWorldRegionId, MemberId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -35,6 +36,18 @@ export type InnerWorldRegionEncryptedFields =
   | "accessType"
   | "gatekeeperMemberIds";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// InnerWorldRegionEncryptedInput → InnerWorldRegionServerMetadata
+//                               → InnerWorldRegionResult → InnerWorldRegionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type InnerWorldRegionEncryptedInput = Pick<
+  InnerWorldRegion,
+  InnerWorldRegionEncryptedFields
+>;
+
 /** An archived innerworld region. */
 export type ArchivedInnerWorldRegion = Archived<InnerWorldRegion>;
 
@@ -55,9 +68,6 @@ export type InnerWorldRegionServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of an InnerWorldRegion. Derived from the domain
- * `InnerWorldRegion` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
- */
-export type InnerWorldRegionWire = Serialize<InnerWorldRegion>;
+export type InnerWorldRegionResult = EncryptedWire<InnerWorldRegionServerMetadata>;
+
+export type InnerWorldRegionWire = Serialize<InnerWorldRegionResult>;

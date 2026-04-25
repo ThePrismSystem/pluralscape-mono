@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { GroupId, HexColor, MemberId, SystemId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
@@ -27,6 +28,15 @@ export interface Group extends AuditMetadata {
  * - `GroupServerMetadata` (derived via `Omit`)
  */
 export type GroupEncryptedFields = "name" | "description" | "imageSource" | "color" | "emoji";
+
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// GroupEncryptedInput → GroupServerMetadata
+//                    → GroupResult → GroupWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type GroupEncryptedInput = Pick<Group, GroupEncryptedFields>;
 
 /** An archived group — preserves all data with archive metadata. */
 export type ArchivedGroup = Archived<Group>;
@@ -63,8 +73,6 @@ export type GroupServerMetadata = Omit<Group, GroupEncryptedFields | "archived">
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * JSON-wire representation of a Group. Derived from the domain `Group`
- * type via `Serialize<T>`; branded IDs become plain strings.
- */
-export type GroupWire = Serialize<Group>;
+export type GroupResult = EncryptedWire<GroupServerMetadata>;
+
+export type GroupWire = Serialize<GroupResult>;

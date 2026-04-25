@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BucketId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -25,6 +26,15 @@ export type ArchivedPrivacyBucket = Archived<PrivacyBucket>;
  */
 export type PrivacyBucketEncryptedFields = "name" | "description";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// PrivacyBucketEncryptedInput → PrivacyBucketServerMetadata
+//                            → PrivacyBucketResult → PrivacyBucketWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type PrivacyBucketEncryptedInput = Pick<PrivacyBucket, PrivacyBucketEncryptedFields>;
+
 /**
  * Server-visible PrivacyBucket metadata — raw Drizzle row shape.
  *
@@ -42,12 +52,9 @@ export type PrivacyBucketServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a PrivacyBucket. Derived from the domain
- * `PrivacyBucket` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
- */
-export type PrivacyBucketWire = Serialize<PrivacyBucket>;
+export type PrivacyBucketResult = EncryptedWire<PrivacyBucketServerMetadata>;
+
+export type PrivacyBucketWire = Serialize<PrivacyBucketResult>;
 
 /**
  * Entity types that can be tagged in privacy buckets.

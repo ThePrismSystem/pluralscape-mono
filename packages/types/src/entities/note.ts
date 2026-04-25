@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { AnyBrandedId, HexColor, NoteId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -28,6 +29,32 @@ export interface Note extends AuditMetadata {
 export type ArchivedNote = Archived<Note>;
 
 /**
+ * Keys of `Note` that are encrypted client-side before the server sees them.
+ * The server stores ciphertext in `encryptedData`; the `author` reference is
+ * flattened into plaintext columns (`authorEntityType` + `authorEntityId`) for
+ * indexing by author type.
+ * Consumed by:
+ * - `NoteServerMetadata` (derived via `Omit`)
+ * - `NoteEncryptedInput = Pick<Note, NoteEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextNote parity)
+ *
+ * Unlike `JournalEntry`, `Note`'s `author` is a server-side flattened plaintext column
+ * (split into `authorEntityType` + `authorEntityId`), not part of the encrypted blob.
+ */
+export type NoteEncryptedFields = "title" | "content" | "backgroundColor";
+
+/**
+ * Domain field that is plaintext (not encrypted) but restructured on the
+ * server row into multiple flat columns. `author` is a polymorphic
+ * `EntityReference<...>` on the domain — on the server row it is split
+ * into `authorEntityType` + `authorEntityId` for indexing.
+ *
+ * Distinguished from `NoteEncryptedFields` (which lists keys whose values
+ * ride inside the encryptedData blob).
+ */
+export type NoteRestructuredPlaintextFields = "author";
+
+/**
  * Server-visible Note metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the polymorphic `author` reference is flattened on the DB
@@ -41,7 +68,7 @@ export type ArchivedNote = Archived<Note>;
  */
 export type NoteServerMetadata = Omit<
   Note,
-  "author" | "title" | "content" | "backgroundColor" | "archived"
+  NoteEncryptedFields | NoteRestructuredPlaintextFields | "archived"
 > & {
   readonly authorEntityType: NoteAuthorEntityType | null;
   readonly authorEntityId: AnyBrandedId | null;
@@ -50,9 +77,15 @@ export type NoteServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a Note. Derived from the domain `Note` type
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
-export type NoteWire = Serialize<Note>;
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// NoteEncryptedInput → NoteServerMetadata
+//                   → NoteResult → NoteWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type NoteEncryptedInput = Pick<Note, NoteEncryptedFields>;
+
+export type NoteResult = EncryptedWire<NoteServerMetadata>;
+
+export type NoteWire = Serialize<NoteResult>;

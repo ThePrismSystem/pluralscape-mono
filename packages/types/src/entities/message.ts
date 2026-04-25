@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BlobId, ChannelId, MemberId, MessageId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -23,6 +24,17 @@ export interface ChatMessage extends AuditMetadata {
 export type ArchivedChatMessage = Archived<ChatMessage>;
 
 /**
+ * Keys of `ChatMessage` that are encrypted client-side before the server sees
+ * them. The server stores ciphertext in `encryptedData`; the plaintext columns
+ * are `channelId`, `replyToId`, `timestamp`, and `editedAt`.
+ * Consumed by:
+ * - `ChatMessageServerMetadata` (derived via `Omit`)
+ * - `ChatMessageEncryptedInput = Pick<ChatMessage, ChatMessageEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextChatMessage parity)
+ */
+export type ChatMessageEncryptedFields = "content" | "senderId" | "attachments" | "mentions";
+
+/**
  * Server-visible ChatMessage metadata — raw Drizzle row shape.
  *
  * Hybrid entity: plaintext columns (`channelId`, `replyToId`, `timestamp`,
@@ -33,16 +45,22 @@ export type ArchivedChatMessage = Archived<ChatMessage>;
  */
 export type ChatMessageServerMetadata = Omit<
   ChatMessage,
-  "senderId" | "content" | "attachments" | "mentions" | "archived"
+  ChatMessageEncryptedFields | "archived"
 > & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a ChatMessage. Derived from the domain
- * `ChatMessage` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
- */
-export type ChatMessageWire = Serialize<ChatMessage>;
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// ChatMessageEncryptedInput → ChatMessageServerMetadata
+//                          → ChatMessageResult → ChatMessageWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type ChatMessageEncryptedInput = Pick<ChatMessage, ChatMessageEncryptedFields>;
+
+export type ChatMessageResult = EncryptedWire<ChatMessageServerMetadata>;
+
+export type ChatMessageWire = Serialize<ChatMessageResult>;

@@ -1,9 +1,8 @@
 import { fieldValues } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { SetFieldValueBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
+import { HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { assertFieldDefinitionActive } from "../../lib/member-helpers.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
@@ -21,7 +20,9 @@ import type { FieldValueOwner, FieldValueResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FieldDefinitionId, FieldValueId, SystemId } from "@pluralscape/types";
+import type { SetFieldValueBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 function ownerLabel(owner: FieldValueOwner): string {
   switch (owner.kind) {
@@ -43,18 +44,13 @@ export async function setFieldValueForOwner(
   systemId: SystemId,
   owner: FieldValueOwner,
   fieldDefId: FieldDefinitionId,
-  params: unknown,
+  body: z.infer<typeof SetFieldValueBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldValueResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = SetFieldValueBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid set payload");
-  }
-
-  const blob = parseAndValidateValueBlob(parsed.data.encryptedData);
+  const blob = parseAndValidateValueBlob(body.encryptedData);
   const valueId = brandId<FieldValueId>(createId(ID_PREFIXES.fieldValue));
   const timestamp = now();
 

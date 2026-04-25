@@ -1,9 +1,8 @@
 import { fieldDefinitions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
+import { HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -20,23 +19,20 @@ import type { FieldDefinitionResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
+import type { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createFieldDefinition(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateFieldDefinitionBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = CreateFieldDefinitionBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
-
-  const blob = parseAndValidateFieldBlob(parsed.data.encryptedData);
+  const blob = parseAndValidateFieldBlob(body.encryptedData);
   const fieldId = brandId<FieldDefinitionId>(createId(ID_PREFIXES.fieldDefinition));
   const timestamp = now();
 
@@ -60,9 +56,9 @@ export async function createFieldDefinition(
       .values({
         id: fieldId,
         systemId,
-        fieldType: parsed.data.fieldType,
-        required: parsed.data.required,
-        sortOrder: parsed.data.sortOrder,
+        fieldType: body.fieldType,
+        required: body.required,
+        sortOrder: body.sortOrder,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -76,7 +72,7 @@ export async function createFieldDefinition(
     await audit(tx, {
       eventType: "field-definition.created",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Field definition created (type: ${parsed.data.fieldType})`,
+      detail: `Field definition created (type: ${body.fieldType})`,
       systemId,
     });
 

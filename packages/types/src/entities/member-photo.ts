@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { MemberId, MemberPhotoId, SystemId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
@@ -24,14 +25,17 @@ export interface MemberPhoto {
  */
 export type MemberPhotoEncryptedFields = "imageSource" | "sortOrder" | "caption";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// MemberPhotoEncryptedInput → MemberPhotoServerMetadata
+//                          → MemberPhotoResult → MemberPhotoWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type MemberPhotoEncryptedInput = Pick<MemberPhoto, MemberPhotoEncryptedFields>;
+
 /** An archived member photo — preserves all data with archive metadata. */
 export type ArchivedMemberPhoto = Archived<MemberPhoto>;
-
-/** Request body for creating a member photo. */
-export interface CreateMemberPhotoBody {
-  readonly encryptedData: string;
-  readonly sortOrder?: number;
-}
 
 /**
  * Server-visible MemberPhoto metadata — raw Drizzle row shape.
@@ -54,8 +58,6 @@ export type MemberPhotoServerMetadata = Omit<MemberPhoto, MemberPhotoEncryptedFi
     readonly archivedAt: UnixMillis | null;
   };
 
-/**
- * JSON-wire representation of a MemberPhoto. Derived from the domain
- * `MemberPhoto` type via `Serialize<T>`; branded IDs become plain strings.
- */
-export type MemberPhotoWire = Serialize<MemberPhoto>;
+export type MemberPhotoResult = EncryptedWire<MemberPhotoServerMetadata>;
+
+export type MemberPhotoWire = Serialize<MemberPhotoResult>;

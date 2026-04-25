@@ -40,14 +40,7 @@ export const memberPhotoRouter = router({
     .input(MemberIdSchema.and(CreateMemberPhotoBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return createMemberPhoto(
-        ctx.db,
-        ctx.systemId,
-        input.memberId,
-        { encryptedData: input.encryptedData, sortOrder: input.sortOrder },
-        ctx.auth,
-        audit,
-      );
+      return createMemberPhoto(ctx.db, ctx.systemId, input.memberId, input, ctx.auth, audit);
     }),
 
   get: systemProcedure

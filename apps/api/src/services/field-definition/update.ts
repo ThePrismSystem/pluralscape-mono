@@ -1,10 +1,7 @@
 import { fieldDefinitions } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -20,24 +17,21 @@ import type { FieldDefinitionResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
+import type { UpdateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateFieldDefinition(
   db: PostgresJsDatabase,
   systemId: SystemId,
   fieldId: FieldDefinitionId,
-  params: unknown,
+  body: z.infer<typeof UpdateFieldDefinitionBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = UpdateFieldDefinitionBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
-  }
-
-  const blob = parseAndValidateFieldBlob(parsed.data.encryptedData);
+  const blob = parseAndValidateFieldBlob(body.encryptedData);
   const timestamp = now();
 
   const setClause: Partial<typeof fieldDefinitions.$inferInsert> = {
@@ -45,11 +39,11 @@ export async function updateFieldDefinition(
     updatedAt: timestamp,
   };
 
-  if (parsed.data.required !== undefined) {
-    setClause.required = parsed.data.required;
+  if (body.required !== undefined) {
+    setClause.required = body.required;
   }
-  if (parsed.data.sortOrder !== undefined) {
-    setClause.sortOrder = parsed.data.sortOrder;
+  if (body.sortOrder !== undefined) {
+    setClause.sortOrder = body.sortOrder;
   }
 
   const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -63,7 +57,7 @@ export async function updateFieldDefinition(
         and(
           eq(fieldDefinitions.id, fieldId),
           eq(fieldDefinitions.systemId, systemId),
-          eq(fieldDefinitions.version, parsed.data.version),
+          eq(fieldDefinitions.version, body.version),
           eq(fieldDefinitions.archived, false),
         ),
       )

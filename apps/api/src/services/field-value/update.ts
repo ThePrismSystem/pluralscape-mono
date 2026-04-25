@@ -1,9 +1,8 @@
 import { fieldValues } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateFieldValueBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { assertFieldDefinitionActive } from "../../lib/member-helpers.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
@@ -21,25 +20,22 @@ import type { FieldValueOwner, FieldValueResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
+import type { UpdateFieldValueBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateFieldValueForOwner(
   db: PostgresJsDatabase,
   systemId: SystemId,
   owner: FieldValueOwner,
   fieldDefId: FieldDefinitionId,
-  params: unknown,
+  body: z.infer<typeof UpdateFieldValueBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldValueResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = UpdateFieldValueBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
-  }
-
-  const blob = parseAndValidateValueBlob(parsed.data.encryptedData);
+  const blob = parseAndValidateValueBlob(body.encryptedData);
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -58,7 +54,7 @@ export async function updateFieldValueForOwner(
           eq(fieldValues.fieldDefinitionId, fieldDefId),
           ownerWhereColumn(owner),
           eq(fieldValues.systemId, systemId),
-          eq(fieldValues.version, parsed.data.version),
+          eq(fieldValues.version, body.version),
         ),
       )
       .returning();

@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   HexColor,
@@ -63,6 +64,18 @@ export type SystemStructureEntityEncryptedFields =
   | "imageSource"
   | "emoji";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// SystemStructureEntityEncryptedInput → SystemStructureEntityServerMetadata
+//                                    → SystemStructureEntityResult → SystemStructureEntityWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type SystemStructureEntityEncryptedInput = Pick<
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields
+>;
+
 export type ArchivedSystemStructureEntity = Archived<SystemStructureEntity>;
 
 /**
@@ -83,9 +96,6 @@ export type SystemStructureEntityServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of SystemStructureEntity. Derived from the
- * domain `SystemStructureEntity` type via `Serialize<T>`; branded IDs
- * become plain strings, `UnixMillis` becomes `number`.
- */
-export type SystemStructureEntityWire = Serialize<SystemStructureEntity>;
+export type SystemStructureEntityResult = EncryptedWire<SystemStructureEntityServerMetadata>;
+
+export type SystemStructureEntityWire = Serialize<SystemStructureEntityResult>;

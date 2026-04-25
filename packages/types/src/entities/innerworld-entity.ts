@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   HexColor,
@@ -85,6 +86,22 @@ export type InnerWorldEntityEncryptedFields =
   | "linkedMemberId"
   | "linkedStructureEntityId";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// InnerWorldEntityEncryptedInput → InnerWorldEntityServerMetadata
+//                               → InnerWorldEntityResult → InnerWorldEntityWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+/**
+ * Distributive `Pick`: result is a union of per-variant projections (one `Pick<...>`
+ * per discriminated variant — `MemberEntity`, `LandmarkEntity`, `StructureEntityEntity`),
+ * not a single intersected object type.
+ */
+export type InnerWorldEntityEncryptedInput = InnerWorldEntity extends unknown
+  ? Pick<InnerWorldEntity, InnerWorldEntityEncryptedFields & keyof InnerWorldEntity>
+  : never;
+
 /**
  * Distributes `Omit<T, K>` over a discriminated union so each variant
  * independently drops its own subset of `K`. The naïve `Omit<Union, K>`
@@ -114,10 +131,6 @@ export type InnerWorldEntityServerMetadata = DistributiveOmit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of an InnerWorldEntity. Derived from the
- * domain `InnerWorldEntity` union via `Serialize<T>`; branded IDs become
- * plain strings, `UnixMillis` becomes `number`. The wire form preserves
- * the discriminated-union shape.
- */
-export type InnerWorldEntityWire = Serialize<InnerWorldEntity>;
+export type InnerWorldEntityResult = EncryptedWire<InnerWorldEntityServerMetadata>;
+
+export type InnerWorldEntityWire = Serialize<InnerWorldEntityResult>;

@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { CustomFrontId, HexColor, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -24,6 +25,15 @@ export interface CustomFront extends AuditMetadata {
  */
 export type CustomFrontEncryptedFields = "name" | "description" | "color" | "emoji";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// CustomFrontEncryptedInput → CustomFrontServerMetadata
+//                          → CustomFrontResult → CustomFrontWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type CustomFrontEncryptedInput = Pick<CustomFront, CustomFrontEncryptedFields>;
+
 /** An archived custom front — preserves all data with archive metadata. */
 export type ArchivedCustomFront = Archived<CustomFront>;
 
@@ -45,8 +55,6 @@ export type CustomFrontServerMetadata = Omit<
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * JSON-wire representation of a CustomFront. Derived from the domain
- * `CustomFront` type via `Serialize<T>`; branded IDs become plain strings.
- */
-export type CustomFrontWire = Serialize<CustomFront>;
+export type CustomFrontResult = EncryptedWire<CustomFrontServerMetadata>;
+
+export type CustomFrontWire = Serialize<CustomFrontResult>;

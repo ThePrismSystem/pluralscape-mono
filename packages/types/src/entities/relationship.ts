@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { MemberId, RelationshipId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -41,6 +42,16 @@ export interface Relationship {
  */
 export type RelationshipEncryptedFields = "label";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// RelationshipEncryptedInput → RelationshipServerMetadata
+//                           → RelationshipResult → RelationshipWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+/** Single-key projection over `"label"` — not truncated. */
+export type RelationshipEncryptedInput = Pick<Relationship, RelationshipEncryptedFields>;
+
 export type ArchivedRelationship = Archived<Relationship>;
 
 /**
@@ -65,8 +76,6 @@ export type RelationshipServerMetadata = Omit<
     readonly archivedAt: UnixMillis | null;
   };
 
-/**
- * JSON-wire representation of a Relationship. Derived from the domain
- * `Relationship` type via `Serialize<T>`; branded IDs become plain strings.
- */
-export type RelationshipWire = Serialize<Relationship>;
+export type RelationshipResult = EncryptedWire<RelationshipServerMetadata>;
+
+export type RelationshipWire = Serialize<RelationshipResult>;

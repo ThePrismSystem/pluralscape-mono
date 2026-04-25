@@ -40,7 +40,7 @@ const FLD_DEF_ID = "fld_550e8400-e29b-41d4-a716-446655440000";
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
-const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64, version: 1 };
 
 const FIELD_VALUE_RESULT = {
   id: "fv_550e8400-e29b-41d4-a716-446655440000" as never,
@@ -110,6 +110,16 @@ describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 with issues details when schema validation fails", async () => {
+    const app = createApp();
+    const res = await putJSON(app, FIELD_PATH, { encryptedData: "x" });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(Array.isArray(body.error.details)).toBe(true);
   });
 
   it("returns 404 when field value not found", async () => {

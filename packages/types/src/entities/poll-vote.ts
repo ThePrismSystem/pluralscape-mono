@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { PollId, PollOptionId, PollVoteId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -20,6 +21,31 @@ export interface PollVote {
 export type ArchivedPollVote = Archived<PollVote>;
 
 /**
+ * Keys of `PollVote` that are encrypted client-side before the server sees
+ * them. The server stores ciphertext in `encryptedData`; the `voter` reference
+ * is stored as jsonb in the clear for efficient queries.
+ * Consumed by:
+ * - `PollVoteServerMetadata` (derived via `Omit`)
+ * - `PollVoteEncryptedInput = Pick<PollVote, PollVoteEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextPollVote parity)
+ */
+export type PollVoteEncryptedFields = "comment";
+
+/**
+ * Domain field that is plaintext on the server row but stored with a
+ * different shape than the domain implies. `voter` is a non-nullable
+ * `EntityReference<"member" | "structure-entity">` on the domain (every
+ * poll vote has a voter); on the server row the column is nullable in
+ * Drizzle's inferred type because a DB-level CHECK constraint enforces
+ * non-null without surfacing it through the column type. Same shape, just
+ * nullability flip (cf. `AcknowledgementRequestRestructuredPlaintextFields`).
+ *
+ * Distinguished from `PollVoteEncryptedFields` (which lists keys whose
+ * values ride inside the encryptedData blob).
+ */
+export type PollVoteRestructuredPlaintextFields = "voter";
+
+/**
  * Server-visible PollVote metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the polymorphic `voter` reference is stored as jsonb on the
@@ -32,7 +58,10 @@ export type ArchivedPollVote = Archived<PollVote>;
  * owning `systemId` FK (denormalized for partition-safe cascades) and the
  * full `AuditMetadata` triple, neither of which appears on the domain.
  */
-export type PollVoteServerMetadata = Omit<PollVote, "comment" | "voter" | "archived"> & {
+export type PollVoteServerMetadata = Omit<
+  PollVote,
+  PollVoteEncryptedFields | PollVoteRestructuredPlaintextFields | "archived"
+> & {
   readonly systemId: SystemId;
   readonly voter: EntityReference<"member" | "structure-entity"> | null;
   readonly createdAt: UnixMillis;
@@ -43,9 +72,15 @@ export type PollVoteServerMetadata = Omit<PollVote, "comment" | "voter" | "archi
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a PollVote. Derived from the domain
- * `PollVote` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
- */
-export type PollVoteWire = Serialize<PollVote>;
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// PollVoteEncryptedInput → PollVoteServerMetadata
+//                       → PollVoteResult → PollVoteWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type PollVoteEncryptedInput = Pick<PollVote, PollVoteEncryptedFields>;
+
+export type PollVoteResult = EncryptedWire<PollVoteServerMetadata>;
+
+export type PollVoteWire = Serialize<PollVoteResult>;

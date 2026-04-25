@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   BlobId,
@@ -159,6 +160,24 @@ export interface JournalEntry extends AuditMetadata {
 export type ArchivedJournalEntry = Archived<JournalEntry>;
 
 /**
+ * Keys of `JournalEntry` that are encrypted client-side before the server
+ * sees them. The server stores ciphertext in `encryptedData`; the only
+ * plaintext column (besides the audit triple and `systemId`/`id`) is
+ * `frontingSessionId`, kept in the clear as a FK for efficient joins.
+ * Consumed by:
+ * - `JournalEntryServerMetadata` (derived via `Omit`)
+ * - `JournalEntryEncryptedInput = Pick<JournalEntry, JournalEntryEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextJournalEntry parity)
+ */
+export type JournalEntryEncryptedFields =
+  | "title"
+  | "author"
+  | "blocks"
+  | "tags"
+  | "linkedEntities"
+  | "frontingSnapshots";
+
+/**
  * Server-visible JournalEntry metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the only plaintext column (besides the audit triple and
@@ -171,16 +190,22 @@ export type ArchivedJournalEntry = Archived<JournalEntry>;
  */
 export type JournalEntryServerMetadata = Omit<
   JournalEntry,
-  "author" | "title" | "blocks" | "tags" | "linkedEntities" | "frontingSnapshots" | "archived"
+  JournalEntryEncryptedFields | "archived"
 > & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a JournalEntry. Derived from the domain
- * `JournalEntry` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
- */
-export type JournalEntryWire = Serialize<JournalEntry>;
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// JournalEntryEncryptedInput → JournalEntryServerMetadata
+//                           → JournalEntryResult → JournalEntryWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type JournalEntryEncryptedInput = Pick<JournalEntry, JournalEntryEncryptedFields>;
+
+export type JournalEntryResult = EncryptedWire<JournalEntryServerMetadata>;
+
+export type JournalEntryWire = Serialize<JournalEntryResult>;

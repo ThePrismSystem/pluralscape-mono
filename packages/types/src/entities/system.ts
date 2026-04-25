@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { AccountId, SystemId, SystemSettingsId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
@@ -24,6 +25,15 @@ export interface System extends AuditMetadata {
  */
 export type SystemEncryptedFields = "name" | "displayName" | "description" | "avatarSource";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// SystemEncryptedInput → SystemServerMetadata
+//                     → SystemResult → SystemWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type SystemEncryptedInput = Pick<System, SystemEncryptedFields>;
+
 /** @future Multi-system switcher list item — not yet implemented. */
 export interface SystemListItem {
   readonly id: SystemId;
@@ -49,9 +59,6 @@ export type SystemServerMetadata = Omit<System, SystemEncryptedFields | "setting
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * JSON-wire representation of a System. Derived from the domain `System`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
-export type SystemWire = Serialize<System>;
+export type SystemResult = EncryptedWire<SystemServerMetadata>;
+
+export type SystemWire = Serialize<SystemResult>;

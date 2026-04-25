@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { SlugHash, SystemId, WikiPageId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -22,28 +23,47 @@ export interface WikiPage extends AuditMetadata {
 export type ArchivedWikiPage = Archived<WikiPage>;
 
 /**
+ * Keys of `WikiPage` that are encrypted client-side. Defined by exclusion
+ * (every domain field except `id`, `systemId`, `archived`, and the audit
+ * triple) so that adding a new field to `WikiPage` cannot silently escape
+ * encryption — the `Exclude` reflects the policy "encrypt by default".
+ *
+ * Consumed by:
+ * - `WikiPageServerMetadata` (derived via `Omit`)
+ * - `WikiPageEncryptedInput = Pick<WikiPage, WikiPageEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextWikiPage parity)
+ */
+export type WikiPageEncryptedFields = Exclude<
+  keyof WikiPage,
+  "id" | "systemId" | "archived" | keyof AuditMetadata
+>;
+
+/**
  * Server-visible WikiPage metadata — raw Drizzle row shape.
  *
  * Hybrid entity: every domain field except `systemId`, `id`, and the audit
  * triple is bundled inside the opaque `encryptedData` blob. The server row
  * substitutes a plaintext `slugHash` (SHA-256 of the decrypted slug) so
  * uniqueness on `(systemId, slug)` can be enforced without the server ever
- * reading the slug itself. `archived: false` on the domain flips to a
- * mutable boolean here, with a companion `archivedAt` timestamp.
+ * reading the slug itself. `archived: false` on the domain flips to a mutable
+ * boolean here, with a companion `archivedAt` timestamp.
  */
-export type WikiPageServerMetadata = Omit<
-  WikiPage,
-  "title" | "slug" | "blocks" | "linkedFromPages" | "tags" | "linkedEntities" | "archived"
-> & {
+export type WikiPageServerMetadata = Omit<WikiPage, WikiPageEncryptedFields | "archived"> & {
   readonly slugHash: SlugHash;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a WikiPage. Derived from the domain
- * `WikiPage` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
- */
-export type WikiPageWire = Serialize<WikiPage>;
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// WikiPageEncryptedInput → WikiPageServerMetadata
+//                       → WikiPageResult → WikiPageWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type WikiPageEncryptedInput = Pick<WikiPage, WikiPageEncryptedFields>;
+
+export type WikiPageResult = EncryptedWire<WikiPageServerMetadata>;
+
+export type WikiPageWire = Serialize<WikiPageResult>;

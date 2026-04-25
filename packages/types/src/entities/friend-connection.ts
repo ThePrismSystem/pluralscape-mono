@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { AccountId, BucketId, FriendConnectionId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -30,20 +31,49 @@ export interface FriendConnection extends AuditMetadata {
 export type ArchivedFriendConnection = Archived<FriendConnection>;
 
 /**
+ * Keys of `FriendConnection` that are encrypted client-side before the
+ * server sees them. The `visibility` blob is the only domain field that
+ * lives inside `encryptedData`; `assignedBucketIds` is plaintext but
+ * derived from a junction table, not a column on this entity.
+ */
+export type FriendConnectionEncryptedFields = "visibility";
+
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FriendConnectionEncryptedInput → FriendConnectionServerMetadata
+//                               → FriendConnectionResult → FriendConnectionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type FriendConnectionEncryptedInput = Pick<
+  FriendConnection,
+  FriendConnectionEncryptedFields
+>;
+
+/**
+ * Domain field absent from the server row for STRUCTURAL reasons (the
+ * value lives in a junction table — `friend_bucket_assignments`), not
+ * because it is encrypted. Distinguished from
+ * `FriendConnectionEncryptedFields` (encrypted blob) and `archived`
+ * (literal-to-boolean flip).
+ */
+export type FriendConnectionAuxOmitFields = "assignedBucketIds";
+
+/**
  * Server-visible FriendConnection metadata — raw Drizzle row shape.
  *
- * Hybrid entity: the domain carries derived fields (`assignedBucketIds`
- * comes from the `friend_bucket_assignments` junction table, `visibility`
- * comes from the decrypted `encryptedData` T1 blob) that do not exist as
- * columns on `friend_connections`. The server row strips those derived
- * keys and replaces them with the nullable `encryptedData` column — nullable
- * because a connection can exist in `pending` status before the grantor
- * writes a visibility blob. `archived` relaxes to the raw boolean column
- * plus its `archivedAt` companion.
+ * The Omit clause names three orthogonal reasons a domain key is absent
+ * from the server row:
+ *   1. `FriendConnectionEncryptedFields` — value lives in `encryptedData`
+ *   2. `FriendConnectionAuxOmitFields` — value lives in a junction table
+ *   3. `"archived"` — domain literal `false` flips to mutable boolean below
+ *
+ * Adds the nullable `encryptedData` column (nullable because pending
+ * connections have no visibility blob yet) and `archivedAt`.
  */
 export type FriendConnectionServerMetadata = Omit<
   FriendConnection,
-  "assignedBucketIds" | "visibility" | "archived"
+  FriendConnectionEncryptedFields | FriendConnectionAuxOmitFields | "archived"
 > & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -51,11 +81,12 @@ export type FriendConnectionServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of a FriendConnection. Derived from the domain
- * `FriendConnection` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
+ * `encryptedData` is `EncryptedBase64 | null` (nullable because pending
+ * connections have no visibility blob yet).
  */
-export type FriendConnectionWire = Serialize<FriendConnection>;
+export type FriendConnectionResult = EncryptedWire<FriendConnectionServerMetadata>;
+
+export type FriendConnectionWire = Serialize<FriendConnectionResult>;
 
 /** A junction mapping a friend connection to a privacy bucket. */
 export interface FriendBucketAssignment {

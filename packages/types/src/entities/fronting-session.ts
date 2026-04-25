@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   CustomFrontId,
@@ -62,6 +63,15 @@ export type FrontingSessionEncryptedFields =
   | "outtrigger"
   | "outtriggerSentiment";
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FrontingSessionEncryptedInput → FrontingSessionServerMetadata
+//                              → FrontingSessionResult → FrontingSessionWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type FrontingSessionEncryptedInput = Pick<FrontingSession, FrontingSessionEncryptedFields>;
+
 /** An archived fronting session. */
 export type ArchivedFrontingSession = Archived<FrontingSession>;
 
@@ -95,9 +105,6 @@ export type FrontingSessionServerMetadata = Omit<
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of FrontingSession. Derived from the domain
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
-export type FrontingSessionWire = Serialize<FrontingSession>;
+export type FrontingSessionResult = EncryptedWire<FrontingSessionServerMetadata>;
+
+export type FrontingSessionWire = Serialize<FrontingSessionResult>;

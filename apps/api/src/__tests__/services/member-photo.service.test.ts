@@ -157,28 +157,6 @@ describe("createMemberPhoto", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "QUOTA_EXCEEDED" }));
   });
 
-  it("throws VALIDATION_ERROR for invalid body", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
-    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
-
-    await expect(createMemberPhoto(db, SYSTEM_ID, MEMBER_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
-  });
-
-  it("throws 400 for oversized blob (rejected by schema validation)", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
-    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
-
-    const oversized = Buffer.from(new Uint8Array(140_000)).toString("base64");
-
-    await expect(
-      createMemberPhoto(db, SYSTEM_ID, MEMBER_ID, { encryptedData: oversized }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws NOT_FOUND when member does not exist", async () => {
     const { db, chain } = mockDb();
     // assertMemberActive returns empty → member not found

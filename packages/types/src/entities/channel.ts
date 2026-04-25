@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { ChannelId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -20,6 +21,17 @@ export interface Channel extends AuditMetadata {
 export type ArchivedChannel = Archived<Channel>;
 
 /**
+ * Keys of `Channel` that are encrypted client-side before the server sees
+ * them. The server stores ciphertext in `encryptedData`; the plaintext
+ * columns are `type`, `parentId`, and `sortOrder`.
+ * Consumed by:
+ * - `ChannelServerMetadata` (derived via `Omit`)
+ * - `ChannelEncryptedInput = Pick<Channel, ChannelEncryptedFields>`
+ * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextChannel parity)
+ */
+export type ChannelEncryptedFields = "name";
+
+/**
  * Server-visible Channel metadata — raw Drizzle row shape.
  *
  * Hybrid entity: plaintext columns (`type`, `parentId`, `sortOrder`) alongside
@@ -28,15 +40,21 @@ export type ArchivedChannel = Archived<Channel>;
  * names. `archived: false` on the domain flips to a mutable boolean here, with
  * a companion `archivedAt` timestamp.
  */
-export type ChannelServerMetadata = Omit<Channel, "name" | "archived"> & {
+export type ChannelServerMetadata = Omit<Channel, ChannelEncryptedFields | "archived"> & {
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 };
 
-/**
- * JSON-wire representation of a Channel. Derived from the domain `Channel`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
-export type ChannelWire = Serialize<Channel>;
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// ChannelEncryptedInput → ChannelServerMetadata
+//                      → ChannelResult → ChannelWire
+// Per-alias JSDoc is intentionally minimal; the alias name plus the
+// chain anchor above carries the meaning. Per-alias docs only appear
+// when an entity diverges from the standard pattern.
+
+export type ChannelEncryptedInput = Pick<Channel, ChannelEncryptedFields>;
+
+export type ChannelResult = EncryptedWire<ChannelServerMetadata>;
+
+export type ChannelWire = Serialize<ChannelResult>;
