@@ -32,6 +32,17 @@ export type ArchivedPollVote = Archived<PollVote>;
 export type PollVoteEncryptedFields = "comment";
 
 /**
+ * Domain field that is plaintext (not encrypted) but restructured on the
+ * server row into multiple flat columns. `voter` is a polymorphic
+ * `EntityReference<...>` on the domain — on the server row it is split
+ * into `voterEntityType` + `voterEntityId`.
+ *
+ * Distinguished from `PollVoteEncryptedFields` (which lists keys whose
+ * values ride inside the encryptedData blob).
+ */
+export type PollVoteRestructuredPlaintextFields = "voter";
+
+/**
  * Server-visible PollVote metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the polymorphic `voter` reference is stored as jsonb on the
@@ -46,7 +57,7 @@ export type PollVoteEncryptedFields = "comment";
  */
 export type PollVoteServerMetadata = Omit<
   PollVote,
-  PollVoteEncryptedFields | "voter" | "archived"
+  PollVoteEncryptedFields | PollVoteRestructuredPlaintextFields | "archived"
 > & {
   readonly systemId: SystemId;
   readonly voter: EntityReference<"member" | "structure-entity"> | null;

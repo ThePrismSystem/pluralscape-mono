@@ -44,6 +44,17 @@ export type ArchivedNote = Archived<Note>;
 export type NoteEncryptedFields = "title" | "content" | "backgroundColor";
 
 /**
+ * Domain field that is plaintext (not encrypted) but restructured on the
+ * server row into multiple flat columns. `author` is a polymorphic
+ * `EntityReference<...>` on the domain — on the server row it is split
+ * into `authorEntityType` + `authorEntityId` for indexing.
+ *
+ * Distinguished from `NoteEncryptedFields` (which lists keys whose values
+ * ride inside the encryptedData blob).
+ */
+export type NoteRestructuredPlaintextFields = "author";
+
+/**
  * Server-visible Note metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the polymorphic `author` reference is flattened on the DB
@@ -55,7 +66,10 @@ export type NoteEncryptedFields = "title" | "content" | "backgroundColor";
  * carries `string` at the type level. `archived: false` on the domain flips
  * to a mutable boolean here, with a companion `archivedAt` timestamp.
  */
-export type NoteServerMetadata = Omit<Note, NoteEncryptedFields | "author" | "archived"> & {
+export type NoteServerMetadata = Omit<
+  Note,
+  NoteEncryptedFields | NoteRestructuredPlaintextFields | "archived"
+> & {
   readonly authorEntityType: NoteAuthorEntityType | null;
   readonly authorEntityId: AnyBrandedId | null;
   readonly archived: boolean;

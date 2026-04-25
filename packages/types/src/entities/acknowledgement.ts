@@ -33,6 +33,18 @@ export type ArchivedAcknowledgementRequest = Archived<AcknowledgementRequest>;
 export type AcknowledgementRequestEncryptedFields = "message" | "targetMemberId" | "confirmedAt";
 
 /**
+ * Domain field that is plaintext on the server row but stored with a
+ * different shape than the domain implies. `createdByMemberId` is a
+ * non-nullable `MemberId` on the domain (every acknowledgement has a
+ * creator); on the server row it is nullable to support imported
+ * acknowledgements where the creator member is not yet known.
+ *
+ * Distinguished from `AcknowledgementRequestEncryptedFields` (which lists
+ * keys whose values ride inside the encryptedData blob).
+ */
+export type AcknowledgementRequestRestructuredPlaintextFields = "createdByMemberId";
+
+/**
  * Server-visible AcknowledgementRequest metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the `message`, `targetMemberId`, and `confirmedAt` fields
@@ -46,7 +58,9 @@ export type AcknowledgementRequestEncryptedFields = "message" | "targetMemberId"
  */
 export type AcknowledgementRequestServerMetadata = Omit<
   AcknowledgementRequest,
-  AcknowledgementRequestEncryptedFields | "createdByMemberId" | "archived"
+  | AcknowledgementRequestEncryptedFields
+  | AcknowledgementRequestRestructuredPlaintextFields
+  | "archived"
 > & {
   readonly createdByMemberId: MemberId | null;
   readonly archived: boolean;
