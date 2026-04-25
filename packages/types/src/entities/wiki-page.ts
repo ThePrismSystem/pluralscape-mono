@@ -23,23 +23,20 @@ export interface WikiPage extends AuditMetadata {
 export type ArchivedWikiPage = Archived<WikiPage>;
 
 /**
- * Keys of `WikiPage` that are encrypted client-side before the server sees
- * them. Every domain field except `systemId`, `id`, and the audit triple is
- * bundled inside the opaque `encryptedData` blob. The server row substitutes a
- * plaintext `slugHash` (SHA-256 of the decrypted slug) so uniqueness on
- * `(systemId, slug)` can be enforced without the server ever reading the slug.
+ * Keys of `WikiPage` that are encrypted client-side. Defined by exclusion
+ * (every domain field except `id`, `systemId`, `archived`, and the audit
+ * triple) so that adding a new field to `WikiPage` cannot silently escape
+ * encryption — the `Exclude` reflects the policy "encrypt by default".
+ *
  * Consumed by:
  * - `WikiPageServerMetadata` (derived via `Omit`)
  * - `WikiPageEncryptedInput = Pick<WikiPage, WikiPageEncryptedFields>`
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextWikiPage parity)
  */
-export type WikiPageEncryptedFields =
-  | "title"
-  | "slug"
-  | "blocks"
-  | "linkedFromPages"
-  | "tags"
-  | "linkedEntities";
+export type WikiPageEncryptedFields = Exclude<
+  keyof WikiPage,
+  "id" | "systemId" | "archived" | keyof AuditMetadata
+>;
 
 /**
  * Server-visible WikiPage metadata — raw Drizzle row shape.
