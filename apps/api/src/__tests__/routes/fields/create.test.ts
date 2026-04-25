@@ -113,6 +113,16 @@ describe("POST /systems/:systemId/fields", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("returns 400 with issues details when schema validation fails", async () => {
+    const app = createApp();
+    const res = await postJSON(app, `/systems/${SYS_ID}/fields`, { fieldType: "bogus" });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(Array.isArray(body.error.details)).toBe(true);
+  });
+
   it("returns 404 when system not found", async () => {
     const { ApiHttpError } = await import("../../../lib/api-error.js");
     vi.mocked(createFieldDefinition).mockRejectedValueOnce(

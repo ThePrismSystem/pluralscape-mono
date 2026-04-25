@@ -110,6 +110,16 @@ describe("POST /systems/:systemId/members/:memberId/photos", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("returns 400 with issues details when schema validation fails", async () => {
+    const app = createApp();
+    const res = await postJSON(app, PHOTOS_PATH, { wrong: "shape" });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(Array.isArray(body.error.details)).toBe(true);
+  });
+
   it("returns 404 when member not found", async () => {
     const { ApiHttpError } = await import("../../../../lib/api-error.js");
     vi.mocked(createMemberPhoto).mockRejectedValueOnce(

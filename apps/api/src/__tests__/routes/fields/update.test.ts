@@ -109,6 +109,16 @@ describe("PUT /systems/:systemId/fields/:fieldId", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("returns 400 with issues details when schema validation fails", async () => {
+    const app = createApp();
+    const res = await putJSON(app, `/systems/${SYS_ID}/fields/${FLD_ID}`, { encryptedData: "x" });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(Array.isArray(body.error.details)).toBe(true);
+  });
+
   it("returns 409 on conflict", async () => {
     const { ApiHttpError } = await import("../../../lib/api-error.js");
     vi.mocked(updateFieldDefinition).mockRejectedValueOnce(
