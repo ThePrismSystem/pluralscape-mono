@@ -40,7 +40,7 @@ const FLD_DEF_ID = "fld_550e8400-e29b-41d4-a716-446655440000";
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
-const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64, version: 1 };
 
 const FIELD_VALUE_RESULT = {
   id: "fv_550e8400-e29b-41d4-a716-446655440000" as never,
