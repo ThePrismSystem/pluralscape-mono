@@ -133,14 +133,6 @@ describe("member.service (PGlite integration)", () => {
       expect(audit.calls[0]?.actor).toEqual({ kind: "account", id: auth.accountId });
     });
 
-    it("throws VALIDATION_ERROR for invalid create payload", async () => {
-      await assertApiError(
-        createMember(asDb(db), systemId, { encryptedData: 123 }, auth, noopAudit),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
-
     it("throws NOT_FOUND for unknown system (assertSystemOwnership)", async () => {
       const otherAccountId = brandId<AccountId>(await pgInsertAccount(db));
       const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, otherAccountId));
@@ -358,21 +350,6 @@ describe("member.service (PGlite integration)", () => {
         ),
         "CONFLICT",
         409,
-      );
-    });
-
-    it("throws VALIDATION_ERROR for invalid update payload", async () => {
-      const created = await createMember(
-        asDb(db),
-        systemId,
-        { encryptedData: testEncryptedDataBase64() },
-        auth,
-        noopAudit,
-      );
-      await assertApiError(
-        updateMember(asDb(db), systemId, created.id, { encryptedData: 123 }, auth, noopAudit),
-        "VALIDATION_ERROR",
-        400,
       );
     });
 
@@ -800,7 +777,12 @@ describe("member.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64() },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: false,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -811,28 +793,18 @@ describe("member.service (PGlite integration)", () => {
       expect(dup.archived).toBe(false);
     });
 
-    it("throws VALIDATION_ERROR for invalid duplicate payload", async () => {
-      const source = await createMember(
-        asDb(db),
-        systemId,
-        { encryptedData: testEncryptedDataBase64() },
-        auth,
-        noopAudit,
-      );
-      await assertApiError(
-        duplicateMember(asDb(db), systemId, source.id, { encryptedData: 999 }, auth, noopAudit),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
-
     it("throws NOT_FOUND when source member does not exist", async () => {
       await assertApiError(
         duplicateMember(
           asDb(db),
           systemId,
           genMemberId(),
-          { encryptedData: testEncryptedDataBase64() },
+          {
+            encryptedData: testEncryptedDataBase64(),
+            copyPhotos: false,
+            copyFields: false,
+            copyMemberships: false,
+          },
           auth,
           noopAudit,
         ),
@@ -864,7 +836,12 @@ describe("member.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: true,
+          copyFields: false,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -889,7 +866,12 @@ describe("member.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: true,
+          copyFields: false,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -933,7 +915,12 @@ describe("member.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyFields: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: true,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -958,7 +945,12 @@ describe("member.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyFields: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: true,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -999,7 +991,12 @@ describe("member.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyMemberships: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: false,
+          copyMemberships: true,
+        },
         auth,
         noopAudit,
       );
@@ -1025,7 +1022,12 @@ describe("member.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyMemberships: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: false,
+          copyMemberships: true,
+        },
         auth,
         noopAudit,
       );

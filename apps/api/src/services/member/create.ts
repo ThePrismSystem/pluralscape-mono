@@ -3,7 +3,7 @@ import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateMemberBodySchema, DuplicateMemberBodySchema } from "@pluralscape/validation";
 import { and, count, eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
+import { HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
@@ -20,22 +20,18 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FieldValueId, MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createMember(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  params: unknown,
+  body: z.infer<typeof CreateMemberBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = CreateMemberBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
   const memberId = brandId<MemberId>(createId(ID_PREFIXES.member));
   const timestamp = now();
 
@@ -88,18 +84,13 @@ export async function duplicateMember(
   db: PostgresJsDatabase,
   systemId: SystemId,
   memberId: MemberId,
-  params: unknown,
+  body: z.infer<typeof DuplicateMemberBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = DuplicateMemberBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid duplicate payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
   const newMemberId = brandId<MemberId>(createId(ID_PREFIXES.member));
   const timestamp = now();
 
@@ -146,7 +137,7 @@ export async function duplicateMember(
       throw new Error("Failed to duplicate member — INSERT returned no rows");
     }
 
-    if (parsed.data.copyPhotos) {
+    if (body.copyPhotos) {
       const photos = await tx
         .select()
         .from(memberPhotos)
@@ -178,7 +169,7 @@ export async function duplicateMember(
       }
     }
 
-    if (parsed.data.copyFields) {
+    if (body.copyFields) {
       const values = await tx
         .select()
         .from(fieldValues)
@@ -205,7 +196,7 @@ export async function duplicateMember(
     }
 
     let membershipsCopied = 0;
-    if (parsed.data.copyMemberships) {
+    if (body.copyMemberships) {
       const memberships = await tx
         .select()
         .from(groupMemberships)

@@ -114,24 +114,6 @@ describe("createMember", () => {
     );
   });
 
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(createMember(db, SYSTEM_ID, { invalid: true }, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
-  });
-
-  it("throws 400 for oversized blob", async () => {
-    const { db } = mockDb();
-    // String exceeds zod max length (131_072 chars), so validation rejects first
-    const oversized = "A".repeat(131_073);
-
-    await expect(
-      createMember(db, SYSTEM_ID, { encryptedData: oversized }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws 400 for malformed blob", async () => {
     const { db } = mockDb();
     const { deserializeEncryptedBlob } = await import("@pluralscape/crypto");
@@ -336,31 +318,6 @@ describe("updateMember", () => {
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
-
-  it("throws 400 for invalid body (missing version)", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateMember(db, SYSTEM_ID, MEMBER_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
-  it("throws 400 for oversized blob", async () => {
-    const { db } = mockDb();
-    // String exceeds zod max length (131_072 chars), so validation rejects first
-    const oversized = "A".repeat(131_073);
-
-    await expect(
-      updateMember(
-        db,
-        SYSTEM_ID,
-        MEMBER_ID,
-        { encryptedData: oversized, version: 1 },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
 });
 
 describe("duplicateMember", () => {
@@ -381,7 +338,12 @@ describe("duplicateMember", () => {
       db,
       SYSTEM_ID,
       MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64 },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        copyPhotos: false,
+        copyFields: false,
+        copyMemberships: false,
+      },
       AUTH,
       mockAudit,
     );
@@ -402,7 +364,12 @@ describe("duplicateMember", () => {
         db,
         SYSTEM_ID,
         brandId<MemberId>("mem_nonexistent"),
-        { encryptedData: VALID_BLOB_BASE64 },
+        {
+          encryptedData: VALID_BLOB_BASE64,
+          copyPhotos: false,
+          copyFields: false,
+          copyMemberships: false,
+        },
         AUTH,
         mockAudit,
       ),
@@ -438,7 +405,12 @@ describe("duplicateMember", () => {
       db,
       SYSTEM_ID,
       MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyPhotos: true },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        copyPhotos: true,
+        copyFields: false,
+        copyMemberships: false,
+      },
       AUTH,
       mockAudit,
     );
@@ -475,7 +447,12 @@ describe("duplicateMember", () => {
       db,
       SYSTEM_ID,
       MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyFields: true },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        copyPhotos: false,
+        copyFields: true,
+        copyMemberships: false,
+      },
       AUTH,
       mockAudit,
     );
@@ -518,7 +495,12 @@ describe("duplicateMember", () => {
       db,
       SYSTEM_ID,
       MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyMemberships: true },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        copyPhotos: false,
+        copyFields: false,
+        copyMemberships: true,
+      },
       AUTH,
       mockAudit,
     );
@@ -550,21 +532,18 @@ describe("duplicateMember", () => {
       db,
       SYSTEM_ID,
       MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyMemberships: true },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        copyPhotos: false,
+        copyFields: false,
+        copyMemberships: true,
+      },
       AUTH,
       mockAudit,
     );
 
     expect(result.id).toBe("mem_new-member");
     expect(chain.insert).toHaveBeenCalledTimes(1); // only member, no memberships
-  });
-
-  it("throws 400 for invalid duplicate payload", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      duplicateMember(db, SYSTEM_ID, MEMBER_ID, { invalid: true }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 });
 
