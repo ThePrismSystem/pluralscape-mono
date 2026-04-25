@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   CustomFrontId,
@@ -35,6 +36,12 @@ export interface FrontingComment extends AuditMetadata {
  */
 export type FrontingCommentEncryptedFields = "content";
 
+/**
+ * Pre-encryption shape — what `encryptFrontingCommentInput` accepts. Single source
+ * of truth: derived from `FrontingComment` via `Pick<>` over the encrypted-keys union.
+ */
+export type FrontingCommentEncryptedInput = Pick<FrontingComment, FrontingCommentEncryptedFields>;
+
 /** An archived fronting comment. */
 export type ArchivedFrontingComment = Archived<FrontingComment>;
 
@@ -64,8 +71,13 @@ export type FrontingCommentServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of FrontingComment. Derived from the domain
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * Server-emit shape — what `toFrontingCommentResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type FrontingCommentWire = Serialize<FrontingComment>;
+export type FrontingCommentResult = EncryptedWire<FrontingCommentServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `FrontingCommentResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type FrontingCommentWire = Serialize<FrontingCommentResult>;

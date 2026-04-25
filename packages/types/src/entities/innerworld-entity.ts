@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   HexColor,
@@ -86,6 +87,15 @@ export type InnerWorldEntityEncryptedFields =
   | "linkedStructureEntityId";
 
 /**
+ * Pre-encryption shape — what `encryptInnerWorldEntityInput` accepts. Single source
+ * of truth: derived from `InnerWorldEntity` via distributive `Pick<>` over the
+ * encrypted-keys union (each variant independently contributes its subset of keys).
+ */
+export type InnerWorldEntityEncryptedInput = InnerWorldEntity extends unknown
+  ? Pick<InnerWorldEntity, InnerWorldEntityEncryptedFields & keyof InnerWorldEntity>
+  : never;
+
+/**
  * Distributes `Omit<T, K>` over a discriminated union so each variant
  * independently drops its own subset of `K`. The naïve `Omit<Union, K>`
  * would only strip keys present on every variant; this helper flattens
@@ -115,9 +125,13 @@ export type InnerWorldEntityServerMetadata = DistributiveOmit<
 };
 
 /**
- * JSON-wire representation of an InnerWorldEntity. Derived from the
- * domain `InnerWorldEntity` union via `Serialize<T>`; branded IDs become
- * plain strings, `UnixMillis` becomes `number`. The wire form preserves
- * the discriminated-union shape.
+ * Server-emit shape — what `toInnerWorldEntityResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type InnerWorldEntityWire = Serialize<InnerWorldEntity>;
+export type InnerWorldEntityResult = EncryptedWire<InnerWorldEntityServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `InnerWorldEntityResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type InnerWorldEntityWire = Serialize<InnerWorldEntityResult>;

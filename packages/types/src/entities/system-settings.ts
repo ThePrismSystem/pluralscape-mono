@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { Locale } from "../i18n.js";
 import type { BucketId, SystemSettingsId, SystemId } from "../ids.js";
@@ -96,6 +97,12 @@ export type SystemSettingsEncryptedFields =
   | "onboardingComplete";
 
 /**
+ * Pre-encryption shape — what `encryptSystemSettingsInput` accepts. Single source
+ * of truth: derived from `SystemSettings` via `Pick<>` over the encrypted-keys union.
+ */
+export type SystemSettingsEncryptedInput = Pick<SystemSettings, SystemSettingsEncryptedFields>;
+
+/**
  * Server-visible SystemSettings metadata — raw Drizzle row shape.
  *
  * Derived from `SystemSettings` by stripping the encrypted field keys
@@ -116,8 +123,13 @@ export type SystemSettingsServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of SystemSettings. Derived from the domain
- * `SystemSettings` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
+ * Server-emit shape — what `toSystemSettingsResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type SystemSettingsWire = Serialize<SystemSettings>;
+export type SystemSettingsResult = EncryptedWire<SystemSettingsServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `SystemSettingsResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type SystemSettingsWire = Serialize<SystemSettingsResult>;

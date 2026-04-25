@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   HexColor,
@@ -63,6 +64,15 @@ export type SystemStructureEntityEncryptedFields =
   | "imageSource"
   | "emoji";
 
+/**
+ * Pre-encryption shape — what `encryptSystemStructureEntityInput` accepts. Single source
+ * of truth: derived from `SystemStructureEntity` via `Pick<>` over the encrypted-keys union.
+ */
+export type SystemStructureEntityEncryptedInput = Pick<
+  SystemStructureEntity,
+  SystemStructureEntityEncryptedFields
+>;
+
 export type ArchivedSystemStructureEntity = Archived<SystemStructureEntity>;
 
 /**
@@ -84,8 +94,13 @@ export type SystemStructureEntityServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of SystemStructureEntity. Derived from the
- * domain `SystemStructureEntity` type via `Serialize<T>`; branded IDs
- * become plain strings, `UnixMillis` becomes `number`.
+ * Server-emit shape — what `toSystemStructureEntityResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type SystemStructureEntityWire = Serialize<SystemStructureEntity>;
+export type SystemStructureEntityResult = EncryptedWire<SystemStructureEntityServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `SystemStructureEntityResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type SystemStructureEntityWire = Serialize<SystemStructureEntityResult>;

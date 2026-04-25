@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { AccountId, SystemId, SystemSettingsId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
@@ -23,6 +24,12 @@ export interface System extends AuditMetadata {
  * - `SystemServerMetadata` (derived via `Omit`)
  */
 export type SystemEncryptedFields = "name" | "displayName" | "description" | "avatarSource";
+
+/**
+ * Pre-encryption shape — what `encryptSystemInput` accepts. Single source
+ * of truth: derived from `System` via `Pick<>` over the encrypted-keys union.
+ */
+export type SystemEncryptedInput = Pick<System, SystemEncryptedFields>;
 
 /** @future Multi-system switcher list item — not yet implemented. */
 export interface SystemListItem {
@@ -50,8 +57,13 @@ export type SystemServerMetadata = Omit<System, SystemEncryptedFields | "setting
 };
 
 /**
- * JSON-wire representation of a System. Derived from the domain `System`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * Server-emit shape — what `toSystemResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type SystemWire = Serialize<System>;
+export type SystemResult = EncryptedWire<SystemServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `SystemResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type SystemWire = Serialize<SystemResult>;

@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { GroupId, HexColor, MemberId, SystemId } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
@@ -27,6 +28,12 @@ export interface Group extends AuditMetadata {
  * - `GroupServerMetadata` (derived via `Omit`)
  */
 export type GroupEncryptedFields = "name" | "description" | "imageSource" | "color" | "emoji";
+
+/**
+ * Pre-encryption shape — what `encryptGroupInput` accepts. Single source
+ * of truth: derived from `Group` via `Pick<>` over the encrypted-keys union.
+ */
+export type GroupEncryptedInput = Pick<Group, GroupEncryptedFields>;
 
 /** An archived group — preserves all data with archive metadata. */
 export type ArchivedGroup = Archived<Group>;
@@ -64,7 +71,13 @@ export type GroupServerMetadata = Omit<Group, GroupEncryptedFields | "archived">
 };
 
 /**
- * JSON-wire representation of a Group. Derived from the domain `Group`
- * type via `Serialize<T>`; branded IDs become plain strings.
+ * Server-emit shape — what `toGroupResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type GroupWire = Serialize<Group>;
+export type GroupResult = EncryptedWire<GroupServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `GroupResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type GroupWire = Serialize<GroupResult>;

@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { BucketId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -26,6 +27,12 @@ export type ArchivedPrivacyBucket = Archived<PrivacyBucket>;
 export type PrivacyBucketEncryptedFields = "name" | "description";
 
 /**
+ * Pre-encryption shape — what `encryptPrivacyBucketInput` accepts. Single source
+ * of truth: derived from `PrivacyBucket` via `Pick<>` over the encrypted-keys union.
+ */
+export type PrivacyBucketEncryptedInput = Pick<PrivacyBucket, PrivacyBucketEncryptedFields>;
+
+/**
  * Server-visible PrivacyBucket metadata — raw Drizzle row shape.
  *
  * Derived from `PrivacyBucket` by stripping the encrypted field keys
@@ -43,11 +50,16 @@ export type PrivacyBucketServerMetadata = Omit<
 };
 
 /**
- * JSON-wire representation of a PrivacyBucket. Derived from the domain
- * `PrivacyBucket` type via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`.
+ * Server-emit shape — what `toPrivacyBucketResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type PrivacyBucketWire = Serialize<PrivacyBucket>;
+export type PrivacyBucketResult = EncryptedWire<PrivacyBucketServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `PrivacyBucketResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type PrivacyBucketWire = Serialize<PrivacyBucketResult>;
 
 /**
  * Entity types that can be tagged in privacy buckets.

@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   InnerWorldEntityId,
@@ -150,6 +151,12 @@ export type LifecycleEventType = LifecycleEvent["eventType"];
 export type LifecycleEventEncryptedFields = "notes";
 
 /**
+ * Pre-encryption shape — what `encryptLifecycleEventInput` accepts. Single source
+ * of truth: derived from `LifecycleEvent` via `Pick<>` over the encrypted-keys union.
+ */
+export type LifecycleEventEncryptedInput = Pick<LifecycleEvent, LifecycleEventEncryptedFields>;
+
+/**
  * Server-visible LifecycleEvent metadata — raw Drizzle row shape.
  *
  * Derived from the `LifecycleEvent` discriminated union by distributively
@@ -178,8 +185,13 @@ export type LifecycleEventServerMetadata = {
 };
 
 /**
- * JSON-wire representation of LifecycleEvent. Derived from the domain
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * Server-emit shape — what `toLifecycleEventResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type LifecycleEventWire = Serialize<LifecycleEvent>;
+export type LifecycleEventResult = EncryptedWire<LifecycleEventServerMetadata>;
+
+/**
+ * JSON-serialized wire form of `LifecycleEventResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type LifecycleEventWire = Serialize<LifecycleEventResult>;

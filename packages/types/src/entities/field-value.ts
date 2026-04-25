@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type {
   FieldDefinitionId,
@@ -44,6 +45,12 @@ export interface FieldValue extends AuditMetadata {
 export type FieldValueEncryptedFields = "value";
 
 /**
+ * Pre-encryption shape — what `encryptFieldValueInput` accepts. Single source
+ * of truth: derived from `FieldValue` via `Pick<>` over the encrypted-keys union.
+ */
+export type FieldValueEncryptedInput = Pick<FieldValue, FieldValueEncryptedFields>;
+
+/**
  * Server-visible FieldValue metadata — raw Drizzle row shape.
  *
  * Derived from `FieldValue` by stripping the encrypted `value` discriminated
@@ -58,19 +65,13 @@ export type FieldValueServerMetadata = Omit<FieldValue, FieldValueEncryptedField
 };
 
 /**
- * JSON-wire representation of a FieldValue. Derived from the domain
- * `FieldValue` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
+ * Server-emit shape — what `toFieldValueResult` returns. Branded IDs and
+ * timestamps preserved; `encryptedData` is wire-form `EncryptedBase64`.
  */
-export type FieldValueWire = Serialize<FieldValue>;
+export type FieldValueResult = EncryptedWire<FieldValueServerMetadata>;
 
-/** Request body for setting a field value. */
-export interface SetFieldValueBody {
-  readonly encryptedData: string;
-}
-
-/** Request body for updating a field value. */
-export interface UpdateFieldValueBody {
-  readonly encryptedData: string;
-  readonly version: number;
-}
+/**
+ * JSON-serialized wire form of `FieldValueResult`: branded IDs become plain strings;
+ * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
+ */
+export type FieldValueWire = Serialize<FieldValueResult>;
