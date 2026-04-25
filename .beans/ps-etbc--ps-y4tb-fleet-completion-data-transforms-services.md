@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-04-25T19:49:40Z
-updated_at: 2026-04-25T19:49:44Z
+updated_at: 2026-04-25T22:27:49Z
 parent: ps-y4tb
 ---
 
@@ -43,7 +43,7 @@ Affected files (from grep on 2026-04-25):
 - packages/import-sp/src/mappers/field-definition.mapper.ts (uses CreateFieldDefinitionBody — switch to z.infer)
 - packages/data/src/transforms/custom-field.ts
 
-After consumers are migrated, delete the deprecated `*Body` interfaces from `field-definition.ts`, `field-value.ts`, `member-photo.ts`. Update `packages/validation/src/__tests__/contract-{custom-fields,member}.test.ts` to use inline shapes (per Member pilot pattern).
+Note: FieldDefinition, FieldValue, and MemberPhoto are already migrated end-to-end in PR #561 (alongside the Member pilot from #560). Their Body interfaces have been deleted and consumers are no longer in this bean's scope.
 
 ### C. Parity tests (Task 4.9)
 
@@ -85,3 +85,9 @@ Update CLAUDE.md, packages/types/README.md, packages/data/README.md, ADR-023, ar
 - Parent: ps-y4tb
 - Sibling: types-600s (CheckInRecord), types-1spw (G4 anchor in data)
 - Plan: `docs/superpowers/plans/2026-04-25-ps-y4tb-encrypted-entity-sot-consolidation.md` Tasks 4.4–4.11 + Task 5
+
+## Update — out-of-scope clarification (2026-04-25)
+
+Do not add net-new inline-shape G4 assertions in `packages/validation/src/__tests__/type-parity/`. Those will be superseded by `types-1spw` (canonical, import-anchored G4 in the data package) once the data-package transforms cleanup lands.
+
+If existing inline-shape G4 assertions are found during ps-etbc work (e.g., from Member pilot or PR #561 migrations), leave them in place — `types-1spw` will sweep them later.
