@@ -13,6 +13,7 @@ import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/rout
 import type { HierarchyNode } from "../../../services/structure/association.js";
 import type { StructureEntityResult } from "../../../services/structure/entity-crud/internal.js";
 import type {
+  EncryptedBase64,
   ApiErrorResponse,
   PaginatedResult,
   SystemStructureEntityId,
@@ -74,7 +75,7 @@ const MOCK_ENTITY: StructureEntityResult = {
   systemId: SYS_ID as never,
   entityTypeId: ET_ID,
   sortOrder: 0,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -104,7 +105,7 @@ describe("POST /systems/:systemId/structure/entities", () => {
     const app = createApp();
     const res = await postJSON(app, BASE, {
       structureEntityTypeId: ET_ID,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       parentEntityId: null,
       sortOrder: 0,
     });
@@ -118,7 +119,7 @@ describe("POST /systems/:systemId/structure/entities", () => {
     const app = createApp();
     const payload = {
       structureEntityTypeId: ET_ID,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       parentEntityId: null,
       sortOrder: 0,
     };
@@ -217,7 +218,7 @@ describe("PUT /systems/:systemId/structure/entities/:entityId", () => {
     vi.mocked(updateStructureEntity).mockResolvedValueOnce({ ...MOCK_ENTITY, version: 2 });
     const app = createApp();
     const res = await putJSON(app, `${BASE}/${ENTITY_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       parentEntityId: null,
       sortOrder: 0,
       version: 1,

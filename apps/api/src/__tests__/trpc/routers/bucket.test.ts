@@ -9,7 +9,13 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { AccountId, BucketId, FriendConnectionId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBase64,
+  AccountId,
+  BucketId,
+  FriendConnectionId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -86,7 +92,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JidWNrZXQ=";
 const MOCK_BUCKET_RESULT = {
   id: BUCKET_ID,
   systemId: MOCK_SYSTEM_ID,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

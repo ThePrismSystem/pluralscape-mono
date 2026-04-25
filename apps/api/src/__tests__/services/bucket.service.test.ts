@@ -5,7 +5,7 @@ import { MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { BucketId, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, BucketId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -116,7 +116,7 @@ vi.mock("@pluralscape/db/pg", () => ({
   buckets: {
     id: "id",
     systemId: "system_id",
-    encryptedData: "encrypted_data",
+    encryptedData: "encrypted_data" as EncryptedBase64,
     version: "version",
     archived: "archived",
     archivedAt: "archived_at",

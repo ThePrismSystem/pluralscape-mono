@@ -9,7 +9,13 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, MemberId, RelationshipId, SystemId } from "@pluralscape/types";
+import type {
+  EncryptedBase64,
+  ApiErrorResponse,
+  MemberId,
+  RelationshipId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -66,7 +72,7 @@ const MOCK_RELATIONSHIP = {
   targetMemberId: brandId<MemberId>("mem_00000000-0000-0000-0000-000000000002"),
   type: "partner" as const,
   bidirectional: true,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: toUnixMillis(1000),
   updatedAt: toUnixMillis(1000),
@@ -81,7 +87,7 @@ const MOCK_PAGINATED = {
   totalCount: null,
 };
 
-const VALID_BODY = { encryptedData: "dGVzdA==" };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
 
 // ── Tests ────────────────────────────────────────────────────────
 

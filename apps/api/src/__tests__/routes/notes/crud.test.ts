@@ -10,6 +10,7 @@ import {
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
 import type { NoteResult } from "../../../services/note/internal.js";
+import type { EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ const MOCK_RESULT: NoteResult = {
   systemId: MOCK_AUTH.systemId as never,
   authorEntityType: null,
   authorEntityId: null,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,
@@ -92,7 +93,7 @@ describe("POST /systems/:id/notes (create)", () => {
     vi.mocked(createNote).mockResolvedValueOnce(MOCK_RESULT);
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
     });
 
     expect(res.status).toBe(201);
@@ -104,13 +105,13 @@ describe("POST /systems/:id/notes (create)", () => {
     vi.mocked(createNote).mockResolvedValueOnce(MOCK_RESULT);
 
     await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
     });
 
     expect(vi.mocked(createNote)).toHaveBeenCalledWith(
       expect.anything(),
       "sys_550e8400-e29b-41d4-a716-446655440000",
-      expect.objectContaining({ encryptedData: "dGVzdA==" }),
+      expect.objectContaining({ encryptedData: "dGVzdA==" as EncryptedBase64 }),
       MOCK_AUTH,
       expect.any(Function),
     );
@@ -121,7 +122,7 @@ describe("POST /systems/:id/notes (create)", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
     });
 
     expect(res.status).toBe(500);
@@ -179,7 +180,7 @@ describe("PUT /systems/:id/notes/:noteId", () => {
     vi.mocked(updateNote).mockResolvedValueOnce({ ...MOCK_RESULT, version: 2 });
 
     const res = await putJSON(createApp(), `${BASE}/${NOTE_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -192,7 +193,7 @@ describe("PUT /systems/:id/notes/:noteId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${NOTE_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -205,7 +206,7 @@ describe("PUT /systems/:id/notes/:noteId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${NOTE_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 

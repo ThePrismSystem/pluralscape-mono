@@ -9,7 +9,12 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, SystemId, SystemSettingsId } from "@pluralscape/types";
+import type {
+  EncryptedBase64,
+  ApiErrorResponse,
+  SystemId,
+  SystemSettingsId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -55,7 +60,7 @@ const MOCK_COMPLETE_RESULT = {
   systemId: brandId<SystemId>(SYS_ID),
   locale: null,
   biometricEnabled: false,
-  encryptedData: "base64data",
+  encryptedData: "base64data" as EncryptedBase64,
   version: 1,
   createdAt: toUnixMillis(1700000000000),
   updatedAt: toUnixMillis(1700000000000),
@@ -114,7 +119,9 @@ describe("POST /:id/setup/nomenclature", () => {
     vi.mocked(setupNomenclatureStep).mockResolvedValueOnce(MOCK_STEP_RESULT);
 
     const app = createApp();
-    const res = await postJSON(app, `/${SYS_ID}/setup/nomenclature`, { encryptedData: "data" });
+    const res = await postJSON(app, `/${SYS_ID}/setup/nomenclature`, {
+      encryptedData: "data" as EncryptedBase64,
+    });
 
     expect(res.status).toBe(204);
     expect(res.headers.get("content-length")).toBeNull();
@@ -139,7 +146,9 @@ describe("POST /:id/setup/nomenclature", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();
-    const res = await postJSON(app, `/${SYS_ID}/setup/nomenclature`, { encryptedData: "data" });
+    const res = await postJSON(app, `/${SYS_ID}/setup/nomenclature`, {
+      encryptedData: "data" as EncryptedBase64,
+    });
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;
@@ -160,7 +169,9 @@ describe("POST /:id/setup/profile", () => {
     vi.mocked(setupProfileStep).mockResolvedValueOnce(MOCK_STEP_RESULT);
 
     const app = createApp();
-    const res = await postJSON(app, `/${SYS_ID}/setup/profile`, { encryptedData: "data" });
+    const res = await postJSON(app, `/${SYS_ID}/setup/profile`, {
+      encryptedData: "data" as EncryptedBase64,
+    });
 
     expect(res.status).toBe(204);
     expect(res.headers.get("content-length")).toBeNull();
@@ -185,7 +196,9 @@ describe("POST /:id/setup/profile", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();
-    const res = await postJSON(app, `/${SYS_ID}/setup/profile`, { encryptedData: "data" });
+    const res = await postJSON(app, `/${SYS_ID}/setup/profile`, {
+      encryptedData: "data" as EncryptedBase64,
+    });
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;
@@ -207,7 +220,7 @@ describe("POST /:id/setup/complete", () => {
 
     const app = createApp();
     const res = await postJSON(app, `/${SYS_ID}/setup/complete`, {
-      encryptedData: "data",
+      encryptedData: "data" as EncryptedBase64,
       recoveryKeyBackupConfirmed: true,
     });
 
@@ -237,7 +250,7 @@ describe("POST /:id/setup/complete", () => {
 
     const app = createApp();
     const res = await postJSON(app, `/${SYS_ID}/setup/complete`, {
-      encryptedData: "data",
+      encryptedData: "data" as EncryptedBase64,
       recoveryKeyBackupConfirmed: true,
     });
 

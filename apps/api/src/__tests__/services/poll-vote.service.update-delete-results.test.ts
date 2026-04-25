@@ -5,7 +5,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { PollId, PollVoteId, SystemId } from "@pluralscape/types";
+import type { EncryptedBase64, PollId, PollVoteId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     voter: "voter",
     isVeto: "is_veto",
     votedAt: "voted_at",
-    encryptedData: "encrypted_data",
+    encryptedData: "encrypted_data" as EncryptedBase64,
     archived: "archived",
     archivedAt: "archived_at",
     createdAt: "created_at",

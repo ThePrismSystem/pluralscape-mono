@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
-import type { MemberId, MemberPhotoId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, MemberId, MemberPhotoId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -58,7 +58,7 @@ const MOCK_PHOTO_RESULT = {
   memberId: MEMBER_ID,
   systemId: MOCK_SYSTEM_ID,
   sortOrder: 0,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,

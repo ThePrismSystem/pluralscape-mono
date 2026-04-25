@@ -10,6 +10,7 @@ import {
 import { createRouteApp, MOCK_AUTH, postJSON } from "../../helpers/route-test-setup.js";
 
 import type { AcknowledgementResult } from "../../../services/acknowledgement/internal.js";
+import type { EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ const MOCK_RESULT: AcknowledgementResult = {
   systemId: MOCK_AUTH.systemId as never,
   createdByMemberId: null,
   confirmed: false,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,
@@ -94,7 +95,7 @@ describe("POST /systems/:id/acknowledgements (create)", () => {
     vi.mocked(createAcknowledgement).mockResolvedValueOnce(MOCK_RESULT);
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
     });
 
     expect(res.status).toBe(201);
@@ -106,13 +107,13 @@ describe("POST /systems/:id/acknowledgements (create)", () => {
     vi.mocked(createAcknowledgement).mockResolvedValueOnce(MOCK_RESULT);
 
     await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
     });
 
     expect(vi.mocked(createAcknowledgement)).toHaveBeenCalledWith(
       expect.anything(),
       "sys_550e8400-e29b-41d4-a716-446655440000",
-      expect.objectContaining({ encryptedData: "dGVzdA==" }),
+      expect.objectContaining({ encryptedData: "dGVzdA==" as EncryptedBase64 }),
       MOCK_AUTH,
       expect.any(Function),
     );
@@ -123,7 +124,7 @@ describe("POST /systems/:id/acknowledgements (create)", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
     });
 
     expect(res.status).toBe(500);

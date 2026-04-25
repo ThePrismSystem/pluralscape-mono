@@ -8,7 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ const MOCK_TIMER = {
   wakingHoursOnly: false as const,
   wakingStart: null,
   wakingEnd: null,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -90,7 +90,7 @@ describe("POST /systems/:id/timer-configs", () => {
 
     const app = createApp();
     const res = await postJSON(app, BASE_URL, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       intervalMinutes: 30,
     });
 
@@ -184,7 +184,10 @@ describe("PUT /systems/:id/timer-configs/:timerId", () => {
     vi.mocked(updateTimerConfig).mockResolvedValueOnce({ ...MOCK_TIMER, version: 2 });
 
     const app = createApp();
-    const res = await putJSON(app, TIMER_URL, { encryptedData: "dGVzdA==", version: 1 });
+    const res = await putJSON(app, TIMER_URL, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      version: 1,
+    });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { version: number } };
@@ -198,7 +201,10 @@ describe("PUT /systems/:id/timer-configs/:timerId", () => {
     );
 
     const app = createApp();
-    const res = await putJSON(app, TIMER_URL, { encryptedData: "dGVzdA==", version: 1 });
+    const res = await putJSON(app, TIMER_URL, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      version: 1,
+    });
 
     expect(res.status).toBe(409);
   });
@@ -209,7 +215,10 @@ describe("PUT /systems/:id/timer-configs/:timerId", () => {
       new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
     );
     const app = createApp();
-    const res = await putJSON(app, TIMER_URL, { encryptedData: "dGVzdA==", version: 1 });
+    const res = await putJSON(app, TIMER_URL, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      version: 1,
+    });
     expect(res.status).toBe(404);
   });
 });

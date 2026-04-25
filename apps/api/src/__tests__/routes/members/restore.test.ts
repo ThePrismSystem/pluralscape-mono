@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ describe("POST /systems/:systemId/members/:memberId/restore", () => {
     vi.mocked(restoreMember).mockResolvedValueOnce({
       id: MEM_ID as never,
       systemId: SYS_ID as never,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
       createdAt: 1000 as never,
       updatedAt: 1000 as never,
@@ -77,7 +77,7 @@ describe("POST /systems/:systemId/members/:memberId/restore", () => {
     vi.mocked(restoreMember).mockResolvedValueOnce({
       id: MEM_ID as never,
       systemId: SYS_ID as never,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
       createdAt: 1000 as never,
       updatedAt: 1000 as never,

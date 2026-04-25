@@ -11,7 +11,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { MemberResult } from "../../../services/member/internal.js";
-import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ describe("GET /systems/:systemId/members", () => {
         {
           id: "mem_550e8400-e29b-41d4-a716-446655440000" as never,
           systemId: SYS_ID as never,
-          encryptedData: "dGVzdA==",
+          encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
           createdAt: 1000 as never,
           updatedAt: 1000 as never,
@@ -214,7 +214,7 @@ describe("GET /systems/:systemId/members", () => {
         {
           id: "mem_550e8400-e29b-41d4-a716-446655440000" as never,
           systemId: SYS_ID as never,
-          encryptedData: "dGVzdA==",
+          encryptedData: "dGVzdA==" as EncryptedBase64,
           version: 1,
           createdAt: 1000 as never,
           updatedAt: 1000 as never,

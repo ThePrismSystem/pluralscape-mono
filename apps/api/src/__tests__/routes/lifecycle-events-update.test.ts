@@ -8,7 +8,7 @@ import {
 } from "../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ const MOCK_EVENT = {
   occurredAt: 1000 as never,
   recordedAt: 1000 as never,
   updatedAt: 2000 as never,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   plaintextMetadata: null,
   version: 2,
   archived: false,
@@ -70,7 +70,7 @@ const MOCK_EVENT = {
 };
 
 const VALID_BODY = {
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
 };
 

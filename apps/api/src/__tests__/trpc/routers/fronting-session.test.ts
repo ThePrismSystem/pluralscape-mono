@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
-import type { FrontingSessionId, MemberId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, FrontingSessionId, MemberId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -60,7 +60,7 @@ const MOCK_SESSION_RESULT = {
   structureEntityId: null,
   startTime: START_TIME,
   endTime: null,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

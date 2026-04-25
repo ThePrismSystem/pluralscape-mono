@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { PollId, PollVoteId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, PollId, PollVoteId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -88,7 +88,7 @@ const MOCK_POLL_RESULT = {
   maxVotesPerMember: 1,
   allowAbstain: false,
   allowVeto: false,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -103,7 +103,7 @@ const MOCK_VOTE_RESULT = {
   voter: null,
   isVeto: false,
   votedAt: 1_700_000_000_000 as UnixMillis,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   archived: false,
   archivedAt: null,
   createdAt: 1_700_000_000_000 as UnixMillis,

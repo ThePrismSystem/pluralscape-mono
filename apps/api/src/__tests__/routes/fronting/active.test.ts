@@ -8,6 +8,8 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
+import type { EncryptedBase64 } from "@pluralscape/types";
+
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../services/fronting-session/create.js", () => ({
@@ -77,7 +79,7 @@ const MOCK_SESSION = {
   structureEntityId: null,
   startTime: 1000 as never,
   endTime: null,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

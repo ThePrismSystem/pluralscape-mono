@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { MemberId, RelationshipId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, MemberId, RelationshipId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -61,7 +61,7 @@ const MOCK_RELATIONSHIP_RESULT = {
   targetMemberId: TARGET_MEMBER_ID,
   type: "sibling" as const,
   bidirectional: true,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_000_000 as UnixMillis,

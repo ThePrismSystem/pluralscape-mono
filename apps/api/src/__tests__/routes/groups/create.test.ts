@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ describe("POST /systems/:id/groups", () => {
       systemId: MOCK_AUTH.systemId as never,
       parentGroupId: null,
       sortOrder: 0,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
       createdAt: 1000 as never,
       updatedAt: 1000 as never,
@@ -71,7 +71,7 @@ describe("POST /systems/:id/groups", () => {
 
     const app = createApp();
     const res = await postJSON(app, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       parentGroupId: null,
       sortOrder: 0,
     });
@@ -87,7 +87,7 @@ describe("POST /systems/:id/groups", () => {
       systemId: MOCK_AUTH.systemId as never,
       parentGroupId: null,
       sortOrder: 0,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
       createdAt: 1000 as never,
       updatedAt: 1000 as never,
@@ -96,12 +96,16 @@ describe("POST /systems/:id/groups", () => {
     });
 
     const app = createApp();
-    await postJSON(app, { encryptedData: "dGVzdA==", parentGroupId: null, sortOrder: 0 });
+    await postJSON(app, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      parentGroupId: null,
+      sortOrder: 0,
+    });
 
     expect(vi.mocked(createGroup)).toHaveBeenCalledWith(
       expect.anything(),
       "sys_550e8400-e29b-41d4-a716-446655440000",
-      expect.objectContaining({ encryptedData: "dGVzdA==" }),
+      expect.objectContaining({ encryptedData: "dGVzdA==" as EncryptedBase64 }),
       MOCK_AUTH,
       expect.any(Function),
     );
@@ -127,7 +131,7 @@ describe("POST /systems/:id/groups", () => {
 
     const app = createApp();
     const res = await postJSON(app, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       parentGroupId: null,
       sortOrder: 0,
     });

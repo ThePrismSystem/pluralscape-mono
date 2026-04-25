@@ -9,6 +9,7 @@ import {
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type {
+  EncryptedBase64,
   BucketExportManifestResponse,
   BucketExportPageResponse,
   BucketId,
@@ -59,7 +60,7 @@ const MOCK_PAGE: BucketExportPageResponse = {
     {
       id: brandId<ExportEntityId>("mem_550e8400-e29b-41d4-a716-446655440000"),
       entityType: "member",
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       updatedAt: 1000 as UnixMillis,
     },
   ],

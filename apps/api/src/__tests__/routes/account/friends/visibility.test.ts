@@ -12,7 +12,7 @@ import {
   putJSON,
 } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ const createApp = () => createRouteApp("/account", accountRoutes);
 const CONNECTION_ID = "fc_550e8400-e29b-41d4-a716-446655440000";
 
 const VALID_BODY = {
-  encryptedData: "dGVzdC1lbmNyeXB0ZWQtZGF0YQ==",
+  encryptedData: "dGVzdC1lbmNyeXB0ZWQtZGF0YQ==" as EncryptedBase64,
   version: 1,
 };
 
@@ -131,7 +131,7 @@ describe("PUT /account/friends/:connectionId/visibility", () => {
 
   it("returns 400 for missing version", async () => {
     const res = await putJSON(createApp(), `/account/friends/${CONNECTION_ID}/visibility`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
     });
 
     expect(res.status).toBe(400);

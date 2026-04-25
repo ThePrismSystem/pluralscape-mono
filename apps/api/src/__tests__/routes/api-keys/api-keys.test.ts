@@ -14,7 +14,7 @@ import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
 import type { ApiKeyCreateResult } from "../../../services/api-key/create.js";
 import type { ApiKeyResult } from "../../../services/api-key/internal.js";
-import type { PaginatedResult } from "@pluralscape/types";
+import type { EncryptedBase64, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ describe("POST /systems/:systemId/api-keys", () => {
     const res = await postJSON(app, `/systems/${SYS_ID}/api-keys`, {
       keyType: "metadata",
       scopes: ["read:members"],
-      encryptedData: "encrypted-payload",
+      encryptedData: "encrypted-payload" as EncryptedBase64,
     });
 
     expect(res.status).toBe(201);
@@ -100,7 +100,7 @@ describe("POST /systems/:systemId/api-keys", () => {
     await postJSON(app, `/systems/${SYS_ID}/api-keys`, {
       keyType: "metadata",
       scopes: ["read:members"],
-      encryptedData: "encrypted-payload",
+      encryptedData: "encrypted-payload" as EncryptedBase64,
     });
 
     expect(createApiKey).toHaveBeenCalledTimes(1);
@@ -111,7 +111,7 @@ describe("POST /systems/:systemId/api-keys", () => {
     const res = await postJSON(app, "/systems/bad-id/api-keys", {
       keyType: "metadata",
       scopes: ["read:members"],
-      encryptedData: "encrypted-payload",
+      encryptedData: "encrypted-payload" as EncryptedBase64,
     });
 
     expect(res.status).toBe(400);

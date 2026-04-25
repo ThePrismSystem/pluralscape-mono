@@ -9,7 +9,7 @@ import {
   assertProcedureRateLimited,
 } from "../test-helpers.js";
 
-import type { ChannelId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBase64, ChannelId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -56,7 +56,7 @@ const MOCK_CHANNEL_RESULT = {
   type: "channel" as const,
   parentId: null,
   sortOrder: 0,
-  encryptedData: "base64data==",
+  encryptedData: "base64data==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,

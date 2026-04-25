@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ const FLD_ID = "fld_550e8400-e29b-41d4-a716-446655440000";
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
-const VALID_BODY = { encryptedData: "dGVzdA==", version: 1 };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64, version: 1 };
 
 const FIELD_DEFINITION_RESULT = {
   id: FLD_ID as never,
@@ -47,7 +47,7 @@ const FIELD_DEFINITION_RESULT = {
   fieldType: "text" as const,
   required: false,
   sortOrder: 0,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,

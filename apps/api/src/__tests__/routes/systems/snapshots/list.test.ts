@@ -7,7 +7,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ const MOCK_SNAPSHOT = {
   id: SNAPSHOT_ID as never,
   systemId: SYS_ID as never,
   snapshotTrigger: "manual" as const,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   createdAt: 1000 as never,
 };
 

@@ -10,6 +10,7 @@ import {
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
 import type { BoardMessageResult } from "../../../services/board-message/internal.js";
+import type { EncryptedBase64 } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ const MOCK_RESULT: BoardMessageResult = {
   systemId: MOCK_AUTH.systemId as never,
   pinned: false,
   sortOrder: 0,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,
@@ -107,7 +108,7 @@ describe("POST /systems/:id/board-messages (create)", () => {
     vi.mocked(createBoardMessage).mockResolvedValueOnce(MOCK_RESULT);
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
     });
 
@@ -120,14 +121,14 @@ describe("POST /systems/:id/board-messages (create)", () => {
     vi.mocked(createBoardMessage).mockResolvedValueOnce(MOCK_RESULT);
 
     await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
     });
 
     expect(vi.mocked(createBoardMessage)).toHaveBeenCalledWith(
       expect.anything(),
       "sys_550e8400-e29b-41d4-a716-446655440000",
-      expect.objectContaining({ encryptedData: "dGVzdA==", sortOrder: 0 }),
+      expect.objectContaining({ encryptedData: "dGVzdA==" as EncryptedBase64, sortOrder: 0 }),
       MOCK_AUTH,
       expect.any(Function),
     );
@@ -138,7 +139,7 @@ describe("POST /systems/:id/board-messages (create)", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const res = await postJSON(createApp(), BASE, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
     });
 
@@ -199,7 +200,7 @@ describe("PUT /systems/:id/board-messages/:boardMessageId", () => {
     vi.mocked(updateBoardMessage).mockResolvedValueOnce({ ...MOCK_RESULT, version: 2 });
 
     const res = await putJSON(createApp(), `${BASE}/${BM_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -212,7 +213,7 @@ describe("PUT /systems/:id/board-messages/:boardMessageId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${BM_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 
@@ -225,7 +226,7 @@ describe("PUT /systems/:id/board-messages/:boardMessageId", () => {
     );
 
     const res = await putJSON(createApp(), `${BASE}/${BM_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 1,
     });
 

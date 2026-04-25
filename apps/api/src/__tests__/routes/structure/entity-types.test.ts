@@ -12,6 +12,7 @@ import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../../helpers/rout
 
 import type { EntityTypeResult } from "../../../services/structure/entity-type/internal.js";
 import type {
+  EncryptedBase64,
   ApiErrorResponse,
   PaginatedResult,
   SystemStructureEntityTypeId,
@@ -71,7 +72,7 @@ const MOCK_ENTITY_TYPE: EntityTypeResult = {
   id: ET_ID,
   systemId: SYS_ID as never,
   sortOrder: 0,
-  encryptedData: "dGVzdA==",
+  encryptedData: "dGVzdA==" as EncryptedBase64,
   version: 1,
   archived: false,
   archivedAt: null,
@@ -99,7 +100,10 @@ describe("POST /systems/:systemId/structure/entity-types", () => {
   it("returns 201 with new entity type on success", async () => {
     vi.mocked(createEntityType).mockResolvedValueOnce(MOCK_ENTITY_TYPE);
     const app = createApp();
-    const res = await postJSON(app, BASE, { encryptedData: "dGVzdA==", sortOrder: 0 });
+    const res = await postJSON(app, BASE, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      sortOrder: 0,
+    });
     expect(res.status).toBe(201);
     const body = (await res.json()) as { data: EntityTypeResult };
     expect(body.data.id).toBe(ET_ID);
@@ -108,7 +112,7 @@ describe("POST /systems/:systemId/structure/entity-types", () => {
   it("forwards systemId, body, auth, and audit to service", async () => {
     vi.mocked(createEntityType).mockResolvedValueOnce(MOCK_ENTITY_TYPE);
     const app = createApp();
-    const payload = { encryptedData: "dGVzdA==", sortOrder: 0 };
+    const payload = { encryptedData: "dGVzdA==" as EncryptedBase64, sortOrder: 0 };
     await postJSON(app, BASE, payload);
 
     expect(vi.mocked(createEntityType)).toHaveBeenCalledWith(
@@ -124,7 +128,7 @@ describe("POST /systems/:systemId/structure/entity-types", () => {
   it("returns 400 for invalid system ID", async () => {
     const app = createApp();
     const res = await postJSON(app, "/systems/not-valid/structure/entity-types", {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
     });
     expect(res.status).toBe(400);
@@ -146,7 +150,10 @@ describe("POST /systems/:systemId/structure/entity-types", () => {
     vi.mocked(createEntityType).mockRejectedValueOnce(new Error("DB timeout"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const app = createApp();
-    const res = await postJSON(app, BASE, { encryptedData: "dGVzdA==", sortOrder: 0 });
+    const res = await postJSON(app, BASE, {
+      encryptedData: "dGVzdA==" as EncryptedBase64,
+      sortOrder: 0,
+    });
     expect(res.status).toBe(500);
   });
 });
@@ -242,7 +249,7 @@ describe("PUT /systems/:systemId/structure/entity-types/:entityTypeId", () => {
     vi.mocked(updateEntityType).mockResolvedValueOnce(updated);
     const app = createApp();
     const res = await putJSON(app, `${BASE}/${ET_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 1,
       version: 1,
     });
@@ -255,7 +262,7 @@ describe("PUT /systems/:systemId/structure/entity-types/:entityTypeId", () => {
     vi.mocked(updateEntityType).mockResolvedValueOnce(MOCK_ENTITY_TYPE);
     const app = createApp();
     await putJSON(app, `${BASE}/${ET_ID}`, {
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       sortOrder: 0,
       version: 1,
     });

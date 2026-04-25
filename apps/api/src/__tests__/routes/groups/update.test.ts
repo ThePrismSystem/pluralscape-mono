@@ -9,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { EncryptedBase64, ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ async function putJSON(app: Hono, body: unknown): Promise<Response> {
   });
 }
 
-const VALID_BODY = { encryptedData: "dGVzdA==", version: 1 };
+const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64, version: 1 };
 
 describe("PUT /systems/:id/groups/:groupId", () => {
   beforeEach(() => {
@@ -58,7 +58,7 @@ describe("PUT /systems/:id/groups/:groupId", () => {
       systemId: MOCK_AUTH.systemId as never,
       parentGroupId: null,
       sortOrder: 0,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 2,
       createdAt: 1000 as never,
       updatedAt: 2000 as never,
@@ -80,7 +80,7 @@ describe("PUT /systems/:id/groups/:groupId", () => {
       systemId: MOCK_AUTH.systemId as never,
       parentGroupId: null,
       sortOrder: 0,
-      encryptedData: "dGVzdA==",
+      encryptedData: "dGVzdA==" as EncryptedBase64,
       version: 2,
       createdAt: 1000 as never,
       updatedAt: 2000 as never,
