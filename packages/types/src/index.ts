@@ -6,7 +6,7 @@
 export * from "./entities/index.js";
 
 // ── Type-level assertions (SoT parity) ───────────────────────────
-export type { Assert, Equal, Extends, Serialize } from "./type-assertions.js";
+export type { Assert, Equal, Extends, Serialize, UnbrandedEquivalence } from "./type-assertions.js";
 
 // ── SoT manifest ─────────────────────────────────────────────────
 export type { SotEntityManifest } from "./__sot-manifest__.js";

@@ -1,21 +1,30 @@
-import type { EncryptedBlob } from "./encryption-primitives.js";
+import type { EncryptedBase64, EncryptedBlob } from "./encryption-primitives.js";
+import type { ServerInternal } from "./server-internal.js";
 
 /**
  * Wire-form envelope for any `XServerMetadata` type. The domain carries
  * `encryptedData: EncryptedBlob` (or `| null`); on the wire that field is
- * base64 `string` (or `string | null`). Every other column passes through.
+ * branded base64 (`EncryptedBase64` or `EncryptedBase64 | null`). Any
+ * top-level field marked `ServerInternal<…>` is stripped — those fields
+ * are server-fill-only and must never leave the server.
  *
  * @see docs/adr/023-zod-type-alignment.md
  *
  * Example:
  *   type MemberResult = EncryptedWire<MemberServerMetadata>;
  */
+type StripServerInternal<T> = {
+  [K in keyof T as T[K] extends ServerInternal<unknown> ? never : K]: T[K];
+};
+
 export type EncryptedWire<T extends { readonly encryptedData: EncryptedBlob | null }> = Omit<
-  T,
+  StripServerInternal<T>,
   "encryptedData"
 > & {
   // null extends T["encryptedData"] is true only when the union actually contains null.
-  readonly encryptedData: null extends T["encryptedData"] ? string | null : string;
+  readonly encryptedData: null extends T["encryptedData"]
+    ? EncryptedBase64 | null
+    : EncryptedBase64;
 };
 
 /**
