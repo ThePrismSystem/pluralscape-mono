@@ -6,6 +6,7 @@ import {
   DuplicateMemberBodySchema,
   UpdateMemberBodySchema,
 } from "../member.js";
+import { MAX_ENCRYPTED_PHOTO_DATA_SIZE } from "../validation.constants.js";
 
 import type { Equal } from "@pluralscape/types";
 import type { z } from "zod/v4";
@@ -139,6 +140,12 @@ describe("CreateMemberPhotoBodySchema", () => {
       encryptedData: "dGVzdA==",
       sortOrder: -1,
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects encryptedData over MAX_ENCRYPTED_PHOTO_DATA_SIZE", () => {
+    const oversized = "a".repeat(MAX_ENCRYPTED_PHOTO_DATA_SIZE + 1);
+    const result = CreateMemberPhotoBodySchema.safeParse({ encryptedData: oversized });
     expect(result.success).toBe(false);
   });
 });

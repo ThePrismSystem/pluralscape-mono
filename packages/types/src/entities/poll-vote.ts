@@ -32,10 +32,13 @@ export type ArchivedPollVote = Archived<PollVote>;
 export type PollVoteEncryptedFields = "comment";
 
 /**
- * Domain field that is plaintext (not encrypted) but restructured on the
- * server row into multiple flat columns. `voter` is a polymorphic
- * `EntityReference<...>` on the domain — on the server row it is split
- * into `voterEntityType` + `voterEntityId`.
+ * Domain field that is plaintext on the server row but stored with a
+ * different shape than the domain implies. `voter` is a non-nullable
+ * `EntityReference<"member" | "structure-entity">` on the domain (every
+ * poll vote has a voter); on the server row the column is nullable in
+ * Drizzle's inferred type because a DB-level CHECK constraint enforces
+ * non-null without surfacing it through the column type. Same shape, just
+ * nullability flip (cf. `AcknowledgementRequestRestructuredPlaintextFields`).
  *
  * Distinguished from `PollVoteEncryptedFields` (which lists keys whose
  * values ride inside the encryptedData blob).
