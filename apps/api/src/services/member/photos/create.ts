@@ -1,7 +1,6 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { memberPhotos, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateMemberPhotoBodySchema } from "@pluralscape/validation";
 import { and, count, eq, max } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../../http.constants.js";
@@ -18,7 +17,9 @@ import type { MemberPhotoResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { EncryptedBlob, MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
+import type { CreateMemberPhotoBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 const MAX_ENCRYPTED_PHOTO_DATA_BYTES = 131_072;
 
@@ -47,19 +48,14 @@ export async function createMemberPhoto(
   db: PostgresJsDatabase,
   systemId: SystemId,
   memberId: MemberId,
-  params: unknown,
+  body: z.infer<typeof CreateMemberPhotoBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberPhotoResult> {
   assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
 
-  const parsed = CreateMemberPhotoBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
-
-  const blob = parseAndValidatePhotoBlob(parsed.data.encryptedData);
+  const blob = parseAndValidatePhotoBlob(body.encryptedData);
   const photoId = brandId<MemberPhotoId>(createId(ID_PREFIXES.memberPhoto));
   const timestamp = now();
 
@@ -102,7 +98,7 @@ export async function createMemberPhoto(
     }
 
     // Determine sort order
-    let sortOrder = parsed.data.sortOrder;
+    let sortOrder = body.sortOrder;
     if (sortOrder === undefined) {
       const [maxResult] = await tx
         .select({ maxSort: max(memberPhotos.sortOrder) })
