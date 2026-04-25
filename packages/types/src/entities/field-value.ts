@@ -75,3 +75,22 @@ export type FieldValueResult = EncryptedWire<FieldValueServerMetadata>;
  * `EncryptedBase64` becomes plain `string`; timestamps become numbers.
  */
 export type FieldValueWire = Serialize<FieldValueResult>;
+
+/**
+ * Request body for setting a field value.
+ *
+ * @deprecated Use `z.infer<typeof SetFieldValueBodySchema>`.
+ */
+export interface SetFieldValueBody {
+  readonly encryptedData: string;
+}
+
+/**
+ * Request body for updating a field value.
+ *
+ * @deprecated Use `z.infer<typeof UpdateFieldValueBodySchema>`.
+ */
+export interface UpdateFieldValueBody {
+  readonly encryptedData: string;
+  readonly version: number;
+}

@@ -35,6 +35,16 @@ export type MemberPhotoEncryptedInput = Pick<MemberPhoto, MemberPhotoEncryptedFi
 export type ArchivedMemberPhoto = Archived<MemberPhoto>;
 
 /**
+ * Request body for creating a member photo.
+ *
+ * @deprecated Use `z.infer<typeof CreateMemberPhotoBodySchema>`.
+ */
+export interface CreateMemberPhotoBody {
+  readonly encryptedData: string;
+  readonly sortOrder?: number;
+}
+
+/**
  * Server-visible MemberPhoto metadata — raw Drizzle row shape.
  *
  * Derived from `MemberPhoto` by stripping the encrypted field keys bundled
