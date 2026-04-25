@@ -41,8 +41,6 @@ The 2026-04-25 type-drift audit revealed structural gaps in the existing type ch
 
 To be written via brainstorming skill (2026-04-25).
 
-
-
 ## PR 1 Pilot Progress (2026-04-25)
 
 Member canonical chain implemented in worktree `refactor/ps-y4tb-pilot-member`. All 10 PR-1 tasks complete:
@@ -56,8 +54,6 @@ Member canonical chain implemented in worktree `refactor/ps-y4tb-pilot-member`. 
 Cycle constraint discovered: `@pluralscape/data` already depends on `@pluralscape/validation`, so G4 in validation parity tests cannot import from data. Inline-shape G4 used instead (mirrors existing pattern in `packages/validation/src/__tests__/contract-member.test.ts`). Follow-up bean **types-1spw** tracks moving canonical G4 anchoring to the data package after fleet rollout.
 
 Plan reference: `docs/superpowers/plans/2026-04-25-ps-y4tb-encrypted-entity-sot-consolidation.md` Task 3.7 (cycle-constraint note above Step 1).
-
-
 
 ## PR 1 Merged — 2026-04-25 09:33 UTC
 

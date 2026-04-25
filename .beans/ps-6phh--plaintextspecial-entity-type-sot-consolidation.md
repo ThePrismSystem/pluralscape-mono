@@ -8,7 +8,7 @@ created_at: 2026-04-25T08:02:48Z
 updated_at: 2026-04-25T08:02:52Z
 parent: ps-cd6x
 blocked_by:
-    - ps-y4tb
+  - ps-y4tb
 ---
 
 Consolidate the type chain for plaintext and special entities — sibling to ps-y4tb (which covers encrypted entities). Tackled after the encrypted-entity work proves the pattern.
@@ -31,7 +31,7 @@ Per the 2026-04-25 audit:
 
 ## Goals
 
-- Drop redundant *Body interfaces in @pluralscape/types where they duplicate z.infer<XBodySchema>
+- Drop redundant \*Body interfaces in @pluralscape/types where they duplicate z.infer<XBodySchema>
 - Drop hand-rolled XRaw types in packages/data where applicable (some plaintext entities don't have transforms)
 - Service signature cleanup: drop params: unknown, accept z.infer<XBodySchema>
 - Add Zod-to-types parity tests for any hand-rolled request input types

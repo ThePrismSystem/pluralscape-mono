@@ -1,6 +1,6 @@
 ---
 # ps-etbc
-title: 'ps-y4tb fleet completion: data transforms, services, routes, tRPC, parity tests, manifest'
+title: "ps-y4tb fleet completion: data transforms, services, routes, tRPC, parity tests, manifest"
 status: todo
 type: task
 priority: high
@@ -34,11 +34,12 @@ For each of the 14 services/routes/routers consuming the deprecated `*Body` inte
 - tRPC routers: pass input directly (no manual rebuild)
 
 Affected files (from grep on 2026-04-25):
+
 - apps/api/src/services/member/photos/create.ts
 - apps/api/src/services/field-definition/{create,update}.ts
 - apps/api/src/services/field-value/{set,update}.ts
 - apps/api/src/trpc/routers/{member-photo,field}.ts
-- apps/api/src/routes/.../* (all corresponding routes)
+- apps/api/src/routes/.../\* (all corresponding routes)
 - packages/import-sp/src/mappers/field-definition.mapper.ts (uses CreateFieldDefinitionBody — switch to z.infer)
 - packages/data/src/transforms/custom-field.ts
 

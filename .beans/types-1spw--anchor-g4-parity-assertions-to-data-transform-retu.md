@@ -29,7 +29,7 @@ C. **Invert the data ↔ validation dependency** so validation depends on data i
 
 ## Scope
 
-Apply to the full encrypted-entity fleet *after* PR 2 of ps-y4tb lands the inline-shape pattern uniformly. Doing this per-entity during the fleet migration would amplify the per-PR diff for marginal benefit; a single follow-up sweep is cleaner.
+Apply to the full encrypted-entity fleet _after_ PR 2 of ps-y4tb lands the inline-shape pattern uniformly. Doing this per-entity during the fleet migration would amplify the per-PR diff for marginal benefit; a single follow-up sweep is cleaner.
 
 ## Acceptance
 
