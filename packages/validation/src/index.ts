@@ -162,6 +162,7 @@ export {
   MessageTimestampQuerySchema,
 } from "./message.js";
 export {
+  BoardMessageEncryptedInputSchema,
   CreateBoardMessageBodySchema,
   UpdateBoardMessageBodySchema,
   ReorderBoardMessagesBodySchema,

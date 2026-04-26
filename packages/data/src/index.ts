@@ -121,7 +121,6 @@ export {
   encryptBoardMessageInput,
   encryptBoardMessageUpdate,
 } from "./transforms/board-message.js";
-export type { BoardMessageEncryptedFields } from "./transforms/board-message.js";
 
 export {
   decryptPoll,

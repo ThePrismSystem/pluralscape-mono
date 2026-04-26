@@ -19,8 +19,7 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPBoardMessage } from "../sources/sp-types.js";
-import type { BoardMessageEncryptedFields } from "@pluralscape/data";
-import type { MemberId } from "@pluralscape/types";
+import type { BoardMessageEncryptedInput, MemberId } from "@pluralscape/types";
 import type { CreateBoardMessageBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -28,7 +27,7 @@ export type MappedBoardMessage = Omit<
   z.infer<typeof CreateBoardMessageBodySchema>,
   "encryptedData"
 > & {
-  readonly encrypted: BoardMessageEncryptedFields;
+  readonly encrypted: BoardMessageEncryptedInput;
   readonly createdAt: number;
 };
 
@@ -68,7 +67,7 @@ export function mapBoardMessage(
 
   const content = sp.title ? `# ${sp.title}\n\n${sp.message}` : sp.message;
 
-  const encrypted: BoardMessageEncryptedFields = {
+  const encrypted: BoardMessageEncryptedInput = {
     content,
     senderId: brandId<MemberId>(authorMemberId),
   };

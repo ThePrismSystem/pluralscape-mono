@@ -41,7 +41,6 @@ import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test
 
 export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
-import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message";
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
@@ -62,6 +61,7 @@ import type {
   AcknowledgementId,
   AcknowledgementRequestWire,
   BoardMessageId,
+  BoardMessageWire,
   ChannelId,
   CheckInRecordId,
   CustomFrontId,
@@ -140,8 +140,8 @@ export function makeRawAcknowledgement(
 
 export function makeRawBoardMessage(
   id: string,
-  overrides?: Partial<BoardMessageRaw>,
-): BoardMessageRaw {
+  overrides?: Partial<BoardMessageWire>,
+): BoardMessageWire {
   const encrypted = encryptBoardMessageInput(
     { content: "Board post", senderId: brandId<MemberId>("m-1") },
     TEST_MASTER_KEY,

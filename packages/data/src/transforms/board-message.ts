@@ -1,93 +1,50 @@
-import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { BoardMessageEncryptedInputSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, BoardMessage, MemberId, UnixMillis } from "@pluralscape/types";
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `boardMessage.get` — derived from the `BoardMessage` domain type. */
-export type BoardMessageRaw = Omit<BoardMessage, keyof BoardMessageEncryptedFields | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+import type {
+  Archived,
+  BoardMessage,
+  BoardMessageEncryptedInput,
+  BoardMessageId,
+  BoardMessageWire,
+  SystemId,
+} from "@pluralscape/types";
 
 /** Shape returned by `boardMessage.list`. */
 export interface BoardMessagePage {
-  readonly data: readonly BoardMessageRaw[];
+  readonly data: readonly BoardMessageWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a board message blob.
- * Pass this to `encryptBoardMessageInput` when creating or updating a board message.
- */
-export interface BoardMessageEncryptedFields {
-  readonly content: string;
-  readonly senderId: MemberId;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertBoardMessageFieldsSubset =
-  BoardMessageEncryptedFields extends Pick<BoardMessage, keyof BoardMessageEncryptedFields>
-    ? true
-    : never;
-
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertBoardMessageEncryptedFields(
-  raw: unknown,
-): asserts raw is BoardMessageEncryptedFields {
-  const obj = assertObjectBlob(raw, "board message");
-  assertStringField(obj, "board message", "content");
-  assertStringField(obj, "board message", "senderId");
-}
-
-// ── BoardMessage transforms ───────────────────────────────────────────
-
-/**
- * Decrypt a single board message API result into a `BoardMessage`.
- *
- * The encrypted blob contains: `content`, `senderId`.
- * All other fields pass through from the wire payload.
- */
 export function decryptBoardMessage(
-  raw: BoardMessageRaw,
+  raw: BoardMessageWire,
   masterKey: KdfMasterKey,
 ): BoardMessage | Archived<BoardMessage> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertBoardMessageEncryptedFields(plaintext);
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = BoardMessageEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    senderId: plaintext.senderId,
-    content: plaintext.content,
+    id: brandId<BoardMessageId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    senderId: validated.senderId,
+    content: validated.content,
     pinned: raw.pinned,
     sortOrder: raw.sortOrder,
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived board message missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Decrypt a paginated board message list result.
- */
 export function decryptBoardMessagePage(
   raw: BoardMessagePage,
   masterKey: KdfMasterKey,
@@ -98,27 +55,15 @@ export function decryptBoardMessagePage(
   };
 }
 
-/**
- * Encrypt board message plaintext fields for create payloads.
- *
- * Returns `{ encryptedData: string }` — pass the spread of this into the
- * `CreateBoardMessageBodySchema`.
- */
 export function encryptBoardMessageInput(
-  data: BoardMessageEncryptedFields,
+  data: BoardMessageEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
-/**
- * Encrypt board message plaintext fields for update payloads.
- *
- * Returns `{ encryptedData: string; version: number }` — pass the spread of this
- * into the `UpdateBoardMessageBodySchema`.
- */
 export function encryptBoardMessageUpdate(
-  data: BoardMessageEncryptedFields,
+  data: BoardMessageEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

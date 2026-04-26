@@ -17,11 +17,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  BoardMessagePage as BoardMessageRawPage,
-  BoardMessageRaw,
-} from "@pluralscape/data/transforms/board-message";
-import type { Archived, BoardMessage, BoardMessageId } from "@pluralscape/types";
+import type { BoardMessagePage as BoardMessageWirePage } from "@pluralscape/data/transforms/board-message";
+import type { Archived, BoardMessage, BoardMessageId, BoardMessageWire } from "@pluralscape/types";
 
 interface BoardMessageListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -32,7 +29,7 @@ export function useBoardMessage(
   boardMessageId: BoardMessageId,
   opts?: SystemIdOverride,
 ): DataQuery<BoardMessage | Archived<BoardMessage>> {
-  return useOfflineFirstQuery<BoardMessageRaw, BoardMessage | Archived<BoardMessage>>({
+  return useOfflineFirstQuery<BoardMessageWire, BoardMessage | Archived<BoardMessage>>({
     queryKey: ["board_messages", boardMessageId],
     table: "own_board_messages",
     entityId: boardMessageId,
@@ -50,7 +47,7 @@ export function useBoardMessage(
 export function useBoardMessagesList(
   opts?: BoardMessageListOpts,
 ): DataListQuery<BoardMessage | Archived<BoardMessage>> {
-  return useOfflineFirstInfiniteQuery<BoardMessageRaw, BoardMessage | Archived<BoardMessage>>({
+  return useOfflineFirstInfiniteQuery<BoardMessageWire, BoardMessage | Archived<BoardMessage>>({
     queryKey: ["board_messages", "list", opts?.includeArchived ?? false],
     table: "own_board_messages",
     rowTransform: rowToBoardMessage,
@@ -66,7 +63,7 @@ export function useBoardMessagesList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: BoardMessageRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: BoardMessageWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<BoardMessage | Archived<BoardMessage>>,
