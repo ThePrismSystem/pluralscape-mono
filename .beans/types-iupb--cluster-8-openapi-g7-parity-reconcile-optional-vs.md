@@ -1,13 +1,13 @@
 ---
 # types-iupb
-title: 'Cluster 8 OpenAPI G7 parity: reconcile optional-vs-nullable for hybrid encrypted entities'
+title: "Cluster 8 OpenAPI G7 parity: reconcile optional-vs-nullable for hybrid encrypted entities"
 status: todo
 type: task
 priority: normal
 created_at: 2026-04-26T05:03:58Z
 updated_at: 2026-04-26T05:03:58Z
 blocked_by:
-    - ps-etbc
+  - ps-etbc
 ---
 
 ## Background
@@ -38,6 +38,7 @@ Recommended: option 1 unless review surfaces a concrete reason a column should b
 ## Scope
 
 For each of the following entities:
+
 - Identify each plaintext column where OpenAPI emits `?: T` but the canonical type declares `T | null` (or vice versa)
 - Reconcile in the OpenAPI spec (preferred) or canonical type
 - Add `Equal<<X>Response, <X>Wire>` G7 assertion to `scripts/openapi-wire-parity.type-test.ts`
