@@ -23,7 +23,7 @@ export interface MemberPhoto {
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextMemberPhoto parity)
  * - `MemberPhotoServerMetadata` (derived via `Omit`)
  */
-export type MemberPhotoEncryptedFields = "imageSource" | "sortOrder" | "caption";
+export type MemberPhotoEncryptedFields = "imageSource" | "caption";
 
 // ── Canonical chain (see ADR-023) ────────────────────────────────────
 // MemberPhotoEncryptedInput → MemberPhotoServerMetadata
@@ -44,9 +44,9 @@ export type ArchivedMemberPhoto = Archived<MemberPhoto>;
  * inside `encryptedData` and `archived` (server tracks a mutable boolean
  * with a companion `archivedAt` timestamp, domain uses `false` literal).
  * Adds DB-only columns the domain type doesn't carry: `systemId`
- * (denormalized from `members` for RLS), `sortOrder` kept plaintext in DB
- * for index-based ordering (present in domain but marked encrypted),
- * full `AuditMetadata` (`createdAt`/`updatedAt`/`version`),
+ * (denormalized from `members` for RLS), `sortOrder` kept as a plaintext
+ * column for index-based ordering (re-added explicitly here so the DB shape
+ * is unambiguous), full `AuditMetadata` (`createdAt`/`updatedAt`/`version`),
  * `encryptedData` (the T1 blob), and `archived`/`archivedAt`.
  */
 export type MemberPhotoServerMetadata = Omit<MemberPhoto, MemberPhotoEncryptedFields | "archived"> &

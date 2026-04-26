@@ -7874,7 +7874,6 @@ export interface components {
      */
     PlaintextMemberPhoto: {
       imageSource: components["schemas"]["PlaintextImageSource"];
-      sortOrder: number;
       caption: string | null;
     };
     /**

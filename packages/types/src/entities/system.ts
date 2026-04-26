@@ -44,6 +44,12 @@ export interface SystemListItem {
 /**
  * Server-visible System metadata — raw Drizzle row shape.
  *
+ * Divergence from domain: the server row carries `archived: boolean` even
+ * though `System` (the decrypted domain shape) has no `archived` field.
+ * Systems are not user-archivable; the column exists at the DB layer for
+ * uniform soft-deletion plumbing across all entity tables, but no domain
+ * code path reads or writes it. Treat the field as server-only state.
+ *
  * Derived from `System` by stripping the encrypted field keys (bundled
  * inside `encryptedData`) and `settingsId` (which lives on the companion
  * `system_settings` table, joined on `systemId`, not as a column on
