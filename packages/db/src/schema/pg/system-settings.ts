@@ -6,7 +6,7 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.j
 
 import { systems } from "./systems.js";
 
-import type { Locale, SystemId, SystemSettingsId } from "@pluralscape/types";
+import type { Locale, PinHash, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSettings = pgTable(
@@ -19,7 +19,7 @@ export const systemSettings = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     locale: varchar("locale", { length: 255 }).$type<Locale>(),
     /** Must use Argon2id — PINs are low-entropy (4-6 digits) and trivially reversible with weak hashes. */
-    pinHash: varchar("pin_hash", { length: 512 }),
+    pinHash: varchar("pin_hash", { length: 512 }).$type<PinHash | null>(),
     /**
      * Server-side cache of the biometricEnabled value stored inside the
      * encrypted AppLockConfig blob (encryptedData). Duplicated here so
