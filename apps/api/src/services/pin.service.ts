@@ -15,7 +15,7 @@ import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { PinHash, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
@@ -42,7 +42,7 @@ export async function setPin(
 
   assertSystemOwnership(systemId, auth);
 
-  const pinHash = await hashPinOffload(parsed.data.pin);
+  const pinHash = (await hashPinOffload(parsed.data.pin)) as PinHash;
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx

@@ -10,13 +10,20 @@
  * `biometricEnabled` (server-visible for device-transfer policy) plus
  * `encryptedData`. See `member.type.test.ts` for the general rationale
  * behind the brand-stripped comparison.
+ *
+ * `Serialize` is used on both sides of the equality check to strip the
+ * `PinHash` brand (and any future brands) down to their primitive
+ * equivalents before comparison. Drizzle emits `pinHash` as
+ * `string | null` (a bare `varchar` column), while the domain type now
+ * carries `PinHash | null`; stripping brands makes the check structurally
+ * sound without widening other fields.
  */
 
 import { describe, expectTypeOf, it } from "vitest";
 
 import { systemSettings } from "../../schema/pg/system-settings.js";
 
-import type { Equal, SystemSettingsServerMetadata } from "@pluralscape/types";
+import type { Equal, Serialize, SystemSettingsServerMetadata } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
 describe("SystemSettings Drizzle parity", () => {
@@ -25,8 +32,10 @@ describe("SystemSettings Drizzle parity", () => {
     expectTypeOf<keyof Row>().toEqualTypeOf<keyof SystemSettingsServerMetadata>();
   });
 
-  it("system_settings Drizzle row equals SystemSettingsServerMetadata", () => {
+  it("system_settings Drizzle row equals SystemSettingsServerMetadata (brand-stripped)", () => {
     type Row = InferSelectModel<typeof systemSettings>;
-    expectTypeOf<Equal<Row, SystemSettingsServerMetadata>>().toEqualTypeOf<true>();
+    expectTypeOf<
+      Equal<Serialize<Row>, Serialize<SystemSettingsServerMetadata>>
+    >().toEqualTypeOf<true>();
   });
 });
