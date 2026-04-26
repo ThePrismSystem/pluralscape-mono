@@ -6,7 +6,16 @@ PollResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"
     - type: object
-      required: [kind, status, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto]
+      required:
+        - createdByMemberId
+        - kind
+        - status
+        - closedAt
+        - endsAt
+        - allowMultipleVotes
+        - maxVotesPerMember
+        - allowAbstain
+        - allowVeto
       properties:
         createdByMemberId:
           type: string

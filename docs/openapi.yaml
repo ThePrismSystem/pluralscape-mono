@@ -13745,6 +13745,13 @@ components:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
+          required:
+            - intervalMinutes
+            - wakingHoursOnly
+            - wakingStart
+            - wakingEnd
+            - enabled
+            - nextCheckInAt
           properties:
             enabled:
               type: boolean
@@ -13768,6 +13775,11 @@ components:
               nullable: true
               pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
               description: End of waking hours (HH:MM, required when wakingHoursOnly=true)
+            nextCheckInAt:
+              type: integer
+              format: int64
+              nullable: true
+              description: Server-tracked Unix milliseconds of the next scheduled check-in (null when disabled or not yet scheduled)
     CreateTimerConfigRequest:
       type: object
       required:
@@ -17145,6 +17157,7 @@ components:
         - type: object
           required:
             - type
+            - parentId
             - sortOrder
           properties:
             type:
@@ -17215,7 +17228,9 @@ components:
         - type: object
           required:
             - channelId
+            - replyToId
             - timestamp
+            - editedAt
           properties:
             channelId:
               type: string
@@ -17357,6 +17372,9 @@ components:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
+          required:
+            - authorEntityType
+            - authorEntityId
           properties:
             authorEntityType:
               type: string
@@ -17419,8 +17437,11 @@ components:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
           required:
+            - createdByMemberId
             - kind
             - status
+            - closedAt
+            - endsAt
             - allowMultipleVotes
             - maxVotesPerMember
             - allowAbstain
@@ -17680,6 +17701,7 @@ components:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
           required:
+            - createdByMemberId
             - confirmed
           properties:
             createdByMemberId:

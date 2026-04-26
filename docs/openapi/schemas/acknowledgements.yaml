@@ -6,7 +6,7 @@ AcknowledgementResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"
     - type: object
-      required: [confirmed]
+      required: [createdByMemberId, confirmed]
       properties:
         createdByMemberId:
           type: string

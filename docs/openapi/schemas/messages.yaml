@@ -6,7 +6,7 @@ MessageResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"
     - type: object
-      required: [channelId, timestamp]
+      required: [channelId, replyToId, timestamp, editedAt]
       properties:
         channelId:
           type: string

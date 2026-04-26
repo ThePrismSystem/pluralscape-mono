@@ -6,7 +6,7 @@ ChannelResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"
     - type: object
-      required: [type, sortOrder]
+      required: [type, parentId, sortOrder]
       properties:
         type:
           type: string

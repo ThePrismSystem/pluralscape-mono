@@ -6,6 +6,7 @@ NoteResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"
     - type: object
+      required: [authorEntityType, authorEntityId]
       properties:
         authorEntityType:
           type: string
