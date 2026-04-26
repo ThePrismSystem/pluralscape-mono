@@ -1,89 +1,48 @@
-import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { PrivacyBucketEncryptedInputSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, PrivacyBucket, UnixMillis } from "@pluralscape/types";
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `privacyBucket.get` — derived from the `PrivacyBucket` domain type. */
-export type PrivacyBucketRaw = Omit<PrivacyBucket, keyof BucketEncryptedFields | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+import type {
+  Archived,
+  BucketId,
+  PrivacyBucket,
+  PrivacyBucketEncryptedInput,
+  PrivacyBucketWire,
+  SystemId,
+} from "@pluralscape/types";
 
 /** Shape returned by `privacyBucket.list`. */
 export interface PrivacyBucketPage {
-  readonly data: readonly PrivacyBucketRaw[];
+  readonly data: readonly PrivacyBucketWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/** The subset of PrivacyBucket fields stored encrypted on the server. */
-export interface BucketEncryptedFields {
-  readonly name: string;
-  readonly description: string | null;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertBucketFieldsSubset =
-  BucketEncryptedFields extends Pick<PrivacyBucket, keyof BucketEncryptedFields> ? true : never;
-
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertBucketEncryptedFields(raw: unknown): asserts raw is BucketEncryptedFields {
-  const obj = assertObjectBlob(raw, "privacy bucket");
-  assertStringField(obj, "privacy bucket", "name");
-  if (!("description" in obj)) {
-    throw new Error("Decrypted privacy bucket blob: missing required field: description");
-  }
-  if (obj["description"] !== null && typeof obj["description"] !== "string") {
-    throw new Error("Decrypted privacy bucket blob: description must be string or null");
-  }
-}
-
-// ── Transforms ────────────────────────────────────────────────────────
-
-/**
- * Decrypt a single privacy bucket API result into a `PrivacyBucket`.
- *
- * The encrypted blob contains: `name`, `description`.
- * All other fields pass through from the wire payload.
- */
 export function decryptPrivacyBucket(
-  raw: PrivacyBucketRaw,
+  raw: PrivacyBucketWire,
   masterKey: KdfMasterKey,
 ): PrivacyBucket | Archived<PrivacyBucket> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertBucketEncryptedFields(plaintext);
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = PrivacyBucketEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    name: plaintext.name,
-    description: plaintext.description,
+    id: brandId<BucketId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
+    name: validated.name,
+    description: validated.description,
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived privacy bucket missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Decrypt a paginated privacy bucket list result.
- */
 export function decryptPrivacyBucketPage(
   raw: PrivacyBucketPage,
   masterKey: KdfMasterKey,
@@ -94,27 +53,15 @@ export function decryptPrivacyBucketPage(
   };
 }
 
-/**
- * Encrypt privacy bucket plaintext fields for a create payload.
- *
- * Returns `{ encryptedData: string }` — pass the spread of this into the
- * `CreateBucketBodySchema`.
- */
 export function encryptBucketInput(
-  data: BucketEncryptedFields,
+  data: PrivacyBucketEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
-/**
- * Encrypt privacy bucket plaintext fields for an update payload.
- *
- * Returns `{ encryptedData: string; version: number }` — pass the spread of
- * this into the `UpdateBucketBodySchema`.
- */
 export function encryptBucketUpdate(
-  data: BucketEncryptedFields,
+  data: PrivacyBucketEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

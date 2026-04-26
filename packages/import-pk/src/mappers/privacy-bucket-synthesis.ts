@@ -13,15 +13,15 @@
 import { mapped, type BatchMapperOutput, type SourceDocument } from "@pluralscape/import-core";
 import { z } from "zod/v4";
 
-import type { BucketEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
+import type { PrivacyBucketEncryptedInput } from "@pluralscape/types";
 import type { CreateBucketBodySchema } from "@pluralscape/validation";
 
 export type PkMappedPrivacyBucket = Omit<
   z.infer<typeof CreateBucketBodySchema>,
   "encryptedData"
 > & {
-  readonly encrypted: BucketEncryptedFields;
+  readonly encrypted: PrivacyBucketEncryptedInput;
 };
 
 /** All PK privacy fields to check for "private" values. */
@@ -115,7 +115,7 @@ export function synthesizePkPrivacyBuckets(
   // Store private member IDs in context metadata for downstream bucket assignment
   ctx.storeMetadata("privacy-bucket", "synthetic:pk-private", "memberIds", privateMemberIds);
 
-  const encrypted: BucketEncryptedFields = {
+  const encrypted: PrivacyBucketEncryptedInput = {
     name: "PK Private",
     description: "Synthesized from PluralKit member privacy settings during import",
   };

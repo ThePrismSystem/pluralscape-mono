@@ -167,6 +167,7 @@ export {
   TagContentBodySchema,
   BucketContentTagQuerySchema,
   SetFieldBucketVisibilityBodySchema,
+  PrivacyBucketEncryptedInputSchema,
 } from "./privacy.js";
 export {
   RedeemFriendCodeBodySchema,

@@ -5,6 +5,22 @@ import { brandedIdQueryParam } from "./branded-id.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
+/**
+ * Runtime validator for the pre-encryption PrivacyBucket input. Every field
+ * of `PrivacyBucketEncryptedInput` (in `@pluralscape/types`) must be present
+ * and well-formed. Zod compile-time parity is checked in
+ * `__tests__/type-parity/privacy-bucket.type.test.ts`.
+ *
+ * Replaces the hand-written `assertBucketEncryptedFields` that used to live
+ * in `packages/data/src/transforms/privacy-bucket.ts`.
+ */
+export const PrivacyBucketEncryptedInputSchema = z
+  .object({
+    name: z.string().min(1),
+    description: z.string().nullable(),
+  })
+  .readonly();
+
 // ── Bucket CRUD ──────────────────────────────────────────────────
 
 export const CreateBucketBodySchema = z

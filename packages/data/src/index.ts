@@ -158,11 +158,6 @@ export {
   encryptBucketInput,
   encryptBucketUpdate,
 } from "./transforms/privacy-bucket.js";
-export type {
-  BucketEncryptedFields,
-  PrivacyBucketRaw,
-  PrivacyBucketPage,
-} from "./transforms/privacy-bucket.js";
 
 export {
   decryptAcknowledgement,
