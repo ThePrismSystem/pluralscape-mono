@@ -1,16 +1,19 @@
 /**
  * Drizzle parity check: the MemberPhoto row shape inferred from the
- * `memberPhotos` table structurally matches `MemberPhotoServerMetadata`
+ * `member_photos` table structurally matches `MemberPhotoServerMetadata`
  * in @pluralscape/types.
  *
- * `MemberPhotoServerMetadata` strips the encrypted field keys from the
- * domain (`imageSource`, `caption` ride inside `encryptedData`; the
- * domain marks `sortOrder` encrypted but the DB keeps it plaintext for
- * index-based ordering, so we add it back) and adds the DB-only columns
- * the domain type doesn't carry: `systemId` (denormalized from `members`
- * for RLS), full `AuditMetadata` (the domain interface lacks it), the
- * `EncryptedBlob` itself, and archivable metadata. See
- * `member.type.test.ts` for the general rationale behind the
+ * Server-side additions over the `MemberPhoto` domain:
+ * - `encryptedData: EncryptedBlob` — the T1 blob holding `imageSource`
+ *   and `caption` (the only encrypted fields on the domain).
+ * - `archived: boolean` — widens the domain's `false` literal to match
+ *   the DB column.
+ *
+ * `sortOrder` is plaintext on both sides: the domain carries it as a
+ * top-level field (used by mobile sort UI), and the DB stores it as a
+ * plain integer column for index-based ordering.
+ *
+ * See `member.type.test.ts` for the general rationale behind the
  * brand-stripped comparison.
  */
 
