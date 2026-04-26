@@ -41,7 +41,6 @@ import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test
 
 export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
-import type { AcknowledgementRaw } from "@pluralscape/data/transforms/acknowledgement";
 import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message";
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
@@ -61,6 +60,7 @@ import type {
 } from "@pluralscape/data/transforms/timer-check-in";
 import type {
   AcknowledgementId,
+  AcknowledgementRequestWire,
   BoardMessageId,
   ChannelId,
   CheckInRecordId,
@@ -111,8 +111,8 @@ export const NOW = 1_700_000_000_000 as UnixMillis;
 
 export function makeRawAcknowledgement(
   id: string,
-  overrides?: Partial<AcknowledgementRaw>,
-): AcknowledgementRaw {
+  overrides?: Partial<AcknowledgementRequestWire>,
+): AcknowledgementRequestWire {
   const encrypted = encryptAcknowledgementInput(
     {
       message: "Please read",

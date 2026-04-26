@@ -194,6 +194,7 @@ export {
   PollVoteQuerySchema,
 } from "./poll.js";
 export {
+  AcknowledgementRequestEncryptedInputSchema,
   CreateAcknowledgementBodySchema,
   ConfirmAcknowledgementBodySchema,
   AcknowledgementQuerySchema,
