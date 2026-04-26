@@ -98,15 +98,18 @@ const MOCK_POLL_RESULT = {
 
 const MOCK_VOTE_RESULT = {
   id: VOTE_ID,
+  systemId: MOCK_SYSTEM_ID,
   pollId: POLL_ID,
   optionId: null,
   voter: null,
   isVeto: false,
   votedAt: 1_700_000_000_000 as UnixMillis,
   encryptedData: "base64data==" as EncryptedBase64,
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1_700_000_000_000 as UnixMillis,
+  updatedAt: 1_700_000_000_000 as UnixMillis,
 };
 
 describe("poll router", () => {

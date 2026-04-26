@@ -82,6 +82,7 @@ import type {
   NomenclatureEncryptedFields,
   NomenclatureSettings,
   NoteWire,
+  PollVoteWire,
   PollWire,
   Relationship,
   RelationshipEncryptedFields,
@@ -220,6 +221,10 @@ expectTypeOf<
 >().toEqualTypeOf<true>();
 
 expectTypeOf<Equal<components["schemas"]["PollResponse"], PollWire>>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["PollVoteResponse"], PollVoteWire>
+>().toEqualTypeOf<true>();
 
 // TimerConfig: server adds plaintext `nextCheckInAt` to the row for
 // scheduling without requiring blob decryption (see TimerConfigServerMetadata).

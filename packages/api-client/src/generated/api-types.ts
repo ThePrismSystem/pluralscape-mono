@@ -8815,12 +8815,14 @@ export interface components {
     PollVoteResponse: {
       /** @description Vote ID */
       id: string;
+      /** @description Owning system */
+      systemId: string;
       /** @description Poll this vote belongs to */
       pollId: string;
       /** @description Selected option ID (null for abstain) */
-      optionId?: string | null;
+      optionId: string | null;
       /** @description Voter entity reference */
-      voter?: {
+      voter: {
         /** @enum {string} */
         entityType: "member" | "structure-entity";
         entityId: string;
@@ -8834,14 +8836,21 @@ export interface components {
       votedAt: number;
       /** @description T1-encrypted vote data (optional comment, etc.) */
       encryptedData: string;
+      /** @description Optimistic concurrency version */
+      version: number;
       archived: boolean;
       /** Format: int64 */
-      archivedAt?: number | null;
+      archivedAt: number | null;
       /**
        * Format: int64
        * @description Unix milliseconds
        */
       createdAt: number;
+      /**
+       * Format: int64
+       * @description Last modification timestamp (Unix milliseconds)
+       */
+      updatedAt: number;
     };
     CastVoteRequest: {
       /** @description Selected option ID (null for abstain) */

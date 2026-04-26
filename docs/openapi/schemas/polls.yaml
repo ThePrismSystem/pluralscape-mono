@@ -59,14 +59,31 @@ PollVoteResponse:
     A vote cast on a poll. Voters are polymorphic entity references
     (member or structure entity).
   type: object
-  required: [id, pollId, isVeto, votedAt, encryptedData, archived, createdAt]
+  required:
+    [
+      id,
+      systemId,
+      pollId,
+      isVeto,
+      votedAt,
+      encryptedData,
+      version,
+      updatedAt,
+      archived,
+      archivedAt,
+      createdAt,
+      optionId,
+      voter,
+    ]
   properties:
     id:
       type: string
       description: Vote ID
+    systemId:
+      type: string
+      description: Owning system
     pollId:
       type: string
-      pattern: ^poll_
       description: Poll this vote belongs to
     optionId:
       type: string
@@ -94,6 +111,10 @@ PollVoteResponse:
       type: string
       contentEncoding: base64
       description: T1-encrypted vote data (optional comment, etc.)
+    version:
+      type: integer
+      minimum: 1
+      description: Optimistic concurrency version
     archived:
       type: boolean
     archivedAt:
@@ -104,6 +125,10 @@ PollVoteResponse:
       type: integer
       format: int64
       description: Unix milliseconds
+    updatedAt:
+      type: integer
+      format: int64
+      description: Last modification timestamp (Unix milliseconds)
 
 CreatePollRequest:
   type: object

@@ -92,15 +92,18 @@ const MOCK_POLL: PollResult = {
 
 const MOCK_VOTE: PollVoteResult = {
   id: VOTE_ID as never,
+  systemId: MOCK_AUTH.systemId as never,
   pollId: POLL_ID as never,
   optionId: null,
   voter: null,
   isVeto: false,
   votedAt: 1000 as never,
   encryptedData: "dGVzdA==" as EncryptedBase64,
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,
+  updatedAt: 1000 as never,
 };
 
 // ── Tests ────────────────────────────────────────────────────────

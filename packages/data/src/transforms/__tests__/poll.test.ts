@@ -101,6 +101,7 @@ function makeServerPollVote(overrides?: {
 }) {
   return {
     id: brandId<PollVoteId>("pv_abc123"),
+    systemId: brandId<SystemId>("sys_xyz789"),
     pollId: brandId<PollId>("poll_abc123"),
     optionId: brandId<PollOptionId>("opt_001") as PollOptionId | null,
     voter: { entityType: "member" as const, entityId: "mem_voter" } as EntityReference<
@@ -109,9 +110,11 @@ function makeServerPollVote(overrides?: {
     isVeto: false,
     votedAt: toUnixMillis(1_700_000_500_000),
     encryptedData: encryptAndEncodeT1(makePollVoteEncryptedInput(), masterKey),
+    version: 1,
     archived: false as boolean,
     archivedAt: null as UnixMillis | null,
     createdAt: toUnixMillis(1_700_000_500_000),
+    updatedAt: toUnixMillis(1_700_000_500_000),
     ...overrides,
   };
 }
