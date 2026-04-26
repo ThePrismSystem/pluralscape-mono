@@ -16057,16 +16057,21 @@ components:
         Note: `sourceMemberId`, `targetMemberId`, `type`, and `bidirectional`
         are sent as **separate plaintext fields** in the request body (not inside
         `encryptedData`) because the server needs them for querying.
-        The `encryptedData` contains only the user-visible label and any
-        additional notes. Encryption tier: **T1**.
-      type: object
-      required:
-        - label
-      properties:
-        label:
-          type: string
-          nullable: true
-          description: User-defined label (meaningful when type is "custom")
+        The `encryptedData` is a discriminated blob: custom-type relationships
+        carry `{ label: string }`, standard-type relationships carry `{}`.
+        Encryption tier: **T1**.
+      oneOf:
+        - description: Custom-type relationship — carries a user-defined label.
+          type: object
+          required:
+            - label
+          properties:
+            label:
+              type: string
+              description: User-defined label for a custom relationship type.
+        - description: Standard-type relationship — no label field.
+          type: object
+          properties: {}
     PlaintextStructureEntityType:
       description: |
         **Encrypted into**: `encryptedData` on structure entity type create/update endpoints.

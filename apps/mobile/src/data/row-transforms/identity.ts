@@ -126,7 +126,9 @@ export function rowToRelationship(
   const id = rid(row);
   const archived = intToBool(row["archived"]);
   const createdAt = guardedToMs(row["created_at"], "relationships", "created_at", id);
-  const base: Relationship = {
+  const type = guardedStr(row["type"], "relationships", "type", id) as Relationship["type"];
+
+  const baseShared = {
     id: guardedStr(row["id"], "relationships", "id", id) as Relationship["id"],
     systemId: guardedStr(
       row["system_id"],
@@ -146,11 +148,20 @@ export function rowToRelationship(
       "target_member_id",
       id,
     ) as Relationship["targetMemberId"],
-    type: guardedStr(row["type"], "relationships", "type", id) as Relationship["type"],
-    label: strOrNull(row["label"], "relationships", "label", id),
     bidirectional: intToBool(row["bidirectional"]),
     createdAt,
-    archived: false,
+    archived: false as const,
   };
+
+  // Discriminate on `type` — custom carries a label, standard does not.
+  const base: Relationship =
+    type === "custom"
+      ? {
+          ...baseShared,
+          type: "custom" as const,
+          label: guardedStr(row["label"], "relationships", "label", id),
+        }
+      : { ...baseShared, type };
+
   return archived ? wrapArchived(base, createdAt) : base;
 }

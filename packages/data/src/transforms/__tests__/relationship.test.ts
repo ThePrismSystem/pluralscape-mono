@@ -33,7 +33,8 @@ beforeAll(async () => {
 
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeRawRelationship(overrides?: Partial<RelationshipWire>): RelationshipWire {
+// Standard (non-custom) relationship: blob is `{}`
+function makeRawStandardRelationship(overrides?: Partial<RelationshipWire>): RelationshipWire {
   return {
     id: brandId<RelationshipId>("rel_001"),
     systemId: brandId<SystemId>("sys_test"),
@@ -44,29 +45,49 @@ function makeRawRelationship(overrides?: Partial<RelationshipWire>): Relationshi
     createdAt: NOW,
     updatedAt: NOW,
     version: 1,
-    encryptedData: encryptAndEncodeT1(
-      { label: "Sibling bond" } satisfies RelationshipEncryptedInput,
-      masterKey,
-    ),
+    encryptedData: encryptAndEncodeT1({} satisfies RelationshipEncryptedInput, masterKey),
     archived: false,
     archivedAt: null,
     ...overrides,
   };
 }
 
-describe("decryptRelationship", () => {
-  it("decrypts label from encrypted data", () => {
-    const result = decryptRelationship(makeRawRelationship(), masterKey);
-    expect(result.label).toBe("Sibling bond");
+// Custom relationship: blob carries `{ label }`
+function makeRawCustomRelationship(
+  label: string,
+  overrides?: Partial<RelationshipWire>,
+): RelationshipWire {
+  return {
+    id: brandId<RelationshipId>("rel_002"),
+    systemId: brandId<SystemId>("sys_test"),
+    sourceMemberId: brandId<MemberId>("mem_1"),
+    targetMemberId: brandId<MemberId>("mem_2"),
+    type: "custom" as RelationshipType,
+    bidirectional: false,
+    createdAt: NOW,
+    updatedAt: NOW,
+    version: 1,
+    encryptedData: encryptAndEncodeT1({ label } satisfies RelationshipEncryptedInput, masterKey),
+    archived: false,
+    archivedAt: null,
+    ...overrides,
+  };
+}
+
+describe("decryptRelationship — standard type", () => {
+  it("decrypts standard relationship with no label", () => {
+    const result = decryptRelationship(makeRawStandardRelationship(), masterKey);
     expect(result.sourceMemberId).toBe("mem_1");
     expect(result.targetMemberId).toBe("mem_2");
     expect(result.type).toBe("sibling");
     expect(result.bidirectional).toBe(true);
     expect(result.archived).toBe(false);
+    // Standard relationships have no `label` key
+    expect("label" in result).toBe(false);
   });
 
   it("handles null member IDs", () => {
-    const raw = makeRawRelationship({ sourceMemberId: null, targetMemberId: null });
+    const raw = makeRawStandardRelationship({ sourceMemberId: null, targetMemberId: null });
     const result = decryptRelationship(raw, masterKey);
     expect(result.sourceMemberId).toBeNull();
     expect(result.targetMemberId).toBeNull();
@@ -74,9 +95,8 @@ describe("decryptRelationship", () => {
 
   it("returns archived variant with archivedAt", () => {
     const archivedAt = toUnixMillis(1_700_002_000_000);
-    const raw = makeRawRelationship({ archived: true, archivedAt });
+    const raw = makeRawStandardRelationship({ archived: true, archivedAt });
     const result = decryptRelationship(raw, masterKey);
-
     expect(result.archived).toBe(true);
     if (result.archived) {
       expect(result.archivedAt).toBe(archivedAt);
@@ -84,19 +104,50 @@ describe("decryptRelationship", () => {
   });
 
   it("throws when archived=true but archivedAt is null", () => {
-    const raw = makeRawRelationship({ archived: true, archivedAt: null });
+    const raw = makeRawStandardRelationship({ archived: true, archivedAt: null });
     expect(() => decryptRelationship(raw, masterKey)).toThrow("missing archivedAt");
   });
 
   it("throws on corrupted encryptedData", () => {
-    const raw = makeRawRelationship({ encryptedData: "not-valid-base64!!!" });
+    const raw = makeRawStandardRelationship({ encryptedData: "not-valid-base64!!!" });
+    expect(() => decryptRelationship(raw, masterKey)).toThrow();
+  });
+});
+
+describe("decryptRelationship — custom type", () => {
+  it("decrypts label from encrypted data", () => {
+    const result = decryptRelationship(makeRawCustomRelationship("My bond"), masterKey);
+    expect(result.type).toBe("custom");
+    if (result.type === "custom") {
+      expect(result.label).toBe("My bond");
+    }
+    expect(result.archived).toBe(false);
+  });
+
+  it("custom type with archived variant carries archivedAt", () => {
+    const archivedAt = toUnixMillis(1_700_002_000_000);
+    const raw = makeRawCustomRelationship("Archived bond", { archived: true, archivedAt });
+    const result = decryptRelationship(raw, masterKey);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+  });
+
+  it("throws when custom blob is missing label", () => {
+    const raw = makeRawCustomRelationship("placeholder", {
+      encryptedData: makeBase64Blob({ notLabel: "x" }, masterKey),
+    });
     expect(() => decryptRelationship(raw, masterKey)).toThrow();
   });
 });
 
 describe("decryptRelationshipPage", () => {
   it("decrypts all items and preserves cursor", () => {
-    const page = { data: [makeRawRelationship(), makeRawRelationship()], nextCursor: "cursor_abc" };
+    const page = {
+      data: [makeRawStandardRelationship(), makeRawCustomRelationship("bond")],
+      nextCursor: "cursor_abc",
+    };
     const result = decryptRelationshipPage(page, masterKey);
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("cursor_abc");
@@ -109,33 +160,55 @@ describe("decryptRelationshipPage", () => {
   });
 });
 
-describe("encryptRelationshipInput", () => {
-  it("round-trips through decrypt", () => {
+describe("encryptRelationshipInput — custom", () => {
+  it("round-trips label through decrypt", () => {
     const fields: RelationshipEncryptedInput = { label: "Test Label" };
     const { encryptedData } = encryptRelationshipInput(fields, masterKey);
-    const raw = makeRawRelationship({ encryptedData });
+    const raw = makeRawCustomRelationship("ignored", { encryptedData });
     const result = decryptRelationship(raw, masterKey);
-    expect(result.label).toBe("Test Label");
+    expect(result.type).toBe("custom");
+    if (result.type === "custom") {
+      expect(result.label).toBe("Test Label");
+    }
+  });
+});
+
+describe("encryptRelationshipInput — standard", () => {
+  it("round-trips empty object through decrypt", () => {
+    const fields: RelationshipEncryptedInput = {};
+    const { encryptedData } = encryptRelationshipInput(fields, masterKey);
+    const raw = makeRawStandardRelationship({ encryptedData });
+    const result = decryptRelationship(raw, masterKey);
+    expect(result.type).toBe("sibling");
+    expect("label" in result).toBe(false);
   });
 });
 
 describe("encryptRelationshipUpdate", () => {
-  it("includes version", () => {
+  it("includes version for custom type", () => {
     const result = encryptRelationshipUpdate({ label: "Updated" }, 3, masterKey);
     expect(result.version).toBe(3);
+    expect(typeof result.encryptedData).toBe("string");
+  });
+
+  it("includes version for standard type", () => {
+    const result = encryptRelationshipUpdate({}, 5, masterKey);
+    expect(result.version).toBe(5);
     expect(typeof result.encryptedData).toBe("string");
   });
 });
 
 describe("RelationshipEncryptedInputSchema validation", () => {
-  it("throws when blob is not an object", () => {
-    const raw = makeRawRelationship({ encryptedData: makeBase64Blob("string", masterKey) });
+  it("throws when blob is not an object (standard path)", () => {
+    const raw = makeRawStandardRelationship({
+      encryptedData: makeBase64Blob("string", masterKey),
+    });
     expect(() => decryptRelationship(raw, masterKey)).toThrow();
   });
 
-  it("throws when label is missing", () => {
-    const raw = makeRawRelationship({
-      encryptedData: makeBase64Blob({ notLabel: "x" }, masterKey),
+  it("throws when custom blob is not an object", () => {
+    const raw = makeRawCustomRelationship("x", {
+      encryptedData: makeBase64Blob("string", masterKey),
     });
     expect(() => decryptRelationship(raw, masterKey)).toThrow();
   });

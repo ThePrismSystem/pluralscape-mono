@@ -659,14 +659,14 @@ describe("rowToAcknowledgement", () => {
 // ── relationship (system-core, boolean bidirectional) ─────────────────────────
 
 describe("rowToRelationship", () => {
-  it("maps relationship row with bidirectional boolean", () => {
+  it("maps standard relationship row — no label key", () => {
     const row: Record<string, unknown> = {
       id: "rel-1",
       system_id: "sys-1",
       source_member_id: "mem-1",
       target_member_id: "mem-2",
       type: "sibling",
-      label: "Twin",
+      label: null,
       bidirectional: 1,
       created_at: 1_700_000_000_000,
       archived: 0,
@@ -678,9 +678,31 @@ describe("rowToRelationship", () => {
     expect(result.sourceMemberId).toBe("mem-1");
     expect(result.targetMemberId).toBe("mem-2");
     expect(result.type).toBe("sibling");
-    expect(result.label).toBe("Twin");
+    expect("label" in result).toBe(false);
     expect(result.bidirectional).toBe(true);
     expect(result.createdAt).toBe(1_700_000_000_000);
+    expect(result.archived).toBe(false);
+  });
+
+  it("maps custom relationship row — carries label", () => {
+    const row: Record<string, unknown> = {
+      id: "rel-2",
+      system_id: "sys-1",
+      source_member_id: "mem-1",
+      target_member_id: "mem-2",
+      type: "custom",
+      label: "Twin",
+      bidirectional: 0,
+      created_at: 1_700_000_000_000,
+      archived: 0,
+    };
+
+    const result = rowToRelationship(row);
+
+    expect(result.type).toBe("custom");
+    if (result.type === "custom") {
+      expect(result.label).toBe("Twin");
+    }
     expect(result.archived).toBe(false);
   });
 });
