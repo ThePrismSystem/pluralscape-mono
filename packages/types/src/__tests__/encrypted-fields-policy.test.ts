@@ -5,7 +5,7 @@ import type { NoteEncryptedFields } from "../entities/note.js";
 import type { Equal } from "../type-assertions.js";
 import type { AuditMetadata } from "../utility.js";
 
-describe("encrypted-fields policy guard", () => {
+describe("JournalEntry encrypted-fields policy guard", () => {
   it("contains exactly the fields encrypted before server storage", () => {
     type Expected = "title" | "author" | "blocks" | "tags" | "linkedEntities" | "frontingSnapshots";
     expectTypeOf<Equal<JournalEntryEncryptedFields, Expected>>().toEqualTypeOf<true>();
@@ -23,7 +23,7 @@ describe("Note encrypted-fields policy guard", () => {
     expectTypeOf<Equal<NoteEncryptedFields, Expected>>().toEqualTypeOf<true>();
   });
 
-  it("excludes id, systemId, author, archived, and audit fields", () => {
+  it("NoteEncryptedFields excludes the allowlisted plaintext keys", () => {
     type Allowlist = "id" | "systemId" | "author" | "archived" | keyof AuditMetadata;
     expectTypeOf<Extract<NoteEncryptedFields, Allowlist>>().toEqualTypeOf<never>();
   });

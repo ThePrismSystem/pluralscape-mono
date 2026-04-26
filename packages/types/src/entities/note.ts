@@ -38,7 +38,7 @@ export type ArchivedNote = Archived<Note>;
  *   flattens into separate `authorEntityType` + `authorEntityId` server
  *   columns for indexing; the value is never inside the encrypted blob
  * - `archived` — mutable server-side flag with companion `archivedAt`
- * - `createdAt` / `updatedAt` / `updatedBy` (via `AuditMetadata`) —
+ * - `createdAt` / `updatedAt` / `version` (via `AuditMetadata`) —
  *   server-managed audit timestamps and actor reference
  *
  * Consumed by:
