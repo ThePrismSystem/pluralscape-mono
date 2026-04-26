@@ -46,7 +46,6 @@ import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
-import type { CanvasRaw } from "@pluralscape/data/transforms/innerworld-canvas";
 import type {
   InnerWorldEntityEncryptedPayload,
   InnerWorldEntityRaw,
@@ -84,6 +83,7 @@ import type {
   FrontingSessionWire,
   GroupId,
   GroupWire,
+  InnerWorldCanvasWire,
   InnerWorldEntityId,
   InnerWorldRegionId,
   LifecycleEventId,
@@ -371,7 +371,7 @@ export function makeRawGroup(id: string, overrides?: Partial<GroupWire>): GroupW
 
 // ── Innerworld Canvas ────────────────────────────────────────────────
 
-export function makeRawCanvas(overrides?: Partial<CanvasRaw>): CanvasRaw {
+export function makeRawCanvas(overrides?: Partial<InnerWorldCanvasWire>): InnerWorldCanvasWire {
   const encrypted = encryptCanvasUpdate(
     {
       viewportX: 0,
