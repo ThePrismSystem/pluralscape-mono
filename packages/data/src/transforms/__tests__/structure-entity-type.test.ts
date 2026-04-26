@@ -13,12 +13,14 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type {
-  StructureEntityTypeEncryptedInput,
-  StructureEntityTypeRaw,
-} from "../structure-entity-type.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { HexColor, SystemStructureEntityTypeId, SystemId } from "@pluralscape/types";
+import type {
+  HexColor,
+  SystemId,
+  SystemStructureEntityTypeEncryptedInput,
+  SystemStructureEntityTypeId,
+  SystemStructureEntityTypeWire,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -30,7 +32,7 @@ beforeAll(async () => {
 
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeEncryptedFields(): StructureEntityTypeEncryptedInput {
+function makeEncryptedFields(): SystemStructureEntityTypeEncryptedInput {
   return {
     name: "Protector",
     description: "Keeps the system safe",
@@ -40,7 +42,9 @@ function makeEncryptedFields(): StructureEntityTypeEncryptedInput {
   };
 }
 
-function makeRaw(overrides?: Partial<StructureEntityTypeRaw>): StructureEntityTypeRaw {
+function makeRaw(
+  overrides?: Partial<SystemStructureEntityTypeWire>,
+): SystemStructureEntityTypeWire {
   return {
     id: brandId<SystemStructureEntityTypeId>("set_001"),
     systemId: brandId<SystemId>("sys_test"),
@@ -68,7 +72,7 @@ describe("decryptStructureEntityType", () => {
   });
 
   it("handles null optional fields", () => {
-    const fields: StructureEntityTypeEncryptedInput = {
+    const fields: SystemStructureEntityTypeEncryptedInput = {
       name: "Unknown",
       description: null,
       emoji: null,
@@ -137,7 +141,7 @@ describe("encryptStructureEntityTypeUpdate", () => {
   });
 });
 
-describe("StructureEntityTypeEncryptedInputSchema validation", () => {
+describe("SystemStructureEntityTypeEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = makeRaw({ encryptedData: makeBase64Blob("string", masterKey) });
     expect(() => decryptStructureEntityType(raw, masterKey)).toThrow(/expected object/);

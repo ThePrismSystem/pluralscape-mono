@@ -54,7 +54,6 @@ import type { MessageRaw } from "@pluralscape/data/transforms/message";
 import type { NoteRaw } from "@pluralscape/data/transforms/note";
 import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
-import type { StructureEntityTypeRaw } from "@pluralscape/data/transforms/structure-entity-type";
 import type {
   NomenclatureSettingsRaw,
   SystemSettingsRaw,
@@ -99,6 +98,7 @@ import type {
   SystemSnapshotId,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
+  SystemStructureEntityTypeWire,
   SystemStructureEntityWire,
   TimerId,
   UnixMillis,
@@ -725,8 +725,8 @@ export function makeRawStructureEntity(
 
 export function makeRawStructureEntityType(
   id: string,
-  overrides?: Partial<StructureEntityTypeRaw>,
-): StructureEntityTypeRaw {
+  overrides?: Partial<SystemStructureEntityTypeWire>,
+): SystemStructureEntityTypeWire {
   const encrypted = encryptStructureEntityTypeInput(
     {
       name: `Type ${id}`,
