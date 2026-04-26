@@ -46,7 +46,6 @@ import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
-import type { InnerWorldRegionRaw } from "@pluralscape/data/transforms/innerworld-region";
 import type {
   LifecycleEventEncryptedPayload,
   LifecycleEventRaw,
@@ -84,6 +83,7 @@ import type {
   InnerWorldEntityId,
   InnerWorldEntityWire,
   InnerWorldRegionId,
+  InnerWorldRegionWire,
   LifecycleEventId,
   MemberId,
   MemberWire,
@@ -427,8 +427,8 @@ export { DEFAULT_VISUAL as INNERWORLD_DEFAULT_VISUAL };
 
 export function makeRawInnerworldRegion(
   id: string,
-  overrides?: Partial<InnerWorldRegionRaw>,
-): InnerWorldRegionRaw {
+  overrides?: Partial<InnerWorldRegionWire>,
+): InnerWorldRegionWire {
   const encrypted = encryptInnerWorldRegionInput(
     {
       name: `Region ${id}`,

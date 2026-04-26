@@ -1,74 +1,49 @@
-import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { InnerWorldRegionEncryptedInputSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
   InnerWorldRegion,
-  InnerWorldRegionEncryptedFields,
-  PlaintextFields,
-  UnixMillis,
+  InnerWorldRegionEncryptedInput,
+  InnerWorldRegionId,
+  InnerWorldRegionWire,
+  SystemId,
 } from "@pluralscape/types";
 
-/**
- * Plaintext shape of a decrypted innerworld region blob — derived from the SoT
- * `InnerWorldRegion` domain type.
- */
-export type InnerWorldRegionPlaintext = PlaintextFields<
-  InnerWorldRegion,
-  InnerWorldRegionEncryptedFields
->;
-
-/** Wire shape returned by `innerworld.region.get` — derived from `InnerWorldRegion`. */
-export type InnerWorldRegionRaw = Omit<
-  InnerWorldRegion,
-  InnerWorldRegionEncryptedFields | "archived"
-> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
-
 export interface InnerWorldRegionPage {
-  readonly data: readonly InnerWorldRegionRaw[];
+  readonly data: readonly InnerWorldRegionWire[];
   readonly nextCursor: string | null;
 }
 
-function assertInnerWorldRegionPlaintext(raw: unknown): asserts raw is InnerWorldRegionPlaintext {
-  const obj = assertObjectBlob(raw, "innerworldRegion");
-  assertStringField(obj, "innerworldRegion", "name");
-}
-
 export function decryptInnerWorldRegion(
-  raw: InnerWorldRegionRaw,
+  raw: InnerWorldRegionWire,
   masterKey: KdfMasterKey,
 ): InnerWorldRegion | Archived<InnerWorldRegion> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertInnerWorldRegionPlaintext(plaintext);
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = InnerWorldRegionEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    parentRegionId: raw.parentRegionId,
-    name: plaintext.name,
-    description: plaintext.description,
-    boundaryData: plaintext.boundaryData,
-    visual: plaintext.visual,
-    gatekeeperMemberIds: plaintext.gatekeeperMemberIds,
-    accessType: plaintext.accessType,
+    id: brandId<InnerWorldRegionId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    parentRegionId:
+      raw.parentRegionId === null ? null : brandId<InnerWorldRegionId>(raw.parentRegionId),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
+    name: validated.name,
+    description: validated.description,
+    boundaryData: validated.boundaryData,
+    visual: validated.visual,
+    gatekeeperMemberIds: validated.gatekeeperMemberIds,
+    accessType: validated.accessType,
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived innerworldRegion missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
@@ -87,14 +62,14 @@ export function decryptInnerWorldRegionPage(
 }
 
 export function encryptInnerWorldRegionInput(
-  data: InnerWorldRegionPlaintext,
+  data: InnerWorldRegionEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 export function encryptInnerWorldRegionUpdate(
-  data: InnerWorldRegionPlaintext,
+  data: InnerWorldRegionEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
