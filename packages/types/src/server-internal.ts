@@ -1,9 +1,11 @@
 /**
  * @internal — symbol is exported only so sibling type-level helpers
  * (`Serialize<T>` in `type-assertions.ts`) can structurally pattern-match
- * the marker. Not for direct consumption.
+ * the marker, and so cross-package Drizzle column inferences over
+ * `.$type<ServerInternal<…>>()` can be named in declaration emit. Not
+ * for direct consumption.
  */
-export declare const __serverInternal: unique symbol;
+export const __serverInternal: unique symbol = Symbol("__serverInternal");
 
 /**
  * Marks a field on a `*ServerMetadata` type as server-fill-only — it is not

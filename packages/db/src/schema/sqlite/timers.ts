@@ -22,7 +22,13 @@ import { sqliteTimeFormatCheck } from "../../helpers/check.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
+import type {
+  CheckInRecordId,
+  MemberId,
+  ServerInternal,
+  SystemId,
+  TimerId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = sqliteTable(
@@ -75,7 +81,12 @@ export const checkInRecords = sqliteTable(
     dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
     respondedByMemberId: brandedId<MemberId>("responded_by_member_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
-    idempotencyKey: text("idempotency_key"),
+    /**
+     * Server-generated dedup key for webhook-driven response writes.
+     * Branded `ServerInternal<…>` so `EncryptedWire<T>` strips it from
+     * the wire envelope (never leaked to clients).
+     */
+    idempotencyKey: text("idempotency_key").$type<ServerInternal<string>>(),
     ...archivable(),
   },
   (t) => [

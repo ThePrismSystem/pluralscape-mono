@@ -7,6 +7,12 @@ import type {
   AuditLogEntryWire,
 } from "../entities/audit-log-entry.js";
 import type {
+  CheckInRecord,
+  CheckInRecordResult,
+  CheckInRecordServerMetadata,
+  CheckInRecordWire,
+} from "../entities/check-in-record.js";
+import type {
   Member,
   MemberEncryptedInput,
   MemberResult,
@@ -42,6 +48,18 @@ describe("SotEntityManifest", () => {
       SotEntityManifest["AuditLogEntry"]["server"]
     >().toEqualTypeOf<AuditLogEntryServerMetadata>();
     expectTypeOf<SotEntityManifest["AuditLogEntry"]["wire"]>().toEqualTypeOf<AuditLogEntryWire>();
+  });
+
+  it("registers CheckInRecord (hybrid: no encryptedInput) with domain/server/result/wire", () => {
+    expectTypeOf<SotEntityManifest["CheckInRecord"]["domain"]>().toEqualTypeOf<CheckInRecord>();
+    expectTypeOf<
+      SotEntityManifest["CheckInRecord"]["server"]
+    >().toEqualTypeOf<CheckInRecordServerMetadata>();
+    expectTypeOf<
+      SotEntityManifest["CheckInRecord"]["result"]
+    >().toEqualTypeOf<CheckInRecordResult>();
+    expectTypeOf<SotEntityManifest["CheckInRecord"]["wire"]>().toEqualTypeOf<CheckInRecordWire>();
+    expectTypeOf<SotEntityManifest["CheckInRecord"]["encryptedFields"]>().toEqualTypeOf<never>();
   });
 
   it("includes the pilot entities", () => {

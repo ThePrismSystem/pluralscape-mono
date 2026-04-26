@@ -13828,6 +13828,17 @@ components:
         A check-in record created by the timer scheduler or manually.
         Can be responded to or dismissed.
       type: object
+      required:
+        - id
+        - systemId
+        - timerConfigId
+        - scheduledAt
+        - respondedByMemberId
+        - respondedAt
+        - dismissed
+        - encryptedData
+        - archived
+        - archivedAt
       properties:
         id:
           type: string
@@ -16164,17 +16175,97 @@ components:
       description: |
         **Encrypted into**: `encryptedData` on lifecycle event create endpoint.
 
-        Encrypted details of a lifecycle event. Note: `eventType`, `occurredAt`,
-        and `plaintextMetadata` (member/structure/entity/region IDs) are sent
-        as separate plaintext fields because the server needs them for querying
-        and relationship tracking. Encryption tier: **T1**.
-      type: object
-      required:
-        - notes
-      properties:
-        notes:
-          type: string
-          nullable: true
+        Per-variant encrypted details of a lifecycle event. `eventType`,
+        `occurredAt`, and `plaintextMetadata` (member/structure/entity/region
+        IDs) are sent as separate plaintext fields. Encryption tier: **T1**.
+
+        Each variant carries `notes` plus its own variant-specific keys.
+      oneOf:
+        - description: Split, Fusion, Merge, Unmerge, Discovery, StructureEntityFormation, StructureMove — notes only
+          type: object
+          required:
+            - notes
+          properties:
+            notes:
+              type: string
+              nullable: true
+        - description: DormancyStart, DormancyEnd — notes + relatedLifecycleEventId
+          type: object
+          required:
+            - notes
+            - relatedLifecycleEventId
+          properties:
+            notes:
+              type: string
+              nullable: true
+            relatedLifecycleEventId:
+              type: string
+              nullable: true
+        - description: Archival — notes + entity reference
+          type: object
+          required:
+            - notes
+            - entity
+          properties:
+            notes:
+              type: string
+              nullable: true
+            entity:
+              type: object
+              required:
+                - entityType
+                - entityId
+              properties:
+                entityType:
+                  type: string
+                entityId:
+                  type: string
+        - description: FormChange — notes + previousForm + newForm
+          type: object
+          required:
+            - notes
+            - previousForm
+            - newForm
+          properties:
+            notes:
+              type: string
+              nullable: true
+            previousForm:
+              type: string
+              nullable: true
+            newForm:
+              type: string
+              nullable: true
+        - description: NameChange — notes + previousName + newName
+          type: object
+          required:
+            - notes
+            - previousName
+            - newName
+          properties:
+            notes:
+              type: string
+              nullable: true
+            previousName:
+              type: string
+              nullable: true
+            newName:
+              type: string
+        - description: InnerworldMove — notes + entityType
+          type: object
+          required:
+            - notes
+            - entityType
+          properties:
+            notes:
+              type: string
+              nullable: true
+            entityType:
+              type: string
+              enum:
+                - member
+                - landmark
+                - structure-entity
     PlaintextInnerworldRegion:
       description: |
         **Encrypted into**: `encryptedData` on innerworld region create/update endpoints.

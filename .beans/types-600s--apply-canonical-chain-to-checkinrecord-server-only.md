@@ -1,11 +1,11 @@
 ---
 # types-600s
 title: Apply canonical chain to CheckInRecord (server-only encrypted payload)
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-25T19:17:08Z
-updated_at: 2026-04-25T19:17:11Z
+updated_at: 2026-04-26T10:22:23Z
 parent: ps-y4tb
 ---
 

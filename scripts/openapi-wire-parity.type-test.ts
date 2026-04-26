@@ -37,6 +37,7 @@ import type { components } from "../packages/api-client/src/generated/api-types.
 import type {
   AuditLogEntry,
   AuditLogEntryWire,
+  CheckInRecordWire,
   CustomFront,
   CustomFrontEncryptedFields,
   CustomFrontWire,
@@ -188,6 +189,15 @@ expectTypeOf<
 
 expectTypeOf<
   Equal<components["schemas"]["CanvasResponse"], InnerWorldCanvasWire>
+>().toEqualTypeOf<true>();
+
+// CheckInRecord is a hybrid (no `EncryptedFields`/`EncryptedInput`): the
+// domain is plaintext but the server row carries an optional encrypted
+// blob. `EncryptedWire<…>` strips the `ServerInternal<…>` `idempotencyKey`,
+// so this single check enforces both the plaintext envelope and the
+// nullable `encryptedData` shape on the wire.
+expectTypeOf<
+  Equal<components["schemas"]["CheckInRecordResponse"], CheckInRecordWire>
 >().toEqualTypeOf<true>();
 
 // ── OpenAPI ↔ Wire parity: Cluster 8 (deferred) ────────────────────

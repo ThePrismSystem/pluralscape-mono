@@ -127,6 +127,12 @@ export type {
 } from "./encryption-primitives.js";
 
 // ── Server-internal marker ───────────────────────────────────────
+// `__serverInternal` (the unique symbol) is re-exported alongside the
+// type so consumers using `.$type<ServerInternal<T>>()` produce a
+// declaration-emit shape that TypeScript can name. Without the value
+// re-export, generic table inferences over branded columns trigger
+// TS4023 ("…cannot be named").
+export { __serverInternal } from "./server-internal.js";
 export type { ServerInternal } from "./server-internal.js";
 
 // ── Response unions ──────────────────────────────────────────────

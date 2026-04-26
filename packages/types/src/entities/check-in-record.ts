@@ -1,5 +1,7 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { CheckInRecordId, MemberId, SystemId, TimerId } from "../ids.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived } from "../utility.js";
@@ -23,30 +25,30 @@ export interface CheckInRecord {
 /** An archived check-in record. */
 export type ArchivedCheckInRecord = Archived<CheckInRecord>;
 
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// CheckInRecord is a hybrid: the domain is plaintext (no encrypted
+// fields), but the server row carries an optional `encryptedData` blob
+// (mood/note attached to a response) and a server-only `idempotencyKey`
+// (webhook dedup, never leaked to clients). Because there are no
+// per-variant encrypted fields, the chain is:
+//   CheckInRecord → CheckInRecordServerMetadata
+//                → CheckInRecordResult → CheckInRecordWire
+// (no `EncryptedFields` / `EncryptedInput` aliases).
+
 /**
  * Server-visible CheckInRecord metadata — raw Drizzle row shape.
  *
- * Hybrid entity: the domain is plaintext (all fields server-visible), but
- * the server row carries two DB-only columns not on the domain:
- *   - `encryptedData` — optional encrypted payload attached to a response
- *     (e.g. mood/note captured with the check-in); nullable because
- *     records start out as scheduled-but-not-responded.
- *   - `idempotencyKey` — server-generated dedup key for webhook-driven
- *     response writes; never leaked to clients.
- *
  * The `archived` literal on the domain (`false`) widens to `boolean` to
  * match the DB column (archive toggles via `Archived<T>` on the domain
- * side; the DB just stores a boolean).
+ * side; the DB just stores a boolean). `idempotencyKey` is marked
+ * `ServerInternal<…>` so `EncryptedWire<T>` strips it from the wire.
  */
 export type CheckInRecordServerMetadata = Omit<CheckInRecord, "archived"> & {
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob | null;
-  readonly idempotencyKey: string | null;
+  readonly idempotencyKey: ServerInternal<string> | null;
 };
 
-/**
- * JSON-wire representation of CheckInRecord. Derived from the domain type
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
-export type CheckInRecordWire = Serialize<CheckInRecord>;
+export type CheckInRecordResult = EncryptedWire<CheckInRecordServerMetadata>;
+
+export type CheckInRecordWire = Serialize<CheckInRecordResult>;

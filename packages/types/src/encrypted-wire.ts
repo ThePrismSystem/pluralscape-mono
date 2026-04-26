@@ -13,8 +13,12 @@ import type { ServerInternal } from "./server-internal.js";
  * Example:
  *   type MemberResult = EncryptedWire<MemberServerMetadata>;
  */
+// Drops every key whose value type contains any `ServerInternal<…>` branch.
+// `Extract<T[K], ServerInternal<unknown>>` finds the marked branches inside
+// the value's union (e.g. `ServerInternal<string> | null`); if non-empty the
+// key is server-only and must not appear on the wire.
 type StripServerInternal<T> = {
-  [K in keyof T as T[K] extends ServerInternal<unknown> ? never : K]: T[K];
+  [K in keyof T as Extract<T[K], ServerInternal<unknown>> extends never ? K : never]: T[K];
 };
 
 export type EncryptedWire<T extends { readonly encryptedData: EncryptedBlob | null }> = Omit<
