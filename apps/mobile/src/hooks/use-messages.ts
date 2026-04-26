@@ -17,11 +17,14 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { MessagePage as MessageWirePage } from "@pluralscape/data/transforms/message";
 import type {
-  MessagePage as MessageRawPage,
-  MessageRaw,
-} from "@pluralscape/data/transforms/message";
-import type { ArchivedChatMessage, ChannelId, ChatMessage, MessageId } from "@pluralscape/types";
+  ArchivedChatMessage,
+  ChannelId,
+  ChatMessage,
+  ChatMessageWire,
+  MessageId,
+} from "@pluralscape/types";
 
 interface MessageOpts extends SystemIdOverride {
   readonly timestamp?: number;
@@ -39,7 +42,7 @@ export function useMessage(
   messageId: MessageId,
   opts?: MessageOpts,
 ): DataQuery<ChatMessage | ArchivedChatMessage> {
-  return useOfflineFirstQuery<MessageRaw, ChatMessage | ArchivedChatMessage>({
+  return useOfflineFirstQuery<ChatMessageWire, ChatMessage | ArchivedChatMessage>({
     queryKey: ["messages", channelId, messageId],
     table: "own_messages",
     entityId: messageId,
@@ -67,7 +70,7 @@ export function useMessagesList(
   channelId: ChannelId,
   opts?: MessageListOpts,
 ): DataListQuery<ChatMessage | ArchivedChatMessage> {
-  return useOfflineFirstInfiniteQuery<MessageRaw, ChatMessage | ArchivedChatMessage>({
+  return useOfflineFirstInfiniteQuery<ChatMessageWire, ChatMessage | ArchivedChatMessage>({
     queryKey: ["messages", "list", channelId, opts?.includeArchived ?? false],
     table: "own_messages",
     rowTransform: rowToMessage,
@@ -94,7 +97,7 @@ export function useMessagesList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: MessageRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: MessageWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<ChatMessage | ArchivedChatMessage>,

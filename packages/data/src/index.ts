@@ -112,7 +112,6 @@ export {
   encryptMessageInput,
   encryptMessageUpdate,
 } from "./transforms/message.js";
-export type { MessageEncryptedFields } from "./transforms/message.js";
 
 export {
   decryptBoardMessage,

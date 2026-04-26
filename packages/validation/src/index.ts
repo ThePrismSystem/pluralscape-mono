@@ -161,6 +161,7 @@ export {
   WebhookDeliveryQuerySchema,
 } from "./webhook.js";
 export {
+  ChatMessageEncryptedInputSchema,
   CreateMessageBodySchema,
   UpdateMessageBodySchema,
   MessageQuerySchema,

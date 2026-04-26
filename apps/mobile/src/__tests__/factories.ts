@@ -47,7 +47,6 @@ import type {
   LifecycleEventEncryptedPayload,
   LifecycleEventRaw,
 } from "@pluralscape/data/transforms/lifecycle-event";
-import type { MessageRaw } from "@pluralscape/data/transforms/message";
 import type { NoteRaw } from "@pluralscape/data/transforms/note";
 import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
@@ -63,6 +62,7 @@ import type {
   BoardMessageWire,
   ChannelId,
   ChannelWire,
+  ChatMessageWire,
   CheckInRecordId,
   CustomFrontId,
   CustomFrontWire,
@@ -519,8 +519,8 @@ export function makeRawMember(id: string, overrides?: Partial<MemberWire>): Memb
 export function makeRawMessage(
   id: string,
   channelId: ChannelId = brandId<ChannelId>("ch-1"),
-  overrides?: Partial<MessageRaw>,
-): MessageRaw {
+  overrides?: Partial<ChatMessageWire>,
+): ChatMessageWire {
   const encrypted = encryptMessageInput(
     {
       content: "hello",
