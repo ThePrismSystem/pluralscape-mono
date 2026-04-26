@@ -1,11 +1,11 @@
 ---
 # types-wozj
 title: "LifecycleEvent transform: canonical type chain migration"
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-26T05:04:22Z
-updated_at: 2026-04-26T09:56:54Z
+updated_at: 2026-04-26T10:23:59Z
 blocked_by:
   - ps-etbc
 ---
@@ -56,3 +56,17 @@ Mobile consumers import `LifecycleEventRaw` / `LifecycleEventEncryptedPayload` f
 - Parent: ps-y4tb
 - Blocked-by: ps-etbc (PR #562)
 - Related: types-x61u (`Exclude<>` hardening for journal-entry/note + distributive Pick for lifecycle-event)
+
+## Summary of Changes
+
+LifecycleEvent now follows the canonical SoT chain:
+
+- `LifecycleEventEncryptedFields` widened to the full per-variant key union (`notes | relatedLifecycleEventId | previousForm | newForm | previousName | newName | entity | entityType`)
+- `LifecycleEventEncryptedInput` is the defensively-distributive `Pick<LifecycleEvent, Extract<keyof LifecycleEvent, …>>` so each variant contributes only the keys it owns
+- `LIFECYCLE_EVENT_ENCRYPTED_SCHEMAS` (Zod) selects per-variant validation by plaintext `eventType`
+- `LifecycleEventResult = EncryptedWire<LifecycleEventServerMetadata>` and `LifecycleEventWire = Serialize<LifecycleEventResult>`
+- Local `LifecycleEventEncryptedPayload`, `LifecycleEventRaw`, and `assertLifecycleEventPayload` deleted; mobile consumers migrated to canonical `LifecycleEventWire`
+- OpenAPI `PlaintextLifecycleEvent` now distributes across variants (oneOf-style)
+- Removed dead `encryptedData === null` defensive branch (the column is `notNull()` in PG and SQLite)
+
+PR: refactor/ps-y4tb-batch2-entity-migrations (commit 96c348e0)
