@@ -105,7 +105,6 @@ export {
   encryptChannelInput,
   encryptChannelUpdate,
 } from "./transforms/channel.js";
-export type { ChannelEncryptedFields } from "./transforms/channel.js";
 
 export {
   decryptMessage,

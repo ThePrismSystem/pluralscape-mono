@@ -41,7 +41,6 @@ import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test
 
 export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
-import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
 import type {
@@ -63,6 +62,7 @@ import type {
   BoardMessageId,
   BoardMessageWire,
   ChannelId,
+  ChannelWire,
   CheckInRecordId,
   CustomFrontId,
   CustomFrontWire,
@@ -163,7 +163,7 @@ export function makeRawBoardMessage(
 
 // ── Channel ──────────────────────────────────────────────────────────
 
-export function makeRawChannel(id: string, overrides?: Partial<ChannelRaw>): ChannelRaw {
+export function makeRawChannel(id: string, overrides?: Partial<ChannelWire>): ChannelWire {
   const encrypted = encryptChannelInput({ name: "general" }, TEST_MASTER_KEY);
   return {
     id: brandId<ChannelId>(id),

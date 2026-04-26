@@ -22,7 +22,12 @@ export {
   CopyGroupBodySchema,
   AddGroupMemberBodySchema,
 } from "./group.js";
-export { CreateChannelBodySchema, UpdateChannelBodySchema, ChannelQuerySchema } from "./channel.js";
+export {
+  ChannelEncryptedInputSchema,
+  CreateChannelBodySchema,
+  UpdateChannelBodySchema,
+  ChannelQuerySchema,
+} from "./channel.js";
 export {
   CreateCustomFrontBodySchema,
   CustomFrontEncryptedInputSchema,

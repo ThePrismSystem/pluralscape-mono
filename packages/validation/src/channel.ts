@@ -4,6 +4,18 @@ import { brandedIdQueryParam, optionalBrandedId } from "./branded-id.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
+// ── Encrypted input ─────────────────────────────────────────────
+
+/**
+ * Runtime validator for the pre-encryption Channel input.
+ * Mirrors `ChannelEncryptedInput = Pick<Channel, "name">`.
+ */
+export const ChannelEncryptedInputSchema = z
+  .object({
+    name: z.string().min(1),
+  })
+  .readonly();
+
 // ── Create ──────────────────────────────────────────────────────
 
 export const CreateChannelBodySchema = z

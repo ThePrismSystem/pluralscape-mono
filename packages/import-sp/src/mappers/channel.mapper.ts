@@ -15,12 +15,12 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPChannel, SPChannelCategory } from "../sources/sp-types.js";
-import type { ChannelEncryptedFields } from "@pluralscape/data";
+import type { ChannelEncryptedInput } from "@pluralscape/types";
 import type { CreateChannelBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 export type MappedChannel = Omit<z.infer<typeof CreateChannelBodySchema>, "encryptedData"> & {
-  readonly encrypted: ChannelEncryptedFields;
+  readonly encrypted: ChannelEncryptedInput;
 };
 
 /**
@@ -46,7 +46,7 @@ export function mapChannelCategory(
     });
     return skipped({ kind: nameError.kind, reason: nameError.message });
   }
-  const encrypted: ChannelEncryptedFields = { name: sp.name };
+  const encrypted: ChannelEncryptedInput = { name: sp.name };
   const payload: MappedChannelCategory = {
     encrypted,
     type: "category",
@@ -84,7 +84,7 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
     parentId = resolved as MappedChannel["parentId"];
   }
 
-  const encrypted: ChannelEncryptedFields = { name: sp.name };
+  const encrypted: ChannelEncryptedInput = { name: sp.name };
   const payload: MappedChannel = {
     encrypted,
     type: "channel",
