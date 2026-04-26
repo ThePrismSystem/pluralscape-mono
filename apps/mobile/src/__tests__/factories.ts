@@ -46,10 +46,6 @@ import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
-import type {
-  InnerWorldEntityEncryptedPayload,
-  InnerWorldEntityRaw,
-} from "@pluralscape/data/transforms/innerworld-entity";
 import type { InnerWorldRegionRaw } from "@pluralscape/data/transforms/innerworld-region";
 import type {
   LifecycleEventEncryptedPayload,
@@ -84,7 +80,9 @@ import type {
   GroupId,
   GroupWire,
   InnerWorldCanvasWire,
+  InnerWorldEntityEncryptedInput,
   InnerWorldEntityId,
+  InnerWorldEntityWire,
   InnerWorldRegionId,
   LifecycleEventId,
   MemberId,
@@ -405,9 +403,9 @@ const DEFAULT_VISUAL: VisualProperties = {
 
 export function makeRawInnerworldEntity(
   id: string,
-  payload: InnerWorldEntityEncryptedPayload,
-  overrides?: Partial<InnerWorldEntityRaw>,
-): InnerWorldEntityRaw {
+  payload: InnerWorldEntityEncryptedInput,
+  overrides?: Partial<InnerWorldEntityWire>,
+): InnerWorldEntityWire {
   const encrypted = encryptInnerWorldEntityInput(payload, TEST_MASTER_KEY);
   return {
     id: brandId<InnerWorldEntityId>(id),

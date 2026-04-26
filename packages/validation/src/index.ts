@@ -102,6 +102,7 @@ export {
   UpdateEntityBodySchema,
   UpdateCanvasBodySchema,
   InnerWorldCanvasEncryptedInputSchema,
+  InnerWorldEntityEncryptedInputSchema,
 } from "./innerworld.js";
 export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema, ALLOWED_MIME_TYPES } from "./blob.js";
 export {
