@@ -140,6 +140,7 @@ export {
 export {
   CreateTimerConfigBodySchema,
   UpdateTimerConfigBodySchema,
+  TimerConfigEncryptedInputSchema,
   TimerConfigQuerySchema,
   CreateCheckInRecordBodySchema,
   RespondCheckInRecordBodySchema,

@@ -30,6 +30,16 @@ export function parseTimeToMinutes(time: string): number | null {
 
 // ── Timer config schemas ────────────────────────────────────────
 
+/**
+ * Runtime validator for the pre-encryption TimerConfig input.
+ * Mirrors `TimerConfigEncryptedInput = Pick<TimerConfig, "promptText">`.
+ */
+export const TimerConfigEncryptedInputSchema = z
+  .object({
+    promptText: z.string().min(1),
+  })
+  .readonly();
+
 export const CreateTimerConfigBodySchema = z
   .object({
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),

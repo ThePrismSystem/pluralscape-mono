@@ -23,7 +23,7 @@ import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   CheckInRecordPage,
   TimerConfigPage,
-  TimerConfigRaw,
+  TimerConfigServerWire,
 } from "@pluralscape/data/transforms/timer-check-in";
 import type {
   ArchivedCheckInRecord,
@@ -49,7 +49,7 @@ export function useTimerConfig(
   timerId: TimerId,
   opts?: SystemIdOverride,
 ): DataQuery<TimerConfig | Archived<TimerConfig>> {
-  return useOfflineFirstQuery<TimerConfigRaw, TimerConfig | Archived<TimerConfig>>({
+  return useOfflineFirstQuery<TimerConfigServerWire, TimerConfig | Archived<TimerConfig>>({
     queryKey: ["timer_configs", timerId],
     table: "timer_configs",
     entityId: timerId,
@@ -66,7 +66,7 @@ export function useTimerConfig(
 export function useTimerConfigsList(
   opts?: TimerConfigListOpts,
 ): DataListQuery<TimerConfig | Archived<TimerConfig>> {
-  return useOfflineFirstInfiniteQuery<TimerConfigRaw, TimerConfig | Archived<TimerConfig>>({
+  return useOfflineFirstInfiniteQuery<TimerConfigServerWire, TimerConfig | Archived<TimerConfig>>({
     queryKey: ["timer_configs", "list", opts?.includeArchived ?? false],
     table: "timer_configs",
     rowTransform: rowToTimer,

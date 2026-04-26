@@ -1,3 +1,6 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { TimerConfigEncryptedInputSchema } from "@pluralscape/validation";
+
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -8,32 +11,23 @@ import type {
   MemberId,
   SystemId,
   TimerConfig,
+  TimerConfigEncryptedInput,
+  TimerConfigWire,
   TimerId,
   UnixMillis,
 } from "@pluralscape/types";
 
-export interface TimerConfigEncryptedFields {
-  readonly promptText: string;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertTimerConfigFieldsSubset =
-  TimerConfigEncryptedFields extends Pick<TimerConfig, keyof TimerConfigEncryptedFields>
-    ? true
-    : never;
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `timerConfig.get` — derived from the `TimerConfig` domain type. */
-export type TimerConfigRaw = Omit<TimerConfig, keyof TimerConfigEncryptedFields | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+/**
+ * Server-emitted wire shape for a TimerConfig — derived from `TimerConfigWire`
+ * by stripping `nextCheckInAt`, which is computed server-side and not
+ * surfaced through the API output (the canonical type carries it because
+ * Drizzle parity holds for the row, not the wire).
+ */
+export type TimerConfigServerWire = Omit<TimerConfigWire, "nextCheckInAt">;
 
 /** Shape returned by `timerConfig.list`. */
 export interface TimerConfigPage {
-  readonly data: readonly TimerConfigRaw[];
+  readonly data: readonly TimerConfigServerWire[];
   readonly nextCursor: string | null;
 }
 
@@ -56,44 +50,32 @@ export interface CheckInRecordPage {
   readonly nextCursor: string | null;
 }
 
-// ── Validator ─────────────────────────────────────────────────────────
-
-function assertTimerConfigEncryptedFields(raw: unknown): asserts raw is TimerConfigEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted timer config blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["promptText"] !== "string") {
-    throw new Error("Decrypted timer config blob missing required string field: promptText");
-  }
-}
-
 // ── Timer config transforms ──────────────────────────────────────────
 
 export function decryptTimerConfig(
-  raw: TimerConfigRaw,
+  raw: TimerConfigServerWire,
   masterKey: KdfMasterKey,
 ): TimerConfig | Archived<TimerConfig> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertTimerConfigEncryptedFields(decrypted);
+  const validated = TimerConfigEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
+    id: brandId<TimerId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
     intervalMinutes: raw.intervalMinutes,
     wakingHoursOnly: raw.wakingHoursOnly,
     wakingStart: raw.wakingStart,
     wakingEnd: raw.wakingEnd,
-    promptText: decrypted.promptText,
+    promptText: validated.promptText,
     enabled: raw.enabled,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
     version: raw.version,
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived timer config missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
@@ -109,14 +91,14 @@ export function decryptTimerConfigPage(
 }
 
 export function encryptTimerConfigInput(
-  data: TimerConfigEncryptedFields,
+  data: TimerConfigEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 export function encryptTimerConfigUpdate(
-  data: TimerConfigEncryptedFields,
+  data: TimerConfigEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

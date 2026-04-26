@@ -97,7 +97,6 @@ export {
   decryptCheckInRecord,
   decryptCheckInRecordPage,
 } from "./transforms/timer-check-in.js";
-export type { TimerConfigEncryptedFields } from "./transforms/timer-check-in.js";
 
 // --- Communication crypto transforms ---
 export {

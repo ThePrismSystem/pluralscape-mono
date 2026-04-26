@@ -55,7 +55,10 @@ import type { NoteRaw } from "@pluralscape/data/transforms/note";
 import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
-import type { CheckInRecordRaw, TimerConfigRaw } from "@pluralscape/data/transforms/timer-check-in";
+import type {
+  CheckInRecordRaw,
+  TimerConfigServerWire,
+} from "@pluralscape/data/transforms/timer-check-in";
 import type {
   AcknowledgementId,
   BoardMessageId,
@@ -864,7 +867,10 @@ export function makeRawNomenclature(
 /** Interval in minutes between timer check-in prompts. */
 const TIMER_INTERVAL_MINUTES = 60;
 
-export function makeRawTimer(id: string, overrides?: Partial<TimerConfigRaw>): TimerConfigRaw {
+export function makeRawTimer(
+  id: string,
+  overrides?: Partial<TimerConfigServerWire>,
+): TimerConfigServerWire {
   const encrypted = encryptTimerConfigInput({ promptText: "How are you?" }, TEST_MASTER_KEY);
   return {
     id: brandId<TimerId>(id),
