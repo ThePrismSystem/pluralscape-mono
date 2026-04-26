@@ -19,15 +19,13 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  StructureEntityPage as StructureEntityRawPage,
-  StructureEntityRaw,
-} from "@pluralscape/data/transforms/structure-entity";
+import type { StructureEntityPage as SystemStructureEntityWirePage } from "@pluralscape/data/transforms/structure-entity";
 import type {
   Archived,
   SystemStructureEntity,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
+  SystemStructureEntityWire,
 } from "@pluralscape/types";
 
 interface StructureEntityListOpts extends SystemIdOverride {
@@ -41,7 +39,7 @@ export function useStructureEntity(
   opts?: SystemIdOverride,
 ): DataQuery<SystemStructureEntity | Archived<SystemStructureEntity>> {
   return useOfflineFirstQuery<
-    StructureEntityRaw,
+    SystemStructureEntityWire,
     SystemStructureEntity | Archived<SystemStructureEntity>
   >({
     queryKey: ["structure_entities", entityId],
@@ -71,7 +69,7 @@ export function useStructureEntitiesList(
   opts?: StructureEntityListOpts,
 ): DataListQuery<SystemStructureEntity | Archived<SystemStructureEntity>> {
   return useOfflineFirstInfiniteQuery<
-    StructureEntityRaw,
+    SystemStructureEntityWire,
     SystemStructureEntity | Archived<SystemStructureEntity>
   >({
     queryKey: ["structure_entities", "list", opts?.includeArchived ?? false, opts?.entityTypeId],
@@ -103,7 +101,7 @@ export function useStructureEntitiesList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: StructureEntityRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: SystemStructureEntityWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<SystemStructureEntity | Archived<SystemStructureEntity>>,

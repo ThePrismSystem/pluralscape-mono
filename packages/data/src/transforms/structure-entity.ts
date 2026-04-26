@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { StructureEntityEncryptedInputSchema } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
@@ -5,72 +6,44 @@ import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.j
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
+  SystemId,
   SystemStructureEntity,
-  SystemStructureEntityEncryptedFields,
-  UnixMillis,
+  SystemStructureEntityEncryptedInput,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+  SystemStructureEntityWire,
 } from "@pluralscape/types";
 
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/**
- * Shape passed to `encryptStructureEntityInput()` before encryption.
- * Derived from the `SystemStructureEntity` domain type by picking the
- * encrypted-field keys — single source of truth lives in `@pluralscape/types`.
- */
-export type StructureEntityEncryptedInput = Pick<
-  SystemStructureEntity,
-  SystemStructureEntityEncryptedFields
->;
-
-/** Wire shape returned by `structureEntity.get` — derived from the domain. */
-export type StructureEntityRaw = Omit<
-  SystemStructureEntity,
-  SystemStructureEntityEncryptedFields | "archived"
-> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
-
 export interface StructureEntityPage {
-  readonly data: readonly StructureEntityRaw[];
+  readonly data: readonly SystemStructureEntityWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Transforms ────────────────────────────────────────────────────────
-
-/**
- * Decrypt a single structure entity wire object to the canonical domain type.
- * Passthrough fields (id, systemId, entityTypeId, sortOrder, archived,
- * version, createdAt, updatedAt) are copied directly; encrypted fields are
- * decrypted from encryptedData and validated by
- * `StructureEntityEncryptedInputSchema`.
- */
 export function decryptStructureEntity(
-  raw: StructureEntityRaw,
+  raw: SystemStructureEntityWire,
   masterKey: KdfMasterKey,
 ): SystemStructureEntity | Archived<SystemStructureEntity> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = StructureEntityEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    entityTypeId: raw.entityTypeId,
+    id: brandId<SystemStructureEntityId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    entityTypeId: brandId<SystemStructureEntityTypeId>(raw.entityTypeId),
+    sortOrder: raw.sortOrder,
+    version: raw.version,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
     name: validated.name,
     description: validated.description,
     emoji: validated.emoji,
     color: validated.color,
     imageSource: validated.imageSource,
-    sortOrder: raw.sortOrder,
-    version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived structureEntity missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
@@ -89,14 +62,14 @@ export function decryptStructureEntityPage(
 }
 
 export function encryptStructureEntityInput(
-  data: StructureEntityEncryptedInput,
+  data: SystemStructureEntityEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 export function encryptStructureEntityUpdate(
-  data: StructureEntityEncryptedInput,
+  data: SystemStructureEntityEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
