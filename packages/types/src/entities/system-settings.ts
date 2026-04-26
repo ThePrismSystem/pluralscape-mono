@@ -106,6 +106,14 @@ export type SystemSettingsEncryptedFields =
 export type SystemSettingsEncryptedInput = Pick<SystemSettings, SystemSettingsEncryptedFields>;
 
 /**
+ * Argon2id-hashed PIN. Branded `string` to prevent assigning an unhashed PIN
+ * by mistake. Constructed only at the hashing call site (`hashPinOffload` in
+ * `apps/api/src/services/pin.service.ts` and `account-pin.service.ts`); never
+ * exposed to clients.
+ */
+export type PinHash = Brand<string, "PinHash">;
+
+/**
  * Server-visible SystemSettings metadata — raw Drizzle row shape.
  *
  * Derived from `SystemSettings` by stripping the encrypted field keys
@@ -116,14 +124,6 @@ export type SystemSettingsEncryptedInput = Pick<SystemSettings, SystemSettingsEn
  * (server-visible for device-transfer policy enforcement without
  * decrypting the settings blob) and `encryptedData`.
  */
-/**
- * Argon2id-hashed PIN. Branded `string` to prevent assigning an unhashed PIN
- * by mistake. Constructed only at the hashing call site (`hashPinOffload` in
- * `apps/api/src/services/pin.service.ts` and `account-pin.service.ts`); never
- * exposed to clients.
- */
-export type PinHash = Brand<string, "PinHash">;
-
 export type SystemSettingsServerMetadata = Omit<
   SystemSettings,
   SystemSettingsEncryptedFields | "defaultBucketId" | "nomenclature"
