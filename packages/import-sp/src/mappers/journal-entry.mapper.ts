@@ -15,12 +15,12 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPNote } from "../sources/sp-types.js";
-import type { NoteEncryptedFields } from "@pluralscape/data";
+import type { NoteEncryptedInput } from "@pluralscape/types";
 import type { CreateNoteBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 export type MappedJournalEntry = Omit<z.infer<typeof CreateNoteBodySchema>, "encryptedData"> & {
-  readonly encrypted: NoteEncryptedFields;
+  readonly encrypted: NoteEncryptedInput;
   readonly createdAt: number;
 };
 
@@ -52,7 +52,7 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
     });
   }
 
-  const encrypted: NoteEncryptedFields = {
+  const encrypted: NoteEncryptedInput = {
     title: sp.title,
     content: sp.note,
     backgroundColor,

@@ -1,8 +1,24 @@
 import { NOTE_AUTHOR_ENTITY_TYPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
+import { HexColorSchema } from "./plaintext-shared.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE, MAX_QUERY_PARAM_STRING_LENGTH } from "./validation.constants.js";
+
+// ── Encrypted input ─────────────────────────────────────────────
+
+/**
+ * Runtime validator for the pre-encryption Note input.
+ * Mirrors `NoteEncryptedInput =
+ * Pick<Note, "title" | "content" | "backgroundColor">`.
+ */
+export const NoteEncryptedInputSchema = z
+  .object({
+    title: z.string().min(1),
+    content: z.string(),
+    backgroundColor: HexColorSchema.nullable(),
+  })
+  .readonly();
 
 // ── Create ──────────────────────────────────────────────────────
 

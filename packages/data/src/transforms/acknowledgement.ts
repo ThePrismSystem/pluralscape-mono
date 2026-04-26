@@ -27,17 +27,11 @@ export function decryptAcknowledgement(
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = AcknowledgementRequestEncryptedInputSchema.parse(decrypted);
 
-  if (raw.createdByMemberId === null) {
-    // Canonical AcknowledgementRequest requires a non-null creator; the server
-    // row is nullable only to accommodate legacy imports without an originating
-    // member, which the API contract still owes us a follow-up rejection for.
-    throw new Error("Acknowledgement missing createdByMemberId");
-  }
-
   const base = {
     id: brandId<AcknowledgementId>(raw.id),
     systemId: brandId<SystemId>(raw.systemId),
-    createdByMemberId: brandId<MemberId>(raw.createdByMemberId),
+    createdByMemberId:
+      raw.createdByMemberId === null ? null : brandId<MemberId>(raw.createdByMemberId),
     targetMemberId: validated.targetMemberId,
     message: validated.message,
     confirmed: raw.confirmed,

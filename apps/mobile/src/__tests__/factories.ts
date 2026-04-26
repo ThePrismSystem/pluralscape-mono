@@ -47,7 +47,6 @@ import type {
   LifecycleEventEncryptedPayload,
   LifecycleEventRaw,
 } from "@pluralscape/data/transforms/lifecycle-event";
-import type { NoteRaw } from "@pluralscape/data/transforms/note";
 import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
@@ -87,6 +86,7 @@ import type {
   MessageId,
   EncryptedBase64,
   NoteId,
+  NoteWire,
   PollId,
   PollOptionId,
   PollVoteId,
@@ -549,7 +549,7 @@ export function makeRawMessage(
 
 // ── Note ─────────────────────────────────────────────────────────────
 
-export function makeRawNote(id: string, overrides?: Partial<NoteRaw>): NoteRaw {
+export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire {
   const encrypted = encryptNoteInput(
     { title: "Note", content: "Body", backgroundColor: null },
     TEST_MASTER_KEY,

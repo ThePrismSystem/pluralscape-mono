@@ -136,7 +136,7 @@ describe("useNote", () => {
     expect(data?.title).toBe("Note");
     expect(data?.content).toBe("Body");
     expect(data?.backgroundColor).toBeNull();
-    expect(data?.authorEntityType).toBeNull();
+    expect(data?.author).toBeNull();
     expect(data?.archived).toBe(false);
   });
 

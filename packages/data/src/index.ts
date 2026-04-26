@@ -141,7 +141,6 @@ export {
   encryptNoteInput,
   encryptNoteUpdate,
 } from "./transforms/note.js";
-export type { NoteDecrypted, NoteEncryptedFields } from "./transforms/note.js";
 
 export {
   decryptPrivacyBucket,

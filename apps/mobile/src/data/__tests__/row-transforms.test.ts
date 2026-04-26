@@ -705,8 +705,7 @@ describe("rowToNote", () => {
     const result = rowToNote(row);
 
     expect(result.id).toBe("note-1");
-    expect(result.authorEntityType).toBe("member");
-    expect(result.authorEntityId).toBe("mem-1");
+    expect(result.author).toEqual({ entityType: "member", entityId: "mem-1" });
     expect(result.title).toBe("Shopping list");
     expect(result.content).toBe("Eggs, milk, bread");
     expect(result.backgroundColor).toBe("#ffffcc");
@@ -729,8 +728,7 @@ describe("rowToNote", () => {
     };
 
     const result = rowToNote(row);
-    expect(result.authorEntityType).toBeNull();
-    expect(result.authorEntityId).toBeNull();
+    expect(result.author).toBeNull();
   });
 });
 
@@ -1687,8 +1685,7 @@ describe("rowToNote", () => {
     const result = rowToNote(baseNoteRow());
     expect(result.id).toBe("note-1");
     expect(result.systemId).toBe("sys-1");
-    expect(result.authorEntityType).toBe("member");
-    expect(result.authorEntityId).toBe("mem-1");
+    expect(result.author).toEqual({ entityType: "member", entityId: "mem-1" });
     expect(result.title).toBe("My Note");
     expect(result.content).toBe("Some content");
     expect(result.backgroundColor).toBeNull();
@@ -1705,8 +1702,7 @@ describe("rowToNote", () => {
 
   it("supports null author fields", () => {
     const result = rowToNote(baseNoteRow({ author_entity_type: null, author_entity_id: null }));
-    expect(result.authorEntityType).toBeNull();
-    expect(result.authorEntityId).toBeNull();
+    expect(result.author).toBeNull();
   });
 
   it("populates backgroundColor when provided", () => {

@@ -174,7 +174,12 @@ export {
   ReorderBoardMessagesBodySchema,
   BoardMessageQuerySchema,
 } from "./board-message.js";
-export { CreateNoteBodySchema, UpdateNoteBodySchema, NoteQuerySchema } from "./note.js";
+export {
+  CreateNoteBodySchema,
+  NoteEncryptedInputSchema,
+  UpdateNoteBodySchema,
+  NoteQuerySchema,
+} from "./note.js";
 export {
   CreateBucketBodySchema,
   UpdateBucketBodySchema,
