@@ -1,11 +1,11 @@
 ---
 # types-iupb
 title: "Cluster 8 OpenAPI G7 parity: reconcile optional-vs-nullable for hybrid encrypted entities"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-26T05:03:58Z
-updated_at: 2026-04-26T05:03:58Z
+updated_at: 2026-04-26T11:54:30Z
 blocked_by:
   - ps-etbc
 ---
@@ -65,3 +65,25 @@ PollVote needs a separate path — its OpenAPI response is a hand-rolled shape (
 - Parent: ps-y4tb
 - Blocked-by: ps-etbc (PR #562)
 - File: `scripts/openapi-wire-parity.type-test.ts` lines around the "Cluster 8 (deferred)" block
+
+## Summary of Changes
+
+G7 full-equality OpenAPI ↔ canonical wire parity restored for 8 entities (7 envelope entities + PollVote). The "Cluster 8 (deferred)" carve-out is gone.
+
+**G7 added (8 entities):**
+
+- Channel, Message (ChatMessage), Note, BoardMessage, Poll, TimerConfig, Acknowledgement (note: schema name `AcknowledgementResponse` does not match canonical `AcknowledgementRequestWire` — divergence documented inline)
+- PollVote: response widened to include `systemId`, `version`, `updatedAt`; `PollVoteServerWire` shim deleted; `decryptPollVote(raw: PollVoteWire, …)` consumes the canonical type directly
+
+**Real drift discovered + fixed:**
+
+- TimerConfig OpenAPI was missing the server-tracked plaintext column `nextCheckInAt` entirely; spec was widened to match the canonical `TimerConfigServerMetadata`
+- PollVote schema had three EncryptedEntity-pattern fields missing (systemId, version, updatedAt); widened in lock-step with the response handler and tests
+
+**Deferred (2 entities):**
+
+- JournalEntry, WikiPage — canonical wire types exist (`JournalEntryWire`, `WikiPageWire`) but no OpenAPI route schema is authored yet. G7 deferred until the routes are added; comment in the parity test points at types-iupb.
+
+**Tests updated:** PollVote response-shape assertions in 5 test fixtures across api routes/tRPC/services were widened with the three new fields (no `expect.objectContaining` masking).
+
+PR: refactor/ps-y4tb-batch3-parity-infrastructure
