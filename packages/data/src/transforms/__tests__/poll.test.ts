@@ -15,17 +15,18 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { PollEncryptedFields, PollVoteEncryptedFields } from "../poll.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   EntityReference,
   HexColor,
   MemberId,
+  PollEncryptedInput,
   PollId,
   PollKind,
   PollOption,
   PollOptionId,
   PollStatus,
+  PollVoteEncryptedInput,
   PollVoteId,
   SystemId,
   UnixMillis,
@@ -51,7 +52,7 @@ function makePollOption(id: string): PollOption {
   };
 }
 
-function makePollEncryptedFields(): PollEncryptedFields {
+function makePollEncryptedInput(): PollEncryptedInput {
   return {
     title: "Best snack?",
     description: "Vote for your favourite.",
@@ -60,7 +61,7 @@ function makePollEncryptedFields(): PollEncryptedFields {
 }
 
 function makeServerPoll(
-  fields: PollEncryptedFields = makePollEncryptedFields(),
+  fields: PollEncryptedInput = makePollEncryptedInput(),
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
@@ -87,28 +88,30 @@ function makeServerPoll(
 
 // ── PollVote fixtures ─────────────────────────────────────────────────
 
-function makePollVoteEncryptedFields(): PollVoteEncryptedFields {
+function makePollVoteEncryptedInput(): PollVoteEncryptedInput {
   return { comment: "Great option!" };
 }
 
 function makeServerPollVote(overrides?: {
-  encryptedData?: string | null;
+  encryptedData?: string;
   archived?: boolean;
   archivedAt?: UnixMillis | null;
   voter?: EntityReference<"member" | "structure-entity"> | null;
+  optionId?: PollOptionId | null;
 }) {
   return {
     id: brandId<PollVoteId>("pv_abc123"),
     pollId: brandId<PollId>("poll_abc123"),
-    optionId: brandId<PollOptionId>("opt_001"),
+    optionId: brandId<PollOptionId>("opt_001") as PollOptionId | null,
     voter: { entityType: "member" as const, entityId: "mem_voter" } as EntityReference<
       "member" | "structure-entity"
     >,
     isVeto: false,
     votedAt: toUnixMillis(1_700_000_500_000),
-    encryptedData: encryptAndEncodeT1(makePollVoteEncryptedFields(), masterKey) as string | null,
+    encryptedData: encryptAndEncodeT1(makePollVoteEncryptedInput(), masterKey),
     archived: false as boolean,
     archivedAt: null as UnixMillis | null,
+    createdAt: toUnixMillis(1_700_000_500_000),
     ...overrides,
   };
 }
@@ -137,7 +140,7 @@ describe("decryptPoll", () => {
   });
 
   it("handles null description", () => {
-    const fields: PollEncryptedFields = { title: "Yes/No?", description: null, options: [] };
+    const fields: PollEncryptedInput = { title: "Yes/No?", description: null, options: [] };
     const result = decryptPoll(makeServerPoll(fields), masterKey);
     expect(result.description).toBeNull();
     expect(result.options).toEqual([]);
@@ -150,7 +153,7 @@ describe("decryptPoll", () => {
 
   it("returns archived variant when raw.archived is true", () => {
     const archivedAt = toUnixMillis(1_700_002_000_000);
-    const raw = makeServerPoll(makePollEncryptedFields(), { archived: true, archivedAt });
+    const raw = makeServerPoll(makePollEncryptedInput(), { archived: true, archivedAt });
     const result = decryptPoll(raw, masterKey);
 
     expect(result.archived).toBe(true);
@@ -160,7 +163,7 @@ describe("decryptPoll", () => {
   });
 
   it("throws when archived is true but archivedAt is null", () => {
-    const raw = makeServerPoll(makePollEncryptedFields(), { archived: true, archivedAt: null });
+    const raw = makeServerPoll(makePollEncryptedInput(), { archived: true, archivedAt: null });
     expect(() => decryptPoll(raw, masterKey)).toThrow("missing archivedAt");
   });
 });
@@ -190,13 +193,13 @@ describe("decryptPollPage", () => {
 
 describe("encryptPollInput", () => {
   it("returns an object with an encryptedData string", () => {
-    const result = encryptPollInput(makePollEncryptedFields(), masterKey);
+    const result = encryptPollInput(makePollEncryptedInput(), masterKey);
     expect(typeof result.encryptedData).toBe("string");
     expect(result.encryptedData.length).toBeGreaterThan(0);
   });
 
   it("round-trips: encrypt then decrypt returns original fields", () => {
-    const fields = makePollEncryptedFields();
+    const fields = makePollEncryptedInput();
     const { encryptedData } = encryptPollInput(fields, masterKey);
     const result = decryptPoll({ ...makeServerPoll(), encryptedData }, masterKey);
 
@@ -210,13 +213,13 @@ describe("encryptPollInput", () => {
 
 describe("encryptPollUpdate", () => {
   it("includes version in the output", () => {
-    const result = encryptPollUpdate(makePollEncryptedFields(), 2, masterKey);
+    const result = encryptPollUpdate(makePollEncryptedInput(), 2, masterKey);
     expect(typeof result.encryptedData).toBe("string");
     expect(result.version).toBe(2);
   });
 
   it("round-trips through decryptPoll", () => {
-    const fields = makePollEncryptedFields();
+    const fields = makePollEncryptedInput();
     const { encryptedData } = encryptPollUpdate(fields, 3, masterKey);
     const result = decryptPoll({ ...makeServerPoll(), encryptedData, version: 3 }, masterKey);
     expect(result.title).toBe(fields.title);
@@ -236,12 +239,6 @@ describe("decryptPollVote", () => {
     expect(result.isVeto).toBe(false);
     expect(result.archived).toBe(false);
     expect(result.comment).toBe("Great option!");
-  });
-
-  it("returns null comment when encryptedData is null", () => {
-    const raw = makeServerPollVote({ encryptedData: null });
-    const result = decryptPollVote(raw, masterKey);
-    expect(result.comment).toBeNull();
   });
 
   it("handles null optionId (abstain vote)", () => {
@@ -276,13 +273,13 @@ describe("decryptPollVote", () => {
 
 describe("encryptPollVoteInput", () => {
   it("returns an object with an encryptedData string", () => {
-    const result = encryptPollVoteInput(makePollVoteEncryptedFields(), masterKey);
+    const result = encryptPollVoteInput(makePollVoteEncryptedInput(), masterKey);
     expect(typeof result.encryptedData).toBe("string");
     expect(result.encryptedData.length).toBeGreaterThan(0);
   });
 
   it("round-trips: encrypt then decrypt returns original comment", () => {
-    const fields = makePollVoteEncryptedFields();
+    const fields = makePollVoteEncryptedInput();
     const { encryptedData } = encryptPollVoteInput(fields, masterKey);
     const raw = makeServerPollVote({ encryptedData });
     const result = decryptPollVote(raw, masterKey);
@@ -290,7 +287,7 @@ describe("encryptPollVoteInput", () => {
   });
 
   it("round-trips null comment", () => {
-    const fields: PollVoteEncryptedFields = { comment: null };
+    const fields: PollVoteEncryptedInput = { comment: null };
     const { encryptedData } = encryptPollVoteInput(fields, masterKey);
     const raw = makeServerPollVote({ encryptedData });
     const result = decryptPollVote(raw, masterKey);
@@ -298,12 +295,12 @@ describe("encryptPollVoteInput", () => {
   });
 });
 
-// ── assertPollEncryptedFields ─────────────────────────────────────────
+// ── PollEncryptedInputSchema ─────────────────────────────────────────
 
-describe("assertPollEncryptedFields", () => {
+describe("PollEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = { ...makeServerPoll(), encryptedData: makeBase64Blob("not-object", masterKey) };
-    expect(() => decryptPoll(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptPoll(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing title field", () => {
@@ -311,7 +308,7 @@ describe("assertPollEncryptedFields", () => {
       ...makeServerPoll(),
       encryptedData: makeBase64Blob({ options: [] }, masterKey),
     };
-    expect(() => decryptPoll(raw, masterKey)).toThrow("missing required string field: title");
+    expect(() => decryptPoll(raw, masterKey)).toThrow(/title/);
   });
 
   it("throws when blob is missing options array", () => {
@@ -319,6 +316,6 @@ describe("assertPollEncryptedFields", () => {
       ...makeServerPoll(),
       encryptedData: makeBase64Blob({ title: "A poll" }, masterKey),
     };
-    expect(() => decryptPoll(raw, masterKey)).toThrow("missing required array field: options");
+    expect(() => decryptPoll(raw, masterKey)).toThrow(/options/);
   });
 });

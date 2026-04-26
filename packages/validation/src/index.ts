@@ -199,6 +199,8 @@ export {
 } from "./friend.js";
 export {
   CreatePollBodySchema,
+  PollEncryptedInputSchema,
+  PollVoteEncryptedInputSchema,
   UpdatePollBodySchema,
   CastVoteBodySchema,
   UpdatePollVoteBodySchema,

@@ -47,7 +47,7 @@ import type {
   LifecycleEventEncryptedPayload,
   LifecycleEventRaw,
 } from "@pluralscape/data/transforms/lifecycle-event";
-import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
+import type { PollVoteServerWire } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
 import type {
@@ -90,6 +90,7 @@ import type {
   PollId,
   PollOptionId,
   PollVoteId,
+  PollWire,
   RelationshipId,
   RelationshipType,
   RelationshipWire,
@@ -571,7 +572,7 @@ export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire
 
 // ── Poll ─────────────────────────────────────────────────────────────
 
-export function makeRawPoll(id: string, overrides?: Partial<PollRaw>): PollRaw {
+export function makeRawPoll(id: string, overrides?: Partial<PollWire>): PollWire {
   const encrypted = encryptPollInput(
     {
       title: `Poll ${id}`,
@@ -613,18 +614,19 @@ export function makeRawPoll(id: string, overrides?: Partial<PollRaw>): PollRaw {
 export function makeRawPollVote(
   id: string,
   pollId: string,
-  overrides?: Partial<PollVoteRaw>,
-): PollVoteRaw {
+  overrides?: Partial<PollVoteServerWire>,
+): PollVoteServerWire {
   const encrypted = encryptPollVoteInput({ comment: "My comment" }, TEST_MASTER_KEY);
   return {
     id: brandId<PollVoteId>(id),
     pollId: brandId<PollId>(pollId),
     optionId: brandId<PollOptionId>("opt-1"),
-    voter: null,
+    voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem-voter") },
     isVeto: false,
     votedAt: NOW,
     archived: false,
     archivedAt: null,
+    createdAt: NOW,
     ...encrypted,
     ...overrides,
   };

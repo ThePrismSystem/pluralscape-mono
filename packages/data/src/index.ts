@@ -128,12 +128,6 @@ export {
   encryptPollUpdate,
   encryptPollVoteInput,
 } from "./transforms/poll.js";
-export type {
-  PollDecrypted,
-  PollEncryptedFields,
-  PollVoteDecrypted,
-  PollVoteEncryptedFields,
-} from "./transforms/poll.js";
 
 export {
   decryptNote,
