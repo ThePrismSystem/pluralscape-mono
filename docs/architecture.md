@@ -220,6 +220,23 @@ Offline queue  ──▶  CRDT merge (conflict resolution)
 
 Per-bucket symmetric keys are derived client-side. The server never holds T1 key material.
 
+### Canonical type chain (types-as-SoT)
+
+Every encrypted entity exposes a six-link chain from `@pluralscape/types`:
+`<Entity>` (decrypted domain) → `<Entity>EncryptedFields` (keys union) →
+`<Entity>EncryptedInput = Pick<<Entity>, <Entity>EncryptedFields>` →
+`<Entity>ServerMetadata` (Drizzle row) → `<Entity>Result =
+EncryptedWire<<Entity>ServerMetadata>` → `<Entity>Wire =
+Serialize<<Entity>Result>`. Drizzle parity (`packages/db`), Zod parity
+(`packages/validation`), and OpenAPI G7 parity (`scripts/openapi-wire-parity.type-test.ts`)
+all assert structural equality against the appropriate slot. `pnpm types:check-sot`
+runs the gate; CI blocks on failure. See [adr/023-zod-type-alignment.md](adr/023-zod-type-alignment.md).
+
+Client transforms in `packages/data/src/transforms/` consume this chain
+function-only — local domain/wire/encrypted-input aliases are forbidden.
+Runtime validation of decrypted blobs is delegated to
+`<Entity>EncryptedInputSchema.parse()` from `@pluralscape/validation`.
+
 ---
 
 ## 4. Key Architecture Decisions

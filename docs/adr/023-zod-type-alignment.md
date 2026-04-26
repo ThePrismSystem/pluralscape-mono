@@ -71,6 +71,25 @@ ADR while letting the wire envelope keep the brand internally.
 
 **Pilot decision (2026-04-22):** Option B — normalize `packages/types` input-body optional fields to `T | undefined`. The Member pilot (`packages/validation/src/__tests__/type-parity/member.type.test.ts`) surfaced **0 optional-vs-undefined mismatches** across `CreateMemberBody` / `UpdateMemberBody` / `DuplicateMemberBody`, because those bodies happen to contain only required fields. Zero is well below the `≥ 10` threshold at which a helper would pay off, so the fleet convention is: when a future input-body type introduces an optional field that pairs with a `.optional()` Zod schema, declare it as `readonly field: T | undefined` (not `readonly field?: T`) so `Equal<z.infer<...>, Body>` remains green. Full-entity types (`<Entity>`) keep `?:` optional markers — only input-body types on the API boundary convergence to Zod's inference shape. `Equal` remains the default parity helper; no `OptionalEqual` sibling is introduced.
 
+### Transform consumer convention — `packages/data/src/transforms/`
+
+Every per-entity client-side transform module owns **functions only**. Local
+domain/wire/encrypted-input/raw-row aliases are forbidden — the transform
+imports `<Entity>`, `<Entity>EncryptedInput`, `<Entity>Wire`, and `Archived<<Entity>>`
+directly from `@pluralscape/types`. Runtime validation of decrypted blobs is
+delegated to `<Entity>EncryptedInputSchema.parse(decrypted)` from
+`@pluralscape/validation`; hand-rolled `assertX*` validators are removed.
+
+When the API serializer omits fields the canonical wire requires (e.g. tRPC
+`listVotes` does not surface `systemId`/`version`/`updatedAt` for `PollVote`),
+the transform owns a narrow `<Entity>ServerWire = Omit<<Entity>Wire, …>` shim
+local to the transform file — never an `as unknown as <Entity>Wire` cast.
+This keeps the ServerWire deviation explicit at the boundary and visible to
+reviewers.
+
+The Member-pilot transform (`packages/data/src/transforms/member.ts`) is the
+canonical reference shape for new transforms.
+
 ### Enforcement — `pnpm types:check-sot`
 
 A single root script (`scripts/check-types-sot.ts`) runs all three parity mechanisms sequentially, short-circuiting on first failure. CI step in `.github/workflows/ci.yml` blocks on failure. Drift at any layer fails CI.
