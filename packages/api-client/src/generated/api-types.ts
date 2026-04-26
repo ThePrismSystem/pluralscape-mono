@@ -6708,15 +6708,20 @@ export interface components {
      */
     TimerConfigResponse: components["schemas"]["EncryptedEntity"] & {
       /** @description Whether the timer is actively scheduling check-ins */
-      enabled?: boolean;
+      enabled: boolean;
       /** @description Minutes between check-in records */
-      intervalMinutes?: number | null;
+      intervalMinutes: number | null;
       /** @description If true, only generate check-ins during waking hours */
-      wakingHoursOnly?: boolean | null;
+      wakingHoursOnly: boolean | null;
       /** @description Start of waking hours (HH:MM, required when wakingHoursOnly=true) */
-      wakingStart?: string | null;
+      wakingStart: string | null;
       /** @description End of waking hours (HH:MM, required when wakingHoursOnly=true) */
-      wakingEnd?: string | null;
+      wakingEnd: string | null;
+      /**
+       * Format: int64
+       * @description Server-tracked Unix milliseconds of the next scheduled check-in (null when disabled or not yet scheduled)
+       */
+      nextCheckInAt: number | null;
     };
     CreateTimerConfigRequest: {
       /** @description T1-encrypted PlaintextTimerConfig */
@@ -8627,7 +8632,7 @@ export interface components {
        */
       type: "category" | "channel";
       /** @description Parent category ID (null for top-level channels/categories) */
-      parentId?: string | null;
+      parentId: string | null;
       /** @description Display order within parent scope */
       sortOrder: number;
     };
@@ -8655,7 +8660,7 @@ export interface components {
       /** @description Channel this message belongs to */
       channelId: string;
       /** @description ID of the message being replied to (null if not a reply) */
-      replyToId?: string | null;
+      replyToId: string | null;
       /**
        * Format: int64
        * @description Message send time in Unix milliseconds (used for partition pruning)
@@ -8665,7 +8670,7 @@ export interface components {
        * Format: int64
        * @description Unix milliseconds when last edited (null until first edit)
        */
-      editedAt?: number | null;
+      editedAt: number | null;
     };
     CreateMessageRequest: {
       /** @description T1-encrypted message content (text, sender proxy identity, etc.) */
@@ -8724,9 +8729,9 @@ export interface components {
        * @description Author entity type (null for system-wide notes)
        * @enum {string|null}
        */
-      authorEntityType?: "member" | "structure-entity" | null;
+      authorEntityType: "member" | "structure-entity" | null;
       /** @description Author entity ID (null for system-wide notes) */
-      authorEntityId?: string | null;
+      authorEntityId: string | null;
     };
     CreateNoteRequest: {
       /** @description T1-encrypted note content (rich text, background color, etc.) */
@@ -8750,7 +8755,7 @@ export interface components {
      */
     PollResponse: components["schemas"]["EncryptedEntity"] & {
       /** @description Member who created the poll (null if not attributed) */
-      createdByMemberId?: string | null;
+      createdByMemberId: string | null;
       /**
        * @description Poll kind
        * @enum {string}
@@ -8765,12 +8770,12 @@ export interface components {
        * Format: int64
        * @description Unix milliseconds when the poll was closed (null while open)
        */
-      closedAt?: number | null;
+      closedAt: number | null;
       /**
        * Format: int64
        * @description Optional scheduled end time in Unix milliseconds
        */
-      endsAt?: number | null;
+      endsAt: number | null;
       /** @description Whether voters can cast more than one vote */
       allowMultipleVotes: boolean;
       /** @description Maximum votes per voter (must be 1 when allowMultipleVotes is false) */
@@ -8810,12 +8815,14 @@ export interface components {
     PollVoteResponse: {
       /** @description Vote ID */
       id: string;
+      /** @description Owning system */
+      systemId: string;
       /** @description Poll this vote belongs to */
       pollId: string;
       /** @description Selected option ID (null for abstain) */
-      optionId?: string | null;
+      optionId: string | null;
       /** @description Voter entity reference */
-      voter?: {
+      voter: {
         /** @enum {string} */
         entityType: "member" | "structure-entity";
         entityId: string;
@@ -8829,14 +8836,21 @@ export interface components {
       votedAt: number;
       /** @description T1-encrypted vote data (optional comment, etc.) */
       encryptedData: string;
+      /** @description Optimistic concurrency version */
+      version: number;
       archived: boolean;
       /** Format: int64 */
-      archivedAt?: number | null;
+      archivedAt: number | null;
       /**
        * Format: int64
        * @description Unix milliseconds
        */
       createdAt: number;
+      /**
+       * Format: int64
+       * @description Last modification timestamp (Unix milliseconds)
+       */
+      updatedAt: number;
     };
     CastVoteRequest: {
       /** @description Selected option ID (null for abstain) */
@@ -8880,7 +8894,7 @@ export interface components {
      */
     AcknowledgementResponse: components["schemas"]["EncryptedEntity"] & {
       /** @description Member who created the acknowledgement (null if not attributed) */
-      createdByMemberId?: string | null;
+      createdByMemberId: string | null;
       /** @description Whether the target member has confirmed this acknowledgement */
       confirmed: boolean;
     };

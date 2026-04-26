@@ -126,9 +126,11 @@ function makeVoteRow(overrides: Record<string, unknown> = {}): Record<string, un
     isVeto: false,
     votedAt: 1000,
     encryptedData: new Uint8Array([1, 2, 3]),
+    version: 1,
     archived: false,
     archivedAt: null,
     createdAt: 1000,
+    updatedAt: 1000,
     ...overrides,
   };
 }

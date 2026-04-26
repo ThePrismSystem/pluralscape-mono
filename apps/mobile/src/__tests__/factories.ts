@@ -43,7 +43,6 @@ export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
-import type { PollVoteServerWire } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
 import type {
@@ -87,6 +86,7 @@ import type {
   PollId,
   PollOptionId,
   PollVoteId,
+  PollVoteWire,
   PollWire,
   RelationshipId,
   RelationshipType,
@@ -610,19 +610,22 @@ export function makeRawPoll(id: string, overrides?: Partial<PollWire>): PollWire
 export function makeRawPollVote(
   id: string,
   pollId: string,
-  overrides?: Partial<PollVoteServerWire>,
-): PollVoteServerWire {
+  overrides?: Partial<PollVoteWire>,
+): PollVoteWire {
   const encrypted = encryptPollVoteInput({ comment: "My comment" }, TEST_MASTER_KEY);
   return {
     id: brandId<PollVoteId>(id),
+    systemId: TEST_SYSTEM_ID,
     pollId: brandId<PollId>(pollId),
     optionId: brandId<PollOptionId>("opt-1"),
     voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem-voter") },
     isVeto: false,
     votedAt: NOW,
+    version: 1,
     archived: false,
     archivedAt: null,
     createdAt: NOW,
+    updatedAt: NOW,
     ...encrypted,
     ...overrides,
   };

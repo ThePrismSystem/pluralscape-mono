@@ -27,14 +27,6 @@ export interface PollPage {
   readonly nextCursor: string | null;
 }
 
-/**
- * Server-emitted wire shape for a PollVote — derived from `PollVoteWire` by
- * stripping `systemId`/`version`/`updatedAt`, none of which the API
- * serializer surfaces (the canonical type carries them because Drizzle
- * parity holds for the row, not the wire).
- */
-export type PollVoteServerWire = Omit<PollVoteWire, "systemId" | "version" | "updatedAt">;
-
 export function decryptPoll(raw: PollWire, masterKey: KdfMasterKey): Poll | Archived<Poll> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = PollEncryptedInputSchema.parse(decrypted);
@@ -93,7 +85,7 @@ export function encryptPollUpdate(
 }
 
 export function decryptPollVote(
-  raw: PollVoteServerWire,
+  raw: PollVoteWire,
   masterKey: KdfMasterKey,
 ): PollVote | ArchivedPollVote {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);

@@ -62,15 +62,18 @@ const RESULTS_URL = `/systems/${SYS_ID}/polls/${POLL_ID}/results`;
 
 const MOCK_VOTE = {
   id: VOTE_ID as never,
+  systemId: SYS_ID as never,
   pollId: POLL_ID as never,
   optionId: "opt_550e8400-e29b-41d4-a716-446655440003" as never,
   voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem_test") },
   isVeto: false,
   votedAt: 1000 as never,
   encryptedData: "dGVzdA==" as EncryptedBase64,
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,
+  updatedAt: 1000 as never,
 };
 
 const VALID_UPDATE_BODY = {

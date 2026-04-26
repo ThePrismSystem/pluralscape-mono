@@ -35,8 +35,12 @@
 
 import type { components } from "../packages/api-client/src/generated/api-types.js";
 import type {
+  AcknowledgementRequestWire,
   AuditLogEntry,
   AuditLogEntryWire,
+  BoardMessageWire,
+  ChannelWire,
+  ChatMessageWire,
   CheckInRecordWire,
   CustomFront,
   CustomFrontEncryptedFields,
@@ -77,6 +81,9 @@ import type {
   MemberWire,
   NomenclatureEncryptedFields,
   NomenclatureSettings,
+  NoteWire,
+  PollVoteWire,
+  PollWire,
   Relationship,
   RelationshipEncryptedFields,
   Serialize,
@@ -95,6 +102,7 @@ import type {
   SystemStructureEntityTypeEncryptedFields,
   SystemStructureEntityTypeWire,
   SystemStructureEntityWire,
+  TimerConfigWire,
 } from "../packages/types/src/index.js";
 import { expectTypeOf } from "vitest";
 
@@ -200,16 +208,40 @@ expectTypeOf<
   Equal<components["schemas"]["CheckInRecordResponse"], CheckInRecordWire>
 >().toEqualTypeOf<true>();
 
-// ── OpenAPI ↔ Wire parity: Cluster 8 (deferred) ────────────────────
-//
-// Channel, ChatMessage, Note, BoardMessage, Poll, TimerConfig are
-// encrypted hybrids whose canonical wire types now exist, but their
-// OpenAPI `<X>Response` schemas mark several plaintext columns as
-// optional (`field?: T`) while the canonical types declare them
-// required-nullable (`field: T | null`). G7 full equality is deferred
-// until the OpenAPI generator emits required-nullable for those
-// columns (or the canonical types are widened to optional). Fix in a
-// follow-up; the envelope tripwire above still covers shared columns.
+expectTypeOf<Equal<components["schemas"]["ChannelResponse"], ChannelWire>>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["MessageResponse"], ChatMessageWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<Equal<components["schemas"]["NoteResponse"], NoteWire>>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["BoardMessageResponse"], BoardMessageWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<Equal<components["schemas"]["PollResponse"], PollWire>>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["PollVoteResponse"], PollVoteWire>
+>().toEqualTypeOf<true>();
+
+// TimerConfig: server adds plaintext `nextCheckInAt` to the row for
+// scheduling without requiring blob decryption (see TimerConfigServerMetadata).
+expectTypeOf<
+  Equal<components["schemas"]["TimerConfigResponse"], TimerConfigWire>
+>().toEqualTypeOf<true>();
+
+// Acknowledgement: OpenAPI schema name (`AcknowledgementResponse`) diverges
+// from the canonical type name (`AcknowledgementRequestWire`) — the domain
+// type is `AcknowledgementRequest`, the API surface trims the suffix.
+expectTypeOf<
+  Equal<components["schemas"]["AcknowledgementResponse"], AcknowledgementRequestWire>
+>().toEqualTypeOf<true>();
+
+// JournalEntryResponse and WikiPageResponse: canonical wire types exist
+// (`JournalEntryWire`, `WikiPageWire`) but no OpenAPI route schema is
+// authored yet. G7 deferred until the routes are added — see types-iupb.
 
 // ── OpenAPI ↔ domain parity: RelationshipResponse ──────────────────
 //

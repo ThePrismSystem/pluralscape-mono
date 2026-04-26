@@ -1,11 +1,11 @@
 ---
 # types-1spw
 title: Anchor G4 parity assertions to data transform return types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-25T09:05:46Z
-updated_at: 2026-04-25T09:05:51Z
+updated_at: 2026-04-26T11:54:04Z
 parent: ps-y4tb
 ---
 
@@ -43,3 +43,14 @@ Apply to the full encrypted-entity fleet _after_ PR 2 of ps-y4tb lands the inlin
 - Parent: ps-y4tb (Encrypted-entity type SoT consolidation)
 - Related: ADR-023 (Zod ↔ types alignment)
 - Plan reference: `docs/superpowers/plans/2026-04-25-ps-y4tb-encrypted-entity-sot-consolidation.md` Task 3.7 (cycle constraint note)
+
+## Summary of Changes
+
+G4 (Body Zod ↔ Transform output) parity assertions for the encrypted-entity fleet now live in `packages/data/src/__tests__/type-parity/<entity>.type.test.ts`, anchored to `ReturnType<typeof encryptXInput>` so transform return-type drift fails the test mechanically.
+
+- 25 per-entity test files in `packages/data/src/__tests__/type-parity/` (Member pilot + 24 fleet entities: acknowledgement, board-message, channel, custom-front, field-definition, field-value, fronting-comment, fronting-report, fronting-session, group, innerworld-canvas, innerworld-entity, innerworld-region, lifecycle-event, message, note, poll, privacy-bucket, relationship, snapshot, structure-entity, structure-entity-type, system-settings, timer-config)
+- Inline-shape G4 assertions removed from `packages/validation/src/__tests__/contract-member.test.ts`, `contract-custom-fields.test.ts`, and `type-parity/member.type.test.ts`
+- Acknowledgement Confirm parity skipped (intentional design — `ConfirmAcknowledgementBodySchema.encryptedData` is `.optional()` because clients may confirm without re-encrypting; the transform always returns required `encryptedData: string`)
+- 45 G4 assertions across 25 files all pass
+
+PR: refactor/ps-y4tb-batch3-parity-infrastructure

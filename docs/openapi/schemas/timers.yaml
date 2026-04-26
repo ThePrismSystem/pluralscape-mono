@@ -5,6 +5,13 @@ TimerConfigResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"
     - type: object
+      required:
+        - intervalMinutes
+        - wakingHoursOnly
+        - wakingStart
+        - wakingEnd
+        - enabled
+        - nextCheckInAt
       properties:
         enabled:
           type: boolean
@@ -28,6 +35,11 @@ TimerConfigResponse:
           nullable: true
           pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
           description: "End of waking hours (HH:MM, required when wakingHoursOnly=true)"
+        nextCheckInAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: "Server-tracked Unix milliseconds of the next scheduled check-in (null when disabled or not yet scheduled)"
 
 CreateTimerConfigRequest:
   type: object

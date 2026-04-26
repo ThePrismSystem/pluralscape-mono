@@ -153,11 +153,8 @@ describe("UpdateFieldDefinitionBodySchema", () => {
 });
 
 describe("SetFieldValueBodySchema", () => {
-  it("infers the correct body shape", () => {
-    expectTypeOf<
-      Equal<z.infer<typeof SetFieldValueBodySchema>, { encryptedData: string }>
-    >().toEqualTypeOf<true>();
-  });
+  // Body↔Transform G4 parity for FieldValue is asserted in
+  // packages/data/src/__tests__/type-parity/field-value.type.test.ts.
 
   it("parses valid input", () => {
     const result = SetFieldValueBodySchema.safeParse({ encryptedData: "dGVzdA==" });
@@ -177,11 +174,8 @@ describe("SetFieldValueBodySchema", () => {
 });
 
 describe("UpdateFieldValueBodySchema", () => {
-  it("infers the correct body shape", () => {
-    expectTypeOf<
-      Equal<z.infer<typeof UpdateFieldValueBodySchema>, { encryptedData: string; version: number }>
-    >().toEqualTypeOf<true>();
-  });
+  // No G4 parity test exists for FieldValue update (no encryptFieldValueUpdate
+  // transform); the runtime contract below is the only check.
 
   it("parses valid input", () => {
     const result = UpdateFieldValueBodySchema.safeParse({ encryptedData: "dGVzdA==", version: 1 });
