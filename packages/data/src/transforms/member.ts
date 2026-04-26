@@ -13,17 +13,9 @@ import type {
   SystemId,
 } from "@pluralscape/types";
 
-export type { MemberEncryptedInput };
-
-/**
- * Wire shape returned by `member.get` and `member.list` — derived from
- * the canonical types-package alias.
- */
-export type MemberRaw = MemberWire;
-
 /** Shape returned by `member.list`. */
 export interface MemberPage {
-  readonly data: readonly MemberRaw[];
+  readonly data: readonly MemberWire[];
   readonly nextCursor: string | null;
 }
 
@@ -38,7 +30,7 @@ export interface MemberPage {
  * domain types; all encrypted fields are decrypted from `encryptedData`
  * and validated by `MemberEncryptedInputSchema`.
  */
-export function decryptMember(raw: MemberRaw, masterKey: KdfMasterKey): Member | Archived<Member> {
+export function decryptMember(raw: MemberWire, masterKey: KdfMasterKey): Member | Archived<Member> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = MemberEncryptedInputSchema.parse(decrypted);
 

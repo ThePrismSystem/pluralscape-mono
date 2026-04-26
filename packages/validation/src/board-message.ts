@@ -4,6 +4,19 @@ import { brandedString } from "./branded.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE, MAX_REORDER_OPERATIONS } from "./validation.constants.js";
 
+// ── Encrypted input ─────────────────────────────────────────────
+
+/**
+ * Runtime validator for the pre-encryption BoardMessage input.
+ * Mirrors `BoardMessageEncryptedInput = Pick<BoardMessage, "senderId" | "content">`.
+ */
+export const BoardMessageEncryptedInputSchema = z
+  .object({
+    senderId: brandedString<"MemberId">(),
+    content: z.string().min(1),
+  })
+  .readonly();
+
 // ── Create ──────────────────────────────────────────────────────
 
 export const CreateBoardMessageBodySchema = z

@@ -151,6 +151,33 @@ All interactive UI elements must have accessibility props (`accessibilityLabel`,
 
 For hook conventions, offline-first patterns, the provider tree architecture, platform abstraction, and a walkthrough of adding new features end-to-end, see the [Mobile Developer Guide](docs/guides/mobile-developer-guide.md).
 
+### Adding or Modifying Encrypted Entities
+
+`packages/types` is the single source of truth for every domain entity. Each
+encrypted entity exposes a six-link canonical chain in its module under
+`packages/types/src/entities/`:
+
+1. `<Entity>` — full decrypted domain shape
+2. `<Entity>EncryptedFields` — keys-union of fields encrypted client-side
+3. `<Entity>EncryptedInput = Pick<<Entity>, <Entity>EncryptedFields>` — what callers encrypt
+4. `<Entity>ServerMetadata` — Drizzle row (plaintext columns + `encryptedData` blob + any `ServerInternal<…>` fields)
+5. `<Entity>Result = EncryptedWire<<Entity>ServerMetadata>` — server JS-runtime response
+6. `<Entity>Wire = Serialize<<Entity>Result>` — JSON HTTP shape
+
+When adding a new encrypted entity:
+
+1. Define all six types in `packages/types/src/entities/<entity>.ts`
+2. Add the entity to `packages/types/src/__sot-manifest__.ts` with full slots
+3. Add `<Entity>EncryptedInputSchema` to `packages/validation/src/<entity>.ts` and re-export from the validation index
+4. Add the Drizzle table; the parity tests will fail until `InferSelectModel<…>` matches `<Entity>ServerMetadata`
+5. Add the OpenAPI response schema; the G7 parity test (`scripts/openapi-wire-parity.type-test.ts`) will fail until `components["schemas"]["<Entity>Response"] ≡ <Entity>Wire`
+6. Add the client transform under `packages/data/src/transforms/<entity>.ts` (functions only — no local domain/wire/encrypted-input aliases). Reference `packages/data/src/transforms/member.ts` for the canonical shape.
+
+`pnpm types:check-sot` runs all four parity gates sequentially. CI blocks on
+failure — drift at any layer fails the build. See [ADR-023](docs/adr/023-zod-type-alignment.md)
+for the full rationale, including the `ServerInternal<T>` and `EncryptedBase64`
+brand conventions.
+
 ### Adding API Endpoints
 
 Every new API feature requires both a REST route and a tRPC procedure. The CI check (`pnpm trpc:parity`) enforces this.

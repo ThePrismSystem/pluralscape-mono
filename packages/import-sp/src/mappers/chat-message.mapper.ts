@@ -15,13 +15,12 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPChatMessage } from "../sources/sp-types.js";
-import type { MessageEncryptedFields } from "@pluralscape/data";
-import type { MemberId } from "@pluralscape/types";
+import type { ChatMessageEncryptedInput, MemberId } from "@pluralscape/types";
 import type { CreateMessageBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 export type MappedChatMessage = Omit<z.infer<typeof CreateMessageBodySchema>, "encryptedData"> & {
-  readonly encrypted: MessageEncryptedFields;
+  readonly encrypted: ChatMessageEncryptedInput;
   readonly channelId: string;
 };
 
@@ -62,7 +61,7 @@ export function mapChatMessage(
     replyToId = resolved as MappedChatMessage["replyToId"];
   }
 
-  const encrypted: MessageEncryptedFields = {
+  const encrypted: ChatMessageEncryptedInput = {
     content: sp.message,
     senderId: brandId<MemberId>(senderId),
     attachments: [],

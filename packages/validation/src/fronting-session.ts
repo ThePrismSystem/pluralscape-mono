@@ -4,6 +4,23 @@ import { optionalBrandedId, requireSubject, REQUIRE_SUBJECT_MESSAGE } from "./br
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
+// ── Encrypted plaintext (T1 blob) ──────────────────────────────
+
+/**
+ * Runtime validator for the pre-encryption FrontingSession input. Every field
+ * of `FrontingSessionEncryptedInput` (in `@pluralscape/types`) must be present
+ * and well-formed. Zod compile-time parity is checked in
+ * `__tests__/type-parity/fronting-session.type.test.ts`.
+ */
+export const FrontingSessionEncryptedInputSchema = z
+  .object({
+    comment: z.string().nullable(),
+    positionality: z.string().nullable(),
+    outtrigger: z.string().nullable(),
+    outtriggerSentiment: z.enum(["negative", "neutral", "positive"]).nullable(),
+  })
+  .readonly();
+
 // ── Create ──────────────────────────────────────────────────────
 
 export const CreateFrontingSessionBodySchema = z

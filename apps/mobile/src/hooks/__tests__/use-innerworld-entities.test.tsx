@@ -9,8 +9,8 @@ import { makeRawInnerworldEntity } from "../../__tests__/factories.js";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
-import type { InnerWorldEntityEncryptedPayload } from "@pluralscape/data/transforms/innerworld-entity";
 import type {
+  InnerWorldEntityEncryptedInput,
   InnerWorldEntityId,
   InnerWorldRegionId,
   MemberId,
@@ -138,7 +138,7 @@ const DEFAULT_VISUAL: VisualProperties = {
   externalUrl: null,
 };
 
-function makeMemberPayload(memberId: string): InnerWorldEntityEncryptedPayload {
+function makeMemberPayload(memberId: string): InnerWorldEntityEncryptedInput {
   return {
     entityType: "member",
     positionX: 10,
@@ -148,7 +148,7 @@ function makeMemberPayload(memberId: string): InnerWorldEntityEncryptedPayload {
   };
 }
 
-function makeLandmarkPayload(name: string): InnerWorldEntityEncryptedPayload {
+function makeLandmarkPayload(name: string): InnerWorldEntityEncryptedInput {
   return {
     entityType: "landmark",
     positionX: 30,
@@ -159,7 +159,7 @@ function makeLandmarkPayload(name: string): InnerWorldEntityEncryptedPayload {
   };
 }
 
-function makeStructureEntityPayload(structureId: string): InnerWorldEntityEncryptedPayload {
+function makeStructureEntityPayload(structureId: string): InnerWorldEntityEncryptedInput {
   return {
     entityType: "structure-entity",
     positionX: 50,

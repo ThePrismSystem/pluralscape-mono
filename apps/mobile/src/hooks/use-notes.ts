@@ -17,12 +17,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  NoteDecrypted,
-  NotePage as NoteRawPage,
-  NoteRaw,
-} from "@pluralscape/data/transforms/note";
-import type { Archived, NoteAuthorEntityType, NoteId } from "@pluralscape/types";
+import type { NotePage as NoteWirePage } from "@pluralscape/data/transforms/note";
+import type { Archived, Note, NoteAuthorEntityType, NoteId, NoteWire } from "@pluralscape/types";
 
 interface NoteListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -32,11 +28,8 @@ interface NoteListOpts extends SystemIdOverride {
   readonly systemWide?: boolean;
 }
 
-export function useNote(
-  noteId: NoteId,
-  opts?: SystemIdOverride,
-): DataQuery<NoteDecrypted | Archived<NoteDecrypted>> {
-  return useOfflineFirstQuery<NoteRaw, NoteDecrypted | Archived<NoteDecrypted>>({
+export function useNote(noteId: NoteId, opts?: SystemIdOverride): DataQuery<Note | Archived<Note>> {
+  return useOfflineFirstQuery<NoteWire, Note | Archived<Note>>({
     queryKey: ["notes", noteId],
     table: "own_notes",
     entityId: noteId,
@@ -45,15 +38,13 @@ export function useNote(
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
       trpc.note.get.useQuery({ systemId, noteId }, { enabled, select }) as DataQuery<
-        NoteDecrypted | Archived<NoteDecrypted>
+        Note | Archived<Note>
       >,
   });
 }
 
-export function useNotesList(
-  opts?: NoteListOpts,
-): DataListQuery<NoteDecrypted | Archived<NoteDecrypted>> {
-  return useOfflineFirstInfiniteQuery<NoteRaw, NoteDecrypted | Archived<NoteDecrypted>>({
+export function useNotesList(opts?: NoteListOpts): DataListQuery<Note | Archived<Note>> {
+  return useOfflineFirstInfiniteQuery<NoteWire, Note | Archived<Note>>({
     queryKey: [
       "notes",
       "list",
@@ -88,10 +79,10 @@ export function useNotesList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: NoteRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: NoteWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<NoteDecrypted | Archived<NoteDecrypted>>,
+      ) as DataListQuery<Note | Archived<Note>>,
   });
 }
 

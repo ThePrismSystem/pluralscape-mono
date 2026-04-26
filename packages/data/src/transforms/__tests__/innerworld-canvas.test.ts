@@ -8,9 +8,12 @@ import { decryptCanvas, encryptCanvasUpdate } from "../innerworld-canvas.js";
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { CanvasEncryptedFields, CanvasRaw } from "../innerworld-canvas.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { SystemId } from "@pluralscape/types";
+import type {
+  InnerWorldCanvasEncryptedInput,
+  InnerWorldCanvasWire,
+  SystemId,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -20,7 +23,7 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-function makeCanvasFields(): CanvasEncryptedFields {
+function makeCanvasFields(): InnerWorldCanvasEncryptedInput {
   return {
     viewportX: 100,
     viewportY: 200,
@@ -29,7 +32,7 @@ function makeCanvasFields(): CanvasEncryptedFields {
   };
 }
 
-function makeRawCanvas(overrides?: Partial<CanvasRaw>): CanvasRaw {
+function makeRawCanvas(overrides?: Partial<InnerWorldCanvasWire>): InnerWorldCanvasWire {
   return {
     systemId: brandId<SystemId>("sys_test"),
     encryptedData: encryptAndEncodeT1(makeCanvasFields(), masterKey),
@@ -72,10 +75,10 @@ describe("encryptCanvasUpdate", () => {
   });
 });
 
-describe("assertCanvasEncryptedFields", () => {
+describe("decryptCanvas Zod validation", () => {
   it("throws when blob is not an object", () => {
     const raw = makeRawCanvas({ encryptedData: makeBase64Blob("not-object", masterKey) });
-    expect(() => decryptCanvas(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptCanvas(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when viewportX is missing", () => {

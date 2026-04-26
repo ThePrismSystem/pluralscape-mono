@@ -17,11 +17,13 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { InnerWorldRegionPage as InnerWorldRegionWirePage } from "@pluralscape/data/transforms/innerworld-region";
 import type {
-  InnerWorldRegionPage as InnerWorldRegionRawPage,
-  InnerWorldRegionRaw,
-} from "@pluralscape/data/transforms/innerworld-region";
-import type { Archived, InnerWorldRegion, InnerWorldRegionId } from "@pluralscape/types";
+  Archived,
+  InnerWorldRegion,
+  InnerWorldRegionId,
+  InnerWorldRegionWire,
+} from "@pluralscape/types";
 
 interface InnerWorldRegionListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -32,7 +34,7 @@ export function useInnerWorldRegion(
   regionId: InnerWorldRegionId,
   opts?: SystemIdOverride,
 ): DataQuery<InnerWorldRegion | Archived<InnerWorldRegion>> {
-  return useOfflineFirstQuery<InnerWorldRegionRaw, InnerWorldRegion | Archived<InnerWorldRegion>>({
+  return useOfflineFirstQuery<InnerWorldRegionWire, InnerWorldRegion | Archived<InnerWorldRegion>>({
     queryKey: ["innerworld_regions", regionId],
     table: "innerworld_regions",
     entityId: regionId,
@@ -50,7 +52,7 @@ export function useInnerWorldRegionsList(
   opts?: InnerWorldRegionListOpts,
 ): DataListQuery<InnerWorldRegion | Archived<InnerWorldRegion>> {
   return useOfflineFirstInfiniteQuery<
-    InnerWorldRegionRaw,
+    InnerWorldRegionWire,
     InnerWorldRegion | Archived<InnerWorldRegion>
   >({
     queryKey: ["innerworld_regions", "list", opts?.includeArchived ?? false],
@@ -68,7 +70,7 @@ export function useInnerWorldRegionsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: InnerWorldRegionRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: InnerWorldRegionWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<InnerWorldRegion | Archived<InnerWorldRegion>>,

@@ -4,6 +4,21 @@ import { optionalBrandedId, requireSubject, REQUIRE_SUBJECT_MESSAGE } from "./br
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
+/**
+ * Runtime validator for the pre-encryption FrontingComment input. Every field
+ * of `FrontingCommentEncryptedInput` (in `@pluralscape/types`) must be present
+ * and well-formed. Zod compile-time parity is checked in
+ * `__tests__/type-parity/fronting-comment.type.test.ts`.
+ *
+ * Replaces the hand-written `assertFrontingCommentPlaintext` that used to live
+ * in `packages/data/src/transforms/fronting-comment.ts`.
+ */
+export const FrontingCommentEncryptedInputSchema = z
+  .object({
+    content: z.string(),
+  })
+  .readonly();
+
 // ── Create ──────────────────────────────────────────────────────
 
 export const CreateFrontingCommentBodySchema = z

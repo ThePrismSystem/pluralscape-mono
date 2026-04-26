@@ -13,9 +13,14 @@ import { encryptAndEncodeT1 } from "../decode-blob.js";
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { AcknowledgementEncryptedFields } from "../acknowledgement.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { AcknowledgementId, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  AcknowledgementId,
+  AcknowledgementRequestEncryptedInput,
+  MemberId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -25,7 +30,7 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-function makeEncryptedFields(): AcknowledgementEncryptedFields {
+function makeEncryptedFields(): AcknowledgementRequestEncryptedInput {
   return {
     message: "Please acknowledge this.",
     targetMemberId: brandId<MemberId>("mem_target"),
@@ -34,7 +39,7 @@ function makeEncryptedFields(): AcknowledgementEncryptedFields {
 }
 
 function makeServerAcknowledgement(
-  fields: AcknowledgementEncryptedFields = makeEncryptedFields(),
+  fields: AcknowledgementRequestEncryptedInput = makeEncryptedFields(),
   overrides?: Partial<{ confirmed: boolean; archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
@@ -74,7 +79,7 @@ describe("decryptAcknowledgement", () => {
 
   it("handles confirmed acknowledgement with confirmedAt set", () => {
     const confirmedAt = toUnixMillis(1_700_001_500_000);
-    const fields: AcknowledgementEncryptedFields = { ...makeEncryptedFields(), confirmedAt };
+    const fields: AcknowledgementRequestEncryptedInput = { ...makeEncryptedFields(), confirmedAt };
     const raw = makeServerAcknowledgement(fields, { confirmed: true });
     const result = decryptAcknowledgement(raw, masterKey);
 
@@ -170,7 +175,7 @@ describe("encryptAcknowledgementInput", () => {
 describe("encryptAcknowledgementConfirm", () => {
   it("returns an object with an encryptedData string", () => {
     const confirmedAt = toUnixMillis(1_700_001_500_000);
-    const fields: AcknowledgementEncryptedFields = { ...makeEncryptedFields(), confirmedAt };
+    const fields: AcknowledgementRequestEncryptedInput = { ...makeEncryptedFields(), confirmedAt };
     const result = encryptAcknowledgementConfirm(fields, masterKey);
     expect(typeof result.encryptedData).toBe("string");
     expect(result.encryptedData.length).toBeGreaterThan(0);
@@ -178,7 +183,7 @@ describe("encryptAcknowledgementConfirm", () => {
 
   it("round-trips with confirmedAt set through decryptAcknowledgement", () => {
     const confirmedAt = toUnixMillis(1_700_001_500_000);
-    const fields: AcknowledgementEncryptedFields = { ...makeEncryptedFields(), confirmedAt };
+    const fields: AcknowledgementRequestEncryptedInput = { ...makeEncryptedFields(), confirmedAt };
     const { encryptedData } = encryptAcknowledgementConfirm(fields, masterKey);
     const result = decryptAcknowledgement(
       { ...makeServerAcknowledgement(), encryptedData, confirmed: true },
@@ -190,7 +195,7 @@ describe("encryptAcknowledgementConfirm", () => {
   });
 
   it("produces different ciphertext on each call", () => {
-    const fields: AcknowledgementEncryptedFields = {
+    const fields: AcknowledgementRequestEncryptedInput = {
       ...makeEncryptedFields(),
       confirmedAt: toUnixMillis(1_700_001_500_000),
     };
@@ -200,15 +205,15 @@ describe("encryptAcknowledgementConfirm", () => {
   });
 });
 
-// ── assertAcknowledgementEncryptedFields ──────────────────────────────
+// ── AcknowledgementRequestEncryptedInputSchema ──────────────────────────────
 
-describe("assertAcknowledgementEncryptedFields", () => {
+describe("AcknowledgementRequestEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = {
       ...makeServerAcknowledgement(),
       encryptedData: makeBase64Blob("not-an-object", masterKey),
     };
-    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing message field", () => {
@@ -216,9 +221,7 @@ describe("assertAcknowledgementEncryptedFields", () => {
       ...makeServerAcknowledgement(),
       encryptedData: makeBase64Blob({ targetMemberId: "mem_target" }, masterKey),
     };
-    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(
-      "missing required string field: message",
-    );
+    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(/message/);
   });
 
   it("throws when message is not a string", () => {
@@ -226,9 +229,7 @@ describe("assertAcknowledgementEncryptedFields", () => {
       ...makeServerAcknowledgement(),
       encryptedData: makeBase64Blob({ message: 42, targetMemberId: "mem_target" }, masterKey),
     };
-    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(
-      "missing required string field: message",
-    );
+    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(/message/);
   });
 
   it("throws when blob is missing targetMemberId field", () => {
@@ -236,9 +237,7 @@ describe("assertAcknowledgementEncryptedFields", () => {
       ...makeServerAcknowledgement(),
       encryptedData: makeBase64Blob({ message: "Please acknowledge this." }, masterKey),
     };
-    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(
-      "missing required string field: targetMemberId",
-    );
+    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(/targetMemberId/);
   });
 
   it("throws when targetMemberId is not a string", () => {
@@ -249,8 +248,6 @@ describe("assertAcknowledgementEncryptedFields", () => {
         masterKey,
       ),
     };
-    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(
-      "missing required string field: targetMemberId",
-    );
+    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow(/targetMemberId/);
   });
 });

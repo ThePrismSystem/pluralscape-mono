@@ -13,13 +13,11 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type {
-  InnerWorldEntityEncryptedPayload,
-  InnerWorldEntityRaw,
-} from "../innerworld-entity.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  InnerWorldEntityEncryptedInput,
   InnerWorldEntityId,
+  InnerWorldEntityWire,
   InnerWorldRegionId,
   MemberId,
   SystemId,
@@ -45,7 +43,7 @@ const VISUAL: VisualProperties = {
 };
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeMemberPayload(): InnerWorldEntityEncryptedPayload {
+function makeMemberPayload(): InnerWorldEntityEncryptedInput {
   return {
     entityType: "member",
     positionX: 10,
@@ -55,7 +53,7 @@ function makeMemberPayload(): InnerWorldEntityEncryptedPayload {
   };
 }
 
-function makeLandmarkPayload(): InnerWorldEntityEncryptedPayload {
+function makeLandmarkPayload(): InnerWorldEntityEncryptedInput {
   return {
     entityType: "landmark",
     positionX: 30,
@@ -66,7 +64,7 @@ function makeLandmarkPayload(): InnerWorldEntityEncryptedPayload {
   };
 }
 
-function makeStructureEntityPayload(): InnerWorldEntityEncryptedPayload {
+function makeStructureEntityPayload(): InnerWorldEntityEncryptedInput {
   return {
     entityType: "structure-entity",
     positionX: 50,
@@ -77,9 +75,9 @@ function makeStructureEntityPayload(): InnerWorldEntityEncryptedPayload {
 }
 
 function makeRaw(
-  payload: InnerWorldEntityEncryptedPayload,
-  overrides?: Partial<InnerWorldEntityRaw>,
-): InnerWorldEntityRaw {
+  payload: InnerWorldEntityEncryptedInput,
+  overrides?: Partial<InnerWorldEntityWire>,
+): InnerWorldEntityWire {
   return {
     id: brandId<InnerWorldEntityId>("iwe_001"),
     systemId: brandId<SystemId>("sys_test"),
@@ -148,9 +146,13 @@ describe("decryptInnerWorldEntity", () => {
   });
 
   it("throws for unknown entity type", () => {
-    const payload = { ...makeMemberPayload(), entityType: "unknown" as never };
-    const raw = makeRaw(payload);
-    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow("Unknown innerworld entity type");
+    const raw = makeRaw(makeMemberPayload(), {
+      encryptedData: makeBase64Blob(
+        { entityType: "unknown", positionX: 0, positionY: 0, visual: VISUAL },
+        masterKey,
+      ),
+    });
+    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow(/entityType/);
   });
 
   it("handles null regionId", () => {
@@ -197,19 +199,19 @@ describe("encryptInnerWorldEntityUpdate", () => {
   });
 });
 
-describe("assertInnerWorldEntityPayload", () => {
+describe("decryptInnerWorldEntity Zod validation", () => {
   it("throws when blob is not an object", () => {
     const raw = makeRaw(makeMemberPayload(), {
       encryptedData: makeBase64Blob("string", masterKey),
     });
-    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when entityType is missing", () => {
     const raw = makeRaw(makeMemberPayload(), {
       encryptedData: makeBase64Blob({ positionX: 0 }, masterKey),
     });
-    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow("entityType");
+    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow(/entityType/);
   });
 
   it("throws when member missing linkedMemberId", () => {
@@ -219,7 +221,7 @@ describe("assertInnerWorldEntityPayload", () => {
         masterKey,
       ),
     });
-    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow("linkedMemberId");
+    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow(/linkedMemberId/);
   });
 
   it("throws when landmark missing name", () => {
@@ -229,7 +231,7 @@ describe("assertInnerWorldEntityPayload", () => {
         masterKey,
       ),
     });
-    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow("name");
+    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow(/"name"/);
   });
 
   it("throws when structure-entity missing linkedStructureEntityId", () => {
@@ -239,6 +241,6 @@ describe("assertInnerWorldEntityPayload", () => {
         masterKey,
       ),
     });
-    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow("linkedStructureEntityId");
+    expect(() => decryptInnerWorldEntity(raw, masterKey)).toThrow(/linkedStructureEntityId/);
   });
 });

@@ -13,11 +13,11 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { MessageEncryptedFields } from "../message.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   BlobId,
   ChannelId,
+  ChatMessageEncryptedInput,
   MemberId,
   MessageId,
   SystemId,
@@ -32,7 +32,7 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-function makeEncryptedFields(): MessageEncryptedFields {
+function makeEncryptedFields(): ChatMessageEncryptedInput {
   return {
     content: "Hello, world!",
     attachments: [],
@@ -42,7 +42,7 @@ function makeEncryptedFields(): MessageEncryptedFields {
 }
 
 function makeServerMessage(
-  fields: MessageEncryptedFields = makeEncryptedFields(),
+  fields: ChatMessageEncryptedInput = makeEncryptedFields(),
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
@@ -83,7 +83,7 @@ describe("decryptMessage", () => {
   });
 
   it("handles attachments and mentions", () => {
-    const fields: MessageEncryptedFields = {
+    const fields: ChatMessageEncryptedInput = {
       content: "Check this out",
       attachments: [brandId<BlobId>("blob_001"), brandId<BlobId>("blob_002")],
       mentions: [brandId<MemberId>("mem_xyz")],
@@ -184,12 +184,12 @@ describe("encryptMessageUpdate", () => {
   });
 });
 
-// ── assertMessageEncryptedFields ──────────────────────────────────────
+// ── ChatMessageEncryptedInputSchema ──────────────────────────────────────
 
-describe("assertMessageEncryptedFields", () => {
+describe("ChatMessageEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = { ...makeServerMessage(), encryptedData: makeBase64Blob(42, masterKey) };
-    expect(() => decryptMessage(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptMessage(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing content field", () => {
@@ -200,7 +200,7 @@ describe("assertMessageEncryptedFields", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMessage(raw, masterKey)).toThrow("missing required string field: content");
+    expect(() => decryptMessage(raw, masterKey)).toThrow(/content/);
   });
 
   it("throws when blob is missing senderId field", () => {
@@ -208,7 +208,7 @@ describe("assertMessageEncryptedFields", () => {
       ...makeServerMessage(),
       encryptedData: makeBase64Blob({ content: "hi", attachments: [], mentions: [] }, masterKey),
     };
-    expect(() => decryptMessage(raw, masterKey)).toThrow("missing required string field: senderId");
+    expect(() => decryptMessage(raw, masterKey)).toThrow(/senderId/);
   });
 
   it("throws when blob is missing attachments array", () => {
@@ -216,9 +216,7 @@ describe("assertMessageEncryptedFields", () => {
       ...makeServerMessage(),
       encryptedData: makeBase64Blob({ content: "hi", senderId: "mem_x", mentions: [] }, masterKey),
     };
-    expect(() => decryptMessage(raw, masterKey)).toThrow(
-      "missing required array field: attachments",
-    );
+    expect(() => decryptMessage(raw, masterKey)).toThrow(/attachments/);
   });
 
   it("throws when blob is missing mentions array", () => {
@@ -229,6 +227,6 @@ describe("assertMessageEncryptedFields", () => {
         masterKey,
       ),
     };
-    expect(() => decryptMessage(raw, masterKey)).toThrow("missing required array field: mentions");
+    expect(() => decryptMessage(raw, masterKey)).toThrow(/mentions/);
   });
 });

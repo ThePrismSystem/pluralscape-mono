@@ -13,9 +13,14 @@ import { encryptAndEncodeT1 } from "../decode-blob.js";
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { BoardMessageEncryptedFields } from "../board-message.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { BoardMessageId, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  BoardMessageEncryptedInput,
+  BoardMessageId,
+  MemberId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -25,7 +30,7 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-function makeEncryptedFields(): BoardMessageEncryptedFields {
+function makeEncryptedFields(): BoardMessageEncryptedInput {
   return {
     content: "A board message from the host.",
     senderId: brandId<MemberId>("mem_host001"),
@@ -33,7 +38,7 @@ function makeEncryptedFields(): BoardMessageEncryptedFields {
 }
 
 function makeServerBoardMessage(
-  fields: BoardMessageEncryptedFields = makeEncryptedFields(),
+  fields: BoardMessageEncryptedInput = makeEncryptedFields(),
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
@@ -158,12 +163,12 @@ describe("encryptBoardMessageUpdate", () => {
   });
 });
 
-// ── assertBoardMessageEncryptedFields ─────────────────────────────────
+// ── BoardMessageEncryptedInputSchema ─────────────────────────────────
 
-describe("assertBoardMessageEncryptedFields", () => {
+describe("BoardMessageEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = { ...makeServerBoardMessage(), encryptedData: makeBase64Blob(null, masterKey) };
-    expect(() => decryptBoardMessage(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptBoardMessage(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing content field", () => {
@@ -171,9 +176,7 @@ describe("assertBoardMessageEncryptedFields", () => {
       ...makeServerBoardMessage(),
       encryptedData: makeBase64Blob({ senderId: "mem_x" }, masterKey),
     };
-    expect(() => decryptBoardMessage(raw, masterKey)).toThrow(
-      "missing required string field: content",
-    );
+    expect(() => decryptBoardMessage(raw, masterKey)).toThrow(/content/);
   });
 
   it("throws when blob is missing senderId field", () => {
@@ -181,8 +184,6 @@ describe("assertBoardMessageEncryptedFields", () => {
       ...makeServerBoardMessage(),
       encryptedData: makeBase64Blob({ content: "hi" }, masterKey),
     };
-    expect(() => decryptBoardMessage(raw, masterKey)).toThrow(
-      "missing required string field: senderId",
-    );
+    expect(() => decryptBoardMessage(raw, masterKey)).toThrow(/senderId/);
   });
 });

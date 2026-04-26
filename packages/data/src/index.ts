@@ -24,7 +24,6 @@ export {
   encryptMemberInput,
   encryptMemberUpdate,
 } from "./transforms/member.js";
-export type { MemberEncryptedInput } from "./transforms/member.js";
 
 export {
   decryptGroup,
@@ -32,7 +31,6 @@ export {
   encryptGroupInput,
   encryptGroupUpdate,
 } from "./transforms/group.js";
-export type { GroupEncryptedInput } from "./transforms/group.js";
 
 export {
   decryptCustomFront,
@@ -40,7 +38,6 @@ export {
   encryptCustomFrontInput,
   encryptCustomFrontUpdate,
 } from "./transforms/custom-front.js";
-export type { CustomFrontEncryptedInput } from "./transforms/custom-front.js";
 
 export {
   decryptRelationship,
@@ -48,7 +45,6 @@ export {
   encryptRelationshipInput,
   encryptRelationshipUpdate,
 } from "./transforms/relationship.js";
-export type { RelationshipEncryptedInput } from "./transforms/relationship.js";
 
 export {
   decryptFieldDefinition,
@@ -78,7 +74,6 @@ export {
   encryptFrontingSessionInput,
   encryptFrontingSessionUpdate,
 } from "./transforms/fronting-session.js";
-export type { FrontingSessionPlaintext } from "./transforms/fronting-session.js";
 
 export {
   decryptFrontingComment,
@@ -86,7 +81,6 @@ export {
   encryptFrontingCommentInput,
   encryptFrontingCommentUpdate,
 } from "./transforms/fronting-comment.js";
-export type { FrontingCommentPlaintext } from "./transforms/fronting-comment.js";
 
 export {
   decryptFrontingReport,
@@ -103,7 +97,6 @@ export {
   decryptCheckInRecord,
   decryptCheckInRecordPage,
 } from "./transforms/timer-check-in.js";
-export type { TimerConfigEncryptedFields } from "./transforms/timer-check-in.js";
 
 // --- Communication crypto transforms ---
 export {
@@ -112,7 +105,6 @@ export {
   encryptChannelInput,
   encryptChannelUpdate,
 } from "./transforms/channel.js";
-export type { ChannelEncryptedFields } from "./transforms/channel.js";
 
 export {
   decryptMessage,
@@ -120,7 +112,6 @@ export {
   encryptMessageInput,
   encryptMessageUpdate,
 } from "./transforms/message.js";
-export type { MessageEncryptedFields } from "./transforms/message.js";
 
 export {
   decryptBoardMessage,
@@ -128,7 +119,6 @@ export {
   encryptBoardMessageInput,
   encryptBoardMessageUpdate,
 } from "./transforms/board-message.js";
-export type { BoardMessageEncryptedFields } from "./transforms/board-message.js";
 
 export {
   decryptPoll,
@@ -138,12 +128,6 @@ export {
   encryptPollUpdate,
   encryptPollVoteInput,
 } from "./transforms/poll.js";
-export type {
-  PollDecrypted,
-  PollEncryptedFields,
-  PollVoteDecrypted,
-  PollVoteEncryptedFields,
-} from "./transforms/poll.js";
 
 export {
   decryptNote,
@@ -151,18 +135,12 @@ export {
   encryptNoteInput,
   encryptNoteUpdate,
 } from "./transforms/note.js";
-export type { NoteDecrypted, NoteEncryptedFields } from "./transforms/note.js";
 
 export {
   decryptPrivacyBucket,
   decryptPrivacyBucketPage,
   encryptBucketInput,
   encryptBucketUpdate,
-} from "./transforms/privacy-bucket.js";
-export type {
-  BucketEncryptedFields,
-  PrivacyBucketRaw,
-  PrivacyBucketPage,
 } from "./transforms/privacy-bucket.js";
 
 export {
@@ -171,8 +149,4 @@ export {
   encryptAcknowledgementInput,
   encryptAcknowledgementUpdate,
   encryptAcknowledgementConfirm,
-} from "./transforms/acknowledgement.js";
-export type {
-  AcknowledgementDecrypted,
-  AcknowledgementEncryptedFields,
 } from "./transforms/acknowledgement.js";

@@ -19,13 +19,13 @@ import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPPrivacyBucket } from "../sources/sp-types.js";
-import type { BucketEncryptedFields } from "@pluralscape/data";
+import type { PrivacyBucketEncryptedInput } from "@pluralscape/types";
 import type { CreateBucketBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
 /** The Pluralscape-shaped bucket payload the persister consumes. */
 export type MappedPrivacyBucket = Omit<z.infer<typeof CreateBucketBodySchema>, "encryptedData"> & {
-  readonly encrypted: BucketEncryptedFields;
+  readonly encrypted: PrivacyBucketEncryptedInput;
 };
 
 export function mapBucket(
@@ -41,7 +41,7 @@ export function mapBucket(
     });
     return skipped({ kind: nameError.kind, reason: nameError.message });
   }
-  const encrypted: BucketEncryptedFields = {
+  const encrypted: PrivacyBucketEncryptedInput = {
     name: sp.name,
     description: sp.desc ?? null,
   };

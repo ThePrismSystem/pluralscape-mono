@@ -22,7 +22,12 @@ export {
   CopyGroupBodySchema,
   AddGroupMemberBodySchema,
 } from "./group.js";
-export { CreateChannelBodySchema, UpdateChannelBodySchema, ChannelQuerySchema } from "./channel.js";
+export {
+  ChannelEncryptedInputSchema,
+  CreateChannelBodySchema,
+  UpdateChannelBodySchema,
+  ChannelQuerySchema,
+} from "./channel.js";
 export {
   CreateCustomFrontBodySchema,
   CustomFrontEncryptedInputSchema,
@@ -31,11 +36,13 @@ export {
 export {
   BiometricEnrollBodySchema,
   BiometricVerifyBodySchema,
+  NomenclatureSettingsEncryptedInputSchema,
   RemovePinBodySchema,
   SetPinBodySchema,
   SetupCompleteBodySchema,
   SetupNomenclatureStepBodySchema,
   SetupProfileStepBodySchema,
+  SystemSettingsEncryptedInputSchema,
   UpdateNomenclatureBodySchema,
   UpdateSystemSettingsBodySchema,
   VerifyPinBodySchema,
@@ -101,15 +108,20 @@ export {
   CreateEntityBodySchema,
   UpdateEntityBodySchema,
   UpdateCanvasBodySchema,
+  InnerWorldCanvasEncryptedInputSchema,
+  InnerWorldEntityEncryptedInputSchema,
+  InnerWorldRegionEncryptedInputSchema,
 } from "./innerworld.js";
 export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema, ALLOWED_MIME_TYPES } from "./blob.js";
 export {
   CreateFrontingSessionBodySchema,
+  FrontingSessionEncryptedInputSchema,
   UpdateFrontingSessionBodySchema,
   EndFrontingSessionBodySchema,
   FrontingSessionQuerySchema,
 } from "./fronting-session.js";
 export {
+  FrontingCommentEncryptedInputSchema,
   CreateFrontingCommentBodySchema,
   UpdateFrontingCommentBodySchema,
   FrontingCommentQuerySchema,
@@ -133,6 +145,7 @@ export {
 export {
   CreateTimerConfigBodySchema,
   UpdateTimerConfigBodySchema,
+  TimerConfigEncryptedInputSchema,
   TimerConfigQuerySchema,
   CreateCheckInRecordBodySchema,
   RespondCheckInRecordBodySchema,
@@ -148,18 +161,25 @@ export {
   WebhookDeliveryQuerySchema,
 } from "./webhook.js";
 export {
+  ChatMessageEncryptedInputSchema,
   CreateMessageBodySchema,
   UpdateMessageBodySchema,
   MessageQuerySchema,
   MessageTimestampQuerySchema,
 } from "./message.js";
 export {
+  BoardMessageEncryptedInputSchema,
   CreateBoardMessageBodySchema,
   UpdateBoardMessageBodySchema,
   ReorderBoardMessagesBodySchema,
   BoardMessageQuerySchema,
 } from "./board-message.js";
-export { CreateNoteBodySchema, UpdateNoteBodySchema, NoteQuerySchema } from "./note.js";
+export {
+  CreateNoteBodySchema,
+  NoteEncryptedInputSchema,
+  UpdateNoteBodySchema,
+  NoteQuerySchema,
+} from "./note.js";
 export {
   CreateBucketBodySchema,
   UpdateBucketBodySchema,
@@ -167,6 +187,7 @@ export {
   TagContentBodySchema,
   BucketContentTagQuerySchema,
   SetFieldBucketVisibilityBodySchema,
+  PrivacyBucketEncryptedInputSchema,
 } from "./privacy.js";
 export {
   RedeemFriendCodeBodySchema,
@@ -178,6 +199,8 @@ export {
 } from "./friend.js";
 export {
   CreatePollBodySchema,
+  PollEncryptedInputSchema,
+  PollVoteEncryptedInputSchema,
   UpdatePollBodySchema,
   CastVoteBodySchema,
   UpdatePollVoteBodySchema,
@@ -185,6 +208,7 @@ export {
   PollVoteQuerySchema,
 } from "./poll.js";
 export {
+  AcknowledgementRequestEncryptedInputSchema,
   CreateAcknowledgementBodySchema,
   ConfirmAcknowledgementBodySchema,
   AcknowledgementQuerySchema,

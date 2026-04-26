@@ -21,8 +21,7 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPPoll } from "../sources/sp-types.js";
-import type { PollEncryptedFields } from "@pluralscape/data";
-import type { PollOptionId } from "@pluralscape/types";
+import type { PollEncryptedInput, PollOptionId } from "@pluralscape/types";
 import type { CreatePollBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -34,7 +33,7 @@ export interface MappedPollVote {
 }
 
 export type MappedPoll = Omit<z.infer<typeof CreatePollBodySchema>, "encryptedData"> & {
-  readonly encrypted: PollEncryptedFields;
+  readonly encrypted: PollEncryptedInput;
   readonly votes: readonly MappedPollVote[];
 };
 
@@ -100,7 +99,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
     });
   }
 
-  const encrypted: PollEncryptedFields = {
+  const encrypted: PollEncryptedInput = {
     title: sp.name,
     description: sp.desc ?? null,
     options,

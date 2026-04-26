@@ -1,87 +1,50 @@
-import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { ChannelEncryptedInputSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, Channel, UnixMillis } from "@pluralscape/types";
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `channel.get` — derived from the `Channel` domain type. */
-export type ChannelRaw = Omit<Channel, keyof ChannelEncryptedFields | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+import type {
+  Archived,
+  Channel,
+  ChannelEncryptedInput,
+  ChannelId,
+  ChannelWire,
+  SystemId,
+} from "@pluralscape/types";
 
 /** Shape returned by `channel.list`. */
 export interface ChannelPage {
-  readonly data: readonly ChannelRaw[];
+  readonly data: readonly ChannelWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a channel blob.
- * Pass this to `encryptChannelInput` when creating or updating a channel.
- */
-export interface ChannelEncryptedFields {
-  readonly name: string;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertChannelFieldsSubset =
-  ChannelEncryptedFields extends Pick<Channel, keyof ChannelEncryptedFields> ? true : never;
-
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertChannelEncryptedFields(raw: unknown): asserts raw is ChannelEncryptedFields {
-  const obj = assertObjectBlob(raw, "channel");
-  assertStringField(obj, "channel", "name");
-}
-
-// ── Channel transforms ────────────────────────────────────────────────
-
-/**
- * Decrypt a single channel API result into a `Channel`.
- *
- * The encrypted blob contains: `name`.
- * All other fields pass through from the wire payload.
- */
 export function decryptChannel(
-  raw: ChannelRaw,
+  raw: ChannelWire,
   masterKey: KdfMasterKey,
 ): Channel | Archived<Channel> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertChannelEncryptedFields(plaintext);
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = ChannelEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    name: plaintext.name,
+    id: brandId<ChannelId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    name: validated.name,
     type: raw.type,
-    parentId: raw.parentId,
+    parentId: raw.parentId === null ? null : brandId<ChannelId>(raw.parentId),
     sortOrder: raw.sortOrder,
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived channel missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Decrypt a paginated channel list result.
- */
 export function decryptChannelPage(
   raw: ChannelPage,
   masterKey: KdfMasterKey,
@@ -92,27 +55,15 @@ export function decryptChannelPage(
   };
 }
 
-/**
- * Encrypt channel plaintext fields for create payloads.
- *
- * Returns `{ encryptedData: string }` — pass the spread of this into the
- * `CreateChannelBodySchema`.
- */
 export function encryptChannelInput(
-  data: ChannelEncryptedFields,
+  data: ChannelEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
-/**
- * Encrypt channel plaintext fields for update payloads.
- *
- * Returns `{ encryptedData: string; version: number }` — pass the spread of this
- * into the `UpdateChannelBodySchema`.
- */
 export function encryptChannelUpdate(
-  data: ChannelEncryptedFields,
+  data: ChannelEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

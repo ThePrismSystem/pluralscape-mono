@@ -1,140 +1,80 @@
-import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { NoteEncryptedInputSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
-  HexColor,
+  EntityReference,
+  MemberId,
+  Note,
   NoteAuthorEntityType,
+  NoteEncryptedInput,
   NoteId,
+  NoteWire,
   SystemId,
-  UnixMillis,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
-
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a note blob.
- * Pass this to `encryptNoteInput` when creating or updating a note.
- */
-export interface NoteEncryptedFields {
-  readonly title: string;
-  readonly content: string;
-  readonly backgroundColor: HexColor | null;
-}
-
-// ── Decrypted output type ─────────────────────────────────────────────
-
-/** A fully decrypted note, combining wire metadata with plaintext fields. */
-export interface NoteDecrypted {
-  readonly id: NoteId;
-  readonly systemId: SystemId;
-  readonly authorEntityType: NoteAuthorEntityType | null;
-  readonly authorEntityId: string | null;
-  readonly title: string;
-  readonly content: string;
-  readonly backgroundColor: HexColor | null;
-  readonly archived: false;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertNoteFieldsSubset =
-  NoteEncryptedFields extends Pick<NoteDecrypted, keyof NoteEncryptedFields> ? true : never;
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `note.get` — derived from the `NoteDecrypted` domain type. */
-export type NoteRaw = Omit<NoteDecrypted, keyof NoteEncryptedFields | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
 
 /** Shape returned by `note.list`. */
 export interface NotePage {
-  readonly data: readonly NoteRaw[];
+  readonly data: readonly NoteWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Validators ────────────────────────────────────────────────────────
+export function decryptNote(raw: NoteWire, masterKey: KdfMasterKey): Note | Archived<Note> {
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = NoteEncryptedInputSchema.parse(decrypted);
 
-function assertNoteEncryptedFields(raw: unknown): asserts raw is NoteEncryptedFields {
-  const obj = assertObjectBlob(raw, "note");
-  assertStringField(obj, "note", "title");
-  assertStringField(obj, "note", "content");
-}
-
-// ── Note transforms ───────────────────────────────────────────────────
-
-/**
- * Decrypt a single note API result.
- *
- * The encrypted blob contains: `title`, `content`, `backgroundColor`.
- * All other fields pass through from the wire payload.
- */
-export function decryptNote(
-  raw: NoteRaw,
-  masterKey: KdfMasterKey,
-): NoteDecrypted | Archived<NoteDecrypted> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertNoteEncryptedFields(plaintext);
+  const author: EntityReference<NoteAuthorEntityType> | null =
+    raw.authorEntityType !== null && raw.authorEntityId !== null
+      ? raw.authorEntityType === "member"
+        ? { entityType: "member", entityId: brandId<MemberId>(raw.authorEntityId) }
+        : {
+            entityType: "structure-entity",
+            entityId: brandId<SystemStructureEntityId>(raw.authorEntityId),
+          }
+      : null;
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    authorEntityType: raw.authorEntityType,
-    authorEntityId: raw.authorEntityId,
-    title: plaintext.title,
-    content: plaintext.content,
-    backgroundColor: plaintext.backgroundColor,
+    id: brandId<NoteId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    author,
+    title: validated.title,
+    content: validated.content,
+    backgroundColor: validated.backgroundColor,
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived note missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Decrypt a paginated note list result.
- */
 export function decryptNotePage(
   raw: NotePage,
   masterKey: KdfMasterKey,
-): { data: (NoteDecrypted | Archived<NoteDecrypted>)[]; nextCursor: string | null } {
+): { data: (Note | Archived<Note>)[]; nextCursor: string | null } {
   return {
     data: raw.data.map((item) => decryptNote(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }
 
-/**
- * Encrypt note plaintext fields for create payloads.
- */
 export function encryptNoteInput(
-  data: NoteEncryptedFields,
+  data: NoteEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
-/**
- * Encrypt note plaintext fields for update payloads.
- */
 export function encryptNoteUpdate(
-  data: NoteEncryptedFields,
+  data: NoteEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

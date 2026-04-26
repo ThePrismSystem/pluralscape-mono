@@ -13,9 +13,14 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { InnerWorldRegionPlaintext, InnerWorldRegionRaw } from "../innerworld-region.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { InnerWorldRegionId, MemberId, SystemId } from "@pluralscape/types";
+import type {
+  InnerWorldRegionEncryptedInput,
+  InnerWorldRegionId,
+  InnerWorldRegionWire,
+  MemberId,
+  SystemId,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -27,7 +32,7 @@ beforeAll(async () => {
 
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeRegionFields(): InnerWorldRegionPlaintext {
+function makeRegionFields(): InnerWorldRegionEncryptedInput {
   return {
     name: "Safe Haven",
     description: "A peaceful region",
@@ -49,7 +54,7 @@ function makeRegionFields(): InnerWorldRegionPlaintext {
   };
 }
 
-function makeRawRegion(overrides?: Partial<InnerWorldRegionRaw>): InnerWorldRegionRaw {
+function makeRawRegion(overrides?: Partial<InnerWorldRegionWire>): InnerWorldRegionWire {
   return {
     id: brandId<InnerWorldRegionId>("reg_001"),
     systemId: brandId<SystemId>("sys_test"),
@@ -148,16 +153,16 @@ describe("encryptInnerWorldRegionUpdate", () => {
   });
 });
 
-describe("assertInnerWorldRegionPlaintext", () => {
+describe("decryptInnerWorldRegion Zod validation", () => {
   it("throws when blob is not an object", () => {
     const raw = makeRawRegion({ encryptedData: makeBase64Blob("string", masterKey) });
-    expect(() => decryptInnerWorldRegion(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptInnerWorldRegion(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when name is missing", () => {
     const raw = makeRawRegion({
       encryptedData: makeBase64Blob({ description: null }, masterKey),
     });
-    expect(() => decryptInnerWorldRegion(raw, masterKey)).toThrow("name");
+    expect(() => decryptInnerWorldRegion(raw, masterKey)).toThrow(/"name"/);
   });
 });

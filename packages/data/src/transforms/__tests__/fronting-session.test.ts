@@ -12,10 +12,10 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { FrontingSessionPlaintext } from "../fronting-session.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   EncryptedBase64,
+  FrontingSessionEncryptedInput,
   FrontingSessionId,
   MemberId,
   PaginationCursor,
@@ -35,12 +35,12 @@ beforeAll(async () => {
 function makeRawSession(
   overrides: Partial<{
     endTime: UnixMillis | null;
-    encryptedFields: FrontingSessionPlaintext;
+    encryptedFields: FrontingSessionEncryptedInput;
     archived: boolean;
     archivedAt: UnixMillis | null;
   }> = {},
 ) {
-  const fields: FrontingSessionPlaintext = overrides.encryptedFields ?? {
+  const fields: FrontingSessionEncryptedInput = overrides.encryptedFields ?? {
     comment: "feeling good",
     positionality: "close",
     outtrigger: "stress",
@@ -95,7 +95,7 @@ describe("decryptFrontingSession", () => {
   });
 
   it("decrypts null encrypted fields", () => {
-    const nullFields: FrontingSessionPlaintext = {
+    const nullFields: FrontingSessionEncryptedInput = {
       comment: null,
       positionality: null,
       outtrigger: null,
@@ -169,7 +169,7 @@ describe("decryptFrontingSessionPage", () => {
 
 describe("encryptFrontingSessionInput", () => {
   it("encrypts fields and returns encryptedData string", () => {
-    const fields: FrontingSessionPlaintext = {
+    const fields: FrontingSessionEncryptedInput = {
       comment: "hello",
       positionality: null,
       outtrigger: "joy",
@@ -182,7 +182,7 @@ describe("encryptFrontingSessionInput", () => {
   });
 
   it("round-trips: encrypted data can be decrypted back", () => {
-    const fields: FrontingSessionPlaintext = {
+    const fields: FrontingSessionEncryptedInput = {
       comment: "round-trip",
       positionality: "far",
       outtrigger: null,
@@ -201,7 +201,7 @@ describe("encryptFrontingSessionInput", () => {
 
 describe("encryptFrontingSessionUpdate", () => {
   it("encrypts fields and includes version", () => {
-    const fields: FrontingSessionPlaintext = {
+    const fields: FrontingSessionEncryptedInput = {
       comment: "updated",
       positionality: null,
       outtrigger: null,
@@ -214,7 +214,7 @@ describe("encryptFrontingSessionUpdate", () => {
   });
 
   it("round-trips: update data can be decrypted back", () => {
-    const fields: FrontingSessionPlaintext = {
+    const fields: FrontingSessionEncryptedInput = {
       comment: "updated comment",
       positionality: "very close",
       outtrigger: "music",
@@ -238,10 +238,10 @@ describe("encryptFrontingSessionUpdate", () => {
 
 // ── Assertion guard tests ────────────────────────────────────────────
 
-describe("assertFrontingSessionPlaintext", () => {
+describe("decryptFrontingSession Zod validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = { ...makeRawSession(), encryptedData: makeBase64Blob("not-an-object", masterKey) };
-    expect(() => decryptFrontingSession(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when comment is not string or null", () => {
@@ -252,7 +252,7 @@ describe("assertFrontingSessionPlaintext", () => {
         masterKey,
       ),
     };
-    expect(() => decryptFrontingSession(raw, masterKey)).toThrow("comment must be string or null");
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(/"comment"/);
   });
 
   it("throws when positionality is not string or null", () => {
@@ -263,9 +263,7 @@ describe("assertFrontingSessionPlaintext", () => {
         masterKey,
       ),
     };
-    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(
-      "positionality must be string or null",
-    );
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(/"positionality"/);
   });
 
   it("throws when outtrigger is not string or null", () => {
@@ -276,9 +274,7 @@ describe("assertFrontingSessionPlaintext", () => {
         masterKey,
       ),
     };
-    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(
-      "outtrigger must be string or null",
-    );
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(/"outtrigger"/);
   });
 
   it("throws when outtriggerSentiment is invalid", () => {
@@ -289,16 +285,14 @@ describe("assertFrontingSessionPlaintext", () => {
         masterKey,
       ),
     };
-    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(
-      "outtriggerSentiment must be a valid sentiment or null",
-    );
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(/"outtriggerSentiment"/);
   });
 
-  it("accepts null blob with null encrypted fields via assertion", () => {
+  it("rejects a null blob (Zod requires an object)", () => {
     const raw = {
       ...makeRawSession(),
       encryptedData: makeBase64Blob(null, masterKey),
     };
-    expect(() => decryptFrontingSession(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(/object/);
   });
 });

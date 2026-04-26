@@ -9,15 +9,15 @@ import { useDomainMutation } from "./factories.js";
 import { type SystemIdOverride, type TRPCMutation, type TRPCQuery } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { CanvasDecrypted, CanvasRaw } from "@pluralscape/data/transforms/innerworld-canvas";
+import type { InnerWorldCanvas, InnerWorldCanvasWire } from "@pluralscape/types";
 
-export function useCanvas(opts?: SystemIdOverride): TRPCQuery<CanvasDecrypted> {
+export function useCanvas(opts?: SystemIdOverride): TRPCQuery<InnerWorldCanvas> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   const selectCanvas = useCallback(
-    (raw: CanvasRaw): CanvasDecrypted => {
+    (raw: InnerWorldCanvasWire): InnerWorldCanvas => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptCanvas(raw, masterKey);
     },

@@ -2,8 +2,25 @@ import { toUnixMillis } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import { optionalBrandedId } from "./branded-id.js";
+import { brandedString } from "./branded.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
+
+// ── Encrypted input ─────────────────────────────────────────────
+
+/**
+ * Runtime validator for the pre-encryption ChatMessage input.
+ * Mirrors `ChatMessageEncryptedInput =
+ * Pick<ChatMessage, "content" | "senderId" | "attachments" | "mentions">`.
+ */
+export const ChatMessageEncryptedInputSchema = z
+  .object({
+    content: z.string().min(1),
+    senderId: brandedString<"MemberId">(),
+    attachments: z.array(brandedString<"BlobId">()).readonly(),
+    mentions: z.array(brandedString<"MemberId">()).readonly(),
+  })
+  .readonly();
 
 // ── Create ──────────────────────────────────────────────────────
 

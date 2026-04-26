@@ -34,7 +34,7 @@ import type {
   PersisterCreateResult,
   PersisterUpdateResult,
 } from "./persister.types.js";
-import type { MemberEncryptedInput } from "@pluralscape/data";
+import type { MemberEncryptedInput } from "@pluralscape/types";
 import type { BlobId, ImageSource } from "@pluralscape/types";
 
 // ── Narrowed payload shape ───────────────────────────────────────────

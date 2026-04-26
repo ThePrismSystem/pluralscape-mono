@@ -1,51 +1,33 @@
 /**
- * Compile-time-only OpenAPI-Wire parity check for the types-ltel pilot.
+ * Compile-time-only OpenAPI-Wire parity check.
  *
- * Asserts that OpenAPI-generated response types from `@pluralscape/api-client`
- * structurally equal their corresponding `<Entity>Wire` types from
- * `@pluralscape/types`.
+ * Asserts that every OpenAPI-generated `<X>Response` type from
+ * `@pluralscape/api-client` structurally equals its corresponding
+ * `<Entity>Wire` type from `@pluralscape/types`.
  *
  * Typechecked via `pnpm types:check-sot`.
  *
- * ── Scope ────────────────────────────────────────────────────────────
+ * ── G7 form ─────────────────────────────────────────────────────────
  *
- * Every `<X>Response` has two parts:
- *  1. The opaque `encryptedData` field — `string` on the wire but a
- *     structured `EncryptedBlob` discriminated union in the domain. The
- *     asymmetry is at an encode/decode boundary that cannot be
- *     structurally equated.
- *  2. Every OTHER field (plaintext columns the server sees) — ids,
- *     timestamps, `version`, `archived`/`archivedAt`, plus per-entity
- *     denormalized additions (e.g. `FrontingSessionResponse.structureEntityId`).
- *     These ARE fully structurally assertable.
+ * `<Entity>Wire` is `Serialize<<Entity>Result>`, where `<Entity>Result =
+ * EncryptedWire<<Entity>ServerMetadata>` collapses the structured
+ * `EncryptedBlob` to the wire-form base64 string and strips brand markers.
+ * The OpenAPI generator emits `encryptedData: string` for every encrypted
+ * entity, so a single `Equal<XResponse, XWire>` assertion catches drift on
+ * BOTH the encrypted-data field AND every plaintext column the server
+ * exposes — there is no longer a split-parity carve-out per entity.
  *
- * Per-entity plaintext-column parity therefore takes a split form — see
- * the Member block below. This is the canonical fleet pattern: every
- * renamed entity replicates the split (`Omit<..., "encryptedData">`
- * equality + `<X>Response["encryptedData"] extends string`).
+ * `AuditLogEntry` is plaintext on the wire (not encrypted), so its OpenAPI
+ * schema structurally matches `Serialize<AuditLogEntry>` directly.
  *
  * The shared `EncryptedEntity` envelope parity serves as the canonical
  * tripwire for the envelope shape itself (the set of plaintext columns
  * every T1 response rides on). If the envelope drifts, every per-entity
- * assertion will also trip — the envelope check localizes the diagnosis.
+ * G7 assertion will also trip — the envelope check localizes the diagnosis.
  *
- * `AuditLogEntry` is plaintext on the wire (not encrypted), so the
- * OpenAPI schema structurally matches the domain type directly via
- * `Equal<components["schemas"]["AuditLogEntry"], Serialize<AuditLogEntry>>`.
- *
- * What this file enforces:
- *  - `MemberWire ≡ Serialize<Member>` (self-consistency of the helper).
- *  - `AuditLogEntryWire ≡ Serialize<AuditLogEntry>` (same).
- *  - `components["schemas"]["EncryptedEntity"]` structurally equals the
- *    hand-authored `EncryptedEntityWire` mirror below — canonical envelope
- *    tripwire.
- *  - `MemberResponse` plaintext columns (split parity, see Member block).
- *  - `components["schemas"]["PlaintextMember"]` structurally equals
- *    `Serialize<Pick<Member, MemberEncryptedFields>>` — the pre-encryption
- *    contract derived directly from the domain.
- *  - `components["schemas"]["AuditLogEntry"]` structurally equals
- *    `Serialize<AuditLogEntry>` — plaintext-wire parity for the audit log.
- *  - `PlaintextX` parity for every fleet-renamed entity.
+ * `Plaintext<X>` parity asserts the pre-encryption contract (what callers
+ * submit before encryption) equals `Serialize<Pick<<Entity>,
+ * <Entity>EncryptedFields>>` — distinct from response parity above.
  *
  * Adding a bogus field on either side of any assertion will fail the gate
  * — see `pnpm types:check-sot`.
@@ -57,32 +39,32 @@ import type {
   AuditLogEntryWire,
   CustomFront,
   CustomFrontEncryptedFields,
-  CustomFrontServerMetadata,
+  CustomFrontWire,
   EncryptedBase64,
   EncryptedBlob,
   EncryptedWire,
   Equal,
   FieldDefinition,
   FieldDefinitionEncryptedFields,
-  FieldDefinitionServerMetadata,
+  FieldDefinitionWire,
   FieldValue,
   FieldValueEncryptedFields,
-  FieldValueServerMetadata,
-  FrontingCommentServerMetadata,
+  FieldValueWire,
+  FrontingCommentWire,
   FrontingSession,
   FrontingSessionEncryptedFields,
   Group,
   GroupEncryptedFields,
-  GroupServerMetadata,
+  GroupWire,
   InnerWorldCanvas,
   InnerWorldCanvasEncryptedFields,
-  InnerWorldCanvasServerMetadata,
+  InnerWorldCanvasWire,
   InnerWorldEntity,
   InnerWorldEntityEncryptedFields,
-  InnerWorldEntityServerMetadata,
+  InnerWorldEntityWire,
   InnerWorldRegion,
   InnerWorldRegionEncryptedFields,
-  InnerWorldRegionServerMetadata,
+  InnerWorldRegionWire,
   LifecycleEvent,
   LifecycleEventEncryptedFields,
   Member,
@@ -108,30 +90,26 @@ import type {
   SystemStructureEntityEncryptedFields,
   SystemStructureEntityMemberLink,
   SystemStructureEntityMemberLinkEncryptedFields,
-  SystemStructureEntityServerMetadata,
   SystemStructureEntityType,
   SystemStructureEntityTypeEncryptedFields,
-  SystemStructureEntityTypeServerMetadata,
+  SystemStructureEntityTypeWire,
+  SystemStructureEntityWire,
 } from "../packages/types/src/index.js";
 import { expectTypeOf } from "vitest";
 
 // ── Wire helpers self-consistency ────────────────────────────────────
 //
-// `<Entity>Wire` must equal `Serialize<Entity>` — no hand-authored drift
-// from the helper-derived form. This bites if someone hand-redefines
-// `MemberWire` to diverge from `Serialize<Member>`.
+// `<Entity>Wire` must equal `Serialize<<Entity>Result>` — no hand-authored
+// drift from the helper-derived form.
 
-// `MemberWire` is the JSON-form of `MemberResult`. Brands are stripped and
-// `encryptedData` collapses to wire-form base64 string (not the structured
-// EncryptedBlob).
 expectTypeOf<Equal<MemberWire, Serialize<MemberResult>>>().toEqualTypeOf<true>();
 expectTypeOf<Equal<AuditLogEntryWire, Serialize<AuditLogEntry>>>().toEqualTypeOf<true>();
 
 // ── OpenAPI ↔ Wire parity: EncryptedEntity envelope ─────────────────
 //
-// Every T1 response rides on this envelope. This is the first real
-// OpenAPI→types tripwire in the pilot: if the OpenAPI spec or the
-// mirror below drifts, this assertion fails.
+// Every T1 response rides on this envelope. If the OpenAPI spec or the
+// mirror below drifts, this assertion fails and localizes the diagnosis
+// before the per-entity tripwires fire.
 //
 // The mirror is kept local to this file rather than exported from
 // `@pluralscape/types` because the envelope is an API-layer concern,
@@ -164,120 +142,81 @@ expectTypeOf<
   Equal<components["schemas"]["PlaintextMember"], Serialize<Pick<Member, MemberEncryptedFields>>>
 >().toEqualTypeOf<true>();
 
-// ── OpenAPI ↔ domain parity: MemberResponse plaintext columns ──────
+// ── OpenAPI ↔ Wire parity: <X>Response ≡ <Entity>Wire (G7) ─────────
 //
-// Every <X>Response has two parts: the opaque `encryptedData` field
-// (string on wire, structured EncryptedBlob in domain — the asymmetry
-// is at an encode/decode boundary that can't be structurally equated),
-// and every other field (plaintext columns the server sees). The
-// plaintext columns ARE assertable, so we split the parity:
+// Single full-equality assertion per entity. `<Entity>Wire =
+// Serialize<EncryptedWire<<Entity>ServerMetadata>>` collapses the
+// structured `EncryptedBlob` to a plain base64 string and strips brand
+// markers, so this single check enforces both `encryptedData` shape AND
+// every plaintext column at once.
+
+expectTypeOf<Equal<components["schemas"]["MemberResponse"], MemberWire>>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["FieldDefinitionResponse"], FieldDefinitionWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["FieldValueResponse"], FieldValueWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["FrontingCommentResponse"], FrontingCommentWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<Equal<components["schemas"]["GroupResponse"], GroupWire>>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["CustomFrontResponse"], CustomFrontWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["StructureEntityTypeResponse"], SystemStructureEntityTypeWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["StructureEntityResponse"], SystemStructureEntityWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["RegionResponse"], InnerWorldRegionWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["EntityResponse"], InnerWorldEntityWire>
+>().toEqualTypeOf<true>();
+
+expectTypeOf<
+  Equal<components["schemas"]["CanvasResponse"], InnerWorldCanvasWire>
+>().toEqualTypeOf<true>();
+
+// ── OpenAPI ↔ Wire parity: Cluster 8 (deferred) ────────────────────
 //
-// Piece 1: plaintext columns on both sides, minus `encryptedData`.
-// Piece 2: `encryptedData` on the wire is opaque `string`.
-//
-// This catches per-entity plaintext column drift (e.g., `archived`
-// rename, new denormalized column added to a response). Fleet must
-// replicate this split for every renamed entity.
-
-type MemberResponseOpenApi = components["schemas"]["MemberResponse"];
-
-// G7 — full equality between the OpenAPI response and the canonical wire
-// type. `MemberWire = Serialize<MemberResult>` collapses the encryptedData
-// blob to the wire-form base64 string and strips brands, so the split
-// parity carve-out (Omit<…, "encryptedData"> + opaque-string check) is
-// no longer needed.
-expectTypeOf<Equal<MemberResponseOpenApi, MemberWire>>().toEqualTypeOf<true>();
-
-// ── OpenAPI ↔ domain parity: FieldDefinitionResponse split parity ──
-
-type FieldDefinitionResponseOpenApi = components["schemas"]["FieldDefinitionResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<FieldDefinitionResponseOpenApi, "encryptedData">,
-    Omit<Serialize<FieldDefinitionServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<FieldDefinitionResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
-
-// ── OpenAPI ↔ domain parity: FieldValueResponse split parity ───────
-
-type FieldValueResponseOpenApi = components["schemas"]["FieldValueResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<FieldValueResponseOpenApi, "encryptedData">,
-    Omit<Serialize<FieldValueServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<FieldValueResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
-
-// ── OpenAPI ↔ domain parity: FrontingCommentResponse split parity ──
-//
-// `FrontingCommentResult` is now `EncryptedWire<FrontingCommentServerMetadata>`
-// (collapsed in types-u87m). The OpenAPI generator emits raw `string` for
-// `encryptedData`; `Serialize<T>` strips both brand markers and
-// `ServerInternal<…>` markers from the domain side, so the plaintext
-// projections compare equal.
-
-type FrontingCommentResponseOpenApi = components["schemas"]["FrontingCommentResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<FrontingCommentResponseOpenApi, "encryptedData">,
-    Omit<Serialize<FrontingCommentServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<FrontingCommentResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
-
-// ── OpenAPI ↔ domain parity: GroupResponse (split) ──────────────────
-
-type GroupResponseOpenApi = components["schemas"]["GroupResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<GroupResponseOpenApi, "encryptedData">,
-    Omit<Serialize<GroupServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<GroupResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
-
-// ── OpenAPI ↔ domain parity: CustomFrontResponse (split) ────────────
-
-type CustomFrontResponseOpenApi = components["schemas"]["CustomFrontResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<CustomFrontResponseOpenApi, "encryptedData">,
-    Omit<Serialize<CustomFrontServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<CustomFrontResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
+// Channel, ChatMessage, Note, BoardMessage, Poll, TimerConfig are
+// encrypted hybrids whose canonical wire types now exist, but their
+// OpenAPI `<X>Response` schemas mark several plaintext columns as
+// optional (`field?: T`) while the canonical types declare them
+// required-nullable (`field: T | null`). G7 full equality is deferred
+// until the OpenAPI generator emits required-nullable for those
+// columns (or the canonical types are widened to optional). Fix in a
+// follow-up; the envelope tripwire above still covers shared columns.
 
 // ── OpenAPI ↔ domain parity: RelationshipResponse ──────────────────
 //
-// The full split-parity assertion is deferred: the OpenAPI wire spec
-// currently marks `sourceMemberId`/`targetMemberId` non-nullable, while
-// `Relationship` models them as `MemberId | null`. Reconciling that is a
-// follow-up (either tighten the domain or widen the spec). The
+// G7 full equality is deferred: the OpenAPI wire spec currently marks
+// `sourceMemberId`/`targetMemberId` non-nullable, while `Relationship`
+// models them as `MemberId | null`. Reconciling that is a follow-up
+// (either tighten the domain or widen the spec). The
 // `PlaintextRelationship` equality below still enforces the
 // label-field parity that Cluster 3 owns.
 
 // ── OpenAPI ↔ domain parity: AuditLogEntry (plaintext wire) ─────────
-//
-// AuditLogEntry is plaintext on the wire (not encrypted), so the OpenAPI
-// schema structurally matches the domain type directly.
 
 expectTypeOf<
   Equal<components["schemas"]["AuditLogEntry"], Serialize<AuditLogEntry>>
 >().toEqualTypeOf<true>();
 
-// ── OpenAPI ↔ domain parity: PlaintextX (fleet, Phase 2) ────────────
+// ── OpenAPI ↔ domain parity: PlaintextX (fleet) ─────────────────────
 //
 // For each non-pilot entity, assert that the OpenAPI `PlaintextX` schema
 // structurally equals `Serialize<Pick<<Entity>, <Entity>EncryptedFields>>`
@@ -334,36 +273,12 @@ expectTypeOf<
   >
 >().toEqualTypeOf<true>();
 
-// ── OpenAPI ↔ domain parity: StructureEntityTypeResponse plaintext columns ──
-type StructureEntityTypeResponseOpenApi = components["schemas"]["StructureEntityTypeResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<StructureEntityTypeResponseOpenApi, "encryptedData">,
-    Omit<Serialize<SystemStructureEntityTypeServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<StructureEntityTypeResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
-
 expectTypeOf<
   Equal<
     components["schemas"]["PlaintextStructureEntity"],
     Serialize<Pick<SystemStructureEntity, SystemStructureEntityEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
-
-// ── OpenAPI ↔ domain parity: StructureEntityResponse plaintext columns ──
-type StructureEntityResponseOpenApi = components["schemas"]["StructureEntityResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<StructureEntityResponseOpenApi, "encryptedData">,
-    Omit<Serialize<SystemStructureEntityServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<StructureEntityResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 expectTypeOf<
   Equal<
@@ -452,46 +367,6 @@ expectTypeOf<
     >
   >
 >().toEqualTypeOf<true>();
-
-// ── OpenAPI ↔ domain parity: InnerWorld*Response plaintext columns ──
-//
-// Split parity (same pattern as MemberResponse above): plaintext columns
-// on both sides minus `encryptedData`, then asserting `encryptedData` on
-// the wire is the opaque base64 `string`. Fleet-level tripwire for
-// per-entity plaintext column drift on innerworld tables.
-
-type RegionResponseOpenApi = components["schemas"]["RegionResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<RegionResponseOpenApi, "encryptedData">,
-    Omit<Serialize<InnerWorldRegionServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<RegionResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
-
-type EntityResponseOpenApi = components["schemas"]["EntityResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<EntityResponseOpenApi, "encryptedData">,
-    Omit<Serialize<InnerWorldEntityServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<EntityResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
-
-type CanvasResponseOpenApi = components["schemas"]["CanvasResponse"];
-
-expectTypeOf<
-  Equal<
-    Omit<CanvasResponseOpenApi, "encryptedData">,
-    Omit<Serialize<InnerWorldCanvasServerMetadata>, "encryptedData">
-  >
->().toEqualTypeOf<true>();
-
-expectTypeOf<CanvasResponseOpenApi["encryptedData"]>().toEqualTypeOf<string>();
 
 // ── EncryptedWire<T> nullability bridging ──────────────────────────
 //

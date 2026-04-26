@@ -13,9 +13,8 @@ import { encryptAndEncodeT1 } from "../decode-blob.js";
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { ChannelEncryptedFields } from "../channel.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { ChannelId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { ChannelEncryptedInput, ChannelId, SystemId, UnixMillis } from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -25,12 +24,12 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-function makeEncryptedFields(): ChannelEncryptedFields {
+function makeEncryptedFields(): ChannelEncryptedInput {
   return { name: "general" };
 }
 
 function makeServerChannel(
-  fields: ChannelEncryptedFields = makeEncryptedFields(),
+  fields: ChannelEncryptedInput = makeEncryptedFields(),
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
 ) {
   return {
@@ -168,24 +167,24 @@ describe("encryptChannelUpdate", () => {
   });
 });
 
-// ── assertChannelEncryptedFields ──────────────────────────────────────
+// ── ChannelEncryptedInputSchema ──────────────────────────────────────
 
-describe("assertChannelEncryptedFields", () => {
+describe("ChannelEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = {
       ...makeServerChannel(),
       encryptedData: makeBase64Blob("not-an-object", masterKey),
     };
-    expect(() => decryptChannel(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptChannel(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing name field", () => {
     const raw = { ...makeServerChannel(), encryptedData: makeBase64Blob({}, masterKey) };
-    expect(() => decryptChannel(raw, masterKey)).toThrow("missing required string field: name");
+    expect(() => decryptChannel(raw, masterKey)).toThrow(/name/);
   });
 
   it("throws when name is not a string", () => {
     const raw = { ...makeServerChannel(), encryptedData: makeBase64Blob({ name: 42 }, masterKey) };
-    expect(() => decryptChannel(raw, masterKey)).toThrow("missing required string field: name");
+    expect(() => decryptChannel(raw, masterKey)).toThrow(/name/);
   });
 });

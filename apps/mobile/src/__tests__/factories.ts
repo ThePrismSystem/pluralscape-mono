@@ -41,80 +41,79 @@ import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test
 
 export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
-import type { AcknowledgementRaw } from "@pluralscape/data/transforms/acknowledgement";
-import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message";
-import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
-import type { CustomFrontRaw } from "@pluralscape/data/transforms/custom-front";
-import type { FrontingCommentRaw } from "@pluralscape/data/transforms/fronting-comment";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
-import type { FrontingSessionRaw } from "@pluralscape/data/transforms/fronting-session";
-import type { GroupRaw } from "@pluralscape/data/transforms/group";
-import type { CanvasRaw } from "@pluralscape/data/transforms/innerworld-canvas";
-import type {
-  InnerWorldEntityEncryptedPayload,
-  InnerWorldEntityRaw,
-} from "@pluralscape/data/transforms/innerworld-entity";
-import type { InnerWorldRegionRaw } from "@pluralscape/data/transforms/innerworld-region";
 import type {
   LifecycleEventEncryptedPayload,
   LifecycleEventRaw,
 } from "@pluralscape/data/transforms/lifecycle-event";
-import type { MemberRaw } from "@pluralscape/data/transforms/member";
-import type { MessageRaw } from "@pluralscape/data/transforms/message";
-import type { NoteRaw } from "@pluralscape/data/transforms/note";
-import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
-import type { RelationshipRaw } from "@pluralscape/data/transforms/relationship";
+import type { PollVoteServerWire } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
-import type { StructureEntityRaw } from "@pluralscape/data/transforms/structure-entity";
-import type { StructureEntityTypeRaw } from "@pluralscape/data/transforms/structure-entity-type";
+import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
 import type {
-  NomenclatureSettingsRaw,
-  SystemSettingsRaw,
-} from "@pluralscape/data/transforms/system-settings";
-import type { CheckInRecordRaw, TimerConfigRaw } from "@pluralscape/data/transforms/timer-check-in";
+  CheckInRecordRaw,
+  TimerConfigServerWire,
+} from "@pluralscape/data/transforms/timer-check-in";
 import type {
   AcknowledgementId,
+  AcknowledgementRequestWire,
   BoardMessageId,
+  BoardMessageWire,
   ChannelId,
+  ChannelWire,
+  ChatMessageWire,
   CheckInRecordId,
   CustomFrontId,
+  CustomFrontWire,
   FieldDefinitionId,
   FieldValueId,
   FrontingCommentId,
+  FrontingCommentWire,
   FrontingReportId,
   FrontingSessionId,
+  FrontingSessionWire,
   GroupId,
+  GroupWire,
+  InnerWorldCanvasWire,
+  InnerWorldEntityEncryptedInput,
   InnerWorldEntityId,
+  InnerWorldEntityWire,
   InnerWorldRegionId,
+  InnerWorldRegionWire,
   LifecycleEventId,
   MemberId,
+  MemberWire,
   MessageId,
   EncryptedBase64,
   NoteId,
+  NoteWire,
   PollId,
   PollOptionId,
   PollVoteId,
+  PollWire,
   RelationshipId,
   RelationshipType,
+  RelationshipWire,
   SnapshotContent,
   SystemSettingsId,
+  SystemSettingsWire,
   SystemSnapshotId,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
+  SystemStructureEntityTypeWire,
+  SystemStructureEntityWire,
   TimerId,
   UnixMillis,
   VisualProperties,
 } from "@pluralscape/types";
-
 export const NOW = 1_700_000_000_000 as UnixMillis;
 
 // ── Acknowledgement ──────────────────────────────────────────────────
 
 export function makeRawAcknowledgement(
   id: string,
-  overrides?: Partial<AcknowledgementRaw>,
-): AcknowledgementRaw {
+  overrides?: Partial<AcknowledgementRequestWire>,
+): AcknowledgementRequestWire {
   const encrypted = encryptAcknowledgementInput(
     {
       message: "Please read",
@@ -142,8 +141,8 @@ export function makeRawAcknowledgement(
 
 export function makeRawBoardMessage(
   id: string,
-  overrides?: Partial<BoardMessageRaw>,
-): BoardMessageRaw {
+  overrides?: Partial<BoardMessageWire>,
+): BoardMessageWire {
   const encrypted = encryptBoardMessageInput(
     { content: "Board post", senderId: brandId<MemberId>("m-1") },
     TEST_MASTER_KEY,
@@ -165,7 +164,7 @@ export function makeRawBoardMessage(
 
 // ── Channel ──────────────────────────────────────────────────────────
 
-export function makeRawChannel(id: string, overrides?: Partial<ChannelRaw>): ChannelRaw {
+export function makeRawChannel(id: string, overrides?: Partial<ChannelWire>): ChannelWire {
   const encrypted = encryptChannelInput({ name: "general" }, TEST_MASTER_KEY);
   return {
     id: brandId<ChannelId>(id),
@@ -230,8 +229,8 @@ export function makeRawFieldValue(id: string, overrides?: Partial<FieldValueRaw>
 
 export function makeRawCustomFront(
   id: string,
-  overrides?: Partial<CustomFrontRaw>,
-): CustomFrontRaw {
+  overrides?: Partial<CustomFrontWire>,
+): CustomFrontWire {
   const encrypted = encryptCustomFrontInput(
     {
       name: `Front ${id}`,
@@ -259,12 +258,12 @@ export function makeRawCustomFront(
 export function makeRawFrontingComment(
   id: string,
   sessionId: FrontingSessionId = brandId<FrontingSessionId>("fs-1"),
-  overrides?: Partial<FrontingCommentRaw>,
-): FrontingCommentRaw {
+  overrides?: Partial<FrontingCommentWire>,
+): FrontingCommentWire {
   const encrypted = encryptFrontingCommentInput({ content: `Comment ${id}` }, TEST_MASTER_KEY);
   return {
     id: brandId<FrontingCommentId>(id),
-    frontingSessionId: sessionId,
+    frontingSessionId: brandId<FrontingSessionId>(sessionId),
     systemId: TEST_SYSTEM_ID,
     memberId: brandId<MemberId>("m-1"),
     customFrontId: null,
@@ -276,7 +275,7 @@ export function makeRawFrontingComment(
     archivedAt: null,
     ...encrypted,
     ...overrides,
-  };
+  } as FrontingCommentWire;
 }
 
 // ── Fronting Report ──────────────────────────────────────────────────
@@ -313,8 +312,8 @@ export function makeRawFrontingReport(
 
 export function makeRawFrontingSession(
   id: string,
-  overrides?: Partial<FrontingSessionRaw>,
-): FrontingSessionRaw {
+  overrides?: Partial<FrontingSessionWire>,
+): FrontingSessionWire {
   const encrypted = encryptFrontingSessionInput(
     {
       comment: `Session ${id}`,
@@ -339,12 +338,12 @@ export function makeRawFrontingSession(
     archivedAt: null,
     encryptedData: encrypted.encryptedData as EncryptedBase64,
     ...overrides,
-  };
+  } as FrontingSessionWire;
 }
 
 // ── Group ────────────────────────────────────────────────────────────
 
-export function makeRawGroup(id: string, overrides?: Partial<GroupRaw>): GroupRaw {
+export function makeRawGroup(id: string, overrides?: Partial<GroupWire>): GroupWire {
   const encrypted = encryptGroupInput(
     {
       name: `Group ${id}`,
@@ -372,7 +371,7 @@ export function makeRawGroup(id: string, overrides?: Partial<GroupRaw>): GroupRa
 
 // ── Innerworld Canvas ────────────────────────────────────────────────
 
-export function makeRawCanvas(overrides?: Partial<CanvasRaw>): CanvasRaw {
+export function makeRawCanvas(overrides?: Partial<InnerWorldCanvasWire>): InnerWorldCanvasWire {
   const encrypted = encryptCanvasUpdate(
     {
       viewportX: 0,
@@ -406,9 +405,9 @@ const DEFAULT_VISUAL: VisualProperties = {
 
 export function makeRawInnerworldEntity(
   id: string,
-  payload: InnerWorldEntityEncryptedPayload,
-  overrides?: Partial<InnerWorldEntityRaw>,
-): InnerWorldEntityRaw {
+  payload: InnerWorldEntityEncryptedInput,
+  overrides?: Partial<InnerWorldEntityWire>,
+): InnerWorldEntityWire {
   const encrypted = encryptInnerWorldEntityInput(payload, TEST_MASTER_KEY);
   return {
     id: brandId<InnerWorldEntityId>(id),
@@ -430,8 +429,8 @@ export { DEFAULT_VISUAL as INNERWORLD_DEFAULT_VISUAL };
 
 export function makeRawInnerworldRegion(
   id: string,
-  overrides?: Partial<InnerWorldRegionRaw>,
-): InnerWorldRegionRaw {
+  overrides?: Partial<InnerWorldRegionWire>,
+): InnerWorldRegionWire {
   const encrypted = encryptInnerWorldRegionInput(
     {
       name: `Region ${id}`,
@@ -488,7 +487,7 @@ export function makeRawLifecycleEvent(
 
 // ── Member ───────────────────────────────────────────────────────────
 
-export function makeRawMember(id: string, overrides?: Partial<MemberRaw>): MemberRaw {
+export function makeRawMember(id: string, overrides?: Partial<MemberWire>): MemberWire {
   const encrypted = encryptMemberInput(
     {
       name: `Member ${id}`,
@@ -521,8 +520,8 @@ export function makeRawMember(id: string, overrides?: Partial<MemberRaw>): Membe
 export function makeRawMessage(
   id: string,
   channelId: ChannelId = brandId<ChannelId>("ch-1"),
-  overrides?: Partial<MessageRaw>,
-): MessageRaw {
+  overrides?: Partial<ChatMessageWire>,
+): ChatMessageWire {
   const encrypted = encryptMessageInput(
     {
       content: "hello",
@@ -551,7 +550,7 @@ export function makeRawMessage(
 
 // ── Note ─────────────────────────────────────────────────────────────
 
-export function makeRawNote(id: string, overrides?: Partial<NoteRaw>): NoteRaw {
+export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire {
   const encrypted = encryptNoteInput(
     { title: "Note", content: "Body", backgroundColor: null },
     TEST_MASTER_KEY,
@@ -573,7 +572,7 @@ export function makeRawNote(id: string, overrides?: Partial<NoteRaw>): NoteRaw {
 
 // ── Poll ─────────────────────────────────────────────────────────────
 
-export function makeRawPoll(id: string, overrides?: Partial<PollRaw>): PollRaw {
+export function makeRawPoll(id: string, overrides?: Partial<PollWire>): PollWire {
   const encrypted = encryptPollInput(
     {
       title: `Poll ${id}`,
@@ -615,18 +614,19 @@ export function makeRawPoll(id: string, overrides?: Partial<PollRaw>): PollRaw {
 export function makeRawPollVote(
   id: string,
   pollId: string,
-  overrides?: Partial<PollVoteRaw>,
-): PollVoteRaw {
+  overrides?: Partial<PollVoteServerWire>,
+): PollVoteServerWire {
   const encrypted = encryptPollVoteInput({ comment: "My comment" }, TEST_MASTER_KEY);
   return {
     id: brandId<PollVoteId>(id),
     pollId: brandId<PollId>(pollId),
     optionId: brandId<PollOptionId>("opt-1"),
-    voter: null,
+    voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem-voter") },
     isVeto: false,
     votedAt: NOW,
     archived: false,
     archivedAt: null,
+    createdAt: NOW,
     ...encrypted,
     ...overrides,
   };
@@ -636,13 +636,12 @@ export function makeRawPollVote(
 
 export function makeRawRelationship(
   id: string,
-  opts?: { encryptedData?: string | null },
-  overrides?: Partial<RelationshipRaw>,
-): RelationshipRaw {
+  opts?: { encryptedData?: string },
+  overrides?: Partial<RelationshipWire>,
+): RelationshipWire {
   const encryptedData =
-    opts?.encryptedData !== undefined
-      ? opts.encryptedData
-      : encryptRelationshipInput({ label: `Label ${id}` }, TEST_MASTER_KEY).encryptedData;
+    opts?.encryptedData ??
+    encryptRelationshipInput({ label: `Label ${id}` }, TEST_MASTER_KEY).encryptedData;
 
   return {
     id: brandId<RelationshipId>(id),
@@ -652,6 +651,8 @@ export function makeRawRelationship(
     type: "sibling" as RelationshipType,
     bidirectional: true,
     createdAt: NOW,
+    updatedAt: NOW,
+    version: 1,
     archived: false,
     archivedAt: null,
     encryptedData,
@@ -696,8 +697,8 @@ export function makeRawSnapshot(id: string, overrides?: Partial<SnapshotRaw>): S
 export function makeRawStructureEntity(
   id: string,
   entityTypeId: SystemStructureEntityTypeId = brandId<SystemStructureEntityTypeId>("stet_default"),
-  overrides?: Partial<StructureEntityRaw>,
-): StructureEntityRaw {
+  overrides?: Partial<SystemStructureEntityWire>,
+): SystemStructureEntityWire {
   const encrypted = encryptStructureEntityInput(
     {
       name: `Entity ${id}`,
@@ -727,8 +728,8 @@ export function makeRawStructureEntity(
 
 export function makeRawStructureEntityType(
   id: string,
-  overrides?: Partial<StructureEntityTypeRaw>,
-): StructureEntityTypeRaw {
+  overrides?: Partial<SystemStructureEntityTypeWire>,
+): SystemStructureEntityTypeWire {
   const encrypted = encryptStructureEntityTypeInput(
     {
       name: `Type ${id}`,
@@ -820,13 +821,14 @@ function makeSystemSettingsPayload(settingsId: SystemSettingsId = FACTORY_SETTIN
   };
 }
 
-export function makeRawSystemSettings(overrides?: Partial<SystemSettingsRaw>): SystemSettingsRaw {
+export function makeRawSystemSettings(overrides?: Partial<SystemSettingsWire>): SystemSettingsWire {
   const settings = makeSystemSettingsPayload();
   const encrypted = encryptSystemSettingsUpdate(settings, 1, TEST_MASTER_KEY);
   return {
     id: FACTORY_SETTINGS_ID,
     systemId: TEST_SYSTEM_ID,
     locale: null,
+    pinHash: null,
     biometricEnabled: false,
     createdAt: NOW,
     updatedAt: NOW,
@@ -836,8 +838,8 @@ export function makeRawSystemSettings(overrides?: Partial<SystemSettingsRaw>): S
 }
 
 export function makeRawNomenclature(
-  overrides?: Partial<NomenclatureSettingsRaw>,
-): NomenclatureSettingsRaw {
+  overrides?: Partial<NomenclatureSettingsWire>,
+): NomenclatureSettingsWire {
   const nomenclature = {
     collective: "System",
     individual: "Member",
@@ -867,7 +869,10 @@ export function makeRawNomenclature(
 /** Interval in minutes between timer check-in prompts. */
 const TIMER_INTERVAL_MINUTES = 60;
 
-export function makeRawTimer(id: string, overrides?: Partial<TimerConfigRaw>): TimerConfigRaw {
+export function makeRawTimer(
+  id: string,
+  overrides?: Partial<TimerConfigServerWire>,
+): TimerConfigServerWire {
   const encrypted = encryptTimerConfigInput({ promptText: "How are you?" }, TEST_MASTER_KEY);
   return {
     id: brandId<TimerId>(id),

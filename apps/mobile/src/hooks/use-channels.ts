@@ -17,11 +17,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  ChannelPage as ChannelRawPage,
-  ChannelRaw,
-} from "@pluralscape/data/transforms/channel";
-import type { Archived, Channel, ChannelId } from "@pluralscape/types";
+import type { ChannelPage as ChannelWirePage } from "@pluralscape/data/transforms/channel";
+import type { Archived, Channel, ChannelId, ChannelWire } from "@pluralscape/types";
 
 interface ChannelListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -32,7 +29,7 @@ export function useChannel(
   channelId: ChannelId,
   opts?: SystemIdOverride,
 ): DataQuery<Channel | Archived<Channel>> {
-  return useOfflineFirstQuery<ChannelRaw, Channel | Archived<Channel>>({
+  return useOfflineFirstQuery<ChannelWire, Channel | Archived<Channel>>({
     queryKey: ["channels", channelId],
     table: "own_channels",
     entityId: channelId,
@@ -49,7 +46,7 @@ export function useChannel(
 export function useChannelsList(
   opts?: ChannelListOpts,
 ): DataListQuery<Channel | Archived<Channel>> {
-  return useOfflineFirstInfiniteQuery<ChannelRaw, Channel | Archived<Channel>>({
+  return useOfflineFirstInfiniteQuery<ChannelWire, Channel | Archived<Channel>>({
     queryKey: ["channels", "list", opts?.includeArchived ?? false],
     table: "own_channels",
     rowTransform: rowToChannel,
@@ -65,7 +62,7 @@ export function useChannelsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: ChannelRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: ChannelWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<Channel | Archived<Channel>>,

@@ -10,13 +10,27 @@ standard library, keeping the dependency graph clean: every other `@pluralscape/
 imports from here, never the reverse.
 
 The package solves a concrete problem: Pluralscape is E2E encrypted, and the same conceptual
-entity (a member, a fronting session, a journal entry) exists in two forms — a `Server*` variant
-holding ciphertext that the API persists and returns, and a `Client*` variant holding plaintext
-after the mobile app has decrypted it. Without shared types enforced at compile time, it is easy
-to accidentally log, cache, or transmit data in the wrong form. The `encryption.ts` module
-defines both variants for every encrypted entity, and the `ServerSafe<T>` branded wrapper
-(`server-safe.ts`) provides a zero-runtime-overhead type fence that prevents unverified data
-from reaching API responses.
+entity (a member, a fronting session, a journal entry) needs precisely-typed shapes at every
+boundary — decrypted on the client, ciphertext-bearing on the server, JSON-serialized on the
+wire. Each encrypted entity therefore exposes a canonical six-link chain in its module under
+`src/entities/`:
+
+1. `<Entity>` — the full decrypted domain shape used by client code.
+2. `<Entity>EncryptedFields` — keys-union of fields that get encrypted client-side.
+3. `<Entity>EncryptedInput = Pick<<Entity>, <Entity>EncryptedFields>` — what the
+   client encrypts and submits to `encryptedData`.
+4. `<Entity>ServerMetadata` — the Drizzle row shape (plaintext columns + opaque
+   `encryptedData` blob + any `ServerInternal<T>`-marked server-only fields).
+5. `<Entity>Result = EncryptedWire<<Entity>ServerMetadata>` — server JS-runtime
+   response, with `encryptedData` branded as `EncryptedBase64`.
+6. `<Entity>Wire = Serialize<<Entity>Result>` — the JSON-serialized HTTP shape.
+   Brands strip, `UnixMillis` becomes `number`, `EncryptedBase64` collapses to `string`.
+
+`__sot-manifest__.ts` registers every entity's slots and is consumed by parity gates in
+`@pluralscape/db`, `@pluralscape/validation`, and the OpenAPI-Wire type test (run via
+`pnpm types:check-sot`). Adding an entity to the manifest forces Drizzle, Zod, and OpenAPI
+generators to stay in lockstep with the canonical type. See [ADR-023](../../docs/adr/023-zod-type-alignment.md)
+for the `ServerInternal<T>` marker convention and the full alignment rationale.
 
 A second key design decision is nominal typing via `Brand<T, B>`. Every entity ID is a distinct
 branded string type (`SystemId`, `MemberId`, `FrontingSessionId`, etc.), preventing cross-entity
@@ -114,16 +128,25 @@ function getFrontingSession(memberId: MemberId): FrontingSession {
 const memberId = brandId<MemberId>(createId(ID_PREFIXES.member));
 ```
 
-Using the server/client encryption boundary:
+Using the canonical encrypted-entity chain:
 
 ```typescript
-import type { ServerMember, ClientMember } from "@pluralscape/types";
-import { serverSafe } from "@pluralscape/types";
+import type {
+  Member, // decrypted domain
+  MemberEncryptedInput, // = Pick<Member, MemberEncryptedFields>
+  MemberServerMetadata, // Drizzle row (server-side only)
+  MemberWire, // JSON HTTP response shape
+} from "@pluralscape/types";
 
-// API handlers work with ServerMember (ciphertext fields)
-// The mobile app decrypts to ClientMember (plaintext fields)
-function respondWithMember(member: ServerMember) {
-  return serverSafe(member); // brands the value as verified server-safe
+// Client builds the input from the domain shape, then encrypts:
+function buildInput(member: Member): MemberEncryptedInput {
+  return { name: member.name, pronouns: member.pronouns /* … */ };
+}
+
+// API handlers return MemberWire to clients; never expose
+// ServerInternal-marked columns from MemberServerMetadata directly.
+async function getMember(id: string): Promise<MemberWire> {
+  /* fetch row, serialize, return */
 }
 ```
 

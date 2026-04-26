@@ -15,9 +15,15 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { TimerConfigEncryptedFields } from "../timer-check-in.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { CheckInRecordId, MemberId, SystemId, TimerId, UnixMillis } from "@pluralscape/types";
+import type {
+  CheckInRecordId,
+  MemberId,
+  SystemId,
+  TimerConfigEncryptedInput,
+  TimerId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -26,7 +32,7 @@ const SYSTEM_ID = brandId<SystemId>("sys_test");
 const NOW = 1700000000000 as UnixMillis;
 const RECORD_ID = brandId<CheckInRecordId>("cir_test001");
 
-const ENCRYPTED_FIELDS: TimerConfigEncryptedFields = {
+const ENCRYPTED_FIELDS: TimerConfigEncryptedInput = {
   promptText: "Who is fronting right now?",
 };
 
@@ -190,23 +196,19 @@ describe("decryptCheckInRecordPage", () => {
 
 // ── Assertion guard tests ────────────────────────────────────────────
 
-describe("assertTimerConfigEncryptedFields", () => {
+describe("TimerConfigEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = makeRawTimerConfig(makeBase64Blob("not-an-object", masterKey));
-    expect(() => decryptTimerConfig(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptTimerConfig(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing promptText field", () => {
     const raw = makeRawTimerConfig(makeBase64Blob({ other: "value" }, masterKey));
-    expect(() => decryptTimerConfig(raw, masterKey)).toThrow(
-      "missing required string field: promptText",
-    );
+    expect(() => decryptTimerConfig(raw, masterKey)).toThrow(/promptText/);
   });
 
   it("throws when promptText is not a string", () => {
     const raw = makeRawTimerConfig(makeBase64Blob({ promptText: 42 }, masterKey));
-    expect(() => decryptTimerConfig(raw, masterKey)).toThrow(
-      "missing required string field: promptText",
-    );
+    expect(() => decryptTimerConfig(raw, masterKey)).toThrow(/promptText/);
   });
 });

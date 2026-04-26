@@ -18,20 +18,19 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  GroupDecrypted,
-  GroupPage as GroupRawPage,
-  GroupRaw,
-} from "@pluralscape/data/transforms/group";
-import type { GroupId, MemberId } from "@pluralscape/types";
+import type { GroupPage as GroupWirePage } from "@pluralscape/data/transforms/group";
+import type { Archived, Group, GroupId, GroupWire, MemberId } from "@pluralscape/types";
 
 interface GroupListOpts extends SystemIdOverride {
   readonly limit?: number;
   readonly includeArchived?: boolean;
 }
 
-export function useGroup(groupId: GroupId, opts?: SystemIdOverride): DataQuery<GroupDecrypted> {
-  return useOfflineFirstQuery<GroupRaw, GroupDecrypted>({
+export function useGroup(
+  groupId: GroupId,
+  opts?: SystemIdOverride,
+): DataQuery<Group | Archived<Group>> {
+  return useOfflineFirstQuery<GroupWire, Group | Archived<Group>>({
     queryKey: ["groups", groupId],
     table: "groups",
     entityId: groupId,
@@ -39,15 +38,14 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): DataQuery<G
     decrypt: decryptGroup,
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.group.get.useQuery(
-        { systemId, groupId },
-        { enabled, select },
-      ) as DataQuery<GroupDecrypted>,
+      trpc.group.get.useQuery({ systemId, groupId }, { enabled, select }) as DataQuery<
+        Group | Archived<Group>
+      >,
   });
 }
 
-export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypted> {
-  return useOfflineFirstInfiniteQuery<GroupRaw, GroupDecrypted>({
+export function useGroupsList(opts?: GroupListOpts): DataListQuery<Group | Archived<Group>> {
+  return useOfflineFirstInfiniteQuery<GroupWire, Group | Archived<Group>>({
     queryKey: ["groups", "list", opts?.includeArchived ?? false],
     table: "groups",
     rowTransform: rowToGroup,
@@ -63,10 +61,10 @@ export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypte
         },
         {
           enabled,
-          getNextPageParam: (lastPage: GroupRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: GroupWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<GroupDecrypted>,
+      ) as DataListQuery<Group | Archived<Group>>,
   });
 }
 

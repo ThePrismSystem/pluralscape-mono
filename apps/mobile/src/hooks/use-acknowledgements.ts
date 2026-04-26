@@ -17,12 +17,13 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { AcknowledgementPage as AcknowledgementWirePage } from "@pluralscape/data/transforms/acknowledgement";
 import type {
-  AcknowledgementDecrypted,
-  AcknowledgementPage as AcknowledgementRawPage,
-  AcknowledgementRaw,
-} from "@pluralscape/data/transforms/acknowledgement";
-import type { AcknowledgementId, Archived } from "@pluralscape/types";
+  AcknowledgementId,
+  AcknowledgementRequest,
+  AcknowledgementRequestWire,
+  Archived,
+} from "@pluralscape/types";
 
 interface AcknowledgementListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -33,10 +34,10 @@ interface AcknowledgementListOpts extends SystemIdOverride {
 export function useAcknowledgement(
   ackId: AcknowledgementId,
   opts?: SystemIdOverride,
-): DataQuery<AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>> {
+): DataQuery<AcknowledgementRequest | Archived<AcknowledgementRequest>> {
   return useOfflineFirstQuery<
-    AcknowledgementRaw,
-    AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>
+    AcknowledgementRequestWire,
+    AcknowledgementRequest | Archived<AcknowledgementRequest>
   >({
     queryKey: ["acknowledgements", ackId],
     table: "own_acknowledgements",
@@ -46,17 +47,17 @@ export function useAcknowledgement(
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
       trpc.acknowledgement.get.useQuery({ systemId, ackId }, { enabled, select }) as DataQuery<
-        AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>
+        AcknowledgementRequest | Archived<AcknowledgementRequest>
       >,
   });
 }
 
 export function useAcknowledgementsList(
   opts?: AcknowledgementListOpts,
-): DataListQuery<AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>> {
+): DataListQuery<AcknowledgementRequest | Archived<AcknowledgementRequest>> {
   return useOfflineFirstInfiniteQuery<
-    AcknowledgementRaw,
-    AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>
+    AcknowledgementRequestWire,
+    AcknowledgementRequest | Archived<AcknowledgementRequest>
   >({
     queryKey: ["acknowledgements", "list", opts?.includeArchived ?? false, opts?.confirmed],
     table: "own_acknowledgements",
@@ -74,10 +75,10 @@ export function useAcknowledgementsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: AcknowledgementRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: AcknowledgementWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>>,
+      ) as DataListQuery<AcknowledgementRequest | Archived<AcknowledgementRequest>>,
   });
 }
 

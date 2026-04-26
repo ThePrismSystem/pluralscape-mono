@@ -15,8 +15,8 @@ import {
 import { normalisePkColor } from "./pk-mapper-helpers.js";
 
 import type { PKMember } from "../validators/pk-payload.js";
-import type { MemberEncryptedInput } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
+import type { MemberEncryptedInput } from "@pluralscape/types";
 import type { CreateMemberBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 

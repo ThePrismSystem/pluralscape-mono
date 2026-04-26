@@ -8,6 +8,8 @@ Client-side data layer: React Query wiring, REST query factories, CRDT bridge, a
 
 Every entity the app works with — members, fronting sessions, channels, notes, polls, innerworld entities, and more — has a corresponding set of crypto transforms in this package. These transforms handle decrypting ciphertext fields from API responses and encrypting plaintext fields before writes, using the XChaCha20-Poly1305 primitives from `@pluralscape/crypto`. Sensitive fields never leave the client in plaintext.
 
+Each transform module owns **functions only** — there are no local domain, wire, or encrypted-input types. Every transform consumes the canonical chain from `@pluralscape/types`: `<Entity>` (decrypted domain), `<Entity>EncryptedFields` (keys union), `<Entity>EncryptedInput = Pick<<Entity>, <Entity>EncryptedFields>`, `<Entity>ServerMetadata` (Drizzle row), `<Entity>Result = EncryptedWire<<Entity>ServerMetadata>` (server JS response), and `<Entity>Wire = Serialize<<Entity>Result>` (HTTP JSON shape). Runtime validation of decrypted blobs is delegated to the matching `<Entity>EncryptedInputSchema` from `@pluralscape/validation` — transforms call `Schema.parse(decrypted)` and rely on Zod errors when the ciphertext doesn't match the expected shape. Hand-rolled `assertX` validators have been removed.
+
 This package has no runtime dependency on React Native or Expo and does not import any UI primitives. It is consumed by the `apps/mobile` Expo app but is kept framework-agnostic so it can be tested in a plain Node/Vitest environment.
 
 ## Key Exports
@@ -57,17 +59,17 @@ Every transform module is available as a granular sub-path import (e.g. `@plural
 
 **Sub-path only** (import from `@pluralscape/data/transforms/<name>`):
 
-| Domain         | Module                                                                                                                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Structure      | `structure-entity`, `structure-entity-type`                                                                                                                                   |
-| Relationships  | `relationship`                                                                                                                                                                |
-| Innerworld     | `innerworld-entity`, `innerworld-region`, `innerworld-canvas`                                                                                                                 |
-| Lifecycle      | `lifecycle-event`, `snapshot`                                                                                                                                                 |
-| Social         | `friend-connection`, `friend-code`, `friend-dashboard`                                                                                                                        |
-| Notifications  | `notification-config`, `device-token`                                                                                                                                         |
-| Shared helpers | `decode-blob` (exports `decodeAndDecryptT2`, `encryptAndEncodeT2`, `extractT2BucketId`, `assertObjectBlob`, `assertStringField`, `assertArrayField`, `base64urlToUint8Array`) |
+| Domain         | Module                                                                                                                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Structure      | `structure-entity`, `structure-entity-type`                                                                                                                                                   |
+| Relationships  | `relationship`                                                                                                                                                                                |
+| Innerworld     | `innerworld-entity`, `innerworld-region`, `innerworld-canvas`                                                                                                                                 |
+| Lifecycle      | `lifecycle-event`, `snapshot`                                                                                                                                                                 |
+| Social         | `friend-code`, `friend-dashboard`                                                                                                                                                             |
+| Notifications  | `notification-config`, `device-token`                                                                                                                                                         |
+| Shared helpers | `decode-blob` (exports `decodeAndDecryptT1`, `encryptAndEncodeT1`, `encryptInput`, `encryptUpdate`, `decodeAndDecryptT2`, `encryptAndEncodeT2`, `extractT2BucketId`, `base64urlToUint8Array`) |
 
-Every `decrypt*` function validates that the decrypted blob matches the expected field shape (not just `name`): missing or wrong-typed fields throw synchronously so ciphertext corruption, key mismatch, or server tampering surfaces as an error rather than silent data loss. Encrypt/decrypt pairs round-trip — e.g. `encryptBucketInput` followed by `decryptPrivacyBucket` reproduces the original plaintext. Base64 encode/decode inside `decode-blob.ts` is backed by Node's `Buffer` API for linear-time conversion.
+Every `decrypt*` function passes the decrypted blob through `<Entity>EncryptedInputSchema.parse()` from `@pluralscape/validation` — missing fields, wrong types, or non-object payloads throw a `ZodError` so ciphertext corruption, key mismatch, or server tampering surfaces as an error rather than silent data loss. Encrypt/decrypt pairs round-trip — e.g. `encryptBucketInput` followed by `decryptPrivacyBucket` reproduces the original plaintext. Base64 encode/decode inside `decode-blob.ts` is backed by Node's `Buffer` API for linear-time conversion.
 
 ## Usage
 

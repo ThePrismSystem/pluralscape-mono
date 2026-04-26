@@ -9,7 +9,7 @@ import type { Archived, AuditMetadata } from "../utility.js";
 export interface AcknowledgementRequest extends AuditMetadata {
   readonly id: AcknowledgementId;
   readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId;
+  readonly createdByMemberId: MemberId | null;
   readonly targetMemberId: MemberId;
   readonly message: string;
   readonly confirmed: boolean;
@@ -33,36 +33,21 @@ export type ArchivedAcknowledgementRequest = Archived<AcknowledgementRequest>;
 export type AcknowledgementRequestEncryptedFields = "message" | "targetMemberId" | "confirmedAt";
 
 /**
- * Domain field that is plaintext on the server row but stored with a
- * different shape than the domain implies. `createdByMemberId` is a
- * non-nullable `MemberId` on the domain (every acknowledgement has a
- * creator); on the server row it is nullable to support imported
- * acknowledgements where the creator member is not yet known.
- *
- * Distinguished from `AcknowledgementRequestEncryptedFields` (which lists
- * keys whose values ride inside the encryptedData blob).
- */
-export type AcknowledgementRequestRestructuredPlaintextFields = "createdByMemberId";
-
-/**
  * Server-visible AcknowledgementRequest metadata — raw Drizzle row shape.
  *
  * Hybrid entity: the `message`, `targetMemberId`, and `confirmedAt` fields
  * are bundled inside the opaque `encryptedData` blob — the target member is
  * encrypted so the server can't trace acknowledgement patterns. The
- * plaintext `confirmed` flag + `createdByMemberId` FK are kept in the clear
- * for queryability. `createdByMemberId` is nullable on the server row to
- * support acknowledgements imported from external sources (no originating
- * member). `archived: false` on the domain flips to a mutable boolean here,
- * with a companion `archivedAt` timestamp.
+ * plaintext `confirmed` flag + nullable `createdByMemberId` FK are kept in
+ * the clear for queryability (the FK is nullable on both the server row and
+ * the domain to support acknowledgements imported from external sources where
+ * no originating member is known). `archived: false` on the domain flips to
+ * a mutable boolean here, with a companion `archivedAt` timestamp.
  */
 export type AcknowledgementRequestServerMetadata = Omit<
   AcknowledgementRequest,
-  | AcknowledgementRequestEncryptedFields
-  | AcknowledgementRequestRestructuredPlaintextFields
-  | "archived"
+  AcknowledgementRequestEncryptedFields | "archived"
 > & {
-  readonly createdByMemberId: MemberId | null;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;

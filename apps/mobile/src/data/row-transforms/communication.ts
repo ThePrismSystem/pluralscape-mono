@@ -14,7 +14,6 @@ import {
   wrapArchived,
 } from "./primitives.js";
 
-import type { NoteDecrypted } from "@pluralscape/data/transforms/note";
 import type {
   AcknowledgementRequest,
   Archived,
@@ -31,8 +30,10 @@ import type {
   EntityReference,
   JournalEntry,
   MemberId,
+  Note,
   NoteAuthorEntityType,
   Poll,
+  SystemStructureEntityId,
   WikiPage,
 } from "@pluralscape/types";
 
@@ -287,20 +288,30 @@ export function rowToWikiPage(row: Record<string, unknown>): WikiPage | Archived
   return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToNote(row: Record<string, unknown>): NoteDecrypted | Archived<NoteDecrypted> {
+export function rowToNote(row: Record<string, unknown>): Note | Archived<Note> {
   const id = rid(row);
   const archived = intToBool(row["archived"]);
   const updatedAt = guardedToMs(row["updated_at"], "notes", "updated_at", id);
-  const base: NoteDecrypted = {
-    id: guardedStr(row["id"], "notes", "id", id) as NoteDecrypted["id"],
-    systemId: guardedStr(row["system_id"], "notes", "system_id", id) as NoteDecrypted["systemId"],
-    authorEntityType: strOrNull(
-      row["author_entity_type"],
-      "notes",
-      "author_entity_type",
-      id,
-    ) as NoteAuthorEntityType | null,
-    authorEntityId: strOrNull(row["author_entity_id"], "notes", "author_entity_id", id),
+  const authorEntityType = strOrNull(
+    row["author_entity_type"],
+    "notes",
+    "author_entity_type",
+    id,
+  ) as NoteAuthorEntityType | null;
+  const authorEntityIdRaw = strOrNull(row["author_entity_id"], "notes", "author_entity_id", id);
+  const author: EntityReference<NoteAuthorEntityType> | null =
+    authorEntityType !== null && authorEntityIdRaw !== null
+      ? authorEntityType === "member"
+        ? { entityType: "member", entityId: brandId<MemberId>(authorEntityIdRaw) }
+        : {
+            entityType: "structure-entity",
+            entityId: brandId<SystemStructureEntityId>(authorEntityIdRaw),
+          }
+      : null;
+  const base: Note = {
+    id: guardedStr(row["id"], "notes", "id", id) as Note["id"],
+    systemId: guardedStr(row["system_id"], "notes", "system_id", id) as Note["systemId"],
+    author,
     title: guardedStr(row["title"], "notes", "title", id),
     content: guardedStr(row["content"], "notes", "content", id),
     backgroundColor: strOrNull(
@@ -308,7 +319,7 @@ export function rowToNote(row: Record<string, unknown>): NoteDecrypted | Archive
       "notes",
       "background_color",
       id,
-    ) as NoteDecrypted["backgroundColor"],
+    ) as Note["backgroundColor"],
     archived: false,
     version: 0,
     createdAt: guardedToMs(row["created_at"], "notes", "created_at", id),

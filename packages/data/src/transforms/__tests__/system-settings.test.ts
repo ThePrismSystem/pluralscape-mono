@@ -18,6 +18,7 @@ import type {
   SystemId,
   SystemSettings,
   SystemSettingsId,
+  SystemSettingsWire,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -108,11 +109,12 @@ function makeNomenclature(overrides?: Partial<NomenclatureSettings>): Nomenclatu
 }
 
 /** Build a mock system settings server response. */
-function makeRawSystemSettings(encryptedData: string, version = 1) {
+function makeRawSystemSettings(encryptedData: string, version = 1): SystemSettingsWire {
   return {
     id: brandId<SystemSettingsId>("sys-settings-1"),
     systemId: brandId<SystemId>("system-1"),
     locale: null,
+    pinHash: null,
     biometricEnabled: false,
     encryptedData,
     version,
@@ -174,9 +176,12 @@ describe("decryptSystemSettings", () => {
     expect(result.updatedAt).toBe(1000);
   });
 
-  it("decrypts settings with non-default theme and locale", () => {
-    const settings = makeSystemSettings({ theme: "dark", locale: "en" });
-    const raw = makeRawSystemSettings(makeBase64Blob(settings, masterKey));
+  it("decrypts settings with non-default theme; locale comes from wire", () => {
+    const settings = makeSystemSettings({ theme: "dark" });
+    const raw = {
+      ...makeRawSystemSettings(makeBase64Blob(settings, masterKey)),
+      locale: "en" as const,
+    };
 
     const result = decryptSystemSettings(raw, masterKey);
     expect(result).toMatchObject({ theme: "dark", locale: "en" });
@@ -291,28 +296,26 @@ describe("encryptNomenclatureUpdate", () => {
 
 // ── Assertion guard tests ────────────────────────────────────────────
 
-describe("assertSystemSettings", () => {
+describe("SystemSettingsEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = makeRawSystemSettings(makeBase64Blob("not-an-object", masterKey));
-    expect(() => decryptSystemSettings(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptSystemSettings(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing theme field", () => {
     const raw = makeRawSystemSettings(makeBase64Blob({ fontScale: 1 }, masterKey));
-    expect(() => decryptSystemSettings(raw, masterKey)).toThrow(
-      "missing required string field: theme",
-    );
+    expect(() => decryptSystemSettings(raw, masterKey)).toThrow(/theme/);
   });
 });
 
-describe("assertNomenclatureSettings", () => {
+describe("NomenclatureSettingsEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = makeRawNomenclature(makeBase64Blob("not-an-object", masterKey));
-    expect(() => decryptNomenclature(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptNomenclature(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when decrypted blob is null inside valid T1 envelope", () => {
     const raw = makeRawNomenclature(makeBase64Blob(null, masterKey));
-    expect(() => decryptNomenclature(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptNomenclature(raw, masterKey)).toThrow(/object/);
   });
 });

@@ -1,248 +1,134 @@
-import {
-  assertArrayField,
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { PollEncryptedInputSchema, PollVoteEncryptedInputSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
-  EntityReference,
-  HexColor,
+  ArchivedPollVote,
   MemberId,
+  Poll,
+  PollEncryptedInput,
   PollId,
-  PollKind,
-  PollOption,
   PollOptionId,
-  PollStatus,
+  PollVote,
+  PollVoteEncryptedInput,
   PollVoteId,
+  PollVoteWire,
+  PollWire,
   SystemId,
-  UnixMillis,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
-
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a poll blob.
- * Pass this to `encryptPollInput` when creating or updating a poll.
- */
-export interface PollEncryptedFields {
-  readonly title: string;
-  readonly description: string | null;
-  readonly options: readonly PollOption[];
-}
-
-/**
- * The plaintext fields encrypted inside a poll vote blob.
- * Pass this to `encryptPollVoteInput` when creating a vote.
- */
-export interface PollVoteEncryptedFields {
-  /** Null when the voter has no comment. */
-  readonly comment: string | null;
-}
-
-// ── Decrypted output types ────────────────────────────────────────────
-
-/** A fully decrypted poll, combining wire metadata with plaintext fields. */
-export interface PollDecrypted {
-  readonly id: PollId;
-  readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId | null;
-  readonly title: string;
-  readonly description: string | null;
-  readonly kind: PollKind;
-  readonly options: readonly PollOption[];
-  readonly status: PollStatus;
-  readonly closedAt: UnixMillis | null;
-  readonly endsAt: UnixMillis | null;
-  readonly allowMultipleVotes: boolean;
-  readonly maxVotesPerMember: number;
-  readonly allowAbstain: boolean;
-  readonly allowVeto: boolean;
-  readonly archived: false;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-/** A fully decrypted poll vote, combining wire metadata with plaintext fields. */
-export interface PollVoteDecrypted {
-  readonly id: PollVoteId;
-  readonly pollId: PollId;
-  readonly optionId: PollOptionId | null;
-  readonly voter: EntityReference<"member" | "structure-entity"> | null;
-  readonly comment: string | null;
-  readonly isVeto: boolean;
-  readonly votedAt: UnixMillis;
-  readonly archived: false;
-}
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertPollFieldsSubset =
-  PollEncryptedFields extends Pick<PollDecrypted, keyof PollEncryptedFields> ? true : never;
-
-/** Compile-time check: encrypted fields must be a subset of the domain type. */
-export type AssertPollVoteFieldsSubset =
-  PollVoteEncryptedFields extends Pick<PollVoteDecrypted, keyof PollVoteEncryptedFields>
-    ? true
-    : never;
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `poll.get` — derived from `PollDecrypted`. */
-export type PollRaw = Omit<PollDecrypted, keyof PollEncryptedFields | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
 
 /** Shape returned by `poll.list`. */
 export interface PollPage {
-  readonly data: readonly PollRaw[];
+  readonly data: readonly PollWire[];
   readonly nextCursor: string | null;
 }
 
-/** Wire shape returned by `pollVote.get` — derived from `PollVoteDecrypted`. */
-export type PollVoteRaw = Omit<PollVoteDecrypted, keyof PollVoteEncryptedFields | "archived"> & {
-  readonly encryptedData: string | null;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
-
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertPollEncryptedFields(raw: unknown): asserts raw is PollEncryptedFields {
-  const obj = assertObjectBlob(raw, "poll");
-  assertStringField(obj, "poll", "title");
-  assertArrayField(obj, "poll", "options");
-}
-
-// ── Poll transforms ───────────────────────────────────────────────────
-
 /**
- * Decrypt a single poll API result.
- *
- * The encrypted blob contains: `title`, `description`, `options`.
- * All other fields pass through from the wire payload.
+ * Server-emitted wire shape for a PollVote — derived from `PollVoteWire` by
+ * stripping `systemId`/`version`/`updatedAt`, none of which the API
+ * serializer surfaces (the canonical type carries them because Drizzle
+ * parity holds for the row, not the wire).
  */
-export function decryptPoll(
-  raw: PollRaw,
-  masterKey: KdfMasterKey,
-): PollDecrypted | Archived<PollDecrypted> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertPollEncryptedFields(plaintext);
+export type PollVoteServerWire = Omit<PollVoteWire, "systemId" | "version" | "updatedAt">;
+
+export function decryptPoll(raw: PollWire, masterKey: KdfMasterKey): Poll | Archived<Poll> {
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = PollEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    createdByMemberId: raw.createdByMemberId,
-    title: plaintext.title,
-    description: plaintext.description,
+    id: brandId<PollId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    createdByMemberId:
+      raw.createdByMemberId === null ? null : brandId<MemberId>(raw.createdByMemberId),
+    title: validated.title,
+    description: validated.description,
     kind: raw.kind,
-    options: plaintext.options,
+    options: validated.options,
     status: raw.status,
-    closedAt: raw.closedAt,
-    endsAt: raw.endsAt,
+    closedAt: raw.closedAt === null ? null : toUnixMillis(raw.closedAt),
+    endsAt: raw.endsAt === null ? null : toUnixMillis(raw.endsAt),
     allowMultipleVotes: raw.allowMultipleVotes,
     maxVotesPerMember: raw.maxVotesPerMember,
     allowAbstain: raw.allowAbstain,
     allowVeto: raw.allowVeto,
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived poll missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Decrypt a paginated poll list result.
- */
 export function decryptPollPage(
   raw: PollPage,
   masterKey: KdfMasterKey,
-): { data: (PollDecrypted | Archived<PollDecrypted>)[]; nextCursor: string | null } {
+): { data: (Poll | Archived<Poll>)[]; nextCursor: string | null } {
   return {
     data: raw.data.map((item) => decryptPoll(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }
 
-/**
- * Encrypt poll plaintext fields for create payloads.
- */
 export function encryptPollInput(
-  data: PollEncryptedFields,
+  data: PollEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
-/**
- * Encrypt poll plaintext fields for update payloads.
- */
 export function encryptPollUpdate(
-  data: PollEncryptedFields,
+  data: PollEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
   return encryptUpdate(data, version, masterKey);
 }
 
-// ── PollVote transforms ───────────────────────────────────────────────
-
-/**
- * Decrypt a single poll vote API result.
- *
- * The encrypted blob contains: `comment`.
- * When `encryptedData` is null, the comment is null and no decryption is performed.
- */
 export function decryptPollVote(
-  raw: PollVoteRaw,
+  raw: PollVoteServerWire,
   masterKey: KdfMasterKey,
-): PollVoteDecrypted | Archived<PollVoteDecrypted> {
-  let comment: string | null = null;
-  if (raw.encryptedData !== null) {
-    const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-    if (plaintext !== null && typeof plaintext === "object") {
-      const obj = plaintext as Record<string, unknown>;
-      comment = typeof obj["comment"] === "string" ? obj["comment"] : null;
-    }
+): PollVote | ArchivedPollVote {
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = PollVoteEncryptedInputSchema.parse(decrypted);
+
+  if (raw.voter === null) {
+    throw new Error("Poll vote missing voter");
   }
 
   const base = {
-    id: raw.id,
-    pollId: raw.pollId,
-    optionId: raw.optionId,
-    voter: raw.voter,
-    comment,
+    id: brandId<PollVoteId>(raw.id),
+    pollId: brandId<PollId>(raw.pollId),
+    optionId: raw.optionId === null ? null : brandId<PollOptionId>(raw.optionId),
+    voter:
+      raw.voter.entityType === "member"
+        ? { entityType: "member" as const, entityId: brandId<MemberId>(raw.voter.entityId) }
+        : {
+            entityType: "structure-entity" as const,
+            entityId: brandId<SystemStructureEntityId>(raw.voter.entityId),
+          },
+    comment: validated.comment,
     isVeto: raw.isVeto,
-    votedAt: raw.votedAt,
+    votedAt: toUnixMillis(raw.votedAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived poll vote missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Encrypt poll vote plaintext fields for create payloads.
- */
 export function encryptPollVoteInput(
-  data: PollVoteEncryptedFields,
+  data: PollVoteEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
-
-// Re-export supporting types used by callers building option fixtures.
-export type { HexColor, PollOption, PollOptionId };

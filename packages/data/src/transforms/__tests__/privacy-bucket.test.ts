@@ -13,9 +13,14 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { BucketEncryptedFields, PrivacyBucketRaw } from "../privacy-bucket.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { BucketId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  BucketId,
+  PrivacyBucketEncryptedInput,
+  PrivacyBucketWire,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -25,7 +30,7 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-function makeEncryptedFields(): BucketEncryptedFields {
+function makeEncryptedFields(): PrivacyBucketEncryptedInput {
   return {
     name: "Friends",
     description: "Visible to close friends",
@@ -33,9 +38,9 @@ function makeEncryptedFields(): BucketEncryptedFields {
 }
 
 function makeServerBucket(
-  fields: BucketEncryptedFields = makeEncryptedFields(),
+  fields: PrivacyBucketEncryptedInput = makeEncryptedFields(),
   overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
-): PrivacyBucketRaw {
+): PrivacyBucketWire {
   return {
     id: brandId<BucketId>("bkt_test0001"),
     systemId: brandId<SystemId>("sys_test001"),
@@ -66,7 +71,7 @@ describe("decryptPrivacyBucket", () => {
   });
 
   it("handles null description", () => {
-    const fields: BucketEncryptedFields = { name: "Private", description: null };
+    const fields: PrivacyBucketEncryptedInput = { name: "Private", description: null };
     const raw = makeServerBucket(fields);
     const result = decryptPrivacyBucket(raw, masterKey);
     expect(result.description).toBeNull();
@@ -115,7 +120,7 @@ describe("decryptPrivacyBucketPage", () => {
   });
 
   it("handles empty data array", () => {
-    const page = { data: [] as PrivacyBucketRaw[], nextCursor: null };
+    const page = { data: [] as PrivacyBucketWire[], nextCursor: null };
     const result = decryptPrivacyBucketPage(page, masterKey);
     expect(result.data).toEqual([]);
     expect(result.nextCursor).toBeNull();
@@ -142,7 +147,7 @@ describe("encryptBucketInput", () => {
   });
 
   it("round-trips null description", () => {
-    const fields: BucketEncryptedFields = { name: "Secret", description: null };
+    const fields: PrivacyBucketEncryptedInput = { name: "Secret", description: null };
     const { encryptedData } = encryptBucketInput(fields, masterKey);
     const raw = { ...makeServerBucket(), encryptedData };
     const bucket = decryptPrivacyBucket(raw, masterKey);
@@ -172,7 +177,7 @@ describe("encryptBucketUpdate", () => {
   });
 
   it("round-trips null description", () => {
-    const fields: BucketEncryptedFields = { name: "Hidden", description: null };
+    const fields: PrivacyBucketEncryptedInput = { name: "Hidden", description: null };
     const { encryptedData } = encryptBucketUpdate(fields, 3, masterKey);
     const raw = { ...makeServerBucket(), encryptedData, version: 3 };
     const bucket = decryptPrivacyBucket(raw, masterKey);
@@ -182,13 +187,13 @@ describe("encryptBucketUpdate", () => {
   });
 });
 
-describe("assertBucketEncryptedFields", () => {
+describe("decryptPrivacyBucket Zod validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = {
       ...makeServerBucket(),
       encryptedData: makeBase64Blob("not-an-object", masterKey),
     };
-    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(/object/);
   });
 
   it("throws when blob is missing name field", () => {
@@ -196,9 +201,7 @@ describe("assertBucketEncryptedFields", () => {
       ...makeServerBucket(),
       encryptedData: makeBase64Blob({ description: null }, masterKey),
     };
-    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(
-      "missing required string field: name",
-    );
+    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(/"name"/);
   });
 
   it("throws when description key is missing", () => {
@@ -206,9 +209,7 @@ describe("assertBucketEncryptedFields", () => {
       ...makeServerBucket(),
       encryptedData: makeBase64Blob({ name: "Test" }, masterKey),
     };
-    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(
-      "missing required field: description",
-    );
+    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(/"description"/);
   });
 
   it("throws when description is invalid type", () => {
@@ -216,8 +217,6 @@ describe("assertBucketEncryptedFields", () => {
       ...makeServerBucket(),
       encryptedData: makeBase64Blob({ name: "Test", description: 42 }, masterKey),
     };
-    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(
-      "description must be string or null",
-    );
+    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(/"description"/);
   });
 });

@@ -17,12 +17,14 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { InnerWorldEntityPage as InnerWorldEntityWirePage } from "@pluralscape/data/transforms/innerworld-entity";
 import type {
-  InnerWorldEntityDecrypted,
-  InnerWorldEntityPage as InnerWorldEntityRawPage,
-  InnerWorldEntityRaw,
-} from "@pluralscape/data/transforms/innerworld-entity";
-import type { Archived, InnerWorldEntityId, InnerWorldRegionId } from "@pluralscape/types";
+  Archived,
+  InnerWorldEntity,
+  InnerWorldEntityId,
+  InnerWorldEntityWire,
+  InnerWorldRegionId,
+} from "@pluralscape/types";
 
 interface InnerWorldEntityListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -33,11 +35,8 @@ interface InnerWorldEntityListOpts extends SystemIdOverride {
 export function useInnerWorldEntity(
   entityId: InnerWorldEntityId,
   opts?: SystemIdOverride,
-): DataQuery<InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>> {
-  return useOfflineFirstQuery<
-    InnerWorldEntityRaw,
-    InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
-  >({
+): DataQuery<InnerWorldEntity | Archived<InnerWorldEntity>> {
+  return useOfflineFirstQuery<InnerWorldEntityWire, InnerWorldEntity | Archived<InnerWorldEntity>>({
     queryKey: ["innerworld_entities", entityId],
     table: "innerworld_entities",
     entityId,
@@ -46,19 +45,19 @@ export function useInnerWorldEntity(
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
       trpc.innerworld.entity.get.useQuery({ systemId, entityId }, { enabled, select }) as DataQuery<
-        InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
+        InnerWorldEntity | Archived<InnerWorldEntity>
       >,
   });
 }
 
 export function useInnerWorldEntitiesList(
   opts?: InnerWorldEntityListOpts,
-): DataListQuery<InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>> {
+): DataListQuery<InnerWorldEntity | Archived<InnerWorldEntity>> {
   const regionId = opts?.regionId ?? null;
 
   return useOfflineFirstInfiniteQuery<
-    InnerWorldEntityRaw,
-    InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
+    InnerWorldEntityWire,
+    InnerWorldEntity | Archived<InnerWorldEntity>
   >({
     queryKey: ["innerworld_entities", "list", opts?.includeArchived ?? false, regionId],
     table: "innerworld_entities",
@@ -87,10 +86,10 @@ export function useInnerWorldEntitiesList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: InnerWorldEntityRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: InnerWorldEntityWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>>,
+      ) as DataListQuery<InnerWorldEntity | Archived<InnerWorldEntity>>,
   });
 }
 

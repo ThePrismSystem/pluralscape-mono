@@ -13,12 +13,13 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { StructureEntityEncryptedInput, StructureEntityRaw } from "../structure-entity.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   HexColor,
+  SystemStructureEntityEncryptedInput,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
+  SystemStructureEntityWire,
   SystemId,
 } from "@pluralscape/types";
 
@@ -32,7 +33,7 @@ beforeAll(async () => {
 
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeEncryptedFields(): StructureEntityEncryptedInput {
+function makeEncryptedFields(): SystemStructureEntityEncryptedInput {
   return {
     name: "Phoenix",
     description: "A fiery entity",
@@ -42,7 +43,7 @@ function makeEncryptedFields(): StructureEntityEncryptedInput {
   };
 }
 
-function makeRaw(overrides?: Partial<StructureEntityRaw>): StructureEntityRaw {
+function makeRaw(overrides?: Partial<SystemStructureEntityWire>): SystemStructureEntityWire {
   return {
     id: brandId<SystemStructureEntityId>("se_001"),
     systemId: brandId<SystemId>("sys_test"),
@@ -72,7 +73,7 @@ describe("decryptStructureEntity", () => {
   });
 
   it("handles null optional fields", () => {
-    const fields: StructureEntityEncryptedInput = {
+    const fields: SystemStructureEntityEncryptedInput = {
       name: "Ghost",
       description: null,
       emoji: null,
@@ -142,7 +143,7 @@ describe("encryptStructureEntityUpdate", () => {
   });
 });
 
-describe("StructureEntityEncryptedInputSchema validation", () => {
+describe("SystemStructureEntityEncryptedInputSchema validation", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = makeRaw({ encryptedData: makeBase64Blob("string", masterKey) });
     expect(() => decryptStructureEntity(raw, masterKey)).toThrow(/expected object/);

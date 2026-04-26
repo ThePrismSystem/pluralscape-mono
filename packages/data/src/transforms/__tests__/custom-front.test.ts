@@ -12,9 +12,14 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { CustomFrontEncryptedInput } from "../custom-front.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { CustomFrontId, HexColor, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  CustomFrontEncryptedInput,
+  CustomFrontId,
+  HexColor,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 

@@ -11,8 +11,8 @@ import { mapped, parseHexColor, skipped, type MapperResult } from "@pluralscape/
 import { normalisePkColor } from "./pk-mapper-helpers.js";
 
 import type { PKGroup } from "../validators/pk-payload.js";
-import type { GroupEncryptedInput } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
+import type { GroupEncryptedInput } from "@pluralscape/types";
 import type { CreateGroupBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 

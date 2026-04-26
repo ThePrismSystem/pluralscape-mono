@@ -17,14 +17,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  FrontingCommentPage,
-  FrontingCommentRaw,
-} from "@pluralscape/data/transforms/fronting-comment";
+import type { FrontingCommentPage } from "@pluralscape/data/transforms/fronting-comment";
 import type {
   Archived,
   FrontingComment,
   FrontingCommentId,
+  FrontingCommentWire,
   FrontingSessionId,
 } from "@pluralscape/types";
 
@@ -38,7 +36,7 @@ export function useFrontingComment(
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
 ): DataQuery<FrontingComment | Archived<FrontingComment>> {
-  return useOfflineFirstQuery<FrontingCommentRaw, FrontingComment | Archived<FrontingComment>>({
+  return useOfflineFirstQuery<FrontingCommentWire, FrontingComment | Archived<FrontingComment>>({
     queryKey: ["fronting_comments", commentId],
     table: "fronting_comments",
     entityId: commentId,
@@ -58,7 +56,7 @@ export function useFrontingCommentsList(
   opts?: FrontingCommentListOpts,
 ): DataListQuery<FrontingComment | Archived<FrontingComment>> {
   return useOfflineFirstInfiniteQuery<
-    FrontingCommentRaw,
+    FrontingCommentWire,
     FrontingComment | Archived<FrontingComment>
   >({
     queryKey: ["fronting_comments", "list", sessionId, opts?.includeArchived ?? false],

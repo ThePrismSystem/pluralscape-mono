@@ -94,13 +94,25 @@ export type InnerWorldEntityEncryptedFields =
 // when an entity diverges from the standard pattern.
 
 /**
+ * Distributes `Pick<T, K>` over a discriminated union so each variant
+ * independently picks its own subset of `K`. The naïve `Pick<Union, K>`
+ * would only project keys present on every variant; the conditional must
+ * be over a *generic* parameter (not the concrete union alias) for TS to
+ * actually distribute.
+ */
+type DistributivePick<T, K extends PropertyKey> = T extends unknown
+  ? Pick<T, Extract<keyof T, K>>
+  : never;
+
+/**
  * Distributive `Pick`: result is a union of per-variant projections (one `Pick<...>`
  * per discriminated variant — `MemberEntity`, `LandmarkEntity`, `StructureEntityEntity`),
  * not a single intersected object type.
  */
-export type InnerWorldEntityEncryptedInput = InnerWorldEntity extends unknown
-  ? Pick<InnerWorldEntity, InnerWorldEntityEncryptedFields & keyof InnerWorldEntity>
-  : never;
+export type InnerWorldEntityEncryptedInput = DistributivePick<
+  InnerWorldEntity,
+  InnerWorldEntityEncryptedFields
+>;
 
 /**
  * Distributes `Omit<T, K>` over a discriminated union so each variant

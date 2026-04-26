@@ -12,8 +12,8 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { FrontingCommentPlaintext } from "../fronting-comment.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
+import type { FrontingCommentEncryptedInput } from "@pluralscape/types";
 import type {
   CustomFrontId,
   FrontingCommentId,
@@ -52,7 +52,7 @@ const BASE_COMMENT_RESULT = {
 
 describe("decryptFrontingComment", () => {
   it("decrypts content from encrypted blob and passes through transparent fields", () => {
-    const encrypted: FrontingCommentPlaintext = {
+    const encrypted: FrontingCommentEncryptedInput = {
       content: "This is a fronting comment.",
     };
     const raw = { ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
@@ -73,7 +73,7 @@ describe("decryptFrontingComment", () => {
   });
 
   it("handles non-null customFrontId and null memberId", () => {
-    const encrypted: FrontingCommentPlaintext = { content: "Custom front comment." };
+    const encrypted: FrontingCommentEncryptedInput = { content: "Custom front comment." };
     const raw = {
       ...BASE_COMMENT_RESULT,
       memberId: null,
@@ -102,7 +102,7 @@ describe("decryptFrontingComment", () => {
 
   it("throws when blob was encrypted with a different key", () => {
     const otherKey = generateMasterKey();
-    const encrypted: FrontingCommentPlaintext = { content: "secret" };
+    const encrypted: FrontingCommentEncryptedInput = { content: "secret" };
     const raw = { ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
     expect(() => decryptFrontingComment(raw, otherKey)).toThrow();
   });
@@ -116,7 +116,7 @@ describe("decryptFrontingComment", () => {
   });
 
   it("returns archived variant when raw.archived is true", () => {
-    const encrypted: FrontingCommentPlaintext = { content: "Archived comment." };
+    const encrypted: FrontingCommentEncryptedInput = { content: "Archived comment." };
     const archivedAt = 1_700_002_000_000 as UnixMillis;
     const raw = {
       ...BASE_COMMENT_RESULT,
@@ -138,7 +138,7 @@ describe("decryptFrontingComment", () => {
 
 describe("decryptFrontingCommentPage", () => {
   it("decrypts all items and passes through nextCursor", () => {
-    const encrypted: FrontingCommentPlaintext = { content: "Page item." };
+    const encrypted: FrontingCommentEncryptedInput = { content: "Page item." };
     const raw = {
       data: [{ ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) }],
       nextCursor: "fcom_cursor_abc",
@@ -158,8 +158,8 @@ describe("decryptFrontingCommentPage", () => {
   });
 
   it("decrypts multiple items", () => {
-    const enc1: FrontingCommentPlaintext = { content: "First comment." };
-    const enc2: FrontingCommentPlaintext = { content: "Second comment." };
+    const enc1: FrontingCommentEncryptedInput = { content: "First comment." };
+    const enc2: FrontingCommentEncryptedInput = { content: "Second comment." };
     const raw = {
       data: [
         {
@@ -189,7 +189,7 @@ describe("decryptFrontingCommentPage", () => {
 
 describe("encryptFrontingCommentInput", () => {
   it("returns an object with an encryptedData string", () => {
-    const input: FrontingCommentPlaintext = { content: "New comment content." };
+    const input: FrontingCommentEncryptedInput = { content: "New comment content." };
     const result = encryptFrontingCommentInput(input, masterKey);
 
     expect(typeof result.encryptedData).toBe("string");
@@ -197,7 +197,7 @@ describe("encryptFrontingCommentInput", () => {
   });
 
   it("round-trips: decryptFrontingComment recovers original content", () => {
-    const input: FrontingCommentPlaintext = { content: "Round-trip test." };
+    const input: FrontingCommentEncryptedInput = { content: "Round-trip test." };
     const { encryptedData } = encryptFrontingCommentInput(input, masterKey);
 
     const raw = { ...BASE_COMMENT_RESULT, encryptedData };
@@ -206,7 +206,7 @@ describe("encryptFrontingCommentInput", () => {
   });
 
   it("produces different ciphertext on each call (nonce randomness)", () => {
-    const input: FrontingCommentPlaintext = { content: "Same content." };
+    const input: FrontingCommentEncryptedInput = { content: "Same content." };
     const r1 = encryptFrontingCommentInput(input, masterKey);
     const r2 = encryptFrontingCommentInput(input, masterKey);
     expect(r1.encryptedData).not.toBe(r2.encryptedData);
@@ -217,7 +217,7 @@ describe("encryptFrontingCommentInput", () => {
 
 describe("encryptFrontingCommentUpdate", () => {
   it("encrypts content and preserves the version number", () => {
-    const data: FrontingCommentPlaintext = { content: "Updated content." };
+    const data: FrontingCommentEncryptedInput = { content: "Updated content." };
     const result = encryptFrontingCommentUpdate(data, 3, masterKey);
 
     expect(typeof result.encryptedData).toBe("string");
@@ -225,7 +225,7 @@ describe("encryptFrontingCommentUpdate", () => {
   });
 
   it("round-trips: decryptFrontingComment recovers updated content", () => {
-    const data: FrontingCommentPlaintext = { content: "Updated round-trip." };
+    const data: FrontingCommentEncryptedInput = { content: "Updated round-trip." };
     const { encryptedData } = encryptFrontingCommentUpdate(data, 2, masterKey);
 
     const raw = { ...BASE_COMMENT_RESULT, encryptedData, version: 2 };

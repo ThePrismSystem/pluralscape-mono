@@ -18,8 +18,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { MemberPage as MemberRawPage, MemberRaw } from "@pluralscape/data/transforms/member";
-import type { Archived, GroupId, Member, MemberId } from "@pluralscape/types";
+import type { MemberPage as MemberWirePage } from "@pluralscape/data/transforms/member";
+import type { Archived, GroupId, Member, MemberId, MemberWire } from "@pluralscape/types";
 
 interface MemberListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -31,7 +31,7 @@ export function useMember(
   memberId: MemberId,
   opts?: SystemIdOverride,
 ): DataQuery<Member | Archived<Member>> {
-  return useOfflineFirstQuery<MemberRaw, Member | Archived<Member>>({
+  return useOfflineFirstQuery<MemberWire, Member | Archived<Member>>({
     queryKey: ["members", memberId],
     table: "members",
     entityId: memberId,
@@ -46,7 +46,7 @@ export function useMember(
 }
 
 export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Archived<Member>> {
-  return useOfflineFirstInfiniteQuery<MemberRaw, Member | Archived<Member>>({
+  return useOfflineFirstInfiniteQuery<MemberWire, Member | Archived<Member>>({
     queryKey: ["members", "list", opts?.includeArchived ?? false],
     table: "members",
     rowTransform: rowToMember,
@@ -63,7 +63,7 @@ export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Ar
         },
         {
           enabled,
-          getNextPageParam: (lastPage: MemberRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: MemberWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<Member | Archived<Member>>,

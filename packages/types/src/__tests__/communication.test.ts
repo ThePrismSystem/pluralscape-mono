@@ -264,7 +264,7 @@ describe("AcknowledgementRequest", () => {
   it("has correct field types", () => {
     expectTypeOf<AcknowledgementRequest["id"]>().toEqualTypeOf<AcknowledgementId>();
     expectTypeOf<AcknowledgementRequest["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<AcknowledgementRequest["createdByMemberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<AcknowledgementRequest["createdByMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<AcknowledgementRequest["targetMemberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<AcknowledgementRequest["message"]>().toBeString();
     expectTypeOf<AcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();

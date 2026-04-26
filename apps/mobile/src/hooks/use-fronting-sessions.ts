@@ -23,11 +23,14 @@ import {
 
 import type { LocalDatabase } from "../data/local-database.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { FrontingSessionPage as FrontingSessionWirePage } from "@pluralscape/data/transforms/fronting-session";
 import type {
-  FrontingSessionPage as FrontingSessionRawPage,
-  FrontingSessionRaw,
-} from "@pluralscape/data/transforms/fronting-session";
-import type { Archived, FrontingSession, FrontingSessionId, SystemId } from "@pluralscape/types";
+  Archived,
+  FrontingSession,
+  FrontingSessionId,
+  FrontingSessionWire,
+  SystemId,
+} from "@pluralscape/types";
 
 // Remains as RouterOutput because getActive returns a composite shape
 // (sessions + isCofronting + entityMemberMap) with no transform-level wire type.
@@ -48,7 +51,7 @@ export function useFrontingSession(
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
 ): DataQuery<FrontingSession | Archived<FrontingSession>> {
-  return useOfflineFirstQuery<FrontingSessionRaw, FrontingSession | Archived<FrontingSession>>({
+  return useOfflineFirstQuery<FrontingSessionWire, FrontingSession | Archived<FrontingSession>>({
     queryKey: ["fronting_sessions", sessionId],
     table: "fronting_sessions",
     entityId: sessionId,
@@ -66,7 +69,7 @@ export function useFrontingSessionsList(
   opts?: FrontingSessionListOpts,
 ): DataListQuery<FrontingSession | Archived<FrontingSession>> {
   return useOfflineFirstInfiniteQuery<
-    FrontingSessionRaw,
+    FrontingSessionWire,
     FrontingSession | Archived<FrontingSession>
   >({
     queryKey: [
@@ -103,7 +106,7 @@ export function useFrontingSessionsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: FrontingSessionRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: FrontingSessionWirePage) => lastPage.nextCursor,
           select,
         },
       ) as DataListQuery<FrontingSession | Archived<FrontingSession>>,
@@ -131,7 +134,9 @@ export function useStartSession(): TRPCMutation<
   });
 }
 
-type EndSessionContext = { readonly previousSession: FrontingSessionRaw | undefined };
+type EndSessionContext = {
+  readonly previousSession: RouterOutput["frontingSession"]["get"] | undefined;
+};
 
 // Kept as manual tRPC mutation — optimistic update with onMutate/onError/onSettled
 // rollback does not fit the useDomainMutation factory pattern.

@@ -22,13 +22,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  PollDecrypted,
-  PollPage as PollRawPage,
-  PollRaw,
-  PollVoteDecrypted,
-} from "@pluralscape/data/transforms/poll";
-import type { Archived, PollId, PollStatus } from "@pluralscape/types";
+import type { PollPage as PollWirePage } from "@pluralscape/data/transforms/poll";
+import type { Archived, Poll, PollId, PollStatus, PollVote, PollWire } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 // These remain as RouterOutput derivations because the endpoints return non-standard
@@ -37,7 +32,7 @@ type RawPollResults = RouterOutput["poll"]["results"];
 type RawPollVotePage = RouterOutput["poll"]["listVotes"];
 
 type PollVotePage = {
-  readonly data: (PollVoteDecrypted | Archived<PollVoteDecrypted>)[];
+  readonly data: (PollVote | Archived<PollVote>)[];
   readonly nextCursor: string | null;
 };
 
@@ -52,11 +47,8 @@ interface PollVoteListOpts extends SystemIdOverride {
   readonly includeArchived?: boolean;
 }
 
-export function usePoll(
-  pollId: PollId,
-  opts?: SystemIdOverride,
-): DataQuery<PollDecrypted | Archived<PollDecrypted>> {
-  return useOfflineFirstQuery<PollRaw, PollDecrypted | Archived<PollDecrypted>>({
+export function usePoll(pollId: PollId, opts?: SystemIdOverride): DataQuery<Poll | Archived<Poll>> {
+  return useOfflineFirstQuery<PollWire, Poll | Archived<Poll>>({
     queryKey: ["polls", pollId],
     table: "own_polls",
     entityId: pollId,
@@ -65,15 +57,13 @@ export function usePoll(
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled, select }) =>
       trpc.poll.get.useQuery({ systemId, pollId }, { enabled, select }) as DataQuery<
-        PollDecrypted | Archived<PollDecrypted>
+        Poll | Archived<Poll>
       >,
   });
 }
 
-export function usePollsList(
-  opts?: PollListOpts,
-): DataListQuery<PollDecrypted | Archived<PollDecrypted>> {
-  return useOfflineFirstInfiniteQuery<PollRaw, PollDecrypted | Archived<PollDecrypted>>({
+export function usePollsList(opts?: PollListOpts): DataListQuery<Poll | Archived<Poll>> {
+  return useOfflineFirstInfiniteQuery<PollWire, Poll | Archived<Poll>>({
     queryKey: ["polls", "list", opts?.includeArchived ?? false, opts?.status],
     table: "own_polls",
     rowTransform: rowToPoll,
@@ -90,10 +80,10 @@ export function usePollsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: PollRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: PollWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<PollDecrypted | Archived<PollDecrypted>>,
+      ) as DataListQuery<Poll | Archived<Poll>>,
   });
 }
 
@@ -121,9 +111,7 @@ export function usePollVotes(
       return {
         ...data,
         pages: data.pages.map((page) => ({
-          data: page.data.map((item): PollVoteDecrypted | Archived<PollVoteDecrypted> =>
-            decryptPollVote(item, key),
-          ),
+          data: page.data.map((item): PollVote | Archived<PollVote> => decryptPollVote(item, key)),
           nextCursor: page.nextCursor,
         })),
       };
