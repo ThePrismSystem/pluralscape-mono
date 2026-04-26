@@ -17,12 +17,15 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { RelationshipPage as RelationshipWirePage } from "@pluralscape/data/transforms/relationship";
 import type {
-  RelationshipDecrypted,
-  RelationshipPage as RelationshipRawPage,
-  RelationshipRaw,
-} from "@pluralscape/data/transforms/relationship";
-import type { Archived, MemberId, RelationshipId, RelationshipType } from "@pluralscape/types";
+  Archived,
+  MemberId,
+  Relationship,
+  RelationshipId,
+  RelationshipType,
+  RelationshipWire,
+} from "@pluralscape/types";
 
 interface RelationshipListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -33,11 +36,8 @@ interface RelationshipListOpts extends SystemIdOverride {
 export function useRelationship(
   relationshipId: RelationshipId,
   opts?: SystemIdOverride,
-): DataQuery<RelationshipDecrypted | Archived<RelationshipDecrypted>> {
-  return useOfflineFirstQuery<
-    RelationshipRaw,
-    RelationshipDecrypted | Archived<RelationshipDecrypted>
-  >({
+): DataQuery<Relationship | Archived<Relationship>> {
+  return useOfflineFirstQuery<RelationshipWire, Relationship | Archived<Relationship>>({
     queryKey: ["relationships", relationshipId],
     table: "relationships",
     entityId: relationshipId,
@@ -48,17 +48,14 @@ export function useRelationship(
       trpc.relationship.get.useQuery(
         { systemId, relationshipId },
         { enabled, select },
-      ) as DataQuery<RelationshipDecrypted | Archived<RelationshipDecrypted>>,
+      ) as DataQuery<Relationship | Archived<Relationship>>,
   });
 }
 
 export function useRelationshipsList(
   opts?: RelationshipListOpts,
-): DataListQuery<RelationshipDecrypted | Archived<RelationshipDecrypted>> {
-  return useOfflineFirstInfiniteQuery<
-    RelationshipRaw,
-    RelationshipDecrypted | Archived<RelationshipDecrypted>
-  >({
+): DataListQuery<Relationship | Archived<Relationship>> {
+  return useOfflineFirstInfiniteQuery<RelationshipWire, Relationship | Archived<Relationship>>({
     queryKey: ["relationships", "list", opts?.memberId, opts?.type],
     table: "relationships",
     rowTransform: rowToRelationship,
@@ -90,10 +87,10 @@ export function useRelationshipsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: RelationshipRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: RelationshipWirePage) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<RelationshipDecrypted | Archived<RelationshipDecrypted>>,
+      ) as DataListQuery<Relationship | Archived<Relationship>>,
   });
 }
 

@@ -53,7 +53,6 @@ import type {
 import type { MessageRaw } from "@pluralscape/data/transforms/message";
 import type { NoteRaw } from "@pluralscape/data/transforms/note";
 import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
-import type { RelationshipRaw } from "@pluralscape/data/transforms/relationship";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { StructureEntityRaw } from "@pluralscape/data/transforms/structure-entity";
 import type { StructureEntityTypeRaw } from "@pluralscape/data/transforms/structure-entity-type";
@@ -95,6 +94,7 @@ import type {
   PollVoteId,
   RelationshipId,
   RelationshipType,
+  RelationshipWire,
   SnapshotContent,
   SystemSettingsId,
   SystemSnapshotId,
@@ -633,13 +633,12 @@ export function makeRawPollVote(
 
 export function makeRawRelationship(
   id: string,
-  opts?: { encryptedData?: string | null },
-  overrides?: Partial<RelationshipRaw>,
-): RelationshipRaw {
+  opts?: { encryptedData?: string },
+  overrides?: Partial<RelationshipWire>,
+): RelationshipWire {
   const encryptedData =
-    opts?.encryptedData !== undefined
-      ? opts.encryptedData
-      : encryptRelationshipInput({ label: `Label ${id}` }, TEST_MASTER_KEY).encryptedData;
+    opts?.encryptedData ??
+    encryptRelationshipInput({ label: `Label ${id}` }, TEST_MASTER_KEY).encryptedData;
 
   return {
     id: brandId<RelationshipId>(id),
@@ -649,6 +648,8 @@ export function makeRawRelationship(
     type: "sibling" as RelationshipType,
     bidirectional: true,
     createdAt: NOW,
+    updatedAt: NOW,
+    version: 1,
     archived: false,
     archivedAt: null,
     encryptedData,

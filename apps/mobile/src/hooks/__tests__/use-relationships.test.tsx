@@ -135,18 +135,6 @@ describe("useRelationship", () => {
     expect(result.current.data?.archived).toBe(false);
   });
 
-  it("returns label: null when encryptedData is null", async () => {
-    fixtures.set("relationship.get", makeRawRelationship("rel_2", { encryptedData: null }));
-    const { result } = renderHookWithProviders(() =>
-      useRelationship(brandId<RelationshipId>("rel_2")),
-    );
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
-    expect(result.current.data?.label).toBeNull();
-  });
-
   it("does not fetch when masterKey is null", () => {
     const { result } = renderHookWithProviders(
       () => useRelationship(brandId<RelationshipId>("rel_1")),

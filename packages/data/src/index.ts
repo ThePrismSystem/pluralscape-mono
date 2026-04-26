@@ -45,7 +45,6 @@ export {
   encryptRelationshipInput,
   encryptRelationshipUpdate,
 } from "./transforms/relationship.js";
-export type { RelationshipEncryptedInput } from "./transforms/relationship.js";
 
 export {
   decryptFieldDefinition,

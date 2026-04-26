@@ -13,9 +13,15 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { RelationshipEncryptedInput, RelationshipRaw } from "../relationship.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { MemberId, RelationshipId, RelationshipType, SystemId } from "@pluralscape/types";
+import type {
+  MemberId,
+  RelationshipEncryptedInput,
+  RelationshipId,
+  RelationshipType,
+  RelationshipWire,
+  SystemId,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -27,7 +33,7 @@ beforeAll(async () => {
 
 const NOW = toUnixMillis(1_700_000_000_000);
 
-function makeRawRelationship(overrides?: Partial<RelationshipRaw>): RelationshipRaw {
+function makeRawRelationship(overrides?: Partial<RelationshipWire>): RelationshipWire {
   return {
     id: brandId<RelationshipId>("rel_001"),
     systemId: brandId<SystemId>("sys_test"),
@@ -36,6 +42,8 @@ function makeRawRelationship(overrides?: Partial<RelationshipRaw>): Relationship
     type: "sibling" as RelationshipType,
     bidirectional: true,
     createdAt: NOW,
+    updatedAt: NOW,
+    version: 1,
     encryptedData: encryptAndEncodeT1(
       { label: "Sibling bond" } satisfies RelationshipEncryptedInput,
       masterKey,
@@ -55,12 +63,6 @@ describe("decryptRelationship", () => {
     expect(result.type).toBe("sibling");
     expect(result.bidirectional).toBe(true);
     expect(result.archived).toBe(false);
-  });
-
-  it("returns label: null when encryptedData is null", () => {
-    const raw = makeRawRelationship({ encryptedData: null });
-    const result = decryptRelationship(raw, masterKey);
-    expect(result.label).toBeNull();
   });
 
   it("handles null member IDs", () => {
