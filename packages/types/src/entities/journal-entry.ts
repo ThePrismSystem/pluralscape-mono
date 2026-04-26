@@ -169,13 +169,10 @@ export type ArchivedJournalEntry = Archived<JournalEntry>;
  * - `JournalEntryEncryptedInput = Pick<JournalEntry, JournalEntryEncryptedFields>`
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextJournalEntry parity)
  */
-export type JournalEntryEncryptedFields =
-  | "title"
-  | "author"
-  | "blocks"
-  | "tags"
-  | "linkedEntities"
-  | "frontingSnapshots";
+export type JournalEntryEncryptedFields = Exclude<
+  keyof JournalEntry,
+  "id" | "systemId" | "frontingSessionId" | "archived" | keyof AuditMetadata
+>;
 
 /**
  * Server-visible JournalEntry metadata — raw Drizzle row shape.
