@@ -45,7 +45,6 @@ import type { AcknowledgementRaw } from "@pluralscape/data/transforms/acknowledg
 import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message";
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
-import type { CustomFrontRaw } from "@pluralscape/data/transforms/custom-front";
 import type { FrontingCommentRaw } from "@pluralscape/data/transforms/fronting-comment";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
 import type { FrontingSessionRaw } from "@pluralscape/data/transforms/fronting-session";
@@ -78,6 +77,7 @@ import type {
   ChannelId,
   CheckInRecordId,
   CustomFrontId,
+  CustomFrontWire,
   FieldDefinitionId,
   FieldValueId,
   FrontingCommentId,
@@ -230,8 +230,8 @@ export function makeRawFieldValue(id: string, overrides?: Partial<FieldValueRaw>
 
 export function makeRawCustomFront(
   id: string,
-  overrides?: Partial<CustomFrontRaw>,
-): CustomFrontRaw {
+  overrides?: Partial<CustomFrontWire>,
+): CustomFrontWire {
   const encrypted = encryptCustomFrontInput(
     {
       name: `Front ${id}`,

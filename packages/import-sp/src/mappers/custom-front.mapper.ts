@@ -10,7 +10,7 @@ import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPFrontStatus } from "../sources/sp-types.js";
-import type { CustomFrontEncryptedInput } from "@pluralscape/data";
+import type { CustomFrontEncryptedInput } from "@pluralscape/types";
 
 export interface MappedCustomFront {
   readonly encrypted: CustomFrontEncryptedInput;

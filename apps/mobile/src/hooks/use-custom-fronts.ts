@@ -17,11 +17,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  CustomFrontPage as CustomFrontRawPage,
-  CustomFrontRaw,
-} from "@pluralscape/data/transforms/custom-front";
-import type { Archived, CustomFront, CustomFrontId } from "@pluralscape/types";
+import type { CustomFrontPage as CustomFrontRawPage } from "@pluralscape/data/transforms/custom-front";
+import type { Archived, CustomFront, CustomFrontId, CustomFrontWire } from "@pluralscape/types";
 
 interface CustomFrontListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -32,7 +29,7 @@ export function useCustomFront(
   customFrontId: CustomFrontId,
   opts?: SystemIdOverride,
 ): DataQuery<CustomFront | Archived<CustomFront>> {
-  return useOfflineFirstQuery<CustomFrontRaw, CustomFront | Archived<CustomFront>>({
+  return useOfflineFirstQuery<CustomFrontWire, CustomFront | Archived<CustomFront>>({
     queryKey: ["custom_fronts", customFrontId],
     table: "custom_fronts",
     entityId: customFrontId,
@@ -49,7 +46,7 @@ export function useCustomFront(
 export function useCustomFrontsList(
   opts?: CustomFrontListOpts,
 ): DataListQuery<CustomFront | Archived<CustomFront>> {
-  return useOfflineFirstInfiniteQuery<CustomFrontRaw, CustomFront | Archived<CustomFront>>({
+  return useOfflineFirstInfiniteQuery<CustomFrontWire, CustomFront | Archived<CustomFront>>({
     queryKey: ["custom_fronts", "list", opts?.includeArchived ?? false],
     table: "custom_fronts",
     rowTransform: rowToCustomFront,
