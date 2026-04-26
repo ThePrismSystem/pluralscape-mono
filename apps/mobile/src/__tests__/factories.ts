@@ -60,7 +60,6 @@ import type {
   LifecycleEventEncryptedPayload,
   LifecycleEventRaw,
 } from "@pluralscape/data/transforms/lifecycle-event";
-import type { MemberRaw } from "@pluralscape/data/transforms/member";
 import type { MessageRaw } from "@pluralscape/data/transforms/message";
 import type { NoteRaw } from "@pluralscape/data/transforms/note";
 import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
@@ -89,6 +88,7 @@ import type {
   InnerWorldRegionId,
   LifecycleEventId,
   MemberId,
+  MemberWire,
   MessageId,
   EncryptedBase64,
   NoteId,
@@ -488,7 +488,7 @@ export function makeRawLifecycleEvent(
 
 // ── Member ───────────────────────────────────────────────────────────
 
-export function makeRawMember(id: string, overrides?: Partial<MemberRaw>): MemberRaw {
+export function makeRawMember(id: string, overrides?: Partial<MemberWire>): MemberWire {
   const encrypted = encryptMemberInput(
     {
       name: `Member ${id}`,

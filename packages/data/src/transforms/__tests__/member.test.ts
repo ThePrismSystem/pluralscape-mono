@@ -14,9 +14,14 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { MemberEncryptedInput } from "../member.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { HexColor, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  HexColor,
+  MemberEncryptedInput,
+  MemberId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 

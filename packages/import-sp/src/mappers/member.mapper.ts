@@ -28,7 +28,7 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPMember } from "../sources/sp-types.js";
-import type { MemberEncryptedInput } from "@pluralscape/data";
+import type { MemberEncryptedInput } from "@pluralscape/types";
 import type { CreateMemberBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
