@@ -78,6 +78,108 @@ export function validateLifecycleMetadata(
   return schema.safeParse(metadata);
 }
 
+// ── Per-variant encrypted-input schemas ───────────────────────────
+// The discriminator (`eventType`) is plaintext on the wire, not inside
+// the blob, so `z.discriminatedUnion` is not applicable here. The
+// transform selects the per-variant schema via LIFECYCLE_EVENT_ENCRYPTED_SCHEMAS
+// keyed on `raw.eventType`.
+
+const baseEncrypted = { notes: z.string().nullable() } as const;
+
+const SplitEncryptedSchema = z.object(baseEncrypted).readonly();
+const FusionEncryptedSchema = z.object(baseEncrypted).readonly();
+const MergeEncryptedSchema = z.object(baseEncrypted).readonly();
+const UnmergeEncryptedSchema = z.object(baseEncrypted).readonly();
+const DiscoveryEncryptedSchema = z.object(baseEncrypted).readonly();
+const StructureEntityFormationEncryptedSchema = z.object(baseEncrypted).readonly();
+const StructureMoveEncryptedSchema = z.object(baseEncrypted).readonly();
+
+const DormancyStartEncryptedSchema = z
+  .object({
+    ...baseEncrypted,
+    relatedLifecycleEventId: brandedString<"LifecycleEventId">().nullable(),
+  })
+  .readonly();
+
+const DormancyEndEncryptedSchema = z
+  .object({
+    ...baseEncrypted,
+    relatedLifecycleEventId: brandedString<"LifecycleEventId">().nullable(),
+  })
+  .readonly();
+
+const ArchivalEncryptedSchema = z
+  .object({
+    ...baseEncrypted,
+    entity: z
+      .object({
+        entityType: z.string(),
+        entityId: z.string(),
+      })
+      .readonly(),
+  })
+  .readonly();
+
+const FormChangeEncryptedSchema = z
+  .object({
+    ...baseEncrypted,
+    previousForm: z.string().nullable(),
+    newForm: z.string().nullable(),
+  })
+  .readonly();
+
+const NameChangeEncryptedSchema = z
+  .object({
+    ...baseEncrypted,
+    previousName: z.string().nullable(),
+    newName: z.string(),
+  })
+  .readonly();
+
+const InnerworldMoveEncryptedSchema = z
+  .object({
+    ...baseEncrypted,
+    entityType: z.enum(["member", "landmark", "structure-entity"]),
+  })
+  .readonly();
+
+/** Union of all per-variant encrypted-input shapes. */
+export const LifecycleEventEncryptedInputSchema = z.union([
+  SplitEncryptedSchema,
+  FusionEncryptedSchema,
+  MergeEncryptedSchema,
+  UnmergeEncryptedSchema,
+  DormancyStartEncryptedSchema,
+  DormancyEndEncryptedSchema,
+  DiscoveryEncryptedSchema,
+  ArchivalEncryptedSchema,
+  StructureEntityFormationEncryptedSchema,
+  FormChangeEncryptedSchema,
+  NameChangeEncryptedSchema,
+  StructureMoveEncryptedSchema,
+  InnerworldMoveEncryptedSchema,
+]);
+
+/**
+ * Map of `eventType` → per-variant Zod schema, used by the transform to
+ * select the correct schema before parsing the decrypted blob.
+ */
+export const LIFECYCLE_EVENT_ENCRYPTED_SCHEMAS = {
+  split: SplitEncryptedSchema,
+  fusion: FusionEncryptedSchema,
+  merge: MergeEncryptedSchema,
+  unmerge: UnmergeEncryptedSchema,
+  "dormancy-start": DormancyStartEncryptedSchema,
+  "dormancy-end": DormancyEndEncryptedSchema,
+  discovery: DiscoveryEncryptedSchema,
+  archival: ArchivalEncryptedSchema,
+  "structure-entity-formation": StructureEntityFormationEncryptedSchema,
+  "form-change": FormChangeEncryptedSchema,
+  "name-change": NameChangeEncryptedSchema,
+  "structure-move": StructureMoveEncryptedSchema,
+  "innerworld-move": InnerworldMoveEncryptedSchema,
+} as const;
+
 // ── Plaintext metadata schema (loose for body validation) ─────────
 
 const PlaintextMetadataSchema = z.object({

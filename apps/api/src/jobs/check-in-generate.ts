@@ -8,7 +8,7 @@ import { computeNextCheckInAt } from "../lib/timer-scheduling.js";
 import { CHECK_IN_GENERATE_BATCH_SIZE } from "./jobs.constants.js";
 
 import type { JobHandler } from "@pluralscape/queue";
-import type { CheckInRecordId, SystemId, TimerId } from "@pluralscape/types";
+import type { CheckInRecordId, ServerInternal, SystemId, TimerId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Seconds per minute, used to convert interval minutes to milliseconds. */
@@ -86,7 +86,11 @@ export function createCheckInGenerateHandler(
           // Create the check-in record with idempotency key to prevent duplicates.
           // ON CONFLICT DO NOTHING ensures concurrent runs are safe.
           const recordId = brandId<CheckInRecordId>(createId(ID_PREFIXES.checkInRecord));
-          const idempotencyKey = computeIdempotencyKey(config.id, config.intervalMinutes, nowMs);
+          const idempotencyKey = computeIdempotencyKey(
+            config.id,
+            config.intervalMinutes,
+            nowMs,
+          ) as ServerInternal<string>;
 
           await db
             .insert(checkInRecords)

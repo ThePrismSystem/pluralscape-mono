@@ -18,6 +18,8 @@ import type { InnerWorldEntityType } from "./innerworld-entity.js";
  *
  * Intentionally does not extend AuditMetadata — lifecycle events are
  * append-only immutable records with their own timestamp semantics.
+ * `archived: false` is included to enable the `Archived<LifecycleEvent>`
+ * utility type for the archived variant.
  */
 interface LifecycleEventBase {
   readonly id: LifecycleEventId;
@@ -25,6 +27,7 @@ interface LifecycleEventBase {
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
   readonly notes: string | null;
+  readonly archived: false;
 }
 
 /** A member split into one or more new members. */
@@ -143,16 +146,31 @@ export type LifecycleEvent =
 export type LifecycleEventType = LifecycleEvent["eventType"];
 
 /**
- * Keys of `LifecycleEvent` that are encrypted client-side before the
- * server sees them. Plaintext siblings (`eventType`, `occurredAt`, and
+ * Keys of `LifecycleEvent` variants that are encrypted client-side before
+ * the server sees them. Plaintext siblings (`eventType`, `occurredAt`, and
  * the event-specific plaintext metadata — member/structure/entity/region
  * IDs) travel as separate request fields and are intentionally excluded.
+ *
+ * Because `LifecycleEvent` is a discriminated union with per-variant
+ * differences, this is the union of every key that may appear in any
+ * encrypted blob. The distributive `LifecycleEventEncryptedInput` below
+ * then projects each variant by its own key intersection, so no variant
+ * is forced to carry keys it does not own.
+ *
  * Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `LifecycleEventServerMetadata` (derived via `Omit`)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextLifecycleEvent parity)
  */
-export type LifecycleEventEncryptedFields = "notes";
+export type LifecycleEventEncryptedFields =
+  | "notes"
+  | "relatedLifecycleEventId"
+  | "previousForm"
+  | "newForm"
+  | "previousName"
+  | "newName"
+  | "entity"
+  | "entityType";
 
 // ── Canonical chain (see ADR-023) ────────────────────────────────────
 // LifecycleEventEncryptedInput → LifecycleEventServerMetadata
@@ -161,9 +179,14 @@ export type LifecycleEventEncryptedFields = "notes";
 // chain anchor above carries the meaning. Per-alias docs only appear
 // when an entity diverges from the standard pattern.
 
-/** Single-key projection over `"notes"` — not truncated. */
+/**
+ * Per-variant projection over encrypted keys. `Extract<keyof V, ...>`
+ * intersects the encrypted-fields union with each variant's own keys so
+ * that `Pick<SplitEvent, "relatedLifecycleEventId">` (which would error)
+ * never occurs — each variant contributes only the keys it actually owns.
+ */
 export type LifecycleEventEncryptedInput = LifecycleEvent extends unknown
-  ? Pick<LifecycleEvent, LifecycleEventEncryptedFields>
+  ? Pick<LifecycleEvent, Extract<keyof LifecycleEvent, LifecycleEventEncryptedFields>>
   : never;
 
 /**

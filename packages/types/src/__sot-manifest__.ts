@@ -60,6 +60,7 @@ import type {
 } from "./entities/channel.js";
 import type {
   CheckInRecord,
+  CheckInRecordResult,
   CheckInRecordServerMetadata,
   CheckInRecordWire,
 } from "./entities/check-in-record.js";
@@ -615,9 +616,11 @@ export type SotEntityManifest = {
   CheckInRecord: {
     domain: CheckInRecord;
     server: CheckInRecordServerMetadata;
+    result: CheckInRecordResult;
     wire: CheckInRecordWire;
-    // Hybrid entity: plaintext domain with optional `encryptedData` blob
-    // (server-only column; no keys-subset of `CheckInRecord`).
+    // Hybrid entity: plaintext domain with an optional `encryptedData`
+    // blob and a `ServerInternal<…>` `idempotencyKey`. No per-field
+    // encrypted-keys subset, so `encryptedFields` is `never`.
     encryptedFields: never;
   };
   // ── Cluster 8: Communication + engagement ─────────────────────────────

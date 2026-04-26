@@ -37,6 +37,7 @@ import type { components } from "../packages/api-client/src/generated/api-types.
 import type {
   AuditLogEntry,
   AuditLogEntryWire,
+  CheckInRecordWire,
   CustomFront,
   CustomFrontEncryptedFields,
   CustomFrontWire,
@@ -190,6 +191,15 @@ expectTypeOf<
   Equal<components["schemas"]["CanvasResponse"], InnerWorldCanvasWire>
 >().toEqualTypeOf<true>();
 
+// CheckInRecord is a hybrid (no `EncryptedFields`/`EncryptedInput`): the
+// domain is plaintext but the server row carries an optional encrypted
+// blob. `EncryptedWire<…>` strips the `ServerInternal<…>` `idempotencyKey`,
+// so this single check enforces both the plaintext envelope and the
+// nullable `encryptedData` shape on the wire.
+expectTypeOf<
+  Equal<components["schemas"]["CheckInRecordResponse"], CheckInRecordWire>
+>().toEqualTypeOf<true>();
+
 // ── OpenAPI ↔ Wire parity: Cluster 8 (deferred) ────────────────────
 //
 // Channel, ChatMessage, Note, BoardMessage, Poll, TimerConfig are
@@ -293,10 +303,15 @@ expectTypeOf<
   >
 >().toEqualTypeOf<true>();
 
+// `LifecycleEvent` is a discriminated union whose variants carry
+// different encrypted keys — a plain `Pick<Union, K>` would only accept
+// keys present on *every* variant. `DistributivePick` distributes the
+// pick over each member, intersecting with that member's own keys so
+// each variant contributes only the fields it actually owns.
 expectTypeOf<
   Equal<
     components["schemas"]["PlaintextLifecycleEvent"],
-    Serialize<Pick<LifecycleEvent, LifecycleEventEncryptedFields>>
+    Serialize<DistributivePick<LifecycleEvent, LifecycleEventEncryptedFields>>
   >
 >().toEqualTypeOf<true>();
 

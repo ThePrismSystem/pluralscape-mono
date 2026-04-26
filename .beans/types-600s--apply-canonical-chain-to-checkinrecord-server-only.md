@@ -1,11 +1,11 @@
 ---
 # types-600s
 title: Apply canonical chain to CheckInRecord (server-only encrypted payload)
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-25T19:17:08Z
-updated_at: 2026-04-25T19:17:11Z
+updated_at: 2026-04-26T10:24:13Z
 parent: ps-y4tb
 ---
 
@@ -43,3 +43,19 @@ Class A/B entities follow a uniform pattern (`Pick<X, XEncryptedFields>` for `En
 - [ ] OpenAPI parity uses G7 `Equal<MemberResponseOpenApi, MemberWire>` form
 - [ ] `pnpm types:check-sot` passes
 - [ ] CI green
+
+## Summary of Changes
+
+CheckInRecord (hybrid entity — plaintext domain + optional encrypted blob) now follows the canonical chain:
+
+- `idempotencyKey` annotated `ServerInternal<string> | null` (not `ServerInternal<string | null>` — the intersection collapses null branches, so the brand goes on the non-null side); PG and SQLite `idempotencyKey` columns mirror via `.$type<ServerInternal<string>>()`
+- `CheckInRecordResult = EncryptedWire<CheckInRecordServerMetadata>` and `CheckInRecordWire = Serialize<CheckInRecordResult>`
+- `__sot-manifest__` entry gains `result`; manifest test asserts the new shape
+- OpenAPI `CheckInRecordResponse` got a `required` array; G7 parity assertion added (`Equal<…CheckInRecordResponse, CheckInRecordWire>`)
+
+Two SoT-wide adjustments shipped alongside:
+
+- `StripServerInternal<T>` in `encrypted-wire.ts` widened to use `Extract<T[K], ServerInternal<unknown>>` so nullable server-only fields (`ServerInternal<X> | null`) are also stripped — the previous `extends` form missed unions
+- `__serverInternal` is now a real runtime `Symbol(...)` and re-exported from `@pluralscape/types`, so cross-package Drizzle column inferences over `.$type<ServerInternal<…>>()` can be named in declaration emit (was tripping TS4023)
+
+PR: refactor/ps-y4tb-batch2-entity-migrations (commit 002772a0)

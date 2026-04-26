@@ -6742,25 +6742,25 @@ export interface components {
      *     Can be responded to or dismissed.
      */
     CheckInRecordResponse: {
-      id?: string;
-      systemId?: string;
-      timerConfigId?: string;
+      id: string;
+      systemId: string;
+      timerConfigId: string;
       /**
        * Format: int64
        * @description Unix milliseconds when the check-in was scheduled
        */
-      scheduledAt?: number;
-      respondedByMemberId?: string | null;
+      scheduledAt: number;
+      respondedByMemberId: string | null;
       /**
        * Format: int64
        * @description Unix milliseconds when the check-in was responded to
        */
-      respondedAt?: number | null;
-      dismissed?: boolean;
-      encryptedData?: string | null;
-      archived?: boolean;
+      respondedAt: number | null;
+      dismissed: boolean;
+      encryptedData: string | null;
+      archived: boolean;
       /** Format: int64 */
-      archivedAt?: number | null;
+      archivedAt: number | null;
     };
     CreateCheckInRecordRequest: {
       /** @description Timer config ID (tmr_ prefix) */
@@ -8033,14 +8033,42 @@ export interface components {
     /**
      * @description **Encrypted into**: `encryptedData` on lifecycle event create endpoint.
      *
-     *     Encrypted details of a lifecycle event. Note: `eventType`, `occurredAt`,
-     *     and `plaintextMetadata` (member/structure/entity/region IDs) are sent
-     *     as separate plaintext fields because the server needs them for querying
-     *     and relationship tracking. Encryption tier: **T1**.
+     *     Per-variant encrypted details of a lifecycle event. `eventType`,
+     *     `occurredAt`, and `plaintextMetadata` (member/structure/entity/region
+     *     IDs) are sent as separate plaintext fields. Encryption tier: **T1**.
+     *
+     *     Each variant carries `notes` plus its own variant-specific keys.
      */
-    PlaintextLifecycleEvent: {
-      notes: string | null;
-    };
+    PlaintextLifecycleEvent:
+      | {
+          notes: string | null;
+        }
+      | {
+          notes: string | null;
+          relatedLifecycleEventId: string | null;
+        }
+      | {
+          notes: string | null;
+          entity: {
+            entityType: string;
+            entityId: string;
+          };
+        }
+      | {
+          notes: string | null;
+          previousForm: string | null;
+          newForm: string | null;
+        }
+      | {
+          notes: string | null;
+          previousName: string | null;
+          newName: string;
+        }
+      | {
+          notes: string | null;
+          /** @enum {string} */
+          entityType: "member" | "landmark" | "structure-entity";
+        };
     /**
      * @description **Encrypted into**: `encryptedData` on innerworld region create/update endpoints.
      *

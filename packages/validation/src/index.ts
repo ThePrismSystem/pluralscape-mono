@@ -95,6 +95,8 @@ export {
   CreateLifecycleEventBodySchema,
   UpdateLifecycleEventBodySchema,
   LIFECYCLE_EVENT_TYPES,
+  LifecycleEventEncryptedInputSchema,
+  LIFECYCLE_EVENT_ENCRYPTED_SCHEMAS,
   validateLifecycleMetadata,
 } from "./lifecycle-event.js";
 export type { PlaintextMetadata } from "./lifecycle-event.js";

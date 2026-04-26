@@ -88,6 +88,17 @@ CheckInRecordResponse:
     A check-in record created by the timer scheduler or manually.
     Can be responded to or dismissed.
   type: object
+  required:
+    - id
+    - systemId
+    - timerConfigId
+    - scheduledAt
+    - respondedByMemberId
+    - respondedAt
+    - dismissed
+    - encryptedData
+    - archived
+    - archivedAt
   properties:
     id:
       type: string

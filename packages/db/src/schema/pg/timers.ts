@@ -23,7 +23,13 @@ import { pgTimeFormatCheck } from "../../helpers/check.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
+import type {
+  CheckInRecordId,
+  MemberId,
+  ServerInternal,
+  SystemId,
+  TimerId,
+} from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = pgTable(
@@ -76,7 +82,12 @@ export const checkInRecords = pgTable(
     dismissed: boolean("dismissed").notNull().default(false),
     respondedByMemberId: brandedId<MemberId>("responded_by_member_id"),
     encryptedData: pgEncryptedBlob("encrypted_data"),
-    idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    /**
+     * Server-generated dedup key for webhook-driven response writes.
+     * Branded `ServerInternal<…>` so `EncryptedWire<T>` strips it from
+     * the wire envelope (never leaked to clients).
+     */
+    idempotencyKey: varchar("idempotency_key", { length: 255 }).$type<ServerInternal<string>>(),
     ...archivable(),
   },
   (t) => [

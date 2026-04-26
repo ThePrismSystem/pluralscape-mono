@@ -1,92 +1,36 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { LIFECYCLE_EVENT_ENCRYPTED_SCHEMAS } from "@pluralscape/validation";
 
-import {
-  assertObjectBlob,
-  decodeAndDecryptT1,
-  encryptInput,
-  encryptUpdate,
-} from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  Archived,
   EntityReference,
   InnerWorldEntityId,
   InnerWorldEntityType,
   InnerWorldRegionId,
   LifecycleEvent,
+  LifecycleEventEncryptedInput,
   LifecycleEventId,
-  LifecycleEventType,
+  LifecycleEventWire,
   MemberId,
   SystemId,
   SystemStructureEntityId,
-  UnixMillis,
 } from "@pluralscape/types";
 
-// ── Encrypted payload ─────────────────────────────────────────────────
-
-/** Fields inside the T1 encrypted blob. */
-export interface LifecycleEventEncryptedPayload {
-  readonly notes: string | null;
-  readonly relatedLifecycleEventId?: LifecycleEventId | null;
-  readonly previousForm?: string | null;
-  readonly newForm?: string | null;
-  readonly previousName?: string | null;
-  readonly newName?: string;
-  readonly entity?: EntityReference;
-  readonly entityType?: InnerWorldEntityType;
-}
-
-// ── Decrypted output — reuse the domain union ─────────────────────────
-
-export type LifecycleEventDecrypted = LifecycleEvent;
-
-/** A lifecycle event with archive status attached by the transform layer. */
-export type LifecycleEventWithArchive =
-  | (LifecycleEventDecrypted & { readonly archived: false })
-  | (LifecycleEventDecrypted & { readonly archived: true; readonly archivedAt: UnixMillis });
-
-// ── Wire types ────────────────────────────────────────────────────────
-
-/** Plaintext metadata on the wire — unbranded string arrays. */
-export interface PlaintextMetadataWire {
-  readonly memberIds?: readonly string[];
-  readonly structureIds?: readonly string[];
-  readonly entityIds?: readonly string[];
-  readonly regionIds?: readonly string[];
-}
-
-export interface LifecycleEventRaw {
-  readonly id: LifecycleEventId;
-  readonly systemId: SystemId;
-  readonly eventType: LifecycleEventType;
-  readonly occurredAt: UnixMillis;
-  readonly recordedAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly encryptedData: string | null;
-  readonly plaintextMetadata: PlaintextMetadataWire | null;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
 export interface LifecycleEventPage {
-  readonly data: readonly LifecycleEventRaw[];
+  readonly data: readonly LifecycleEventWire[];
   readonly nextCursor: string | null;
-}
-
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertLifecycleEventPayload(raw: unknown): asserts raw is LifecycleEventEncryptedPayload {
-  assertObjectBlob(raw, "lifecycleEvent");
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-function metaIds(
-  meta: PlaintextMetadataWire | null,
-  key: keyof PlaintextMetadataWire,
-): readonly string[] {
-  return meta?.[key] ?? [];
+/** Reads an ID array from plaintextMetadata, returning empty array if absent. */
+function metaIds(meta: Record<string, unknown> | null, key: string): readonly string[] {
+  const val = meta?.[key];
+  if (!Array.isArray(val)) return [];
+  return val as readonly string[];
 }
 
 function atOrThrow(arr: readonly string[], index: number, label: string): string {
@@ -110,38 +54,26 @@ function firstOrThrow(arr: readonly string[], label: string): string {
 // ── Transforms ────────────────────────────────────────────────────────
 
 export function decryptLifecycleEvent(
-  raw: LifecycleEventRaw,
+  raw: LifecycleEventWire,
   masterKey: KdfMasterKey,
-): LifecycleEventWithArchive {
-  let payload: LifecycleEventEncryptedPayload;
-
-  if (raw.encryptedData !== null) {
-    const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-    assertLifecycleEventPayload(plaintext);
-    payload = plaintext;
-  } else {
-    payload = { notes: null };
-  }
+): LifecycleEvent | Archived<LifecycleEvent> {
+  // Per-variant schema selection: eventType is plaintext on the wire
+  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const schema = LIFECYCLE_EVENT_ENCRYPTED_SCHEMAS[raw.eventType];
+  const validated = schema.parse(plaintext);
 
   const shared = {
-    id: raw.id,
-    systemId: raw.systemId,
-    occurredAt: raw.occurredAt,
-    recordedAt: raw.recordedAt,
-    notes: payload.notes,
+    id: brandId<LifecycleEventId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    occurredAt: toUnixMillis(raw.occurredAt),
+    recordedAt: toUnixMillis(raw.recordedAt),
+    notes: validated.notes,
+    archived: false as const,
   };
 
-  function withArchive<T>(
-    base: T,
-  ): (T & { archived: false }) | (T & { archived: true; archivedAt: UnixMillis }) {
-    if (raw.archived) {
-      if (raw.archivedAt === null) throw new Error("Archived lifecycleEvent missing archivedAt");
-      return { ...base, archived: true as const, archivedAt: raw.archivedAt };
-    }
-    return { ...base, archived: false as const };
-  }
+  const meta = raw.plaintextMetadata as Record<string, unknown> | null;
 
-  const meta = raw.plaintextMetadata;
+  let domain: LifecycleEvent;
 
   switch (raw.eventType) {
     case "split": {
@@ -149,101 +81,119 @@ export function decryptLifecycleEvent(
       if (ids.length < 2) {
         throw new Error("lifecycleEvent split requires at least 2 memberIds in plaintextMetadata");
       }
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "split" as const,
         sourceMemberId: brandId<MemberId>(firstOrThrow(ids, "memberIds")),
         resultMemberIds: ids.slice(1).map((id) => brandId<MemberId>(id)),
-      });
+      };
+      break;
     }
     case "fusion": {
       const ids = metaIds(meta, "memberIds");
       if (ids.length < 2) {
         throw new Error("lifecycleEvent fusion requires at least 2 memberIds in plaintextMetadata");
       }
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "fusion" as const,
         sourceMemberIds: ids.slice(0, -1).map((id) => brandId<MemberId>(id)),
         resultMemberId: brandId<MemberId>(atOrThrow(ids, ids.length - 1, "memberIds")),
-      });
+      };
+      break;
     }
     case "merge":
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "merge" as const,
         memberIds: metaIds(meta, "memberIds").map((id) => brandId<MemberId>(id)),
-      });
+      };
+      break;
     case "unmerge":
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "unmerge" as const,
         memberIds: metaIds(meta, "memberIds").map((id) => brandId<MemberId>(id)),
-      });
-    case "dormancy-start":
-      return withArchive({
+      };
+      break;
+    case "dormancy-start": {
+      const v = validated as { notes: string | null; relatedLifecycleEventId: string | null };
+      domain = {
         ...shared,
         eventType: "dormancy-start" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
-        relatedLifecycleEventId: payload.relatedLifecycleEventId
-          ? brandId<LifecycleEventId>(payload.relatedLifecycleEventId)
+        relatedLifecycleEventId: v.relatedLifecycleEventId
+          ? brandId<LifecycleEventId>(v.relatedLifecycleEventId)
           : null,
-      });
-    case "dormancy-end":
-      return withArchive({
+      };
+      break;
+    }
+    case "dormancy-end": {
+      const v = validated as { notes: string | null; relatedLifecycleEventId: string | null };
+      domain = {
         ...shared,
         eventType: "dormancy-end" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
-        relatedLifecycleEventId: payload.relatedLifecycleEventId
-          ? brandId<LifecycleEventId>(payload.relatedLifecycleEventId)
+        relatedLifecycleEventId: v.relatedLifecycleEventId
+          ? brandId<LifecycleEventId>(v.relatedLifecycleEventId)
           : null,
-      });
+      };
+      break;
+    }
     case "discovery":
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "discovery" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
-      });
+      };
+      break;
     case "archival": {
-      if (payload.entity === undefined) {
-        throw new Error("Decrypted lifecycleEvent(archival) blob missing required field: entity");
-      }
-      return withArchive({
+      const v = validated as {
+        notes: string | null;
+        entity: { entityType: string; entityId: string };
+      };
+      domain = {
         ...shared,
         eventType: "archival" as const,
-        entity: payload.entity,
-      });
+        entity: v.entity as EntityReference,
+      };
+      break;
     }
     case "structure-entity-formation":
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "structure-entity-formation" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
         resultStructureEntityId: brandId<SystemStructureEntityId>(
           firstOrThrow(metaIds(meta, "structureIds"), "structureIds"),
         ),
-      });
-    case "form-change":
-      return withArchive({
+      };
+      break;
+    case "form-change": {
+      const v = validated as {
+        notes: string | null;
+        previousForm: string | null;
+        newForm: string | null;
+      };
+      domain = {
         ...shared,
         eventType: "form-change" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
-        previousForm: (payload.previousForm as string | null) ?? null,
-        newForm: (payload.newForm as string | null) ?? null,
-      });
+        previousForm: v.previousForm,
+        newForm: v.newForm,
+      };
+      break;
+    }
     case "name-change": {
-      if (payload.newName === undefined) {
-        throw new Error(
-          "Decrypted lifecycleEvent(name-change) blob missing required field: newName",
-        );
-      }
-      return withArchive({
+      const v = validated as { notes: string | null; previousName: string | null; newName: string };
+      domain = {
         ...shared,
         eventType: "name-change" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
-        previousName: (payload.previousName as string | null) ?? null,
-        newName: payload.newName,
-      });
+        previousName: v.previousName,
+        newName: v.newName,
+      };
+      break;
     }
     case "structure-move": {
       const sIds = metaIds(meta, "structureIds");
@@ -268,23 +218,19 @@ export function decryptLifecycleEvent(
               entityType: "structure-entity",
               entityId: brandId<SystemStructureEntityId>(atOrThrow(sIds, 0, "structureIds")),
             };
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "structure-move" as const,
         memberId: mId,
         fromStructure,
         toStructure,
-      });
+      };
+      break;
     }
     case "innerworld-move": {
       const eIds = metaIds(meta, "entityIds");
       const rIds = metaIds(meta, "regionIds");
-      const iwEntityType = payload.entityType;
-      if (iwEntityType === undefined) {
-        throw new Error(
-          "Decrypted lifecycleEvent(innerworld-move) blob missing required field: entityType",
-        );
-      }
+      const v = validated as { notes: string | null; entityType: InnerWorldEntityType };
       const fromRegionId: InnerWorldRegionId | null =
         rIds.length >= 2 ? brandId<InnerWorldRegionId>(atOrThrow(rIds, 0, "regionIds")) : null;
       const toRegionId: InnerWorldRegionId | null =
@@ -293,27 +239,38 @@ export function decryptLifecycleEvent(
           : rIds.length === 1
             ? brandId<InnerWorldRegionId>(atOrThrow(rIds, 0, "regionIds"))
             : null;
-      return withArchive({
+      domain = {
         ...shared,
         eventType: "innerworld-move" as const,
         entityId: brandId<InnerWorldEntityId>(firstOrThrow(eIds, "entityIds")),
-        entityType: iwEntityType,
+        entityType: v.entityType,
         fromRegionId,
         toRegionId,
-      });
+      };
+      break;
     }
     default: {
       const _exhaustive: never = raw.eventType;
       throw new Error(`Unknown lifecycle event type: ${String(_exhaustive)}`);
     }
   }
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived lifecycleEvent missing archivedAt");
+    return {
+      ...domain,
+      archived: true as const,
+      archivedAt: toUnixMillis(raw.archivedAt),
+    } as Archived<LifecycleEvent>;
+  }
+  return domain;
 }
 
 export function decryptLifecycleEventPage(
   raw: LifecycleEventPage,
   masterKey: KdfMasterKey,
 ): {
-  data: LifecycleEventWithArchive[];
+  data: (LifecycleEvent | Archived<LifecycleEvent>)[];
   nextCursor: string | null;
 } {
   return {
@@ -323,14 +280,14 @@ export function decryptLifecycleEventPage(
 }
 
 export function encryptLifecycleEventInput(
-  data: LifecycleEventEncryptedPayload,
+  data: LifecycleEventEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 export function encryptLifecycleEventUpdate(
-  data: LifecycleEventEncryptedPayload,
+  data: LifecycleEventEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
