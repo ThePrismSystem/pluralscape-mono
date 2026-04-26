@@ -198,6 +198,15 @@ describe("encryptRelationshipUpdate", () => {
   });
 });
 
+describe("StandardRelationshipEncryptedSchema — strict mode", () => {
+  it("rejects standard-type relationship whose blob carries unexpected keys", () => {
+    const raw = makeRawStandardRelationship({
+      encryptedData: makeBase64Blob({ label: "leaked" }, masterKey),
+    });
+    expect(() => decryptRelationship(raw, masterKey)).toThrow();
+  });
+});
+
 describe("RelationshipEncryptedInputSchema validation", () => {
   it("throws when blob is not an object (standard path)", () => {
     const raw = makeRawStandardRelationship({

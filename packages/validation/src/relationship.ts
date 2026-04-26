@@ -25,9 +25,11 @@ export const CustomRelationshipEncryptedSchema = z.object({ label: z.string() })
 
 /**
  * Runtime validator for a standard-type pre-encryption Relationship input.
- * Standard relationships carry no label — the blob is an empty object.
+ * Standard relationships carry no label — the blob MUST be an empty object.
+ * Strict mode rejects any extra keys (defense against schema drift or
+ * misrouted custom blobs).
  */
-export const StandardRelationshipEncryptedSchema = z.object({}).readonly();
+export const StandardRelationshipEncryptedSchema = z.object({}).strict().readonly();
 
 /**
  * Union of both encrypted-input schemas. `z.infer` yields `{ label: string } | {}`,
