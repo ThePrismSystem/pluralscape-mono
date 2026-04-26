@@ -20,9 +20,8 @@ import { brandId } from "@pluralscape/types";
 
 import { PKSwitchSchema } from "../validators/pk-payload.js";
 
-import type { FrontingSessionPlaintext } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
-import type { MemberId } from "@pluralscape/types";
+import type { FrontingSessionEncryptedInput, MemberId } from "@pluralscape/types";
 import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -30,7 +29,7 @@ export type PkMappedFrontingSession = Omit<
   z.infer<typeof CreateFrontingSessionBodySchema>,
   "encryptedData" | "endTime"
 > & {
-  readonly encrypted: FrontingSessionPlaintext;
+  readonly encrypted: FrontingSessionEncryptedInput;
   readonly endTime: number | null;
 };
 
@@ -44,7 +43,7 @@ function buildSession(
   startTime: number,
   endTime: number | null,
 ): PkMappedFrontingSession {
-  const encrypted: FrontingSessionPlaintext = {
+  const encrypted: FrontingSessionEncryptedInput = {
     comment: null,
     positionality: null,
     outtrigger: null,

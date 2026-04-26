@@ -1,3 +1,6 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { FrontingSessionEncryptedInputSchema } from "@pluralscape/validation";
+
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -5,107 +8,61 @@ import type {
   ActiveFrontingSession,
   Archived,
   CompletedFrontingSession,
-  EncryptedBase64,
+  CustomFrontId,
   FrontingSession,
-  FrontingSessionEncryptedFields,
-  OuttriggerSentiment,
-  PlaintextFields,
-  UnixMillis,
+  FrontingSessionEncryptedInput,
+  FrontingSessionId,
+  FrontingSessionWire,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
-
-/**
- * The T1-encrypted plaintext payload for a fronting session.
- * Derived from `FrontingSession` by picking its encrypted-field keys —
- * SoT lives in `@pluralscape/types`.
- */
-export type FrontingSessionPlaintext = PlaintextFields<
-  FrontingSession,
-  FrontingSessionEncryptedFields
->;
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape for a single fronting session — derived from `ActiveFrontingSession`. */
-export type FrontingSessionRaw = Omit<
-  ActiveFrontingSession,
-  FrontingSessionEncryptedFields | "archived" | "endTime"
-> & {
-  readonly endTime: UnixMillis | null;
-  readonly encryptedData: EncryptedBase64;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
 
 /** Shape returned by `frontingSession.list`. */
 export interface FrontingSessionPage {
-  readonly data: readonly FrontingSessionRaw[];
+  readonly data: readonly FrontingSessionWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function isOuttriggerSentiment(value: unknown): value is OuttriggerSentiment {
-  return value === "negative" || value === "neutral" || value === "positive";
-}
-
-// ── Validator ────────────────────────────────────────────────────────────────
-
-function assertFrontingSessionPlaintext(raw: unknown): asserts raw is FrontingSessionPlaintext {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted fronting session blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (obj["comment"] !== null && typeof obj["comment"] !== "string") {
-    throw new Error("Decrypted fronting session blob: comment must be string or null");
-  }
-  if (obj["positionality"] !== null && typeof obj["positionality"] !== "string") {
-    throw new Error("Decrypted fronting session blob: positionality must be string or null");
-  }
-  if (obj["outtrigger"] !== null && typeof obj["outtrigger"] !== "string") {
-    throw new Error("Decrypted fronting session blob: outtrigger must be string or null");
-  }
-  if (obj["outtriggerSentiment"] !== null && !isOuttriggerSentiment(obj["outtriggerSentiment"])) {
-    throw new Error(
-      "Decrypted fronting session blob: outtriggerSentiment must be a valid sentiment or null",
-    );
-  }
-}
-
-// ── Decrypt ───────────────────────────────────────────────────────────────────
-
 /**
- * Decrypt a raw fronting session from the server into a typed `FrontingSession`.
+ * Decrypt a single fronting-session wire object to the canonical domain type.
  * Discriminates on `endTime` to produce `ActiveFrontingSession | CompletedFrontingSession`.
- * Returns the archived variant when `raw.archived` is true.
  */
 export function decryptFrontingSession(
-  raw: FrontingSessionRaw,
+  raw: FrontingSessionWire,
   masterKey: KdfMasterKey,
 ): FrontingSession | Archived<FrontingSession> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertFrontingSessionPlaintext(plaintext);
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = FrontingSessionEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
-    memberId: raw.memberId,
-    customFrontId: raw.customFrontId,
-    structureEntityId: raw.structureEntityId,
-    startTime: raw.startTime,
+    id: brandId<FrontingSessionId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    memberId: raw.memberId === null ? null : brandId<MemberId>(raw.memberId),
+    customFrontId: raw.customFrontId === null ? null : brandId<CustomFrontId>(raw.customFrontId),
+    structureEntityId:
+      raw.structureEntityId === null
+        ? null
+        : brandId<SystemStructureEntityId>(raw.structureEntityId),
+    startTime: toUnixMillis(raw.startTime),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
-    comment: plaintext.comment ?? null,
-    positionality: plaintext.positionality ?? null,
-    outtrigger: plaintext.outtrigger ?? null,
-    outtriggerSentiment: plaintext.outtriggerSentiment ?? null,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
+    comment: validated.comment,
+    positionality: validated.positionality,
+    outtrigger: validated.outtrigger,
+    outtriggerSentiment: validated.outtriggerSentiment,
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived fronting session missing archivedAt");
-    const archivedBase = { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    const archivedBase = {
+      ...base,
+      archived: true as const,
+      archivedAt: toUnixMillis(raw.archivedAt),
+    };
     if (raw.endTime === null) return { ...archivedBase, endTime: null };
-    return { ...archivedBase, endTime: raw.endTime };
+    return { ...archivedBase, endTime: toUnixMillis(raw.endTime) };
   }
 
   if (raw.endTime === null) {
@@ -114,13 +71,11 @@ export function decryptFrontingSession(
   return {
     ...base,
     archived: false as const,
-    endTime: raw.endTime,
+    endTime: toUnixMillis(raw.endTime),
   } satisfies CompletedFrontingSession;
 }
 
-/**
- * Decrypt a paginated page of fronting sessions from the server.
- */
+/** Decrypt a paginated page of fronting sessions from the server. */
 export function decryptFrontingSessionPage(
   raw: FrontingSessionPage,
   masterKey: KdfMasterKey,
@@ -131,25 +86,15 @@ export function decryptFrontingSessionPage(
   };
 }
 
-// ── Encrypt ───────────────────────────────────────────────────────────────────
-
-/**
- * Encrypt fronting session fields for a create mutation.
- * Returns `{ encryptedData }` ready for `frontingSession.create` input.
- */
 export function encryptFrontingSessionInput(
-  data: FrontingSessionPlaintext,
+  data: FrontingSessionEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
-/**
- * Encrypt fronting session fields for an update mutation.
- * Returns `{ encryptedData, version }` ready for `frontingSession.update` input.
- */
 export function encryptFrontingSessionUpdate(
-  data: FrontingSessionPlaintext,
+  data: FrontingSessionEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

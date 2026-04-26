@@ -11,7 +11,7 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPGroup } from "../sources/sp-types.js";
-import type { GroupEncryptedInput } from "@pluralscape/data";
+import type { GroupEncryptedInput } from "@pluralscape/types";
 import type { CreateGroupBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 

@@ -9,8 +9,7 @@ import { makeRawFrontingSession } from "../../__tests__/factories.js";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
-import type { FrontingSessionRaw } from "@pluralscape/data/transforms/fronting-session";
-import type { FrontingSessionId } from "@pluralscape/types";
+import type { FrontingSessionId, FrontingSessionWire } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -29,7 +28,7 @@ const mockUtils = {
     get: {
       invalidate: vi.fn(),
       cancel: vi.fn(() => Promise.resolve()),
-      getData: vi.fn((): FrontingSessionRaw | undefined => undefined),
+      getData: vi.fn((): FrontingSessionWire | undefined => undefined),
       setData: vi.fn(),
     },
     list: {

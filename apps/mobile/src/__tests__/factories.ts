@@ -45,10 +45,7 @@ import type { AcknowledgementRaw } from "@pluralscape/data/transforms/acknowledg
 import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message";
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
-import type { FrontingCommentRaw } from "@pluralscape/data/transforms/fronting-comment";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
-import type { FrontingSessionRaw } from "@pluralscape/data/transforms/fronting-session";
-import type { GroupRaw } from "@pluralscape/data/transforms/group";
 import type { CanvasRaw } from "@pluralscape/data/transforms/innerworld-canvas";
 import type {
   InnerWorldEntityEncryptedPayload,
@@ -81,9 +78,12 @@ import type {
   FieldDefinitionId,
   FieldValueId,
   FrontingCommentId,
+  FrontingCommentWire,
   FrontingReportId,
   FrontingSessionId,
+  FrontingSessionWire,
   GroupId,
+  GroupWire,
   InnerWorldEntityId,
   InnerWorldRegionId,
   LifecycleEventId,
@@ -106,7 +106,6 @@ import type {
   UnixMillis,
   VisualProperties,
 } from "@pluralscape/types";
-
 export const NOW = 1_700_000_000_000 as UnixMillis;
 
 // ── Acknowledgement ──────────────────────────────────────────────────
@@ -259,12 +258,12 @@ export function makeRawCustomFront(
 export function makeRawFrontingComment(
   id: string,
   sessionId: FrontingSessionId = brandId<FrontingSessionId>("fs-1"),
-  overrides?: Partial<FrontingCommentRaw>,
-): FrontingCommentRaw {
+  overrides?: Partial<FrontingCommentWire>,
+): FrontingCommentWire {
   const encrypted = encryptFrontingCommentInput({ content: `Comment ${id}` }, TEST_MASTER_KEY);
   return {
     id: brandId<FrontingCommentId>(id),
-    frontingSessionId: sessionId,
+    frontingSessionId: brandId<FrontingSessionId>(sessionId),
     systemId: TEST_SYSTEM_ID,
     memberId: brandId<MemberId>("m-1"),
     customFrontId: null,
@@ -276,7 +275,7 @@ export function makeRawFrontingComment(
     archivedAt: null,
     ...encrypted,
     ...overrides,
-  };
+  } as FrontingCommentWire;
 }
 
 // ── Fronting Report ──────────────────────────────────────────────────
@@ -313,8 +312,8 @@ export function makeRawFrontingReport(
 
 export function makeRawFrontingSession(
   id: string,
-  overrides?: Partial<FrontingSessionRaw>,
-): FrontingSessionRaw {
+  overrides?: Partial<FrontingSessionWire>,
+): FrontingSessionWire {
   const encrypted = encryptFrontingSessionInput(
     {
       comment: `Session ${id}`,
@@ -339,12 +338,12 @@ export function makeRawFrontingSession(
     archivedAt: null,
     encryptedData: encrypted.encryptedData as EncryptedBase64,
     ...overrides,
-  };
+  } as FrontingSessionWire;
 }
 
 // ── Group ────────────────────────────────────────────────────────────
 
-export function makeRawGroup(id: string, overrides?: Partial<GroupRaw>): GroupRaw {
+export function makeRawGroup(id: string, overrides?: Partial<GroupWire>): GroupWire {
   const encrypted = encryptGroupInput(
     {
       name: `Group ${id}`,

@@ -105,11 +105,13 @@ export {
 export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema, ALLOWED_MIME_TYPES } from "./blob.js";
 export {
   CreateFrontingSessionBodySchema,
+  FrontingSessionEncryptedInputSchema,
   UpdateFrontingSessionBodySchema,
   EndFrontingSessionBodySchema,
   FrontingSessionQuerySchema,
 } from "./fronting-session.js";
 export {
+  FrontingCommentEncryptedInputSchema,
   CreateFrontingCommentBodySchema,
   UpdateFrontingCommentBodySchema,
   FrontingCommentQuerySchema,

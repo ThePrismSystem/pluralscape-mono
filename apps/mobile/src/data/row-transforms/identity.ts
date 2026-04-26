@@ -12,11 +12,12 @@ import {
   wrapArchived,
 } from "./primitives.js";
 
-import type { GroupDecrypted } from "@pluralscape/data/transforms/group";
 import type {
+  Archived,
   ArchivedMember,
   ArchivedMemberPhoto,
   ArchivedRelationship,
+  Group,
   Member,
   MemberPhoto,
   Relationship,
@@ -87,13 +88,13 @@ export function rowToMemberPhoto(row: Record<string, unknown>): MemberPhoto | Ar
   return base;
 }
 
-export function rowToGroup(row: Record<string, unknown>): GroupDecrypted {
+export function rowToGroup(row: Record<string, unknown>): Group | Archived<Group> {
   const id = rid(row);
   const archived = intToBool(row["archived"]);
   const updatedAt = guardedToMs(row["updated_at"], "groups", "updated_at", id);
-  return {
-    id: guardedStr(row["id"], "groups", "id", id) as GroupDecrypted["id"],
-    systemId: guardedStr(row["system_id"], "groups", "system_id", id) as GroupDecrypted["systemId"],
+  const base: Group = {
+    id: guardedStr(row["id"], "groups", "id", id) as Group["id"],
+    systemId: guardedStr(row["system_id"], "groups", "system_id", id) as Group["systemId"],
     name: guardedStr(row["name"], "groups", "name", id),
     description: strOrNull(row["description"], "groups", "description", id),
     parentGroupId: strOrNull(
@@ -101,22 +102,22 @@ export function rowToGroup(row: Record<string, unknown>): GroupDecrypted {
       "groups",
       "parent_group_id",
       id,
-    ) as GroupDecrypted["parentGroupId"],
+    ) as Group["parentGroupId"],
     imageSource: parseJsonSafe(
       row["image_source"],
       "groups",
       "image_source",
       id,
-    ) as GroupDecrypted["imageSource"],
-    color: strOrNull(row["color"], "groups", "color", id) as GroupDecrypted["color"],
+    ) as Group["imageSource"],
+    color: strOrNull(row["color"], "groups", "color", id) as Group["color"],
     emoji: strOrNull(row["emoji"], "groups", "emoji", id),
     sortOrder: guardedNum(row["sort_order"], "groups", "sort_order", id),
-    archived,
-    archivedAt: archived ? updatedAt : null,
+    archived: false,
     createdAt: guardedToMs(row["created_at"], "groups", "created_at", id),
     updatedAt,
     version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
 export function rowToRelationship(

@@ -1,80 +1,62 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
+import { FrontingCommentEncryptedInputSchema } from "@pluralscape/validation";
+
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
+  CustomFrontId,
   FrontingComment,
-  FrontingCommentEncryptedFields as FrontingCommentKeys,
-  PlaintextFields,
-  UnixMillis,
+  FrontingCommentEncryptedInput,
+  FrontingCommentId,
+  FrontingCommentWire,
+  FrontingSessionId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
 } from "@pluralscape/types";
-
-// ── Encrypted payload types ───────────────────────────────────────────
-
-/**
- * The plaintext fields encrypted inside a fronting comment blob.
- * Pass this to `encryptFrontingCommentInput` when creating or updating a comment.
- */
-export type FrontingCommentPlaintext = PlaintextFields<FrontingComment, FrontingCommentKeys>;
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `frontingComment.get` — derived from the `FrontingComment` domain type. */
-export type FrontingCommentRaw = Omit<FrontingComment, FrontingCommentKeys | "archived"> & {
-  readonly encryptedData: string;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
 
 /** Shape returned by `frontingComment.list`. */
 export interface FrontingCommentPage {
-  readonly data: readonly FrontingCommentRaw[];
+  readonly data: readonly FrontingCommentWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertFrontingCommentPlaintext(raw: unknown): asserts raw is FrontingCommentPlaintext {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted fronting comment blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["content"] !== "string") {
-    throw new Error("Decrypted fronting comment blob missing required string field: content");
-  }
-}
-
-// ── Fronting comment transforms ───────────────────────────────────────
+// ── FrontingComment transforms ────────────────────────────────────────
 
 /**
- * Decrypt a single fronting comment API result into a `FrontingComment`.
+ * Decrypt a single fronting comment wire object to the canonical domain type.
  *
  * The encrypted blob contains: `content`.
  * All other fields pass through from the wire payload.
  */
 export function decryptFrontingComment(
-  raw: FrontingCommentRaw,
+  raw: FrontingCommentWire,
   masterKey: KdfMasterKey,
 ): FrontingComment | Archived<FrontingComment> {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertFrontingCommentPlaintext(plaintext);
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const validated = FrontingCommentEncryptedInputSchema.parse(decrypted);
 
   const base = {
-    id: raw.id,
-    frontingSessionId: raw.frontingSessionId,
-    systemId: raw.systemId,
-    memberId: raw.memberId,
-    customFrontId: raw.customFrontId,
-    structureEntityId: raw.structureEntityId,
-    content: plaintext.content,
+    id: brandId<FrontingCommentId>(raw.id),
+    frontingSessionId: brandId<FrontingSessionId>(raw.frontingSessionId),
+    systemId: brandId<SystemId>(raw.systemId),
+    memberId: raw.memberId !== null ? brandId<MemberId>(raw.memberId) : null,
+    customFrontId: raw.customFrontId !== null ? brandId<CustomFrontId>(raw.customFrontId) : null,
+    structureEntityId:
+      raw.structureEntityId !== null
+        ? brandId<SystemStructureEntityId>(raw.structureEntityId)
+        : null,
+    content: validated.content,
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived fronting comment missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
@@ -93,26 +75,26 @@ export function decryptFrontingCommentPage(
 }
 
 /**
- * Encrypt fronting comment plaintext fields for create payloads.
+ * Encrypt fronting comment fields for create payloads.
  *
  * Returns `{ encryptedData: string }` — pass the spread of this into the
  * `CreateFrontingCommentBodySchema`.
  */
 export function encryptFrontingCommentInput(
-  data: FrontingCommentPlaintext,
+  data: FrontingCommentEncryptedInput,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
   return encryptInput(data, masterKey);
 }
 
 /**
- * Encrypt fronting comment plaintext fields for update payloads.
+ * Encrypt fronting comment fields for update payloads.
  *
  * Returns `{ encryptedData: string; version: number }` — pass the spread of this
  * into the `UpdateFrontingCommentBodySchema`.
  */
 export function encryptFrontingCommentUpdate(
-  data: FrontingCommentPlaintext,
+  data: FrontingCommentEncryptedInput,
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {

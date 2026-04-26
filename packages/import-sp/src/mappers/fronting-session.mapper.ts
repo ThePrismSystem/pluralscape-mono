@@ -16,8 +16,7 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPFrontHistory } from "../sources/sp-types.js";
-import type { FrontingSessionPlaintext } from "@pluralscape/data";
-import type { CustomFrontId, MemberId } from "@pluralscape/types";
+import type { CustomFrontId, FrontingSessionEncryptedInput, MemberId } from "@pluralscape/types";
 import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -25,7 +24,7 @@ export type MappedFrontingSession = Omit<
   z.infer<typeof CreateFrontingSessionBodySchema>,
   "encryptedData" | "endTime"
 > & {
-  readonly encrypted: FrontingSessionPlaintext;
+  readonly encrypted: FrontingSessionEncryptedInput;
   readonly endTime: number | null;
 };
 
@@ -46,7 +45,7 @@ export function mapFrontingSession(
 
   const endTime = sp.live ? null : (sp.endTime ?? null);
 
-  const encrypted: FrontingSessionPlaintext = {
+  const encrypted: FrontingSessionEncryptedInput = {
     comment: sp.customStatus ?? null,
     positionality: null,
     outtrigger: null,
