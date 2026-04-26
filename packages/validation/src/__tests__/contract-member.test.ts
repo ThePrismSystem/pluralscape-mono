@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "../member-photo.js";
 import {
@@ -8,16 +8,10 @@ import {
 } from "../member.js";
 import { MAX_ENCRYPTED_PHOTO_DATA_SIZE } from "../validation.constants.js";
 
-import type { Equal } from "@pluralscape/types";
-import type { z } from "zod/v4";
+// Body-schema shape parity (G4) lives in `packages/data/src/__tests__/type-parity/`
+// — see bean `types-1spw`. This file owns the runtime parse-validation tests.
 
 describe("CreateMemberBodySchema", () => {
-  it("infers the correct body shape", () => {
-    expectTypeOf<
-      Equal<z.infer<typeof CreateMemberBodySchema>, { encryptedData: string }>
-    >().toEqualTypeOf<true>();
-  });
-
   it("parses valid input", () => {
     const result = CreateMemberBodySchema.safeParse({ encryptedData: "dGVzdA==" });
     expect(result.success).toBe(true);
@@ -43,12 +37,6 @@ describe("CreateMemberBodySchema", () => {
 });
 
 describe("UpdateMemberBodySchema", () => {
-  it("infers the correct body shape", () => {
-    expectTypeOf<
-      Equal<z.infer<typeof UpdateMemberBodySchema>, { encryptedData: string; version: number }>
-    >().toEqualTypeOf<true>();
-  });
-
   it("parses valid input", () => {
     const result = UpdateMemberBodySchema.safeParse({ encryptedData: "dGVzdA==", version: 1 });
     expect(result.success).toBe(true);
@@ -66,20 +54,6 @@ describe("UpdateMemberBodySchema", () => {
 });
 
 describe("DuplicateMemberBodySchema", () => {
-  it("infers the correct body shape", () => {
-    expectTypeOf<
-      Equal<
-        z.infer<typeof DuplicateMemberBodySchema>,
-        {
-          encryptedData: string;
-          copyPhotos: boolean;
-          copyFields: boolean;
-          copyMemberships: boolean;
-        }
-      >
-    >().toEqualTypeOf<true>();
-  });
-
   it("parses valid input with defaults", () => {
     const result = DuplicateMemberBodySchema.safeParse({ encryptedData: "dGVzdA==" });
     expect(result.success).toBe(true);
@@ -107,15 +81,6 @@ describe("DuplicateMemberBodySchema", () => {
 });
 
 describe("CreateMemberPhotoBodySchema", () => {
-  it("infers the correct body shape", () => {
-    expectTypeOf<
-      Equal<
-        z.infer<typeof CreateMemberPhotoBodySchema>,
-        { encryptedData: string; sortOrder?: number }
-      >
-    >().toEqualTypeOf<true>();
-  });
-
   it("parses valid input without sortOrder", () => {
     const result = CreateMemberPhotoBodySchema.safeParse({ encryptedData: "dGVzdA==" });
     expect(result.success).toBe(true);
