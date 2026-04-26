@@ -16,10 +16,19 @@ import { useLocalDb, useQuerySource } from "./use-query-source.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   DecryptedNomenclature,
-  NomenclatureSettingsRaw,
-  SystemSettingsRaw,
+  NomenclatureSettingsWire,
 } from "@pluralscape/data/transforms/system-settings";
-import type { NomenclatureSettings, SystemSettings } from "@pluralscape/types";
+import type { NomenclatureSettings, SystemSettings, SystemSettingsWire } from "@pluralscape/types";
+
+/**
+ * tRPC server-inferred shape for `systemSettings.settings.get`. Diverges from
+ * canonical `SystemSettingsWire` in two ways the API surface has not yet
+ * caught up on: pinHash is omitted (server-internal credential) and locale is
+ * typed as raw string rather than the `Locale` enum.
+ */
+type SystemSettingsServerResponse = Omit<SystemSettingsWire, "locale" | "pinHash"> & {
+  readonly locale: string | null;
+};
 
 export function useSystemSettings(): DataQuery<SystemSettings> {
   const source = useQuerySource();
@@ -28,9 +37,9 @@ export function useSystemSettings(): DataQuery<SystemSettings> {
   const masterKey = useMasterKey();
 
   const selectSystemSettings = useCallback(
-    (raw: SystemSettingsRaw): SystemSettings => {
+    (raw: SystemSettingsServerResponse): SystemSettings => {
       if (masterKey === null) throw new Error("masterKey is null");
-      return decryptSystemSettings(raw, masterKey);
+      return decryptSystemSettings(raw as SystemSettingsWire, masterKey);
     },
     [masterKey],
   );
@@ -66,7 +75,7 @@ export function useNomenclature(): DataQuery<DecryptedNomenclature | Nomenclatur
   const masterKey = useMasterKey();
 
   const selectNomenclature = useCallback(
-    (raw: NomenclatureSettingsRaw): DecryptedNomenclature => {
+    (raw: NomenclatureSettingsWire): DecryptedNomenclature => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptNomenclature(raw, masterKey);
     },

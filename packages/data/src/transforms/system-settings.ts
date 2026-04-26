@@ -1,85 +1,63 @@
+import { brandId, createDefaultNomenclatureSettings, toUnixMillis } from "@pluralscape/types";
+import {
+  NomenclatureSettingsEncryptedInputSchema,
+  SystemSettingsEncryptedInputSchema,
+} from "@pluralscape/validation";
+
 import { decodeAndDecryptT1, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  BucketId,
+  EncryptedWire,
   NomenclatureSettings,
+  NomenclatureServerMetadata,
+  Serialize,
   SystemId,
   SystemSettings,
+  SystemSettingsEncryptedInput,
   SystemSettingsId,
-  UnixMillis,
+  SystemSettingsWire,
 } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
-
-/** Shape returned by `systemSettings.settings.get`. */
-export interface SystemSettingsRaw {
-  readonly id: SystemSettingsId;
-  readonly systemId: SystemId;
-  readonly locale: string | null;
-  readonly biometricEnabled: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-/** Shape returned by `systemSettings.nomenclature.get`. */
-export interface NomenclatureSettingsRaw {
-  readonly systemId: SystemId;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-// ── Decrypted output types ──────────────────────────────────────────
+/** JSON-wire shape of the `nomenclature_settings` row. */
+export type NomenclatureSettingsWire = Serialize<EncryptedWire<NomenclatureServerMetadata>>;
 
 /** Decrypted nomenclature with wire version for optimistic locking. */
 export interface DecryptedNomenclature extends NomenclatureSettings {
   readonly version: number;
 }
 
-// ── Validators ───────────────────────────────────────────────────────
-
-function assertSystemSettings(raw: unknown): asserts raw is SystemSettings {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted system settings blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["theme"] !== "string") {
-    throw new Error("Decrypted system settings blob missing required string field: theme");
-  }
-}
-
-function assertNomenclatureSettings(raw: unknown): asserts raw is NomenclatureSettings {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted nomenclature settings blob is not an object");
-  }
-}
-
-// ── System settings transforms ────────────────────────────────────────
-
 /**
  * Decrypt the T1-encrypted blob in a system settings server response.
  *
  * Wire metadata (id, systemId, version, createdAt, updatedAt) is taken from
  * the server response rather than the blob to avoid stale values.
- *
- * Flow: base64 encryptedData → T1 blob → SystemSettings
+ * `defaultBucketId` is encoded in the encrypted blob (per ADR-023's
+ * `SystemSettingsServerMetadata` Omit list) and surfaced through the
+ * settings payload itself; `nomenclature` is fetched separately.
  */
 export function decryptSystemSettings(
-  raw: SystemSettingsRaw,
+  raw: SystemSettingsWire,
   masterKey: KdfMasterKey,
 ): SystemSettings {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertSystemSettings(decrypted);
+  const validated: SystemSettingsEncryptedInput =
+    SystemSettingsEncryptedInputSchema.parse(decrypted);
+  const blob = decrypted as {
+    readonly defaultBucketId?: BucketId | null;
+    readonly nomenclature?: NomenclatureSettings;
+  };
   return {
-    ...decrypted,
-    id: raw.id,
-    systemId: raw.systemId,
+    ...validated,
+    id: brandId<SystemSettingsId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
+    locale: raw.locale,
+    defaultBucketId: blob.defaultBucketId ?? null,
+    nomenclature: blob.nomenclature ?? createDefaultNomenclatureSettings(),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 }
 
@@ -96,22 +74,19 @@ export function encryptSystemSettingsUpdate(
   return encryptUpdate(data, version, masterKey);
 }
 
-// ── Nomenclature settings transforms ─────────────────────────────────
-
 /**
  * Decrypt the T1-encrypted blob in a nomenclature settings server response.
- *
  * Preserves `version` from the wire response for optimistic locking.
- *
- * Flow: base64 encryptedData → T1 blob → DecryptedNomenclature
  */
 export function decryptNomenclature(
-  raw: NomenclatureSettingsRaw,
+  raw: NomenclatureSettingsWire,
   masterKey: KdfMasterKey,
 ): DecryptedNomenclature {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertNomenclatureSettings(decrypted);
-  return { ...decrypted, version: raw.version };
+  const validated = NomenclatureSettingsEncryptedInputSchema.parse(
+    decrypted,
+  ) as NomenclatureSettings;
+  return { ...validated, version: raw.version };
 }
 
 /**

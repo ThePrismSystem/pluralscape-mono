@@ -31,11 +31,13 @@ export {
 export {
   BiometricEnrollBodySchema,
   BiometricVerifyBodySchema,
+  NomenclatureSettingsEncryptedInputSchema,
   RemovePinBodySchema,
   SetPinBodySchema,
   SetupCompleteBodySchema,
   SetupNomenclatureStepBodySchema,
   SetupProfileStepBodySchema,
+  SystemSettingsEncryptedInputSchema,
   UpdateNomenclatureBodySchema,
   UpdateSystemSettingsBodySchema,
   VerifyPinBodySchema,

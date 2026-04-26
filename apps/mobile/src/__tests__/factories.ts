@@ -54,10 +54,7 @@ import type { MessageRaw } from "@pluralscape/data/transforms/message";
 import type { NoteRaw } from "@pluralscape/data/transforms/note";
 import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
-import type {
-  NomenclatureSettingsRaw,
-  SystemSettingsRaw,
-} from "@pluralscape/data/transforms/system-settings";
+import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
 import type { CheckInRecordRaw, TimerConfigRaw } from "@pluralscape/data/transforms/timer-check-in";
 import type {
   AcknowledgementId,
@@ -95,6 +92,7 @@ import type {
   RelationshipWire,
   SnapshotContent,
   SystemSettingsId,
+  SystemSettingsWire,
   SystemSnapshotId,
   SystemStructureEntityId,
   SystemStructureEntityTypeId,
@@ -818,13 +816,14 @@ function makeSystemSettingsPayload(settingsId: SystemSettingsId = FACTORY_SETTIN
   };
 }
 
-export function makeRawSystemSettings(overrides?: Partial<SystemSettingsRaw>): SystemSettingsRaw {
+export function makeRawSystemSettings(overrides?: Partial<SystemSettingsWire>): SystemSettingsWire {
   const settings = makeSystemSettingsPayload();
   const encrypted = encryptSystemSettingsUpdate(settings, 1, TEST_MASTER_KEY);
   return {
     id: FACTORY_SETTINGS_ID,
     systemId: TEST_SYSTEM_ID,
     locale: null,
+    pinHash: null,
     biometricEnabled: false,
     createdAt: NOW,
     updatedAt: NOW,
@@ -834,8 +833,8 @@ export function makeRawSystemSettings(overrides?: Partial<SystemSettingsRaw>): S
 }
 
 export function makeRawNomenclature(
-  overrides?: Partial<NomenclatureSettingsRaw>,
-): NomenclatureSettingsRaw {
+  overrides?: Partial<NomenclatureSettingsWire>,
+): NomenclatureSettingsWire {
   const nomenclature = {
     collective: "System",
     individual: "Member",
