@@ -162,7 +162,9 @@ export type LifecycleEventEncryptedFields = "notes";
 // when an entity diverges from the standard pattern.
 
 /** Single-key projection over `"notes"` — not truncated. */
-export type LifecycleEventEncryptedInput = Pick<LifecycleEvent, LifecycleEventEncryptedFields>;
+export type LifecycleEventEncryptedInput = LifecycleEvent extends unknown
+  ? Pick<LifecycleEvent, LifecycleEventEncryptedFields>
+  : never;
 
 /**
  * Server-visible LifecycleEvent metadata — raw Drizzle row shape.
