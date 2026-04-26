@@ -14,6 +14,7 @@ import {
   encryptFieldValueInput,
 } from "@pluralscape/data/transforms/custom-field";
 import { encryptCustomFrontInput } from "@pluralscape/data/transforms/custom-front";
+import { encryptAndEncodeT1 } from "@pluralscape/data/transforms/decode-blob";
 import { encryptFrontingCommentInput } from "@pluralscape/data/transforms/fronting-comment";
 import { encryptFrontingReportInput } from "@pluralscape/data/transforms/fronting-report";
 import { encryptFrontingSessionInput } from "@pluralscape/data/transforms/fronting-session";
@@ -21,7 +22,6 @@ import { encryptGroupInput } from "@pluralscape/data/transforms/group";
 import { encryptCanvasUpdate } from "@pluralscape/data/transforms/innerworld-canvas";
 import { encryptInnerWorldEntityInput } from "@pluralscape/data/transforms/innerworld-entity";
 import { encryptInnerWorldRegionInput } from "@pluralscape/data/transforms/innerworld-region";
-import { encryptLifecycleEventInput } from "@pluralscape/data/transforms/lifecycle-event";
 import { encryptMemberInput } from "@pluralscape/data/transforms/member";
 import { encryptMessageInput } from "@pluralscape/data/transforms/message";
 import { encryptNoteInput } from "@pluralscape/data/transforms/note";
@@ -43,10 +43,6 @@ export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
-import type {
-  LifecycleEventEncryptedPayload,
-  LifecycleEventRaw,
-} from "@pluralscape/data/transforms/lifecycle-event";
 import type { PollVoteServerWire } from "@pluralscape/data/transforms/poll";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
@@ -81,6 +77,7 @@ import type {
   InnerWorldRegionId,
   InnerWorldRegionWire,
   LifecycleEventId,
+  LifecycleEventWire,
   MemberId,
   MemberWire,
   MessageId,
@@ -464,23 +461,22 @@ export function makeRawInnerworldRegion(
 export function makeRawLifecycleEvent(
   id: string,
   eventType: string,
-  payload: LifecycleEventEncryptedPayload,
-  plaintextMetadata: LifecycleEventRaw["plaintextMetadata"],
-  overrides?: Partial<LifecycleEventRaw>,
-): LifecycleEventRaw {
-  const encrypted = encryptLifecycleEventInput(payload, TEST_MASTER_KEY);
+  payload: unknown,
+  plaintextMetadata: LifecycleEventWire["plaintextMetadata"],
+  overrides?: Partial<LifecycleEventWire>,
+): LifecycleEventWire {
   return {
     id: brandId<LifecycleEventId>(id),
     systemId: TEST_SYSTEM_ID,
-    eventType: eventType as LifecycleEventRaw["eventType"],
+    eventType: eventType as LifecycleEventWire["eventType"],
     occurredAt: NOW,
     recordedAt: NOW,
     updatedAt: NOW,
+    encryptedData: encryptAndEncodeT1(payload, TEST_MASTER_KEY),
     plaintextMetadata,
     version: 1,
     archived: false,
     archivedAt: null,
-    ...encrypted,
     ...overrides,
   };
 }

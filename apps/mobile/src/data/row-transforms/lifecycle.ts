@@ -10,8 +10,8 @@ import {
   wrapArchived,
 } from "./primitives.js";
 
-import type { LifecycleEventWithArchive } from "@pluralscape/data/transforms/lifecycle-event";
 import type {
+  Archived,
   ArchivedCheckInRecord,
   ArchivedTimerConfig,
   CheckInRecord,
@@ -59,7 +59,9 @@ function assertLifecycleEvent(v: unknown): asserts v is LifecycleEvent {
   void v;
 }
 
-export function rowToLifecycleEvent(row: Record<string, unknown>): LifecycleEventWithArchive {
+export function rowToLifecycleEvent(
+  row: Record<string, unknown>,
+): LifecycleEvent | Archived<LifecycleEvent> {
   const id = rid(row);
   const archived = intToBool(row["archived"]);
   const eventType = guardedStr(

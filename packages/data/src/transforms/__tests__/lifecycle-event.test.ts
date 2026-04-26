@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis, brandId } from "@pluralscape/types";
+import { brandId } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -13,9 +13,8 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { LifecycleEventEncryptedPayload, LifecycleEventRaw } from "../lifecycle-event.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { LifecycleEventId, LifecycleEventType, SystemId } from "@pluralscape/types";
+import type { LifecycleEventId, LifecycleEventType, LifecycleEventWire } from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -25,18 +24,24 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-const NOW = toUnixMillis(1_700_000_000_000);
-const LATER = toUnixMillis(1_700_001_000_000);
+const NOW = 1_700_000_000_000;
+const LATER = 1_700_001_000_000;
 
+/**
+ * `payload` is `unknown` because the encrypted blob is opaque on the wire and
+ * tests intentionally exercise both well-formed per-variant inputs and
+ * malformed inputs (negative cases for schema validation). Per-variant type
+ * safety is enforced by the Zod schemas in the decryption path, not here.
+ */
 function makeRaw(
   eventType: LifecycleEventType,
-  payload: LifecycleEventEncryptedPayload,
+  payload: unknown,
   plaintextMetadata: Record<string, readonly string[]> | null,
-  overrides?: Partial<LifecycleEventRaw>,
-): LifecycleEventRaw {
+  overrides?: Partial<LifecycleEventWire>,
+): LifecycleEventWire {
   return {
-    id: brandId<LifecycleEventId>("evt_001"),
-    systemId: brandId<SystemId>("sys_test"),
+    id: "evt_001",
+    systemId: "sys_test",
     eventType,
     occurredAt: NOW,
     recordedAt: NOW,
@@ -54,7 +59,7 @@ function makeRaw(
 
 describe("decryptLifecycleEvent — split", () => {
   it("decrypts split event", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: "Split happened" };
+    const payload = { notes: "Split happened" };
     const meta = { memberIds: ["mem_src", "mem_r1", "mem_r2"] };
     const result = decryptLifecycleEvent(makeRaw("split", payload, meta), masterKey);
 
@@ -71,7 +76,7 @@ describe("decryptLifecycleEvent — split", () => {
 
 describe("decryptLifecycleEvent — fusion", () => {
   it("decrypts fusion event", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a", "mem_b", "mem_result"] };
     const result = decryptLifecycleEvent(makeRaw("fusion", payload, meta), masterKey);
 
@@ -88,7 +93,7 @@ describe("decryptLifecycleEvent — fusion", () => {
 
 describe("decryptLifecycleEvent — merge", () => {
   it("decrypts merge event", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a", "mem_b"] };
     const result = decryptLifecycleEvent(makeRaw("merge", payload, meta), masterKey);
 
@@ -103,7 +108,7 @@ describe("decryptLifecycleEvent — merge", () => {
 
 describe("decryptLifecycleEvent — unmerge", () => {
   it("decrypts unmerge event", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a", "mem_b"] };
     const result = decryptLifecycleEvent(makeRaw("unmerge", payload, meta), masterKey);
 
@@ -118,7 +123,7 @@ describe("decryptLifecycleEvent — unmerge", () => {
 
 describe("decryptLifecycleEvent — dormancy-start", () => {
   it("decrypts dormancy-start with relatedLifecycleEventId", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       relatedLifecycleEventId: brandId<LifecycleEventId>("evt_related"),
     };
@@ -133,7 +138,7 @@ describe("decryptLifecycleEvent — dormancy-start", () => {
   });
 
   it("decrypts dormancy-start with null relatedLifecycleEventId", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       relatedLifecycleEventId: null,
     };
@@ -150,7 +155,7 @@ describe("decryptLifecycleEvent — dormancy-start", () => {
 
 describe("decryptLifecycleEvent — dormancy-end", () => {
   it("decrypts dormancy-end event", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: "Woke up",
       relatedLifecycleEventId: brandId<LifecycleEventId>("evt_start"),
     };
@@ -170,7 +175,7 @@ describe("decryptLifecycleEvent — dormancy-end", () => {
 
 describe("decryptLifecycleEvent — discovery", () => {
   it("decrypts discovery event", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: "New member found" };
+    const payload = { notes: "New member found" };
     const meta = { memberIds: ["mem_new"] };
     const result = decryptLifecycleEvent(makeRaw("discovery", payload, meta), masterKey);
 
@@ -186,7 +191,7 @@ describe("decryptLifecycleEvent — discovery", () => {
 
 describe("decryptLifecycleEvent — archival", () => {
   it("decrypts archival event", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       entity: { entityType: "member", entityId: "mem_archived" },
     };
@@ -204,7 +209,7 @@ describe("decryptLifecycleEvent — archival", () => {
 
 describe("decryptLifecycleEvent — structure-entity-formation", () => {
   it("decrypts structure-entity-formation event", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a"], structureIds: ["se_result"] };
     const result = decryptLifecycleEvent(
       makeRaw("structure-entity-formation", payload, meta),
@@ -223,7 +228,7 @@ describe("decryptLifecycleEvent — structure-entity-formation", () => {
 
 describe("decryptLifecycleEvent — form-change", () => {
   it("decrypts form-change event", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       previousForm: "child",
       newForm: "adult",
@@ -240,7 +245,7 @@ describe("decryptLifecycleEvent — form-change", () => {
   });
 
   it("handles null previousForm and newForm", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       previousForm: null,
       newForm: null,
@@ -259,7 +264,7 @@ describe("decryptLifecycleEvent — form-change", () => {
 
 describe("decryptLifecycleEvent — name-change", () => {
   it("decrypts name-change event", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       previousName: "Old Name",
       newName: "New Name",
@@ -276,7 +281,7 @@ describe("decryptLifecycleEvent — name-change", () => {
   });
 
   it("handles null previousName", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       previousName: null,
       newName: "First Name",
@@ -295,7 +300,7 @@ describe("decryptLifecycleEvent — name-change", () => {
 
 describe("decryptLifecycleEvent — structure-move", () => {
   it("decrypts with fromStructure and toStructure (2 structureIds)", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a"], structureIds: ["se_from", "se_to"] };
     const result = decryptLifecycleEvent(makeRaw("structure-move", payload, meta), masterKey);
 
@@ -314,7 +319,7 @@ describe("decryptLifecycleEvent — structure-move", () => {
   });
 
   it("decrypts with null fromStructure (1 structureId)", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a"], structureIds: ["se_to"] };
     const result = decryptLifecycleEvent(makeRaw("structure-move", payload, meta), masterKey);
 
@@ -332,7 +337,7 @@ describe("decryptLifecycleEvent — structure-move", () => {
 
 describe("decryptLifecycleEvent — innerworld-move", () => {
   it("decrypts with fromRegionId and toRegionId (2 regionIds)", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       entityType: "member",
     };
@@ -349,7 +354,7 @@ describe("decryptLifecycleEvent — innerworld-move", () => {
   });
 
   it("decrypts with only toRegionId (1 regionId)", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       entityType: "landmark",
     };
@@ -363,7 +368,7 @@ describe("decryptLifecycleEvent — innerworld-move", () => {
   });
 
   it("decrypts with both null (0 regionIds)", () => {
-    const payload: LifecycleEventEncryptedPayload = {
+    const payload = {
       notes: null,
       entityType: "structure-entity",
     };
@@ -380,21 +385,8 @@ describe("decryptLifecycleEvent — innerworld-move", () => {
 // ── Shared behaviors ──────────────────────────────────────────────────
 
 describe("decryptLifecycleEvent — shared", () => {
-  it("defaults notes to null when encryptedData is null", () => {
-    const raw = makeRaw(
-      "discovery",
-      { notes: null },
-      { memberIds: ["mem_a"] },
-      {
-        encryptedData: null,
-      },
-    );
-    const result = decryptLifecycleEvent(raw, masterKey);
-    expect(result.notes).toBeNull();
-  });
-
   it("returns archived variant with archivedAt", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a"] };
     const raw = makeRaw("discovery", payload, meta, {
       archived: true,
@@ -409,7 +401,7 @@ describe("decryptLifecycleEvent — shared", () => {
   });
 
   it("throws when archived=true but archivedAt is null", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const meta = { memberIds: ["mem_a"] };
     const raw = makeRaw("discovery", payload, meta, {
       archived: true,
@@ -446,7 +438,7 @@ describe("decryptLifecycleEventPage", () => {
 
 describe("encryptLifecycleEventInput", () => {
   it("round-trips through decrypt", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: "Test note" };
+    const payload = { notes: "Test note" };
     const { encryptedData } = encryptLifecycleEventInput(payload, masterKey);
     const raw = makeRaw("discovery", payload, { memberIds: ["mem_a"] }, { encryptedData });
     const result = decryptLifecycleEvent(raw, masterKey);
@@ -456,16 +448,16 @@ describe("encryptLifecycleEventInput", () => {
 
 describe("encryptLifecycleEventUpdate", () => {
   it("includes version", () => {
-    const payload: LifecycleEventEncryptedPayload = { notes: null };
+    const payload = { notes: null };
     const result = encryptLifecycleEventUpdate(payload, 5, masterKey);
     expect(result.version).toBe(5);
     expect(typeof result.encryptedData).toBe("string");
   });
 });
 
-// ── Validation ────────────────────────────────────────────────────────
+// ── Schema validation ─────────────────────────────────────────────────
 
-describe("assertLifecycleEventPayload", () => {
+describe("decryptLifecycleEvent — schema validation", () => {
   it("throws when blob is not an object", () => {
     const raw = makeRaw(
       "discovery",
@@ -475,7 +467,34 @@ describe("assertLifecycleEventPayload", () => {
         encryptedData: makeBase64Blob("string", masterKey),
       },
     );
-    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("not an object");
+    // Zod parse throws when the decrypted blob is not an object
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow();
+  });
+
+  it("throws when archival blob missing entity field", () => {
+    // Encrypt only `notes` — schema requires `entity` for archival variant
+    const encryptedData = encryptAndEncodeT1({ notes: null }, masterKey);
+    const raw = makeRaw(
+      "archival",
+      { notes: null },
+      { memberIds: ["mem_a"] },
+      {
+        encryptedData,
+      },
+    );
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow();
+  });
+
+  it("throws when name-change blob missing newName field", () => {
+    // Encrypt only `notes + previousName` — schema requires `newName`
+    const encryptedData = encryptAndEncodeT1({ notes: null, previousName: "Old" }, masterKey);
+    const raw = makeRaw(
+      "name-change",
+      { notes: null, previousName: "Old", newName: "x" },
+      { memberIds: ["mem_a"] },
+      { encryptedData },
+    );
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow();
   });
 });
 
@@ -526,19 +545,5 @@ describe("decryptLifecycleEvent — metadata validation", () => {
       { entityIds: [], regionIds: [] },
     );
     expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required entityIds");
-  });
-
-  it("throws on archival with missing payload.entity", () => {
-    const raw = makeRaw("archival", { notes: null }, { memberIds: ["mem_a"] });
-    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required field: entity");
-  });
-
-  it("throws on name-change with missing payload.newName", () => {
-    const raw = makeRaw(
-      "name-change",
-      { notes: null, previousName: "Old" },
-      { memberIds: ["mem_a"] },
-    );
-    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required field: newName");
   });
 });

@@ -1,11 +1,11 @@
 ---
 # types-wozj
 title: "LifecycleEvent transform: canonical type chain migration"
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-26T05:04:22Z
-updated_at: 2026-04-26T05:04:22Z
+updated_at: 2026-04-26T09:56:54Z
 blocked_by:
   - ps-etbc
 ---

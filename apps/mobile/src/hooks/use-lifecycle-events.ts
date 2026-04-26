@@ -18,11 +18,14 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
-  LifecycleEventPage as LifecycleEventRawPage,
-  LifecycleEventRaw,
-  LifecycleEventWithArchive,
-} from "@pluralscape/data/transforms/lifecycle-event";
-import type { LifecycleEventId, LifecycleEventType } from "@pluralscape/types";
+  Archived,
+  LifecycleEvent,
+  LifecycleEventId,
+  LifecycleEventType,
+  LifecycleEventWire,
+} from "@pluralscape/types";
+
+type LifecycleEventDecrypted = LifecycleEvent | Archived<LifecycleEvent>;
 
 interface LifecycleEventListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -33,8 +36,8 @@ interface LifecycleEventListOpts extends SystemIdOverride {
 export function useLifecycleEvent(
   eventId: LifecycleEventId,
   opts?: SystemIdOverride,
-): DataQuery<LifecycleEventWithArchive> {
-  return useOfflineFirstQuery<LifecycleEventRaw, LifecycleEventWithArchive>({
+): DataQuery<LifecycleEventDecrypted> {
+  return useOfflineFirstQuery<LifecycleEventWire, LifecycleEventDecrypted>({
     queryKey: ["lifecycle_events", eventId],
     table: "lifecycle_events",
     entityId: eventId,
@@ -45,14 +48,14 @@ export function useLifecycleEvent(
       trpc.lifecycleEvent.get.useQuery(
         { systemId, eventId },
         { enabled, select },
-      ) as DataQuery<LifecycleEventWithArchive>,
+      ) as DataQuery<LifecycleEventDecrypted>,
   });
 }
 
 export function useLifecycleEventsList(
   opts?: LifecycleEventListOpts,
-): DataListQuery<LifecycleEventWithArchive> {
-  return useOfflineFirstInfiniteQuery<LifecycleEventRaw, LifecycleEventWithArchive>({
+): DataListQuery<LifecycleEventDecrypted> {
+  return useOfflineFirstInfiniteQuery<LifecycleEventWire, LifecycleEventDecrypted>({
     queryKey: ["lifecycle_events", "list", opts?.includeArchived ?? false],
     table: "lifecycle_events",
     rowTransform: rowToLifecycleEvent,
@@ -77,10 +80,10 @@ export function useLifecycleEventsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: LifecycleEventRawPage) => lastPage.nextCursor,
+          getNextPageParam: (lastPage: { nextCursor: string | null }) => lastPage.nextCursor,
           select,
         },
-      ) as DataListQuery<LifecycleEventWithArchive>,
+      ) as DataListQuery<LifecycleEventDecrypted>,
   });
 }
 

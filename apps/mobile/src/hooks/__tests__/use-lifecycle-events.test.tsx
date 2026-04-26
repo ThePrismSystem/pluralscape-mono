@@ -9,8 +9,7 @@ import { makeRawLifecycleEvent } from "../../__tests__/factories.js";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
-import type { LifecycleEventRaw } from "@pluralscape/data/transforms/lifecycle-event";
-import type { LifecycleEventId } from "@pluralscape/types";
+import type { LifecycleEventId, LifecycleEventWire } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -118,7 +117,7 @@ const {
   useDeleteLifecycleEvent,
 } = await import("../use-lifecycle-events.js");
 
-function makeDiscoveryEvent(id: string, memberId: string): LifecycleEventRaw {
+function makeDiscoveryEvent(id: string, memberId: string): LifecycleEventWire {
   return makeRawLifecycleEvent(id, "discovery", { notes: null }, { memberIds: [memberId] });
 }
 
