@@ -3,7 +3,7 @@ import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { MemberId, RelationshipId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
-import type { Archived, AuditMetadata } from "../utility.js";
+import type { Archived } from "../utility.js";
 
 /** The kind of relationship between two members. */
 export type RelationshipType =
@@ -18,19 +18,29 @@ export type RelationshipType =
   | "source"
   | "custom";
 
-/** A relationship between two members. */
-export interface Relationship {
+interface RelationshipBase {
   readonly id: RelationshipId;
   readonly systemId: SystemId;
   readonly sourceMemberId: MemberId | null;
   readonly targetMemberId: MemberId | null;
-  readonly type: RelationshipType;
-  /** User-defined label — only meaningful when type is "custom". */
-  readonly label: string | null;
   readonly bidirectional: boolean;
   readonly createdAt: UnixMillis;
   readonly archived: false;
 }
+
+/** A custom-type relationship — carries a user-defined label. */
+export interface CustomRelationship extends RelationshipBase {
+  readonly type: "custom";
+  readonly label: string;
+}
+
+/** A standard-type relationship — no user-defined label. */
+export interface StandardRelationship extends RelationshipBase {
+  readonly type: Exclude<RelationshipType, "custom">;
+}
+
+/** A relationship between two members. Discriminated by `type`. */
+export type Relationship = CustomRelationship | StandardRelationship;
 
 /**
  * Keys of `Relationship` that are encrypted client-side before the server sees
@@ -38,7 +48,6 @@ export interface Relationship {
  * sent plaintext because the server needs them for querying. Consumed by:
  * - `__sot-manifest__.ts` (manifest's `encryptedFields` slot)
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextRelationship parity)
- * - Plan 2 fleet will consume when deriving `RelationshipServerMetadata`.
  */
 export type RelationshipEncryptedFields = "label";
 
@@ -49,32 +58,40 @@ export type RelationshipEncryptedFields = "label";
 // chain anchor above carries the meaning. Per-alias docs only appear
 // when an entity diverges from the standard pattern.
 
-/** Single-key projection over `"label"` — not truncated. */
-export type RelationshipEncryptedInput = Pick<Relationship, RelationshipEncryptedFields>;
+/**
+ * Distributive Pick over the union — `{ label: string }` for the custom
+ * variant, `{}` for standard variants (which carry no label key at all).
+ */
+export type RelationshipEncryptedInput = Relationship extends unknown
+  ? Pick<Relationship, Extract<keyof Relationship, RelationshipEncryptedFields>>
+  : never;
 
 export type ArchivedRelationship = Archived<Relationship>;
 
 /**
  * Server-visible Relationship metadata — raw Drizzle row shape.
  *
- * Derived from `Relationship` by stripping the encrypted field key
- * (`label` rides inside `encryptedData`) and `archived` (server tracks a
- * mutable boolean with a companion `archivedAt` timestamp, domain uses
- * `false` literal). Adds DB-only columns the domain doesn't carry:
- * `encryptedData` (T1 blob), `archived`/`archivedAt`, and the rest of
- * `AuditMetadata` (`updatedAt`/`version` — the domain carries only
- * `createdAt`). Non-"custom" relationships carry an empty label inside
- * the blob rather than a nullable column.
+ * Declared as a single non-union shape because the Drizzle `relationships`
+ * table returns one object shape (not a union). The discriminated union is
+ * purely a domain-level invariant enforced after decryption. The server
+ * carries `type: RelationshipType` (flat) and `label` lives inside
+ * `encryptedData`. Adds DB-only columns: `encryptedData`, `archived`/
+ * `archivedAt`, `updatedAt`, `version`.
  */
-export type RelationshipServerMetadata = Omit<
-  Relationship,
-  RelationshipEncryptedFields | "archived"
-> &
-  Omit<AuditMetadata, "createdAt"> & {
-    readonly encryptedData: EncryptedBlob;
-    readonly archived: boolean;
-    readonly archivedAt: UnixMillis | null;
-  };
+export type RelationshipServerMetadata = {
+  readonly id: RelationshipId;
+  readonly systemId: SystemId;
+  readonly sourceMemberId: MemberId | null;
+  readonly targetMemberId: MemberId | null;
+  readonly type: RelationshipType;
+  readonly bidirectional: boolean;
+  readonly encryptedData: EncryptedBlob;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+  readonly version: number;
+};
 
 export type RelationshipResult = EncryptedWire<RelationshipServerMetadata>;
 

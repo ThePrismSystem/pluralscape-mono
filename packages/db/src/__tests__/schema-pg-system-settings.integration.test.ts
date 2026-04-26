@@ -16,7 +16,7 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { SystemId, SystemSettingsId } from "@pluralscape/types";
+import type { PinHash, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, systemSettings };
@@ -47,7 +47,7 @@ describe("PG system_settings schema", () => {
       id: brandId<SystemSettingsId>(`sset_${crypto.randomUUID()}`),
       systemId,
       locale: "en",
-      pinHash: "$argon2id$hash123",
+      pinHash: brandId<PinHash>("$argon2id$hash123"),
       biometricEnabled: true,
       encryptedData: data,
       createdAt: now,

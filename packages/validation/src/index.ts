@@ -85,8 +85,10 @@ export {
 } from "./structure.js";
 export {
   CreateRelationshipBodySchema,
+  CustomRelationshipEncryptedSchema,
   RELATIONSHIP_TYPES,
   RelationshipEncryptedInputSchema,
+  StandardRelationshipEncryptedSchema,
   UpdateRelationshipBodySchema,
 } from "./relationship.js";
 export {

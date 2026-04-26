@@ -51,11 +51,19 @@ export type FriendConnectionEncryptedInput = Pick<
 >;
 
 /**
- * Domain field absent from the server row for STRUCTURAL reasons (the
- * value lives in a junction table — `friend_bucket_assignments`), not
- * because it is encrypted. Distinguished from
- * `FriendConnectionEncryptedFields` (encrypted blob) and `archived`
- * (literal-to-boolean flip).
+ * Domain keys omitted from `FriendConnectionServerMetadata` for one of three
+ * orthogonal reasons:
+ *
+ * 1. **Junction-table derivation** — `assignedBucketIds` is computed by
+ *    joining the `bucket_friend_connections` junction table at read time,
+ *    not stored on the friend-connection row.
+ * 2. **Encrypted-blob derivation** — `visibility` lives inside the T1
+ *    `encryptedData` blob; the server never sees its plaintext form.
+ * 3. **Domain-only convention** — `archived` exists on the domain as a
+ *    discriminated literal (widens to `boolean` server-side), so the omit
+ *    avoids the type collision.
+ *
+ * @see FriendConnectionServerMetadata
  */
 export type FriendConnectionAuxOmitFields = "assignedBucketIds";
 
@@ -63,13 +71,9 @@ export type FriendConnectionAuxOmitFields = "assignedBucketIds";
  * Server-visible FriendConnection metadata — raw Drizzle row shape.
  *
  * The Omit clause names three orthogonal reasons a domain key is absent
- * from the server row:
- *   1. `FriendConnectionEncryptedFields` — value lives in `encryptedData`
- *   2. `FriendConnectionAuxOmitFields` — value lives in a junction table
- *   3. `"archived"` — domain literal `false` flips to mutable boolean below
- *
- * Adds the nullable `encryptedData` column (nullable because pending
- * connections have no visibility blob yet) and `archivedAt`.
+ * from the server row — see {@link FriendConnectionAuxOmitFields} for the
+ * full enumeration. Adds the nullable `encryptedData` column (nullable
+ * because pending connections have no visibility blob yet) and `archivedAt`.
  */
 export type FriendConnectionServerMetadata = Omit<
   FriendConnection,

@@ -1,7 +1,7 @@
 import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
 import type { Locale } from "../i18n.js";
-import type { BucketId, SystemSettingsId, SystemId } from "../ids.js";
+import type { Brand, BucketId, SystemSettingsId, SystemId } from "../ids.js";
 import type { LittlesSafeModeConfig } from "../littles-safe-mode.js";
 import type { NomenclatureSettings } from "../nomenclature.js";
 import type { Serialize } from "../type-assertions.js";
@@ -106,6 +106,14 @@ export type SystemSettingsEncryptedFields =
 export type SystemSettingsEncryptedInput = Pick<SystemSettings, SystemSettingsEncryptedFields>;
 
 /**
+ * Argon2id-hashed PIN. Branded `string` to prevent assigning an unhashed PIN
+ * by mistake. Constructed only at the hashing call site (`hashPinOffload` in
+ * `apps/api/src/services/pin.service.ts` and `account-pin.service.ts`); never
+ * exposed to clients.
+ */
+export type PinHash = Brand<string, "PinHash">;
+
+/**
  * Server-visible SystemSettings metadata — raw Drizzle row shape.
  *
  * Derived from `SystemSettings` by stripping the encrypted field keys
@@ -120,7 +128,7 @@ export type SystemSettingsServerMetadata = Omit<
   SystemSettings,
   SystemSettingsEncryptedFields | "defaultBucketId" | "nomenclature"
 > & {
-  readonly pinHash: string | null;
+  readonly pinHash: PinHash | null;
   readonly biometricEnabled: boolean;
   readonly encryptedData: EncryptedBlob;
 };

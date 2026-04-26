@@ -161,21 +161,29 @@ export type ArchivedJournalEntry = Archived<JournalEntry>;
 
 /**
  * Keys of `JournalEntry` that are encrypted client-side before the server
- * sees them. The server stores ciphertext in `encryptedData`; the only
- * plaintext column (besides the audit triple and `systemId`/`id`) is
- * `frontingSessionId`, kept in the clear as a FK for efficient joins.
+ * sees them — derived via `Exclude<keyof JournalEntry, ...>` (encrypt-by-default
+ * policy: every new field is encrypted unless explicitly allowlisted).
+ *
+ * Excluded (plaintext) keys and the rationale for each:
+ * - `id`               — primary key; required for upsert routing and FK references
+ * - `systemId`         — partition key; required for RLS context and tenant isolation
+ * - `frontingSessionId`— FK into the partitioned fronting-sessions table; kept clear
+ *                        so the server can perform efficient joins without decrypting
+ * - `archived`         — boolean flag; server must query it for archival/restore
+ *                        operations and index maintenance without decrypting the blob
+ * - `createdAt`, `updatedAt`, `version` (from `AuditMetadata`) — server-managed audit
+ *                        columns written by the database; never part of the encrypted
+ *                        payload
+ *
  * Consumed by:
  * - `JournalEntryServerMetadata` (derived via `Omit`)
  * - `JournalEntryEncryptedInput = Pick<JournalEntry, JournalEntryEncryptedFields>`
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextJournalEntry parity)
  */
-export type JournalEntryEncryptedFields =
-  | "title"
-  | "author"
-  | "blocks"
-  | "tags"
-  | "linkedEntities"
-  | "frontingSnapshots";
+export type JournalEntryEncryptedFields = Exclude<
+  keyof JournalEntry,
+  "id" | "systemId" | "frontingSessionId" | "archived" | keyof AuditMetadata
+>;
 
 /**
  * Server-visible JournalEntry metadata — raw Drizzle row shape.

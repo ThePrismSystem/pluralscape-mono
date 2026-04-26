@@ -23,7 +23,7 @@ export interface MemberPhoto {
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextMemberPhoto parity)
  * - `MemberPhotoServerMetadata` (derived via `Omit`)
  */
-export type MemberPhotoEncryptedFields = "imageSource" | "sortOrder" | "caption";
+export type MemberPhotoEncryptedFields = "imageSource" | "caption";
 
 // ── Canonical chain (see ADR-023) ────────────────────────────────────
 // MemberPhotoEncryptedInput → MemberPhotoServerMetadata
@@ -40,19 +40,23 @@ export type ArchivedMemberPhoto = Archived<MemberPhoto>;
 /**
  * Server-visible MemberPhoto metadata — raw Drizzle row shape.
  *
- * Derived from `MemberPhoto` by stripping the encrypted field keys bundled
- * inside `encryptedData` and `archived` (server tracks a mutable boolean
- * with a companion `archivedAt` timestamp, domain uses `false` literal).
- * Adds DB-only columns the domain type doesn't carry: `systemId`
- * (denormalized from `members` for RLS), `sortOrder` kept plaintext in DB
- * for index-based ordering (present in domain but marked encrypted),
- * full `AuditMetadata` (`createdAt`/`updatedAt`/`version`),
- * `encryptedData` (the T1 blob), and `archived`/`archivedAt`.
+ * Derived from `MemberPhoto` by stripping the encrypted field keys
+ * (`imageSource`, `caption`) that ride inside `encryptedData`, and
+ * `archived` (server tracks a mutable boolean with a companion
+ * `archivedAt` timestamp; the domain uses the `false` literal).
+ *
+ * Adds DB-only columns the domain type doesn't carry:
+ * - `systemId` — denormalized from `members` for RLS
+ * - `encryptedData: EncryptedBlob` — T1 blob carrying the encrypted fields
+ * - `archived: boolean` / `archivedAt` — archive lifecycle columns
+ * - full `AuditMetadata` (`createdAt` / `updatedAt` / `version`)
+ *
+ * `sortOrder` is plaintext on both sides and flows through from `MemberPhoto`
+ * via the `Omit`; no re-declaration needed.
  */
 export type MemberPhotoServerMetadata = Omit<MemberPhoto, MemberPhotoEncryptedFields | "archived"> &
   AuditMetadata & {
     readonly systemId: SystemId;
-    readonly sortOrder: number;
     readonly encryptedData: EncryptedBlob;
     readonly archived: boolean;
     readonly archivedAt: UnixMillis | null;

@@ -1,11 +1,11 @@
 ---
 # types-x61u
 title: "ps-y4tb followup: harden encrypted-keys union with Exclude<> (journal-entry, note) + defensive distributive Pick (lifecycle-event)"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-25T23:18:43Z
-updated_at: 2026-04-25T23:18:43Z
+updated_at: 2026-04-26T08:45:31Z
 parent: ps-y4tb
 ---
 
@@ -100,3 +100,11 @@ In \`packages/types/src/**tests**/encrypted-fields-policy.test.ts\` (new), asser
 
 - Parent: ps-y4tb
 - Triggered by: PR #561 review (2026-04-25)
+
+## Summary of Changes
+
+Closed by ps-y4tb-batch1 PR: 13 commits on branch refactor/ps-y4tb-batch1-hardening.
+
+- JournalEntryEncryptedFields and NoteEncryptedFields now derive via Exclude<keyof X, allowlist> (encrypt-by-default policy)
+- LifecycleEventEncryptedInput is defensively distributive
+- New parity guard test at packages/types/src/**tests**/encrypted-fields-policy.test.ts locks the current key sets in

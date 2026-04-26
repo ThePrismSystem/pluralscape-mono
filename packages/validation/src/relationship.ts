@@ -17,16 +17,29 @@ export const RELATIONSHIP_TYPES = [
 ] as const;
 
 /**
- * Runtime validator for the pre-encryption Relationship input. Every field
- * of `RelationshipEncryptedInput` (in `@pluralscape/data`) must be present
- * and well-formed. Zod compile-time parity is checked in
- * `__tests__/type-parity/relationship.type.test.ts`.
+ * Runtime validator for the custom-type pre-encryption Relationship input.
+ * The `type` discriminant is plaintext on the wire (not inside the blob), so
+ * callers must select the correct schema before parsing the decrypted payload.
  */
-export const RelationshipEncryptedInputSchema = z
-  .object({
-    label: z.string().nullable(),
-  })
-  .readonly();
+export const CustomRelationshipEncryptedSchema = z.object({ label: z.string() }).readonly();
+
+/**
+ * Runtime validator for a standard-type pre-encryption Relationship input.
+ * Standard relationships carry no label — the blob MUST be an empty object.
+ * Strict mode rejects any extra keys (defense against schema drift or
+ * misrouted custom blobs).
+ */
+export const StandardRelationshipEncryptedSchema = z.object({}).strict().readonly();
+
+/**
+ * Union of both encrypted-input schemas. `z.infer` yields `{ label: string } | {}`,
+ * matching the distributive `RelationshipEncryptedInput` canonical type.
+ * Zod compile-time parity checked in `__tests__/type-parity/relationship.type.test.ts`.
+ */
+export const RelationshipEncryptedInputSchema = z.union([
+  CustomRelationshipEncryptedSchema,
+  StandardRelationshipEncryptedSchema,
+]);
 
 export const CreateRelationshipBodySchema = z
   .object({

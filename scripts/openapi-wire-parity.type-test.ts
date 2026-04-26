@@ -258,7 +258,13 @@ expectTypeOf<
 expectTypeOf<
   Equal<
     components["schemas"]["PlaintextRelationship"],
-    Serialize<Pick<Relationship, RelationshipEncryptedFields>>
+    // Distributive Pick — `{ label: string }` for custom, `{}` for standard.
+    // Matches `RelationshipEncryptedInput` (see packages/types/src/entities/relationship.ts).
+    Serialize<
+      Relationship extends unknown
+        ? Pick<Relationship, Extract<keyof Relationship, RelationshipEncryptedFields>>
+        : never
+    >
   >
 >().toEqualTypeOf<true>();
 

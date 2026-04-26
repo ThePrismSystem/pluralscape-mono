@@ -1,11 +1,11 @@
 ---
 # types-kk7a
 title: "ps-y4tb followup: JSDoc + ADR cross-reference cleanup (system, friend-connection, member-photo, ADR-023)"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-25T23:18:05Z
-updated_at: 2026-04-25T23:18:05Z
+updated_at: 2026-04-26T08:45:31Z
 parent: ps-y4tb
 ---
 
@@ -50,3 +50,12 @@ Decide and either fix the comments or write the ADR.
 
 - Parent: ps-y4tb
 - Triggered by: PR #561 review (2026-04-25)
+
+## Summary of Changes
+
+Closed by ps-y4tb-batch1 PR.
+
+- system.ts JSDoc explicitly notes that archived is a server-only field with no domain counterpart
+- friend-connection.ts FriendConnectionAuxOmitFields JSDoc carries the three orthogonal Omit reasons; FriendConnectionServerMetadata cross-links via {@link}
+- member-photo.ts: sortOrder dropped from MemberPhotoEncryptedFields (it was already plaintext on the server for indexing); OpenAPI PlaintextMemberPhoto updated; Drizzle parity test JSDoc refreshed
+- ADR-023 Decision section now lists all six chain types as primary bullets

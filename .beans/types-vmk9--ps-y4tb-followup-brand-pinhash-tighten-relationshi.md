@@ -1,11 +1,11 @@
 ---
 # types-vmk9
 title: "ps-y4tb followup: brand pinHash + tighten Relationship.label invariant"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-25T23:18:23Z
-updated_at: 2026-04-25T23:18:23Z
+updated_at: 2026-04-26T08:45:31Z
 parent: ps-y4tb
 ---
 
@@ -76,3 +76,16 @@ Migrate consumers (data transforms, validation schemas, openapi parity types) to
 
 - Parent: ps-y4tb
 - Triggered by: PR #561 review (2026-04-25)
+
+## Summary of Changes
+
+Closed by ps-y4tb-batch1 PR.
+
+- PinHash brand declared in @pluralscape/types and applied to SystemSettingsServerMetadata.pinHash
+- pinHash columns in PG and SQLite schemas branded via .$type<PinHash | null>()
+- Hash-construction call sites in pin.service.ts and account-pin.service.ts cast to PinHash
+- Relationship converted to a discriminated union (CustomRelationship | StandardRelationship)
+- RelationshipEncryptedInput is the distributive Pick (`{ label: string } | {}`)
+- Validation split into CustomRelationshipEncryptedSchema (.string()) + StandardRelationshipEncryptedSchema (.strict())
+- Transform narrows on raw.type to select the right schema
+- OpenAPI PlaintextRelationship updated to oneOf; mobile consumers narrow on type === 'custom' before reading label

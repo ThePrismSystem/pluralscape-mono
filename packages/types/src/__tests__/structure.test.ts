@@ -2,6 +2,7 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
   ArchivedRelationship,
+  CustomRelationship,
   Relationship,
   RelationshipType,
 } from "../entities/relationship.js";
@@ -85,29 +86,33 @@ describe("Relationship", () => {
     expectTypeOf<Relationship>().not.toExtend<AuditMetadata>();
   });
 
-  it("has correct field types", () => {
+  it("has correct field types on shared keys", () => {
     expectTypeOf<Relationship["id"]>().toEqualTypeOf<RelationshipId>();
     expectTypeOf<Relationship["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<Relationship["sourceMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<Relationship["targetMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<Relationship["type"]>().toEqualTypeOf<RelationshipType>();
-    expectTypeOf<Relationship["label"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Relationship["bidirectional"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Relationship["createdAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("label exists only on custom variant", () => {
+    // label is not on the union base — access via narrowed type only
+    expectTypeOf<CustomRelationship["label"]>().toEqualTypeOf<string>();
   });
 
   it("has archived as false literal", () => {
     expectTypeOf<Relationship["archived"]>().toEqualTypeOf<false>();
   });
 
-  it("has exact shape", () => {
+  it("has exact shape — union of both variant key sets", () => {
+    // keyof (A | B) = keyof A & keyof B (shared keys only)
     expectTypeOf<keyof Relationship>().toEqualTypeOf<
       | "id"
       | "systemId"
       | "sourceMemberId"
       | "targetMemberId"
       | "type"
-      | "label"
       | "bidirectional"
       | "createdAt"
       | "archived"

@@ -1,5 +1,8 @@
 import { brandId, toUnixMillis } from "@pluralscape/types";
-import { RelationshipEncryptedInputSchema } from "@pluralscape/validation";
+import {
+  CustomRelationshipEncryptedSchema,
+  StandardRelationshipEncryptedSchema,
+} from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
@@ -24,25 +27,37 @@ export function decryptRelationship(
   masterKey: KdfMasterKey,
 ): Relationship | Archived<Relationship> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  const validated = RelationshipEncryptedInputSchema.parse(decrypted);
-  const label = validated.label;
 
-  const base = {
+  const baseShared = {
     id: brandId<RelationshipId>(raw.id),
     systemId: brandId<SystemId>(raw.systemId),
     sourceMemberId: raw.sourceMemberId === null ? null : brandId<MemberId>(raw.sourceMemberId),
     targetMemberId: raw.targetMemberId === null ? null : brandId<MemberId>(raw.targetMemberId),
-    type: raw.type,
-    label,
     bidirectional: raw.bidirectional,
     createdAt: toUnixMillis(raw.createdAt),
   };
 
+  // `type` is plaintext on the wire — use it to select the correct schema for
+  // the decrypted blob. Custom carries `{ label }`, standard carries `{}`.
+  let domainObj: Relationship;
+  if (raw.type === "custom") {
+    const validated = CustomRelationshipEncryptedSchema.parse(decrypted);
+    domainObj = {
+      ...baseShared,
+      type: "custom" as const,
+      label: validated.label,
+      archived: false as const,
+    };
+  } else {
+    StandardRelationshipEncryptedSchema.parse(decrypted);
+    domainObj = { ...baseShared, type: raw.type, archived: false as const };
+  }
+
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived relationship missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
+    return { ...domainObj, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
-  return { ...base, archived: false as const };
+  return domainObj;
 }
 
 export function decryptRelationshipPage(

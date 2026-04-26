@@ -130,7 +130,6 @@ describe("useRelationship", () => {
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-    expect(result.current.data?.label).toBe("Label rel_1");
     expect(result.current.data?.type).toBe("sibling");
     expect(result.current.data?.archived).toBe(false);
   });
@@ -178,8 +177,8 @@ describe("useRelationshipsList", () => {
     const items = firstPage && "data" in firstPage ? firstPage.data : [];
     expect(pages).toHaveLength(1);
     expect(items).toHaveLength(2);
-    expect(items[0]?.label).toBe("Label rel_1");
-    expect(items[1]?.label).toBe("Label rel_2");
+    expect(items[0]?.type).toBe("sibling");
+    expect(items[1]?.type).toBe("sibling");
   });
 
   it("does not fetch when masterKey is null", () => {

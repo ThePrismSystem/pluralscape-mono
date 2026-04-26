@@ -8,8 +8,7 @@
  * the blob, not its own column), and `nomenclature` (stored in the
  * `nomenclature_settings` table). It adds `pinHash` and
  * `biometricEnabled` (server-visible for device-transfer policy) plus
- * `encryptedData`. See `member.type.test.ts` for the general rationale
- * behind the brand-stripped comparison.
+ * `encryptedData`.
  */
 
 import { describe, expectTypeOf, it } from "vitest";

@@ -7874,7 +7874,6 @@ export interface components {
      */
     PlaintextMemberPhoto: {
       imageSource: components["schemas"]["PlaintextImageSource"];
-      sortOrder: number;
       caption: string | null;
     };
     /**
@@ -7976,13 +7975,16 @@ export interface components {
      *     Note: `sourceMemberId`, `targetMemberId`, `type`, and `bidirectional`
      *     are sent as **separate plaintext fields** in the request body (not inside
      *     `encryptedData`) because the server needs them for querying.
-     *     The `encryptedData` contains only the user-visible label and any
-     *     additional notes. Encryption tier: **T1**.
+     *     The `encryptedData` is a discriminated blob: custom-type relationships
+     *     carry `{ label: string }`, standard-type relationships carry `{}`.
+     *     Encryption tier: **T1**.
      */
-    PlaintextRelationship: {
-      /** @description User-defined label (meaningful when type is "custom") */
-      label: string | null;
-    };
+    PlaintextRelationship:
+      | {
+          /** @description User-defined label for a custom relationship type. */
+          label: string;
+        }
+      | Record<string, never>;
     /**
      * @description **Encrypted into**: `encryptedData` on structure entity type create/update endpoints.
      *

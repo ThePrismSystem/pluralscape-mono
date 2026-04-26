@@ -639,9 +639,9 @@ export function makeRawRelationship(
   opts?: { encryptedData?: string },
   overrides?: Partial<RelationshipWire>,
 ): RelationshipWire {
+  // Default to a standard (non-custom) relationship: blob is `{}`
   const encryptedData =
-    opts?.encryptedData ??
-    encryptRelationshipInput({ label: `Label ${id}` }, TEST_MASTER_KEY).encryptedData;
+    opts?.encryptedData ?? encryptRelationshipInput({}, TEST_MASTER_KEY).encryptedData;
 
   return {
     id: brandId<RelationshipId>(id),

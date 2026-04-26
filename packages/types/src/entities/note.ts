@@ -29,19 +29,27 @@ export interface Note extends AuditMetadata {
 export type ArchivedNote = Archived<Note>;
 
 /**
- * Keys of `Note` that are encrypted client-side before the server sees them.
- * The server stores ciphertext in `encryptedData`; the `author` reference is
- * flattened into plaintext columns (`authorEntityType` + `authorEntityId`) for
- * indexing by author type.
+ * Keys of `Note` whose values are encrypted client-side before the server
+ * sees them (encrypt-by-default policy via `Exclude<>`).
+ *
+ * Excluded keys and rationale:
+ * - `id` / `systemId` — structural identity, required for server routing
+ * - `author` — restructured plaintext: the polymorphic `EntityReference`
+ *   flattens into separate `authorEntityType` + `authorEntityId` server
+ *   columns for indexing; the value is never inside the encrypted blob
+ * - `archived` — mutable server-side flag with companion `archivedAt`
+ * - `createdAt` / `updatedAt` / `version` (via `AuditMetadata`) —
+ *   server-managed audit timestamps and actor reference
+ *
  * Consumed by:
  * - `NoteServerMetadata` (derived via `Omit`)
  * - `NoteEncryptedInput = Pick<Note, NoteEncryptedFields>`
  * - `scripts/openapi-wire-parity.type-test.ts` (PlaintextNote parity)
- *
- * Unlike `JournalEntry`, `Note`'s `author` is a server-side flattened plaintext column
- * (split into `authorEntityType` + `authorEntityId`), not part of the encrypted blob.
  */
-export type NoteEncryptedFields = "title" | "content" | "backgroundColor";
+export type NoteEncryptedFields = Exclude<
+  keyof Note,
+  "id" | "systemId" | "author" | "archived" | keyof AuditMetadata
+>;
 
 /**
  * Domain field that is plaintext (not encrypted) but restructured on the
