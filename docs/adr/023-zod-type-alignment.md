@@ -12,13 +12,18 @@ Drizzle cannot be the source of truth: the server only sees metadata columns plu
 
 ## Decision
 
-Every domain entity publishes three named types from `packages/types`:
+Every encrypted domain entity publishes a six-link canonical chain from `packages/types`:
 
-- **`<Entity>`** — full decrypted domain shape. Branded IDs, `Date` objects, all decrypted fields. No DB-internal columns.
-- **`<Entity>ServerMetadata`** — raw Drizzle row. Branded IDs, `Date`, `encryptedData: Uint8Array` for encrypted entities, plus DB-internal columns (search_tsv, partition keys, computed columns) where applicable.
-- **`<Entity>Wire`** — JSON-serialized view. Almost always `type <Entity>Wire = Serialize<Entity>`; hand-authored only when the `Serialize<T>` transform can't express the shape.
+1. **`<Entity>`** — full decrypted domain shape. Branded IDs, `Date` objects, all decrypted fields. No DB-internal columns.
+2. **`<Entity>EncryptedFields`** — keys-union of fields encrypted client-side. Either a literal union or `Exclude<keyof <Entity>, allowlist>` when the policy is "encrypt every field except an allowlist".
+3. **`<Entity>EncryptedInput`** — `Pick<<Entity>, <Entity>EncryptedFields>`. The shape callers encrypt and submit to `encryptedData`. Use a defensively distributive form (`<Entity> extends unknown ? Pick<…> : never`) when `<Entity>` is a discriminated union.
+4. **`<Entity>ServerMetadata`** — raw Drizzle row. Branded IDs, `Date`, `encryptedData: EncryptedBlob` (or `| null`), plus DB-internal columns (search_tsv, partition keys, computed columns) and `ServerInternal<…>`-marked server-fill-only fields.
+5. **`<Entity>Result`** — `EncryptedWire<<Entity>ServerMetadata>`. Server JS-runtime response shape: `encryptedData` brand-tagged as `EncryptedBase64`, `ServerInternal<…>` fields stripped.
+6. **`<Entity>Wire`** — `Serialize<<Entity>Result>`. JSON-serialized HTTP shape: brands strip to plain `string`, `UnixMillis` becomes `number`, `EncryptedBase64` collapses to `string`.
 
-A fourth helper, **`EncryptedWire<T>`** (`packages/types/src/encrypted-wire.ts`), publishes the wire envelope produced by base64-encoding `encryptedData` for transport: `Omit<T, "encryptedData"> & { readonly encryptedData: string | (string | null) }`, with nullability preserved from `T`. The earlier "envelope is API-layer only" stance (kept locally inside `scripts/openapi-wire-parity.type-test.ts`) is reversed — when 30+ effective re-declarations of the same transform accumulate across the services tree, the SoT argument flips. Per-entity service `<X>Result` types are now derivations: `type <X>Result = EncryptedWire<<X>ServerMetadata>`. Hand-rolled `<X>Result` interfaces are reserved for cases where the wire shape genuinely diverges from the metadata (denormalized server-internal fields that must not leak, polymorphic refs the wire widens to plain string, validated narrowings of `Record<string, unknown>` payloads, etc.); each retained hand-roll documents _why_ in a comment above the interface.
+Plaintext entities publish only `<Entity>` → `<Entity>ServerMetadata` → `<Entity>Wire`.
+
+The `EncryptedWire<T>` helper (`packages/types/src/encrypted-wire.ts`) and `Serialize<T>` together produce links 5 and 6 mechanically; only the keys-union and the server metadata require hand-authoring per entity. Per-entity service `<X>Result` types are derivations: `type <X>Result = EncryptedWire<<X>ServerMetadata>`. Hand-rolled `<X>Result` interfaces are reserved for cases where the wire shape genuinely diverges from the metadata (denormalized server-internal fields that must not leak, polymorphic refs the wire widens to plain string, validated narrowings of `Record<string, unknown>` payloads, etc.); each retained hand-roll documents _why_ in a comment above the interface.
 
 Downstream layers derive-or-assert-equal rather than redefine:
 
