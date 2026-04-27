@@ -97,17 +97,6 @@ export function assertStringField(
   }
 }
 
-/** Validate that a field exists and is an array. */
-export function assertArrayField(
-  obj: Record<string, unknown>,
-  entity: string,
-  field: string,
-): void {
-  if (!Array.isArray(obj[field])) {
-    throw new Error(`Decrypted ${entity} blob missing required array field: ${field}`);
-  }
-}
-
 export function base64ToUint8Array(base64: string): Uint8Array {
   return new Uint8Array(Buffer.from(base64, "base64"));
 }
