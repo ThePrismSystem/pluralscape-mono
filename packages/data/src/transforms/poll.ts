@@ -1,4 +1,4 @@
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { PollEncryptedInputSchema, PollVoteEncryptedInputSchema } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
@@ -41,8 +41,8 @@ export function decryptPoll(raw: PollWire, masterKey: KdfMasterKey): Poll | Arch
     kind: raw.kind,
     options: validated.options,
     status: raw.status,
-    closedAt: raw.closedAt === null ? null : toUnixMillis(raw.closedAt),
-    endsAt: raw.endsAt === null ? null : toUnixMillis(raw.endsAt),
+    closedAt: toUnixMillisOrNull(raw.closedAt),
+    endsAt: toUnixMillisOrNull(raw.endsAt),
     allowMultipleVotes: raw.allowMultipleVotes,
     maxVotesPerMember: raw.maxVotesPerMember,
     allowAbstain: raw.allowAbstain,

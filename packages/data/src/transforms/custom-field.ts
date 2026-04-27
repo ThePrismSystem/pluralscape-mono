@@ -1,4 +1,4 @@
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   FieldDefinitionEncryptedInputSchema,
   FieldValueEncryptedInputSchema,
@@ -105,7 +105,7 @@ export function decryptFieldDefinition(
     required: raw.required,
     sortOrder: raw.sortOrder,
     archived: raw.archived,
-    archivedAt: raw.archivedAt === null ? null : toUnixMillis(raw.archivedAt),
+    archivedAt: toUnixMillisOrNull(raw.archivedAt),
     version: raw.version,
     createdAt: toUnixMillis(raw.createdAt),
     updatedAt: toUnixMillis(raw.updatedAt),

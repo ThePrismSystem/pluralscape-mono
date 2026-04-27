@@ -1,4 +1,4 @@
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import type {
   AccountId,
@@ -21,7 +21,7 @@ export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<Fri
     accountId: brandId<AccountId>(raw.accountId),
     code: raw.code,
     createdAt: toUnixMillis(raw.createdAt),
-    expiresAt: raw.expiresAt === null ? null : toUnixMillis(raw.expiresAt),
+    expiresAt: toUnixMillisOrNull(raw.expiresAt),
   };
 
   if (raw.archived) {

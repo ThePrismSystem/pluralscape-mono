@@ -1,4 +1,4 @@
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { ChatMessageEncryptedInputSchema } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
@@ -37,7 +37,7 @@ export function decryptMessage(
     mentions: validated.mentions,
     replyToId: raw.replyToId === null ? null : brandId<MessageId>(raw.replyToId),
     timestamp: toUnixMillis(raw.timestamp),
-    editedAt: raw.editedAt === null ? null : toUnixMillis(raw.editedAt),
+    editedAt: toUnixMillisOrNull(raw.editedAt),
     version: raw.version,
     createdAt: toUnixMillis(raw.createdAt),
     updatedAt: toUnixMillis(raw.updatedAt),

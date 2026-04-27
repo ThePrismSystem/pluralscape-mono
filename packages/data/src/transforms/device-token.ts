@@ -1,4 +1,4 @@
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import type {
   AccountId,
@@ -22,7 +22,7 @@ export function narrowDeviceToken(raw: DeviceTokenWire): DeviceToken {
     systemId: brandId<SystemId>(raw.systemId),
     platform: raw.platform,
     token: raw.token,
-    lastActiveAt: raw.lastActiveAt === null ? null : toUnixMillis(raw.lastActiveAt),
+    lastActiveAt: toUnixMillisOrNull(raw.lastActiveAt),
     version: raw.version,
     createdAt: toUnixMillis(raw.createdAt),
     updatedAt: toUnixMillis(raw.updatedAt),
