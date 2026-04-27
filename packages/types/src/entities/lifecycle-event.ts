@@ -11,6 +11,7 @@ import type {
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { EntityReference } from "../utility.js";
+import type { LifecycleEventForm, LifecycleEventName } from "../value-types.js";
 import type { InnerWorldEntityType } from "./innerworld-entity.js";
 
 /**
@@ -93,20 +94,16 @@ export interface StructureEntityFormationEvent extends LifecycleEventBase {
 export interface FormChangeEvent extends LifecycleEventBase {
   readonly eventType: "form-change";
   readonly memberId: MemberId;
-  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
-  readonly previousForm: string | null;
-  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
-  readonly newForm: string | null;
+  readonly previousForm: LifecycleEventForm | null;
+  readonly newForm: LifecycleEventForm | null;
 }
 
 /** A member's name changes. */
 export interface NameChangeEvent extends LifecycleEventBase {
   readonly eventType: "name-change";
   readonly memberId: MemberId;
-  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
-  readonly previousName: string | null;
-  /** Free-text user-supplied display label, not a branded identifier. See bean `types-yxgc` for branded-value-type follow-up. */
-  readonly newName: string;
+  readonly previousName: LifecycleEventName | null;
+  readonly newName: LifecycleEventName;
 }
 
 /** A member moves within the system structure. */
