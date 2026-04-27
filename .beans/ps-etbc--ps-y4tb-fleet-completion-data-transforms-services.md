@@ -1,11 +1,11 @@
 ---
 # ps-etbc
 title: "ps-y4tb fleet completion: data transforms, services, routes, tRPC, parity tests, manifest"
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-04-25T19:49:40Z
-updated_at: 2026-04-26T04:30:10Z
+updated_at: 2026-04-27T21:16:27Z
 parent: ps-y4tb
 ---
 
@@ -203,3 +203,18 @@ an "Adding or Modifying Encrypted Entities" checklist.
 - Class E webhook-delivery server-side encryption — `ps-f3ox`
 - Cluster 8 OpenAPI G7 (requires optional→nullable spec change) — to be filed
 - LifecycleEvent transform indirection — `types-x61u`
+
+### 2026-04-27 closeout commit
+
+Final five XRaw stragglers identified during 2026-04-27 verification have been deleted:
+notification-config, fronting-report, custom-field (FieldDefinition + FieldValue),
+device-token, friend-code. NotificationConfigWire and FriendCodeWire in
+@pluralscape/types redefined to derive from XServerMetadata so the wire union
+covers both archived states. FrontingReport gains the full canonical chain
+(closes types-wyda). All four mobile consumers migrated to import *Wire from
+@pluralscape/types. Three data-transform tests updated to construct *Wire
+shapes.
+
+Verified: zero in-scope XRaw exports remain in packages/data/src/transforms/.
+Only CheckInRecord (deferred to types-600s, completed) and Snapshot (deferred
+to ps-qmyt, completed) remain — the bean's design always exempted those.

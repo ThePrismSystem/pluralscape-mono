@@ -1,11 +1,11 @@
 ---
 # types-p2b0
 title: Zod-to-types z.infer equality assertions
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-21T13:55:46Z
-updated_at: 2026-04-22T23:06:07Z
+updated_at: 2026-04-27T21:21:04Z
 parent: types-ltel
 blocked_by:
   - types-f62m
@@ -53,3 +53,12 @@ Pilot Zod parity delivered: `packages/validation/src/__tests__/type-parity/membe
 Option-B decision in ADR-023: fleet convention is to declare optional input-body fields as `T | undefined` (not `T?`). No `OptionalEqual` helper added since pilot encountered zero mismatches in Member input bodies.
 
 Remaining (fleet, Phase 2): parity tests for the remaining entities' input bodies.
+
+## Summary of Changes
+
+Phase 2 fleet parity tests landed across 18 entities under
+packages/validation/src/**tests**/type-parity/. AuditLogEntry intentionally
+excluded — server-generated only, no client input schema by design. Placeholder
+audit-log-entry.type.test.ts removed in this PR; an explanatory comment in
+packages/types/src/entities/audit-log-entry.ts documents the rationale so the
+stub is not recreated.

@@ -3,8 +3,10 @@
 title: "Timer-config update.ts: collapse read-before-write into single UPDATE when scheduling fields absent"
 status: todo
 type: task
+priority: normal
 created_at: 2026-04-22T03:32:22Z
-updated_at: 2026-04-22T03:32:22Z
+updated_at: 2026-04-27T20:28:57Z
+parent: ps-cd6x
 ---
 
 Split off from api-p6uu item #1. Needs load measurement before acting.

@@ -24,11 +24,14 @@ import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   FieldDefinitionDecrypted,
   FieldDefinitionPage,
-  FieldDefinitionRaw,
   FieldValueDecrypted,
-  FieldValueRaw,
 } from "@pluralscape/data/transforms/custom-field";
-import type { FieldDefinitionId, MemberId } from "@pluralscape/types";
+import type {
+  FieldDefinitionId,
+  FieldDefinitionWire,
+  FieldValueWire,
+  MemberId,
+} from "@pluralscape/types";
 
 interface FieldDefinitionListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -39,7 +42,7 @@ export function useFieldDefinition(
   fieldDefinitionId: FieldDefinitionId,
   opts?: SystemIdOverride,
 ): DataQuery<FieldDefinitionDecrypted> {
-  return useOfflineFirstQuery<FieldDefinitionRaw, FieldDefinitionDecrypted>({
+  return useOfflineFirstQuery<FieldDefinitionWire, FieldDefinitionDecrypted>({
     queryKey: ["field_definitions", fieldDefinitionId],
     table: "field_definitions",
     entityId: fieldDefinitionId,
@@ -57,7 +60,7 @@ export function useFieldDefinition(
 export function useFieldDefinitionsList(
   opts?: FieldDefinitionListOpts,
 ): DataListQuery<FieldDefinitionDecrypted> {
-  return useOfflineFirstInfiniteQuery<FieldDefinitionRaw, FieldDefinitionDecrypted>({
+  return useOfflineFirstInfiniteQuery<FieldDefinitionWire, FieldDefinitionDecrypted>({
     queryKey: ["field_definitions", "list", opts?.includeArchived ?? false],
     table: "field_definitions",
     rowTransform: rowToFieldDefinition,
@@ -160,7 +163,7 @@ export function useMemberFieldValues(
   memberId: MemberId,
   opts?: SystemIdOverride,
 ): DataQuery<ReadonlyArray<FieldValueDecrypted>> {
-  return useOfflineFirstQuery<readonly FieldValueRaw[], ReadonlyArray<FieldValueDecrypted>>({
+  return useOfflineFirstQuery<readonly FieldValueWire[], ReadonlyArray<FieldValueDecrypted>>({
     queryKey: ["field_values", "member", memberId],
     table: "field_values",
     entityId: memberId,

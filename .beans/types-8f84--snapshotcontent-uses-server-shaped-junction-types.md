@@ -1,11 +1,12 @@
 ---
 # types-8f84
 title: SnapshotContent uses server-shaped junction types — consider plaintext-snapshot projections
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-27T13:11:45Z
-updated_at: 2026-04-27T14:14:50Z
+updated_at: 2026-04-27T21:20:20Z
+parent: ps-cd6x
 ---
 
 Pre-existing on main, surfaced during ps-qmyt code review (PR3 of M9a closeout).
@@ -23,3 +24,14 @@ Add `SnapshotStructureEntityLink`, `SnapshotStructureEntityMemberLink`, `Snapsho
 - `SnapshotContent` references only `Snapshot*` projections, not the server-shaped types
 - `SnapshotContentSchema` parity test still passes
 - No data migration needed (snapshots are encrypted blobs and clients re-render from current snapshot logic)
+
+## Summary of Changes
+
+Three Snapshot\* projections added in packages/types/src/entities/system-snapshot.ts:
+SnapshotStructureEntityLink, SnapshotStructureEntityMemberLink,
+SnapshotStructureEntityAssociation. Each Omits the server-only systemId and
+createdAt fields, mirroring the existing SnapshotMember/SnapshotGroup
+convention. SnapshotContent now references the projections.
+
+SnapshotContentSchema in packages/validation/src/snapshot.ts updated with
+derived omit() schemas. Snapshot parity test green; 896 validation tests pass.

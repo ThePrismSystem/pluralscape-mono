@@ -1,4 +1,4 @@
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { AcknowledgementRequestEncryptedInputSchema } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
@@ -35,7 +35,7 @@ export function decryptAcknowledgement(
     targetMemberId: validated.targetMemberId,
     message: validated.message,
     confirmed: raw.confirmed,
-    confirmedAt: validated.confirmedAt === null ? null : toUnixMillis(validated.confirmedAt),
+    confirmedAt: toUnixMillisOrNull(validated.confirmedAt),
     version: raw.version,
     createdAt: toUnixMillis(raw.createdAt),
     updatedAt: toUnixMillis(raw.updatedAt),

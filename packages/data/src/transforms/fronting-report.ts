@@ -1,44 +1,37 @@
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { FrontingReportEncryptedInputSchema } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { FrontingReport, FrontingReportEncryptedInput, UnixMillis } from "@pluralscape/types";
-
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape for a fronting report — adds wire-only fields absent from the domain type. */
-export type FrontingReportRaw = Omit<FrontingReport, keyof FrontingReportEncryptedInput> & {
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt?: UnixMillis;
-  readonly updatedAt?: UnixMillis;
-};
+import type {
+  FrontingReport,
+  FrontingReportEncryptedInput,
+  FrontingReportId,
+  FrontingReportWire,
+  SystemId,
+} from "@pluralscape/types";
 
 /** Shape returned by `frontingReport.list`. */
 export interface FrontingReportPage {
-  readonly data: readonly FrontingReportRaw[];
+  readonly data: readonly FrontingReportWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Transforms ───────────────────────────────────────────────────────
-
 export function decryptFrontingReport(
-  raw: FrontingReportRaw,
+  raw: FrontingReportWire,
   masterKey: KdfMasterKey,
 ): FrontingReport {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = FrontingReportEncryptedInputSchema.parse(decrypted);
   return {
-    id: raw.id,
-    systemId: raw.systemId,
+    id: brandId<FrontingReportId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
     dateRange: validated.dateRange,
     memberBreakdowns: validated.memberBreakdowns,
     chartData: validated.chartData,
     format: raw.format,
-    generatedAt: raw.generatedAt,
+    generatedAt: toUnixMillis(raw.generatedAt),
   };
 }
 

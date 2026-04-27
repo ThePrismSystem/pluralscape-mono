@@ -8,12 +8,7 @@ export {
   rowToSystemSettings,
 } from "./primitives.js";
 export { rowToMember, rowToMemberPhoto, rowToGroup, rowToRelationship } from "./identity.js";
-export {
-  rowToCustomFront,
-  rowToFrontingSession,
-  rowToFrontingComment,
-  rowToFrontingReport,
-} from "./fronting.js";
+export { rowToCustomFront, rowToFrontingSession, rowToFrontingComment } from "./fronting.js";
 export {
   rowToChannel,
   rowToMessage,

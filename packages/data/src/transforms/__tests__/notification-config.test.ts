@@ -1,23 +1,16 @@
-import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { narrowNotificationConfig, narrowNotificationConfigPage } from "../notification-config.js";
 
-import type { NotificationConfigRaw } from "../notification-config.js";
-import type {
-  NotificationConfigId,
-  NotificationEventType,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { NotificationConfigWire, NotificationEventType } from "@pluralscape/types";
 
-const NOW = 1_700_000_000_000 as UnixMillis;
-const LATER = 1_700_002_000_000 as UnixMillis;
+const NOW = 1_700_000_000_000;
+const LATER = 1_700_002_000_000;
 
-function makeRaw(overrides?: Partial<NotificationConfigRaw>): NotificationConfigRaw {
+function makeRaw(overrides?: Partial<NotificationConfigWire>): NotificationConfigWire {
   return {
-    id: brandId<NotificationConfigId>("nc_test0001"),
-    systemId: brandId<SystemId>("sys_test001"),
+    id: "nc_test0001",
+    systemId: "sys_test001",
     eventType: "switch-reminder" as NotificationEventType,
     enabled: true,
     pushEnabled: false,

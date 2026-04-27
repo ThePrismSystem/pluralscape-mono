@@ -1,11 +1,11 @@
 ---
 # types-yxgc
 title: Branded value types for non-ID free-text labels (member form / display name)
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-04-25T20:28:59Z
-updated_at: 2026-04-27T04:54:14Z
+updated_at: 2026-04-27T21:21:04Z
 parent: ps-y4tb
 ---
 
@@ -51,11 +51,11 @@ Update callers (services, transforms, tests) to brand values via the existing `b
 
 ## Acceptance
 
-- [ ] Branded value types defined for in-scope display fields
-- [ ] Domain entity types updated to use branded types
-- [ ] All callers/transforms/tests updated to brand at construction
-- [ ] `pnpm types:check-sot` clean
-- [ ] CI green
+- [x] Branded value types defined for in-scope display fields
+- [x] Domain entity types updated to use branded types
+- [x] All callers/transforms/tests updated to brand at construction
+- [x] `pnpm types:check-sot` clean
+- [x] CI green
 
 ## Cross-references
 
@@ -71,3 +71,9 @@ The lifecycle-event JSDoc on `previousForm`/`newForm`/`previousName`/`newName` r
 
 - types-f3fk — Brand fleet expansion (Member, Group, Channel)
 - types-t3tn — Free-text label audit (custom-front, custom-field, member-photo)
+
+## Summary of Changes
+
+Lifecycle-event scope shipped in PR #571: LifecycleEventForm and LifecycleEventName brands defined in packages/types/src/value-types.ts, with brandValue<T> helper. Domain types in lifecycle-event.ts and the canonical chain reflect the brands.
+
+Member/Group/Channel name brand expansion is carved into follow-up bean types-f3fk (now parented under M9a). Custom-front / custom-field / member-photo audit is carved into follow-up bean types-t3tn (closing in the same PR as this bean — the audit document is the deliverable).

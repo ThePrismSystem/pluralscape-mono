@@ -243,7 +243,7 @@ export type AuditActor =
   | { readonly kind: "api-key"; readonly id: ApiKeyId }
   | { readonly kind: "system"; readonly id: SystemId };
 
-/** An append-only audit log entry. */
+/** An append-only audit log entry. Server-generated only — clients never submit. */
 export interface AuditLogEntry {
   readonly id: AuditLogEntryId;
   readonly systemId: SystemId;

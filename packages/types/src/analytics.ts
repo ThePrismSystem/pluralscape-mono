@@ -1,3 +1,5 @@
+import type { EncryptedWire } from "./encrypted-wire.js";
+import type { EncryptedBlob } from "./encryption-primitives.js";
 import type {
   Brand,
   CustomFrontId,
@@ -7,6 +9,7 @@ import type {
   SystemStructureEntityId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
+import type { Serialize } from "./type-assertions.js";
 import type { DateRange } from "./utility.js";
 
 /** A duration in milliseconds — branded for type safety. */
@@ -81,18 +84,32 @@ export interface FrontingReport {
 }
 
 /**
- * Encrypted-input projection for `FrontingReport`. Class A (subset of
- * `FrontingReport` keys). Travels inside the T1-encrypted `encryptedData`
- * blob; server cannot read these fields.
- *
- * Parity gate: `FrontingReportEncryptedInputSchema` in
- * `packages/validation/src/fronting-report.ts`.
+ * Keys of `FrontingReport` that are encrypted client-side before the server
+ * sees them. Anchor for the canonical chain (ADR-023).
  */
-export interface FrontingReportEncryptedInput {
-  readonly dateRange: DateRange;
-  readonly memberBreakdowns: readonly MemberFrontingBreakdown[];
-  readonly chartData: readonly ChartData[];
-}
+export type FrontingReportEncryptedFields = "dateRange" | "memberBreakdowns" | "chartData";
+
+// ── Canonical chain (see ADR-023) ────────────────────────────────────
+// FrontingReportEncryptedInput → FrontingReportServerMetadata
+//                             → FrontingReportResult → FrontingReportWire
+
+export type FrontingReportEncryptedInput = Pick<FrontingReport, FrontingReportEncryptedFields>;
+
+/**
+ * Server-visible FrontingReport metadata — raw Drizzle row shape. Strips
+ * the encrypted fields (bundled inside `encryptedData`) and adds
+ * `archived`/`archivedAt`/`version` plus the encrypted blob.
+ */
+export type FrontingReportServerMetadata = Omit<FrontingReport, FrontingReportEncryptedFields> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly version: number;
+  readonly encryptedData: EncryptedBlob;
+};
+
+export type FrontingReportResult = EncryptedWire<FrontingReportServerMetadata>;
+
+export type FrontingReportWire = Serialize<FrontingReportResult>;
 
 /** A single data point in a chart dataset. */
 export interface ChartDataset {

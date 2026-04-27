@@ -1,3 +1,4 @@
+import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   FieldDefinitionEncryptedInputSchema,
   FieldValueEncryptedInputSchema,
@@ -10,10 +11,11 @@ import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
   FieldDefinitionId,
+  FieldDefinitionWire,
   FieldType,
-  FieldValueEncryptedFields,
   FieldValueId,
   FieldValueUnion,
+  FieldValueWire,
   GroupId,
   MemberId,
   SystemId,
@@ -73,29 +75,11 @@ export type FieldValueDecrypted = {
   readonly updatedAt: UnixMillis;
 } & FieldValueUnion;
 
-// ── Wire types (derived from domain types) ──────────────────────────
-
-/** Wire shape returned by `field.definition.get` — derived from `FieldDefinitionDecrypted`. */
-export type FieldDefinitionRaw = Omit<
-  FieldDefinitionDecrypted,
-  keyof Pick<FieldDefinition, FieldDefinitionEncryptedFields>
-> & {
-  readonly encryptedData: string;
-};
-
 /** Shape returned by `field.definition.list`. */
 export interface FieldDefinitionPage {
-  readonly data: readonly FieldDefinitionRaw[];
+  readonly data: readonly FieldDefinitionWire[];
   readonly nextCursor: string | null;
 }
-
-/** Wire shape returned by `field.value.list` — derived from `FieldValueDecrypted`. */
-export type FieldValueRaw = Omit<
-  FieldValueDecrypted,
-  keyof FieldValueUnion | FieldValueEncryptedFields
-> & {
-  readonly encryptedData: string;
-};
 
 // ── Field Definition transforms ───────────────────────────────────────
 
@@ -106,14 +90,14 @@ export type FieldValueRaw = Omit<
  * All other fields pass through from the wire payload.
  */
 export function decryptFieldDefinition(
-  raw: FieldDefinitionRaw,
+  raw: FieldDefinitionWire,
   masterKey: KdfMasterKey,
 ): FieldDefinitionDecrypted {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = FieldDefinitionEncryptedInputSchema.parse(plaintext);
   return {
-    id: raw.id,
-    systemId: raw.systemId,
+    id: brandId<FieldDefinitionId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
     name: validated.name,
     description: validated.description,
     fieldType: raw.fieldType,
@@ -121,10 +105,10 @@ export function decryptFieldDefinition(
     required: raw.required,
     sortOrder: raw.sortOrder,
     archived: raw.archived,
-    archivedAt: raw.archivedAt,
+    archivedAt: toUnixMillisOrNull(raw.archivedAt),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 }
 
@@ -163,21 +147,24 @@ export function encryptFieldDefinitionInput(
  * All other fields pass through from the wire payload.
  */
 export function decryptFieldValue(
-  raw: FieldValueRaw,
+  raw: FieldValueWire,
   masterKey: KdfMasterKey,
 ): FieldValueDecrypted {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   const validated = FieldValueEncryptedInputSchema.parse(plaintext);
   return {
-    id: raw.id,
-    fieldDefinitionId: raw.fieldDefinitionId,
-    memberId: raw.memberId,
-    structureEntityId: raw.structureEntityId,
-    groupId: raw.groupId,
-    systemId: raw.systemId,
+    id: brandId<FieldValueId>(raw.id),
+    fieldDefinitionId: brandId<FieldDefinitionId>(raw.fieldDefinitionId),
+    memberId: raw.memberId === null ? null : brandId<MemberId>(raw.memberId),
+    structureEntityId:
+      raw.structureEntityId === null
+        ? null
+        : brandId<SystemStructureEntityId>(raw.structureEntityId),
+    groupId: raw.groupId === null ? null : brandId<GroupId>(raw.groupId),
+    systemId: brandId<SystemId>(raw.systemId),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
     ...validated,
   } as FieldValueDecrypted;
 }
@@ -188,7 +175,7 @@ export function decryptFieldValue(
  * Returns `FieldValueDecrypted[]` — the full list from `field.value.list`.
  */
 export function decryptFieldValueList(
-  raw: readonly FieldValueRaw[],
+  raw: readonly FieldValueWire[],
   masterKey: KdfMasterKey,
 ): FieldValueDecrypted[] {
   return raw.map((item) => decryptFieldValue(item, masterKey));

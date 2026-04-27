@@ -41,8 +41,6 @@ import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test
 
 export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
-import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
-import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
 import type {
@@ -50,52 +48,38 @@ import type {
   TimerConfigServerWire,
 } from "@pluralscape/data/transforms/timer-check-in";
 import type {
-  AcknowledgementId,
   AcknowledgementRequestWire,
-  BoardMessageId,
   BoardMessageWire,
   ChannelId,
   ChannelWire,
   ChatMessageWire,
   CheckInRecordId,
-  CustomFrontId,
   CustomFrontWire,
-  FieldDefinitionId,
-  FieldValueId,
-  FrontingCommentId,
+  FieldDefinitionWire,
+  FieldValueWire,
   FrontingCommentWire,
-  FrontingReportId,
+  FrontingReportWire,
   FrontingSessionId,
   FrontingSessionWire,
-  GroupId,
   GroupWire,
   InnerWorldCanvasWire,
   InnerWorldEntityEncryptedInput,
-  InnerWorldEntityId,
   InnerWorldEntityWire,
-  InnerWorldRegionId,
   InnerWorldRegionWire,
-  LifecycleEventId,
   LifecycleEventWire,
   MemberId,
   MemberWire,
-  MessageId,
   EncryptedBase64,
-  NoteId,
   NoteWire,
-  PollId,
   PollOptionId,
-  PollVoteId,
   PollVoteWire,
   PollWire,
-  RelationshipId,
   RelationshipType,
   RelationshipWire,
   SnapshotContent,
   SystemSettingsId,
   SystemSettingsWire,
   SystemSnapshotId,
-  SystemStructureEntityId,
   SystemStructureEntityTypeId,
   SystemStructureEntityTypeWire,
   SystemStructureEntityWire,
@@ -120,7 +104,7 @@ export function makeRawAcknowledgement(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<AcknowledgementId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     createdByMemberId: null,
     confirmed: false,
@@ -145,7 +129,7 @@ export function makeRawBoardMessage(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<BoardMessageId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     pinned: false,
     sortOrder: 0,
@@ -164,7 +148,7 @@ export function makeRawBoardMessage(
 export function makeRawChannel(id: string, overrides?: Partial<ChannelWire>): ChannelWire {
   const encrypted = encryptChannelInput({ name: "general" }, TEST_MASTER_KEY);
   return {
-    id: brandId<ChannelId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     type: "channel",
     parentId: null,
@@ -183,14 +167,14 @@ export function makeRawChannel(id: string, overrides?: Partial<ChannelWire>): Ch
 
 export function makeRawFieldDefinition(
   id: string,
-  overrides?: Partial<FieldDefinitionRaw>,
-): FieldDefinitionRaw {
+  overrides?: Partial<FieldDefinitionWire>,
+): FieldDefinitionWire {
   const encrypted = encryptFieldDefinitionInput(
     { name: `Field ${id}`, description: "A test field", options: null },
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<FieldDefinitionId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     fieldType: "text",
     required: false,
@@ -205,12 +189,12 @@ export function makeRawFieldDefinition(
   };
 }
 
-export function makeRawFieldValue(id: string, overrides?: Partial<FieldValueRaw>): FieldValueRaw {
+export function makeRawFieldValue(id: string, overrides?: Partial<FieldValueWire>): FieldValueWire {
   const encrypted = encryptFieldValueInput({ fieldType: "text", value: "hello" }, TEST_MASTER_KEY);
   return {
-    id: brandId<FieldValueId>(id),
-    fieldDefinitionId: brandId<FieldDefinitionId>("fd-1"),
-    memberId: brandId<MemberId>("m-1"),
+    id,
+    fieldDefinitionId: "fd-1",
+    memberId: "m-1",
     structureEntityId: null,
     groupId: null,
     systemId: TEST_SYSTEM_ID,
@@ -238,7 +222,7 @@ export function makeRawCustomFront(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<CustomFrontId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     version: 1,
     createdAt: NOW,
@@ -259,10 +243,10 @@ export function makeRawFrontingComment(
 ): FrontingCommentWire {
   const encrypted = encryptFrontingCommentInput({ content: `Comment ${id}` }, TEST_MASTER_KEY);
   return {
-    id: brandId<FrontingCommentId>(id),
-    frontingSessionId: brandId<FrontingSessionId>(sessionId),
+    id,
+    frontingSessionId: sessionId,
     systemId: TEST_SYSTEM_ID,
-    memberId: brandId<MemberId>("m-1"),
+    memberId: "m-1",
     customFrontId: null,
     structureEntityId: null,
     version: 1,
@@ -282,8 +266,8 @@ const REPORT_END = 1_700_000_000_000 as UnixMillis;
 
 export function makeRawFrontingReport(
   id: string,
-  overrides?: Partial<FrontingReportRaw>,
-): FrontingReportRaw {
+  overrides?: Partial<FrontingReportWire>,
+): FrontingReportWire {
   const encrypted = encryptFrontingReportInput(
     {
       dateRange: { start: REPORT_START, end: REPORT_END },
@@ -293,7 +277,7 @@ export function makeRawFrontingReport(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<FrontingReportId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     format: "html",
     generatedAt: NOW,
@@ -321,9 +305,9 @@ export function makeRawFrontingSession(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<FrontingSessionId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
-    memberId: brandId<MemberId>("m-1"),
+    memberId: "m-1",
     customFrontId: null,
     structureEntityId: null,
     startTime: NOW,
@@ -352,7 +336,7 @@ export function makeRawGroup(id: string, overrides?: Partial<GroupWire>): GroupW
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<GroupId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     parentGroupId: null,
     sortOrder: 0,
@@ -407,7 +391,7 @@ export function makeRawInnerworldEntity(
 ): InnerWorldEntityWire {
   const encrypted = encryptInnerWorldEntityInput(payload, TEST_MASTER_KEY);
   return {
-    id: brandId<InnerWorldEntityId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     regionId: null,
     version: 1,
@@ -443,7 +427,7 @@ export function makeRawInnerworldRegion(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<InnerWorldRegionId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     parentRegionId: null,
     version: 1,
@@ -466,7 +450,7 @@ export function makeRawLifecycleEvent(
   overrides?: Partial<LifecycleEventWire>,
 ): LifecycleEventWire {
   return {
-    id: brandId<LifecycleEventId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     eventType: eventType as LifecycleEventWire["eventType"],
     occurredAt: NOW,
@@ -499,7 +483,7 @@ export function makeRawMember(id: string, overrides?: Partial<MemberWire>): Memb
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<MemberId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     version: 1,
     createdAt: NOW,
@@ -528,7 +512,7 @@ export function makeRawMessage(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<MessageId>(id),
+    id,
     channelId,
     systemId: TEST_SYSTEM_ID,
     replyToId: null,
@@ -552,7 +536,7 @@ export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<NoteId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     authorEntityType: null,
     authorEntityId: null,
@@ -586,7 +570,7 @@ export function makeRawPoll(id: string, overrides?: Partial<PollWire>): PollWire
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<PollId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     createdByMemberId: null,
     kind: "standard",
@@ -614,11 +598,11 @@ export function makeRawPollVote(
 ): PollVoteWire {
   const encrypted = encryptPollVoteInput({ comment: "My comment" }, TEST_MASTER_KEY);
   return {
-    id: brandId<PollVoteId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
-    pollId: brandId<PollId>(pollId),
-    optionId: brandId<PollOptionId>("opt-1"),
-    voter: { entityType: "member" as const, entityId: brandId<MemberId>("mem-voter") },
+    pollId,
+    optionId: "opt-1",
+    voter: { entityType: "member" as const, entityId: "mem-voter" },
     isVeto: false,
     votedAt: NOW,
     version: 1,
@@ -643,10 +627,10 @@ export function makeRawRelationship(
     opts?.encryptedData ?? encryptRelationshipInput({}, TEST_MASTER_KEY).encryptedData;
 
   return {
-    id: brandId<RelationshipId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
-    sourceMemberId: brandId<MemberId>("m-1"),
-    targetMemberId: brandId<MemberId>("m-2"),
+    sourceMemberId: "m-1",
+    targetMemberId: "m-2",
     type: "sibling" as RelationshipType,
     bidirectional: true,
     createdAt: NOW,
@@ -709,7 +693,7 @@ export function makeRawStructureEntity(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<SystemStructureEntityId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     entityTypeId,
     sortOrder: 0,
@@ -740,7 +724,7 @@ export function makeRawStructureEntityType(
     TEST_MASTER_KEY,
   );
   return {
-    id: brandId<SystemStructureEntityTypeId>(id),
+    id,
     systemId: TEST_SYSTEM_ID,
     sortOrder: 0,
     version: 1,

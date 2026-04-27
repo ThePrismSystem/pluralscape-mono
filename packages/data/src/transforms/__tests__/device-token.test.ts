@@ -1,24 +1,16 @@
-import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { narrowDeviceToken, narrowDeviceTokenPage } from "../device-token.js";
 
-import type { DeviceTokenRaw } from "../device-token.js";
-import type {
-  AccountId,
-  DeviceTokenId,
-  DeviceTokenPlatform,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { DeviceTokenPlatform, DeviceTokenWire } from "@pluralscape/types";
 
-const NOW = 1_700_000_000_000 as UnixMillis;
+const NOW = 1_700_000_000_000;
 
-function makeRaw(overrides?: Partial<DeviceTokenRaw>): DeviceTokenRaw {
+function makeRaw(overrides?: Partial<DeviceTokenWire>): DeviceTokenWire {
   return {
-    id: brandId<DeviceTokenId>("dt_test0001"),
-    accountId: brandId<AccountId>("acc_test001"),
-    systemId: brandId<SystemId>("sys_test001"),
+    id: "dt_test0001",
+    accountId: "acc_test001",
+    systemId: "sys_test001",
     platform: "ios" as DeviceTokenPlatform,
     token: "device-push-token-abc123",
     lastActiveAt: NOW,

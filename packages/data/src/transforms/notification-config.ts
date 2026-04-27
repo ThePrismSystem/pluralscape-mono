@@ -1,48 +1,42 @@
-import type { Archived, NotificationConfig, UnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 
-// ── Wire types ────────────────────────────────────────────────────────
-
-/** Wire shape returned by `notificationConfig.get` — derived from the `NotificationConfig` domain type. */
-export type NotificationConfigRaw = Omit<NotificationConfig, "archived"> & {
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+import type {
+  Archived,
+  NotificationConfig,
+  NotificationConfigId,
+  NotificationConfigWire,
+  SystemId,
+} from "@pluralscape/types";
 
 /** Shape returned by `notificationConfig.list`. */
 export interface NotificationConfigPage {
-  readonly data: readonly NotificationConfigRaw[];
+  readonly data: readonly NotificationConfigWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Transforms ────────────────────────────────────────────────────────
-
-/**
- * Narrow a single notification config API result into a `NotificationConfig` or `Archived<NotificationConfig>`.
- */
+/** Narrow a wire notification config; re-brands stripped IDs/timestamps. */
 export function narrowNotificationConfig(
-  raw: NotificationConfigRaw,
+  raw: NotificationConfigWire,
 ): NotificationConfig | Archived<NotificationConfig> {
   const base = {
-    id: raw.id,
-    systemId: raw.systemId,
+    id: brandId<NotificationConfigId>(raw.id),
+    systemId: brandId<SystemId>(raw.systemId),
     eventType: raw.eventType,
     enabled: raw.enabled,
     pushEnabled: raw.pushEnabled,
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived notificationConfig missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Narrow a paginated notification config list result.
- */
+/** Narrow a paginated notification config list. */
 export function narrowNotificationConfigPage(raw: NotificationConfigPage): {
   data: (NotificationConfig | Archived<NotificationConfig>)[];
   nextCursor: string | null;

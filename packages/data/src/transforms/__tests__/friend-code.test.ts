@@ -1,19 +1,17 @@
-import { brandId } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { narrowFriendCode, narrowFriendCodePage } from "../friend-code.js";
 
-import type { FriendCodeRaw } from "../friend-code.js";
-import type { AccountId, FriendCodeId, UnixMillis } from "@pluralscape/types";
+import type { FriendCodeWire } from "@pluralscape/types";
 
-const NOW = 1_700_000_000_000 as UnixMillis;
-const LATER = 1_700_002_000_000 as UnixMillis;
-const EXPIRES = 1_700_086_400_000 as UnixMillis;
+const NOW = 1_700_000_000_000;
+const LATER = 1_700_002_000_000;
+const EXPIRES = 1_700_086_400_000;
 
-function makeRaw(overrides?: Partial<FriendCodeRaw>): FriendCodeRaw {
+function makeRaw(overrides?: Partial<FriendCodeWire>): FriendCodeWire {
   return {
-    id: brandId<FriendCodeId>("fcd_test001"),
-    accountId: brandId<AccountId>("acc_test001"),
+    id: "fcd_test001",
+    accountId: "acc_test001",
     code: "ABCD-1234",
     createdAt: NOW,
     expiresAt: EXPIRES,
