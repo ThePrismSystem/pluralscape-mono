@@ -10,7 +10,8 @@ import type { DeviceInfo } from "@pluralscape/types";
  * `__tests__/type-parity/session.type.test.ts` asserts
  * `z.infer<typeof DeviceInfoSchema>` ≡ `DeviceInfo`.
  *
- * Currently a parity gate only — not yet wired to a runtime parse boundary.
+ * Wired at the decrypt boundary in
+ * `packages/data/src/transforms/session.ts:decryptDeviceInfo`.
  */
 export const DeviceInfoSchema: z.ZodType<DeviceInfo> = z
   .object({

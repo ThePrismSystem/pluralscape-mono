@@ -249,6 +249,7 @@ export {
   PUBLIC_KEY_BYTE_LENGTH,
 } from "./validation.constants.js";
 export { ApiKeyEncryptedPayloadSchema, CreateApiKeyBodySchema } from "./api-key.js";
+export { DeviceInfoSchema } from "./session.js";
 export { PurgeSystemBodySchema } from "./system-purge.js";
 export {
   CreateSnapshotBodySchema,
