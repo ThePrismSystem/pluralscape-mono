@@ -1,13 +1,46 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, BUCKET_CONTENT_ENTITY_TYPES, ID_PREFIXES } from "@pluralscape/types";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { decodeBucketContentTagRow } from "../decode.js";
+import { decodeBucketContentTagRow, decodeBucketContentTagRowSafe } from "../decode.js";
 
 import type { BucketContentEntityType, BucketId, MemberId } from "@pluralscape/types";
 
 // ── Constants ─────────────────────────────────────────────────────
 
 const BUCKET_ID = brandId<BucketId>("bkt_550e8400-e29b-41d4-a716-446655440000");
+
+/**
+ * Mapping from {@link BucketContentEntityType} (kebab-case) to its
+ * {@link ID_PREFIXES} key (camelCase). Required because the union literals
+ * differ in casing from the prefix-table keys, but each entityType has
+ * exactly one ID prefix in the table.
+ */
+const ID_PREFIX_KEY: Record<
+  (typeof BUCKET_CONTENT_ENTITY_TYPES)[number],
+  keyof typeof ID_PREFIXES
+> = {
+  member: "member",
+  group: "group",
+  channel: "channel",
+  message: "message",
+  note: "note",
+  poll: "poll",
+  relationship: "relationship",
+  "structure-entity-type": "structureEntityType",
+  "structure-entity": "structureEntity",
+  "journal-entry": "journalEntry",
+  "wiki-page": "wikiPage",
+  "custom-front": "customFront",
+  "fronting-session": "frontingSession",
+  "board-message": "boardMessage",
+  acknowledgement: "acknowledgement",
+  "innerworld-entity": "innerWorldEntity",
+  "innerworld-region": "innerWorldRegion",
+  "field-definition": "fieldDefinition",
+  "field-value": "fieldValue",
+  "member-photo": "memberPhoto",
+  "fronting-comment": "frontingComment",
+};
 
 // ── Tests ─────────────────────────────────────────────────────────
 
@@ -62,5 +95,48 @@ describe("decodeBucketContentTagRow", () => {
         bucketId: BUCKET_ID,
       }),
     ).toThrow(/Unhandled BucketContentEntityType: totally-unknown/);
+  });
+});
+
+describe("decodeBucketContentTagRow — fleet parity", () => {
+  it.each(BUCKET_CONTENT_ENTITY_TYPES)(
+    "decodes a row of entityType %s with the matching prefix",
+    (entityType) => {
+      const prefix = ID_PREFIXES[ID_PREFIX_KEY[entityType]];
+      const entityId = `${prefix}00000000-0000-0000-0000-000000000001`;
+
+      const decoded = decodeBucketContentTagRow({ entityType, entityId, bucketId: BUCKET_ID });
+
+      expect(decoded.entityType).toBe(entityType);
+      expect(decoded.entityId).toBe(entityId);
+      expect(decoded.bucketId).toBe(BUCKET_ID);
+    },
+  );
+});
+
+describe("decodeBucketContentTagRowSafe", () => {
+  it.each(BUCKET_CONTENT_ENTITY_TYPES)(
+    "returns a decoded tag for entityType %s with the matching prefix",
+    (entityType) => {
+      const prefix = ID_PREFIXES[ID_PREFIX_KEY[entityType]];
+      const entityId = `${prefix}00000000-0000-0000-0000-000000000001`;
+
+      const result = decodeBucketContentTagRowSafe({ entityType, entityId, bucketId: BUCKET_ID });
+
+      expect(result).not.toBeNull();
+      expect(result?.entityType).toBe(entityType);
+      expect(result?.entityId).toBe(entityId);
+      expect(result?.bucketId).toBe(BUCKET_ID);
+    },
+  );
+
+  it("returns null for an unknown entityType — resilient list path", () => {
+    const result = decodeBucketContentTagRowSafe({
+      entityType: "totally-unknown",
+      entityId: "x_y",
+      bucketId: BUCKET_ID,
+    });
+
+    expect(result).toBeNull();
   });
 });
