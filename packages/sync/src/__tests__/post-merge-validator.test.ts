@@ -2833,3 +2833,384 @@ describe("PostMergeValidator: validateBucketContentTags", () => {
     expect(session.document.contentTags["bogus_x_bkt_1"]).toBeUndefined();
   });
 });
+
+// ── Branch coverage gap fillers ─────────────────────────────────────
+// Each test below targets a specific BRDA-flagged uncovered branch in
+// post-merge-validator.ts. They focus on early-return guards (when the
+// document type lacks a given field) and bucket-content-tag entityType
+// runtime-shape branches, which are not exercised by the higher-level
+// integration-style tests above.
+
+describe("PostMergeValidator: missing-field early returns", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("normalizeSortOrder returns no patches when sortable strategies have no entityMap", () => {
+    // Privacy-config docs have no `structureEntityLinks` etc., so every
+    // sortable strategy hits `if (!entityMap) continue`.
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sort-no-fields"),
+      sodium,
+    });
+
+    const result = normalizeSortOrder(session as EncryptedSyncSession<unknown>);
+
+    expect(result.patches).toHaveLength(0);
+    expect(result.envelope).toBeNull();
+  });
+
+  it("normalizeCheckInRecord returns count=0 when document has no checkInRecords field", () => {
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-checkin-no-field"),
+      sodium,
+    });
+
+    const result = normalizeCheckInRecord(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(0);
+    expect(result.envelope).toBeNull();
+  });
+
+  it("normalizeFriendConnection returns count=0 when document has no friendConnections field", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-friend-no-field"),
+      sodium,
+    });
+
+    const result = normalizeFriendConnection(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(0);
+    expect(result.envelope).toBeNull();
+  });
+
+  it("normalizeFrontingSessions returns count=0 when document has no sessions field", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fs-no-field"),
+      sodium,
+    });
+
+    const result = normalizeFrontingSessions(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(0);
+    expect(result.notifications).toHaveLength(0);
+    expect(result.envelope).toBeNull();
+  });
+
+  it("normalizeWebhookConfigs returns count=0 when document has no webhookConfigs field", () => {
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-wh-no-field"),
+      sodium,
+    });
+
+    const result = normalizeWebhookConfigs(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(0);
+    expect(result.notifications).toHaveLength(0);
+    expect(result.envelope).toBeNull();
+  });
+
+  it("validateBucketContentTags returns count=0 when document has no contentTags field", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-no-field"),
+      sodium,
+    });
+
+    const result = validateBucketContentTags(session as EncryptedSyncSession<unknown>);
+
+    expect(result.count).toBe(0);
+    expect(result.notifications).toHaveLength(0);
+    expect(result.envelope).toBeNull();
+  });
+});
+
+// ── Hierarchy edge cases ──────────────────────────────────────────────
+
+describe("PostMergeValidator: detectHierarchyCycles edge cases", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("ignores entities whose parent points to a non-existent entity", () => {
+    // Hits the `if (current !== null && !(current in entityMap)) current = null;`
+    // branch — group has parentGroupId pointing to a missing entity.
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-orphan-parent"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.groups[asGroupId("grp_orphan")] = makeGroup("grp_orphan", 1, {
+        parentGroupId: "grp_does_not_exist",
+      });
+    });
+
+    const { breaks } = detectHierarchyCycles(session);
+
+    // No cycle — orphan parent is treated as "no parent" and walk terminates.
+    expect(breaks).toHaveLength(0);
+  });
+});
+
+// ── Sort order edge cases ─────────────────────────────────────────────
+
+describe("PostMergeValidator: normalizeSortOrder edge cases", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("issues no patch when an entity already sits at its computed position", () => {
+    // Hits the `if (entity.sortOrder !== newOrder)` false branch — at least
+    // one tied entity, after deterministic sort, ends up at its existing
+    // sortOrder so no patch is emitted for it.
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sort-no-change"),
+      sodium,
+    });
+
+    session.change((d) => {
+      // Two siblings with sortOrder 1 — the first by createdAt/id stays at 1.
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_a")] = {
+        id: s("stel_a"),
+        systemId: s("sys_1"),
+        entityId: s("ste_a"),
+        parentEntityId: s("parent_x"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_b")] = {
+        id: s("stel_b"),
+        systemId: s("sys_1"),
+        entityId: s("ste_b"),
+        parentEntityId: s("parent_x"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 2000,
+        updatedAt: 2000,
+      };
+    });
+
+    const { patches } = normalizeSortOrder(session);
+
+    // Exactly one entity needed renumbering (the second tied sibling).
+    // The first entity's sortOrder already matched newOrder=1, so no patch.
+    expect(patches).toHaveLength(1);
+    expect(patches[0]?.entityId).toBe("stel_b");
+    expect(patches[0]?.newSortOrder).toBe(2);
+  });
+
+  it("treats a non-null non-ImmutableString sortGroupField value as the null group", () => {
+    // Hits the `else { key = NULL_GROUP; }` branch in partitionByGroupField —
+    // a corrupt entity whose parentEntityId is a primitive instead of an
+    // ImmutableString or null.
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sort-corrupt-group"),
+      sodium,
+    });
+
+    session.change((d) => {
+      // Inject a corrupt link via a Record view so we can store a primitive
+      // parentEntityId — the runtime branch handles this defensively.
+      const links: Record<string, unknown> = d.structureEntityLinks;
+      links["stel_corrupt"] = {
+        id: s("stel_corrupt"),
+        systemId: s("sys_1"),
+        entityId: s("ste_corrupt"),
+        parentEntityId: 42,
+        sortOrder: 5,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      links["stel_corrupt2"] = {
+        id: s("stel_corrupt2"),
+        systemId: s("sys_1"),
+        entityId: s("ste_corrupt2"),
+        parentEntityId: 42,
+        sortOrder: 5,
+        archived: false,
+        createdAt: 2000,
+        updatedAt: 2000,
+      };
+    });
+
+    // Ties under the synthetic NULL_GROUP partition are renumbered.
+    const { patches } = normalizeSortOrder(session);
+    expect(patches.length).toBeGreaterThan(0);
+  });
+});
+
+// ── BucketContentTag entityType runtime shape branches ────────────────
+
+describe("PostMergeValidator: validateBucketContentTags entityType shapes", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("accepts entityType wrapped in an ImmutableString-like object with a string val", () => {
+    // Hits the `typeof rawType === "object" && "val" in rawType && typeof val === "string"`
+    // true path — entityType serialized as an Automerge ImmutableString.
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-immutable-str"),
+      sodium,
+    });
+
+    session.change((d) => {
+      const tags: Record<string, unknown> = d.contentTags;
+      tags["mem_immutable"] = {
+        entityType: s("member"),
+        entityId: asMemberId("mem_immut"),
+        bucketId: s("bkt_1"),
+      };
+    });
+
+    const result = validateBucketContentTags(session);
+
+    // Recognized as a known type — survives.
+    expect(result.count).toBe(0);
+    expect(result.envelope).toBeNull();
+  });
+
+  it("drops entries whose entityType object has no `val` key", () => {
+    // Hits the `"val" in rawType` false branch — typeStr stays null and the
+    // entry is dropped with a "<missing>" placeholder in the summary.
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-noval"),
+      sodium,
+    });
+
+    session.change((d) => {
+      const tags: Record<string, unknown> = d.contentTags;
+      tags["bad_noval"] = {
+        entityType: { other: "field" },
+        entityId: "x",
+        bucketId: s("bkt_1"),
+      };
+    });
+
+    const result = validateBucketContentTags(session);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications[0]?.summary).toContain("<missing>");
+  });
+
+  it("drops entries whose entityType object has a non-string `val`", () => {
+    // Hits the `typeof (rawType as { val: unknown }).val === "string"` false
+    // branch — the val exists but is a number.
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-numval"),
+      sodium,
+    });
+
+    session.change((d) => {
+      const tags: Record<string, unknown> = d.contentTags;
+      tags["bad_numval"] = {
+        entityType: { val: 42 },
+        entityId: "x",
+        bucketId: s("bkt_1"),
+      };
+    });
+
+    const result = validateBucketContentTags(session);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications[0]?.summary).toContain("<missing>");
+  });
+
+  it("drops entries whose entityType is a primitive non-string non-object", () => {
+    // Hits the `typeof rawType === "string"` false AND object-branch false
+    // (rawType is a number) — typeStr remains null.
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-primitive"),
+      sodium,
+    });
+
+    session.change((d) => {
+      const tags: Record<string, unknown> = d.contentTags;
+      tags["bad_primitive"] = {
+        entityType: 99,
+        entityId: "x",
+        bucketId: s("bkt_1"),
+      };
+    });
+
+    const result = validateBucketContentTags(session);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications[0]?.summary).toContain("<missing>");
+  });
+
+  it("drops entries whose entityType is null (object-branch null guard)", () => {
+    // Hits the `rawType !== null` false branch — rawType is actually null.
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-null-type"),
+      sodium,
+    });
+
+    session.change((d) => {
+      const tags: Record<string, unknown> = d.contentTags;
+      tags["bad_null"] = {
+        entityType: null,
+        entityId: "x",
+        bucketId: s("bkt_1"),
+      };
+    });
+
+    const result = validateBucketContentTags(session);
+
+    expect(result.count).toBe(1);
+    expect(result.notifications[0]?.summary).toContain("<missing>");
+  });
+});
