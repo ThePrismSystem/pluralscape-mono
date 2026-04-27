@@ -246,8 +246,9 @@ export {
   DEVICE_TOKEN_PLATFORM_VALUES,
   FRIEND_NOTIFICATION_EVENT_TYPE_VALUES,
   IMPORT_ENTITY_REF_BATCH_MAX,
+  PUBLIC_KEY_BYTE_LENGTH,
 } from "./validation.constants.js";
-export { CreateApiKeyBodySchema } from "./api-key.js";
+export { ApiKeyEncryptedPayloadSchema, CreateApiKeyBodySchema } from "./api-key.js";
 export { PurgeSystemBodySchema } from "./system-purge.js";
 export { CreateSnapshotBodySchema, DuplicateSystemBodySchema } from "./snapshot.js";
 export {
