@@ -105,8 +105,40 @@ export interface ApiKeyServerMetadata {
 }
 
 /**
- * JSON-wire representation of an ApiKey. Derived from the domain `ApiKey`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`, `Uint8Array` becomes `string` (base64).
+ * Server-visible plaintext fields of an ApiKey row — the columns the
+ * server can surface without decrypting `encryptedData`. Equivalent to
+ * `ApiKeyServerMetadata` minus the per-account marker (`accountId`),
+ * the auth secret (`tokenHash`), and the two encrypted columns
+ * (`encryptedData` Class C blob + `encryptedKeyMaterial` Class E
+ * server-side material).
+ *
+ * Used by the listing/get response shape; the Class C `name` and
+ * `publicKey` fields from the encrypted blob never appear here, so
+ * clients see no decrypted payload from these endpoints.
  */
-export type ApiKeyWire = Serialize<ApiKey>;
+export type ApiKeyServerVisible = Omit<
+  ApiKeyServerMetadata,
+  "accountId" | "tokenHash" | "encryptedData" | "encryptedKeyMaterial"
+>;
+
+/**
+ * JSON-wire representation of an ApiKey row.
+ *
+ * **Wire shape rationale (Class C):** The Class C auxiliary type
+ * `ApiKeyEncryptedPayload` (carrying `name` and, for `keyType === "crypto"`,
+ * `publicKey`) lives inside the `encryptedData` blob. Pluralscape is
+ * zero-knowledge — the server cannot decrypt that blob — so the wire
+ * surfaces only the plaintext columns (`ApiKeyServerVisible`). Listing
+ * (`GET /api-keys`) and get (`GET /api-keys/:id`) endpoints both return
+ * this shape (see `apps/api/src/services/api-key/queries.ts:30-85`).
+ *
+ * The creation endpoint (`POST /api-keys`) returns this shape augmented
+ * with the plaintext `token` field — represented in OpenAPI as
+ * `ApiKeyCreateResponse = ApiKeyResponse + { token }`. The plaintext
+ * blob payload is never echoed back from any endpoint; the caller
+ * already holds it from the request.
+ *
+ * `Serialize<T>` strips brands: branded IDs become plain `string`,
+ * `UnixMillis` becomes `number`.
+ */
+export type ApiKeyWire = Serialize<ApiKeyServerVisible>;
