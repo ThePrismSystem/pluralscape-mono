@@ -57,6 +57,20 @@ export interface ApiKeyWithSecret {
 }
 
 /**
+ * The decrypted content of an ApiKey row's `encryptedData` blob.
+ *
+ * Class C auxiliary type per ADR-023 — the SoT manifest's `encryptedInput`
+ * slot for `ApiKey` points at this type directly (no alias).
+ * Parity gate: `ApiKeyEncryptedPayloadSchema` in `packages/validation/src/api-key.ts`.
+ *
+ * Discriminated over `keyType`: metadata-only keys carry just `name`;
+ * crypto-capable keys additionally carry `publicKey: Uint8Array`.
+ */
+export type ApiKeyEncryptedPayload =
+  | { readonly keyType: "metadata"; readonly name: string }
+  | { readonly keyType: "crypto"; readonly name: string; readonly publicKey: Uint8Array };
+
+/**
  * Server-visible ApiKey metadata — raw Drizzle row shape.
  *
  * The domain `ApiKey` type is a discriminated union (metadata vs crypto)
@@ -74,6 +88,14 @@ export interface ApiKeyServerMetadata {
   readonly tokenHash: string;
   readonly scopes: readonly ApiKeyScope[];
   readonly encryptedData: EncryptedBlob;
+  /**
+   * Server-side T3-encrypted private key material for `keyType === "crypto"`
+   * rows. Encrypted with a server-held key (not E2E) — clients never see it.
+   *
+   * Class E exception per ADR-023 — the canonical chain does not extend
+   * here. `ApiKey` is a hybrid Class C + Class E entity: `encryptedData`
+   * follows Class C (above), `encryptedKeyMaterial` is documented as Class E.
+   */
   readonly encryptedKeyMaterial: Uint8Array | null;
   readonly createdAt: UnixMillis;
   readonly lastUsedAt: UnixMillis | null;
