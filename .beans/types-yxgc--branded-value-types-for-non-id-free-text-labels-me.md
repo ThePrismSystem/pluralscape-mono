@@ -1,11 +1,11 @@
 ---
 # types-yxgc
 title: Branded value types for non-ID free-text labels (member form / display name)
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-04-25T20:28:59Z
-updated_at: 2026-04-25T21:39:52Z
+updated_at: 2026-04-27T04:54:14Z
 parent: ps-y4tb
 ---
 
@@ -66,3 +66,8 @@ Update callers (services, transforms, tests) to brand values via the existing `b
 ## Note on cross-reference cleanup
 
 The lifecycle-event JSDoc on `previousForm`/`newForm`/`previousName`/`newName` references this bean by ID. When this bean is completed, those JSDoc cross-references must be removed (the fields will then carry branded types, making the comment obsolete). Track as part of this bean's acceptance.
+
+## Follow-up beans opened
+
+- types-f3fk — Brand fleet expansion (Member, Group, Channel)
+- types-t3tn — Free-text label audit (custom-front, custom-field, member-photo)

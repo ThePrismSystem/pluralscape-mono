@@ -1,4 +1,4 @@
-import { brandId, toUnixMillis } from "@pluralscape/types";
+import { brandId, brandValue, toUnixMillis } from "@pluralscape/types";
 import { LIFECYCLE_EVENT_ENCRYPTED_SCHEMAS } from "@pluralscape/validation";
 
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
@@ -12,7 +12,9 @@ import type {
   InnerWorldRegionId,
   LifecycleEvent,
   LifecycleEventEncryptedInput,
+  LifecycleEventForm,
   LifecycleEventId,
+  LifecycleEventName,
   LifecycleEventWire,
   MemberId,
   SystemId,
@@ -179,8 +181,9 @@ export function decryptLifecycleEvent(
         ...shared,
         eventType: "form-change" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
-        previousForm: v.previousForm,
-        newForm: v.newForm,
+        previousForm:
+          v.previousForm === null ? null : brandValue<LifecycleEventForm>(v.previousForm),
+        newForm: v.newForm === null ? null : brandValue<LifecycleEventForm>(v.newForm),
       };
       break;
     }
@@ -190,8 +193,9 @@ export function decryptLifecycleEvent(
         ...shared,
         eventType: "name-change" as const,
         memberId: brandId<MemberId>(firstOrThrow(metaIds(meta, "memberIds"), "memberIds")),
-        previousName: v.previousName,
-        newName: v.newName,
+        previousName:
+          v.previousName === null ? null : brandValue<LifecycleEventName>(v.previousName),
+        newName: brandValue<LifecycleEventName>(v.newName),
       };
       break;
     }

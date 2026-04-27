@@ -27,6 +27,7 @@ import type {
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { EntityReference } from "../utility.js";
+import type { LifecycleEventForm, LifecycleEventName } from "../value-types.js";
 
 describe("LifecycleEvent base fields", () => {
   it("all variants share common fields", () => {
@@ -118,8 +119,8 @@ describe("FormChangeEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<FormChangeEvent["eventType"]>().toEqualTypeOf<"form-change">();
     expectTypeOf<FormChangeEvent["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<FormChangeEvent["previousForm"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<FormChangeEvent["newForm"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<FormChangeEvent["previousForm"]>().toEqualTypeOf<LifecycleEventForm | null>();
+    expectTypeOf<FormChangeEvent["newForm"]>().toEqualTypeOf<LifecycleEventForm | null>();
   });
 });
 
@@ -127,8 +128,8 @@ describe("NameChangeEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<NameChangeEvent["eventType"]>().toEqualTypeOf<"name-change">();
     expectTypeOf<NameChangeEvent["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<NameChangeEvent["previousName"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<NameChangeEvent["newName"]>().toEqualTypeOf<string>();
+    expectTypeOf<NameChangeEvent["previousName"]>().toEqualTypeOf<LifecycleEventName | null>();
+    expectTypeOf<NameChangeEvent["newName"]>().toEqualTypeOf<LifecycleEventName>();
   });
 });
 
