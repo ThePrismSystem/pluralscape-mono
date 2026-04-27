@@ -17,7 +17,6 @@ import {
   rowToFriendCode,
   rowToFriendConnection,
   rowToFrontingComment,
-  rowToFrontingReport,
   rowToFrontingSession,
   rowToGroup,
   rowToInnerWorldEntity,
@@ -1208,25 +1207,6 @@ describe("rowToFriendCode", () => {
     if (result.archived) {
       expect(result.archivedAt).toBe(1_700_000_000_000);
     }
-  });
-});
-
-// ── fronting-report (fronting document, locally encrypted) ───────────────────
-
-describe("rowToFrontingReport", () => {
-  it("maps fronting report row", () => {
-    const row: Record<string, unknown> = {
-      id: "fr-1",
-      system_id: "sys-1",
-      encrypted_data: "base64encodedblob",
-      format: "json",
-      generated_at: 1_700_000_000_000,
-    };
-
-    const result = rowToFrontingReport(row);
-
-    expect(result.id).toBe("fr-1");
-    expect(result.systemId).toBe("sys-1");
   });
 });
 

@@ -14,7 +14,6 @@ import type {
   ArchivedFrontingSession,
   CustomFront,
   FrontingComment,
-  FrontingReportWire,
   FrontingSession,
 } from "@pluralscape/types";
 
@@ -140,25 +139,4 @@ export function rowToFrontingComment(
     version: 0,
   };
   return archived ? wrapArchived(base, updatedAt) : base;
-}
-
-export function rowToFrontingReport(row: Record<string, unknown>): FrontingReportWire {
-  // FrontingReport is stored encrypted in SQLite; the row holds the wire shape
-  // (encryptedData blob) rather than the decrypted domain fields.
-  const id = rid(row);
-  return {
-    id: guardedStr(row["id"], "fronting_reports", "id", id),
-    systemId: guardedStr(row["system_id"], "fronting_reports", "system_id", id),
-    encryptedData: guardedStr(row["encrypted_data"], "fronting_reports", "encrypted_data", id),
-    format: guardedStr(
-      row["format"],
-      "fronting_reports",
-      "format",
-      id,
-    ) as FrontingReportWire["format"],
-    generatedAt: guardedToMs(row["generated_at"], "fronting_reports", "generated_at", id),
-    version: 0,
-    archived: false,
-    archivedAt: null,
-  };
 }
