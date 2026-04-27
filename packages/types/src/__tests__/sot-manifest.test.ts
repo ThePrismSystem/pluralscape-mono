@@ -2,6 +2,13 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import type { SotEntityManifest } from "../__sot-manifest__.js";
 import type {
+  ApiKey,
+  ApiKeyEncryptedPayload,
+  ApiKeyServerMetadata,
+  ApiKeyServerVisible,
+  ApiKeyWire,
+} from "../entities/api-key.js";
+import type {
   AuditLogEntry,
   AuditLogEntryServerMetadata,
   AuditLogEntryWire,
@@ -19,7 +26,19 @@ import type {
   MemberServerMetadata,
   MemberWire,
 } from "../entities/member.js";
-import type { Extends } from "../type-assertions.js";
+import type {
+  DeviceInfo,
+  Session,
+  SessionServerMetadata,
+  SessionWire,
+} from "../entities/session.js";
+import type {
+  SnapshotContent,
+  SystemSnapshot,
+  SystemSnapshotServerMetadata,
+  SystemSnapshotWire,
+} from "../entities/system-snapshot.js";
+import type { Equal, Extends } from "../type-assertions.js";
 
 describe("SotEntityManifest", () => {
   it("entries carry at minimum a domain + encryptedFields pair", () => {
@@ -65,6 +84,58 @@ describe("SotEntityManifest", () => {
   it("includes the pilot entities", () => {
     expectTypeOf<
       Extends<"Member" | "AuditLogEntry", keyof SotEntityManifest>
+    >().toEqualTypeOf<true>();
+  });
+
+  it("registers ApiKey (Class C) with the auxiliary-type encryptedInput", () => {
+    expectTypeOf<SotEntityManifest["ApiKey"]["domain"]>().toEqualTypeOf<ApiKey>();
+    expectTypeOf<
+      SotEntityManifest["ApiKey"]["encryptedInput"]
+    >().toEqualTypeOf<ApiKeyEncryptedPayload>();
+    expectTypeOf<SotEntityManifest["ApiKey"]["server"]>().toEqualTypeOf<ApiKeyServerMetadata>();
+    expectTypeOf<SotEntityManifest["ApiKey"]["wire"]>().toEqualTypeOf<ApiKeyWire>();
+    expectTypeOf<SotEntityManifest["ApiKey"]["encryptedFields"]>().toEqualTypeOf<never>();
+  });
+
+  it("registers Session (Class C) with DeviceInfo as encryptedInput", () => {
+    expectTypeOf<SotEntityManifest["Session"]["domain"]>().toEqualTypeOf<Session>();
+    expectTypeOf<SotEntityManifest["Session"]["encryptedInput"]>().toEqualTypeOf<DeviceInfo>();
+    expectTypeOf<SotEntityManifest["Session"]["server"]>().toEqualTypeOf<SessionServerMetadata>();
+    expectTypeOf<SotEntityManifest["Session"]["wire"]>().toEqualTypeOf<SessionWire>();
+    expectTypeOf<SotEntityManifest["Session"]["encryptedFields"]>().toEqualTypeOf<never>();
+  });
+
+  it("registers SystemSnapshot (Class C) with SnapshotContent as encryptedInput", () => {
+    expectTypeOf<SotEntityManifest["SystemSnapshot"]["domain"]>().toEqualTypeOf<SystemSnapshot>();
+    expectTypeOf<
+      SotEntityManifest["SystemSnapshot"]["encryptedInput"]
+    >().toEqualTypeOf<SnapshotContent>();
+    expectTypeOf<
+      SotEntityManifest["SystemSnapshot"]["server"]
+    >().toEqualTypeOf<SystemSnapshotServerMetadata>();
+    expectTypeOf<SotEntityManifest["SystemSnapshot"]["wire"]>().toEqualTypeOf<SystemSnapshotWire>();
+    expectTypeOf<SotEntityManifest["SystemSnapshot"]["encryptedFields"]>().toEqualTypeOf<never>();
+  });
+
+  it("pins the exact ApiKeyServerVisible keyset (fail-closed allowlist guard)", () => {
+    type ExpectedVisibleKeys =
+      | "id"
+      | "systemId"
+      | "keyType"
+      | "scopes"
+      | "createdAt"
+      | "lastUsedAt"
+      | "revokedAt"
+      | "expiresAt"
+      | "scopedBucketIds";
+    expectTypeOf<keyof ApiKeyServerVisible>().toEqualTypeOf<ExpectedVisibleKeys>();
+  });
+
+  it("ApiKeyEncryptedPayload.keyType is exhaustive against ApiKey.keyType", () => {
+    // If `ApiKey` ever adds a new keyType literal, this fails to compile —
+    // forcing the encrypted payload's discriminator to stay in sync.
+    expectTypeOf<
+      Equal<ApiKeyEncryptedPayload["keyType"], ApiKey["keyType"]>
     >().toEqualTypeOf<true>();
   });
 });

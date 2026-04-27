@@ -10,6 +10,7 @@ import { env } from "../env.js";
 import { fromHex } from "../lib/hex.js";
 
 import type { AeadKey } from "@pluralscape/crypto";
+import type { T3EncryptedBytes } from "@pluralscape/types";
 
 /** Expected hex length for a 32-byte AEAD key. */
 const ENCRYPTION_KEY_HEX_LENGTH = AEAD_KEY_BYTES * 2;
@@ -37,9 +38,11 @@ export function getWebhookPayloadEncryptionKey(): AeadKey {
 
 /**
  * Encrypt a webhook payload using XChaCha20-Poly1305 with the server-held key.
- * Returns the combined nonce + ciphertext as a Uint8Array suitable for bytea storage.
+ * Returns the combined nonce + ciphertext as `T3EncryptedBytes` (ADR-023
+ * Class E) suitable for bytea storage. This is the brand-construction site —
+ * raw bytes become T3 ciphertext here.
  */
-export function encryptWebhookPayload(plaintext: string, key: AeadKey): Uint8Array {
+export function encryptWebhookPayload(plaintext: string, key: AeadKey): T3EncryptedBytes {
   assertAeadKey(key);
   const adapter = getSodium();
   const plaintextBytes = new TextEncoder().encode(plaintext);
@@ -47,7 +50,8 @@ export function encryptWebhookPayload(plaintext: string, key: AeadKey): Uint8Arr
   const combined = new Uint8Array(AEAD_NONCE_BYTES + result.ciphertext.length);
   combined.set(result.nonce, 0);
   combined.set(result.ciphertext, AEAD_NONCE_BYTES);
-  return combined;
+  // Brand at the encrypt boundary — phantom marker, no runtime cost.
+  return combined as T3EncryptedBytes;
 }
 
 /**

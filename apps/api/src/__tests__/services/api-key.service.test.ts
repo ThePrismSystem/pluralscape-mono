@@ -68,6 +68,7 @@ vi.mock("../../lib/encrypted-blob.js", () => ({
     nonce: new Uint8Array(24),
     ciphertext: new Uint8Array(16),
   })),
+  toT3EncryptedBytes: vi.fn((bytes: Uint8Array) => bytes),
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({

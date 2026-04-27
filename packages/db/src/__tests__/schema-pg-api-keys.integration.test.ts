@@ -16,10 +16,14 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { AccountId, ApiKeyId, BucketId, SystemId } from "@pluralscape/types";
+import type { AccountId, ApiKeyId, BucketId, SystemId, T3EncryptedBytes } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys };
+
+function t3(bytes: readonly number[]): T3EncryptedBytes {
+  return new Uint8Array(bytes) as T3EncryptedBytes;
+}
 
 describe("PG api_keys schema", () => {
   let client: PGlite;
@@ -71,7 +75,7 @@ describe("PG api_keys schema", () => {
     const now = fixtureNow();
     const id = brandId<ApiKeyId>(crypto.randomUUID());
     const tokenHash = `hash_${crypto.randomUUID()}`;
-    const keyMaterial = new Uint8Array([1, 2, 3, 4, 5]);
+    const keyMaterial = t3([1, 2, 3, 4, 5]);
 
     await db.insert(apiKeys).values({
       id,
@@ -271,7 +275,7 @@ describe("PG api_keys schema", () => {
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["full"],
-        encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
+        encryptedKeyMaterial: t3([1, 2, 3]),
         createdAt: now,
       }),
     ).rejects.toThrow();

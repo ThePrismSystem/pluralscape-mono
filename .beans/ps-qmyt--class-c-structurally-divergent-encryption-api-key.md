@@ -1,11 +1,11 @@
 ---
 # ps-qmyt
 title: "Class C structurally-divergent encryption: api-key, session, system-snapshot"
-status: draft
+status: completed
 type: feature
 priority: normal
 created_at: 2026-04-25T08:07:36Z
-updated_at: 2026-04-25T08:07:49Z
+updated_at: 2026-04-27T05:50:07Z
 parent: ps-cd6x
 blocked_by:
   - ps-y4tb
@@ -57,3 +57,23 @@ For each entity:
 ## Blocked-by
 
 ps-y4tb (encrypted-entity SoT consolidation) — proves the pattern; this work extends it to bespoke cases.
+
+## Summary of Changes
+
+Class C canonical-chain extension landed for api-key, session, system-snapshot. ADR-023 grew two sections (Class C + Class E) so PR4 (ps-f3ox) is doc-only.
+
+### ADR-023 amendments (in this PR)
+
+- Class C — divergent encrypted payload (auxiliary type IS the EncryptedInput; no alias)
+- Class E — server-side T3 encryption (no canonical chain; documented exception)
+
+### Per-entity work
+
+- **Session:** `DeviceInfoSchema` in `packages/validation/src/session.ts`; parity test; manifest entry; JSDoc on `DeviceInfo` references Class C
+- **System-snapshot:** `SnapshotContentSchema` in `packages/validation/src/snapshot.ts`; parity test; manifest entry; JSDoc on `SnapshotContent` references Class C
+- **ApiKey:** new `ApiKeyEncryptedPayload` discriminated union in `packages/types/src/entities/api-key.ts`; `ApiKeyEncryptedPayloadSchema` in validation; parity test; manifest entry; `encryptedKeyMaterial` documented as Class E exception; `ApiKeyWire` audit yielded a wire-shape tightening to `Serialize<ApiKeyServerVisible>` matching the existing `ApiKeyResult` handler shape (no client ripple required)
+
+### Verification
+
+- `pnpm types:check-sot` — green
+- `pnpm typecheck` / `lint` / `test:unit` / `test:integration` / `test:e2e` — green (E2E: 507 passed, 2 skipped)

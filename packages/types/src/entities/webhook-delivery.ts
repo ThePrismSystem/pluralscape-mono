@@ -1,3 +1,4 @@
+import type { T3EncryptedBytes } from "../encryption-primitives.js";
 import type { SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
@@ -26,10 +27,11 @@ export interface WebhookDelivery {
  * Derived from `WebhookDelivery` by adding the server-only
  * `encryptedData` column — the T3-encrypted payload the server stores
  * to sign at delivery time. The payload itself is encrypted with a
- * server-held key (not E2E), so it's `Uint8Array` not `EncryptedBlob`.
+ * server-held key (not E2E), so it's `T3EncryptedBytes` not
+ * `EncryptedBlob` — see ADR-023 Class E.
  */
 export type WebhookDeliveryServerMetadata = WebhookDelivery & {
-  readonly encryptedData: Uint8Array;
+  readonly encryptedData: T3EncryptedBytes;
 };
 
 /**

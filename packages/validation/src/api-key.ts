@@ -1,7 +1,9 @@
 import { ALL_API_KEY_SCOPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
-import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
+import { MAX_ENCRYPTED_DATA_SIZE, PUBLIC_KEY_BYTE_LENGTH } from "./validation.constants.js";
+
+import type { ApiKeyEncryptedPayload } from "@pluralscape/types";
 
 /** Key types matching the DB enum constraint. */
 const API_KEY_KEY_TYPES = ["metadata", "crypto"] as const;
@@ -25,3 +27,36 @@ export const CreateApiKeyBodySchema = z
     },
   )
   .readonly();
+
+/**
+ * Zod parity for `ApiKeyEncryptedPayload` — the Class C auxiliary type
+ * encrypted inside an ApiKey row's `encryptedData` blob.
+ *
+ * Validates the in-memory shape after decode. The schema rejects
+ * base64 strings for `publicKey` — any JSON-string boundary requires a
+ * base64-string adapter before parsing.
+ */
+export const ApiKeyEncryptedPayloadSchema: z.ZodType<ApiKeyEncryptedPayload> = z.discriminatedUnion(
+  "keyType",
+  [
+    z
+      .object({
+        keyType: z.literal("metadata"),
+        name: z.string().min(1),
+      })
+      .readonly(),
+    z
+      .object({
+        keyType: z.literal("crypto"),
+        name: z.string().min(1),
+        // In-memory contract — replace with EncryptedBase64Schema if wired to a JSON parse boundary.
+        publicKey: z
+          .instanceof(Uint8Array)
+          .refine(
+            (buf) => buf.length === PUBLIC_KEY_BYTE_LENGTH,
+            "publicKey must be 32 bytes (X25519)",
+          ),
+      })
+      .readonly(),
+  ],
+);

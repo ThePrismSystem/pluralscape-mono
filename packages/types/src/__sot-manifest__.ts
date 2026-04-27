@@ -12,7 +12,12 @@ import type {
   AcknowledgementRequestServerMetadata,
   AcknowledgementRequestWire,
 } from "./entities/acknowledgement.js";
-import type { ApiKey, ApiKeyServerMetadata, ApiKeyWire } from "./entities/api-key.js";
+import type {
+  ApiKey,
+  ApiKeyEncryptedPayload,
+  ApiKeyServerMetadata,
+  ApiKeyWire,
+} from "./entities/api-key.js";
 import type {
   AuditLogEntry,
   AuditLogEntryServerMetadata,
@@ -253,7 +258,12 @@ import type {
   RelationshipServerMetadata,
   RelationshipWire,
 } from "./entities/relationship.js";
-import type { Session, SessionServerMetadata, SessionWire } from "./entities/session.js";
+import type {
+  DeviceInfo,
+  Session,
+  SessionServerMetadata,
+  SessionWire,
+} from "./entities/session.js";
 import type {
   SystemStructureEntityAssociation,
   SystemStructureEntityAssociationEncryptedFields,
@@ -297,6 +307,7 @@ import type {
   SystemSettingsWire,
 } from "./entities/system-settings.js";
 import type {
+  SnapshotContent,
   SystemSnapshot,
   SystemSnapshotServerMetadata,
   SystemSnapshotWire,
@@ -349,9 +360,12 @@ import type {
  * - `domain`         — the full decrypted domain shape (`<Entity>`)
  * - `encryptedFields`— keys-union of encrypted fields (or `never` for
  *                      plaintext / hybrid entities with no keys-subset union)
- * - `encryptedInput` — `Pick<<Entity>, <Entity>EncryptedFields>` (the shape
- *                      callers encrypt). Omitted for entities where
- *                      `encryptedFields` is `never`.
+ * - `encryptedInput` — for Class A entities (`encryptedFields` is a real
+ *                      keys-union), this is `Pick<<Entity>, <Entity>EncryptedFields>`.
+ *                      For Class C entities (`encryptedFields: never` plus a
+ *                      divergent encrypted payload), this is the auxiliary
+ *                      type carried inside the blob (see ADR-023). Omitted
+ *                      for plaintext entities with no encrypted blob.
  * - `server`         — the server-visible Drizzle row shape
  *                      (`<Entity>ServerMetadata`)
  * - `result`         — `EncryptedWire<<Entity>ServerMetadata>` (server's
@@ -531,12 +545,14 @@ export type SotEntityManifest = {
   };
   SystemSnapshot: {
     domain: SystemSnapshot;
+    encryptedFields: never;
+    encryptedInput: SnapshotContent;
     server: SystemSnapshotServerMetadata;
     wire: SystemSnapshotWire;
-    // Hybrid entity: plaintext metadata + opaque `encryptedData` blob whose
-    // decrypted shape (`SnapshotContent`) lives in its own type, not as a
-    // keys-subset of `SystemSnapshot`. No `encryptedFields` union.
-    encryptedFields: never;
+    // Class C entity per ADR-023: the encrypted blob carries the auxiliary
+    // type `SnapshotContent` (members, structure entities, relationships,
+    // groups, innerworld snapshot — point-in-time view-only data). Clients
+    // decrypt locally to render the snapshot.
   };
   StructureEntityMemberLink: {
     domain: SystemStructureEntityMemberLink;
@@ -556,12 +572,15 @@ export type SotEntityManifest = {
   };
   ApiKey: {
     domain: ApiKey;
+    encryptedFields: never;
+    encryptedInput: ApiKeyEncryptedPayload;
     server: ApiKeyServerMetadata;
     wire: ApiKeyWire;
-    // Plaintext entity at the domain level — server splits domain fields
-    // across flat columns + opaque `encryptedData`; no domain-level
-    // encryptedFields keys-union exists.
-    encryptedFields: never;
+    // Class C entity per ADR-023: the encrypted blob carries the auxiliary
+    // type `ApiKeyEncryptedPayload` (discriminated over keyType: metadata
+    // carries `name`; crypto adds `publicKey`). The wire shape strips both
+    // the encrypted blob and the Class E `encryptedKeyMaterial` column —
+    // see ApiKeyWire JSDoc.
   };
   AuthKey: {
     domain: AuthKey;
@@ -595,10 +614,14 @@ export type SotEntityManifest = {
   };
   Session: {
     domain: Session;
+    encryptedFields: never;
+    encryptedInput: DeviceInfo;
     server: SessionServerMetadata;
     wire: SessionWire;
-    // Plaintext entity — no encrypted fields in the domain keyset.
-    encryptedFields: never;
+    // Class C entity per ADR-023: the encrypted blob carries the auxiliary
+    // type `DeviceInfo` (platform/appVersion/deviceName). The domain
+    // `Session` exposes only session-lifecycle metadata — clients
+    // decrypt `DeviceInfo` locally.
   };
   StructureEntityLink: {
     domain: SystemStructureEntityLink;

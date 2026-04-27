@@ -42,6 +42,12 @@ test.describe("API keys CRUD", () => {
       const body = (await res.json()) as { data: { id: string; keyType: string } };
       expect(body.data.id).toBe(keyId);
       expect(body.data.keyType).toBe("metadata");
+      // Fail-closed allowlist guard (ADR-023 Class C): the wire surface must
+      // never include sensitive server-only columns.
+      expect(body.data).not.toHaveProperty("tokenHash");
+      expect(body.data).not.toHaveProperty("encryptedData");
+      expect(body.data).not.toHaveProperty("encryptedKeyMaterial");
+      expect(body.data).not.toHaveProperty("accountId");
     });
 
     await test.step("list includes the key", async () => {
@@ -50,6 +56,13 @@ test.describe("API keys CRUD", () => {
       const body = (await res.json()) as { data: Array<{ id: string }> };
       const ids = body.data.map((k) => k.id);
       expect(ids).toContain(keyId);
+      const listed = body.data.find((k) => k.id === keyId);
+      expect(listed).toBeDefined();
+      // Same fail-closed guard on the list endpoint.
+      expect(listed).not.toHaveProperty("tokenHash");
+      expect(listed).not.toHaveProperty("encryptedData");
+      expect(listed).not.toHaveProperty("encryptedKeyMaterial");
+      expect(listed).not.toHaveProperty("accountId");
     });
 
     await test.step("revoke API key", async () => {

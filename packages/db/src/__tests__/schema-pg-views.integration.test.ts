@@ -56,6 +56,7 @@ import type {
   ServerInternal,
   ServerSecret,
   SessionId,
+  T3EncryptedBytes,
   SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
@@ -340,7 +341,7 @@ describe("PG views / query helpers", () => {
         status: "failed",
         attemptCount: 2,
         nextRetryAt: toUnixMillis(now - 60000),
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: new Uint8Array([1, 2, 3]) as T3EncryptedBytes,
         createdAt: now,
       });
       // Over limit, nextRetryAt in the past
@@ -352,7 +353,7 @@ describe("PG views / query helpers", () => {
         status: "failed",
         attemptCount: 5,
         nextRetryAt: toUnixMillis(now - 60000),
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: new Uint8Array([1, 2, 3]) as T3EncryptedBytes,
         createdAt: now,
       });
       // Under limit but nextRetryAt in the future — should NOT be returned
@@ -364,7 +365,7 @@ describe("PG views / query helpers", () => {
         status: "failed",
         attemptCount: 2,
         nextRetryAt: toUnixMillis(now + 60000),
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: new Uint8Array([1, 2, 3]) as T3EncryptedBytes,
         createdAt: now,
       });
 

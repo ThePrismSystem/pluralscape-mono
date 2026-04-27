@@ -9,13 +9,23 @@ import { MAX_ENCRYPTED_DATA_BYTES } from "../service.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 
-import type { EncryptedBase64, EncryptedBlob } from "@pluralscape/types";
+import type { EncryptedBase64, EncryptedBlob, T3EncryptedBytes } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 export function encryptedBlobToBase64(blob: EncryptedBlob): EncryptedBase64 {
   // Brand-construction site: the only place plain base64 is lifted to the
   // EncryptedBase64 wire brand. Mirror of `brandId` for ID brands.
   return Buffer.from(serializeEncryptedBlob(blob)).toString("base64") as EncryptedBase64;
+}
+
+/**
+ * Narrow raw bytes into a `T3EncryptedBytes` brand without a double-cast
+ * (mirror of `toServerSecret`). The brand is a compile-time phantom; the
+ * runtime bytes are unchanged. Callers are responsible for ensuring the
+ * input bytes really are server-side T3 ciphertext (per ADR-023 Class E).
+ */
+export function toT3EncryptedBytes(bytes: Uint8Array): T3EncryptedBytes {
+  return bytes as T3EncryptedBytes;
 }
 
 export function encryptedBlobToBase64OrNull(blob: EncryptedBlob | null): EncryptedBase64 | null {

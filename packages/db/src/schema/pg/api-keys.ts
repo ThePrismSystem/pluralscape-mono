@@ -24,6 +24,7 @@ import type {
   ApiKeyScope,
   BucketId,
   SystemId,
+  T3EncryptedBytes,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -40,7 +41,7 @@ export const apiKeys = pgTable(
     tokenHash: varchar("token_hash", { length: 255 }).notNull(),
     scopes: jsonb("scopes").notNull().$type<readonly ApiKeyScope[]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
-    encryptedKeyMaterial: pgBinary("encrypted_key_material"),
+    encryptedKeyMaterial: pgBinary("encrypted_key_material").$type<T3EncryptedBytes>(),
     createdAt: pgTimestamp("created_at").notNull(),
     lastUsedAt: pgTimestamp("last_used_at"),
     revokedAt: pgTimestamp("revoked_at"),
