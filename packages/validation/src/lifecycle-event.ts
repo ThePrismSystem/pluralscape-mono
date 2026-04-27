@@ -123,16 +123,16 @@ const ArchivalEncryptedSchema = z
 const FormChangeEncryptedSchema = z
   .object({
     ...baseEncrypted,
-    previousForm: z.string().nullable(),
-    newForm: z.string().nullable(),
+    previousForm: brandedString<"LifecycleEventForm">().nullable(),
+    newForm: brandedString<"LifecycleEventForm">().nullable(),
   })
   .readonly();
 
 const NameChangeEncryptedSchema = z
   .object({
     ...baseEncrypted,
-    previousName: z.string().nullable(),
-    newName: z.string(),
+    previousName: brandedString<"LifecycleEventName">().nullable(),
+    newName: brandedString<"LifecycleEventName">(),
   })
   .readonly();
 
