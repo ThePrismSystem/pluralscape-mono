@@ -15,7 +15,12 @@ export interface Session {
 
 /**
  * Device metadata stored inside the session's encryptedData blob.
- * The server never sees this in plaintext — it is T1 encrypted.
+ * The server never sees this in plaintext — it is T1 encrypted client-side.
+ *
+ * Class C auxiliary type per ADR-023 — the SoT manifest's
+ * `encryptedInput` slot for `Session` points at this type directly
+ * (no alias). Parity gate: `DeviceInfoSchema` in
+ * `packages/validation/src/session.ts`.
  */
 export interface DeviceInfo {
   readonly platform: string;
