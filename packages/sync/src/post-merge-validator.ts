@@ -7,6 +7,7 @@
  * making the corrections part of CRDT history.
  */
 import * as Automerge from "@automerge/automerge";
+import { isBucketContentEntityType } from "@pluralscape/types";
 import { parseTimeToMinutes, WEBHOOK_EVENT_TYPE_VALUES } from "@pluralscape/validation";
 
 import { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
@@ -804,6 +805,74 @@ export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>):
   return { count: issueCount, notifications, envelope: null };
 }
 
+/**
+ * Post-merge validation for BucketContentTag entries on the privacy-config
+ * document. Drops entries whose `entityType` is not a known
+ * {@link BucketContentEntityType}.
+ *
+ * A peer running an older app version cannot synthesize an unknown entity
+ * type, but a corrupted document or a future variant rolled back to an old
+ * client could. Quarantining at the CRDT layer prevents the materializer
+ * from trying to insert rows with an unrecognized polymorphic discriminator.
+ */
+export function validateBucketContentTags(session: EncryptedSyncSession<unknown>): {
+  count: number;
+  notifications: ConflictNotification[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+  const now = Date.now();
+  const notifications: ConflictNotification[] = [];
+
+  const tags = getEntityMap<{ entityType: unknown }>(doc, "contentTags");
+  if (!tags) return { count: 0, notifications, envelope: null };
+
+  const toDrop: string[] = [];
+  for (const [key, tag] of Object.entries(tags)) {
+    const rawType: unknown = tag.entityType;
+    let typeStr: string | null = null;
+    if (typeof rawType === "string") {
+      typeStr = rawType;
+    } else if (
+      typeof rawType === "object" &&
+      rawType !== null &&
+      "val" in rawType &&
+      typeof (rawType as { val: unknown }).val === "string"
+    ) {
+      typeStr = (rawType as { val: string }).val;
+    }
+
+    if (typeStr === null || !isBucketContentEntityType(typeStr)) {
+      toDrop.push(key);
+      notifications.push({
+        entityType: "bucket-content-tag",
+        entityId: key,
+        fieldName: "entityType",
+        resolution: "post-merge-bucket-content-tag-drop",
+        detectedAt: now,
+        summary: `Dropped bucket content tag ${key}: unknown entityType ${typeStr ?? "<missing>"}`,
+      });
+    }
+  }
+
+  if (toDrop.length === 0) {
+    return { count: 0, notifications, envelope: null };
+  }
+
+  const envelope = session.change((d) => {
+    const map = getEntityMap<unknown>(d as DocRecord, "contentTags");
+    if (!map) return;
+    for (const key of toDrop) {
+      // eslint reports dynamic-delete; the keys come from a closed `toDrop`
+      // array we built above (not user-supplied), so this is safe. Use
+      // explicit assignment with `Reflect.deleteProperty` to satisfy the rule.
+      Reflect.deleteProperty(map, key);
+    }
+  });
+
+  return { count: toDrop.length, notifications, envelope };
+}
+
 // ── Public API ──────────────────────────────────────────────────────
 
 /**
@@ -835,6 +904,7 @@ export function runAllValidations(
   let frontingSessionNormalizations = 0;
   let timerConfigNormalizations = 0;
   let webhookConfigIssues = 0;
+  let bucketContentTagDrops = 0;
 
   // Always run tombstone enforcement first
   try {
@@ -992,6 +1062,20 @@ export function runAllValidations(
     }
   }
 
+  if ("contentTags" in doc) {
+    try {
+      const tagResult = validateBucketContentTags(session);
+      bucketContentTagDrops = tagResult.count;
+      if (tagResult.envelope) {
+        correctionEnvelopes.push(tagResult.envelope);
+      }
+      notifications.push(...tagResult.notifications);
+    } catch (error: unknown) {
+      errors.push({ validator: "validateBucketContentTags", error });
+      onError?.("Bucket content tag validation failed", error);
+    }
+  }
+
   return {
     cycleBreaks,
     sortOrderPatches,
@@ -1001,6 +1085,7 @@ export function runAllValidations(
     frontingCommentAuthorIssues,
     timerConfigNormalizations,
     webhookConfigIssues,
+    bucketContentTagDrops,
     correctionEnvelopes,
     notifications,
     errors,

@@ -599,6 +599,7 @@ describe("P-M5: conflict retry buffer cap", () => {
       frontingCommentAuthorIssues: 0,
       timerConfigNormalizations: 0,
       webhookConfigIssues: 0,
+      bucketContentTagDrops: 0,
       correctionEnvelopes: [],
       notifications: [fakeNotification],
       errors: [],

@@ -32,6 +32,7 @@ import {
   normalizeWebhookConfigs,
   ENTITY_FIELD_MAP,
   normalizeFrontingCommentAuthors,
+  validateBucketContentTags,
 } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
@@ -2724,5 +2725,110 @@ describe("runAllValidations: onError callback invocation", () => {
     expect(result.notifications.some((n) => n.fieldName === "wakingHours")).toBe(true);
     // No errors on successful validation
     expect(errorMessages).toHaveLength(0);
+  });
+});
+
+describe("PostMergeValidator: validateBucketContentTags", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("drops bucket-content-tag entries with unknown entityType", () => {
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-drop"),
+      sodium,
+    });
+
+    session.change((d) => {
+      // Valid known entity type — must survive
+      d.contentTags["member_mem_1_bkt_1"] = {
+        entityType: "member",
+        entityId: asMemberId("mem_1"),
+        bucketId: s("bkt_1"),
+      };
+      // Unknown entity type — must be dropped. The CRDT type forbids
+      // unknown entityType strings at compile time; this simulates a
+      // corrupt or future-version document.
+      const corruptEntry: Record<string, unknown> = {
+        entityType: "future-thing",
+        entityId: "xyz",
+        bucketId: s("bkt_1"),
+      };
+      const tags: Record<string, unknown> = d.contentTags;
+      tags["future-thing_xyz_bkt_1"] = corruptEntry;
+    });
+
+    const result = validateBucketContentTags(session);
+
+    expect(result.count).toBe(1);
+    expect(result.envelope).not.toBeNull();
+    expect(session.document.contentTags["member_mem_1_bkt_1"]).toBeDefined();
+    expect(session.document.contentTags["future-thing_xyz_bkt_1"]).toBeUndefined();
+    expect(
+      result.notifications.some(
+        (n) =>
+          n.entityType === "bucket-content-tag" &&
+          n.entityId === "future-thing_xyz_bkt_1" &&
+          n.fieldName === "entityType",
+      ),
+    ).toBe(true);
+  });
+
+  it("returns 0 and no envelope when all entityTypes are known", () => {
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-ok"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.contentTags["member_mem_1_bkt_1"] = {
+        entityType: "member",
+        entityId: asMemberId("mem_1"),
+        bucketId: s("bkt_1"),
+      };
+      d.contentTags["group_grp_1_bkt_1"] = {
+        entityType: "group",
+        entityId: asGroupId("grp_1"),
+        bucketId: s("bkt_1"),
+      };
+    });
+
+    const result = validateBucketContentTags(session);
+
+    expect(result.count).toBe(0);
+    expect(result.envelope).toBeNull();
+    expect(result.notifications).toHaveLength(0);
+  });
+
+  it("runAllValidations reports bucketContentTagDrops on privacy-config docs", () => {
+    const base = createPrivacyConfigDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-bct-runall"),
+      sodium,
+    });
+
+    session.change((d) => {
+      const corrupt: Record<string, unknown> = {
+        entityType: "bogus",
+        entityId: "x",
+        bucketId: s("bkt_1"),
+      };
+      const tags: Record<string, unknown> = d.contentTags;
+      tags["bogus_x_bkt_1"] = corrupt;
+    });
+
+    const result = runAllValidations(session);
+    expect(result.bucketContentTagDrops).toBe(1);
+    expect(session.document.contentTags["bogus_x_bkt_1"]).toBeUndefined();
   });
 });
