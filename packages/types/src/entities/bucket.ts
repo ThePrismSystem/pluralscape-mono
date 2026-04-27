@@ -1,30 +1,6 @@
 import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
-import type {
-  AcknowledgementId,
-  BoardMessageId,
-  BucketId,
-  ChannelId,
-  CustomFrontId,
-  FieldDefinitionId,
-  FieldValueId,
-  FrontingCommentId,
-  FrontingSessionId,
-  GroupId,
-  InnerWorldEntityId,
-  InnerWorldRegionId,
-  JournalEntryId,
-  MemberId,
-  MemberPhotoId,
-  MessageId,
-  NoteId,
-  PollId,
-  RelationshipId,
-  SystemId,
-  SystemStructureEntityId,
-  SystemStructureEntityTypeId,
-  WikiPageId,
-} from "../ids.js";
+import type { BucketId, EntityTypeIdMap, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
@@ -149,29 +125,31 @@ export function isBucketContentEntityType(value: string): value is BucketContent
  * Each variant pairs an entity type with its branded ID, so consumers
  * cannot accidentally tag a member with a group ID. The DB column
  * stays varchar — the brand discriminates only at the app boundary.
+ *
+ * Generated as a mapped type over {@link BucketContentEntityType} indexing
+ * into {@link EntityTypeIdMap}. The {@link _AssertBucketContentEntityTypesMapped}
+ * compile-time assertion below guarantees every variant of
+ * `BucketContentEntityType` has a corresponding entry in `EntityTypeIdMap`,
+ * so adding a new tag-eligible entity is a one-line change to the
+ * `BucketContentEntityType` union and remains exhaustive everywhere.
  */
-export type TaggedEntityRef =
-  | { readonly entityType: "member"; readonly entityId: MemberId }
-  | { readonly entityType: "group"; readonly entityId: GroupId }
-  | { readonly entityType: "channel"; readonly entityId: ChannelId }
-  | { readonly entityType: "message"; readonly entityId: MessageId }
-  | { readonly entityType: "note"; readonly entityId: NoteId }
-  | { readonly entityType: "poll"; readonly entityId: PollId }
-  | { readonly entityType: "relationship"; readonly entityId: RelationshipId }
-  | { readonly entityType: "structure-entity-type"; readonly entityId: SystemStructureEntityTypeId }
-  | { readonly entityType: "structure-entity"; readonly entityId: SystemStructureEntityId }
-  | { readonly entityType: "journal-entry"; readonly entityId: JournalEntryId }
-  | { readonly entityType: "wiki-page"; readonly entityId: WikiPageId }
-  | { readonly entityType: "custom-front"; readonly entityId: CustomFrontId }
-  | { readonly entityType: "fronting-session"; readonly entityId: FrontingSessionId }
-  | { readonly entityType: "board-message"; readonly entityId: BoardMessageId }
-  | { readonly entityType: "acknowledgement"; readonly entityId: AcknowledgementId }
-  | { readonly entityType: "innerworld-entity"; readonly entityId: InnerWorldEntityId }
-  | { readonly entityType: "innerworld-region"; readonly entityId: InnerWorldRegionId }
-  | { readonly entityType: "field-definition"; readonly entityId: FieldDefinitionId }
-  | { readonly entityType: "field-value"; readonly entityId: FieldValueId }
-  | { readonly entityType: "member-photo"; readonly entityId: MemberPhotoId }
-  | { readonly entityType: "fronting-comment"; readonly entityId: FrontingCommentId };
+export type TaggedEntityRef = {
+  [K in BucketContentEntityType]: {
+    readonly entityType: K;
+    readonly entityId: EntityTypeIdMap[K];
+  };
+}[BucketContentEntityType];
+
+// Compile-time check: every BucketContentEntityType variant must appear as a
+// key in EntityTypeIdMap. Adding a new tag-eligible entity to the union
+// without a matching EntityTypeIdMap entry is a type error here.
+type _AssertBucketContentEntityTypesMapped = {
+  [K in BucketContentEntityType]: K extends keyof EntityTypeIdMap
+    ? true
+    : `Missing EntityTypeIdMap entry for "${K}"`;
+}[BucketContentEntityType];
+const _ASSERT_BUCKET_CONTENT_ENTITY_TYPES_MAPPED: _AssertBucketContentEntityTypesMapped = true;
+void _ASSERT_BUCKET_CONTENT_ENTITY_TYPES_MAPPED;
 
 /**
  * Tags an entity as belonging to a privacy bucket.
