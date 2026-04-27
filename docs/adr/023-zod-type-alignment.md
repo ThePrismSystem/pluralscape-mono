@@ -102,7 +102,7 @@ Class A's six-link chain assumes `<X>EncryptedInput = Pick<<X>, K>`. For Class C
 - The auxiliary type is published in `packages/types/src/entities/<entity>.ts` and used **directly** as the canonical "encrypted input" — no `<X>EncryptedInput` alias is introduced (aliases are forbidden under the pre-production policy).
 - The Zod parity gate is named after the auxiliary type: `<AuxiliaryType>Schema` in `packages/validation/src/<entity>.ts`. The parity assertion in `packages/validation/src/__tests__/type-parity/<entity>.type.test.ts` is `Equal<z.infer<typeof <AuxiliaryType>Schema>, <AuxiliaryType>>`.
 - The SoT manifest's `encryptedInput` slot points at the auxiliary type by name.
-- `<X>Result` and `<X>Wire` are decided per-entity. For zero-knowledge entities, Wire usually equals `Serialize<EncryptedWire<<X>ServerMetadata>>` and clients decrypt locally. For entities where the server briefly handles plaintext at one specific moment (e.g. `ApiKey` at creation time via `ApiKeyWithSecret`), the chosen rationale is documented in JSDoc on the wire type.
+- `<X>Result` and `<X>Wire` are decided per-entity. The current Class C entities all keep the encrypted blob server-side and surface the plaintext columns only — `Session` and `SystemSnapshot` use `Serialize<<X>>` (the encrypted column is absent from the domain type), and `ApiKey` uses `Serialize<<X>ServerVisible>` where `<X>ServerVisible` is a `Pick`-projection of `<X>ServerMetadata` over the columns the server can publish without decryption. Each wire type's JSDoc documents the chosen rationale.
 
 Class C entities (3): api-key, session, system-snapshot.
 

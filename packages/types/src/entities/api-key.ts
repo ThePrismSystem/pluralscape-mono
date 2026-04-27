@@ -106,19 +106,24 @@ export interface ApiKeyServerMetadata {
 
 /**
  * Server-visible plaintext fields of an ApiKey row — the columns the
- * server can surface without decrypting `encryptedData`. Equivalent to
- * `ApiKeyServerMetadata` minus the per-account marker (`accountId`),
- * the auth secret (`tokenHash`), and the two encrypted columns
- * (`encryptedData` Class C blob + `encryptedKeyMaterial` Class E
- * server-side material).
+ * server can surface without decrypting `encryptedData`.
  *
- * Used by the listing/get response shape; the Class C `name` and
- * `publicKey` fields from the encrypted blob never appear here, so
- * clients see no decrypted payload from these endpoints.
+ * Expressed as a positive allowlist (`Pick`) so a future column added
+ * to `ApiKeyServerMetadata` defaults to **excluded** from the wire
+ * surface. This is fail-closed: a new sensitive column cannot leak
+ * by accident.
  */
-export type ApiKeyServerVisible = Omit<
+export type ApiKeyServerVisible = Pick<
   ApiKeyServerMetadata,
-  "accountId" | "tokenHash" | "encryptedData" | "encryptedKeyMaterial"
+  | "id"
+  | "systemId"
+  | "keyType"
+  | "scopes"
+  | "createdAt"
+  | "lastUsedAt"
+  | "revokedAt"
+  | "expiresAt"
+  | "scopedBucketIds"
 >;
 
 /**

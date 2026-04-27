@@ -9,6 +9,8 @@ import type { DeviceInfo } from "@pluralscape/types";
  * alias). The compile-time parity test in
  * `__tests__/type-parity/session.type.test.ts` asserts
  * `z.infer<typeof DeviceInfoSchema>` ≡ `DeviceInfo`.
+ *
+ * Currently a parity gate only — not yet wired to a runtime parse boundary.
  */
 export const DeviceInfoSchema: z.ZodType<DeviceInfo> = z
   .object({

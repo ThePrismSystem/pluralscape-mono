@@ -142,6 +142,8 @@ const SystemStructureEntityAssociationSchema: z.ZodType<SystemStructureEntityAss
  * this schema is named after the auxiliary type (no
  * `SystemSnapshotEncryptedInputSchema` alias). Parity test:
  * `__tests__/type-parity/system-snapshot.type.test.ts`.
+ *
+ * Currently a parity gate only — not yet wired to a runtime parse boundary.
  */
 export const SnapshotContentSchema: z.ZodType<SnapshotContent> = z
   .object({

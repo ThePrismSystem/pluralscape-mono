@@ -35,6 +35,11 @@ export const CreateApiKeyBodySchema = z
  * `publicKey: Uint8Array`. The compile-time parity test asserts
  * `z.infer<typeof ApiKeyEncryptedPayloadSchema>` equals
  * `ApiKeyEncryptedPayload`.
+ *
+ * Currently a parity gate only — not yet wired to a runtime parse
+ * boundary. If/when consumed at the decrypt boundary, `publicKey` will
+ * need a base64-string adapter since JSON-deserialized payloads arrive
+ * as strings, not `Uint8Array`.
  */
 export const ApiKeyEncryptedPayloadSchema: z.ZodType<ApiKeyEncryptedPayload> = z.discriminatedUnion(
   "keyType",
