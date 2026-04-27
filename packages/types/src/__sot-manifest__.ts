@@ -360,9 +360,12 @@ import type {
  * - `domain`         — the full decrypted domain shape (`<Entity>`)
  * - `encryptedFields`— keys-union of encrypted fields (or `never` for
  *                      plaintext / hybrid entities with no keys-subset union)
- * - `encryptedInput` — `Pick<<Entity>, <Entity>EncryptedFields>` (the shape
- *                      callers encrypt). Omitted for entities where
- *                      `encryptedFields` is `never`.
+ * - `encryptedInput` — for Class A entities (`encryptedFields` is a real
+ *                      keys-union), this is `Pick<<Entity>, <Entity>EncryptedFields>`.
+ *                      For Class C entities (`encryptedFields: never` plus a
+ *                      divergent encrypted payload), this is the auxiliary
+ *                      type carried inside the blob (see ADR-023). Omitted
+ *                      for plaintext entities with no encrypted blob.
  * - `server`         — the server-visible Drizzle row shape
  *                      (`<Entity>ServerMetadata`)
  * - `result`         — `EncryptedWire<<Entity>ServerMetadata>` (server's
@@ -542,7 +545,7 @@ export type SotEntityManifest = {
   };
   SystemSnapshot: {
     domain: SystemSnapshot;
-    encryptedFields: never; // Class C — SnapshotContent is not a keys-subset of SystemSnapshot.
+    encryptedFields: never;
     encryptedInput: SnapshotContent;
     server: SystemSnapshotServerMetadata;
     wire: SystemSnapshotWire;
@@ -569,7 +572,7 @@ export type SotEntityManifest = {
   };
   ApiKey: {
     domain: ApiKey;
-    encryptedFields: never; // Class C — no keys-subset of ApiKey is encrypted.
+    encryptedFields: never;
     encryptedInput: ApiKeyEncryptedPayload;
     server: ApiKeyServerMetadata;
     wire: ApiKeyWire;
@@ -611,7 +614,7 @@ export type SotEntityManifest = {
   };
   Session: {
     domain: Session;
-    encryptedFields: never; // Class C — DeviceInfo lives in encryptedData, not in the domain keyset.
+    encryptedFields: never;
     encryptedInput: DeviceInfo;
     server: SessionServerMetadata;
     wire: SessionWire;

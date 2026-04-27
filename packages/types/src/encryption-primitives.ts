@@ -84,6 +84,26 @@ declare const __serverSecret: unique symbol;
  */
 export type ServerSecret = Uint8Array & { readonly [__serverSecret]: true };
 
+// ── T3EncryptedBytes ───────────────────────────────────────────
+
+declare const __t3EncryptedBytes: unique symbol;
+
+/**
+ * Branded type for ciphertext encrypted with a server-held key (T3 server-side
+ * encryption per ADR-023's Class E section). Distinct from `EncryptedBlob`
+ * (T1/T2, carries the envelope) and `ServerSecret` (the signing key itself,
+ * not ciphertext).
+ *
+ * Surfaces:
+ * - `WebhookDeliveryServerMetadata.encryptedData` — encrypted webhook payload
+ * - `ApiKeyServerMetadata.encryptedKeyMaterial` — encrypted private key bytes
+ *   for crypto-typed API keys (Class E sidecar inside a Class C entity)
+ *
+ * Constructed at encrypt boundaries; consumers reading from Drizzle columns
+ * branded via `.$type<T3EncryptedBytes>()` receive the brand for free.
+ */
+export type T3EncryptedBytes = Uint8Array & { readonly [__t3EncryptedBytes]: true };
+
 // ── Server/Client variant pattern ──────────────────────────────
 // Server types carry EncryptedBlob; Client types have flat decrypted fields.
 // Only defined for completed domain modules.

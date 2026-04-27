@@ -23,6 +23,12 @@ Every encrypted domain entity publishes a six-link canonical chain from `package
 
 Plaintext entities publish only `<Entity>` → `<Entity>ServerMetadata` → `<Entity>Wire`.
 
+The taxonomy of encrypted-data shapes covered by this ADR:
+
+- **Class A** — canonical six-link chain (above). The encrypted blob is a key-subset of the entity (`<X>EncryptedInput = Pick<<X>, K>`).
+- **Class C** — divergent encrypted payload. The encrypted blob carries an auxiliary type that is **not** a key-subset of the entity (e.g., `DeviceInfo` for `Session`). Detailed in the "Class C" subsection below.
+- **Class E** — server-side T3 encryption. The payload is encrypted with a server-held key, not E2E. The canonical chain does **not** extend to it. Detailed in the "Class E" subsection below.
+
 The `EncryptedWire<T>` helper (`packages/types/src/encrypted-wire.ts`) and `Serialize<T>` together produce links 5 and 6 mechanically; only the keys-union and the server metadata require hand-authoring per entity. Per-entity service `<X>Result` types are derivations: `type <X>Result = EncryptedWire<<X>ServerMetadata>`. Hand-rolled `<X>Result` interfaces are reserved for cases where the wire shape genuinely diverges from the metadata (denormalized server-internal fields that must not leak, polymorphic refs the wire widens to plain string, validated narrowings of `Record<string, unknown>` payloads, etc.); each retained hand-roll documents _why_ in a comment above the interface.
 
 Downstream layers derive-or-assert-equal rather than redefine:
@@ -102,24 +108,26 @@ Class A's six-link chain assumes `<X>EncryptedInput = Pick<<X>, K>`. For Class C
 - The auxiliary type is published in `packages/types/src/entities/<entity>.ts` and used **directly** as the canonical "encrypted input" — no `<X>EncryptedInput` alias is introduced (aliases are forbidden under the pre-production policy).
 - The Zod parity gate is named after the auxiliary type: `<AuxiliaryType>Schema` in `packages/validation/src/<entity>.ts`. The parity assertion in `packages/validation/src/__tests__/type-parity/<entity>.type.test.ts` is `Equal<z.infer<typeof <AuxiliaryType>Schema>, <AuxiliaryType>>`.
 - The SoT manifest's `encryptedInput` slot points at the auxiliary type by name.
-- `<X>Result` and `<X>Wire` are decided per-entity. The current Class C entities all keep the encrypted blob server-side and surface the plaintext columns only — `Session` and `SystemSnapshot` use `Serialize<<X>>` (the encrypted column is absent from the domain type), and `ApiKey` uses `Serialize<<X>ServerVisible>` where `<X>ServerVisible` is a `Pick`-projection of `<X>ServerMetadata` over the columns the server can publish without decryption. Each wire type's JSDoc documents the chosen rationale.
+- `<X>Result` and `<X>Wire` follow this rule: if `<X>ServerMetadata` has no Class E sidecar columns, `<X>Wire = Serialize<<X>>` is sufficient (the encrypted blob is absent from the domain `<X>`). If it has a Class E sidecar (e.g., `ApiKey.encryptedKeyMaterial`), define `<X>ServerVisible = Pick<<X>ServerMetadata, ...>` as a positive allowlist excluding the sidecar, and use `<X>Wire = Serialize<<X>ServerVisible>`. The positive `Pick` allowlist is fail-closed — a future column added to `<X>ServerMetadata` defaults to excluded from the wire surface. Each wire type's JSDoc documents the chosen rationale.
+- The naming convention for the projection is `<X>ServerVisible`. Currently used by `ApiKey` (the only Class C entity with a Class E sidecar today). `Session` and `SystemSnapshot` use `Serialize<<X>>` directly because their server metadata has no sidecar.
 
 Class C entities (3): api-key, session, system-snapshot.
 
 ### Class E — server-side T3 encryption
 
-Some encrypted payloads are encrypted with a **server-held key**, not E2E. The payload is `Uint8Array` (raw bytes), not `EncryptedBlob` (which carries the T1 envelope). Server-side encryption never crosses the wire to clients — clients see only the entity's plaintext metadata.
+Some encrypted payloads are encrypted with a **server-held key**, not E2E. The payload is `T3EncryptedBytes` (a phantom-branded `Uint8Array` from `packages/types/src/encryption-primitives.ts`), not `EncryptedBlob` (which carries the T1 envelope). Server-side encryption never crosses the wire to clients — clients see only the entity's plaintext metadata.
 
 The canonical chain does **not** extend to Class E:
 
-- `<X>Wire = Serialize<<X>>` — the server-only `encryptedData` (or `encryptedKeyMaterial`) Uint8Array is stripped by being absent from the domain type
+- `<X>Wire = Serialize<<X>>` — the server-only `encryptedData` (or `encryptedKeyMaterial`) `T3EncryptedBytes` is stripped by being absent from the domain type
 - No `<X>EncryptedInput` is published — there is no client-supplied input shape
 - No Zod parity for the encrypted payload — its shape is server-internal
+- The `T3EncryptedBytes` brand is constructed at the encrypt boundary (e.g., `encryptWebhookPayload` in `apps/api/src/services/webhook-payload-encryption.ts`) or via the `toT3EncryptedBytes` helper (`apps/api/src/lib/encrypted-blob.ts`); Drizzle columns use `.$type<T3EncryptedBytes>()` to thread the brand through reads.
 
 Class E surfaces (2):
 
-- **Entity-level:** `webhook-delivery` (`WebhookDeliveryServerMetadata.encryptedData: Uint8Array`)
-- **Column-level inside a Class C entity:** `ApiKeyServerMetadata.encryptedKeyMaterial: Uint8Array | null` (only present on `CryptoApiKey` rows). The `ApiKey` entity is therefore a hybrid Class C + Class E — its primary encrypted blob follows the Class C convention, while the side-channel key material is documented as a Class E exception.
+- **Entity-level:** `webhook-delivery` (`WebhookDeliveryServerMetadata.encryptedData: T3EncryptedBytes`)
+- **Column-level inside a Class C entity:** `ApiKeyServerMetadata.encryptedKeyMaterial: T3EncryptedBytes | null` (only present on `CryptoApiKey` rows). The `ApiKey` entity is therefore a hybrid Class C + Class E — its primary encrypted blob follows the Class C convention, while the side-channel key material is documented as a Class E exception.
 
 ### Enforcement — `pnpm types:check-sot`
 

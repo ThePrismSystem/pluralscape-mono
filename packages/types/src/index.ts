@@ -126,6 +126,7 @@ export type {
   EncryptedString,
   EncryptedBase64,
   ServerSecret,
+  T3EncryptedBytes,
   DecryptFn,
   EncryptFn,
 } from "./encryption-primitives.js";

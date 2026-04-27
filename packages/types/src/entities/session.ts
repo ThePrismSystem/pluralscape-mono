@@ -17,6 +17,11 @@ export interface Session {
  * Device metadata stored inside the session's encryptedData blob.
  * The server never sees this in plaintext — it is T1 encrypted client-side.
  *
+ * `SessionServerMetadata.encryptedData` is `EncryptedBlob | null`; when
+ * non-null, the decrypted shape is `DeviceInfo`. Sessions without
+ * encrypted data (e.g., legacy or programmatic API-token sessions) have
+ * no `DeviceInfo`.
+ *
  * Class C auxiliary type per ADR-023 — the SoT manifest's
  * `encryptedInput` slot for `Session` points at this type directly
  * (no alias). Parity gate: `DeviceInfoSchema` in

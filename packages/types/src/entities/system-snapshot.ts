@@ -131,6 +131,9 @@ export interface SnapshotContent {
   readonly members: readonly SnapshotMember[];
   readonly structureEntityTypes: readonly SnapshotStructureEntityType[];
   readonly structureEntities: readonly SnapshotStructureEntity[];
+  // TODO(types-8f84): replace SystemStructure* with Snapshot* projections
+  // (omits server-shaped systemId / createdAt) per the snapshot-projection
+  // convention used by SnapshotMember/Group/Region above.
   readonly structureEntityLinks: readonly SystemStructureEntityLink[];
   readonly structureEntityMemberLinks: readonly SystemStructureEntityMemberLink[];
   readonly structureEntityAssociations: readonly SystemStructureEntityAssociation[];

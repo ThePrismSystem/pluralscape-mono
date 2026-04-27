@@ -1,4 +1,4 @@
-import type { EncryptedBlob } from "../encryption-primitives.js";
+import type { EncryptedBlob, T3EncryptedBytes } from "../encryption-primitives.js";
 import type { AccountId, ApiKeyId, Brand, BucketId, SystemId } from "../ids.js";
 import type { ScopeDomain, ScopeTier } from "../scope-domains.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -62,9 +62,6 @@ export interface ApiKeyWithSecret {
  * Class C auxiliary type per ADR-023 — the SoT manifest's `encryptedInput`
  * slot for `ApiKey` points at this type directly (no alias).
  * Parity gate: `ApiKeyEncryptedPayloadSchema` in `packages/validation/src/api-key.ts`.
- *
- * Discriminated over `keyType`: metadata-only keys carry just `name`;
- * crypto-capable keys additionally carry `publicKey: Uint8Array`.
  */
 export type ApiKeyEncryptedPayload =
   | { readonly keyType: "metadata"; readonly name: string }
@@ -96,7 +93,7 @@ export interface ApiKeyServerMetadata {
    * here. `ApiKey` is a hybrid Class C + Class E entity: `encryptedData`
    * follows Class C (above), `encryptedKeyMaterial` is documented as Class E.
    */
-  readonly encryptedKeyMaterial: Uint8Array | null;
+  readonly encryptedKeyMaterial: T3EncryptedBytes | null;
   readonly createdAt: UnixMillis;
   readonly lastUsedAt: UnixMillis | null;
   readonly revokedAt: UnixMillis | null;
@@ -127,23 +124,18 @@ export type ApiKeyServerVisible = Pick<
 >;
 
 /**
- * JSON-wire representation of an ApiKey row.
+ * JSON-wire representation of an ApiKey row — the plaintext columns the
+ * server can publish without decrypting `encryptedData`.
  *
- * **Wire shape rationale (Class C):** The Class C auxiliary type
- * `ApiKeyEncryptedPayload` (carrying `name` and, for `keyType === "crypto"`,
- * `publicKey`) lives inside the `encryptedData` blob. Pluralscape is
- * zero-knowledge — the server cannot decrypt that blob — so the wire
- * surfaces only the plaintext columns (`ApiKeyServerVisible`). Listing
- * (`GET /api-keys`) and get (`GET /api-keys/:id`) endpoints both return
- * this shape (see `apps/api/src/services/api-key/queries.ts:30-85`).
+ * **Wire shape rationale (Class C):** Pluralscape is zero-knowledge — the
+ * server cannot decrypt the `ApiKeyEncryptedPayload` (`name` plus, for
+ * `keyType === "crypto"`, `publicKey`) inside `encryptedData`. The
+ * `listApiKeys` / `getApiKey` handlers in
+ * `apps/api/src/services/api-key/queries.ts` project to `ApiKeyResult`
+ * (`apps/api/src/services/api-key/internal.ts`). The `createApiKey`
+ * handler augments that shape with the plaintext `token` once at creation
+ * as `ApiKeyCreateResult` (`apps/api/src/services/api-key/create.ts`).
  *
- * The creation endpoint (`POST /api-keys`) returns this shape augmented
- * with the plaintext `token` field — represented in OpenAPI as
- * `ApiKeyCreateResponse = ApiKeyResponse + { token }`. The plaintext
- * blob payload is never echoed back from any endpoint; the caller
- * already holds it from the request.
- *
- * `Serialize<T>` strips brands: branded IDs become plain `string`,
- * `UnixMillis` becomes `number`.
+ * `Serialize<T>` strips brands: branded IDs → `string`, `UnixMillis` → `number`.
  */
 export type ApiKeyWire = Serialize<ApiKeyServerVisible>;

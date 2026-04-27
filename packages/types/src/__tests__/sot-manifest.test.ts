@@ -5,6 +5,7 @@ import type {
   ApiKey,
   ApiKeyEncryptedPayload,
   ApiKeyServerMetadata,
+  ApiKeyServerVisible,
   ApiKeyWire,
 } from "../entities/api-key.js";
 import type {
@@ -37,7 +38,7 @@ import type {
   SystemSnapshotServerMetadata,
   SystemSnapshotWire,
 } from "../entities/system-snapshot.js";
-import type { Extends } from "../type-assertions.js";
+import type { Equal, Extends } from "../type-assertions.js";
 
 describe("SotEntityManifest", () => {
   it("entries carry at minimum a domain + encryptedFields pair", () => {
@@ -114,5 +115,27 @@ describe("SotEntityManifest", () => {
     >().toEqualTypeOf<SystemSnapshotServerMetadata>();
     expectTypeOf<SotEntityManifest["SystemSnapshot"]["wire"]>().toEqualTypeOf<SystemSnapshotWire>();
     expectTypeOf<SotEntityManifest["SystemSnapshot"]["encryptedFields"]>().toEqualTypeOf<never>();
+  });
+
+  it("pins the exact ApiKeyServerVisible keyset (fail-closed allowlist guard)", () => {
+    type ExpectedVisibleKeys =
+      | "id"
+      | "systemId"
+      | "keyType"
+      | "scopes"
+      | "createdAt"
+      | "lastUsedAt"
+      | "revokedAt"
+      | "expiresAt"
+      | "scopedBucketIds";
+    expectTypeOf<keyof ApiKeyServerVisible>().toEqualTypeOf<ExpectedVisibleKeys>();
+  });
+
+  it("ApiKeyEncryptedPayload.keyType is exhaustive against ApiKey.keyType", () => {
+    // If `ApiKey` ever adds a new keyType literal, this fails to compile —
+    // forcing the encrypted payload's discriminator to stay in sync.
+    expectTypeOf<
+      Equal<ApiKeyEncryptedPayload["keyType"], ApiKey["keyType"]>
+    >().toEqualTypeOf<true>();
   });
 });

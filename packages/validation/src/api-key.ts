@@ -1,7 +1,7 @@
 import { ALL_API_KEY_SCOPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
-import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
+import { MAX_ENCRYPTED_DATA_SIZE, PUBLIC_KEY_BYTE_LENGTH } from "./validation.constants.js";
 
 import type { ApiKeyEncryptedPayload } from "@pluralscape/types";
 
@@ -30,16 +30,11 @@ export const CreateApiKeyBodySchema = z
 
 /**
  * Zod parity for `ApiKeyEncryptedPayload` — the Class C auxiliary type
- * encrypted inside an ApiKey row's `encryptedData` blob. Discriminated
- * over `keyType`: `"metadata"` carries `name`; `"crypto"` adds
- * `publicKey: Uint8Array`. The compile-time parity test asserts
- * `z.infer<typeof ApiKeyEncryptedPayloadSchema>` equals
- * `ApiKeyEncryptedPayload`.
+ * encrypted inside an ApiKey row's `encryptedData` blob.
  *
- * Currently a parity gate only — not yet wired to a runtime parse
- * boundary. If/when consumed at the decrypt boundary, `publicKey` will
- * need a base64-string adapter since JSON-deserialized payloads arrive
- * as strings, not `Uint8Array`.
+ * Validates the in-memory shape after decode. The schema rejects
+ * base64 strings for `publicKey` — any JSON-string boundary requires a
+ * base64-string adapter before parsing.
  */
 export const ApiKeyEncryptedPayloadSchema: z.ZodType<ApiKeyEncryptedPayload> = z.discriminatedUnion(
   "keyType",
@@ -47,14 +42,20 @@ export const ApiKeyEncryptedPayloadSchema: z.ZodType<ApiKeyEncryptedPayload> = z
     z
       .object({
         keyType: z.literal("metadata"),
-        name: z.string(),
+        name: z.string().min(1),
       })
       .readonly(),
     z
       .object({
         keyType: z.literal("crypto"),
-        name: z.string(),
-        publicKey: z.instanceof(Uint8Array),
+        name: z.string().min(1),
+        // In-memory contract — replace with EncryptedBase64Schema if wired to a JSON parse boundary.
+        publicKey: z
+          .instanceof(Uint8Array)
+          .refine(
+            (buf) => buf.length === PUBLIC_KEY_BYTE_LENGTH,
+            "publicKey must be 32 bytes (X25519)",
+          ),
       })
       .readonly(),
   ],

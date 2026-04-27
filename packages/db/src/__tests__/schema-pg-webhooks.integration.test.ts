@@ -19,13 +19,23 @@ import {
   testBlob,
 } from "./helpers/pg-helpers.js";
 
-import type { ApiKeyId, ServerSecret, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
+import type {
+  ApiKeyId,
+  ServerSecret,
+  T3EncryptedBytes,
+  WebhookDeliveryId,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
 
 function secret(bytes: readonly number[]): ServerSecret {
   return new Uint8Array(bytes) as ServerSecret;
+}
+
+function t3(bytes: readonly number[]): T3EncryptedBytes {
+  return new Uint8Array(bytes) as T3EncryptedBytes;
 }
 
 describe("PG webhooks schema", () => {
@@ -291,7 +301,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: t3([1, 2, 3]),
         createdAt: now,
       });
 
@@ -324,7 +334,7 @@ describe("PG webhooks schema", () => {
           webhookId: whId,
           systemId,
           eventType: "invalid.event" as "member.created",
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -353,7 +363,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           attemptCount: -1,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -382,7 +392,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           httpStatus: 999,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -410,7 +420,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: t3([1, 2, 3]),
         createdAt: now,
       });
 
@@ -442,7 +452,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           status: "queued" as "pending",
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -476,7 +486,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "success" as const,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: thirtyOneDaysAgo,
         },
         {
@@ -485,7 +495,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "failed" as const,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         },
         {
@@ -494,7 +504,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "pending" as const,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: thirtyOneDaysAgo,
         },
       ]);
@@ -534,7 +544,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: t3([1, 2, 3]),
         createdAt: now,
       });
 
@@ -570,7 +580,7 @@ describe("PG webhooks schema", () => {
           eventType: "member.created" as const,
           status: "pending" as const,
           nextRetryAt: retryAt,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         },
         {
@@ -579,7 +589,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "success" as const,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         },
         {
@@ -588,7 +598,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created" as const,
           status: "failed" as const,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: t3([1, 2, 3]),
           createdAt: now,
         },
       ]);

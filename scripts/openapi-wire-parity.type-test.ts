@@ -36,6 +36,7 @@
 import type { components } from "../packages/api-client/src/generated/api-types.js";
 import type {
   AcknowledgementRequestWire,
+  ApiKeyWire,
   AuditLogEntry,
   AuditLogEntryWire,
   BoardMessageWire,
@@ -238,6 +239,13 @@ expectTypeOf<
 expectTypeOf<
   Equal<components["schemas"]["AcknowledgementResponse"], AcknowledgementRequestWire>
 >().toEqualTypeOf<true>();
+
+// ApiKey: Class C entity. `ApiKeyWire = Serialize<ApiKeyServerVisible>` —
+// the wire surface is a positive `Pick` allowlist of the server-visible
+// columns (no `tokenHash`, no `encryptedData`, no `encryptedKeyMaterial`,
+// no `accountId`). Any drift between the OpenAPI spec and the allowlist
+// fails this gate.
+expectTypeOf<Equal<components["schemas"]["ApiKeyResponse"], ApiKeyWire>>().toEqualTypeOf<true>();
 
 // JournalEntryResponse and WikiPageResponse: canonical wire types exist
 // (`JournalEntryWire`, `WikiPageWire`) but no OpenAPI route schema is

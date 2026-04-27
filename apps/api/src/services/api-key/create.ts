@@ -13,7 +13,7 @@ import { CreateApiKeyBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
+import { toT3EncryptedBytes, validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -88,7 +88,8 @@ export async function createApiKey(
         scopes,
         encryptedData: blob,
         encryptedKeyMaterial: encryptedKeyMaterial
-          ? Buffer.from(encryptedKeyMaterial, "base64")
+          ? // Brand-construction boundary: client-supplied base64 → T3 bytes.
+            toT3EncryptedBytes(Buffer.from(encryptedKeyMaterial, "base64"))
           : null,
         createdAt: timestamp,
         lastUsedAt: null,

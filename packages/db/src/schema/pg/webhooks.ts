@@ -30,6 +30,7 @@ import type {
   ApiKeyId,
   ServerSecret,
   SystemId,
+  T3EncryptedBytes,
   WebhookDeliveryId,
   WebhookDeliveryStatus,
   WebhookEventType,
@@ -91,7 +92,7 @@ export const webhookDeliveries = pgTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: pgTimestamp("last_attempt_at"),
     nextRetryAt: pgTimestamp("next_retry_at"),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgBinary("encrypted_data").notNull().$type<T3EncryptedBytes>(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
