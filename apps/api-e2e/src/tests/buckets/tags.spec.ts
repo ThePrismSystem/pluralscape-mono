@@ -120,7 +120,7 @@ test.describe("Bucket Content Tags", () => {
     const bucket = await createBucket(request, authHeaders, systemId);
 
     const res = await request.delete(
-      `/v1/systems/${systemId}/buckets/${bucket.id}/tags/member/mem_nonexistent`,
+      `/v1/systems/${systemId}/buckets/${bucket.id}/tags/member/mem_00000000-0000-0000-0000-000000000999`,
       { headers: authHeaders },
     );
     expect(res.status()).toBe(404);
