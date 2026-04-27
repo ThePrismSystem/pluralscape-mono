@@ -17,6 +17,7 @@ import type {
   AccountId,
   ServerSecret,
   SystemId,
+  T3EncryptedBytes,
   WebhookDeliveryId,
   WebhookId,
 } from "@pluralscape/types";
@@ -72,7 +73,7 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
       eventType: "fronting.started",
       status,
       attemptCount: status === "pending" ? 0 : 1,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: new Uint8Array([1, 2, 3]) as T3EncryptedBytes,
       createdAt,
     });
     return id;
