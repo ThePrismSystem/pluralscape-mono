@@ -5,7 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-04-27T13:11:45Z
-updated_at: 2026-04-27T14:14:50Z
+updated_at: 2026-04-27T20:28:57Z
+parent: ps-cd6x
 ---
 
 Pre-existing on main, surfaced during ps-qmyt code review (PR3 of M9a closeout).
