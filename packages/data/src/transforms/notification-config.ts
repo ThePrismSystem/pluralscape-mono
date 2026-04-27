@@ -14,11 +14,7 @@ export interface NotificationConfigPage {
   readonly nextCursor: string | null;
 }
 
-/**
- * Narrow a single notification config wire object into a `NotificationConfig`
- * or `Archived<NotificationConfig>`. Re-brands IDs/timestamps stripped by
- * `Serialize<>` at the wire boundary.
- */
+/** Narrow a wire notification config; re-brands stripped IDs/timestamps. */
 export function narrowNotificationConfig(
   raw: NotificationConfigWire,
 ): NotificationConfig | Archived<NotificationConfig> {
@@ -40,7 +36,7 @@ export function narrowNotificationConfig(
   return { ...base, archived: false as const };
 }
 
-/** Narrow a paginated notification config list result. */
+/** Narrow a paginated notification config list. */
 export function narrowNotificationConfigPage(raw: NotificationConfigPage): {
   data: (NotificationConfig | Archived<NotificationConfig>)[];
   nextCursor: string | null;

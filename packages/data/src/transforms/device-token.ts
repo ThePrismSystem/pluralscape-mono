@@ -14,11 +14,7 @@ export interface DeviceTokenPage {
   readonly nextCursor: string | null;
 }
 
-/**
- * Narrow a single device token wire object into a `DeviceToken`. Re-brands
- * IDs/timestamps stripped at the wire boundary. Device tokens have no
- * archive variant.
- */
+/** Narrow a wire device token; re-brands stripped IDs/timestamps. (No archive variant.) */
 export function narrowDeviceToken(raw: DeviceTokenWire): DeviceToken {
   return {
     id: brandId<DeviceTokenId>(raw.id),
@@ -33,7 +29,7 @@ export function narrowDeviceToken(raw: DeviceTokenWire): DeviceToken {
   };
 }
 
-/** Narrow a paginated device token list result. */
+/** Narrow a paginated device token list. */
 export function narrowDeviceTokenPage(raw: DeviceTokenPage): {
   data: DeviceToken[];
   nextCursor: string | null;

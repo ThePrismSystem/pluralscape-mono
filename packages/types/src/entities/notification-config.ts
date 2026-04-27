@@ -37,12 +37,7 @@ export type NotificationConfigServerMetadata = Omit<NotificationConfig, "archive
   readonly archivedAt: UnixMillis | null;
 };
 
-/**
- * JSON-wire representation of a NotificationConfig (live or archived).
- * Derived from `NotificationConfigServerMetadata` so the wire union covers
- * both archive states; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
- */
+/** JSON-wire NotificationConfig (live or archived). Branded IDs and UnixMillis get stripped at the wire boundary. */
 export type NotificationConfigWire = Serialize<NotificationConfigServerMetadata>;
 
 /** A notification payload ready for delivery. */

@@ -14,11 +14,7 @@ export interface FriendCodePage {
   readonly nextCursor: string | null;
 }
 
-/**
- * Narrow a single friend code wire object into a `FriendCode` or
- * `Archived<FriendCode>`. Re-brands IDs/timestamps stripped at the wire
- * boundary.
- */
+/** Narrow a wire friend code; re-brands stripped IDs/timestamps. */
 export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<FriendCode> {
   const base = {
     id: brandId<FriendCodeId>(raw.id),
@@ -35,7 +31,7 @@ export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<Fri
   return { ...base, archived: false as const };
 }
 
-/** Narrow a paginated friend code list result. */
+/** Narrow a paginated friend code list. */
 export function narrowFriendCodePage(raw: FriendCodePage): {
   data: (FriendCode | Archived<FriendCode>)[];
   nextCursor: string | null;

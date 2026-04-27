@@ -84,25 +84,14 @@ export interface SnapshotStructureEntity {
   readonly description: string | null;
 }
 
-/**
- * Snapshot projection of a structure-entity link. Omits server-only fields
- * (`systemId`, `createdAt`) — clients re-render junction rows from the
- * snapshot's other contents.
- */
+// Junction projections: server-only fields are just systemId + createdAt, so
+// mechanical Omit suffices (peer Snapshot* projections curate fields explicitly
+// because they wrap multi-field domain entities).
 export type SnapshotStructureEntityLink = Omit<SystemStructureEntityLink, "systemId" | "createdAt">;
-
-/**
- * Snapshot projection of a structure-entity ↔ member link. Omits
- * server-only fields.
- */
 export type SnapshotStructureEntityMemberLink = Omit<
   SystemStructureEntityMemberLink,
   "systemId" | "createdAt"
 >;
-
-/**
- * Snapshot projection of a structure-entity association. Omits server-only fields.
- */
 export type SnapshotStructureEntityAssociation = Omit<
   SystemStructureEntityAssociation,
   "systemId" | "createdAt"
