@@ -3,6 +3,8 @@ import { z } from "zod/v4";
 
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
+import type { ApiKeyEncryptedPayload } from "@pluralscape/types";
+
 /** Key types matching the DB enum constraint. */
 const API_KEY_KEY_TYPES = ["metadata", "crypto"] as const;
 
@@ -25,3 +27,30 @@ export const CreateApiKeyBodySchema = z
     },
   )
   .readonly();
+
+/**
+ * Zod parity for `ApiKeyEncryptedPayload` — the Class C auxiliary type
+ * encrypted inside an ApiKey row's `encryptedData` blob. Discriminated
+ * over `keyType`: `"metadata"` carries `name`; `"crypto"` adds
+ * `publicKey: Uint8Array`. The compile-time parity test asserts
+ * `z.infer<typeof ApiKeyEncryptedPayloadSchema>` equals
+ * `ApiKeyEncryptedPayload`.
+ */
+export const ApiKeyEncryptedPayloadSchema: z.ZodType<ApiKeyEncryptedPayload> = z.discriminatedUnion(
+  "keyType",
+  [
+    z
+      .object({
+        keyType: z.literal("metadata"),
+        name: z.string(),
+      })
+      .readonly(),
+    z
+      .object({
+        keyType: z.literal("crypto"),
+        name: z.string(),
+        publicKey: z.instanceof(Uint8Array),
+      })
+      .readonly(),
+  ],
+);
