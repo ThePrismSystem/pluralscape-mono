@@ -84,6 +84,30 @@ export interface SnapshotStructureEntity {
   readonly description: string | null;
 }
 
+/**
+ * Snapshot projection of a structure-entity link. Omits server-only fields
+ * (`systemId`, `createdAt`) — clients re-render junction rows from the
+ * snapshot's other contents.
+ */
+export type SnapshotStructureEntityLink = Omit<SystemStructureEntityLink, "systemId" | "createdAt">;
+
+/**
+ * Snapshot projection of a structure-entity ↔ member link. Omits
+ * server-only fields.
+ */
+export type SnapshotStructureEntityMemberLink = Omit<
+  SystemStructureEntityMemberLink,
+  "systemId" | "createdAt"
+>;
+
+/**
+ * Snapshot projection of a structure-entity association. Omits server-only fields.
+ */
+export type SnapshotStructureEntityAssociation = Omit<
+  SystemStructureEntityAssociation,
+  "systemId" | "createdAt"
+>;
+
 /** Snapshot of a relationship between members. */
 export interface SnapshotRelationship {
   readonly sourceMemberId: MemberId;
@@ -131,12 +155,9 @@ export interface SnapshotContent {
   readonly members: readonly SnapshotMember[];
   readonly structureEntityTypes: readonly SnapshotStructureEntityType[];
   readonly structureEntities: readonly SnapshotStructureEntity[];
-  // TODO(types-8f84): replace SystemStructure* with Snapshot* projections
-  // (omits server-shaped systemId / createdAt) per the snapshot-projection
-  // convention used by SnapshotMember/Group/Region above.
-  readonly structureEntityLinks: readonly SystemStructureEntityLink[];
-  readonly structureEntityMemberLinks: readonly SystemStructureEntityMemberLink[];
-  readonly structureEntityAssociations: readonly SystemStructureEntityAssociation[];
+  readonly structureEntityLinks: readonly SnapshotStructureEntityLink[];
+  readonly structureEntityMemberLinks: readonly SnapshotStructureEntityMemberLink[];
+  readonly structureEntityAssociations: readonly SnapshotStructureEntityAssociation[];
   readonly relationships: readonly SnapshotRelationship[];
   readonly groups: readonly SnapshotGroup[];
   readonly innerworldRegions: readonly SnapshotInnerworldRegion[];

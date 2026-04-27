@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 import { brandedIdQueryParam } from "./branded-id.js";
-import { brandedNumber, brandedString } from "./branded.js";
+import { brandedString } from "./branded.js";
 import { PlaintextSaturationLevelSchema, PlaintextTagSchema } from "./plaintext-shared.js";
 import { RELATIONSHIP_TYPES } from "./relationship.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
@@ -14,10 +14,10 @@ import type {
   SnapshotMember,
   SnapshotRelationship,
   SnapshotStructureEntity,
+  SnapshotStructureEntityAssociation,
+  SnapshotStructureEntityLink,
+  SnapshotStructureEntityMemberLink,
   SnapshotStructureEntityType,
-  SystemStructureEntityAssociation,
-  SystemStructureEntityLink,
-  SystemStructureEntityMemberLink,
 } from "@pluralscape/types";
 
 export const CreateSnapshotBodySchema = z
@@ -102,37 +102,33 @@ const SnapshotInnerworldEntitySchema: z.ZodType<SnapshotInnerworldEntity> = z
   })
   .readonly();
 
-// ── Junction-record schemas ───────────────────────────────────────────
+// ── Junction-record snapshot projections ──────────────────────────────
+// These omit server-only fields (`systemId`, `createdAt`) — clients
+// re-render junction rows from the snapshot's other contents.
 
-const SystemStructureEntityLinkSchema: z.ZodType<SystemStructureEntityLink> = z
+const SnapshotStructureEntityLinkSchema: z.ZodType<SnapshotStructureEntityLink> = z
   .object({
     id: brandedString<"SystemStructureEntityLinkId">(),
-    systemId: brandedString<"SystemId">(),
     entityId: brandedString<"SystemStructureEntityId">(),
     parentEntityId: brandedString<"SystemStructureEntityId">().nullable(),
     sortOrder: z.number(),
-    createdAt: brandedNumber<"UnixMillis">(),
   })
   .readonly();
 
-const SystemStructureEntityMemberLinkSchema: z.ZodType<SystemStructureEntityMemberLink> = z
+const SnapshotStructureEntityMemberLinkSchema: z.ZodType<SnapshotStructureEntityMemberLink> = z
   .object({
     id: brandedString<"SystemStructureEntityMemberLinkId">(),
-    systemId: brandedString<"SystemId">(),
     parentEntityId: brandedString<"SystemStructureEntityId">().nullable(),
     memberId: brandedString<"MemberId">(),
     sortOrder: z.number(),
-    createdAt: brandedNumber<"UnixMillis">(),
   })
   .readonly();
 
-const SystemStructureEntityAssociationSchema: z.ZodType<SystemStructureEntityAssociation> = z
+const SnapshotStructureEntityAssociationSchema: z.ZodType<SnapshotStructureEntityAssociation> = z
   .object({
     id: brandedString<"SystemStructureEntityAssociationId">(),
-    systemId: brandedString<"SystemId">(),
     sourceEntityId: brandedString<"SystemStructureEntityId">(),
     targetEntityId: brandedString<"SystemStructureEntityId">(),
-    createdAt: brandedNumber<"UnixMillis">(),
   })
   .readonly();
 
@@ -153,9 +149,9 @@ export const SnapshotContentSchema: z.ZodType<SnapshotContent> = z
     members: z.array(SnapshotMemberSchema).readonly(),
     structureEntityTypes: z.array(SnapshotStructureEntityTypeSchema).readonly(),
     structureEntities: z.array(SnapshotStructureEntitySchema).readonly(),
-    structureEntityLinks: z.array(SystemStructureEntityLinkSchema).readonly(),
-    structureEntityMemberLinks: z.array(SystemStructureEntityMemberLinkSchema).readonly(),
-    structureEntityAssociations: z.array(SystemStructureEntityAssociationSchema).readonly(),
+    structureEntityLinks: z.array(SnapshotStructureEntityLinkSchema).readonly(),
+    structureEntityMemberLinks: z.array(SnapshotStructureEntityMemberLinkSchema).readonly(),
+    structureEntityAssociations: z.array(SnapshotStructureEntityAssociationSchema).readonly(),
     relationships: z.array(SnapshotRelationshipSchema).readonly(),
     groups: z.array(SnapshotGroupSchema).readonly(),
     innerworldRegions: z.array(SnapshotInnerworldRegionSchema).readonly(),
