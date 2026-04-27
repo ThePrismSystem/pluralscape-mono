@@ -7,6 +7,7 @@ import type {
   BucketContentTag,
   BucketVisibilityScope,
   PrivacyBucket,
+  TaggedEntityRef,
 } from "../entities/bucket.js";
 import type { ArchivedFriendCode, FriendCode } from "../entities/friend-code.js";
 import type {
@@ -23,6 +24,7 @@ import type {
   FriendCodeId,
   FriendConnectionId,
   KeyGrantId,
+  MemberId,
   SystemId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -56,14 +58,25 @@ describe("ArchivedPrivacyBucket", () => {
 });
 
 describe("BucketContentTag", () => {
-  it("has entityType as BucketContentEntityType, entityId, and bucketId", () => {
+  it("has entityType as BucketContentEntityType, entityId narrowed by entityType, and bucketId", () => {
     expectTypeOf<BucketContentTag["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
-    expectTypeOf<BucketContentTag["entityId"]>().toBeString();
+    // entityId is a union of every branded ID — the discriminant narrows it per variant.
+    expectTypeOf<BucketContentTag["entityId"]>().toEqualTypeOf<TaggedEntityRef["entityId"]>();
     expectTypeOf<BucketContentTag["bucketId"]>().toEqualTypeOf<BucketId>();
   });
 
   it("has exact shape", () => {
     expectTypeOf<keyof BucketContentTag>().toEqualTypeOf<"entityType" | "entityId" | "bucketId">();
+  });
+
+  it("narrows entityId by entityType in a discriminated union", () => {
+    function readTag(tag: BucketContentTag): BucketId {
+      if (tag.entityType === "member") {
+        expectTypeOf(tag.entityId).toEqualTypeOf<MemberId>();
+      }
+      return tag.bucketId;
+    }
+    expectTypeOf(readTag).toBeFunction();
   });
 });
 

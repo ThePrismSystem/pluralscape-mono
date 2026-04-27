@@ -1,5 +1,11 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
-import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId } from "@pluralscape/types";
+import type {
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  KeyGrantId,
+  TaggedEntityRef,
+} from "@pluralscape/types";
 
 // ── privacy bucket ────────────────────────────────────────────────────
 
@@ -19,13 +25,14 @@ export interface CrdtPrivacyBucket extends CrdtAuditFields {
  *
  * Key format: "{entityType}_{entityId}_{bucketId}"
  * Deleting the key removes the entity-bucket assignment.
+ *
+ * Discriminated by `entityType`: each variant pairs an entity type with
+ * its branded ID, mirroring the canonical {@link TaggedEntityRef} union
+ * from `@pluralscape/types`. The wire format (JSON shape) is unchanged
+ * — only the TypeScript type narrows to forbid mismatched (entityType,
+ * entityId) pairs.
  */
-export interface CrdtBucketContentTag {
-  /** BucketContentEntityType string */
-  entityType: CrdtString;
-  entityId: CrdtString;
-  bucketId: CrdtString;
-}
+export type CrdtBucketContentTag = TaggedEntityRef & { bucketId: CrdtString };
 
 // ── friend connection ─────────────────────────────────────────────────
 

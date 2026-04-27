@@ -1,5 +1,4 @@
 import { bucketContentTags } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
 import { BucketContentTagQuerySchema, TagContentBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
@@ -12,20 +11,20 @@ import { tenantCtx } from "../lib/tenant-context.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import { assertBucketExists } from "./bucket/internal.js";
+import { decodeBucketContentTagRow } from "./bucket-content-tag/decode.js";
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { BucketContentEntityType, BucketId, SystemId } from "@pluralscape/types";
+import type {
+  BucketContentEntityType,
+  BucketContentTag,
+  BucketId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
-
-export interface BucketContentTagResult {
-  readonly entityType: BucketContentEntityType;
-  readonly entityId: string;
-  readonly bucketId: BucketId;
-}
 
 interface ListTagOpts {
   readonly entityType?: BucketContentEntityType;
@@ -34,12 +33,8 @@ interface ListTagOpts {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function toTagResult(row: typeof bucketContentTags.$inferSelect): BucketContentTagResult {
-  return {
-    entityType: row.entityType,
-    entityId: row.entityId,
-    bucketId: brandId<BucketId>(row.bucketId),
-  };
+function toTagResult(row: typeof bucketContentTags.$inferSelect): BucketContentTag {
+  return decodeBucketContentTagRow(row);
 }
 
 // ── TAG ─────────────────────────────────────────────────────────────
@@ -51,7 +46,7 @@ export async function tagContent(
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<BucketContentTagResult> {
+): Promise<BucketContentTag> {
   assertSystemOwnership(systemId, auth);
 
   const parsed = TagContentBodySchema.safeParse(params);
@@ -87,11 +82,14 @@ export async function tagContent(
       });
     }
 
-    return {
+    // Re-decode through the centralized helper so the (entityType, entityId)
+    // pair is narrowed via the discriminated union — preserves type safety
+    // without re-asserting brands at the call site.
+    return decodeBucketContentTagRow({
       entityType: parsed.data.entityType,
       entityId: parsed.data.entityId,
       bucketId,
-    };
+    });
   });
 }
 
@@ -147,7 +145,7 @@ export async function listTagsByBucket(
   bucketId: BucketId,
   auth: AuthContext,
   opts: ListTagOpts = {},
-): Promise<readonly BucketContentTagResult[]> {
+): Promise<readonly BucketContentTag[]> {
   assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);

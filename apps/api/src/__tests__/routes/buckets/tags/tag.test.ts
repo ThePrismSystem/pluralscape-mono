@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../../lib/api-error.js";
@@ -9,7 +10,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, MemberId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ const BASE_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/tags`;
 
 const VALID_BODY = {
   entityType: "member" as const,
-  entityId: "mem_770e8400-e29b-41d4-a716-446655440000",
+  entityId: brandId<MemberId>("mem_770e8400-e29b-41d4-a716-446655440000"),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

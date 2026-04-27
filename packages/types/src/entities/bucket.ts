@@ -1,6 +1,30 @@
 import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
-import type { BucketId, SystemId } from "../ids.js";
+import type {
+  AcknowledgementId,
+  BoardMessageId,
+  BucketId,
+  ChannelId,
+  CustomFrontId,
+  FieldDefinitionId,
+  FieldValueId,
+  FrontingCommentId,
+  FrontingSessionId,
+  GroupId,
+  InnerWorldEntityId,
+  InnerWorldRegionId,
+  JournalEntryId,
+  MemberId,
+  MemberPhotoId,
+  MessageId,
+  NoteId,
+  PollId,
+  RelationshipId,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+  WikiPageId,
+} from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
@@ -120,17 +144,46 @@ export function isBucketContentEntityType(value: string): value is BucketContent
 }
 
 /**
+ * A reference to a tagged entity, discriminated by `entityType`.
+ *
+ * Each variant pairs an entity type with its branded ID, so consumers
+ * cannot accidentally tag a member with a group ID. The DB column
+ * stays varchar — the brand discriminates only at the app boundary.
+ */
+export type TaggedEntityRef =
+  | { readonly entityType: "member"; readonly entityId: MemberId }
+  | { readonly entityType: "group"; readonly entityId: GroupId }
+  | { readonly entityType: "channel"; readonly entityId: ChannelId }
+  | { readonly entityType: "message"; readonly entityId: MessageId }
+  | { readonly entityType: "note"; readonly entityId: NoteId }
+  | { readonly entityType: "poll"; readonly entityId: PollId }
+  | { readonly entityType: "relationship"; readonly entityId: RelationshipId }
+  | { readonly entityType: "structure-entity-type"; readonly entityId: SystemStructureEntityTypeId }
+  | { readonly entityType: "structure-entity"; readonly entityId: SystemStructureEntityId }
+  | { readonly entityType: "journal-entry"; readonly entityId: JournalEntryId }
+  | { readonly entityType: "wiki-page"; readonly entityId: WikiPageId }
+  | { readonly entityType: "custom-front"; readonly entityId: CustomFrontId }
+  | { readonly entityType: "fronting-session"; readonly entityId: FrontingSessionId }
+  | { readonly entityType: "board-message"; readonly entityId: BoardMessageId }
+  | { readonly entityType: "acknowledgement"; readonly entityId: AcknowledgementId }
+  | { readonly entityType: "innerworld-entity"; readonly entityId: InnerWorldEntityId }
+  | { readonly entityType: "innerworld-region"; readonly entityId: InnerWorldRegionId }
+  | { readonly entityType: "field-definition"; readonly entityId: FieldDefinitionId }
+  | { readonly entityType: "field-value"; readonly entityId: FieldValueId }
+  | { readonly entityType: "member-photo"; readonly entityId: MemberPhotoId }
+  | { readonly entityType: "fronting-comment"; readonly entityId: FrontingCommentId };
+
+/**
  * Tags an entity as belonging to a privacy bucket.
  *
  * Access is fail-closed: if an entity has no bucket tags, or if
  * a friend's assigned buckets do not intersect with the entity's
  * bucket tags for the relevant scope, the entity is invisible.
+ *
+ * The (entityType, entityId) pair is a discriminated union — each
+ * entity type narrows the entityId to its branded ID type.
  */
-export interface BucketContentTag {
-  readonly entityType: BucketContentEntityType;
-  readonly entityId: string;
-  readonly bucketId: BucketId;
-}
+export type BucketContentTag = TaggedEntityRef & { readonly bucketId: BucketId };
 
 /** The categories of content that a privacy bucket can control visibility for. */
 export type BucketVisibilityScope =

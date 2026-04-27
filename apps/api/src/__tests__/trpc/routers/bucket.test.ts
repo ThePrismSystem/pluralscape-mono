@@ -14,6 +14,7 @@ import type {
   AccountId,
   BucketId,
   FriendConnectionId,
+  MemberId,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -436,7 +437,7 @@ describe("bucket router", () => {
     it("calls tagContent with correct args", async () => {
       const mockResult = {
         entityType: "member" as const,
-        entityId: "mem_test001",
+        entityId: brandId<MemberId>("mem_aa0e8400-e29b-41d4-a716-446655440001"),
         bucketId: BUCKET_ID,
       };
       vi.mocked(tagContent).mockResolvedValue(mockResult);
@@ -445,7 +446,7 @@ describe("bucket router", () => {
         systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         entityType: "member",
-        entityId: "mem_test001",
+        entityId: "mem_aa0e8400-e29b-41d4-a716-446655440001",
       });
 
       expect(vi.mocked(tagContent)).toHaveBeenCalledOnce();
@@ -462,7 +463,7 @@ describe("bucket router", () => {
           systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           entityType: "member",
-          entityId: "mem_test001",
+          entityId: "mem_aa0e8400-e29b-41d4-a716-446655440001",
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
@@ -478,7 +479,7 @@ describe("bucket router", () => {
         systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         entityType: "member",
-        entityId: "mem_test001",
+        entityId: "mem_aa0e8400-e29b-41d4-a716-446655440001",
       });
 
       expect(result).toEqual({ success: true });
@@ -486,7 +487,9 @@ describe("bucket router", () => {
       expect(vi.mocked(untagContent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(untagContent).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(vi.mocked(untagContent).mock.calls[0]?.[3]).toBe("member");
-      expect(vi.mocked(untagContent).mock.calls[0]?.[4]).toBe("mem_test001");
+      expect(vi.mocked(untagContent).mock.calls[0]?.[4]).toBe(
+        "mem_aa0e8400-e29b-41d4-a716-446655440001",
+      );
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -499,7 +502,7 @@ describe("bucket router", () => {
           systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           entityType: "member",
-          entityId: "mem_test001",
+          entityId: "mem_aa0e8400-e29b-41d4-a716-446655440001",
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
@@ -510,7 +513,11 @@ describe("bucket router", () => {
   describe("bucket.listTags", () => {
     it("calls listTagsByBucket and returns result", async () => {
       const mockResult = [
-        { entityType: "member" as const, entityId: "mem_test001", bucketId: BUCKET_ID },
+        {
+          entityType: "member" as const,
+          entityId: brandId<MemberId>("mem_aa0e8400-e29b-41d4-a716-446655440001"),
+          bucketId: BUCKET_ID,
+        },
       ];
       vi.mocked(listTagsByBucket).mockResolvedValue(mockResult);
       const caller = createCaller();

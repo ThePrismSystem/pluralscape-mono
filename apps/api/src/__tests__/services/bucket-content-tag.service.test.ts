@@ -94,7 +94,7 @@ const BUCKET_ID = brandId<BucketId>("bkt_test-bucket");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const ENTITY_TYPE: BucketContentEntityType = "member";
-const ENTITY_ID = "mem_test-entity";
+const ENTITY_ID = "mem_770e8400-e29b-41d4-a716-446655440000";
 
 function makeTagRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -232,7 +232,10 @@ describe("bucket-content-tag service", () => {
 
   describe("listTagsByBucket", () => {
     it("returns list of tags", async () => {
-      mockTx.limit.mockResolvedValueOnce([makeTagRow(), makeTagRow({ entityId: "mem_other" })]);
+      mockTx.limit.mockResolvedValueOnce([
+        makeTagRow(),
+        makeTagRow({ entityId: "mem_880e8400-e29b-41d4-a716-446655440000" }),
+      ]);
 
       const result = await listTagsByBucket({} as never, SYSTEM_ID, BUCKET_ID, AUTH);
 

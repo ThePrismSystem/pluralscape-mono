@@ -1,3 +1,4 @@
+import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,7 +8,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { ApiErrorResponse, MemberId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -53,7 +54,11 @@ describe("GET /systems/:id/buckets/:bucketId/tags", () => {
 
   it("returns 200 with tag list", async () => {
     vi.mocked(listTagsByBucket).mockResolvedValueOnce([
-      { entityType: "member" as never, entityId: "mem_test", bucketId: BUCKET_ID as never },
+      {
+        entityType: "member",
+        entityId: brandId<MemberId>("mem_test"),
+        bucketId: BUCKET_ID as never,
+      },
     ]);
 
     const res = await createApp().request(BASE_URL);
