@@ -266,3 +266,4 @@ export type {
   ImportEntityRefLookupBatchBody,
   ImportEntityRefUpsertBatchBody,
 } from "./import-entity-ref.js";
+export { Base64ToUint8ArrayCodec } from "./encryption-primitives.js";
