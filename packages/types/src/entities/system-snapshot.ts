@@ -118,7 +118,13 @@ export interface SnapshotInnerworldEntity {
   readonly name: string | null;
 }
 
-/** The decrypted content of a system snapshot blob. */
+/**
+ * The decrypted content of a system snapshot blob.
+ *
+ * Class C auxiliary type per ADR-023 — the SoT manifest's `encryptedInput`
+ * slot for `SystemSnapshot` points at this type directly (no alias).
+ * Parity gate: `SnapshotContentSchema` in `packages/validation/src/snapshot.ts`.
+ */
 export interface SnapshotContent {
   readonly name: string | null;
   readonly description: string | null;
