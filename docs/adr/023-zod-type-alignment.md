@@ -95,6 +95,32 @@ reviewers.
 The Member-pilot transform (`packages/data/src/transforms/member.ts`) is the
 canonical reference shape for new transforms.
 
+### Class C — divergent encrypted payload
+
+Class A's six-link chain assumes `<X>EncryptedInput = Pick<<X>, K>`. For Class C, the encrypted blob carries an auxiliary type that is **not** a key-subset of the entity:
+
+- The auxiliary type is published in `packages/types/src/entities/<entity>.ts` and used **directly** as the canonical "encrypted input" — no `<X>EncryptedInput` alias is introduced (aliases are forbidden under the pre-production policy).
+- The Zod parity gate is named after the auxiliary type: `<AuxiliaryType>Schema` in `packages/validation/src/<entity>.ts`. The parity assertion in `packages/validation/src/__tests__/type-parity/<entity>.type.test.ts` is `Equal<z.infer<typeof <AuxiliaryType>Schema>, <AuxiliaryType>>`.
+- The SoT manifest's `encryptedInput` slot points at the auxiliary type by name.
+- `<X>Result` and `<X>Wire` are decided per-entity. For zero-knowledge entities, Wire usually equals `Serialize<EncryptedWire<<X>ServerMetadata>>` and clients decrypt locally. For entities where the server briefly handles plaintext at one specific moment (e.g. `ApiKey` at creation time via `ApiKeyWithSecret`), the chosen rationale is documented in JSDoc on the wire type.
+
+Class C entities (3): api-key, session, system-snapshot.
+
+### Class E — server-side T3 encryption
+
+Some encrypted payloads are encrypted with a **server-held key**, not E2E. The payload is `Uint8Array` (raw bytes), not `EncryptedBlob` (which carries the T1 envelope). Server-side encryption never crosses the wire to clients — clients see only the entity's plaintext metadata.
+
+The canonical chain does **not** extend to Class E:
+
+- `<X>Wire = Serialize<<X>>` — the server-only `encryptedData` (or `encryptedKeyMaterial`) Uint8Array is stripped by being absent from the domain type
+- No `<X>EncryptedInput` is published — there is no client-supplied input shape
+- No Zod parity for the encrypted payload — its shape is server-internal
+
+Class E surfaces (2):
+
+- **Entity-level:** `webhook-delivery` (`WebhookDeliveryServerMetadata.encryptedData: Uint8Array`)
+- **Column-level inside a Class C entity:** `ApiKeyServerMetadata.encryptedKeyMaterial: Uint8Array | null` (only present on `CryptoApiKey` rows). The `ApiKey` entity is therefore a hybrid Class C + Class E — its primary encrypted blob follows the Class C convention, while the side-channel key material is documented as a Class E exception.
+
 ### Enforcement — `pnpm types:check-sot`
 
 A single root script (`scripts/check-types-sot.ts`) runs all three parity mechanisms sequentially, short-circuiting on first failure. CI step in `.github/workflows/ci.yml` blocks on failure. Drift at any layer fails CI.
