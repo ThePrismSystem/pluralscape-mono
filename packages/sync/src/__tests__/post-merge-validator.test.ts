@@ -2767,7 +2767,8 @@ describe("PostMergeValidator: validateBucketContentTags", () => {
 
     expect(result.count).toBe(1);
     expect(result.envelope).not.toBeNull();
-    expect(session.document.contentTags["member_mem_1_bkt_1"]).toBeDefined();
+    const survivor = session.document.contentTags["member_mem_1_bkt_1"];
+    expect(survivor?.entityType).toBe("member");
     expect(session.document.contentTags["future-thing_xyz_bkt_1"]).toBeUndefined();
     expect(
       result.notifications.some(
