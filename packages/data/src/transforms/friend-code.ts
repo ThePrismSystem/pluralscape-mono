@@ -1,46 +1,41 @@
-import type { Archived, FriendCode, UnixMillis } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 
-// ── Wire types ────────────────────────────────────────────────────────
-
-/**
- * Wire shape returned by `friendCode.get` — derived from the `FriendCode` domain type.
- * Note: `FriendCode` does NOT extend `AuditMetadata` — no `version` or `updatedAt`.
- */
-export type FriendCodeRaw = Omit<FriendCode, "archived"> & {
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+import type {
+  AccountId,
+  Archived,
+  FriendCode,
+  FriendCodeId,
+  FriendCodeWire,
+} from "@pluralscape/types";
 
 /** Shape returned by `friendCode.list`. */
 export interface FriendCodePage {
-  readonly data: readonly FriendCodeRaw[];
+  readonly data: readonly FriendCodeWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Transforms ────────────────────────────────────────────────────────
-
 /**
- * Narrow a single friend code API result into a `FriendCode` or `Archived<FriendCode>`.
+ * Narrow a single friend code wire object into a `FriendCode` or
+ * `Archived<FriendCode>`. Re-brands IDs/timestamps stripped at the wire
+ * boundary.
  */
-export function narrowFriendCode(raw: FriendCodeRaw): FriendCode | Archived<FriendCode> {
+export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<FriendCode> {
   const base = {
-    id: raw.id,
-    accountId: raw.accountId,
+    id: brandId<FriendCodeId>(raw.id),
+    accountId: brandId<AccountId>(raw.accountId),
     code: raw.code,
-    createdAt: raw.createdAt,
-    expiresAt: raw.expiresAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    expiresAt: raw.expiresAt === null ? null : toUnixMillis(raw.expiresAt),
   };
 
   if (raw.archived) {
     if (raw.archivedAt === null) throw new Error("Archived friendCode missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
-/**
- * Narrow a paginated friend code list result.
- */
+/** Narrow a paginated friend code list result. */
 export function narrowFriendCodePage(raw: FriendCodePage): {
   data: (FriendCode | Archived<FriendCode>)[];
   nextCursor: string | null;

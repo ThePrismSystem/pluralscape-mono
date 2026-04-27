@@ -15,11 +15,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  FrontingReportPage,
-  FrontingReportRaw,
-} from "@pluralscape/data/transforms/fronting-report";
-import type { FrontingReport, FrontingReportId } from "@pluralscape/types";
+import type { FrontingReportPage } from "@pluralscape/data/transforms/fronting-report";
+import type { FrontingReport, FrontingReportId, FrontingReportWire } from "@pluralscape/types";
 
 interface FrontingReportListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -29,7 +26,7 @@ export function useFrontingReport(
   reportId: FrontingReportId,
   opts?: SystemIdOverride,
 ): DataQuery<FrontingReport> {
-  return useOfflineFirstQuery<FrontingReportRaw, FrontingReport>({
+  return useOfflineFirstQuery<FrontingReportWire, FrontingReport>({
     queryKey: ["fronting_reports", reportId],
     table: "fronting_reports",
     entityId: reportId,
@@ -49,7 +46,7 @@ export function useFrontingReport(
 export function useFrontingReportsList(
   opts?: FrontingReportListOpts,
 ): DataListQuery<FrontingReport> {
-  return useOfflineFirstInfiniteQuery<FrontingReportRaw, FrontingReport>({
+  return useOfflineFirstInfiniteQuery<FrontingReportWire, FrontingReport>({
     queryKey: ["fronting_reports", "list"],
     table: "fronting_reports",
     rowTransform: () => {

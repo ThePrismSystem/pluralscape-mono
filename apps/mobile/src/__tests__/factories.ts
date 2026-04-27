@@ -41,8 +41,6 @@ import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test
 
 export { TEST_MASTER_KEY, TEST_SYSTEM_ID };
 
-import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
-import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
 import type { SnapshotRaw } from "@pluralscape/data/transforms/snapshot";
 import type { NomenclatureSettingsWire } from "@pluralscape/data/transforms/system-settings";
 import type {
@@ -61,10 +59,13 @@ import type {
   CustomFrontId,
   CustomFrontWire,
   FieldDefinitionId,
+  FieldDefinitionWire,
   FieldValueId,
+  FieldValueWire,
   FrontingCommentId,
   FrontingCommentWire,
   FrontingReportId,
+  FrontingReportWire,
   FrontingSessionId,
   FrontingSessionWire,
   GroupId,
@@ -183,8 +184,8 @@ export function makeRawChannel(id: string, overrides?: Partial<ChannelWire>): Ch
 
 export function makeRawFieldDefinition(
   id: string,
-  overrides?: Partial<FieldDefinitionRaw>,
-): FieldDefinitionRaw {
+  overrides?: Partial<FieldDefinitionWire>,
+): FieldDefinitionWire {
   const encrypted = encryptFieldDefinitionInput(
     { name: `Field ${id}`, description: "A test field", options: null },
     TEST_MASTER_KEY,
@@ -205,7 +206,7 @@ export function makeRawFieldDefinition(
   };
 }
 
-export function makeRawFieldValue(id: string, overrides?: Partial<FieldValueRaw>): FieldValueRaw {
+export function makeRawFieldValue(id: string, overrides?: Partial<FieldValueWire>): FieldValueWire {
   const encrypted = encryptFieldValueInput({ fieldType: "text", value: "hello" }, TEST_MASTER_KEY);
   return {
     id: brandId<FieldValueId>(id),
@@ -282,8 +283,8 @@ const REPORT_END = 1_700_000_000_000 as UnixMillis;
 
 export function makeRawFrontingReport(
   id: string,
-  overrides?: Partial<FrontingReportRaw>,
-): FrontingReportRaw {
+  overrides?: Partial<FrontingReportWire>,
+): FrontingReportWire {
   const encrypted = encryptFrontingReportInput(
     {
       dateRange: { start: REPORT_START, end: REPORT_END },

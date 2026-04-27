@@ -1,10 +1,11 @@
 ---
 # types-wyda
 title: Add FrontingReport server/wire types when report endpoints land
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-27T19:00:11Z
-updated_at: 2026-04-27T19:00:11Z
+updated_at: 2026-04-27T21:16:27Z
 parent: ps-cd6x
 ---
 
@@ -31,3 +32,15 @@ Landed in `types-emid` (PR #579) as part of the canonical-chain extension. The m
 
 - types-emid (PR #579 — Class A canonical chain landed)
 - ps-cd6x (Milestone 9a)
+
+## Summary of Changes
+
+Canonical chain added for FrontingReport in packages/types/src/analytics.ts:
+FrontingReportEncryptedFields, FrontingReportEncryptedInput (now Pick-derived),
+FrontingReportServerMetadata, FrontingReportResult, FrontingReportWire. The
+gate that this bean was waiting on — "report endpoints land" — was already met
+(routes exist under apps/api/src/routes/fronting-reports/). SoT manifest entry
+updated (server/result/wire slots filled; previously never). Data-package
+transform migrated to consume FrontingReportWire directly with re-branding.
+Mobile consumers migrated. Closed alongside ps-etbc in the M9a types
+closeout PR.

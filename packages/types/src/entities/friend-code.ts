@@ -30,8 +30,8 @@ export type FriendCodeServerMetadata = Omit<FriendCode, "archived"> & {
 };
 
 /**
- * JSON-wire representation of a FriendCode. Derived from the domain
- * `FriendCode` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
+ * JSON-wire representation of a FriendCode (live or archived). Derived
+ * from `FriendCodeServerMetadata` so the wire union covers both archive
+ * states; branded IDs become plain strings, `UnixMillis` becomes `number`.
  */
-export type FriendCodeWire = Serialize<FriendCode>;
+export type FriendCodeWire = Serialize<FriendCodeServerMetadata>;

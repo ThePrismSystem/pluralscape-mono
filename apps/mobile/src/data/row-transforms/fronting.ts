@@ -8,13 +8,13 @@ import {
   wrapArchived,
 } from "./primitives.js";
 
-import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
 import type {
   ArchivedCustomFront,
   ArchivedFrontingComment,
   ArchivedFrontingSession,
   CustomFront,
   FrontingComment,
+  FrontingReportWire,
   FrontingSession,
 } from "@pluralscape/types";
 
@@ -142,25 +142,20 @@ export function rowToFrontingComment(
   return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFrontingReport(row: Record<string, unknown>): FrontingReportRaw {
+export function rowToFrontingReport(row: Record<string, unknown>): FrontingReportWire {
   // FrontingReport is stored encrypted in SQLite; the row holds the wire shape
   // (encryptedData blob) rather than the decrypted domain fields.
   const id = rid(row);
   return {
-    id: guardedStr(row["id"], "fronting_reports", "id", id) as FrontingReportRaw["id"],
-    systemId: guardedStr(
-      row["system_id"],
-      "fronting_reports",
-      "system_id",
-      id,
-    ) as FrontingReportRaw["systemId"],
+    id: guardedStr(row["id"], "fronting_reports", "id", id),
+    systemId: guardedStr(row["system_id"], "fronting_reports", "system_id", id),
     encryptedData: guardedStr(row["encrypted_data"], "fronting_reports", "encrypted_data", id),
     format: guardedStr(
       row["format"],
       "fronting_reports",
       "format",
       id,
-    ) as FrontingReportRaw["format"],
+    ) as FrontingReportWire["format"],
     generatedAt: guardedToMs(row["generated_at"], "fronting_reports", "generated_at", id),
     version: 0,
     archived: false,

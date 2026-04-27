@@ -38,11 +38,12 @@ export type NotificationConfigServerMetadata = Omit<NotificationConfig, "archive
 };
 
 /**
- * JSON-wire representation of a NotificationConfig. Derived from the
- * domain type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
+ * JSON-wire representation of a NotificationConfig (live or archived).
+ * Derived from `NotificationConfigServerMetadata` so the wire union covers
+ * both archive states; branded IDs become plain strings, `UnixMillis`
+ * becomes `number`.
  */
-export type NotificationConfigWire = Serialize<NotificationConfig>;
+export type NotificationConfigWire = Serialize<NotificationConfigServerMetadata>;
 
 /** A notification payload ready for delivery. */
 export interface NotificationPayload {

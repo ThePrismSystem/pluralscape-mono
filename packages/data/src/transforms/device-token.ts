@@ -1,42 +1,39 @@
-import type { DeviceToken } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 
-// ── Wire types ────────────────────────────────────────────────────────
-
-/**
- * Wire shape returned by `deviceToken.get` — identical to `DeviceToken`.
- * Device tokens have no archive variant; records are deleted, not archived.
- */
-export type DeviceTokenRaw = DeviceToken;
+import type {
+  AccountId,
+  DeviceToken,
+  DeviceTokenId,
+  DeviceTokenWire,
+  SystemId,
+} from "@pluralscape/types";
 
 /** Shape returned by `deviceToken.list`. */
 export interface DeviceTokenPage {
-  readonly data: readonly DeviceTokenRaw[];
+  readonly data: readonly DeviceTokenWire[];
   readonly nextCursor: string | null;
 }
 
-// ── Transforms ────────────────────────────────────────────────────────
-
 /**
- * Narrow a single device token API result into a `DeviceToken`.
- * This is a passthrough — device tokens have no archive variant.
+ * Narrow a single device token wire object into a `DeviceToken`. Re-brands
+ * IDs/timestamps stripped at the wire boundary. Device tokens have no
+ * archive variant.
  */
-export function narrowDeviceToken(raw: DeviceTokenRaw): DeviceToken {
+export function narrowDeviceToken(raw: DeviceTokenWire): DeviceToken {
   return {
-    id: raw.id,
-    accountId: raw.accountId,
-    systemId: raw.systemId,
+    id: brandId<DeviceTokenId>(raw.id),
+    accountId: brandId<AccountId>(raw.accountId),
+    systemId: brandId<SystemId>(raw.systemId),
     platform: raw.platform,
     token: raw.token,
-    lastActiveAt: raw.lastActiveAt,
+    lastActiveAt: raw.lastActiveAt === null ? null : toUnixMillis(raw.lastActiveAt),
     version: raw.version,
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: toUnixMillis(raw.createdAt),
+    updatedAt: toUnixMillis(raw.updatedAt),
   };
 }
 
-/**
- * Narrow a paginated device token list result.
- */
+/** Narrow a paginated device token list result. */
 export function narrowDeviceTokenPage(raw: DeviceTokenPage): {
   data: DeviceToken[];
   nextCursor: string | null;
