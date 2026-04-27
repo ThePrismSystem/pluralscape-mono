@@ -28,35 +28,68 @@ export const CreateApiKeyBodySchema = z
   )
   .readonly();
 
-/**
- * Zod parity for `ApiKeyEncryptedPayload` — the Class C auxiliary type
- * encrypted inside an ApiKey row's `encryptedData` blob.
- *
- * Validates the in-memory shape after decode. The schema rejects
- * base64 strings for `publicKey` — any JSON-string boundary requires a
- * base64-string adapter before parsing.
- */
-export const ApiKeyEncryptedPayloadSchema: z.ZodType<ApiKeyEncryptedPayload> = z.discriminatedUnion(
-  "keyType",
-  [
-    z
-      .object({
-        keyType: z.literal("metadata"),
-        name: z.string().min(1),
-      })
-      .readonly(),
-    z
-      .object({
-        keyType: z.literal("crypto"),
-        name: z.string().min(1),
-        // In-memory contract — replace with EncryptedBase64Schema if wired to a JSON parse boundary.
-        publicKey: z
-          .instanceof(Uint8Array)
-          .refine(
-            (buf) => buf.length === PUBLIC_KEY_BYTE_LENGTH,
-            "publicKey must be 32 bytes (X25519)",
-          ),
-      })
-      .readonly(),
-  ],
+// ── ApiKeyEncryptedPayload codec ──────────────────────────────────────
+//
+// Class C auxiliary type encrypted inside an ApiKey row's `encryptedData`
+// blob. Wire side: publicKey is a base64 string (what JSON.parse produces).
+// Memory side: publicKey is a 32-byte Uint8Array (what crypto operations
+// consume). `z.encode(...)` runs memory → wire (used at the encrypt
+// boundary, before JSON.stringify); `z.decode(...)` runs wire → memory
+// (used at the decrypt boundary, after JSON.parse).
+// Parity test: `__tests__/type-parity/api-key.type.test.ts` asserts
+// `z.output<typeof ApiKeyEncryptedPayloadSchema>` ≡ `ApiKeyEncryptedPayload`.
+
+const ApiKeyEncryptedPayloadWireSchema = z.discriminatedUnion("keyType", [
+  z
+    .object({
+      keyType: z.literal("metadata"),
+      name: z.string().min(1),
+    })
+    .readonly(),
+  z
+    .object({
+      keyType: z.literal("crypto"),
+      name: z.string().min(1),
+      publicKey: z.base64(),
+    })
+    .readonly(),
+]);
+
+const ApiKeyEncryptedPayloadMemorySchema = z.discriminatedUnion("keyType", [
+  z
+    .object({
+      keyType: z.literal("metadata"),
+      name: z.string().min(1),
+    })
+    .readonly(),
+  z
+    .object({
+      keyType: z.literal("crypto"),
+      name: z.string().min(1),
+      // z.custom<Uint8Array> (not z.instanceof) — z.instanceof yields
+      // InstanceType<typeof Uint8Array> which breaks Equal<> parity in the
+      // type-parity test. Runtime check is identical (instanceof Uint8Array).
+      publicKey: z
+        .custom<Uint8Array>((v) => v instanceof Uint8Array)
+        .refine(
+          (buf) => buf.length === PUBLIC_KEY_BYTE_LENGTH,
+          "publicKey must be 32 bytes (X25519)",
+        ),
+    })
+    .readonly(),
+]) satisfies z.ZodType<ApiKeyEncryptedPayload>;
+
+export const ApiKeyEncryptedPayloadSchema = z.codec(
+  ApiKeyEncryptedPayloadWireSchema,
+  ApiKeyEncryptedPayloadMemorySchema,
+  {
+    decode: (wire) =>
+      wire.keyType === "crypto"
+        ? { ...wire, publicKey: z.util.base64ToUint8Array(wire.publicKey) }
+        : wire,
+    encode: (memory) =>
+      memory.keyType === "crypto"
+        ? { ...memory, publicKey: z.util.uint8ArrayToBase64(memory.publicKey) }
+        : memory,
+  },
 );
