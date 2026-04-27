@@ -191,6 +191,11 @@ export default defineConfig({
         "**/test/**",
         "**/*.d.ts",
         "**/index.ts",
+        // Type-only files: `.types.ts` modules export only TypeScript
+        // declarations; the SoT manifest is generated from those types and
+        // contains no executable code worth covering.
+        "**/*.types.ts",
+        "**/__sot-manifest__.ts",
         // Type-only files (no executable code — validated via expectTypeOf tests).
         // Per-entity splits live under packages/types/src/entities/; add new files
         // to the entities/ glob, not an individual line.

@@ -29,7 +29,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, BucketId, SystemId } from "@pluralscape/types";
+import type { AccountId, BucketId, MemberId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { buckets, bucketContentTags } = schema;
@@ -94,13 +94,13 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "member", entityId: "mem_test-1" },
+        { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
         auth,
         audit,
       );
 
       expect(result.entityType).toBe("member");
-      expect(result.entityId).toBe("mem_test-1");
+      expect(result.entityId).toBe("mem_990e8400-e29b-41d4-a716-446655440001");
       expect(result.bucketId).toBe(bucketId);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("bucket-content-tag.tagged");
@@ -114,7 +114,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "member", entityId: "mem_test-1" },
+        { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
         auth,
         firstAudit,
       );
@@ -125,7 +125,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "member", entityId: "mem_test-1" },
+        { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
         auth,
         secondAudit,
       );
@@ -159,13 +159,23 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "member", entityId: "mem_test-1" },
+        { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
         auth,
         noopAudit,
       );
 
       const audit = spyAudit();
-      await untagContent(asDb(db), systemId, bucketId, "member", "mem_test-1", auth, audit);
+      await untagContent(
+        asDb(db),
+        systemId,
+        bucketId,
+        {
+          entityType: "member",
+          entityId: brandId<MemberId>("mem_990e8400-e29b-41d4-a716-446655440001"),
+        },
+        auth,
+        audit,
+      );
 
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("bucket-content-tag.untagged");
@@ -179,8 +189,10 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           bucketId,
-          "member",
-          `mem_${crypto.randomUUID()}`,
+          {
+            entityType: "member",
+            entityId: brandId<MemberId>(`mem_${crypto.randomUUID()}`),
+          },
           auth,
           noopAudit,
         ),
@@ -199,7 +211,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "member", entityId: "mem_test-1" },
+        { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
         auth,
         noopAudit,
       );
@@ -207,7 +219,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "group", entityId: "grp_test-1" },
+        { entityType: "group", entityId: "grp_bb0e8400-e29b-41d4-a716-446655440002" },
         auth,
         noopAudit,
       );
@@ -223,7 +235,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "member", entityId: "mem_test-1" },
+        { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
         auth,
         noopAudit,
       );
@@ -231,7 +243,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        { entityType: "group", entityId: "grp_test-1" },
+        { entityType: "group", entityId: "grp_bb0e8400-e29b-41d4-a716-446655440002" },
         auth,
         noopAudit,
       );
@@ -254,7 +266,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           genBucketId(),
-          { entityType: "member", entityId: "mem_test-1" },
+          { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
           auth,
           noopAudit,
         ),
@@ -275,7 +287,7 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           bucketId,
-          { entityType: "member", entityId: "mem_test-1" },
+          { entityType: "member", entityId: "mem_990e8400-e29b-41d4-a716-446655440001" },
           auth,
           noopAudit,
         ),

@@ -1,10 +1,15 @@
 import { bucketContentTags } from "@pluralscape/db/pg";
-import { brandId } from "@pluralscape/types";
-import { BucketContentTagQuerySchema, TagContentBodySchema } from "@pluralscape/validation";
+import {
+  BucketContentTagQuerySchema,
+  TagContentBodySchema,
+  UntagContentParamsSchema,
+} from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod/v4";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { logger } from "../lib/logger.js";
 import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -12,34 +17,28 @@ import { tenantCtx } from "../lib/tenant-context.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import { assertBucketExists } from "./bucket/internal.js";
+import {
+  decodeBucketContentTagRow,
+  decodeBucketContentTagRowSafe,
+} from "./bucket-content-tag/decode.js";
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { BucketContentEntityType, BucketId, SystemId } from "@pluralscape/types";
+import type {
+  BucketContentEntityType,
+  BucketContentTag,
+  BucketId,
+  SystemId,
+  TaggedEntityRef,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface BucketContentTagResult {
-  readonly entityType: BucketContentEntityType;
-  readonly entityId: string;
-  readonly bucketId: BucketId;
-}
-
 interface ListTagOpts {
   readonly entityType?: BucketContentEntityType;
   readonly limit?: number;
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────
-
-function toTagResult(row: typeof bucketContentTags.$inferSelect): BucketContentTagResult {
-  return {
-    entityType: row.entityType,
-    entityId: row.entityId,
-    bucketId: brandId<BucketId>(row.bucketId),
-  };
 }
 
 // ── TAG ─────────────────────────────────────────────────────────────
@@ -51,12 +50,17 @@ export async function tagContent(
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<BucketContentTagResult> {
+): Promise<BucketContentTag> {
   assertSystemOwnership(systemId, auth);
 
   const parsed = TagContentBodySchema.safeParse(params);
   if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid tag content payload");
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid tag content payload",
+      z.treeifyError(parsed.error),
+    );
   }
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -87,11 +91,11 @@ export async function tagContent(
       });
     }
 
-    return {
+    return decodeBucketContentTagRow({
       entityType: parsed.data.entityType,
       entityId: parsed.data.entityId,
       bucketId,
-    };
+    });
   });
 }
 
@@ -101,20 +105,30 @@ export async function untagContent(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
-  entityType: BucketContentEntityType,
-  entityId: string,
+  params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
+
+  const parsed = UntagContentParamsSchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid (entityType, entityId) pair",
+      z.treeifyError(parsed.error),
+    );
+  }
+  const ref: TaggedEntityRef = parsed.data;
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const deleted = await tx
       .delete(bucketContentTags)
       .where(
         and(
-          eq(bucketContentTags.entityType, entityType),
-          eq(bucketContentTags.entityId, entityId),
+          eq(bucketContentTags.entityType, ref.entityType),
+          eq(bucketContentTags.entityId, ref.entityId),
           eq(bucketContentTags.bucketId, bucketId),
           eq(bucketContentTags.systemId, systemId),
         ),
@@ -128,13 +142,13 @@ export async function untagContent(
     await audit(tx, {
       eventType: "bucket-content-tag.untagged",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Untagged ${entityType} ${entityId} from bucket`,
+      detail: `Untagged ${ref.entityType} ${ref.entityId} from bucket`,
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "bucket-content-tag.untagged", {
       bucketId,
-      entityType,
-      entityId,
+      entityType: ref.entityType,
+      entityId: ref.entityId,
     });
   });
 }
@@ -147,7 +161,7 @@ export async function listTagsByBucket(
   bucketId: BucketId,
   auth: AuthContext,
   opts: ListTagOpts = {},
-): Promise<readonly BucketContentTagResult[]> {
+): Promise<readonly BucketContentTag[]> {
   assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
@@ -168,7 +182,21 @@ export async function listTagsByBucket(
       .where(and(...conditions))
       .limit(effectiveLimit);
 
-    return rows.map(toTagResult);
+    const decoded: BucketContentTag[] = [];
+    for (const row of rows) {
+      const tag = decodeBucketContentTagRowSafe(row);
+      if (tag === null) {
+        logger.warn("bucket-content-tag: skipping corrupt row", {
+          systemId: row.systemId,
+          bucketId: row.bucketId,
+          entityType: row.entityType,
+          entityId: row.entityId,
+        });
+        continue;
+      }
+      decoded.push(tag);
+    }
+    return decoded;
   });
 }
 

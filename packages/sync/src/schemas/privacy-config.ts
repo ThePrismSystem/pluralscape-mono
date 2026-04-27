@@ -1,5 +1,11 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
-import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId } from "@pluralscape/types";
+import type {
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  KeyGrantId,
+  TaggedEntityRef,
+} from "@pluralscape/types";
 
 // ── privacy bucket ────────────────────────────────────────────────────
 
@@ -17,15 +23,11 @@ export interface CrdtPrivacyBucket extends CrdtAuditFields {
 /**
  * CRDT representation of a BucketContentTag (LWW map).
  *
- * Key format: "{entityType}_{entityId}_{bucketId}"
- * Deleting the key removes the entity-bucket assignment.
+ * Key format: "{entityType}_{entityId}_{bucketId}"; deleting the key
+ * removes the entity-bucket assignment. Wire format unchanged from the
+ * pre-discriminated-union schema.
  */
-export interface CrdtBucketContentTag {
-  /** BucketContentEntityType string */
-  entityType: CrdtString;
-  entityId: CrdtString;
-  bucketId: CrdtString;
-}
+export type CrdtBucketContentTag = TaggedEntityRef & { bucketId: CrdtString };
 
 // ── friend connection ─────────────────────────────────────────────────
 

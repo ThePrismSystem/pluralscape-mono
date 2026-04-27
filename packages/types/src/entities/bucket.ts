@@ -1,6 +1,6 @@
 import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob } from "../encryption-primitives.js";
-import type { BucketId, SystemId } from "../ids.js";
+import type { BucketId, EntityTypeIdMap, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
@@ -120,17 +120,45 @@ export function isBucketContentEntityType(value: string): value is BucketContent
 }
 
 /**
+ * A reference to a tagged entity, discriminated by `entityType`.
+ *
+ * Each variant pairs an entity type with its branded ID, so consumers
+ * cannot accidentally tag a member with a group ID. The DB column
+ * stays varchar — the brand discriminates only at the app boundary.
+ *
+ * Generated as a mapped type over {@link BucketContentEntityType} indexing
+ * into {@link EntityTypeIdMap}. The {@link _AssertBucketContentEntityTypesMapped}
+ * compile-time assertion below guarantees every variant of
+ * `BucketContentEntityType` has a corresponding entry in `EntityTypeIdMap`,
+ * so adding a new tag-eligible entity is a one-line change to the
+ * `BucketContentEntityType` union and remains exhaustive everywhere.
+ */
+export type TaggedEntityRef = {
+  [K in BucketContentEntityType]: {
+    readonly entityType: K;
+    readonly entityId: EntityTypeIdMap[K];
+  };
+}[BucketContentEntityType];
+
+// Compile-time check: every BucketContentEntityType variant must appear as a
+// key in EntityTypeIdMap. Adding a new tag-eligible entity to the union
+// without a matching EntityTypeIdMap entry is a type error here.
+type _AssertBucketContentEntityTypesMapped = {
+  [K in BucketContentEntityType]: K extends keyof EntityTypeIdMap
+    ? true
+    : `Missing EntityTypeIdMap entry for "${K}"`;
+}[BucketContentEntityType];
+const _ASSERT_BUCKET_CONTENT_ENTITY_TYPES_MAPPED: _AssertBucketContentEntityTypesMapped = true;
+void _ASSERT_BUCKET_CONTENT_ENTITY_TYPES_MAPPED;
+
+/**
  * Tags an entity as belonging to a privacy bucket.
  *
  * Access is fail-closed: if an entity has no bucket tags, or if
  * a friend's assigned buckets do not intersect with the entity's
  * bucket tags for the relevant scope, the entity is invisible.
  */
-export interface BucketContentTag {
-  readonly entityType: BucketContentEntityType;
-  readonly entityId: string;
-  readonly bucketId: BucketId;
-}
+export type BucketContentTag = TaggedEntityRef & { readonly bucketId: BucketId };
 
 /** The categories of content that a privacy bucket can control visibility for. */
 export type BucketVisibilityScope =

@@ -129,62 +129,69 @@ describe("BucketQuerySchema", () => {
 });
 
 describe("TagContentBodySchema", () => {
-  it("accepts valid member tag", () => {
+  const VALID_BY_TYPE = [
+    ["member", "mem_550e8400-e29b-41d4-a716-446655440000"],
+    ["group", "grp_550e8400-e29b-41d4-a716-446655440000"],
+    ["channel", "ch_550e8400-e29b-41d4-a716-446655440000"],
+    ["message", "msg_550e8400-e29b-41d4-a716-446655440000"],
+    ["note", "note_550e8400-e29b-41d4-a716-446655440000"],
+    ["poll", "poll_550e8400-e29b-41d4-a716-446655440000"],
+    ["relationship", "rel_550e8400-e29b-41d4-a716-446655440000"],
+    ["structure-entity-type", "stet_550e8400-e29b-41d4-a716-446655440000"],
+    ["structure-entity", "ste_550e8400-e29b-41d4-a716-446655440000"],
+    ["journal-entry", "je_550e8400-e29b-41d4-a716-446655440000"],
+    ["wiki-page", "wp_550e8400-e29b-41d4-a716-446655440000"],
+    ["custom-front", "cf_550e8400-e29b-41d4-a716-446655440000"],
+    ["fronting-session", "fs_550e8400-e29b-41d4-a716-446655440000"],
+    ["board-message", "bm_550e8400-e29b-41d4-a716-446655440000"],
+    ["acknowledgement", "ack_550e8400-e29b-41d4-a716-446655440000"],
+    ["innerworld-entity", "iwe_550e8400-e29b-41d4-a716-446655440000"],
+    ["innerworld-region", "iwr_550e8400-e29b-41d4-a716-446655440000"],
+    ["field-definition", "fld_550e8400-e29b-41d4-a716-446655440000"],
+    ["field-value", "fv_550e8400-e29b-41d4-a716-446655440000"],
+    ["member-photo", "mp_550e8400-e29b-41d4-a716-446655440000"],
+    ["fronting-comment", "fcom_550e8400-e29b-41d4-a716-446655440000"],
+  ] as const;
+
+  it("accepts a valid member tag with the correct branded ID", () => {
     const result = TagContentBodySchema.safeParse({
       entityType: "member",
-      entityId: "mem_abc123",
+      entityId: "mem_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.entityType).toBe("member");
-      expect(result.data.entityId).toBe("mem_abc123");
+      expect(result.data.entityId).toBe("mem_550e8400-e29b-41d4-a716-446655440000");
     }
   });
 
-  it("accepts all valid entity types", () => {
-    const types = [
-      "member",
-      "group",
-      "channel",
-      "message",
-      "note",
-      "poll",
-      "relationship",
-      "structure-entity-type",
-      "structure-entity",
-      "journal-entry",
-      "wiki-page",
-      "custom-front",
-      "fronting-session",
-      "board-message",
-      "acknowledgement",
-      "innerworld-entity",
-      "innerworld-region",
-      "field-definition",
-      "field-value",
-      "member-photo",
-      "fronting-comment",
-    ];
-    for (const entityType of types) {
-      const result = TagContentBodySchema.safeParse({
-        entityType,
-        entityId: "id_123",
-      });
-      expect(result.success, `Expected ${entityType} to be valid`).toBe(true);
+  it("accepts every entity-type variant when paired with the correct prefix", () => {
+    for (const [entityType, entityId] of VALID_BY_TYPE) {
+      const result = TagContentBodySchema.safeParse({ entityType, entityId });
+      expect(result.success, `Expected ${entityType} with ${entityId} to be valid`).toBe(true);
     }
+  });
+
+  it("rejects mismatched entityType / entityId prefix pairs", () => {
+    // member with grp_ prefix — the discriminated union rejects it.
+    const result = TagContentBodySchema.safeParse({
+      entityType: "member",
+      entityId: "grp_550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects invalid entityType", () => {
     const result = TagContentBodySchema.safeParse({
       entityType: "invalid",
-      entityId: "id_123",
+      entityId: "mem_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects missing entityType", () => {
     const result = TagContentBodySchema.safeParse({
-      entityId: "id_123",
+      entityId: "mem_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(false);
   });
@@ -215,20 +222,12 @@ describe("TagContentBodySchema", () => {
   it("rejects entityId with uppercase prefix", () => {
     const result = TagContentBodySchema.safeParse({
       entityType: "member",
-      entityId: "MEM_abc123",
+      entityId: "MEM_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(false);
   });
 
-  it("rejects entityId with single-char prefix", () => {
-    const result = TagContentBodySchema.safeParse({
-      entityType: "member",
-      entityId: "x_id",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects entityId with prefix but empty suffix", () => {
+  it("rejects entityId with prefix but missing UUID suffix", () => {
     const result = TagContentBodySchema.safeParse({
       entityType: "member",
       entityId: "mem_",
@@ -236,7 +235,7 @@ describe("TagContentBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects entityId with special characters in suffix", () => {
+  it("rejects entityId with non-UUID suffix", () => {
     const result = TagContentBodySchema.safeParse({
       entityType: "member",
       entityId: "mem_abc!@#",
@@ -244,12 +243,12 @@ describe("TagContentBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts entityId with hyphenated UUID suffix", () => {
+  it("rejects entityId with prefix that does not match a known entity type", () => {
     const result = TagContentBodySchema.safeParse({
       entityType: "member",
-      entityId: "mem_550e8400-e29b-41d4-a716-446655440000",
+      entityId: "x_550e8400-e29b-41d4-a716-446655440000",
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 });
 
