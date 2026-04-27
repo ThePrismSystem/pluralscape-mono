@@ -182,10 +182,6 @@ export async function listTagsByBucket(
       .where(and(...conditions))
       .limit(effectiveLimit);
 
-    // Per-row resilience: a corrupt row (e.g. unknown entityType from a manual
-    // DB edit) must not poison the entire list response. The safe variant
-    // returns null for unknown types; we log + skip so callers see a partial
-    // view rather than a 500.
     const decoded: BucketContentTag[] = [];
     for (const row of rows) {
       const tag = decodeBucketContentTagRowSafe(row);

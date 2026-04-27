@@ -157,9 +157,6 @@ void _ASSERT_BUCKET_CONTENT_ENTITY_TYPES_MAPPED;
  * Access is fail-closed: if an entity has no bucket tags, or if
  * a friend's assigned buckets do not intersect with the entity's
  * bucket tags for the relevant scope, the entity is invisible.
- *
- * The (entityType, entityId) pair is a discriminated union — each
- * entity type narrows the entityId to its branded ID type.
  */
 export type BucketContentTag = TaggedEntityRef & { readonly bucketId: BucketId };
 

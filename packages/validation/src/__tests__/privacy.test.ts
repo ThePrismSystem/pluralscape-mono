@@ -129,12 +129,6 @@ describe("BucketQuerySchema", () => {
 });
 
 describe("TagContentBodySchema", () => {
-  // ── Per-entity-type prefix mapping ───────────────────────────────
-  //
-  // The schema is a discriminated union where each `entityType` arm
-  // requires its corresponding branded-ID prefix. Using a non-matching
-  // prefix is rejected — mirroring the canonical `TaggedEntityRef`
-  // union in `@pluralscape/types`.
   const VALID_BY_TYPE = [
     ["member", "mem_550e8400-e29b-41d4-a716-446655440000"],
     ["group", "grp_550e8400-e29b-41d4-a716-446655440000"],

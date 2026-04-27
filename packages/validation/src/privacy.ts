@@ -46,10 +46,8 @@ export const BucketQuerySchema = z.object({
 // ── Content tags ─────────────────────────────────────────────────
 
 /**
- * Per-entity-type discriminated union arms used by both the tag-content body
- * and the untag-content path-parameter schemas. Each arm pairs an entity type
- * literal with a branded-ID validator whose prefix matches the type, mirroring
- * the canonical {@link import("@pluralscape/types").TaggedEntityRef} union.
+ * Discriminated union arms shared by tag-content and untag-content schemas,
+ * mirroring the canonical {@link import("@pluralscape/types").TaggedEntityRef}.
  */
 const TAGGED_ENTITY_REF_ARMS = [
   z.object({ entityType: z.literal("member"), entityId: brandedIdQueryParam("mem_") }).readonly(),

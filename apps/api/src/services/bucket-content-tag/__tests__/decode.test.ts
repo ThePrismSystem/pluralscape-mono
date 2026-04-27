@@ -54,8 +54,6 @@ describe("decodeBucketContentTagRow", () => {
 
   it("throws on an unknown entityType — exhaustiveness lock", () => {
     // Cast through `BucketContentEntityType` to exercise the runtime guard.
-    // The compile-time `_exhaustive: never` guarantees this branch is only
-    // reachable if the type union diverges from the switch coverage.
     const sneaky = "totally-unknown" as BucketContentEntityType;
     expect(() =>
       decodeBucketContentTagRow({

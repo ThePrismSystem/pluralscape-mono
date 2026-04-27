@@ -23,14 +23,9 @@ export interface CrdtPrivacyBucket extends CrdtAuditFields {
 /**
  * CRDT representation of a BucketContentTag (LWW map).
  *
- * Key format: "{entityType}_{entityId}_{bucketId}"
- * Deleting the key removes the entity-bucket assignment.
- *
- * Discriminated by `entityType`: each variant pairs an entity type with
- * its branded ID, mirroring the canonical {@link TaggedEntityRef} union
- * from `@pluralscape/types`. The wire format (JSON shape) is unchanged
- * — only the TypeScript type narrows to forbid mismatched (entityType,
- * entityId) pairs.
+ * Key format: "{entityType}_{entityId}_{bucketId}"; deleting the key
+ * removes the entity-bucket assignment. Wire format unchanged from the
+ * pre-discriminated-union schema.
  */
 export type CrdtBucketContentTag = TaggedEntityRef & { bucketId: CrdtString };
 
