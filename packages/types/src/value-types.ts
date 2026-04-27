@@ -6,8 +6,8 @@ import type { Brand } from "./ids.js";
  *
  * Branded so a `previousForm` value cannot accidentally be assigned to a
  * `previousName` field (or vice versa) — both are `string | null` in raw
- * shape, but cross-field assignment was a real risk surfaced by the
- * type-design reviewer in PR #561.
+ * shape, and cross-field assignment is a real risk this brand prevents at
+ * compile time.
  */
 export type LifecycleEventForm = Brand<string, "LifecycleEventForm">;
 
@@ -25,11 +25,6 @@ type AnyBrandedValue = Brand<string, string>;
 /**
  * Cast a plain string to a branded value type. Compile-time only — no
  * runtime cost. Mirrors {@link brandId} for non-ID display labels.
- *
- * Callers handle null themselves:
- * ```ts
- * previousForm: raw === null ? null : brandValue<LifecycleEventForm>(raw)
- * ```
  */
 export function brandValue<B extends AnyBrandedValue>(raw: B | string): B {
   return raw as B;
