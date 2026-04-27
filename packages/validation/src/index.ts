@@ -250,7 +250,11 @@ export {
 } from "./validation.constants.js";
 export { ApiKeyEncryptedPayloadSchema, CreateApiKeyBodySchema } from "./api-key.js";
 export { PurgeSystemBodySchema } from "./system-purge.js";
-export { CreateSnapshotBodySchema, DuplicateSystemBodySchema } from "./snapshot.js";
+export {
+  CreateSnapshotBodySchema,
+  DuplicateSystemBodySchema,
+  SnapshotContentSchema,
+} from "./snapshot.js";
 export {
   CreateImportJobBodySchema,
   UpdateImportJobBodySchema,

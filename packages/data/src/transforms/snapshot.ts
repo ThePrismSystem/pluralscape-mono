@@ -1,13 +1,15 @@
-import {
-  assertObjectBlob,
-  assertArrayField,
-  decodeAndDecryptT1,
-  encryptInput,
-} from "./decode-blob.js";
+import { SnapshotContentSchema } from "@pluralscape/validation";
+
+import { decodeAndDecryptT1, encryptInput } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { SystemSnapshotId, SystemId, UnixMillis } from "@pluralscape/types";
-import type { SnapshotContent, SnapshotTrigger } from "@pluralscape/types";
+import type {
+  SnapshotContent,
+  SnapshotTrigger,
+  SystemId,
+  SystemSnapshotId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 // ── Decrypted output type ─────────────────────────────────────────────
 
@@ -34,26 +36,18 @@ export interface SnapshotPage {
   readonly nextCursor: string | null;
 }
 
-// ── Validators ────────────────────────────────────────────────────────
-
-function assertSnapshotContent(raw: unknown): asserts raw is SnapshotContent {
-  const obj = assertObjectBlob(raw, "snapshot");
-  assertArrayField(obj, "snapshot", "members");
-  assertArrayField(obj, "snapshot", "groups");
-}
-
 // ── Transforms ────────────────────────────────────────────────────────
 
 export function decryptSnapshot(raw: SnapshotRaw, masterKey: KdfMasterKey): SnapshotDecrypted {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertSnapshotContent(plaintext);
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  const content = SnapshotContentSchema.parse(decrypted);
 
   return {
     id: raw.id,
     systemId: raw.systemId,
     snapshotTrigger: raw.snapshotTrigger,
     createdAt: raw.createdAt,
-    content: plaintext,
+    content,
   };
 }
 
