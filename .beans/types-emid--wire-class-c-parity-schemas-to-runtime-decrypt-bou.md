@@ -1,11 +1,11 @@
 ---
 # types-emid
 title: Wire Class C parity schemas to runtime decrypt boundaries
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-27T14:30:14Z
-updated_at: 2026-04-27T17:28:29Z
+updated_at: 2026-04-27T18:55:54Z
 ---
 
 Three Zod parity schemas for Class C entities are currently parity-gates only — not yet wired to a runtime parse boundary. This bean tracks wiring them at the decrypt callsites once those callsites materialize.
@@ -85,3 +85,59 @@ Implementation plan at `docs/superpowers/plans/2026-04-27-types-emid.md` (gitign
 7. `FrontingReportEncryptedInputSchema` wired in `decryptFrontingReport`
 8. Cleanup unused `decode-blob.ts` helpers
 9. Final `/verify` + bean closeout
+
+## Summary of Changes
+
+Wired five encrypted-payload Zod schemas at their runtime decrypt boundaries.
+
+### Codec primitive
+
+- New `Base64ToUint8ArrayCodec` in `packages/validation/src/encryption-primitives.ts` — Zod 4.1+ `z.codec()` for binary↔base64 boundaries inside JSON-encoded AEAD plaintexts.
+
+### ApiKey (Class C — codec-based)
+
+- `ApiKeyEncryptedPayloadSchema` rewritten as `z.codec()` — wire side `publicKey: z.base64()`, memory side `publicKey: Uint8Array` with 32-byte refine.
+- New transforms `decryptApiKeyPayload` / `encryptApiKeyPayload` in `packages/data/src/transforms/api-key.ts` using `Schema.parse` / `z.encode`.
+- Round-trip tests cover both metadata and crypto variants.
+- Parity test now asserts `z.output<>` ≡ `ApiKeyEncryptedPayload`.
+- Used `z.custom<Uint8Array>` over `z.instanceof` (with inline comment) because `z.instanceof` produces `InstanceType<typeof Uint8Array>` which fails strict `Equal<>` parity.
+
+### Snapshot, DeviceInfo (Class C — schema-parse)
+
+- `decryptSnapshot` swapped from hand-rolled `assertSnapshotContent` to `SnapshotContentSchema.parse()`.
+- New transform `decryptDeviceInfo` in `packages/data/src/transforms/session.ts` using `DeviceInfoSchema.parse()`.
+
+### FrontingReport (T1 outlier — full canonical-chain extension)
+
+- New canonical type `FrontingReportEncryptedInput` in `packages/types/src/analytics.ts`.
+- New `FrontingReportEncryptedInputSchema` (with sub-schemas for `DateRange`, `MemberFrontingBreakdown`, `ChartDataset`, `ChartData`) in `packages/validation/src/fronting-report.ts`.
+- New SoT manifest entry (Class A, `server: never` / `wire: never` placeholders documented for future endpoint formalization).
+- New G3 parity test.
+- `decryptFrontingReport` swapped from hand-rolled `assertFrontingReportEncryptedFields` to `FrontingReportEncryptedInputSchema.parse()`. Inline `FrontingReportEncryptedFields` interface and `AssertFrontingReportFieldsSubset` removed.
+- Orphaned barrel re-export from `packages/data/src/index.ts` removed.
+
+### Cleanup
+
+- "Parity gate only" / "in-memory contract" comments removed from all wired validation modules; replaced with positive wiring references.
+- Unused `assertArrayField` helper removed from `packages/data/src/transforms/decode-blob.ts` (zero callers after wiring). `assertObjectBlob` and `assertStringField` remain (still used by `friend-dashboard.ts` T2 path — out of scope).
+
+### Verification (final `/verify`)
+
+- `pnpm format` — clean
+- `pnpm lint` — zero warnings
+- `pnpm typecheck` — zero errors
+- `pnpm types:check-sot` — all 4 parity gates green (types, Drizzle, Zod, OpenAPI-Wire)
+- `pnpm test:unit` — 13024 passed (1 skipped, 1 todo across 1015 files)
+- `pnpm test:integration` — 3055 passed (11 skipped across 152 files)
+- `pnpm test:e2e` — 507 passed (2 skipped)
+
+### Follow-ups deferred to separate beans
+
+- Wire `decryptDeviceInfo` once the session-list endpoint plumbs `encryptedData`.
+- Wire `decryptApiKeyPayload` / `encryptApiKeyPayload` when ApiKey crypto-variant lands client-side.
+- Add `FrontingReportServerMetadata` / `FrontingReportWire` when report API endpoints are formalised.
+- Inline or relocate `assertObjectBlob` / `assertStringField` after `friend-dashboard.ts` migrates to its own validation pattern.
+
+### Branch / commits
+
+`feat/types-emid-decrypt-wiring` — 8 implementation commits + 1 bean-tracking commit, top-down narrative: codec primitive → ApiKey codec → ApiKey transforms → Snapshot wiring → DeviceInfo transform → FrontingReport canonical chain → FrontingReport wiring → decode-blob cleanup.
