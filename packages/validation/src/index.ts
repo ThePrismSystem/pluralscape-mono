@@ -130,6 +130,7 @@ export {
   UpdateFrontingCommentBodySchema,
   FrontingCommentQuerySchema,
 } from "./fronting-comment.js";
+export { FrontingReportEncryptedInputSchema } from "./fronting-report.js";
 export {
   booleanQueryParam,
   optionalBooleanQueryParam,

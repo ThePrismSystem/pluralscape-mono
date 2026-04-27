@@ -266,6 +266,7 @@ export type {
   SubjectFrontingBreakdown,
   FrontingAnalytics,
   FrontingReport,
+  FrontingReportEncryptedInput,
   ChartDataset,
   ChartData,
   CoFrontingPair,

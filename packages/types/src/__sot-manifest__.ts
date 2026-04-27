@@ -1,3 +1,4 @@
+import type { FrontingReport, FrontingReportEncryptedInput } from "./analytics.js";
 import type {
   AccountPurgeRequest,
   AccountPurgeRequestServerMetadata,
@@ -819,5 +820,17 @@ export type SotEntityManifest = {
     wire: FriendNotificationPreferenceWire;
     // Plaintext entity — no encrypted fields.
     encryptedFields: never;
+  };
+  FrontingReport: {
+    domain: FrontingReport;
+    encryptedFields: never;
+    encryptedInput: FrontingReportEncryptedInput;
+    server: never;
+    wire: never;
+    // Class A entity per ADR-023: encryptedInput is a subset of FrontingReport
+    // keys (dateRange / memberBreakdowns / chartData). Server-shaped server /
+    // wire types are not yet defined; this entry exists for parity-gate and
+    // canonical-chain consistency. Add server and wire types when the
+    // FrontingReport API endpoints are formalised.
   };
 };
