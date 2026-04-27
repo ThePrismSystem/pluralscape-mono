@@ -46,72 +46,79 @@ export const BucketQuerySchema = z.object({
 // ── Content tags ─────────────────────────────────────────────────
 
 /**
- * Validates the body for tagging content into a privacy bucket.
- *
- * Discriminated by `entityType`: each variant's `entityId` must be a
- * branded ID with the prefix matching its entity type. The runtime
- * validator mirrors the canonical {@link import("@pluralscape/types").TaggedEntityRef}
- * union from `@pluralscape/types`.
+ * Per-entity-type discriminated union arms used by both the tag-content body
+ * and the untag-content path-parameter schemas. Each arm pairs an entity type
+ * literal with a branded-ID validator whose prefix matches the type, mirroring
+ * the canonical {@link import("@pluralscape/types").TaggedEntityRef} union.
  */
+const TAGGED_ENTITY_REF_ARMS = [
+  z.object({ entityType: z.literal("member"), entityId: brandedIdQueryParam("mem_") }).readonly(),
+  z.object({ entityType: z.literal("group"), entityId: brandedIdQueryParam("grp_") }).readonly(),
+  z.object({ entityType: z.literal("channel"), entityId: brandedIdQueryParam("ch_") }).readonly(),
+  z.object({ entityType: z.literal("message"), entityId: brandedIdQueryParam("msg_") }).readonly(),
+  z.object({ entityType: z.literal("note"), entityId: brandedIdQueryParam("note_") }).readonly(),
+  z.object({ entityType: z.literal("poll"), entityId: brandedIdQueryParam("poll_") }).readonly(),
+  z
+    .object({ entityType: z.literal("relationship"), entityId: brandedIdQueryParam("rel_") })
+    .readonly(),
+  z
+    .object({
+      entityType: z.literal("structure-entity-type"),
+      entityId: brandedIdQueryParam("stet_"),
+    })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("structure-entity"), entityId: brandedIdQueryParam("ste_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("journal-entry"), entityId: brandedIdQueryParam("je_") })
+    .readonly(),
+  z.object({ entityType: z.literal("wiki-page"), entityId: brandedIdQueryParam("wp_") }).readonly(),
+  z
+    .object({ entityType: z.literal("custom-front"), entityId: brandedIdQueryParam("cf_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("fronting-session"), entityId: brandedIdQueryParam("fs_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("board-message"), entityId: brandedIdQueryParam("bm_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("acknowledgement"), entityId: brandedIdQueryParam("ack_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("innerworld-entity"), entityId: brandedIdQueryParam("iwe_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("innerworld-region"), entityId: brandedIdQueryParam("iwr_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("field-definition"), entityId: brandedIdQueryParam("fld_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("field-value"), entityId: brandedIdQueryParam("fv_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("member-photo"), entityId: brandedIdQueryParam("mp_") })
+    .readonly(),
+  z
+    .object({ entityType: z.literal("fronting-comment"), entityId: brandedIdQueryParam("fcom_") })
+    .readonly(),
+] as const;
+
+/** Validates the body for tagging content into a privacy bucket. */
 export const TagContentBodySchema = z
-  .discriminatedUnion("entityType", [
-    z.object({ entityType: z.literal("member"), entityId: brandedIdQueryParam("mem_") }).readonly(),
-    z.object({ entityType: z.literal("group"), entityId: brandedIdQueryParam("grp_") }).readonly(),
-    z.object({ entityType: z.literal("channel"), entityId: brandedIdQueryParam("ch_") }).readonly(),
-    z
-      .object({ entityType: z.literal("message"), entityId: brandedIdQueryParam("msg_") })
-      .readonly(),
-    z.object({ entityType: z.literal("note"), entityId: brandedIdQueryParam("note_") }).readonly(),
-    z.object({ entityType: z.literal("poll"), entityId: brandedIdQueryParam("poll_") }).readonly(),
-    z
-      .object({ entityType: z.literal("relationship"), entityId: brandedIdQueryParam("rel_") })
-      .readonly(),
-    z
-      .object({
-        entityType: z.literal("structure-entity-type"),
-        entityId: brandedIdQueryParam("stet_"),
-      })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("structure-entity"), entityId: brandedIdQueryParam("ste_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("journal-entry"), entityId: brandedIdQueryParam("je_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("wiki-page"), entityId: brandedIdQueryParam("wp_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("custom-front"), entityId: brandedIdQueryParam("cf_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("fronting-session"), entityId: brandedIdQueryParam("fs_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("board-message"), entityId: brandedIdQueryParam("bm_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("acknowledgement"), entityId: brandedIdQueryParam("ack_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("innerworld-entity"), entityId: brandedIdQueryParam("iwe_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("innerworld-region"), entityId: brandedIdQueryParam("iwr_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("field-definition"), entityId: brandedIdQueryParam("fld_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("field-value"), entityId: brandedIdQueryParam("fv_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("member-photo"), entityId: brandedIdQueryParam("mp_") })
-      .readonly(),
-    z
-      .object({ entityType: z.literal("fronting-comment"), entityId: brandedIdQueryParam("fcom_") })
-      .readonly(),
-  ])
+  .discriminatedUnion("entityType", TAGGED_ENTITY_REF_ARMS)
+  .readonly();
+
+/**
+ * Validates the (entityType, entityId) path parameters for untagging content.
+ * Uses the same per-arm prefix coupling as {@link TagContentBodySchema} so a
+ * member entityType paired with a `ch_` entityId is rejected at the boundary
+ * instead of slipping through to a no-op DELETE.
+ */
+export const UntagContentParamsSchema = z
+  .discriminatedUnion("entityType", TAGGED_ENTITY_REF_ARMS)
   .readonly();
 
 /**

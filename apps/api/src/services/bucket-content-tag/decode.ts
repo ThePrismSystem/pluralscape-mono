@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, isBucketContentEntityType } from "@pluralscape/types";
 
 import type {
   AcknowledgementId,
@@ -99,4 +99,27 @@ export function decodeBucketContentTagRow(row: {
       throw new Error(`Unhandled BucketContentEntityType: ${String(_exhaustive)}`);
     }
   }
+}
+
+/**
+ * Resilient variant of {@link decodeBucketContentTagRow}: returns `null`
+ * for rows whose `entityType` is not a known {@link BucketContentEntityType}.
+ *
+ * Use this on list paths where one corrupt row (e.g. a manually-edited DB
+ * record) must not 500 the whole response. Callers are responsible for
+ * logging or filtering the dropped rows; nothing is silently swallowed.
+ */
+export function decodeBucketContentTagRowSafe(row: {
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly bucketId: string;
+}): BucketContentTag | null {
+  if (!isBucketContentEntityType(row.entityType)) {
+    return null;
+  }
+  return decodeBucketContentTagRow({
+    entityType: row.entityType,
+    entityId: row.entityId,
+    bucketId: row.bucketId,
+  });
 }

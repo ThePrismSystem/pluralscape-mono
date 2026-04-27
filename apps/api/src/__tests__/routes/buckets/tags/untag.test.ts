@@ -67,8 +67,7 @@ describe("DELETE /systems/:id/buckets/:bucketId/tags/:entityType/:entityId", () 
       {},
       SYS_ID,
       BUCKET_ID,
-      "member",
-      ENTITY_ID,
+      { entityType: "member", entityId: ENTITY_ID },
       expect.any(Object),
       expect.any(Function),
     );

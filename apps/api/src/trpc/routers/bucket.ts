@@ -6,6 +6,7 @@ import {
   CreateBucketBodySchema,
   InitiateRotationBodySchema,
   TagContentBodySchema,
+  UntagContentParamsSchema,
   UpdateBucketBodySchema,
   brandedIdQueryParam,
 } from "@pluralscape/validation";
@@ -202,22 +203,14 @@ export const bucketRouter = router({
 
   untagContent: systemProcedure
     .use(writeLimiter)
-    .input(
-      BucketIdSchema.and(
-        z.object({
-          entityType: z.enum(BUCKET_CONTENT_ENTITY_TYPES),
-          entityId: z.string().min(1),
-        }),
-      ),
-    )
+    .input(BucketIdSchema.and(UntagContentParamsSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await untagContent(
         ctx.db,
         ctx.systemId,
         input.bucketId,
-        input.entityType,
-        input.entityId,
+        { entityType: input.entityType, entityId: input.entityId },
         ctx.auth,
         audit,
       );

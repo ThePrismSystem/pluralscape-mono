@@ -189,6 +189,7 @@ export {
   UpdateBucketBodySchema,
   BucketQuerySchema,
   TagContentBodySchema,
+  UntagContentParamsSchema,
   BucketContentTagQuerySchema,
   SetFieldBucketVisibilityBodySchema,
   PrivacyBucketEncryptedInputSchema,

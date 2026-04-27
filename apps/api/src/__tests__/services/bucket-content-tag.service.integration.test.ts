@@ -29,7 +29,7 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, BucketId, SystemId } from "@pluralscape/types";
+import type { AccountId, BucketId, MemberId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { buckets, bucketContentTags } = schema;
@@ -169,8 +169,10 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         bucketId,
-        "member",
-        "mem_990e8400-e29b-41d4-a716-446655440001",
+        {
+          entityType: "member",
+          entityId: brandId<MemberId>("mem_990e8400-e29b-41d4-a716-446655440001"),
+        },
         auth,
         audit,
       );
@@ -187,8 +189,10 @@ describe("bucket-content-tag.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           bucketId,
-          "member",
-          `mem_${crypto.randomUUID()}`,
+          {
+            entityType: "member",
+            entityId: brandId<MemberId>(`mem_${crypto.randomUUID()}`),
+          },
           auth,
           noopAudit,
         ),

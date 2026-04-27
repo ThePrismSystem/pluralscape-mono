@@ -486,10 +486,10 @@ describe("bucket router", () => {
       expect(vi.mocked(untagContent)).toHaveBeenCalledOnce();
       expect(vi.mocked(untagContent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(untagContent).mock.calls[0]?.[2]).toBe(BUCKET_ID);
-      expect(vi.mocked(untagContent).mock.calls[0]?.[3]).toBe("member");
-      expect(vi.mocked(untagContent).mock.calls[0]?.[4]).toBe(
-        "mem_aa0e8400-e29b-41d4-a716-446655440001",
-      );
+      expect(vi.mocked(untagContent).mock.calls[0]?.[3]).toEqual({
+        entityType: "member",
+        entityId: "mem_aa0e8400-e29b-41d4-a716-446655440001",
+      });
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
