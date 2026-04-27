@@ -6,9 +6,9 @@ import type { ApiKeyEncryptedPayload, Equal } from "@pluralscape/types";
 import type { z } from "zod/v4";
 
 describe("ApiKey Zod parity (Class C — ApiKeyEncryptedPayload)", () => {
-  it("z.infer<typeof ApiKeyEncryptedPayloadSchema> equals ApiKeyEncryptedPayload", () => {
+  it("z.output<typeof ApiKeyEncryptedPayloadSchema> equals ApiKeyEncryptedPayload (memory side)", () => {
     expectTypeOf<
-      Equal<z.infer<typeof ApiKeyEncryptedPayloadSchema>, ApiKeyEncryptedPayload>
+      Equal<z.output<typeof ApiKeyEncryptedPayloadSchema>, ApiKeyEncryptedPayload>
     >().toEqualTypeOf<true>();
   });
 });

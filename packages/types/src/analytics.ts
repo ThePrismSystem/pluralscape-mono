@@ -80,6 +80,20 @@ export interface FrontingReport {
   readonly generatedAt: UnixMillis;
 }
 
+/**
+ * Encrypted-input projection for `FrontingReport`. Class A (subset of
+ * `FrontingReport` keys). Travels inside the T1-encrypted `encryptedData`
+ * blob; server cannot read these fields.
+ *
+ * Parity gate: `FrontingReportEncryptedInputSchema` in
+ * `packages/validation/src/fronting-report.ts`.
+ */
+export interface FrontingReportEncryptedInput {
+  readonly dateRange: DateRange;
+  readonly memberBreakdowns: readonly MemberFrontingBreakdown[];
+  readonly chartData: readonly ChartData[];
+}
+
 /** A single data point in a chart dataset. */
 export interface ChartDataset {
   readonly label: string;

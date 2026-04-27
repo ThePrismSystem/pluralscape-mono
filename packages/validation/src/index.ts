@@ -130,6 +130,7 @@ export {
   UpdateFrontingCommentBodySchema,
   FrontingCommentQuerySchema,
 } from "./fronting-comment.js";
+export { FrontingReportEncryptedInputSchema } from "./fronting-report.js";
 export {
   booleanQueryParam,
   optionalBooleanQueryParam,
@@ -246,10 +247,16 @@ export {
   DEVICE_TOKEN_PLATFORM_VALUES,
   FRIEND_NOTIFICATION_EVENT_TYPE_VALUES,
   IMPORT_ENTITY_REF_BATCH_MAX,
+  PUBLIC_KEY_BYTE_LENGTH,
 } from "./validation.constants.js";
-export { CreateApiKeyBodySchema } from "./api-key.js";
+export { ApiKeyEncryptedPayloadSchema, CreateApiKeyBodySchema } from "./api-key.js";
+export { DeviceInfoSchema } from "./session.js";
 export { PurgeSystemBodySchema } from "./system-purge.js";
-export { CreateSnapshotBodySchema, DuplicateSystemBodySchema } from "./snapshot.js";
+export {
+  CreateSnapshotBodySchema,
+  DuplicateSystemBodySchema,
+  SnapshotContentSchema,
+} from "./snapshot.js";
 export {
   CreateImportJobBodySchema,
   UpdateImportJobBodySchema,
@@ -266,3 +273,4 @@ export type {
   ImportEntityRefLookupBatchBody,
   ImportEntityRefUpsertBatchBody,
 } from "./import-entity-ref.js";
+export { Base64ToUint8ArrayCodec } from "./encryption-primitives.js";

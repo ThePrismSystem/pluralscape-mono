@@ -12,9 +12,13 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { FrontingReportEncryptedFields } from "../fronting-report.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { FrontingReportId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  FrontingReportEncryptedInput,
+  FrontingReportId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -23,7 +27,7 @@ const SYSTEM_ID = brandId<SystemId>("sys_test");
 const NOW = 1700000000000 as UnixMillis;
 const START = 1699000000000 as UnixMillis;
 
-const ENCRYPTED_FIELDS: FrontingReportEncryptedFields = {
+const ENCRYPTED_FIELDS: FrontingReportEncryptedInput = {
   dateRange: { start: START, end: NOW },
   memberBreakdowns: [],
   chartData: [],
@@ -108,25 +112,30 @@ describe("encryptFrontingReportInput", () => {
   });
 });
 
-// ── Assertion guard tests ────────────────────────────────────────────
+// ── Validation tests ────────────────────────────────────────────────
 
-describe("assertFrontingReportEncryptedFields", () => {
+describe("decryptFrontingReport validation (Zod)", () => {
   it("throws when decrypted blob is not an object", () => {
     const raw = makeRawReport(makeBase64Blob("not-an-object", masterKey));
-    expect(() => decryptFrontingReport(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptFrontingReport(raw, masterKey)).toThrow();
   });
 
-  it("throws when blob is missing dateRange field", () => {
-    const raw = makeRawReport(makeBase64Blob({ memberBreakdowns: [] }, masterKey));
-    expect(() => decryptFrontingReport(raw, masterKey)).toThrow(
-      "missing required object field: dateRange",
-    );
+  it("throws when blob is missing dateRange", () => {
+    const raw = makeRawReport(makeBase64Blob({ memberBreakdowns: [], chartData: [] }, masterKey));
+    expect(() => decryptFrontingReport(raw, masterKey)).toThrow();
   });
 
   it("throws when dateRange is null", () => {
-    const raw = makeRawReport(makeBase64Blob({ dateRange: null }, masterKey));
-    expect(() => decryptFrontingReport(raw, masterKey)).toThrow(
-      "missing required object field: dateRange",
+    const raw = makeRawReport(
+      makeBase64Blob({ dateRange: null, memberBreakdowns: [], chartData: [] }, masterKey),
     );
+    expect(() => decryptFrontingReport(raw, masterKey)).toThrow();
+  });
+
+  it("throws when memberBreakdowns is missing", () => {
+    const raw = makeRawReport(
+      makeBase64Blob({ dateRange: { start: 1, end: 2 }, chartData: [] }, masterKey),
+    );
+    expect(() => decryptFrontingReport(raw, masterKey)).toThrow();
   });
 });

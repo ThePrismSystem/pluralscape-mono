@@ -93,23 +93,23 @@ describe("encryptSnapshotInput", () => {
   });
 });
 
-describe("assertSnapshotContent", () => {
+describe("decryptSnapshot validation (Zod)", () => {
   it("throws when blob is not an object", () => {
     const raw = makeRawSnapshot({ encryptedData: makeBase64Blob("string", masterKey) });
-    expect(() => decryptSnapshot(raw, masterKey)).toThrow("not an object");
+    expect(() => decryptSnapshot(raw, masterKey)).toThrow();
   });
 
   it("throws when members array is missing", () => {
     const raw = makeRawSnapshot({
       encryptedData: makeBase64Blob({ groups: [] }, masterKey),
     });
-    expect(() => decryptSnapshot(raw, masterKey)).toThrow("members");
+    expect(() => decryptSnapshot(raw, masterKey)).toThrow();
   });
 
   it("throws when groups array is missing", () => {
     const raw = makeRawSnapshot({
       encryptedData: makeBase64Blob({ members: [] }, masterKey),
     });
-    expect(() => decryptSnapshot(raw, masterKey)).toThrow("groups");
+    expect(() => decryptSnapshot(raw, masterKey)).toThrow();
   });
 });

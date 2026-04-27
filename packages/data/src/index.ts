@@ -87,7 +87,6 @@ export {
   decryptFrontingReportPage,
   encryptFrontingReportInput,
 } from "./transforms/fronting-report.js";
-export type { FrontingReportEncryptedFields } from "./transforms/fronting-report.js";
 
 export {
   decryptTimerConfig,
