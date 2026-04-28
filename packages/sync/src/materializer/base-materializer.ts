@@ -16,10 +16,38 @@ export interface DiffResult {
   readonly deletes: readonly string[];
 }
 
+/**
+ * Values bindable to a SQLite prepared statement. Mirrors the union accepted
+ * by `expo-sqlite`'s `SQLiteBindValue` and `bun:sqlite`'s parameter type so
+ * the materializer's interface narrows misuse (e.g., passing an object) into
+ * a TypeScript error rather than a native-bridge crash.
+ */
+export type MaterializerBindValue = string | number | boolean | null | Uint8Array;
+
 export interface MaterializerDb {
-  queryAll<T>(sql: string, params: unknown[]): T[];
-  execute(sql: string, params: unknown[]): void;
+  queryAll<T>(sql: string, params: MaterializerBindValue[]): T[];
+  execute(sql: string, params: MaterializerBindValue[]): void;
   transaction<T>(fn: () => T): T;
+}
+
+/**
+ * Narrow `unknown` (e.g. an EntityRow column value) to `MaterializerBindValue`.
+ * Throws on unsupported types so the caller fails fast at the materializer
+ * boundary instead of at the SQLite bridge.
+ */
+export function toBindValue(v: unknown): MaterializerBindValue {
+  if (
+    v === null ||
+    typeof v === "string" ||
+    typeof v === "number" ||
+    typeof v === "boolean" ||
+    v instanceof Uint8Array
+  ) {
+    return v;
+  }
+  throw new TypeError(
+    `materializer: unsupported bind value type ${v === undefined ? "undefined" : typeof v}`,
+  );
 }
 
 // ── diffEntities ──────────────────────────────────────────────────────
@@ -208,6 +236,6 @@ function upsertRow(
   const presentColumns = columnNames.filter((col) => col in row);
   const placeholders = presentColumns.map(() => "?").join(", ");
   const sql = `INSERT OR REPLACE INTO ${tableName} (${presentColumns.join(", ")}) VALUES (${placeholders})`;
-  const params = presentColumns.map((col) => row[col] ?? null);
+  const params = presentColumns.map((col) => toBindValue(row[col] ?? null));
   db.execute(sql, params);
 }

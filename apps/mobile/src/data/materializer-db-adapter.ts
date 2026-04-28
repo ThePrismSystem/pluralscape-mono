@@ -1,5 +1,4 @@
-import type { MaterializerDb } from "@pluralscape/sync/materializer";
-import type { SQLiteBindParams } from "expo-sqlite";
+import type { MaterializerBindValue, MaterializerDb } from "@pluralscape/sync/materializer";
 
 /**
  * Subset of expo-sqlite's `SQLiteExecuteSyncResult` we exercise. The
@@ -17,9 +16,13 @@ export interface ExecuteSyncResult<T> {
  * Methods are declared as arrow-function properties so consumers can pass
  * them around without binding gymnastics — keeps test mocks free of
  * unbound-method lint noise.
+ *
+ * `executeSync` accepts `MaterializerBindValue[]` (a structural subset of
+ * `SQLiteBindValue[]`), so passing the materializer's bound params straight
+ * through requires no cast at the call site.
  */
 export interface SqliteStatementHandle {
-  readonly executeSync: <T>(params: SQLiteBindParams) => ExecuteSyncResult<T>;
+  readonly executeSync: <T>(params: MaterializerBindValue[]) => ExecuteSyncResult<T>;
   readonly finalizeSync: () => void;
 }
 
@@ -39,32 +42,32 @@ export interface SqliteSyncDatabase {
 
 /**
  * Adapter wrapping `expo-sqlite`'s synchronous JSI APIs into the
- * `MaterializerDb` interface used by the materializer.
+ * `MaterializerDb` interface used by the materializer subscriber.
  *
  * The materializer issues dynamic INSERT OR REPLACE statements with positional
- * parameters; this adapter forwards them to `prepareSync` / `executeSync` and
- * runs `withTransactionSync` to batch a merge's writes into a single SQLite
- * transaction (per local-first consensus — synchronous in-transaction
- * materialization, no concurrent writers under WAL).
+ * parameters; this adapter forwards them to `prepareSync` / `executeSync`. It
+ * also exposes `transaction()` so the subscriber can wrap one full
+ * materialisation pass (all entity-type projections for one merge) inside a
+ * single BEGIN/COMMIT — keeping a merge atomic from a reader's perspective.
  *
  * Statement handles are finalised in `finally` to avoid native leaks if the
  * caller throws.
  */
 export function createMaterializerDbAdapter(db: SqliteSyncDatabase): MaterializerDb {
   return {
-    queryAll<T>(sql: string, params: unknown[]): T[] {
+    queryAll<T>(sql: string, params: MaterializerBindValue[]): T[] {
       const stmt = db.prepareSync(sql);
       try {
-        const result = stmt.executeSync<T>(params as SQLiteBindParams);
+        const result = stmt.executeSync<T>(params);
         return result.getAllSync();
       } finally {
         stmt.finalizeSync();
       }
     },
-    execute(sql: string, params: unknown[]): void {
+    execute(sql: string, params: MaterializerBindValue[]): void {
       const stmt = db.prepareSync(sql);
       try {
-        stmt.executeSync(params as SQLiteBindParams);
+        stmt.executeSync(params);
       } finally {
         stmt.finalizeSync();
       }
