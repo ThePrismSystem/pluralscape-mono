@@ -99,7 +99,7 @@ const STUB_LOCAL_PLATFORM: PlatformContext = {
     storageBackend: "sqlite",
   },
   storage: {
-    backend: "sqlite",
+    backend: "sqlite-async",
     driver: {} as SqliteDriver,
   },
   crypto: STUB_SODIUM,

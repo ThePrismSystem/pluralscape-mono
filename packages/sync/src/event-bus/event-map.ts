@@ -1,6 +1,7 @@
 import type { SyncDocumentType } from "../document-types.js";
 import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 // ── Transport events ────────────────────────────────────────────────
 
@@ -28,14 +29,22 @@ export interface WsNotificationEvent {
 
 export interface SyncChangesMergedEvent {
   readonly type: "sync:changes-merged";
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   readonly documentType: SyncDocumentType;
+  /**
+   * Entity types whose CRDT shape changed during this merge. Consumed by the
+   * materializer subscriber to scope row projection to changed entities only
+   * — full-document materialisation scales with the total entity count, so a
+   * narrowed set keeps merge-time write amplification proportional to the
+   * actual delta.
+   */
+  readonly dirtyEntityTypes: ReadonlySet<SyncedEntityType>;
   readonly conflicts: readonly ConflictNotification[];
 }
 
 export interface SyncSnapshotAppliedEvent {
   readonly type: "sync:snapshot-applied";
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   readonly documentType: SyncDocumentType;
 }
 

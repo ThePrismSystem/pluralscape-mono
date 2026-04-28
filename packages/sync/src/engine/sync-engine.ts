@@ -459,6 +459,7 @@ export class SyncEngine {
         type: "sync:changes-merged",
         documentId: docId,
         documentType,
+        dirtyEntityTypes: dirty,
         conflicts: postMergeResult.notifications,
       });
     }
@@ -578,6 +579,7 @@ export class SyncEngine {
           type: "sync:changes-merged",
           documentId: docId,
           documentType: docType,
+          dirtyEntityTypes: dirty,
           conflicts: postMergeResult.notifications,
         });
 

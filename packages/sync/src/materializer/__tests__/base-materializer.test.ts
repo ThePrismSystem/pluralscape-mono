@@ -235,7 +235,9 @@ describe("applyDiff", () => {
       { inserts: [insert], updates: [], deletes: [] },
       eventBus,
     );
-    expect(db.transactionCalled).toBe(true);
+    // applyDiff itself does not open a transaction — the caller (subscriber)
+    // wraps the whole merge so multi-entity-type merges land atomically.
+    expect(db.transactionCalled).toBe(false);
     expect(db.calls).toHaveLength(1);
     expect(db.calls[0]?.sql).toContain("INSERT OR REPLACE INTO");
     expect(db.calls[0]?.sql).toContain("members");
@@ -273,7 +275,7 @@ describe("applyDiff", () => {
     expect(db.calls[0]?.params).toEqual(["m_1"]);
   });
 
-  it("wraps all writes in a transaction", () => {
+  it("issues writes without opening its own transaction (caller owns transaction context)", () => {
     const db = makeDb();
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
@@ -288,7 +290,9 @@ describe("applyDiff", () => {
       },
       eventBus,
     );
-    expect(db.transactionCalled).toBe(true);
+    expect(db.transactionCalled).toBe(false);
+    // Both writes were issued anyway.
+    expect(db.calls).toHaveLength(2);
   });
 
   it("does not emit entity events for cold-path entities", () => {

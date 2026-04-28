@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useRef } from "react";
 
 import { usePlatform } from "../platform/PlatformProvider.js";
+import { isSqliteBackend } from "../platform/types.js";
 
 import { createLocalDatabase } from "./local-database.js";
 import { createQueryInvalidator } from "./query-invalidator.js";
@@ -33,7 +34,7 @@ export function DataLayerProvider({
   eventBusRef.current ??= createEventBus<DataLayerEventMap>();
 
   const localDbRef = useRef<LocalDatabase | null>(null);
-  if (localDbRef.current === null && platform.storage.backend === "sqlite") {
+  if (localDbRef.current === null && isSqliteBackend(platform.storage)) {
     const db = createLocalDatabase(platform.storage.driver);
     // Fire-and-forget: initialize() runs CREATE TABLE DDL asynchronously.
     // Failures surface via the event bus as `data:error` for UI to observe.

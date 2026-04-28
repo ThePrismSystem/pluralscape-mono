@@ -1,4 +1,5 @@
 import { createBucketKeyCache } from "@pluralscape/crypto";
+import { createMaterializerSubscriber } from "@pluralscape/data";
 import { DocumentKeyResolver, SyncEngine } from "@pluralscape/sync";
 import { SqliteStorageAdapter } from "@pluralscape/sync/adapters";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,14 +10,17 @@ import { useConnection } from "../connection/index.js";
 import { createWsManager } from "../connection/ws-manager.js";
 import { useDataLayer } from "../data/DataLayerProvider.js";
 import { usePlatform } from "../platform/index.js";
+import { isSqliteBackend } from "../platform/types.js";
 
 import { SyncCtx } from "./sync-context.js";
 
 import type { SyncContextValue } from "./sync-context.js";
 import type { WsManager } from "../connection/ws-manager.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
+import type { MaterializerSubscriberHandle } from "@pluralscape/data";
 import type { DataLayerEventMap, EventBus, ReplicationProfile } from "@pluralscape/sync";
 import type { SqliteDriver } from "@pluralscape/sync/adapters";
+import type { MaterializerDb } from "@pluralscape/sync/materializer";
 import type { SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
@@ -34,6 +38,11 @@ interface EngineReadyConfig {
   readonly masterKey: KdfMasterKey;
   readonly signingKeys: SignKeypair;
   readonly sqliteDriver: SqliteDriver;
+  /**
+   * Synchronous materializer DB handle. `null` on backends that only expose
+   * async APIs (web/OPFS); the subscriber is skipped in that case.
+   */
+  readonly materializerDb: MaterializerDb | null;
 }
 
 const Ctx = SyncCtx;
@@ -46,7 +55,9 @@ const Ctx = SyncCtx;
  * 2. Platform storage backend is "sqlite" (full device)
  *
  * Constructs: SqliteStorageAdapter, DocumentKeyResolver (with BucketKeyCache),
- * WsManager (WebSocket network adapter), and SyncEngine.
+ * WsManager (WebSocket network adapter), SyncEngine, and (when the platform
+ * exposes a synchronous DB handle) the materializer subscriber that projects
+ * merged CRDT state into local SQLite cache tables.
  *
  * Bootstraps sync when the SSE connection reports "connected", then exposes
  * engine and bootstrap state via context. Retries up to MAX_BOOTSTRAP_ATTEMPTS
@@ -90,7 +101,9 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
   const masterKey = auth.snapshot.state === "unlocked" ? auth.snapshot.session.masterKey : null;
   const signingKeys =
     auth.snapshot.state === "unlocked" ? auth.snapshot.session.identityKeys.sign : null;
-  const sqliteDriver = platform.storage.backend === "sqlite" ? platform.storage.driver : null;
+  const sqliteDriver = isSqliteBackend(platform.storage) ? platform.storage.driver : null;
+  const materializerDb =
+    platform.storage.backend === "sqlite-sync" ? platform.storage.materializerDb : null;
 
   // Memoize engine creation config — excludes isConnected to avoid tearing
   // down and re-creating the engine on every connection status change.
@@ -114,10 +127,22 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       masterKey,
       signingKeys,
       sqliteDriver,
+      materializerDb,
     };
-    // storageBackend intentionally excluded: sqliteDriver is null on non-sqlite
-    // platforms, so the null check above already gates on backend type.
-  }, [isUnlocked, systemId, sodium, eventBus, sessionToken, masterKey, signingKeys, sqliteDriver]);
+    // storageBackend isn't a dep: `sqliteDriver` is null on non-sqlite platforms
+    // and `materializerDb` is null on async-only sqlite, so the null checks
+    // above already gate on backend variant.
+  }, [
+    isUnlocked,
+    systemId,
+    sodium,
+    eventBus,
+    sessionToken,
+    masterKey,
+    signingKeys,
+    sqliteDriver,
+    materializerDb,
+  ]);
 
   // Engine lifecycle effect — creates or tears down the sync pipeline.
   // Uses a ref-based cleanup strategy so state updates in the effect body
@@ -161,16 +186,17 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       keyResolver?: DocumentKeyResolver;
       wsManager?: WsManager;
       engine?: SyncEngine;
+      materializerSubscriber?: MaterializerSubscriberHandle;
     } = {};
 
     const disposePartial = (): void => {
+      // Tear down in reverse construction order. Subscriber first so it
+      // stops consuming events the engine is about to stop emitting.
+      pipeline.materializerSubscriber?.dispose();
       pipeline.engine?.dispose();
       pipeline.keyResolver?.dispose();
       pipeline.wsManager?.disconnect();
       pipeline.bucketKeyCache?.clearAll();
-      bucketKeyCacheRef.current = null;
-      keyResolverRef.current = null;
-      wsManagerRef.current = null;
     };
 
     void (async () => {
@@ -207,7 +233,6 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
 
         const profile: ReplicationProfile = { profileType: "owner-full" };
 
-        const bus = engineConfig.eventBus;
         pipeline.engine = new SyncEngine({
           networkAdapter,
           storageAdapter,
@@ -216,14 +241,26 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
           profile,
           systemId: engineConfig.systemId,
           onError: (message, error) => {
-            bus.emit("sync:error", { type: "sync:error", message, error });
+            engineConfig.eventBus.emit("sync:error", { type: "sync:error", message, error });
           },
-          eventBus: bus,
+          eventBus: engineConfig.eventBus,
         });
         if (isCancelled()) {
           disposePartial();
           return;
         }
+
+        // Wire the materializer subscriber once the engine exists, so merged
+        // CRDT state lands in the local SQLite cache. Skipped when the
+        // platform doesn't expose a synchronous DB handle (web/OPFS).
+        if (engineConfig.materializerDb !== null) {
+          pipeline.materializerSubscriber = createMaterializerSubscriber({
+            engine: pipeline.engine,
+            materializerDb: engineConfig.materializerDb,
+            eventBus: engineConfig.eventBus,
+          });
+        }
+
         setEngine(pipeline.engine);
 
         cleanup = () => {
@@ -238,6 +275,11 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
           error,
         });
         disposePartial();
+        // Mirror the success-path cleanup: leaving stale engine state in React
+        // would cause the bootstrap effect to retry against a torn-down
+        // pipeline once the connection comes up.
+        setEngine(null);
+        setIsBootstrapped(false);
       }
     })();
 

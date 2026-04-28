@@ -16,10 +16,38 @@ export interface DiffResult {
   readonly deletes: readonly string[];
 }
 
+/**
+ * Values bindable to a SQLite prepared statement. Mirrors the union accepted
+ * by `expo-sqlite`'s `SQLiteBindValue` and `bun:sqlite`'s parameter type so
+ * the materializer's interface narrows misuse (e.g., passing an object) into
+ * a TypeScript error rather than a native-bridge crash.
+ */
+export type MaterializerBindValue = string | number | boolean | null | Uint8Array;
+
 export interface MaterializerDb {
-  queryAll<T>(sql: string, params: unknown[]): T[];
-  execute(sql: string, params: unknown[]): void;
+  queryAll<T>(sql: string, params: MaterializerBindValue[]): T[];
+  execute(sql: string, params: MaterializerBindValue[]): void;
   transaction<T>(fn: () => T): T;
+}
+
+/**
+ * Narrow `unknown` (e.g. an EntityRow column value) to `MaterializerBindValue`.
+ * Throws on unsupported types so the caller fails fast at the materializer
+ * boundary instead of at the SQLite bridge.
+ */
+export function toBindValue(v: unknown): MaterializerBindValue {
+  if (
+    v === null ||
+    typeof v === "string" ||
+    typeof v === "number" ||
+    typeof v === "boolean" ||
+    v instanceof Uint8Array
+  ) {
+    return v;
+  }
+  throw new TypeError(
+    `materializer: unsupported bind value type ${v === undefined ? "undefined" : typeof v}`,
+  );
 }
 
 // ── diffEntities ──────────────────────────────────────────────────────
@@ -148,10 +176,15 @@ function emitEntityEvents(
  * - Skips if the diff is empty.
  * - Uses `INSERT OR REPLACE INTO` for inserts and updates.
  * - Uses `DELETE FROM … WHERE id = ?` for deletes.
- * - Wraps all writes in a single transaction.
  * - Emits `materialized:entity` events for each change when the entity
  *   type is hot-path (per `ENTITY_METADATA[entityType].hotPath`).
  *   Document-level events are NOT emitted here — the caller is responsible for that.
+ *
+ * Transaction boundary: this function does NOT open its own transaction. The
+ * caller (typically the materializer subscriber) wraps an entire merge's
+ * worth of `applyDiff` calls in one BEGIN/COMMIT so a multi-entity-type merge
+ * is atomic from a reader's perspective. Opening one here would conflict with
+ * the outer transaction (expo-sqlite's `withTransactionSync` is not nestable).
  */
 export function applyDiff(
   db: MaterializerDb,
@@ -167,17 +200,15 @@ export function applyDiff(
 
   const { tableName, columnNames } = meta;
 
-  db.transaction(() => {
-    for (const row of diff.inserts) {
-      upsertRow(db, tableName, columnNames, row);
-    }
-    for (const row of diff.updates) {
-      upsertRow(db, tableName, columnNames, row);
-    }
-    for (const id of diff.deletes) {
-      db.execute(`DELETE FROM ${tableName} WHERE id = ?`, [id]);
-    }
-  });
+  for (const row of diff.inserts) {
+    upsertRow(db, tableName, columnNames, row);
+  }
+  for (const row of diff.updates) {
+    upsertRow(db, tableName, columnNames, row);
+  }
+  for (const id of diff.deletes) {
+    db.execute(`DELETE FROM ${tableName} WHERE id = ?`, [id]);
+  }
 
   if (ENTITY_METADATA[entityType].hotPath) {
     emitEntityEvents(
@@ -208,6 +239,6 @@ function upsertRow(
   const presentColumns = columnNames.filter((col) => col in row);
   const placeholders = presentColumns.map(() => "?").join(", ");
   const sql = `INSERT OR REPLACE INTO ${tableName} (${presentColumns.join(", ")}) VALUES (${placeholders})`;
-  const params = presentColumns.map((col) => row[col] ?? null);
+  const params = presentColumns.map((col) => toBindValue(row[col] ?? null));
   db.execute(sql, params);
 }

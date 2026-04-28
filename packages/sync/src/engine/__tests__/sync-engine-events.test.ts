@@ -421,6 +421,7 @@ describe("SyncEngine event bus integration", () => {
           documentId: SYSTEM_CORE_DOC_ID,
           documentType: "system-core",
           conflicts: expect.any(Array) as unknown[],
+          dirtyEntityTypes: expect.any(Set) as unknown,
         }),
       );
 

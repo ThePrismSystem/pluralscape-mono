@@ -59,7 +59,10 @@ async function detectWeb(): Promise<PlatformContext> {
           hasNativeMemzero: false,
           storageBackend: "sqlite",
         },
-        storage: { backend: "sqlite", driver },
+        // OPFS exposes only async APIs (worker-backed) — no sync materializer
+        // adapter is wired here. The subscriber is a no-op on web until a sync
+        // path lands (e.g., wa-sqlite synchronous mode).
+        storage: { backend: "sqlite-async", driver },
         crypto,
       };
     } catch (err: unknown) {
@@ -93,7 +96,7 @@ async function detectNative(): Promise<PlatformContext> {
   await crypto.init();
 
   const { createExpoSqliteDriver } = await import("./drivers/expo-sqlite-driver.js");
-  const driver = await createExpoSqliteDriver();
+  const { driver, materializerDb } = await createExpoSqliteDriver();
 
   return {
     capabilities: {
@@ -103,7 +106,7 @@ async function detectNative(): Promise<PlatformContext> {
       hasNativeMemzero: nativeMemzero !== undefined,
       storageBackend: "sqlite",
     },
-    storage: { backend: "sqlite", driver },
+    storage: { backend: "sqlite-sync", driver, materializerDb },
     crypto,
   };
 }

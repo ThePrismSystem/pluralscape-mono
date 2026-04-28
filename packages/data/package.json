@@ -46,6 +46,7 @@
   "dependencies": {
     "@pluralscape/api-client": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@pluralscape/validation": "workspace:*",
     "@tanstack/react-query": "catalog:"

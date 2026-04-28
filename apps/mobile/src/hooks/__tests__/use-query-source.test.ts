@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mock } from "vitest-mock-extended";
 
 vi.mock("../../platform/PlatformProvider.js", () => ({
   usePlatform: vi.fn(),
@@ -23,6 +24,9 @@ import { useLocalDb, useQuerySource } from "../use-query-source.js";
 import type { DataLayerContextValue } from "../../data/DataLayerProvider.js";
 import type { PlatformContext } from "../../platform/types.js";
 import type { SyncContextValue } from "../../sync/sync-context.js";
+import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SqliteDriver } from "@pluralscape/sync/adapters";
+import type { MaterializerDb } from "@pluralscape/sync/materializer";
 
 const mockUsePlatform = vi.mocked(usePlatform);
 const mockUseSync = vi.mocked(useSync);
@@ -38,8 +42,12 @@ function makePlatform(backend: "sqlite" | "indexeddb"): PlatformContext {
         hasNativeMemzero: false,
         storageBackend: "sqlite",
       },
-      storage: { backend: "sqlite", driver: {} as never },
-      crypto: {} as never,
+      storage: {
+        backend: "sqlite-sync",
+        driver: mock<SqliteDriver>(),
+        materializerDb: mock<MaterializerDb>(),
+      },
+      crypto: mock<SodiumAdapter>(),
     };
   }
   return {

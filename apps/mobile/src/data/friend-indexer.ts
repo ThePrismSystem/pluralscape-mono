@@ -3,10 +3,11 @@ import {
   FRIEND_EXPORTABLE_ENTITY_TYPES,
   entityToRow,
   getTableMetadataForEntityType,
+  toBindValue,
 } from "@pluralscape/sync/materializer";
 
 import type { DataLayerEventMap, EventBus, SyncedEntityType } from "@pluralscape/sync";
-import type { MaterializerDb } from "@pluralscape/sync/materializer";
+import type { MaterializerBindValue, MaterializerDb } from "@pluralscape/sync/materializer";
 
 // ── Public types ──────────────────────────────────────────────────────
 
@@ -75,9 +76,9 @@ async function indexFriend(connectionId: string, config: FriendIndexerConfig): P
       const presentColumns = ["connection_id", ...columnNames.filter((col) => col in row)];
       const placeholders = presentColumns.map(() => "?").join(", ");
       const sql = `INSERT OR REPLACE INTO ${friendTableName} (${presentColumns.join(", ")}) VALUES (${placeholders})`;
-      const params: unknown[] = [
+      const params: MaterializerBindValue[] = [
         connectionId,
-        ...columnNames.filter((col) => col in row).map((col) => row[col] ?? null),
+        ...columnNames.filter((col) => col in row).map((col) => toBindValue(row[col] ?? null)),
       ];
 
       db.execute(sql, params);

@@ -7,9 +7,11 @@ export {
   diffEntities,
   applyDiff,
   entityToRow,
+  toBindValue,
   toSnakeCase,
   type EntityRow,
   type DiffResult,
+  type MaterializerBindValue,
   type MaterializerDb,
 } from "./base-materializer.js";
 

@@ -40,7 +40,7 @@ vi.mock("../../platform/PlatformProvider.js", () => ({
       hasNativeMemzero: false,
       storageBackend: "sqlite" as const,
     },
-    storage: { backend: "sqlite" as const, driver: mockDriver },
+    storage: { backend: "sqlite-async" as const, driver: mockDriver },
     crypto: {},
   }),
 }));
