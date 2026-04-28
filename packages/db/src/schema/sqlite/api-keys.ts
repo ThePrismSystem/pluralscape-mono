@@ -1,44 +1,34 @@
 import { sql } from "drizzle-orm";
 import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import {
-  brandedId,
-  sqliteBinary,
-  sqliteEncryptedBlob,
-  sqliteJson,
-  sqliteTimestamp,
-} from "../../columns/sqlite.js";
+import { brandedId, sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import { encryptedPayload, entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 import { API_KEY_KEY_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
-import { systems } from "./systems.js";
 
-import type {
-  AccountId,
-  ApiKey,
-  ApiKeyId,
-  ApiKeyScope,
-  BucketId,
-  SystemId,
-} from "@pluralscape/types";
+import type { AccountId, ApiKey, ApiKeyId, ApiKeyScope, BucketId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/** Account-system ownership (ensuring the account owns the system) is enforced at the app layer. */
+/**
+ * Account-system ownership (ensuring the account owns the system) is enforced
+ * at the app layer.
+ *
+ * Carve-out: bespoke createdAt/lastUsedAt/revokedAt/expiresAt instead of the
+ * standard `timestamps()` mixin; no audit columns.
+ */
 export const apiKeys = sqliteTable(
   "api_keys",
   {
-    id: brandedId<ApiKeyId>("id").primaryKey(),
+    ...entityIdentity<ApiKeyId>(),
     accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     keyType: text("key_type").notNull().$type<ApiKey["keyType"]>(),
     tokenHash: text("token_hash").notNull(),
     scopes: sqliteJson("scopes").notNull().$type<readonly ApiKeyScope[]>(),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     encryptedKeyMaterial: sqliteBinary("encrypted_key_material"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     lastUsedAt: sqliteTimestamp("last_used_at"),
