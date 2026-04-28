@@ -6,6 +6,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { SEARCH_DEBOUNCE_MS, SEARCH_RESULTS_LIMIT } from "./search.constants.js";
+
 import type { LocalDatabase } from "../data/local-database.js";
 import type { SyncedEntityType } from "@pluralscape/sync";
 import type { UseQueryResult } from "@tanstack/react-query";
@@ -20,14 +22,6 @@ export interface SearchResult {
   readonly rank: number;
   readonly data: Record<string, unknown>;
 }
-
-// ── Constants ─────────────────────────────────────────────────────────
-
-/** Debounce delay for search input (ms). */
-const SEARCH_DEBOUNCE_MS = 300;
-
-/** Maximum results per entity type per FTS5 query. */
-const SEARCH_RESULTS_LIMIT = 20;
 
 // ── Searchable entity lists ───────────────────────────────────────────
 
