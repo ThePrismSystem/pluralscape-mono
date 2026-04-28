@@ -20,7 +20,8 @@ import type {
   SignSecretKey,
 } from "@pluralscape/crypto";
 import type { ReplicationProfile } from "@pluralscape/sync";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { MaterializerDb } from "@pluralscape/sync/materializer";
+import type { AccountId, SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
 // ── Branded type helpers (assertion-based, no double-cast) ──────────
@@ -105,7 +106,23 @@ let mockAuthState: AuthContextValue["snapshot"] = {
 
 let mockConnectionStatus: ConnectionContextValue["status"] = "disconnected";
 
-function makeSqliteDriver(): PlatformStorage & { backend: "sqlite" } {
+function makeMockMaterializerDb(): MaterializerDb {
+  // Note: `transaction` is generic, so we use a regular method declaration
+  // (preserves generic signature) rather than `vi.fn` (loses generic).
+  return {
+    queryAll: vi.fn(() => []),
+    execute: vi.fn(),
+    transaction<T>(fn: () => T): T {
+      return fn();
+    },
+  };
+}
+
+function makeSqliteDriver(
+  opts: {
+    materializerDb?: MaterializerDb | null;
+  } = {},
+): PlatformStorage & { backend: "sqlite" } {
   return {
     backend: "sqlite" as const,
     driver: {
@@ -120,7 +137,7 @@ function makeSqliteDriver(): PlatformStorage & { backend: "sqlite" } {
       },
       close: vi.fn(() => Promise.resolve()),
     },
-    materializerDb: null,
+    materializerDb: opts.materializerDb ?? null,
   };
 }
 
@@ -159,12 +176,23 @@ const mockSodium: PlatformContext["crypto"] = {
 
 const mockBootstrap = vi.fn(() => Promise.resolve());
 const mockDispose = vi.fn();
+const mockGetDocumentSnapshot = vi.fn<(id: string) => unknown>(() => null);
 
 // Use a function declaration so it can be called with `new`
 const MockSyncEngine = vi.fn(function MockSyncEngineImpl(this: Record<string, unknown>) {
   this.bootstrap = mockBootstrap;
   this.dispose = mockDispose;
+  this.getDocumentSnapshot = mockGetDocumentSnapshot;
 });
+
+// ── Mock materializer registry ──────────────────────────────────────
+
+const mockMaterialize = vi.fn();
+const mockGetMaterializer = vi.fn<
+  (docType: string) => { materialize: typeof mockMaterialize } | null
+>(() => ({
+  materialize: mockMaterialize,
+}));
 
 // ── Mock DocumentKeyResolver ────────────────────────────────────────
 
@@ -302,6 +330,14 @@ vi.mock("@pluralscape/sync/adapters", async (importOriginal) => {
   return {
     ...actual,
     SqliteStorageAdapter: MockSqliteStorageAdapter,
+  };
+});
+
+vi.mock("@pluralscape/sync/materializer", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/sync/materializer")>();
+  return {
+    ...actual,
+    getMaterializer: mockGetMaterializer,
   };
 });
 
@@ -712,6 +748,126 @@ describe("SyncProvider", () => {
       expect(emitted[0]?.error).toBe(initError);
       expect(MockSyncEngine).not.toHaveBeenCalled();
       expect(result.current.engine).toBeNull();
+    });
+  });
+
+  describe("materializer subscriber wiring", () => {
+    it("invokes the materializer when sync:changes-merged fires after engine creation", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      const materializerDb = makeMockMaterializerDb();
+      mockPlatformStorage = makeSqliteDriver({ materializerDb });
+
+      // Snapshot returned for the document under test
+      const docSnapshot = { members: { mem_1: { id: "mem_1", name: "Test" } } };
+      mockGetDocumentSnapshot.mockReturnValue(docSnapshot);
+
+      renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+      // Wait for the engine (and subscriber) to be wired
+      await waitFor(() => {
+        expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+      });
+
+      // Emit sync:changes-merged on the same eventBus the provider passes to
+      // the engine — the subscriber listens here.
+      const docId = brandId<SyncDocumentId>("system-core_sys_test123");
+      mockEventBus.emit("sync:changes-merged", {
+        type: "sync:changes-merged",
+        documentId: docId,
+        documentType: "system-core",
+        dirtyEntityTypes: new Set(["member"]),
+        conflicts: [],
+      });
+
+      expect(mockGetDocumentSnapshot).toHaveBeenCalledWith(docId);
+      expect(mockGetMaterializer).toHaveBeenCalledWith("system-core");
+      expect(mockMaterialize).toHaveBeenCalledTimes(1);
+      expect(mockMaterialize).toHaveBeenCalledWith(
+        docSnapshot,
+        materializerDb,
+        mockEventBus,
+        new Set(["member"]),
+      );
+    });
+
+    it("invokes the materializer with no dirty filter on sync:snapshot-applied", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      const materializerDb = makeMockMaterializerDb();
+      mockPlatformStorage = makeSqliteDriver({ materializerDb });
+      const docSnapshot = { members: {} };
+      mockGetDocumentSnapshot.mockReturnValue(docSnapshot);
+
+      renderHook(() => useSync(), { wrapper: makeWrapper() });
+      await waitFor(() => {
+        expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+      });
+
+      const docId = brandId<SyncDocumentId>("system-core_sys_test123");
+      mockEventBus.emit("sync:snapshot-applied", {
+        type: "sync:snapshot-applied",
+        documentId: docId,
+        documentType: "system-core",
+      });
+
+      expect(mockMaterialize).toHaveBeenCalledTimes(1);
+      expect(mockMaterialize).toHaveBeenCalledWith(
+        docSnapshot,
+        materializerDb,
+        mockEventBus,
+        undefined,
+      );
+    });
+
+    it("does not wire a subscriber when materializerDb is null", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      mockPlatformStorage = makeSqliteDriver({ materializerDb: null });
+      mockGetDocumentSnapshot.mockReturnValue({ members: {} });
+
+      renderHook(() => useSync(), { wrapper: makeWrapper() });
+      await waitFor(() => {
+        expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+      });
+
+      mockEventBus.emit("sync:changes-merged", {
+        type: "sync:changes-merged",
+        documentId: brandId<SyncDocumentId>("system-core_sys_test123"),
+        documentType: "system-core",
+        dirtyEntityTypes: new Set(["member"]),
+        conflicts: [],
+      });
+
+      expect(mockMaterialize).not.toHaveBeenCalled();
+    });
+
+    it("disposes the subscriber on unmount so later events are ignored", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
+      mockGetDocumentSnapshot.mockReturnValue({ members: {} });
+
+      const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+      await waitFor(() => {
+        expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+      });
+
+      unmount();
+
+      mockEventBus.emit("sync:changes-merged", {
+        type: "sync:changes-merged",
+        documentId: brandId<SyncDocumentId>("system-core_sys_test123"),
+        documentType: "system-core",
+        dirtyEntityTypes: new Set(["member"]),
+        conflicts: [],
+      });
+
+      expect(mockMaterialize).not.toHaveBeenCalled();
     });
   });
 });
