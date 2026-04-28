@@ -1,9 +1,11 @@
 import {
-  assertObjectBlob,
-  assertStringField,
-  decodeAndDecryptT2,
-  extractT2BucketId,
-} from "./decode-blob.js";
+  FriendDashboardCustomFrontBlobSchema,
+  FriendDashboardFrontingSessionBlobSchema,
+  FriendDashboardMemberBlobSchema,
+  FriendDashboardStructureEntityBlobSchema,
+} from "@pluralscape/validation";
+
+import { decodeAndDecryptT2, extractT2BucketId } from "./decode-blob.js";
 
 import type { AeadKey } from "@pluralscape/crypto";
 import type {
@@ -84,30 +86,6 @@ export interface DecryptedFriendDashboard {
   readonly visibleStructureEntities: readonly DecryptedDashboardStructureEntity[];
 }
 
-// ── Validators ────────────────────────────────────────────────────
-
-function assertMemberBlob(raw: unknown): Record<string, unknown> {
-  const obj = assertObjectBlob(raw, "dashboard member");
-  assertStringField(obj, "dashboard member", "name");
-  return obj;
-}
-
-function assertFrontingSessionBlob(raw: unknown): Record<string, unknown> {
-  return assertObjectBlob(raw, "dashboard fronting session");
-}
-
-function assertCustomFrontBlob(raw: unknown): Record<string, unknown> {
-  const obj = assertObjectBlob(raw, "dashboard custom front");
-  assertStringField(obj, "dashboard custom front", "name");
-  return obj;
-}
-
-function assertStructureEntityBlob(raw: unknown): Record<string, unknown> {
-  const obj = assertObjectBlob(raw, "dashboard structure entity");
-  assertStringField(obj, "dashboard structure entity", "name");
-  return obj;
-}
-
 // ── Per-entity decrypt functions ──────────────────────────────────
 
 /** Decrypt a single friend dashboard member T2 blob. */
@@ -116,14 +94,14 @@ export function decryptDashboardMember(
   bucketKey: AeadKey,
 ): DecryptedDashboardMember {
   const plaintext = decodeAndDecryptT2(raw.encryptedData, bucketKey);
-  const obj = assertMemberBlob(plaintext);
+  const parsed = FriendDashboardMemberBlobSchema.parse(plaintext);
 
   return {
     id: raw.id,
-    name: obj["name"] as string,
-    pronouns: (obj["pronouns"] as readonly string[] | undefined) ?? [],
-    description: (obj["description"] as string | null) ?? null,
-    colors: (obj["colors"] as readonly (HexColor | null)[] | undefined) ?? [],
+    name: parsed.name,
+    pronouns: parsed.pronouns ?? [],
+    description: parsed.description ?? null,
+    colors: (parsed.colors as readonly (HexColor | null)[] | undefined) ?? [],
   };
 }
 
@@ -133,7 +111,7 @@ export function decryptDashboardFrontingSession(
   bucketKey: AeadKey,
 ): DecryptedDashboardFrontingSession {
   const plaintext = decodeAndDecryptT2(raw.encryptedData, bucketKey);
-  const obj = assertFrontingSessionBlob(plaintext);
+  const parsed = FriendDashboardFrontingSessionBlobSchema.parse(plaintext);
 
   return {
     id: raw.id,
@@ -141,10 +119,11 @@ export function decryptDashboardFrontingSession(
     customFrontId: raw.customFrontId,
     structureEntityId: raw.structureEntityId,
     startTime: raw.startTime,
-    comment: (obj["comment"] as string | null) ?? null,
-    positionality: (obj["positionality"] as string | null) ?? null,
-    outtrigger: (obj["outtrigger"] as string | null) ?? null,
-    outtriggerSentiment: (obj["outtriggerSentiment"] as OuttriggerSentiment | null) ?? null,
+    comment: parsed.comment ?? null,
+    positionality: parsed.positionality ?? null,
+    outtrigger: parsed.outtrigger ?? null,
+    outtriggerSentiment:
+      (parsed.outtriggerSentiment as OuttriggerSentiment | null | undefined) ?? null,
   };
 }
 
@@ -154,14 +133,14 @@ export function decryptDashboardCustomFront(
   bucketKey: AeadKey,
 ): DecryptedDashboardCustomFront {
   const plaintext = decodeAndDecryptT2(raw.encryptedData, bucketKey);
-  const obj = assertCustomFrontBlob(plaintext);
+  const parsed = FriendDashboardCustomFrontBlobSchema.parse(plaintext);
 
   return {
     id: raw.id,
-    name: obj["name"] as string,
-    description: (obj["description"] as string | null) ?? null,
-    color: (obj["color"] as HexColor | null) ?? null,
-    emoji: (obj["emoji"] as string | null) ?? null,
+    name: parsed.name,
+    description: parsed.description ?? null,
+    color: (parsed.color as HexColor | null | undefined) ?? null,
+    emoji: parsed.emoji ?? null,
   };
 }
 
@@ -171,15 +150,15 @@ export function decryptDashboardStructureEntity(
   bucketKey: AeadKey,
 ): DecryptedDashboardStructureEntity {
   const plaintext = decodeAndDecryptT2(raw.encryptedData, bucketKey);
-  const obj = assertStructureEntityBlob(plaintext);
+  const parsed = FriendDashboardStructureEntityBlobSchema.parse(plaintext);
 
   return {
     id: raw.id,
-    name: obj["name"] as string,
-    description: (obj["description"] as string | null) ?? null,
-    emoji: (obj["emoji"] as string | null) ?? null,
-    color: (obj["color"] as HexColor | null) ?? null,
-    imageSource: (obj["imageSource"] as ImageSource | null) ?? null,
+    name: parsed.name,
+    description: parsed.description ?? null,
+    emoji: parsed.emoji ?? null,
+    color: (parsed.color as HexColor | null | undefined) ?? null,
+    imageSource: parsed.imageSource ?? null,
   };
 }
 

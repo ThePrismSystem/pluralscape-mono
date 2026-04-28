@@ -154,7 +154,7 @@ describe("decryptDashboardMember", () => {
       id: brandId<MemberId>("mem_bad"),
       encryptedData: encryptAndEncodeT2("not-an-object", bucketKey, BUCKET_ID),
     };
-    expect(() => decryptDashboardMember(raw, bucketKey)).toThrow("not an object");
+    expect(() => decryptDashboardMember(raw, bucketKey)).toThrow(/expected object/i);
   });
 
   it("throws on missing name field", () => {
@@ -162,7 +162,15 @@ describe("decryptDashboardMember", () => {
       id: brandId<MemberId>("mem_bad"),
       encryptedData: encryptAndEncodeT2({ pronouns: [] }, bucketKey, BUCKET_ID),
     };
-    expect(() => decryptDashboardMember(raw, bucketKey)).toThrow("missing required string field");
+    expect(() => decryptDashboardMember(raw, bucketKey)).toThrow(/expected string/i);
+  });
+
+  it("throws on missing name field for custom front", () => {
+    const raw = {
+      id: brandId<CustomFrontId>("cf_bad"),
+      encryptedData: encryptAndEncodeT2({ description: "x" }, bucketKey, BUCKET_ID),
+    };
+    expect(() => decryptDashboardCustomFront(raw, bucketKey)).toThrow(/expected string/i);
   });
 });
 

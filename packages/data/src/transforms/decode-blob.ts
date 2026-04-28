@@ -75,28 +75,6 @@ export function encryptAndEncodeT2(
   return uint8ArrayToBase64(bytes);
 }
 
-/**
- * Validate that a decrypted blob is a non-null object.
- * Returns the object cast to Record for field inspection.
- */
-export function assertObjectBlob(raw: unknown, entity: string): Record<string, unknown> {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error(`Decrypted ${entity} blob is not an object`);
-  }
-  return raw as Record<string, unknown>;
-}
-
-/** Validate that a field exists and is a string. */
-export function assertStringField(
-  obj: Record<string, unknown>,
-  entity: string,
-  field: string,
-): void {
-  if (typeof obj[field] !== "string") {
-    throw new Error(`Decrypted ${entity} blob missing required string field: ${field}`);
-  }
-}
-
 export function base64ToUint8Array(base64: string): Uint8Array {
   return new Uint8Array(Buffer.from(base64, "base64"));
 }
