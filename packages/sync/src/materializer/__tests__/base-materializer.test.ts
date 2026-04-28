@@ -9,7 +9,7 @@ import {
   type MaterializerDb,
 } from "../base-materializer.js";
 
-import type { EntityTableDef } from "../entity-registry.js";
+import type { MaterializerTableMetadata } from "../drizzle-bridge.js";
 
 // ── diffEntities ──────────────────────────────────────────────────────
 
@@ -195,25 +195,16 @@ function makeDb(): FakeDb {
   return db;
 }
 
-const TABLE_DEF_COLD: EntityTableDef = {
-  tableName: "members",
-  columns: [
-    { name: "id", sqlType: "TEXT", primaryKey: true, notNull: true },
-    { name: "name", sqlType: "TEXT", notNull: true },
-  ],
-  ftsColumns: [],
-  hotPath: false,
-};
+function makeMeta(tableName: string, columnNames: readonly string[]): MaterializerTableMetadata {
+  return {
+    tableName,
+    columnNames,
+    drizzleTable: {} as MaterializerTableMetadata["drizzleTable"],
+  };
+}
 
-const TABLE_DEF_HOT: EntityTableDef = {
-  tableName: "fronting_sessions",
-  columns: [
-    { name: "id", sqlType: "TEXT", primaryKey: true, notNull: true },
-    { name: "member_id", sqlType: "TEXT", notNull: true },
-  ],
-  ftsColumns: [],
-  hotPath: true,
-};
+const META_COLD = makeMeta("members", ["id", "name"]);
+const META_HOT = makeMeta("fronting_sessions", ["id", "member_id"]);
 
 describe("applyDiff", () => {
   it("skips when diff is empty", () => {
@@ -221,11 +212,12 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_COLD,
+      META_COLD,
       "member",
       "system-core",
       { inserts: [], updates: [], deletes: [] },
       eventBus,
+      false,
     );
     expect(db.calls).toHaveLength(0);
     expect(db.transactionCalled).toBe(false);
@@ -238,11 +230,12 @@ describe("applyDiff", () => {
     const insert: EntityRow = { id: "m_1", name: "Alice" };
     applyDiff(
       db,
-      TABLE_DEF_COLD,
+      META_COLD,
       "member",
       "system-core",
       { inserts: [insert], updates: [], deletes: [] },
       eventBus,
+      false,
     );
     expect(db.transactionCalled).toBe(true);
     expect(db.calls).toHaveLength(1);
@@ -256,11 +249,12 @@ describe("applyDiff", () => {
     const update: EntityRow = { id: "m_1", name: "Alicia" };
     applyDiff(
       db,
-      TABLE_DEF_COLD,
+      META_COLD,
       "member",
       "system-core",
       { inserts: [], updates: [update], deletes: [] },
       eventBus,
+      false,
     );
     expect(db.calls).toHaveLength(1);
     expect(db.calls[0]?.sql).toContain("INSERT OR REPLACE INTO");
@@ -271,11 +265,12 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_COLD,
+      META_COLD,
       "member",
       "system-core",
       { inserts: [], updates: [], deletes: ["m_1"] },
       eventBus,
+      false,
     );
     expect(db.calls).toHaveLength(1);
     expect(db.calls[0]?.sql).toContain("DELETE FROM members WHERE id = ?");
@@ -287,7 +282,7 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_COLD,
+      META_COLD,
       "member",
       "system-core",
       {
@@ -296,6 +291,7 @@ describe("applyDiff", () => {
         deletes: ["m_old"],
       },
       eventBus,
+      false,
     );
     expect(db.transactionCalled).toBe(true);
   });
@@ -305,7 +301,7 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_COLD,
+      META_COLD,
       "member",
       "system-core",
       {
@@ -314,6 +310,7 @@ describe("applyDiff", () => {
         deletes: ["m_3"],
       },
       eventBus,
+      false,
     );
     expect(eventBus.emit).not.toHaveBeenCalled();
   });
@@ -323,11 +320,12 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_HOT,
+      META_HOT,
       "fronting-session",
       "fronting",
       { inserts: [{ id: "fs_1", member_id: "m_1" }], updates: [], deletes: [] },
       eventBus,
+      true,
     );
     expect(eventBus.emit).toHaveBeenCalledWith("materialized:entity", {
       type: "materialized:entity",
@@ -343,11 +341,12 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_HOT,
+      META_HOT,
       "fronting-session",
       "fronting",
       { inserts: [], updates: [{ id: "fs_1", member_id: "m_1" }], deletes: [] },
       eventBus,
+      true,
     );
     expect(eventBus.emit).toHaveBeenCalledWith("materialized:entity", {
       type: "materialized:entity",
@@ -363,11 +362,12 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_HOT,
+      META_HOT,
       "fronting-session",
       "fronting",
       { inserts: [], updates: [], deletes: ["fs_1"] },
       eventBus,
+      true,
     );
     expect(eventBus.emit).toHaveBeenCalledWith("materialized:entity", {
       type: "materialized:entity",
@@ -383,11 +383,12 @@ describe("applyDiff", () => {
     const eventBus = { emit: vi.fn(), on: vi.fn(), removeAll: vi.fn() };
     applyDiff(
       db,
-      TABLE_DEF_HOT,
+      META_HOT,
       "fronting-session",
       "fronting",
       { inserts: [{ id: "fs_1", member_id: "m_1" }], updates: [], deletes: [] },
       eventBus,
+      true,
     );
     const documentEmits = (eventBus.emit as ReturnType<typeof vi.fn>).mock.calls.filter(
       ([type]) => type === "materialized:document",

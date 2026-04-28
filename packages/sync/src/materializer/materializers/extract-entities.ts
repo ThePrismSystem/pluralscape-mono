@@ -4,7 +4,7 @@ import {
   type SyncedEntityType,
 } from "../../strategies/crdt-strategies.js";
 import { entityToRow, type EntityRow } from "../base-materializer.js";
-import { getTableDef } from "../entity-registry.js";
+import { getTableMetadataForEntityType } from "../drizzle-bridge.js";
 
 /**
  * Extract entity rows from an Automerge document for a given entity type.
@@ -25,10 +25,9 @@ export function extractEntities(
   const raw = doc[strategy.fieldName];
   if (raw === undefined || raw === null) return [];
 
-  const tableDef = getTableDef(entityType);
-  const columnNames = tableDef.columns.map((c) => c.name);
+  const meta = getTableMetadataForEntityType(entityType);
 
-  return extractByStorageType(strategy.storageType, entityType, raw, columnNames);
+  return extractByStorageType(strategy.storageType, entityType, raw, meta.columnNames);
 }
 
 function extractByStorageType(
