@@ -8,10 +8,32 @@ import type { LifecycleEvent, LifecycleEventId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /**
+ * Distributes `Omit<T, K>` over a discriminated union so each variant
+ * independently drops its own subset of `K`. Naïve `Omit` would only
+ * strip keys present on every variant, collapsing variant-specific
+ * residuals to the common shape.
+ */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+/**
+ * Variant-specific residual of a `LifecycleEvent` after the columns
+ * carried as dedicated cache fields are stripped. The CRDT writes the
+ * full event; the materializer projects `id`/`systemId`/`eventType`/
+ * `occurredAt`/`recordedAt`/`notes`/`archived` into typed columns and
+ * stores the per-variant fields (e.g., `sourceMemberId`, `memberIds`,
+ * `entity`, `previousForm`) in this typed JSON payload.
+ */
+type LifecycleEventPayload = DistributiveOmit<
+  LifecycleEvent,
+  "id" | "systemId" | "eventType" | "occurredAt" | "recordedAt" | "notes" | "archived"
+>;
+
+/**
  * Decrypted client-cache projection of `LifecycleEvent` (discriminated
- * union). The variant-specific fields ride as a JSON `payload` column
- * — the entire decrypted record is stored verbatim. Carve-out: no
- * `timestamps()` mixin (uses bespoke `occurredAt` / `recordedAt`).
+ * union). Carve-out: no `timestamps()` mixin — uses bespoke
+ * `occurredAt` / `recordedAt`. Cache asymmetry: the CRDT carries each
+ * variant in full, but the cache splits structural fields into typed
+ * columns and keeps only the variant-specific siblings in `payload`.
  */
 export const lifecycleEvents = sqliteTable("lifecycle_events", {
   ...entityIdentity<LifecycleEventId>(),
@@ -19,12 +41,7 @@ export const lifecycleEvents = sqliteTable("lifecycle_events", {
   occurredAt: sqliteTimestamp("occurred_at").notNull(),
   recordedAt: sqliteTimestamp("recorded_at").notNull(),
   notes: text("notes"),
-  /**
-   * Variant-specific fields (e.g., sourceMemberId, resultMemberIds for
-   * split events). Stored as JSON because the union is wide and the
-   * fields differ per `eventType`.
-   */
-  payload: sqliteJsonOf<LifecycleEvent>("payload").notNull(),
+  payload: sqliteJsonOf<LifecycleEventPayload>("payload").notNull(),
   ...archivable(),
 });
 
