@@ -17,3 +17,14 @@ export {
   type NewLocalGroup,
   type NewLocalGroupMembership,
 } from "./groups.js";
+export {
+  customFronts,
+  frontingComments,
+  frontingSessions,
+  type LocalCustomFrontRow,
+  type LocalFrontingCommentRow,
+  type LocalFrontingSessionRow,
+  type NewLocalCustomFront,
+  type NewLocalFrontingComment,
+  type NewLocalFrontingSession,
+} from "./fronting.js";

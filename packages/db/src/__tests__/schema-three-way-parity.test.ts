@@ -21,7 +21,16 @@ import * as cache from "../schema/sqlite-client-cache/index.js";
 
 import { assertStructuralColumnsEquivalent } from "./helpers/three-way-parity.js";
 
-import type { Group, GroupMembership, Member, MemberPhoto, System } from "@pluralscape/types";
+import type {
+  CustomFront,
+  FrontingComment,
+  FrontingSession,
+  Group,
+  GroupMembership,
+  Member,
+  MemberPhoto,
+  System,
+} from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
 const SERVER_ONLY_COLUMNS = ["encryptedData", "version"] as const;
@@ -129,5 +138,68 @@ describe("three-way schema parity — group_memberships", () => {
     type _Check = AssertSubset<VariantKeys, keyof GroupMembership>;
     const sentinel: _Check = "groupId";
     expect(sentinel).toBe("groupId");
+  });
+});
+
+describe("three-way schema parity — custom_fronts", () => {
+  test("server PG ↔ cache structural columns equivalent", () => {
+    assertStructuralColumnsEquivalent(
+      getTableColumns(pgSchema.customFronts),
+      getTableColumns(cache.customFronts),
+      { skip: [...SERVER_ONLY_COLUMNS] },
+    );
+  });
+
+  test("server SQLite ↔ cache structural columns equivalent", () => {
+    assertStructuralColumnsEquivalent(
+      getTableColumns(sqliteSchema.customFronts),
+      getTableColumns(cache.customFronts),
+      { skip: [...SERVER_ONLY_COLUMNS] },
+    );
+  });
+
+  test("cache columns ↔ CustomFront domain fields", () => {
+    type ColKeys = StringKeys<InferSelectModel<typeof cache.customFronts>>;
+    type VariantKeys = Exclude<ColKeys, EntityStructuralKey>;
+    type _Check = AssertSubset<VariantKeys, keyof CustomFront>;
+    const sentinel: _Check = "name";
+    expect(sentinel).toBe("name");
+  });
+});
+
+describe("three-way schema parity — fronting_sessions", () => {
+  test("cache columns ↔ FrontingSession domain fields", () => {
+    type ColKeys = StringKeys<InferSelectModel<typeof cache.frontingSessions>>;
+    type VariantKeys = Exclude<ColKeys, EntityStructuralKey>;
+    type _Check = AssertSubset<VariantKeys, keyof FrontingSession>;
+    const sentinel: _Check = "startTime";
+    expect(sentinel).toBe("startTime");
+  });
+});
+
+describe("three-way schema parity — fronting_comments", () => {
+  test("server PG ↔ cache structural columns equivalent", () => {
+    assertStructuralColumnsEquivalent(
+      getTableColumns(pgSchema.frontingComments),
+      getTableColumns(cache.frontingComments),
+      // sessionStartTime is a PG-only denormalised column for partitioning.
+      { skip: [...SERVER_ONLY_COLUMNS, "sessionStartTime"] },
+    );
+  });
+
+  test("server SQLite ↔ cache structural columns equivalent", () => {
+    assertStructuralColumnsEquivalent(
+      getTableColumns(sqliteSchema.frontingComments),
+      getTableColumns(cache.frontingComments),
+      { skip: [...SERVER_ONLY_COLUMNS] },
+    );
+  });
+
+  test("cache columns ↔ FrontingComment domain fields", () => {
+    type ColKeys = StringKeys<InferSelectModel<typeof cache.frontingComments>>;
+    type VariantKeys = Exclude<ColKeys, EntityStructuralKey>;
+    type _Check = AssertSubset<VariantKeys, keyof FrontingComment>;
+    const sentinel: _Check = "content";
+    expect(sentinel).toBe("content");
   });
 });
