@@ -9,9 +9,10 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { brandedId, pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { brandedId, pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { encryptedPayload } from "../../helpers/entity-shape.pg.js";
 import { API_KEY_KEY_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -28,7 +29,11 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/** Composite FK (systemId, accountId) → systems(id, accountId) enforces tenant ownership at DB layer. */
+/**
+ * Composite FK (systemId, accountId) → systems(id, accountId) enforces tenant
+ * ownership at DB layer. entityIdentity does not fit because the systemId here
+ * has no column-level FK — the composite table-level FK replaces it.
+ */
 export const apiKeys = pgTable(
   "api_keys",
   {
@@ -40,7 +45,7 @@ export const apiKeys = pgTable(
     keyType: varchar("key_type", { length: ENUM_MAX_LENGTH }).notNull().$type<ApiKey["keyType"]>(),
     tokenHash: varchar("token_hash", { length: 255 }).notNull(),
     scopes: jsonb("scopes").notNull().$type<readonly ApiKeyScope[]>(),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     encryptedKeyMaterial: pgBinary("encrypted_key_material").$type<T3EncryptedBytes>(),
     createdAt: pgTimestamp("created_at").notNull(),
     lastUsedAt: pgTimestamp("last_used_at"),

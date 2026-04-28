@@ -17,15 +17,14 @@ import {
   archivableConsistencyCheckFor,
   timestamps,
   versioned,
-  versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { entityIdentity, serverEntityChecks } from "../../helpers/entity-shape.pg.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
 import { friendConnections } from "./privacy.js";
-import { systems } from "./systems.js";
 
 import type {
   AccountId,
@@ -36,20 +35,17 @@ import type {
   FriendNotificationPreferenceId,
   NotificationConfigId,
   NotificationEventType,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: device_tokens has no encrypted payload and bespoke timestamps.
 export const deviceTokens = pgTable(
   "device_tokens",
   {
-    id: brandedId<DeviceTokenId>("id").primaryKey(),
+    ...entityIdentity<DeviceTokenId>(),
     accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     platform: varchar("platform", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<DeviceTokenPlatform>(),
@@ -67,13 +63,12 @@ export const deviceTokens = pgTable(
   ],
 );
 
+// Carve-out: this table has no encrypted payload (the configuration is plain
+// settings, not user content).
 export const notificationConfigs = pgTable(
   "notification_configs",
   {
-    id: brandedId<NotificationConfigId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<NotificationConfigId>(),
     eventType: varchar("event_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<NotificationEventType>(),
@@ -91,11 +86,11 @@ export const notificationConfigs = pgTable(
       "notification_configs_event_type_check",
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
     ),
-    archivableConsistencyCheckFor("notification_configs", t.archived, t.archivedAt),
-    versionCheckFor("notification_configs", t.version),
+    ...serverEntityChecks("notification_configs", t),
   ],
 );
 
+// Account-scoped (not system-scoped); entityIdentity does not fit.
 export const friendNotificationPreferences = pgTable(
   "friend_notification_preferences",
   {
