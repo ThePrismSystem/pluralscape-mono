@@ -1,32 +1,29 @@
 import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.sqlite.js";
+import { sqliteTimestamp } from "../../columns/sqlite.js";
+import { archivable, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.sqlite.js";
 import { LIFECYCLE_EVENT_TYPES } from "../../helpers/enums.js";
 
-import { systems } from "./systems.js";
-
-import type { LifecycleEvent, LifecycleEventId, SystemId } from "@pluralscape/types";
+import type { LifecycleEvent, LifecycleEventId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: this table tracks bespoke timestamps (occurredAt, recordedAt,
+// updatedAt) instead of the standard `timestamps()` mixin.
 export const lifecycleEvents = sqliteTable(
   "lifecycle_events",
   {
-    id: brandedId<LifecycleEventId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<LifecycleEventId>(),
     eventType: text("event_type").notNull().$type<LifecycleEvent["eventType"]>(),
     occurredAt: sqliteTimestamp("occurred_at").notNull(),
     recordedAt: sqliteTimestamp("recorded_at").notNull(),
     updatedAt: sqliteTimestamp("updated_at").notNull(),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     plaintextMetadata: text("plaintext_metadata", { mode: "json" }).$type<
       Record<string, unknown>
     >(),
@@ -38,8 +35,7 @@ export const lifecycleEvents = sqliteTable(
     index("lifecycle_events_system_recorded_idx").on(t.systemId, t.recordedAt),
     index("lifecycle_events_system_archived_idx").on(t.systemId, t.archived),
     check("lifecycle_events_event_type_check", enumCheck(t.eventType, LIFECYCLE_EVENT_TYPES)),
-    versionCheckFor("lifecycle_events", t.version),
-    archivableConsistencyCheckFor("lifecycle_events", t.archived, t.archivedAt),
+    ...serverEntityChecks("lifecycle_events", t),
   ],
 );
 

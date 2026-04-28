@@ -10,23 +10,16 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { brandedId, sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.sqlite.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import { entityIdentity, serverEntityChecks } from "../../helpers/entity-shape.sqlite.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { apiKeys } from "./api-keys.js";
-import { systems } from "./systems.js";
 
 import type {
   ApiKeyId,
   ServerSecret,
-  SystemId,
   WebhookDeliveryId,
   WebhookDeliveryStatus,
   WebhookEventType,
@@ -34,13 +27,13 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out for encryptedPayload: the T3 server-readable HMAC `secret` lives
+// in this table instead of an encrypted blob, because the server must read it
+// to sign outbound webhook payloads at delivery time.
 export const webhookConfigs = sqliteTable(
   "webhook_configs",
   {
-    id: brandedId<WebhookId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<WebhookId>(),
     url: text("url").notNull(),
     /** T3 (server-readable): raw HMAC signing key the server uses to sign outbound webhook payloads. Intentionally not E2E encrypted — server must read it to produce signatures at delivery time. */
     secret: sqliteBinary("secret").notNull().$type<ServerSecret>(),
@@ -56,19 +49,18 @@ export const webhookConfigs = sqliteTable(
   (t) => [
     index("webhook_configs_system_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("webhook_configs", t.version),
-    archivableConsistencyCheckFor("webhook_configs", t.archived, t.archivedAt),
+    ...serverEntityChecks("webhook_configs", t),
   ],
 );
 
+// Carve-out: deliveries have no audit columns and `encrypted_data` is a raw
+// sqliteBinary (not an EncryptedBlob), so encryptedPayload doesn't apply.
+// entityIdentity still does.
 export const webhookDeliveries = sqliteTable(
   "webhook_deliveries",
   {
-    id: brandedId<WebhookDeliveryId>("id").primaryKey(),
+    ...entityIdentity<WebhookDeliveryId>(),
     webhookId: brandedId<WebhookId>("webhook_id").notNull(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     eventType: text("event_type").notNull().$type<WebhookEventType>(),
     status: text("status").notNull().default("pending").$type<WebhookDeliveryStatus>(),
     httpStatus: integer("http_status"),
