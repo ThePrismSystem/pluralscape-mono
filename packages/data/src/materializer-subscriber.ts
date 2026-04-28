@@ -57,11 +57,11 @@ export function createMaterializerSubscriber(
   }
 
   const offMerged = eventBus.on("sync:changes-merged", (event) => {
-    materialise(event.documentId as SyncDocumentId, event.documentType, event.dirtyEntityTypes);
+    materialise(event.documentId, event.documentType, event.dirtyEntityTypes);
   });
 
   const offSnapshot = eventBus.on("sync:snapshot-applied", (event) => {
-    materialise(event.documentId as SyncDocumentId, event.documentType, undefined);
+    materialise(event.documentId, event.documentType, undefined);
   });
 
   return {
