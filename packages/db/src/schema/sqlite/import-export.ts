@@ -4,6 +4,7 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 import { brandedId, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { MAX_ERROR_LOG_ENTRIES } from "../../helpers/db.constants.js";
+import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 import {
   ACCOUNT_PURGE_STATUSES,
   EXPORT_FORMATS,
@@ -28,20 +29,18 @@ import type {
   ImportJobId,
   ImportJobStatus,
   ImportSourceFormat,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: bespoke createdAt/updatedAt/completedAt timestamps and no
+// encrypted payload (operational job tracking).
 export const importJobs = sqliteTable(
   "import_jobs",
   {
-    id: brandedId<ImportJobId>("id").primaryKey(),
+    ...entityIdentity<ImportJobId>(),
     accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     source: text("source").notNull().$type<ImportSourceFormat>(),
     status: text("status").notNull().default("pending").$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
@@ -79,6 +78,9 @@ export const importJobs = sqliteTable(
 /**
  * Source-entity to target-entity mapping recorded during an import.
  * Mirrors the PG schema. T3 operational metadata.
+ *
+ * Carve-out: ids are plain text (sourced from external systems), so
+ * entityIdentity (branded) does not fit.
  */
 export const importEntityRefs = sqliteTable(
   "import_entity_refs",
@@ -140,6 +142,7 @@ export const exportRequests = sqliteTable(
   ],
 );
 
+// Account-scoped (no systemId) — entityIdentity does not fit.
 // App-level enforcement needed: only one active purge request per account at a time.
 export const accountPurgeRequests = sqliteTable(
   "account_purge_requests",

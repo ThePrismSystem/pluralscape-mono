@@ -3,10 +3,10 @@ import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-cor
 
 import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
-import { systems } from "./systems.js";
 
 import type {
   BucketId,
@@ -15,20 +15,18 @@ import type {
   EntityType,
   RotationItemStatus,
   RotationState,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: rotation tracking tables have no encrypted payload and no audit
+// columns; lifecycle tracked via state/initiatedAt/completedAt fields.
 export const bucketKeyRotations = sqliteTable(
   "bucket_key_rotations",
   {
-    id: brandedId<BucketKeyRotationId>("id").primaryKey(),
+    ...entityIdentity<BucketKeyRotationId>(),
     bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     fromKeyVersion: integer("from_key_version").notNull(),
     toKeyVersion: integer("to_key_version").notNull(),
     state: text("state").notNull().default("initiated").$type<RotationState>(),
@@ -53,13 +51,10 @@ export const bucketKeyRotations = sqliteTable(
 export const bucketRotationItems = sqliteTable(
   "bucket_rotation_items",
   {
-    id: brandedId<BucketRotationItemId>("id").primaryKey(),
+    ...entityIdentity<BucketRotationItemId>(),
     rotationId: brandedId<BucketKeyRotationId>("rotation_id")
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "restrict" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     entityType: text("entity_type").notNull().$type<EntityType>(),
     // Polymorphic — domain `BucketRotationItem.entityId` is a plain string.
     entityId: text("entity_id").notNull(),

@@ -1,20 +1,23 @@
 import { sqliteTable } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { brandedId } from "../../columns/sqlite.js";
+import { timestamps, versionCheckFor, versioned } from "../../helpers/audit.sqlite.js";
+import { encryptedPayload } from "../../helpers/entity-shape.sqlite.js";
 
 import { systems } from "./systems.js";
 
 import type { SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Singleton per system — systemId is the primary key. entityIdentity does not
+// fit (no separate id column).
 export const nomenclatureSettings = sqliteTable(
   "nomenclature_settings",
   {
     systemId: brandedId<SystemId>("system_id")
       .primaryKey()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
   },
