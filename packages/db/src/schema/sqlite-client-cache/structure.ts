@@ -20,9 +20,6 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `SystemStructureEntityType`.
- */
 export const systemStructureEntityTypes = sqliteTable("structure_entity_types", {
   ...entityIdentity<SystemStructureEntityTypeId>(),
   name: text("name").notNull(),
@@ -35,9 +32,6 @@ export const systemStructureEntityTypes = sqliteTable("structure_entity_types", 
   ...archivable(),
 });
 
-/**
- * Decrypted client-cache projection of `SystemStructureEntity`.
- */
 export const systemStructureEntities = sqliteTable(
   "structure_entities",
   {
@@ -89,10 +83,6 @@ export const relationships = sqliteTable(
   ],
 );
 
-/**
- * Plaintext entity — no encrypted payload. Mirrors
- * `SystemStructureEntityLink` exactly.
- */
 export const systemStructureEntityLinks = sqliteTable(
   "structure_entity_links",
   {
@@ -114,10 +104,6 @@ export const systemStructureEntityLinks = sqliteTable(
   ],
 );
 
-/**
- * Plaintext entity — no encrypted payload. Mirrors
- * `SystemStructureEntityMemberLink` exactly.
- */
 export const systemStructureEntityMemberLinks = sqliteTable(
   "structure_entity_member_links",
   {
@@ -139,10 +125,6 @@ export const systemStructureEntityMemberLinks = sqliteTable(
   ],
 );
 
-/**
- * Plaintext entity — no encrypted payload. Mirrors
- * `SystemStructureEntityAssociation` exactly.
- */
 export const systemStructureEntityAssociations = sqliteTable(
   "structure_entity_associations",
   {

@@ -15,10 +15,6 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `Member`. Mirrors the `Member` domain
- * type from `@pluralscape/types` per the encoding rules in ADR-038.
- */
 export const members = sqliteTable("members", {
   ...entityIdentity<MemberId>(),
   name: text("name").notNull(),

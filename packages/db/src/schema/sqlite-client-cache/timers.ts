@@ -9,9 +9,6 @@ import { members } from "./members.js";
 import type { CheckInRecordId, MemberId, TimerId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `TimerConfig`.
- */
 export const timerConfigs = sqliteTable("timers", {
   ...entityIdentity<TimerId>(),
   intervalMinutes: integer("interval_minutes"),

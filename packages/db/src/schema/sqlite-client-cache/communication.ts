@@ -24,10 +24,6 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `Channel`. Mirrors the `Channel`
- * domain type from `@pluralscape/types`.
- */
 export const channels = sqliteTable("channels", {
   ...entityIdentity<ChannelId>(),
   name: text("name").notNull(),
@@ -66,10 +62,6 @@ export const messages = sqliteTable(
   ],
 );
 
-/**
- * Decrypted client-cache projection of `BoardMessage`. Mirrors the domain
- * type.
- */
 export const boardMessages = sqliteTable("board_messages", {
   ...entityIdentity<BoardMessageId>(),
   senderId: brandedId<MemberId>("sender_id").notNull(),
@@ -96,9 +88,6 @@ export const notes = sqliteTable("notes", {
   ...archivable(),
 });
 
-/**
- * Decrypted client-cache projection of `Poll`. Mirrors the domain type.
- */
 export const polls = sqliteTable("polls", {
   ...entityIdentity<PollId>(),
   createdByMemberId: brandedId<MemberId>("created_by_member_id"),
@@ -153,10 +142,6 @@ export const pollVotes = sqliteTable("poll_votes", {
   ...archivable(),
 });
 
-/**
- * Decrypted client-cache projection of `AcknowledgementRequest`. Mirrors
- * the domain type.
- */
 export const acknowledgements = sqliteTable("acknowledgements", {
   ...entityIdentity<AcknowledgementId>(),
   createdByMemberId: brandedId<MemberId>("created_by_member_id"),

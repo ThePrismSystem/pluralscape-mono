@@ -15,10 +15,6 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `CustomFront`. Mirrors the
- * `CustomFront` domain type from `@pluralscape/types`.
- */
 export const customFronts = sqliteTable("custom_fronts", {
   ...entityIdentity<CustomFrontId>(),
   name: text("name").notNull(),
@@ -58,10 +54,6 @@ export const frontingSessions = sqliteTable(
   ],
 );
 
-/**
- * Decrypted client-cache projection of `FrontingComment`. Mirrors the
- * `FrontingComment` domain type.
- */
 export const frontingComments = sqliteTable("fronting_comments", {
   ...entityIdentity<FrontingCommentId>(),
   frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id").notNull(),

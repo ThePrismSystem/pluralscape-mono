@@ -7,10 +7,6 @@ import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 import type { GroupId, HexColor, ImageSource, MemberId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `Group`. Mirrors the `Group` domain
- * type from `@pluralscape/types` per the encoding rules in ADR-038.
- */
 export const groups = sqliteTable("groups", {
   ...entityIdentity<GroupId>(),
   name: text("name").notNull(),

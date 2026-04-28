@@ -15,9 +15,6 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `InnerWorldRegion`.
- */
 export const innerworldRegions = sqliteTable(
   "innerworld_regions",
   {

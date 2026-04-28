@@ -20,9 +20,6 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `FieldDefinition`.
- */
 export const fieldDefinitions = sqliteTable("field_definitions", {
   ...entityIdentity<FieldDefinitionId>(),
   name: text("name").notNull(),

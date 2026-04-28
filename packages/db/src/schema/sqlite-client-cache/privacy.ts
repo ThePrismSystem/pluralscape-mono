@@ -17,9 +17,6 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/**
- * Decrypted client-cache projection of `PrivacyBucket`.
- */
 export const buckets = sqliteTable("buckets", {
   ...entityIdentity<BucketId>(),
   name: text("name").notNull(),
