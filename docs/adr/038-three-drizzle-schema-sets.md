@@ -31,10 +31,9 @@ All three schema sets are Drizzle schemas. They are differentiated by their encr
 
 - `entityIdentity<TIdBrand>()` — branded id PK + systemId FK to systems
 - `encryptedPayload()` — encryptedData blob column (server-only)
-- `commonEntityIndexes(name, t)` — `<name>_system_id_archived_idx`, `<name>_created_at_idx`, `<name>_id_system_id_unique`
 - `serverEntityChecks(name, t)` — version + archivable consistency checks (server-only)
 
-Both server schema sets (PG + SQLite) consume these mixins. The client cache schemas use `entityIdentity()` and `commonEntityIndexes()` plus per-entity decrypted columns.
+Both server schema sets (PG + SQLite) consume these mixins. The client cache schemas use `entityIdentity()` plus per-entity decrypted columns; cache tables intentionally declare zero indexes today (callers reach a cache row by id or via FTS5, both of which are already indexed by the materializer's DDL emitter).
 
 ### Encoding rules (domain field → cache column)
 
@@ -55,7 +54,7 @@ Both server schema sets (PG + SQLite) consume these mixins. The client cache sch
 
 ### Three-way parity gate
 
-`packages/db/src/__tests__/schema-type-parity.test.ts` asserts, for every materialized entity:
+`packages/db/src/__tests__/schema-three-way-parity.test.ts` asserts, covering every `SyncedEntityType`:
 
 1. `pg.X.columns ≡ sqlite.X.columns` (existing — server-side parity)
 2. Server-side structural columns ≡ cache-side structural columns (id, systemId, timestamps, archivable). Variant columns (encryptedData, version on server; decrypted fields on cache) are skipped via an explicit `skip` list.
