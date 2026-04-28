@@ -6,7 +6,6 @@ import {
   type EntityRow,
 } from "../base-materializer.js";
 import { getTableMetadataForEntityType } from "../drizzle-bridge.js";
-import { ENTITY_METADATA } from "../entity-metadata.js";
 
 import { extractEntities } from "./extract-entities.js";
 
@@ -55,15 +54,7 @@ export function materializeDocument(
     const meta = getTableMetadataForEntityType(entityType);
     const current = db.queryAll<EntityRow>(`SELECT * FROM ${meta.tableName}`, []);
     const diff = diffEntities(current, incoming);
-    applyDiff(
-      db,
-      meta,
-      entityType,
-      documentType,
-      diff,
-      eventBus,
-      ENTITY_METADATA[entityType].hotPath,
-    );
+    applyDiff(db, meta, entityType, documentType, diff, eventBus);
   }
 
   eventBus.emit("materialized:document", {

@@ -217,7 +217,6 @@ describe("applyDiff", () => {
       "system-core",
       { inserts: [], updates: [], deletes: [] },
       eventBus,
-      false,
     );
     expect(db.calls).toHaveLength(0);
     expect(db.transactionCalled).toBe(false);
@@ -235,7 +234,6 @@ describe("applyDiff", () => {
       "system-core",
       { inserts: [insert], updates: [], deletes: [] },
       eventBus,
-      false,
     );
     expect(db.transactionCalled).toBe(true);
     expect(db.calls).toHaveLength(1);
@@ -254,7 +252,6 @@ describe("applyDiff", () => {
       "system-core",
       { inserts: [], updates: [update], deletes: [] },
       eventBus,
-      false,
     );
     expect(db.calls).toHaveLength(1);
     expect(db.calls[0]?.sql).toContain("INSERT OR REPLACE INTO");
@@ -270,7 +267,6 @@ describe("applyDiff", () => {
       "system-core",
       { inserts: [], updates: [], deletes: ["m_1"] },
       eventBus,
-      false,
     );
     expect(db.calls).toHaveLength(1);
     expect(db.calls[0]?.sql).toContain("DELETE FROM members WHERE id = ?");
@@ -291,7 +287,6 @@ describe("applyDiff", () => {
         deletes: ["m_old"],
       },
       eventBus,
-      false,
     );
     expect(db.transactionCalled).toBe(true);
   });
@@ -310,7 +305,6 @@ describe("applyDiff", () => {
         deletes: ["m_3"],
       },
       eventBus,
-      false,
     );
     expect(eventBus.emit).not.toHaveBeenCalled();
   });
@@ -325,7 +319,6 @@ describe("applyDiff", () => {
       "fronting",
       { inserts: [{ id: "fs_1", member_id: "m_1" }], updates: [], deletes: [] },
       eventBus,
-      true,
     );
     expect(eventBus.emit).toHaveBeenCalledWith("materialized:entity", {
       type: "materialized:entity",
@@ -346,7 +339,6 @@ describe("applyDiff", () => {
       "fronting",
       { inserts: [], updates: [{ id: "fs_1", member_id: "m_1" }], deletes: [] },
       eventBus,
-      true,
     );
     expect(eventBus.emit).toHaveBeenCalledWith("materialized:entity", {
       type: "materialized:entity",
@@ -367,7 +359,6 @@ describe("applyDiff", () => {
       "fronting",
       { inserts: [], updates: [], deletes: ["fs_1"] },
       eventBus,
-      true,
     );
     expect(eventBus.emit).toHaveBeenCalledWith("materialized:entity", {
       type: "materialized:entity",
@@ -388,7 +379,6 @@ describe("applyDiff", () => {
       "fronting",
       { inserts: [{ id: "fs_1", member_id: "m_1" }], updates: [], deletes: [] },
       eventBus,
-      true,
     );
     const documentEmits = (eventBus.emit as ReturnType<typeof vi.fn>).mock.calls.filter(
       ([type]) => type === "materialized:document",

@@ -1,3 +1,5 @@
+import { ENTITY_METADATA } from "./entity-metadata.js";
+
 import type { SyncDocumentType } from "../document-types.js";
 import type { MaterializerTableMetadata } from "./drizzle-bridge.js";
 import type { EntityOperation } from "../event-bus/event-map.js";
@@ -147,7 +149,8 @@ function emitEntityEvents(
  * - Uses `INSERT OR REPLACE INTO` for inserts and updates.
  * - Uses `DELETE FROM … WHERE id = ?` for deletes.
  * - Wraps all writes in a single transaction.
- * - Emits `materialized:entity` events for each change when `hotPath` is true.
+ * - Emits `materialized:entity` events for each change when the entity
+ *   type is hot-path (per `ENTITY_METADATA[entityType].hotPath`).
  *   Document-level events are NOT emitted here — the caller is responsible for that.
  */
 export function applyDiff(
@@ -157,7 +160,6 @@ export function applyDiff(
   documentType: SyncDocumentType,
   diff: DiffResult,
   eventBus: EventBus<DataLayerEventMap>,
-  hotPath: boolean,
 ): void {
   if (diff.inserts.length === 0 && diff.updates.length === 0 && diff.deletes.length === 0) {
     return;
@@ -177,7 +179,7 @@ export function applyDiff(
     }
   });
 
-  if (hotPath) {
+  if (ENTITY_METADATA[entityType].hotPath) {
     emitEntityEvents(
       eventBus,
       documentType,
