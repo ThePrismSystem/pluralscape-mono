@@ -30,6 +30,12 @@ export interface SyncChangesMergedEvent {
   readonly type: "sync:changes-merged";
   readonly documentId: string;
   readonly documentType: SyncDocumentType;
+  /**
+   * Set of entity types whose CRDT shape changed during this merge. Consumed
+   * by the materializer subscriber to scope row-projection work to dirty
+   * entities only — the perf gain landed in sync-f4ma.
+   */
+  readonly dirtyEntityTypes: ReadonlySet<SyncedEntityType>;
   readonly conflicts: readonly ConflictNotification[];
 }
 
