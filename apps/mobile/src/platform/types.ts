@@ -20,20 +20,40 @@ export interface PlatformCapabilities {
 
 export type PlatformStorage =
   | {
-      readonly backend: "sqlite";
-      readonly driver: SqliteDriver;
       /**
-       * Synchronous DB handle the materializer subscriber writes through.
-       * Populated for sync-native backends (expo-sqlite); `null` for backends
-       * that only expose async APIs (OPFS over a Web Worker).
+       * Native sqlite (expo-sqlite). Exposes both the async {@link SqliteDriver}
+       * used by the engine's storage adapter and the synchronous
+       * {@link MaterializerDb} the materializer subscriber writes through.
        */
-      readonly materializerDb: MaterializerDb | null;
+      readonly backend: "sqlite-sync";
+      readonly driver: SqliteDriver;
+      readonly materializerDb: MaterializerDb;
+    }
+  | {
+      /**
+       * Web sqlite (OPFS over a Worker). Only exposes async APIs; no
+       * materializer subscriber wires up on this backend until a sync path
+       * lands (e.g. wa-sqlite synchronous mode).
+       */
+      readonly backend: "sqlite-async";
+      readonly driver: SqliteDriver;
     }
   | {
       readonly backend: "indexeddb";
       readonly storageAdapter: SyncStorageAdapter;
       readonly offlineQueueAdapter: OfflineQueueAdapter;
     };
+
+/**
+ * Type guard covering both sqlite variants (native sync + OPFS async). Use
+ * when consumers only need a {@link SqliteDriver} and don't care which
+ * platform produced it.
+ */
+export function isSqliteBackend(
+  s: PlatformStorage,
+): s is PlatformStorage & { driver: SqliteDriver } {
+  return s.backend === "sqlite-sync" || s.backend === "sqlite-async";
+}
 
 export interface PlatformContext {
   readonly capabilities: PlatformCapabilities;

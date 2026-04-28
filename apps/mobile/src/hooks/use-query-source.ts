@@ -1,5 +1,6 @@
 import { useDataLayerOptional } from "../data/DataLayerProvider.js";
 import { usePlatform } from "../platform/PlatformProvider.js";
+import { isSqliteBackend } from "../platform/types.js";
 import { useSync } from "../sync/sync-context.js";
 
 import type { LocalDatabase } from "../data/local-database.js";
@@ -14,7 +15,7 @@ export function useQuerySource(): QuerySource {
   const platform = usePlatform();
   const sync = useSync();
   if (sync.fallbackToRemote) return "remote";
-  return platform.storage.backend === "sqlite" && sync.isBootstrapped ? "local" : "remote";
+  return isSqliteBackend(platform.storage) && sync.isBootstrapped ? "local" : "remote";
 }
 
 /**

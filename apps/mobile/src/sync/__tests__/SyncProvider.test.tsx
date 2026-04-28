@@ -122,22 +122,29 @@ function makeSqliteDriver(
   opts: {
     materializerDb?: MaterializerDb | null;
   } = {},
-): PlatformStorage & { backend: "sqlite" } {
-  return {
-    backend: "sqlite" as const,
-    driver: {
-      exec: vi.fn(() => Promise.resolve()),
-      prepare: vi.fn(() => ({
-        all: vi.fn(() => Promise.resolve([])),
-        get: vi.fn(() => Promise.resolve(undefined)),
-        run: vi.fn(() => Promise.resolve()),
-      })),
-      transaction<T>(fn: () => Promise<T>): Promise<T> {
-        return fn();
-      },
-      close: vi.fn(() => Promise.resolve()),
+): PlatformStorage {
+  const driver = {
+    exec: vi.fn(() => Promise.resolve()),
+    prepare: vi.fn(() => ({
+      all: vi.fn(() => Promise.resolve([])),
+      get: vi.fn(() => Promise.resolve(undefined)),
+      run: vi.fn(() => Promise.resolve()),
+    })),
+    transaction<T>(fn: () => Promise<T>): Promise<T> {
+      return fn();
     },
-    materializerDb: opts.materializerDb ?? null,
+    close: vi.fn(() => Promise.resolve()),
+  };
+  // Default to "sqlite-sync" so existing tests that don't care about the
+  // subscriber wiring still get a fully-typed PlatformStorage. Pass
+  // `materializerDb: null` to opt into the async-only variant.
+  if (opts.materializerDb === null) {
+    return { backend: "sqlite-async" as const, driver };
+  }
+  return {
+    backend: "sqlite-sync" as const,
+    driver,
+    materializerDb: opts.materializerDb ?? makeMockMaterializerDb(),
   };
 }
 

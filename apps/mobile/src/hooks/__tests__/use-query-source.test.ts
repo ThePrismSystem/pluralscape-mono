@@ -26,6 +26,7 @@ import type { PlatformContext } from "../../platform/types.js";
 import type { SyncContextValue } from "../../sync/sync-context.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 import type { SqliteDriver } from "@pluralscape/sync/adapters";
+import type { MaterializerDb } from "@pluralscape/sync/materializer";
 
 const mockUsePlatform = vi.mocked(usePlatform);
 const mockUseSync = vi.mocked(useSync);
@@ -42,9 +43,9 @@ function makePlatform(backend: "sqlite" | "indexeddb"): PlatformContext {
         storageBackend: "sqlite",
       },
       storage: {
-        backend: "sqlite",
+        backend: "sqlite-sync",
         driver: mock<SqliteDriver>(),
-        materializerDb: null,
+        materializerDb: mock<MaterializerDb>(),
       },
       crypto: mock<SodiumAdapter>(),
     };

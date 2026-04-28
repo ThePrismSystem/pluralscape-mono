@@ -85,7 +85,7 @@ describe("detectPlatform — web + OPFS available", () => {
     });
     const ctx = await detectPlatform();
     expect(ctx.capabilities.storageBackend).toBe("sqlite");
-    expect(ctx.storage.backend).toBe("sqlite");
+    expect(ctx.storage.backend).toBe("sqlite-async");
   });
 });
 

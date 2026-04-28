@@ -10,6 +10,7 @@ import { useConnection } from "../connection/index.js";
 import { createWsManager } from "../connection/ws-manager.js";
 import { useDataLayer } from "../data/DataLayerProvider.js";
 import { usePlatform } from "../platform/index.js";
+import { isSqliteBackend } from "../platform/types.js";
 
 import { SyncCtx } from "./sync-context.js";
 
@@ -100,9 +101,9 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
   const masterKey = auth.snapshot.state === "unlocked" ? auth.snapshot.session.masterKey : null;
   const signingKeys =
     auth.snapshot.state === "unlocked" ? auth.snapshot.session.identityKeys.sign : null;
-  const sqliteDriver = platform.storage.backend === "sqlite" ? platform.storage.driver : null;
+  const sqliteDriver = isSqliteBackend(platform.storage) ? platform.storage.driver : null;
   const materializerDb =
-    platform.storage.backend === "sqlite" ? platform.storage.materializerDb : null;
+    platform.storage.backend === "sqlite-sync" ? platform.storage.materializerDb : null;
 
   // Memoize engine creation config — excludes isConnected to avoid tearing
   // down and re-creating the engine on every connection status change.
