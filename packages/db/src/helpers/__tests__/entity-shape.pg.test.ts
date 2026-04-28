@@ -3,12 +3,7 @@ import { getTableConfig, pgTable } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
 import { archivable, timestamps, versioned } from "../audit.pg.js";
-import {
-  commonEntityIndexes,
-  encryptedPayload,
-  entityIdentity,
-  serverEntityChecks,
-} from "../entity-shape.pg.js";
+import { encryptedPayload, entityIdentity, serverEntityChecks } from "../entity-shape.pg.js";
 
 import type { MemberId } from "@pluralscape/types";
 
@@ -29,23 +24,6 @@ describe("encryptedPayload (pg)", () => {
     const cols = getTableColumns(t);
     expect(cols.encryptedData).toBeDefined();
     expect(cols.encryptedData.notNull).toBe(true);
-  });
-});
-
-describe("commonEntityIndexes (pg)", () => {
-  it("emits the three standard index/unique entries with derived names", () => {
-    const t = pgTable(
-      "test_table",
-      { ...entityIdentity<MemberId>(), ...timestamps(), ...archivable() },
-      (cols) => commonEntityIndexes("test_table", cols),
-    );
-    const config = getTableConfig(t);
-    const indexNames = config.indexes.map((i) => i.config.name);
-    const uniqueNames = config.uniqueConstraints.map((u) => u.name);
-
-    expect(indexNames).toContain("test_table_system_id_archived_idx");
-    expect(indexNames).toContain("test_table_created_at_idx");
-    expect(uniqueNames).toContain("test_table_id_system_id_unique");
   });
 });
 

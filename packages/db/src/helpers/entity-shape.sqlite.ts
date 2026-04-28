@@ -1,10 +1,4 @@
-import {
-  type SQLiteColumn,
-  index,
-  type IndexBuilder,
-  unique,
-  type UniqueConstraintBuilder,
-} from "drizzle-orm/sqlite-core";
+import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { brandedId, sqliteEncryptedBlob } from "../columns/sqlite.js";
 import { systems } from "../schema/sqlite/systems.js";
@@ -53,28 +47,6 @@ export function entityIdentity<TIdBrand extends AnyBrandedId>(): ReturnType<
  */
 export function encryptedPayload(): ReturnType<typeof _encryptedPayload> {
   return _encryptedPayload();
-}
-
-/**
- * Indexes shared by both server-encrypted and client-cache schemas
- * for system-scoped archivable entities. Names are derived from
- * `tableName` so the cache mirror produces identical structural
- * names where it shadows server schemas.
- */
-export function commonEntityIndexes(
-  tableName: string,
-  t: {
-    id: SQLiteColumn;
-    systemId: SQLiteColumn;
-    archived: SQLiteColumn;
-    createdAt: SQLiteColumn;
-  },
-): [IndexBuilder, IndexBuilder, UniqueConstraintBuilder] {
-  return [
-    index(`${tableName}_system_id_archived_idx`).on(t.systemId, t.archived),
-    index(`${tableName}_created_at_idx`).on(t.createdAt),
-    unique(`${tableName}_id_system_id_unique`).on(t.id, t.systemId),
-  ];
 }
 
 /**

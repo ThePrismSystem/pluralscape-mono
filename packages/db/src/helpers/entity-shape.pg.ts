@@ -1,11 +1,4 @@
-import {
-  type ExtraConfigColumn,
-  type IndexBuilder,
-  type PgColumn,
-  type UniqueConstraintBuilder,
-  index,
-  unique,
-} from "drizzle-orm/pg-core";
+import { type PgColumn } from "drizzle-orm/pg-core";
 
 import { brandedId, pgEncryptedBlob } from "../columns/pg.js";
 import { systems } from "../schema/pg/systems.js";
@@ -53,27 +46,6 @@ export function entityIdentity<TIdBrand extends AnyBrandedId>(): ReturnType<
  */
 export function encryptedPayload(): ReturnType<typeof _encryptedPayload> {
   return _encryptedPayload();
-}
-
-/**
- * Indexes shared by every system-scoped archivable PG entity. Names
- * mirror the SQLite counterpart so dialect parity tests pass without
- * special-casing.
- */
-export function commonEntityIndexes(
-  tableName: string,
-  t: {
-    id: ExtraConfigColumn;
-    systemId: ExtraConfigColumn;
-    archived: ExtraConfigColumn;
-    createdAt: ExtraConfigColumn;
-  },
-): [IndexBuilder, IndexBuilder, UniqueConstraintBuilder] {
-  return [
-    index(`${tableName}_system_id_archived_idx`).on(t.systemId, t.archived),
-    index(`${tableName}_created_at_idx`).on(t.createdAt),
-    unique(`${tableName}_id_system_id_unique`).on(t.id, t.systemId),
-  ];
 }
 
 /**

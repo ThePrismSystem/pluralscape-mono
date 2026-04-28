@@ -1,4 +1,4 @@
-import { foreignKey, index, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, sqliteTable, unique } from "drizzle-orm/sqlite-core";
 
 import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import {
@@ -9,7 +9,6 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
 import {
-  commonEntityIndexes,
   encryptedPayload,
   entityIdentity,
   serverEntityChecks,
@@ -29,7 +28,12 @@ export const members = sqliteTable(
     ...versioned(),
     ...archivable(),
   },
-  (t) => [...commonEntityIndexes("members", t), ...serverEntityChecks("members", t)],
+  (t) => [
+    index("members_system_id_archived_idx").on(t.systemId, t.archived),
+    index("members_created_at_idx").on(t.createdAt),
+    unique("members_id_system_id_unique").on(t.id, t.systemId),
+    ...serverEntityChecks("members", t),
+  ],
 );
 
 export const memberPhotos = sqliteTable(
