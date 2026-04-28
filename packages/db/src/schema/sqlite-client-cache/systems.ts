@@ -11,7 +11,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
  * IS the system. Decrypted client-cache projection of `System` from
  * `@pluralscape/types`. Authored per the encoding rules in ADR-038.
  */
-export const systems = sqliteTable("system", {
+export const systems = sqliteTable("systems", {
   id: brandedId<SystemId>("id").primaryKey(),
   name: text("name").notNull(),
   displayName: text("display_name"),

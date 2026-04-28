@@ -233,7 +233,7 @@ describe("systemCoreMaterializer", () => {
 
     getSystemCoreMaterializer().materialize(doc, db, eventBus);
 
-    const systemInserts = db.calls.filter((c) => c.sql.includes("INSERT OR REPLACE INTO system "));
+    const systemInserts = db.calls.filter((c) => c.sql.includes("INSERT OR REPLACE INTO systems "));
     expect(systemInserts.length).toBeGreaterThan(0);
   });
 
