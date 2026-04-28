@@ -85,3 +85,11 @@ export {
   type NewLocalFieldDefinitionScope,
   type NewLocalFieldValue,
 } from "./custom-fields.js";
+export {
+  journalEntries,
+  wikiPages,
+  type LocalJournalEntryRow,
+  type LocalWikiPageRow,
+  type NewLocalJournalEntry,
+  type NewLocalWikiPage,
+} from "./journal.js";
