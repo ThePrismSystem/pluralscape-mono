@@ -201,6 +201,12 @@ const mockGetMaterializer = vi.fn<
   materialize: mockMaterialize,
 }));
 
+// ── Hoisted subscriber-dispose spy (used by the disposal-order test) ──
+
+const { mockSubscriberDispose } = vi.hoisted(() => ({
+  mockSubscriberDispose: vi.fn(),
+}));
+
 // ── Mock DocumentKeyResolver ────────────────────────────────────────
 
 const mockKeyResolverDispose = vi.fn();
@@ -345,6 +351,28 @@ vi.mock("@pluralscape/sync/materializer", async (importOriginal) => {
   return {
     ...actual,
     getMaterializer: mockGetMaterializer,
+  };
+});
+
+// Wrap createMaterializerSubscriber so we can observe its dispose timing
+// against the engine's. The wrapper still delegates to the real subscriber so
+// the existing "materializer subscriber wiring" tests keep exercising the
+// real listener path.
+vi.mock("@pluralscape/data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/data")>();
+  return {
+    ...actual,
+    createMaterializerSubscriber: (
+      deps: Parameters<typeof actual.createMaterializerSubscriber>[0],
+    ) => {
+      const real = actual.createMaterializerSubscriber(deps);
+      return {
+        dispose: () => {
+          mockSubscriberDispose();
+          real.dispose();
+        },
+      };
+    },
   };
 });
 
@@ -875,6 +903,91 @@ describe("SyncProvider", () => {
       });
 
       expect(mockMaterialize).not.toHaveBeenCalled();
+    });
+
+    it("disposes the subscriber before the engine on unmount", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
+
+      const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+      await waitFor(() => {
+        expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+      });
+
+      unmount();
+
+      const subscriberOrder = mockSubscriberDispose.mock.invocationCallOrder[0];
+      const engineOrder = mockDispose.mock.invocationCallOrder[0];
+      // Vitest invocation order is monotonic and starts at 1; missing entries
+      // are undefined. Asserting > 0 doubles as a "was actually called" check.
+      expect(subscriberOrder).toBeGreaterThan(0);
+      expect(engineOrder).toBeGreaterThan(0);
+      // Subscriber must stop consuming events before the engine stops emitting.
+      expect(subscriberOrder).toBeLessThan(engineOrder ?? 0);
+    });
+
+    it("creates a fresh subscriber on lock→unlock cycle", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
+
+      const { rerender } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+      await waitFor(() => {
+        expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+      });
+      expect(mockSubscriberDispose).not.toHaveBeenCalled();
+
+      // Lock — the subscriber for the first session must be disposed.
+      setUnauthenticated();
+      mockConnectionStatus = "disconnected";
+      rerender();
+
+      await waitFor(() => {
+        expect(mockSubscriberDispose).toHaveBeenCalledTimes(1);
+      });
+
+      // Unlock again — a NEW engine and subscriber are constructed.
+      setUnlocked();
+      mockConnectionStatus = "connected";
+      mockPlatformStorage = makeSqliteDriver({ materializerDb: makeMockMaterializerDb() });
+      rerender();
+
+      await waitFor(() => {
+        expect(MockSyncEngine).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("clears engine state when SyncEngine construction throws", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+
+      const constructError = new Error("engine ctor failed");
+      MockSyncEngine.mockImplementationOnce(function FailingCtor() {
+        throw constructError;
+      });
+
+      const emitted: import("@pluralscape/sync").SyncErrorEvent[] = [];
+      mockEventBus.on("sync:error", (event) => {
+        emitted.push(event);
+      });
+
+      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+      await waitFor(() => {
+        expect(emitted).toHaveLength(1);
+      });
+
+      expect(emitted[0]?.message).toContain("initialization failed");
+      expect(emitted[0]?.error).toBe(constructError);
+      expect(result.current.engine).toBeNull();
+      expect(result.current.isBootstrapped).toBe(false);
+      // Resources created BEFORE the throw must be torn down.
+      expect(mockKeyResolverDispose).toHaveBeenCalledTimes(1);
+      expect(mockClearAll).toHaveBeenCalledTimes(1);
+      expect(mockWsDisconnect).toHaveBeenCalledTimes(1);
     });
   });
 });

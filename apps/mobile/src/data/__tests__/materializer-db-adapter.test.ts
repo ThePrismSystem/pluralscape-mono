@@ -62,7 +62,7 @@ describe("createMaterializerDbAdapter", () => {
     expect(stmt.finalizeSync).toHaveBeenCalledTimes(1);
   });
 
-  it("finalises the statement even when executeSync throws", () => {
+  it("finalises the statement even when executeSync throws on execute", () => {
     const { db, stmt } = setupMocks([]);
     stmt.executeSync.mockImplementation(() => {
       throw new Error("boom");
@@ -72,6 +72,19 @@ describe("createMaterializerDbAdapter", () => {
     expect(() => {
       adapter.execute("INSERT INTO members (id) VALUES (?)", ["m_1"]);
     }).toThrow("boom");
+    expect(stmt.finalizeSync).toHaveBeenCalledTimes(1);
+  });
+
+  it("finalises the statement even when executeSync throws on queryAll", () => {
+    const { db, stmt } = setupMocks([]);
+    stmt.executeSync.mockImplementation(() => {
+      throw new Error("query-boom");
+    });
+    const adapter = createMaterializerDbAdapter(db);
+
+    expect(() => {
+      adapter.queryAll<TestRow>("SELECT id FROM members WHERE id = ?", ["m1"]);
+    }).toThrow("query-boom");
     expect(stmt.finalizeSync).toHaveBeenCalledTimes(1);
   });
 
