@@ -1,11 +1,21 @@
-import { getEntityTypesForDocument, getTableDef } from "@pluralscape/sync/materializer";
+import { ENTITY_CRDT_STRATEGIES } from "@pluralscape/sync";
+import { ENTITY_METADATA, getTableMetadataForEntityType } from "@pluralscape/sync/materializer";
 
 import type {
   DataLayerEventMap,
   EventBus,
   SearchScope as EventSearchScope,
+  SyncDocumentType,
+  SyncedEntityType,
 } from "@pluralscape/sync";
+import type { EntityMetadata } from "@pluralscape/sync/materializer";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
+
+function getEntityTypesForDocument(documentType: SyncDocumentType): SyncedEntityType[] {
+  return (Object.keys(ENTITY_CRDT_STRATEGIES) as SyncedEntityType[]).filter(
+    (entityType) => ENTITY_CRDT_STRATEGIES[entityType].document === documentType,
+  );
+}
 
 /**
  * Index into a React Query key at which list-style queries carry the
@@ -62,7 +72,8 @@ export function createQueryInvalidator(
   const unsubDocument = eventBus.on("materialized:document", (event) => {
     const entityTypes = getEntityTypesForDocument(event.documentType);
     for (const entityType of entityTypes) {
-      const tableDef = getTableDef(entityType);
+      const { tableName } = getTableMetadataForEntityType(entityType);
+      const meta: EntityMetadata = ENTITY_METADATA[entityType];
       // Narrowing: for hot-path entity types whose detail keys are shaped
       // `[tableName, entityId]`, per-entity `materialized:entity` events
       // (see `unsubEntity` below) already precisely invalidate those detail
@@ -75,20 +86,20 @@ export function createQueryInvalidator(
       // would skip details that the entity-event prefix match also misses.
       // In both cases the document event must broadly invalidate
       // `[tableName]` so details stay fresh.
-      const canNarrowToLists = tableDef.hotPath && tableDef.compoundDetailKey !== true;
+      const canNarrowToLists = meta.hotPath && meta.compoundDetailKey !== true;
       if (canNarrowToLists) {
         void queryClient.invalidateQueries({
-          queryKey: [tableDef.tableName],
+          queryKey: [tableName],
           predicate: (query) => isListQuery(query.queryKey),
         });
       } else {
-        void queryClient.invalidateQueries({ queryKey: [tableDef.tableName] });
+        void queryClient.invalidateQueries({ queryKey: [tableName] });
       }
     }
   });
 
   const unsubEntity = eventBus.on("materialized:entity", (event) => {
-    const { tableName } = getTableDef(event.entityType);
+    const { tableName } = getTableMetadataForEntityType(event.entityType);
     void queryClient.invalidateQueries({ queryKey: [tableName, event.entityId] });
   });
 

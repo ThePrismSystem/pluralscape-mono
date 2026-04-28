@@ -1,9 +1,10 @@
-import { ENTITY_TABLE_REGISTRY } from "@pluralscape/sync/materializer";
+import { ENTITY_METADATA } from "@pluralscape/sync/materializer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { executeSearch } from "../use-search.js";
 
 import type { LocalDatabase } from "../../data/local-database.js";
+import type { EntityMetadata } from "@pluralscape/sync/materializer";
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -119,8 +120,8 @@ describe("executeSearch", () => {
       await executeSearch(fixture.db, "test", "self");
 
       // Count expected searchable entity types (those with ftsColumns.length > 0)
-      const searchableCount = Object.values(ENTITY_TABLE_REGISTRY).filter(
-        (def) => def.ftsColumns.length > 0,
+      const searchableCount = Object.values(ENTITY_METADATA).filter(
+        (def: EntityMetadata) => def.ftsColumns.length > 0,
       ).length;
 
       // For self scope, one query per searchable entity type

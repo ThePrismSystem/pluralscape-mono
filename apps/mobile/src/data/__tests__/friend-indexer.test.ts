@@ -1,5 +1,5 @@
 import { createEventBus } from "@pluralscape/sync";
-import { ENTITY_TABLE_REGISTRY } from "@pluralscape/sync/materializer";
+import { getTableMetadataForEntityType } from "@pluralscape/sync/materializer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createFriendIndexer } from "../friend-indexer.js";
@@ -185,12 +185,14 @@ describe("createFriendIndexer", () => {
             return match?.[1];
           });
 
-        expect(deletedTables).toContain(`friend_${ENTITY_TABLE_REGISTRY["member"].tableName}`);
         expect(deletedTables).toContain(
-          `friend_${ENTITY_TABLE_REGISTRY["fronting-session"].tableName}`,
+          `friend_${getTableMetadataForEntityType("member").tableName}`,
         );
         expect(deletedTables).toContain(
-          `friend_${ENTITY_TABLE_REGISTRY["journal-entry"].tableName}`,
+          `friend_${getTableMetadataForEntityType("fronting-session").tableName}`,
+        );
+        expect(deletedTables).toContain(
+          `friend_${getTableMetadataForEntityType("journal-entry").tableName}`,
         );
       });
     });

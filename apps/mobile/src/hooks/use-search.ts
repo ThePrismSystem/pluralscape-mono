@@ -1,6 +1,7 @@
 import {
-  ENTITY_TABLE_REGISTRY,
+  ENTITY_METADATA,
   FRIEND_EXPORTABLE_ENTITY_TYPES,
+  getTableMetadataForEntityType,
 } from "@pluralscape/sync/materializer";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -34,8 +35,8 @@ const SEARCH_RESULTS_LIMIT = 20;
  * Entity types that have FTS columns defined — these are searchable.
  */
 const SEARCHABLE_ENTITY_TYPES: readonly SyncedEntityType[] = (
-  Object.keys(ENTITY_TABLE_REGISTRY) as SyncedEntityType[]
-).filter((entityType) => ENTITY_TABLE_REGISTRY[entityType].ftsColumns.length > 0);
+  Object.keys(ENTITY_METADATA) as SyncedEntityType[]
+).filter((entityType) => ENTITY_METADATA[entityType].ftsColumns.length > 0);
 
 // ── Query builder ─────────────────────────────────────────────────────
 
@@ -106,8 +107,7 @@ export async function executeSearch(
   const results: SearchResult[] = [];
 
   for (const entityType of SEARCHABLE_ENTITY_TYPES) {
-    const def = ENTITY_TABLE_REGISTRY[entityType];
-    const { tableName } = def;
+    const { tableName } = getTableMetadataForEntityType(entityType);
 
     if (scope === "self" || scope === "all") {
       const ftsName = `fts_${tableName}`;
