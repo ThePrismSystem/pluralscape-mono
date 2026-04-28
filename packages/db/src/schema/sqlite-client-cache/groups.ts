@@ -1,12 +1,10 @@
-import { foreignKey, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteJsonOf, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteJsonOf } from "../../columns/sqlite.js";
 import { archivable, timestamps } from "../../helpers/audit.sqlite.js";
 import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 
-import { members } from "./members.js";
-
-import type { GroupId, HexColor, ImageSource, MemberId, SystemId } from "@pluralscape/types";
+import type { GroupId, HexColor, ImageSource, MemberId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /**
@@ -27,30 +25,19 @@ export const groups = sqliteTable("groups", {
 });
 
 /**
- * CARVE-OUT: pure link table. `GroupMembership` (from @pluralscape/types) only
- * exposes (groupId, memberId); the systemId and createdAt are persistence
- * metadata required for the composite FKs.
+ * CARVE-OUT (ADR-038): junction-storage entity. The compound CRDT key
+ * `groupId:memberId` is the row identity; the parsed parts ride as
+ * separate columns for indexed lookups. No `entityIdentity()` mixin
+ * (`systemId`/timestamps don't apply — junctions carry no metadata
+ * beyond presence). Composite FKs to `groups`/`members` are dropped
+ * from the cache layer because the cache mirrors what the CRDT carries,
+ * which has no `systemId` for junctions.
  */
-export const groupMemberships = sqliteTable(
-  "group_memberships",
-  {
-    groupId: brandedId<GroupId>("group_id").notNull(),
-    memberId: brandedId<MemberId>("member_id").notNull(),
-    systemId: brandedId<SystemId>("system_id").notNull(),
-    createdAt: sqliteTimestamp("created_at").notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.groupId, t.memberId] }),
-    foreignKey({
-      columns: [t.groupId, t.systemId],
-      foreignColumns: [groups.id, groups.systemId],
-    }).onDelete("restrict"),
-    foreignKey({
-      columns: [t.memberId, t.systemId],
-      foreignColumns: [members.id, members.systemId],
-    }).onDelete("restrict"),
-  ],
-);
+export const groupMemberships = sqliteTable("group_memberships", {
+  id: text("id").primaryKey(),
+  groupId: brandedId<GroupId>("group_id").notNull(),
+  memberId: brandedId<MemberId>("member_id").notNull(),
+});
 
 export type LocalGroupRow = InferSelectModel<typeof groups>;
 export type NewLocalGroup = InferInsertModel<typeof groups>;

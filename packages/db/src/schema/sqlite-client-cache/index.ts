@@ -76,16 +76,13 @@ export {
 } from "./structure.js";
 export {
   fieldBucketVisibility,
-  fieldDefinitionScopes,
   fieldDefinitions,
   fieldValues,
   type LocalFieldBucketVisibilityRow,
   type LocalFieldDefinitionRow,
-  type LocalFieldDefinitionScopeRow,
   type LocalFieldValueRow,
   type NewLocalFieldBucketVisibility,
   type NewLocalFieldDefinition,
-  type NewLocalFieldDefinitionScope,
   type NewLocalFieldValue,
 } from "./custom-fields.js";
 export {
@@ -148,10 +145,7 @@ export {
   type NewLocalFrontingReport,
 } from "./analytics.js";
 export {
-  nomenclatureSettings,
   systemSettings,
-  type LocalNomenclatureSettingsRow,
   type LocalSystemSettingsRow,
-  type NewLocalNomenclatureSettings,
   type NewLocalSystemSettings,
 } from "./system-settings.js";

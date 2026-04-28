@@ -1,4 +1,4 @@
-import { foreignKey, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { foreignKey, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { brandedId, sqliteJsonOf } from "../../columns/sqlite.js";
 import { archivable, timestamps } from "../../helpers/audit.sqlite.js";
@@ -6,21 +6,17 @@ import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 
 import { groups } from "./groups.js";
 import { members } from "./members.js";
-import { systemStructureEntities, systemStructureEntityTypes } from "./structure.js";
+import { systemStructureEntities } from "./structure.js";
 
 import type {
   BucketId,
   FieldDefinitionId,
-  FieldDefinitionScopeId,
-  FieldDefinitionScopeType,
   FieldType,
   FieldValueId,
   FieldValueUnion,
   GroupId,
   MemberId,
-  SystemId,
   SystemStructureEntityId,
-  SystemStructureEntityTypeId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -78,49 +74,16 @@ export const fieldValues = sqliteTable(
 );
 
 /**
- * Pure link table — no entity identity, no encrypted payload, no audit.
- * Mirrors `FieldBucketVisibility` exactly.
+ * CARVE-OUT (ADR-038): junction-storage entity. The compound CRDT key
+ * `fieldDefinitionId:bucketId` is the row identity; the parsed parts
+ * ride as separate columns for indexed lookups. No `entityIdentity()`
+ * mixin (junctions carry no metadata beyond presence).
  */
-export const fieldBucketVisibility = sqliteTable(
-  "field_bucket_visibilities",
-  {
-    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
-    bucketId: brandedId<BucketId>("bucket_id").notNull(),
-    systemId: brandedId<SystemId>("system_id").notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.fieldDefinitionId, t.bucketId] }),
-    foreignKey({
-      columns: [t.fieldDefinitionId, t.systemId],
-      foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
-    }).onDelete("restrict"),
-  ],
-);
-
-/**
- * Decrypted client-cache projection of `FieldDefinitionScope`. Plaintext
- * entity — no encrypted payload, not archivable.
- */
-export const fieldDefinitionScopes = sqliteTable(
-  "field_definition_scopes",
-  {
-    ...entityIdentity<FieldDefinitionScopeId>(),
-    fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
-    scopeType: text("scope_type").$type<FieldDefinitionScopeType>().notNull(),
-    scopeEntityTypeId: brandedId<SystemStructureEntityTypeId>("scope_entity_type_id"),
-    ...timestamps(),
-  },
-  (t) => [
-    foreignKey({
-      columns: [t.fieldDefinitionId, t.systemId],
-      foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
-    }).onDelete("restrict"),
-    foreignKey({
-      columns: [t.scopeEntityTypeId, t.systemId],
-      foreignColumns: [systemStructureEntityTypes.id, systemStructureEntityTypes.systemId],
-    }).onDelete("restrict"),
-  ],
-);
+export const fieldBucketVisibility = sqliteTable("field_bucket_visibilities", {
+  id: text("id").primaryKey(),
+  fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
+  bucketId: brandedId<BucketId>("bucket_id").notNull(),
+});
 
 export type LocalFieldDefinitionRow = InferSelectModel<typeof fieldDefinitions>;
 export type NewLocalFieldDefinition = InferInsertModel<typeof fieldDefinitions>;
@@ -128,5 +91,3 @@ export type LocalFieldValueRow = InferSelectModel<typeof fieldValues>;
 export type NewLocalFieldValue = InferInsertModel<typeof fieldValues>;
 export type LocalFieldBucketVisibilityRow = InferSelectModel<typeof fieldBucketVisibility>;
 export type NewLocalFieldBucketVisibility = InferInsertModel<typeof fieldBucketVisibility>;
-export type LocalFieldDefinitionScopeRow = InferSelectModel<typeof fieldDefinitionScopes>;
-export type NewLocalFieldDefinitionScope = InferInsertModel<typeof fieldDefinitionScopes>;

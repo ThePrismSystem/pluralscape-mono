@@ -189,34 +189,18 @@ describe("extractEntities — singleton-lww (system)", () => {
 // ── junction-map: "group-membership" (fieldName: "groupMemberships") ─
 
 describe("extractEntities — junction-map (group-membership)", () => {
-  it("extracts from compound keys", () => {
+  it("extracts from compound keys (`:` separator)", () => {
     const doc: Record<string, unknown> = {
       groupMemberships: {
-        grp_1_mem_1: true,
-        grp_1_mem_2: true,
+        "grp_1:mem_1": true,
+        "grp_1:mem_2": true,
       },
     };
 
     const rows = extractEntities("group-membership", doc);
     expect(rows).toHaveLength(2);
     const ids = rows.map((r) => r.id).sort();
-    expect(ids).toEqual(["grp_1_mem_1", "grp_1_mem_2"]);
-  });
-
-  it("skips keys with fewer than 2 parts", () => {
-    const doc: Record<string, unknown> = {
-      groupMemberships: {
-        grp1mem1: true, // no underscore separator producing 2+ parts
-        grp_1_mem_1: true,
-      },
-    };
-
-    const rows = extractEntities("group-membership", doc);
-    // grp1mem1 has only 1 part (no underscore), grp_1_mem_1 has 4 parts
-    // The key "grp1mem1" has 0 underscores so it produces 1 part => skip
-    const skippedIds = rows.map((r) => r.id);
-    expect(skippedIds).not.toContain("grp1mem1");
-    expect(skippedIds).toContain("grp_1_mem_1");
+    expect(ids).toEqual(["grp_1:mem_1", "grp_1:mem_2"]);
   });
 
   it("returns empty array when field is null", () => {
@@ -229,20 +213,29 @@ describe("extractEntities — junction-map (group-membership)", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("populates group_id and member_id columns from compound key parts", () => {
+  it("populates group_id and member_id columns with full branded IDs", () => {
     const doc: Record<string, unknown> = {
       groupMemberships: {
-        grp_abc_mem_xyz: true,
+        "grp_abc:mem_xyz": true,
       },
     };
 
     const rows = extractEntities("group-membership", doc);
     expect(rows).toHaveLength(1);
-    // The compound key "grp_abc_mem_xyz" splits into ["grp", "abc", "mem", "xyz"]
-    // The non-id columns are group_id and member_id
-    expect(rows[0]?.id).toBe("grp_abc_mem_xyz");
-    expect(rows[0]?.group_id).toBe("grp");
-    expect(rows[0]?.member_id).toBe("abc");
+    // The `:` separator preserves the underscore-bearing branded prefixes.
+    expect(rows[0]?.id).toBe("grp_abc:mem_xyz");
+    expect(rows[0]?.group_id).toBe("grp_abc");
+    expect(rows[0]?.member_id).toBe("mem_xyz");
+  });
+
+  it("throws when compound key part count does not match column count", () => {
+    const doc: Record<string, unknown> = {
+      groupMemberships: {
+        grp_1: true, // only 1 part, but group-membership expects 2 (group_id, member_id)
+      },
+    };
+
+    expect(() => extractEntities("group-membership", doc)).toThrow(/expected 2/);
   });
 });
 

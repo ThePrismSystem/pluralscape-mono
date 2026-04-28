@@ -209,7 +209,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     document: "system-core",
     fieldName: "groupMemberships",
     mutationSemantics:
-      "Add-wins — compound key {groupId}_{memberId} mapped to true; concurrent add+remove preserves the junction",
+      "Add-wins — compound key {groupId}:{memberId} mapped to true; concurrent add+remove preserves the junction",
   },
 
   // ── fronting document ────────────────────────────────────────────
@@ -323,7 +323,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     document: "privacy-config",
     fieldName: "contentTags",
     mutationSemantics:
-      "LWW; compound key {entityType}_{entityId}_{bucketId} — deleting key removes assignment",
+      "LWW; compound key {entityType}:{entityId}:{bucketId} — deleting key removes assignment",
   },
   "friend-connection": {
     storageType: "lww-map",
@@ -350,7 +350,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     document: "privacy-config",
     fieldName: "fieldBucketVisibility",
     mutationSemantics:
-      "Add-wins — compound key {fieldDefinitionId}_{bucketId} mapped to true; concurrent add+remove preserves the visibility assignment",
+      "Add-wins — compound key {fieldDefinitionId}:{bucketId} mapped to true; concurrent add+remove preserves the visibility assignment",
   },
 } as const satisfies Record<string, CrdtStrategy>;
 

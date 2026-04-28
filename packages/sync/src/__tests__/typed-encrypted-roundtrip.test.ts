@@ -214,17 +214,17 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
       });
 
       const envelope = sessionA.change((doc) => {
-        // junction key: {groupId}_{memberId}
-        doc.groupMemberships[asGroupMembershipKey("grp_a_mem_1")] = true;
-        doc.groupMemberships[asGroupMembershipKey("grp_a_mem_2")] = true;
+        // junction key: {groupId}:{memberId}
+        doc.groupMemberships[asGroupMembershipKey("grp_a:mem_1")] = true;
+        doc.groupMemberships[asGroupMembershipKey("grp_a:mem_2")] = true;
       });
       await relay.submit(envelope);
 
       const _r3 = await relay.getEnvelopesSince(testDocId, 0);
       sessionB.applyEncryptedChanges(_r3.envelopes);
 
-      expect(sessionB.document.groupMemberships[asGroupMembershipKey("grp_a_mem_1")]).toBe(true);
-      expect(sessionB.document.groupMemberships[asGroupMembershipKey("grp_a_mem_2")]).toBe(true);
+      expect(sessionB.document.groupMemberships[asGroupMembershipKey("grp_a:mem_1")]).toBe(true);
+      expect(sessionB.document.groupMemberships[asGroupMembershipKey("grp_a:mem_2")]).toBe(true);
       expect(Object.keys(sessionB.document.groupMemberships)).toHaveLength(2);
     } finally {
       resolver.dispose();

@@ -1,11 +1,11 @@
 ---
 # db-jv3w
 title: Local-cache Drizzle schemas + materializer DDL refactor (PR2)
-status: completed
+status: in-progress
 type: epic
 priority: high
 created_at: 2026-04-28T00:06:39Z
-updated_at: 2026-04-28T03:21:46Z
+updated_at: 2026-04-28T06:23:42Z
 parent: ps-cd6x
 blocking:
   - sync-xjfi
@@ -66,3 +66,7 @@ The materializer's `applyDiff`, `entityToRow`, and `extractEntities` all consume
 - `pnpm test:e2e` — 507 tests pass
 - `pnpm lint` — passes
 - `pnpm format` — passes
+
+## 2026-04-28 — Reopened for review-cleanup
+
+Multi-agent review of PR #581 surfaced 4 Critical, 14 Important, and ~8 Suggestion-level findings. Bundling all fixes onto the existing branch via force-push (per design at `docs/superpowers/specs/2026-04-28-pr581-review-cleanup-design.md`).

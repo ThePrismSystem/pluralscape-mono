@@ -1,4 +1,4 @@
-import { foreignKey, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { foreignKey, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { brandedId, sqliteJsonOf, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps } from "../../helpers/audit.sqlite.js";
@@ -8,12 +8,12 @@ import type {
   AccountId,
   BucketContentEntityType,
   BucketId,
+  EntityTypeIdMap,
   FriendCodeId,
   FriendConnectionId,
   FriendConnectionStatus,
   FriendVisibilitySettings,
   KeyGrantId,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -29,26 +29,20 @@ export const buckets = sqliteTable("buckets", {
 });
 
 /**
- * Decrypted client-cache projection of `BucketContentTag`. The
- * polymorphic entity reference is stored as flat columns; the `entityId`
- * column is `text` because the brand depends on `entityType`.
+ * CARVE-OUT (ADR-038): junction-storage entity. The compound CRDT key
+ * `entityType:entityId:bucketId` is the row identity; the parsed parts
+ * ride as separate columns for indexed lookups. No `entityIdentity()`
+ * mixin (junctions carry no metadata beyond presence). The `entityId`
+ * column is typed as the union of every brand reachable from
+ * {@link BucketContentEntityType}, so consumers see the strongest type
+ * the discriminator union allows.
  */
-export const bucketContentTags = sqliteTable(
-  "bucket_content_tags",
-  {
-    entityType: text("entity_type").$type<BucketContentEntityType>().notNull(),
-    entityId: text("entity_id").notNull(),
-    bucketId: brandedId<BucketId>("bucket_id").notNull(),
-    systemId: brandedId<SystemId>("system_id").notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
-    foreignKey({
-      columns: [t.bucketId, t.systemId],
-      foreignColumns: [buckets.id, buckets.systemId],
-    }).onDelete("restrict"),
-  ],
-);
+export const bucketContentTags = sqliteTable("bucket_content_tags", {
+  id: text("id").primaryKey(),
+  entityType: text("entity_type").$type<BucketContentEntityType>().notNull(),
+  entityId: brandedId<EntityTypeIdMap[BucketContentEntityType]>("entity_id").notNull(),
+  bucketId: brandedId<BucketId>("bucket_id").notNull(),
+});
 
 /**
  * Decrypted client-cache projection of `KeyGrant`. The server stores the

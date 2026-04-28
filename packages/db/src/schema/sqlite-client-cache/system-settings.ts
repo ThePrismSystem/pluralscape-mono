@@ -47,17 +47,5 @@ export const systemSettings = sqliteTable("system_settings", {
   ...timestamps(),
 });
 
-/**
- * Decrypted client-cache projection of `NomenclatureSettings`. Singleton
- * per system — `systemId` is the primary key (mirrors the server schema).
- */
-export const nomenclatureSettings = sqliteTable("nomenclature_settings", {
-  systemId: brandedId<SystemId>("system_id").primaryKey(),
-  terms: sqliteJsonOf<NomenclatureSettings>("terms").notNull(),
-  ...timestamps(),
-});
-
 export type LocalSystemSettingsRow = InferSelectModel<typeof systemSettings>;
 export type NewLocalSystemSettings = InferInsertModel<typeof systemSettings>;
-export type LocalNomenclatureSettingsRow = InferSelectModel<typeof nomenclatureSettings>;
-export type NewLocalNomenclatureSettings = InferInsertModel<typeof nomenclatureSettings>;

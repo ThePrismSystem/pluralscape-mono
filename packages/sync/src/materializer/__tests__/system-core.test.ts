@@ -243,8 +243,8 @@ describe("systemCoreMaterializer", () => {
 
     const doc: Record<string, unknown> = {
       groupMemberships: {
-        grp_1_mem_1: true,
-        grp_1_mem_2: true,
+        "grp_1:mem_1": true,
+        "grp_1:mem_2": true,
       },
     };
 

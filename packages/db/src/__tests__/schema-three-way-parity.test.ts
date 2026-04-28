@@ -132,9 +132,9 @@ describe("three-way schema parity — groups", () => {
 describe("three-way schema parity — group_memberships", () => {
   test("cache columns ↔ GroupMembership domain fields", () => {
     type ColKeys = StringKeys<InferSelectModel<typeof cache.groupMemberships>>;
-    // systemId and createdAt are persistence metadata not present on the
-    // domain GroupMembership type.
-    type VariantKeys = Exclude<ColKeys, "systemId" | "createdAt">;
+    // `id` is the compound CRDT key (junction-storage carve-out, ADR-038);
+    // not present on the domain GroupMembership type.
+    type VariantKeys = Exclude<ColKeys, "id">;
     type _Check = AssertSubset<VariantKeys, keyof GroupMembership>;
     const sentinel: _Check = "groupId";
     expect(sentinel).toBe("groupId");
