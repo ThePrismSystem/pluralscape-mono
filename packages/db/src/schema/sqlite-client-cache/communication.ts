@@ -119,6 +119,24 @@ export const polls = sqliteTable("polls", {
 });
 
 /**
+ * Decrypted client-cache projection of `PollOption`. Carve-out: poll
+ * options have NO server PG table — they live inside the parent poll's
+ * `encryptedData` blob server-side. The cache mirrors the CRDT layer's
+ * separate-entity representation (lww-map in the "chat" document) so
+ * option-edit merges are visible to the local query layer. Columns:
+ * `pollId` is the parent ref; `voteCount` is omitted (computed at read
+ * time from `pollVotes`). No archivable mixin (poll options are
+ * recreated on poll edit, never archived).
+ */
+export const pollOptions = sqliteTable("poll_options", {
+  id: brandedId<PollOptionId>("id").primaryKey(),
+  pollId: brandedId<PollId>("poll_id").notNull(),
+  label: text("label").notNull(),
+  color: text("color").$type<HexColor | null>(),
+  emoji: text("emoji"),
+});
+
+/**
  * Decrypted client-cache projection of `PollVote`. The polymorphic `voter`
  * field is flattened into discriminator/id columns, matching the server-side
  * encoding.
@@ -165,6 +183,8 @@ export type LocalNoteRow = InferSelectModel<typeof notes>;
 export type NewLocalNote = InferInsertModel<typeof notes>;
 export type LocalPollRow = InferSelectModel<typeof polls>;
 export type NewLocalPoll = InferInsertModel<typeof polls>;
+export type LocalPollOptionRow = InferSelectModel<typeof pollOptions>;
+export type NewLocalPollOption = InferInsertModel<typeof pollOptions>;
 export type LocalPollVoteRow = InferSelectModel<typeof pollVotes>;
 export type NewLocalPollVote = InferInsertModel<typeof pollVotes>;
 export type LocalAcknowledgementRow = InferSelectModel<typeof acknowledgements>;

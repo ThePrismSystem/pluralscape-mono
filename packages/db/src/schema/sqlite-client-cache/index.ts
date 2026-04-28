@@ -34,6 +34,7 @@ export {
   channels,
   messages,
   notes,
+  pollOptions,
   pollVotes,
   polls,
   type LocalAcknowledgementRow,
@@ -41,6 +42,7 @@ export {
   type LocalChannelRow,
   type LocalMessageRow,
   type LocalNoteRow,
+  type LocalPollOptionRow,
   type LocalPollRow,
   type LocalPollVoteRow,
   type NewLocalAcknowledgement,
@@ -49,6 +51,7 @@ export {
   type NewLocalMessage,
   type NewLocalNote,
   type NewLocalPoll,
+  type NewLocalPollOption,
   type NewLocalPollVote,
 } from "./communication.js";
 export {
@@ -139,6 +142,11 @@ export {
   type LocalLifecycleEventRow,
   type NewLocalLifecycleEvent,
 } from "./lifecycle-events.js";
+export {
+  frontingReports,
+  type LocalFrontingReportRow,
+  type NewLocalFrontingReport,
+} from "./analytics.js";
 export {
   nomenclatureSettings,
   systemSettings,
