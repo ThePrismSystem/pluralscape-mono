@@ -98,15 +98,3 @@ export function getTableMetadataForEntityType(
     drizzleTable: t,
   };
 }
-
-/**
- * Returns the Drizzle cache table for an entity type, or undefined when
- * the entity type is not registered (used by the DDL emitter to skip
- * non-cache-backed strategy entries).
- */
-export function getTableForEntityType(entityType: SyncedEntityType): SQLiteTable | undefined {
-  return ENTITY_TO_TABLE[entityType];
-}
-
-/** All cache tables in the registry, in `SyncedEntityType` enumeration order. */
-export const ALL_CACHE_TABLES: readonly SQLiteTable[] = Object.values(ENTITY_TO_TABLE);

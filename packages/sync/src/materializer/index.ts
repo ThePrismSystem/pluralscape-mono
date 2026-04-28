@@ -13,12 +13,7 @@ export {
   type MaterializerDb,
 } from "./base-materializer.js";
 
-export {
-  ALL_CACHE_TABLES,
-  getTableForEntityType,
-  getTableMetadataForEntityType,
-  type MaterializerTableMetadata,
-} from "./drizzle-bridge.js";
+export { getTableMetadataForEntityType, type MaterializerTableMetadata } from "./drizzle-bridge.js";
 
 export {
   ENTITY_METADATA,

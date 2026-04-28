@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { ENTITY_CRDT_STRATEGIES } from "../../strategies/crdt-strategies.js";
-import { ALL_CACHE_TABLES, getTableMetadataForEntityType } from "../drizzle-bridge.js";
+import { getTableMetadataForEntityType } from "../drizzle-bridge.js";
 
 import type { SyncedEntityType } from "../../strategies/crdt-strategies.js";
 
@@ -37,11 +37,6 @@ describe("getTableMetadataForEntityType", () => {
       expect(meta.tableName).toBeTypeOf("string");
       expect(meta.columnNames.length).toBeGreaterThan(0);
     }
-  });
-
-  test("ALL_CACHE_TABLES enumerates every registered table", () => {
-    const allEntityTypes = Object.keys(ENTITY_CRDT_STRATEGIES);
-    expect(ALL_CACHE_TABLES.length).toBe(allEntityTypes.length);
   });
 
   test("throws with a clear message when given an unregistered entity type", () => {
