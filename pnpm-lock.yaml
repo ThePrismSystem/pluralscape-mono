@@ -508,6 +508,9 @@ importers:
       '@pluralscape/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@pluralscape/sync':
+        specifier: workspace:*
+        version: link:../sync
       '@pluralscape/types':
         specifier: workspace:*
         version: link:../types
