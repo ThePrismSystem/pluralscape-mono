@@ -34,7 +34,7 @@ describe("SQLite members schema", () => {
     db.insert(members)
       .values({
         id,
-        systemId,
+        systemId: brandId<SystemId>(systemId),
         encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
@@ -63,7 +63,7 @@ describe("SQLite members schema", () => {
     it("inserts with encrypted_data and round-trips binary", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
@@ -86,7 +86,7 @@ describe("SQLite members schema", () => {
     it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(members)
@@ -107,7 +107,7 @@ describe("SQLite members schema", () => {
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(members)
@@ -140,8 +140,8 @@ describe("SQLite members schema", () => {
         db
           .insert(members)
           .values({
-            id: crypto.randomUUID(),
-            systemId: "nonexistent",
+            id: brandId<MemberId>(crypto.randomUUID()),
+            systemId: brandId<SystemId>("nonexistent"),
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -153,7 +153,7 @@ describe("SQLite members schema", () => {
     it("round-trips empty Uint8Array for encrypted_data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(members)
@@ -173,7 +173,7 @@ describe("SQLite members schema", () => {
     it("round-trips archived: true with archivedAt timestamp", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(members)
@@ -196,7 +196,7 @@ describe("SQLite members schema", () => {
     it("updates version and updatedAt correctly", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(members)
@@ -265,7 +265,7 @@ describe("SQLite members schema", () => {
     it("updates archived from false to true", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const id = brandId<MemberId>(crypto.randomUUID());
       const now = fixtureNow();
 
       db.insert(members)
