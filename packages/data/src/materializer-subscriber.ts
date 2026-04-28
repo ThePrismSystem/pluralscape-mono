@@ -1,3 +1,4 @@
+import { NoActiveSessionError } from "@pluralscape/sync";
 import { getMaterializer } from "@pluralscape/sync/materializer";
 
 import type { DocumentSnapshotProvider } from "./crdt-query-bridge.js";
@@ -6,11 +7,8 @@ import type { MaterializerDb } from "@pluralscape/sync/materializer";
 import type { SyncDocumentId, SyncDocumentType } from "@pluralscape/types";
 
 export interface MaterializerSubscriberDeps {
-  /** Source of CRDT document snapshots. SyncEngine implements this interface. */
   readonly engine: DocumentSnapshotProvider;
-  /** Adapter over the local SQLite database where materialized rows are written. */
   readonly materializerDb: MaterializerDb;
-  /** Event bus carrying sync:changes-merged and sync:snapshot-applied. */
   readonly eventBus: EventBus<DataLayerEventMap>;
 }
 
@@ -19,49 +17,77 @@ export interface MaterializerSubscriberHandle {
   readonly dispose: () => void;
 }
 
-function isRecordSnapshot(doc: unknown): doc is Record<string, unknown> {
-  return doc !== null && typeof doc === "object";
-}
-
 /**
  * Subscribes to engine merge events and runs the registered materializer
  * for the affected document. On `sync:changes-merged`, materializes only
- * the dirty entity types (perf gain landed in sync-f4ma). On
- * `sync:snapshot-applied`, full materialisation (no dirty filter — fresh
- * snapshot replaces the doc).
+ * the dirty entity types. On `sync:snapshot-applied`, full materialisation
+ * (no dirty filter — fresh snapshot replaces the doc).
  *
- * Materialization runs synchronously inside the event-bus dispatch.
- * After completion, the materializer emits `materialized:document` and
- * `search:index-updated` itself — no double-emit needed here.
+ * Materialisation runs synchronously inside the event-bus dispatch and is
+ * wrapped in a single `materializerDb.transaction(...)` so all entity-type
+ * passes for one merge land atomically — readers never observe a half-merged
+ * state. After completion, the materializer emits `materialized:document`
+ * and `search:index-updated` itself.
  *
- * Skips silently when the engine has evicted the session (snapshot is
- * undefined) or no materializer is registered for the document type.
+ * Failure modes are surfaced through the event bus rather than thrown:
+ *
+ * - `NoActiveSessionError` from `engine.getDocumentSnapshot` is treated as a
+ *   benign race (session evicted before the listener fired) and skipped.
+ * - Any other snapshot read error or materializer write error is reported
+ *   via `sync:error` so observers can react; the listener does not crash
+ *   the bus dispatch (which would queueMicrotask the throw into an
+ *   unhandled rejection).
+ *
+ * Skips silently when no materializer is registered for the document type.
  */
 export function createMaterializerSubscriber(
   deps: MaterializerSubscriberDeps,
 ): MaterializerSubscriberHandle {
   const { engine, materializerDb, eventBus } = deps;
 
-  function materialise(
+  function materialize(
     documentId: SyncDocumentId,
     documentType: SyncDocumentType,
     dirty: ReadonlySet<SyncedEntityType> | undefined,
   ): void {
-    const doc = engine.getDocumentSnapshot(documentId);
-    if (!isRecordSnapshot(doc)) return;
+    let doc: unknown;
+    try {
+      doc = engine.getDocumentSnapshot(documentId);
+    } catch (err) {
+      if (err instanceof NoActiveSessionError) return;
+      eventBus.emit("sync:error", {
+        type: "sync:error",
+        message: "materializer snapshot read failed",
+        error: err,
+      });
+      return;
+    }
+
+    if (doc === null || typeof doc !== "object") return;
+    const snapshot = doc as Record<string, unknown>;
 
     const materializer = getMaterializer(documentType);
     if (!materializer) return;
 
-    materializer.materialize(doc, materializerDb, eventBus, dirty);
+    try {
+      materializerDb.transaction(() => {
+        materializer.materialize(snapshot, materializerDb, eventBus, dirty);
+      });
+    } catch (err) {
+      eventBus.emit("sync:error", {
+        type: "sync:error",
+        message: "materializer write failed",
+        error: err,
+      });
+    }
   }
 
   const offMerged = eventBus.on("sync:changes-merged", (event) => {
-    materialise(event.documentId, event.documentType, event.dirtyEntityTypes);
+    materialize(event.documentId, event.documentType, event.dirtyEntityTypes);
   });
 
   const offSnapshot = eventBus.on("sync:snapshot-applied", (event) => {
-    materialise(event.documentId, event.documentType, undefined);
+    materialize(event.documentId, event.documentType, undefined);
   });
 
   return {

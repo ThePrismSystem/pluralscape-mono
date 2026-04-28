@@ -176,10 +176,15 @@ function emitEntityEvents(
  * - Skips if the diff is empty.
  * - Uses `INSERT OR REPLACE INTO` for inserts and updates.
  * - Uses `DELETE FROM … WHERE id = ?` for deletes.
- * - Wraps all writes in a single transaction.
  * - Emits `materialized:entity` events for each change when the entity
  *   type is hot-path (per `ENTITY_METADATA[entityType].hotPath`).
  *   Document-level events are NOT emitted here — the caller is responsible for that.
+ *
+ * Transaction boundary: this function does NOT open its own transaction. The
+ * caller (typically the materializer subscriber) wraps an entire merge's
+ * worth of `applyDiff` calls in one BEGIN/COMMIT so a multi-entity-type merge
+ * is atomic from a reader's perspective. Opening one here would conflict with
+ * the outer transaction (expo-sqlite's `withTransactionSync` is not nestable).
  */
 export function applyDiff(
   db: MaterializerDb,
@@ -195,17 +200,15 @@ export function applyDiff(
 
   const { tableName, columnNames } = meta;
 
-  db.transaction(() => {
-    for (const row of diff.inserts) {
-      upsertRow(db, tableName, columnNames, row);
-    }
-    for (const row of diff.updates) {
-      upsertRow(db, tableName, columnNames, row);
-    }
-    for (const id of diff.deletes) {
-      db.execute(`DELETE FROM ${tableName} WHERE id = ?`, [id]);
-    }
-  });
+  for (const row of diff.inserts) {
+    upsertRow(db, tableName, columnNames, row);
+  }
+  for (const row of diff.updates) {
+    upsertRow(db, tableName, columnNames, row);
+  }
+  for (const id of diff.deletes) {
+    db.execute(`DELETE FROM ${tableName} WHERE id = ?`, [id]);
+  }
 
   if (ENTITY_METADATA[entityType].hotPath) {
     emitEntityEvents(
