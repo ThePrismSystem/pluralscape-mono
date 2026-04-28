@@ -129,8 +129,9 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       sqliteDriver,
       materializerDb,
     };
-    // storageBackend intentionally excluded: sqliteDriver is null on non-sqlite
-    // platforms, so the null check above already gates on backend type.
+    // storageBackend isn't a dep: `sqliteDriver` is null on non-sqlite platforms
+    // and `materializerDb` is null on async-only sqlite, so the null checks
+    // above already gate on backend variant.
   }, [
     isUnlocked,
     systemId,
@@ -196,9 +197,6 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       pipeline.keyResolver?.dispose();
       pipeline.wsManager?.disconnect();
       pipeline.bucketKeyCache?.clearAll();
-      bucketKeyCacheRef.current = null;
-      keyResolverRef.current = null;
-      wsManagerRef.current = null;
     };
 
     void (async () => {
@@ -235,7 +233,6 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
 
         const profile: ReplicationProfile = { profileType: "owner-full" };
 
-        const bus = engineConfig.eventBus;
         pipeline.engine = new SyncEngine({
           networkAdapter,
           storageAdapter,
@@ -244,9 +241,9 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
           profile,
           systemId: engineConfig.systemId,
           onError: (message, error) => {
-            bus.emit("sync:error", { type: "sync:error", message, error });
+            engineConfig.eventBus.emit("sync:error", { type: "sync:error", message, error });
           },
-          eventBus: bus,
+          eventBus: engineConfig.eventBus,
         });
         if (isCancelled()) {
           disposePartial();
@@ -260,7 +257,7 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
           pipeline.materializerSubscriber = createMaterializerSubscriber({
             engine: pipeline.engine,
             materializerDb: engineConfig.materializerDb,
-            eventBus: bus,
+            eventBus: engineConfig.eventBus,
           });
         }
 
@@ -278,6 +275,11 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
           error,
         });
         disposePartial();
+        // Mirror the success-path cleanup: leaving stale engine state in React
+        // would cause the bootstrap effect to retry against a torn-down
+        // pipeline once the connection comes up.
+        setEngine(null);
+        setIsBootstrapped(false);
       }
     })();
 
