@@ -66,6 +66,16 @@ const ENTITY_TO_TABLE = {
 export interface MaterializerTableMetadata {
   readonly tableName: string;
   readonly columnNames: readonly string[];
+  /**
+   * @internal
+   *
+   * Raw Drizzle table reference. Prefer `tableName` and `columnNames` for
+   * routine consumers — those are the values the materializer's hot path
+   * actually uses. The DDL emitter (`local-schema.ts`) and the friend
+   * indexer's column-walk legitimately need the raw table to call
+   * `getTableConfig`; one or two cross-package consumers is acceptable
+   * but new callers should think twice before reaching for it.
+   */
   readonly drizzleTable: SQLiteTable;
 }
 
