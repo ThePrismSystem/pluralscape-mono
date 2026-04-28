@@ -12,16 +12,15 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+import { brandedId } from "../../columns/pg.js";
+import { archivable, timestamps, versionCheckFor, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck, exclusiveNullCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 import { FIELD_DEFINITION_SCOPE_TYPES, FIELD_TYPES } from "../../helpers/enums.js";
 
 import { groups } from "./groups.js";
@@ -47,14 +46,11 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const fieldDefinitions = pgTable(
   "field_definitions",
   {
-    id: brandedId<FieldDefinitionId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<FieldDefinitionId>(),
     fieldType: varchar("field_type", { length: ENUM_MAX_LENGTH }).notNull().$type<FieldType>(),
     required: boolean("required").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -63,23 +59,21 @@ export const fieldDefinitions = pgTable(
     index("field_definitions_system_archived_idx").on(t.systemId, t.archived),
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
-    versionCheckFor("field_definitions", t.version),
-    archivableConsistencyCheckFor("field_definitions", t.archived, t.archivedAt),
+    ...serverEntityChecks("field_definitions", t),
   ],
 );
 
+// Carve-out for serverEntityChecks: field_values is not archivable (CRDT
+// replaces values on update). entityIdentity and encryptedPayload still apply.
 export const fieldValues = pgTable(
   "field_values",
   {
-    id: brandedId<FieldValueId>("id").primaryKey(),
+    ...entityIdentity<FieldValueId>(),
     fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
     memberId: brandedId<MemberId>("member_id"),
     structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
     groupId: brandedId<GroupId>("group_id"),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
   },
@@ -126,6 +120,7 @@ export const fieldValues = pgTable(
   ],
 );
 
+// Pure link table — no entity identity, no encrypted payload, no audit.
 export const fieldBucketVisibility = pgTable(
   "field_bucket_visibility",
   {
@@ -146,18 +141,16 @@ export const fieldBucketVisibility = pgTable(
   ],
 );
 
+// Carve-outs: not archivable, no encrypted payload. entityIdentity applies.
 export const fieldDefinitionScopes = pgTable(
   "field_definition_scopes",
   {
-    id: brandedId<FieldDefinitionScopeId>("id").primaryKey(),
+    ...entityIdentity<FieldDefinitionScopeId>(),
     fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
     scopeType: varchar("scope_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<"system" | "member" | "group" | "structure-entity-type">(),
     scopeEntityTypeId: brandedId<SystemStructureEntityTypeId>("scope_entity_type_id"),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     ...timestamps(),
     ...versioned(),
   },
