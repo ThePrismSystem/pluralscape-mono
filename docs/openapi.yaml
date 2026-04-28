@@ -12170,6 +12170,14 @@ components:
           format: int64
           nullable: true
           description: Unix timestamp in milliseconds when the session expires
+        encryptedData:
+          type: string
+          nullable: true
+          description: |
+            Base64-encoded T1 ciphertext blob carrying the per-session DeviceInfo
+            payload (platform, appVersion, deviceName). Decrypted client-side via
+            `decryptDeviceInfo` from `@pluralscape/data`. Null on legacy rows that
+            pre-date device-info capture.
     SessionListResponse:
       type: object
       required:

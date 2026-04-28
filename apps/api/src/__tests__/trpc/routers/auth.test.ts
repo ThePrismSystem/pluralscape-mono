@@ -319,7 +319,13 @@ describe("auth router", () => {
     it("returns paginated sessions", async () => {
       const mockResult = {
         sessions: [
-          { id: brandId<SessionId>("sess_1"), createdAt: 1000, lastActive: 2000, expiresAt: null },
+          {
+            id: brandId<SessionId>("sess_1"),
+            createdAt: 1000,
+            lastActive: 2000,
+            expiresAt: null,
+            encryptedData: null,
+          },
         ],
         nextCursor: null,
       };

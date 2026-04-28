@@ -18,6 +18,14 @@ export {
 } from "./transforms/decode-blob.js";
 
 // --- Domain crypto transforms ---
+export { decryptDeviceInfo } from "./transforms/session.js";
+
+export {
+  withDecryptedDeviceInfo,
+  type SessionListRow,
+  type SessionListRowWithDeviceInfo,
+} from "./transforms/session-helpers.js";
+
 export {
   decryptMember,
   decryptMemberPage,
