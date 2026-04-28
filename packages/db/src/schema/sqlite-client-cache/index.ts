@@ -71,3 +71,17 @@ export {
   type NewLocalSystemStructureEntityMemberLink,
   type NewLocalSystemStructureEntityType,
 } from "./structure.js";
+export {
+  fieldBucketVisibility,
+  fieldDefinitionScopes,
+  fieldDefinitions,
+  fieldValues,
+  type LocalFieldBucketVisibilityRow,
+  type LocalFieldDefinitionRow,
+  type LocalFieldDefinitionScopeRow,
+  type LocalFieldValueRow,
+  type NewLocalFieldBucketVisibility,
+  type NewLocalFieldDefinition,
+  type NewLocalFieldDefinitionScope,
+  type NewLocalFieldValue,
+} from "./custom-fields.js";
