@@ -31,9 +31,318 @@ import type {
   MemberPhoto,
   System,
 } from "@pluralscape/types";
-import type { InferSelectModel } from "drizzle-orm";
+import type { InferSelectModel, Table } from "drizzle-orm";
 
 const SERVER_ONLY_COLUMNS = ["encryptedData", "version"] as const;
+
+// ── Parameterized structural parity ───────────────────────────────────
+// Every materialized SyncedEntityType is covered here so a future schema
+// addition fails the gate at CI time even if the author forgets to add a
+// dedicated describe block. The hand-written blocks below additionally
+// pin domain↔cache parity at the type level for the most-used entities.
+
+interface StructuralParityCase {
+  readonly name: string;
+  readonly pg: Table | null;
+  readonly sqlite: Table | null;
+  readonly cache: Table;
+  readonly skip: readonly string[];
+}
+
+const STRUCTURAL_PARITY_CASES: readonly StructuralParityCase[] = [
+  // system-core
+  // systems: server stores `accountId` (per-tenant FK to accounts) — cache is single-account, no accountId.
+  {
+    name: "systems",
+    pg: pgSchema.systems,
+    sqlite: sqliteSchema.systems,
+    cache: cache.systems,
+    skip: [...SERVER_ONLY_COLUMNS, "accountId"],
+  },
+  // systemSettings: `pinHash` and `biometricEnabled` are app-lock auth state — server-side, kept off the cache (the cache mirrors only synced settings).
+  {
+    name: "systemSettings",
+    pg: pgSchema.systemSettings,
+    sqlite: sqliteSchema.systemSettings,
+    cache: cache.systemSettings,
+    skip: [...SERVER_ONLY_COLUMNS, "pinHash", "biometricEnabled"],
+  },
+  {
+    name: "members",
+    pg: pgSchema.members,
+    sqlite: sqliteSchema.members,
+    cache: cache.members,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "memberPhotos",
+    pg: pgSchema.memberPhotos,
+    sqlite: sqliteSchema.memberPhotos,
+    cache: cache.memberPhotos,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "groups",
+    pg: pgSchema.groups,
+    sqlite: sqliteSchema.groups,
+    cache: cache.groups,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  // group_memberships intentionally skipped — junction tables are not entityIdentity-shaped.
+  {
+    name: "systemStructureEntityTypes",
+    pg: pgSchema.systemStructureEntityTypes,
+    sqlite: sqliteSchema.systemStructureEntityTypes,
+    cache: cache.systemStructureEntityTypes,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "systemStructureEntities",
+    pg: pgSchema.systemStructureEntities,
+    sqlite: sqliteSchema.systemStructureEntities,
+    cache: cache.systemStructureEntities,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "systemStructureEntityLinks",
+    pg: pgSchema.systemStructureEntityLinks,
+    sqlite: sqliteSchema.systemStructureEntityLinks,
+    cache: cache.systemStructureEntityLinks,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "systemStructureEntityMemberLinks",
+    pg: pgSchema.systemStructureEntityMemberLinks,
+    sqlite: sqliteSchema.systemStructureEntityMemberLinks,
+    cache: cache.systemStructureEntityMemberLinks,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "systemStructureEntityAssociations",
+    pg: pgSchema.systemStructureEntityAssociations,
+    sqlite: sqliteSchema.systemStructureEntityAssociations,
+    cache: cache.systemStructureEntityAssociations,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "relationships",
+    pg: pgSchema.relationships,
+    sqlite: sqliteSchema.relationships,
+    cache: cache.relationships,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "customFronts",
+    pg: pgSchema.customFronts,
+    sqlite: sqliteSchema.customFronts,
+    cache: cache.customFronts,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "frontingReports",
+    pg: pgSchema.frontingReports,
+    sqlite: sqliteSchema.frontingReports,
+    cache: cache.frontingReports,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "fieldDefinitions",
+    pg: pgSchema.fieldDefinitions,
+    sqlite: sqliteSchema.fieldDefinitions,
+    cache: cache.fieldDefinitions,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "fieldValues",
+    pg: pgSchema.fieldValues,
+    sqlite: sqliteSchema.fieldValues,
+    cache: cache.fieldValues,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "innerworldEntities",
+    pg: pgSchema.innerworldEntities,
+    sqlite: sqliteSchema.innerworldEntities,
+    cache: cache.innerworldEntities,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "innerworldRegions",
+    pg: pgSchema.innerworldRegions,
+    sqlite: sqliteSchema.innerworldRegions,
+    cache: cache.innerworldRegions,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "innerworldCanvas",
+    pg: pgSchema.innerworldCanvas,
+    sqlite: sqliteSchema.innerworldCanvas,
+    cache: cache.innerworldCanvas,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  // timerConfigs: server denormalises `nextCheckInAt` for cron-driven dispatch — cache derives at read time.
+  {
+    name: "timerConfigs",
+    pg: pgSchema.timerConfigs,
+    sqlite: sqliteSchema.timerConfigs,
+    cache: cache.timerConfigs,
+    skip: [...SERVER_ONLY_COLUMNS, "nextCheckInAt"],
+  },
+  // lifecycle-events: server stores `plaintextMetadata`/`updatedAt`; cache uses typed `payload`.
+  {
+    name: "lifecycleEvents",
+    pg: pgSchema.lifecycleEvents,
+    sqlite: sqliteSchema.lifecycleEvents,
+    cache: cache.lifecycleEvents,
+    skip: [...SERVER_ONLY_COLUMNS, "plaintextMetadata", "updatedAt"],
+  },
+  // webhookConfigs: HMAC `secret` is server-only T3 metadata (see review-cleanup 2a) — never replicated.
+  {
+    name: "webhookConfigs",
+    pg: pgSchema.webhookConfigs,
+    sqlite: sqliteSchema.webhookConfigs,
+    cache: cache.webhookConfigs,
+    skip: [...SERVER_ONLY_COLUMNS, "secret"],
+  },
+  // fronting
+  {
+    name: "frontingSessions",
+    pg: pgSchema.frontingSessions,
+    sqlite: sqliteSchema.frontingSessions,
+    cache: cache.frontingSessions,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "frontingComments",
+    pg: pgSchema.frontingComments,
+    sqlite: sqliteSchema.frontingComments,
+    cache: cache.frontingComments,
+    skip: [...SERVER_ONLY_COLUMNS, "sessionStartTime"],
+  },
+  // checkInRecords: server stores `idempotencyKey` for replay protection on the timer endpoint — cache only sees materialized records.
+  {
+    name: "checkInRecords",
+    pg: pgSchema.checkInRecords,
+    sqlite: sqliteSchema.checkInRecords,
+    cache: cache.checkInRecords,
+    skip: [...SERVER_ONLY_COLUMNS, "idempotencyKey"],
+  },
+  // chat
+  {
+    name: "channels",
+    pg: pgSchema.channels,
+    sqlite: sqliteSchema.channels,
+    cache: cache.channels,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "messages",
+    pg: pgSchema.messages,
+    sqlite: sqliteSchema.messages,
+    cache: cache.messages,
+    skip: [...SERVER_ONLY_COLUMNS, "timestamp"],
+  },
+  {
+    name: "boardMessages",
+    pg: pgSchema.boardMessages,
+    sqlite: sqliteSchema.boardMessages,
+    cache: cache.boardMessages,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "polls",
+    pg: pgSchema.polls,
+    sqlite: sqliteSchema.polls,
+    cache: cache.polls,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  // poll-options have no PG/SQLite server table — they live inside the parent poll's encryptedData.
+  { name: "pollOptions", pg: null, sqlite: null, cache: cache.pollOptions, skip: [] },
+  // pollVotes: server stores polymorphic `voter` as a JSON column — cache flattens into discriminator columns (voterEntityType/voterEntityId).
+  {
+    name: "pollVotes",
+    pg: pgSchema.pollVotes,
+    sqlite: sqliteSchema.pollVotes,
+    cache: cache.pollVotes,
+    skip: [...SERVER_ONLY_COLUMNS, "voter"],
+  },
+  {
+    name: "acknowledgements",
+    pg: pgSchema.acknowledgements,
+    sqlite: sqliteSchema.acknowledgements,
+    cache: cache.acknowledgements,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  // journal
+  {
+    name: "journalEntries",
+    pg: pgSchema.journalEntries,
+    sqlite: sqliteSchema.journalEntries,
+    cache: cache.journalEntries,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "wikiPages",
+    pg: pgSchema.wikiPages,
+    sqlite: sqliteSchema.wikiPages,
+    cache: cache.wikiPages,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "notes",
+    pg: pgSchema.notes,
+    sqlite: sqliteSchema.notes,
+    cache: cache.notes,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  // privacy
+  {
+    name: "buckets",
+    pg: pgSchema.buckets,
+    sqlite: sqliteSchema.buckets,
+    cache: cache.buckets,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  // bucket_content_tags + field_bucket_visibility: junction tables, no entityIdentity.
+  {
+    name: "friendConnections",
+    pg: pgSchema.friendConnections,
+    sqlite: sqliteSchema.friendConnections,
+    cache: cache.friendConnections,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "friendCodes",
+    pg: pgSchema.friendCodes,
+    sqlite: sqliteSchema.friendCodes,
+    cache: cache.friendCodes,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+  {
+    name: "keyGrants",
+    pg: pgSchema.keyGrants,
+    sqlite: sqliteSchema.keyGrants,
+    cache: cache.keyGrants,
+    skip: [...SERVER_ONLY_COLUMNS],
+  },
+];
+
+describe.each(STRUCTURAL_PARITY_CASES)(
+  "three-way structural parity — $name",
+  ({ pg, sqlite, cache: cacheTable, skip }) => {
+    test.skipIf(pg === null)("server PG ↔ cache structural columns equivalent", () => {
+      if (pg === null) return;
+      assertStructuralColumnsEquivalent(getTableColumns(pg), getTableColumns(cacheTable), { skip });
+    });
+
+    test.skipIf(sqlite === null)("server SQLite ↔ cache structural columns equivalent", () => {
+      if (sqlite === null) return;
+      assertStructuralColumnsEquivalent(getTableColumns(sqlite), getTableColumns(cacheTable), {
+        skip,
+      });
+    });
+  },
+);
 
 type SystemStructuralKey = "id" | "createdAt" | "updatedAt" | "archived" | "archivedAt";
 type EntityStructuralKey = SystemStructuralKey | "systemId";
