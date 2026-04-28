@@ -307,7 +307,9 @@ describe("createMaterializerSubscriber", () => {
 
     const handle = createMaterializerSubscriber({ engine, materializerDb, eventBus });
     handle.dispose();
-    expect(() => { handle.dispose(); }).not.toThrow();
+    expect(() => {
+      handle.dispose();
+    }).not.toThrow();
   });
 
   test("skips silently when no materializer is registered for the document type", () => {
