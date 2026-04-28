@@ -36,8 +36,11 @@ export const journalEntries = sqliteTable("journal_entries", {
 });
 
 /**
- * Decrypted client-cache projection of `WikiPage`. Server-only `slugHash`
- * is preserved for slug-based lookups against the encrypted server row.
+ * Decrypted client-cache projection of `WikiPage`. The `slugHash` column
+ * is a client-side-computed hash of the slug, identical to the value
+ * stored server-side; the cache keeps it in plaintext so that wiki
+ * link resolution (`[[page-slug]]`) can run locally without round-tripping
+ * to the server for every keystroke.
  */
 export const wikiPages = sqliteTable("wiki_pages", {
   ...entityIdentity<WikiPageId>(),
