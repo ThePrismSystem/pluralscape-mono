@@ -275,7 +275,7 @@ importers:
         version: 55.0.9(@expo/dom-webview@55.0.5)(expo@55.0.15)(react-dom@19.2.5(react@19.2.5))(react-native@0.85.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.5))(react@19.2.5)
       '@journeyapps/wa-sqlite':
         specifier: ^1.6.0
-        version: 1.6.0
+        version: 1.7.0
       '@microsoft/fetch-event-source':
         specifier: ^2.0.1
         version: 2.0.1
@@ -2155,8 +2155,8 @@ packages:
     resolution: {integrity: sha512-u3UPsIilWKOM3F9CXtrG8LEJmNxwoCQC/XVj4IKYXvvpx7QIi/Kg1LI5uDmDpKlac62NUtX7eLjRh+jVZcLOzw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
 
-  '@journeyapps/wa-sqlite@1.6.0':
-    resolution: {integrity: sha512-ZhHCTQiGGGoJz6LJPTH880BMO0kR0uVepoNTGCUpl65ZQ82r1RUHXGUpGWY3yndsjWKNveOxsqCCAgvI+TTu2w==}
+  '@journeyapps/wa-sqlite@1.7.0':
+    resolution: {integrity: sha512-xQZ670aKDo4FWxIFpLqY0AGDpURr09aYIO08UkLdWvFw8C018nCiqY0ILJudGRhRdXORhv7K2xD2OXZ2QxU39w==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -9054,7 +9054,7 @@ snapshots:
       '@types/yargs': 17.0.35
       chalk: 4.1.2
 
-  '@journeyapps/wa-sqlite@1.6.0': {}
+  '@journeyapps/wa-sqlite@1.7.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
