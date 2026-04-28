@@ -43,4 +43,10 @@ describe("getTableMetadataForEntityType", () => {
     const allEntityTypes = Object.keys(ENTITY_CRDT_STRATEGIES);
     expect(ALL_CACHE_TABLES.length).toBe(allEntityTypes.length);
   });
+
+  test("throws with a clear message when given an unregistered entity type", () => {
+    expect(() => getTableMetadataForEntityType("nonexistent" as SyncedEntityType)).toThrow(
+      /No cache table registered for entity type "nonexistent"/,
+    );
+  });
 });

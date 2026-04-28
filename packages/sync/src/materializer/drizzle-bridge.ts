@@ -79,6 +79,9 @@ export interface MaterializerTableMetadata {
 export function getTableMetadataForEntityType(
   entityType: SyncedEntityType,
 ): MaterializerTableMetadata {
+  if (!Object.hasOwn(ENTITY_TO_TABLE, entityType)) {
+    throw new Error(`No cache table registered for entity type "${entityType}"`);
+  }
   const t = ENTITY_TO_TABLE[entityType];
   const config = getTableConfig(t);
   return {
