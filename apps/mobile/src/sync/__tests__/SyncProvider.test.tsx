@@ -120,6 +120,7 @@ function makeSqliteDriver(): PlatformStorage & { backend: "sqlite" } {
       },
       close: vi.fn(() => Promise.resolve()),
     },
+    materializerDb: null,
   };
 }
 

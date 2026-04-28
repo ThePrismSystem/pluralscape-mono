@@ -6,7 +6,10 @@ import {
   type SQLiteDatabase,
 } from "expo-sqlite";
 
+import { createMaterializerDbAdapter } from "../../data/materializer-db-adapter.js";
+
 import type { SqliteDriver, SqliteStatement } from "@pluralscape/sync/adapters";
+import type { MaterializerDb } from "@pluralscape/sync/materializer";
 
 const DB_NAME = "pluralscape-sync.db";
 
@@ -26,6 +29,18 @@ export interface ExpoSqliteDriverOptions {
    * `DB_ENCRYPTION_KDF_CONTEXT` and `DB_ENCRYPTION_SUBKEY_ID` constants).
    */
   readonly encryptionKeyHex?: string;
+}
+
+/**
+ * Pair returned by {@link createExpoSqliteDriver}: the async {@link SqliteDriver}
+ * used by the storage adapter and the synchronous {@link MaterializerDb} used
+ * by the materializer subscriber. Both wrap the same underlying expo-sqlite
+ * connection so writes from each side share the SQLCipher session and a single
+ * WAL.
+ */
+export interface ExpoSqliteAdapters {
+  readonly driver: SqliteDriver;
+  readonly materializerDb: MaterializerDb;
 }
 
 /**
@@ -65,7 +80,11 @@ function isDatabaseAccessible(db: SQLiteDatabase): boolean {
 }
 
 /**
- * Wraps expo-sqlite into the SqliteDriver interface used by @pluralscape/sync adapters.
+ * Wraps expo-sqlite into the SqliteDriver interface used by @pluralscape/sync adapters
+ * AND the synchronous {@link MaterializerDb} interface used by the materializer
+ * subscriber. Both are backed by the same underlying expo-sqlite connection so writes
+ * from each side share the SQLCipher session and a single WAL.
+ *
  * expo-sqlite uses a synchronous API under the hood (JSI), wrapped in our interface.
  *
  * When `encryptionKeyHex` is provided, the driver:
@@ -79,7 +98,7 @@ function isDatabaseAccessible(db: SQLiteDatabase): boolean {
  */
 export function createExpoSqliteDriver(
   options: ExpoSqliteDriverOptions = {},
-): Promise<SqliteDriver> {
+): Promise<ExpoSqliteAdapters> {
   const { encryptionKeyHex } = options;
 
   let db: SQLiteDatabase = openDatabaseSync(DB_NAME);
@@ -160,5 +179,7 @@ export function createExpoSqliteDriver(
     },
   };
 
-  return Promise.resolve(driver);
+  const materializerDb = createMaterializerDbAdapter(db);
+
+  return Promise.resolve({ driver, materializerDb });
 }

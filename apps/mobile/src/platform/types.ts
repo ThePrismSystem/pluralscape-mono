@@ -4,6 +4,7 @@ import type {
   SyncStorageAdapter,
   OfflineQueueAdapter,
 } from "@pluralscape/sync/adapters";
+import type { MaterializerDb } from "@pluralscape/sync/materializer";
 
 export type StorageBackend = "sqlite" | "indexeddb";
 
@@ -18,7 +19,16 @@ export interface PlatformCapabilities {
 }
 
 export type PlatformStorage =
-  | { readonly backend: "sqlite"; readonly driver: SqliteDriver }
+  | {
+      readonly backend: "sqlite";
+      readonly driver: SqliteDriver;
+      /**
+       * Synchronous DB handle the materializer subscriber writes through.
+       * Populated for sync-native backends (expo-sqlite); `null` for backends
+       * that only expose async APIs (OPFS over a Web Worker).
+       */
+      readonly materializerDb: MaterializerDb | null;
+    }
   | {
       readonly backend: "indexeddb";
       readonly storageAdapter: SyncStorageAdapter;
