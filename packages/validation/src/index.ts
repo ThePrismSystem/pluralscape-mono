@@ -61,6 +61,16 @@ export {
   PlaintextTagSchema,
 } from "./plaintext-shared.js";
 export {
+  FriendDashboardMemberBlobSchema,
+  FriendDashboardFrontingSessionBlobSchema,
+  FriendDashboardCustomFrontBlobSchema,
+  FriendDashboardStructureEntityBlobSchema,
+  type FriendDashboardMemberBlob,
+  type FriendDashboardFrontingSessionBlob,
+  type FriendDashboardCustomFrontBlob,
+  type FriendDashboardStructureEntityBlob,
+} from "./friend-dashboard-blob.js";
+export {
   CreateFieldDefinitionBodySchema,
   FieldDefinitionEncryptedInputSchema,
   FieldValueEncryptedInputSchema,

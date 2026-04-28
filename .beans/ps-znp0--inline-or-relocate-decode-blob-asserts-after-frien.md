@@ -1,10 +1,11 @@
 ---
 # ps-znp0
 title: Inline or relocate decode-blob asserts after friend-dashboard migrates
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-27T19:00:19Z
-updated_at: 2026-04-27T19:00:19Z
+updated_at: 2026-04-28T18:50:56Z
 parent: ps-cd6x
 ---
 
@@ -30,3 +31,11 @@ Single-consumer helpers in `decode-blob.ts` are a code smell; either inline them
 
 - types-emid (PR #579 — established the Zod-at-decrypt pattern)
 - ps-cd6x (Milestone 9a)
+
+## Summary of Changes
+
+- Added 4 Zod schemas in @pluralscape/validation (FriendDashboardMember/FrontingSession/CustomFront/StructureEntity Blob)
+- Refactored decryptDashboard\* functions in @pluralscape/data to use Schema.parse() at the decrypt boundary
+- Deleted assertObjectBlob and assertStringField from packages/data/src/transforms/decode-blob.ts (sole consumers were the dashboard decryption helpers)
+- Added regression test for missing-required-field rejection on custom front
+- Updated existing throw assertions to match new Zod error messages (expected object/string)

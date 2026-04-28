@@ -1,10 +1,11 @@
 ---
 # api-bqu4
 title: Wire decryptDeviceInfo at session-list endpoint
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-27T18:59:53Z
-updated_at: 2026-04-27T18:59:53Z
+updated_at: 2026-04-28T17:55:43Z
 parent: ps-cd6x
 ---
 
@@ -24,3 +25,15 @@ Landed in `types-emid` (PR #579) as part of pre-release data-layer scaffolding. 
 
 - types-emid (PR #579 — schema and transform landed)
 - ps-cd6x (Milestone 9a)
+
+## Summary of Changes
+
+- Extended SessionInfo with encryptedData field (apps/api/src/services/auth/sessions.ts)
+- Added encryptedData column to listSessions SELECT projection with base64 conversion
+- Updated OpenAPI schema source in docs/openapi/schemas/auth.yaml; rebundled
+- Added withDecryptedDeviceInfo helper + SessionListRow types in @pluralscape/data
+- Exported decryptDeviceInfo from data package index
+- Added integration test verifying encryptedData round-trips on listSessions
+- Added unit test for withDecryptedDeviceInfo (present + null cases)
+- Added E2E contract test asserting encryptedData field is exposed on session list
+- pnpm trpc:parity and pnpm types:check-sot pass

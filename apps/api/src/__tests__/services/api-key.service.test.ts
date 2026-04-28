@@ -68,6 +68,7 @@ vi.mock("../../lib/encrypted-blob.js", () => ({
     nonce: new Uint8Array(24),
     ciphertext: new Uint8Array(16),
   })),
+  encryptedBlobToBase64: vi.fn(() => "ZW5jcnlwdGVkRGF0YQ=="),
   toT3EncryptedBytes: vi.fn((bytes: Uint8Array) => bytes),
 }));
 
@@ -118,6 +119,14 @@ function makeApiKeyRow(overrides: Record<string, unknown> = {}): Record<string, 
     revokedAt: null,
     expiresAt: null,
     scopedBucketIds: null,
+    encryptedData: {
+      tier: 1,
+      algorithm: "xchacha20-poly1305",
+      keyVersion: null,
+      bucketId: null,
+      nonce: new Uint8Array(24),
+      ciphertext: new Uint8Array(16),
+    },
     ...overrides,
   };
 }

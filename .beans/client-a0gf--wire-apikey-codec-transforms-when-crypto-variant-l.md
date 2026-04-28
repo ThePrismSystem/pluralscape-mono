@@ -1,10 +1,11 @@
 ---
 # client-a0gf
 title: Wire ApiKey codec transforms when crypto-variant lands client-side
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-27T19:00:01Z
-updated_at: 2026-04-27T19:00:01Z
+updated_at: 2026-04-28T18:45:41Z
 parent: ps-cd6x
 ---
 
@@ -30,3 +31,13 @@ When the crypto-variant work picks up:
 - types-emid (PR #579 — schema and transform landed)
 - ps-qmyt (Class C extension — original)
 - ps-cd6x (Milestone 9a)
+
+## Summary of Changes
+
+- Extended ApiKeyResult, API_KEY_SELECT_COLUMNS, toApiKeyResult with encryptedData (apps/api/src/services/api-key/internal.ts)
+- Updated OpenAPI ApiKeyResponse schema to include encryptedData; rebundled
+- Added decryptApiKeyPayload, encryptApiKeyPayload, withDecodedApiKeyPayload exports in @pluralscape/data
+- Added integration test asserting encryptedData round-trips on create/get/list
+- Added unit tests for withDecodedApiKeyPayload (crypto/metadata variants + field preservation)
+- Added E2E test exercising full crypto-variant publicKey encrypt-on-create → decrypt-on-list flow
+- pnpm trpc:parity and pnpm types:check-sot pass

@@ -1,8 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
-import { initSodium } from "@pluralscape/crypto";
+import { encryptTier1, generateMasterKey, getSodium, initSodium, toHex } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
-import { brandId } from "@pluralscape/types";
+import { brandId, toUnixMillis } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,7 +31,7 @@ import { asDb, noopAudit, registerTestAccount, spyAudit } from "../helpers/integ
 import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { RegistrationCommitResult } from "../../services/auth/register.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, SessionId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
@@ -316,6 +316,50 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const page2 = await listSessions(asDb(db), brandId<AccountId>(reg.accountId), rawCursor, 1);
       expect(page2.sessions).toHaveLength(1);
       expect(page2.sessions[0]?.id).not.toBe(rawCursor);
+    });
+
+    it("projects encryptedData=null for sessions without a DeviceInfo blob", async () => {
+      const reg = await registerTestAccount(asDb(db));
+
+      const { sessions: sessionList } = await listSessions(
+        asDb(db),
+        brandId<AccountId>(reg.accountId),
+      );
+
+      expect(sessionList.length).toBeGreaterThanOrEqual(1);
+      expect(sessionList[0]?.encryptedData).toBeNull();
+    });
+
+    it("projects encryptedData as base64 string when row has a stored blob", async () => {
+      const sodium = getSodium();
+      const reg = await registerTestAccount(asDb(db));
+      const masterKey = generateMasterKey();
+      const blob = encryptTier1(
+        { platform: "ios", appVersion: "1.0.0", deviceName: "Test iPhone" },
+        masterKey,
+      );
+
+      await db.insert(sessions).values({
+        id: brandId<SessionId>(`sess_${crypto.randomUUID()}`),
+        accountId: brandId<AccountId>(reg.accountId),
+        tokenHash: toHex(sodium.randomBytes(32)),
+        encryptedData: blob,
+        createdAt: toUnixMillis(Date.now()),
+        lastActive: toUnixMillis(Date.now()),
+        expiresAt: toUnixMillis(Date.now() + 3_600_000),
+      });
+
+      const { sessions: sessionList } = await listSessions(
+        asDb(db),
+        brandId<AccountId>(reg.accountId),
+      );
+
+      const withBlob = sessionList.find((s) => s.encryptedData !== null);
+      if (!withBlob) {
+        throw new Error("Expected to find a session with encryptedData set");
+      }
+      expect(typeof withBlob.encryptedData).toBe("string");
+      expect(withBlob.encryptedData).toMatch(/^[A-Za-z0-9+/=]+$/);
     });
   });
 

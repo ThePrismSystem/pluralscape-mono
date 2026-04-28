@@ -2,13 +2,14 @@ import { sessions } from "@pluralscape/db/pg";
 import { brandId, now } from "@pluralscape/types";
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
+import { encryptedBlobToBase64OrNull } from "../../lib/encrypted-blob.js";
 import { toCursor } from "../../lib/pagination.js";
 import { withAccountRead, withAccountTransaction } from "../../lib/rls-context.js";
 import { buildIdleTimeoutFilter } from "../../lib/session-idle-filter.js";
 import { DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT } from "../../routes/auth/auth.constants.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AccountId, PaginationCursor, SessionId } from "@pluralscape/types";
+import type { AccountId, EncryptedBase64, PaginationCursor, SessionId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Session management ─────────────────────────────────────────────
@@ -18,6 +19,13 @@ export interface SessionInfo {
   readonly createdAt: number;
   readonly lastActive: number | null;
   readonly expiresAt: number | null;
+  /**
+   * Base64-encoded T1 ciphertext blob carrying the per-session DeviceInfo
+   * payload (platform, appVersion, deviceName). Decrypted client-side via
+   * `decryptDeviceInfo` from `@pluralscape/data`. Null on legacy rows that
+   * pre-date device-info capture.
+   */
+  readonly encryptedData: EncryptedBase64 | null;
 }
 
 export async function listSessions(
@@ -48,6 +56,7 @@ export async function listSessions(
         createdAt: sessions.createdAt,
         lastActive: sessions.lastActive,
         expiresAt: sessions.expiresAt,
+        encryptedData: sessions.encryptedData,
       })
       .from(sessions)
       .where(and(...conditions))
@@ -55,7 +64,14 @@ export async function listSessions(
       .limit(effectiveLimit + 1);
 
     const hasMore = rows.length > effectiveLimit;
-    const result = hasMore ? rows.slice(0, effectiveLimit) : rows;
+    const sliced = hasMore ? rows.slice(0, effectiveLimit) : rows;
+    const result: SessionInfo[] = sliced.map((row) => ({
+      id: row.id,
+      createdAt: row.createdAt,
+      lastActive: row.lastActive,
+      expiresAt: row.expiresAt,
+      encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
+    }));
     const lastId = result[result.length - 1]?.id;
     const nextCursor = hasMore && lastId ? toCursor(lastId) : null;
 

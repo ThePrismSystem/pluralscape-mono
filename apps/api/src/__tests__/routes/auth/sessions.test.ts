@@ -106,8 +106,20 @@ describe("sessions route", () => {
     it("returns session list for authenticated user", async () => {
       const mockSessions = {
         sessions: [
-          { id: brandId<SessionId>("sess_1"), createdAt: 1000, lastActive: 2000, expiresAt: 9000 },
-          { id: brandId<SessionId>("sess_2"), createdAt: 1500, lastActive: 2500, expiresAt: 9500 },
+          {
+            id: brandId<SessionId>("sess_1"),
+            createdAt: 1000,
+            lastActive: 2000,
+            expiresAt: 9000,
+            encryptedData: null,
+          },
+          {
+            id: brandId<SessionId>("sess_2"),
+            createdAt: 1500,
+            lastActive: 2500,
+            expiresAt: 9500,
+            encryptedData: null,
+          },
         ],
         nextCursor: toCursor("sess_2"),
       };
