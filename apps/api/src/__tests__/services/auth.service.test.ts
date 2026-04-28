@@ -1102,8 +1102,8 @@ describe("auth service", () => {
     it("returns sessions without nextCursor when under the limit", async () => {
       const { db, chain } = mockDb();
       const rows = [
-        { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
-        { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
+        { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000, encryptedData: null },
+        { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100, encryptedData: null },
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
@@ -1115,9 +1115,9 @@ describe("auth service", () => {
     it("returns nextCursor when limit+1 rows are returned", async () => {
       const { db, chain } = mockDb();
       const rows = [
-        { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
-        { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
-        { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
+        { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000, encryptedData: null },
+        { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100, encryptedData: null },
+        { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200, encryptedData: null },
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
@@ -1133,8 +1133,8 @@ describe("auth service", () => {
     it("passes cursor as SQL condition (not in-memory filtering)", async () => {
       const { db, chain } = mockDb();
       const rows = [
-        { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
-        { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
+        { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100, encryptedData: null },
+        { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200, encryptedData: null },
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
@@ -1150,7 +1150,15 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       const fixedTime = 700_000_000;
       mockNow.mockReturnValue(fixedTime);
-      const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
+      const rows = [
+        {
+          id: "sess_1",
+          createdAt: 0,
+          lastActive: 1,
+          expiresAt: 2_592_000_000,
+          encryptedData: null,
+        },
+      ];
       chain.limit.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, TEST_ACCOUNT_ID);
@@ -1167,6 +1175,7 @@ describe("auth service", () => {
           createdAt: fixedTime - 1000,
           lastActive: fixedTime - 500,
           expiresAt: fixedTime + 2_592_000_000,
+          encryptedData: null,
         },
       ];
       chain.limit.mockResolvedValueOnce(rows);

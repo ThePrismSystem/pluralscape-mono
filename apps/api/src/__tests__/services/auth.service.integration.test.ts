@@ -355,9 +355,11 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       );
 
       const withBlob = sessionList.find((s) => s.encryptedData !== null);
-      expect(withBlob).toBeDefined();
-      expect(typeof withBlob?.encryptedData).toBe("string");
-      expect(withBlob?.encryptedData).toMatch(/^[A-Za-z0-9+/=]+$/);
+      if (!withBlob) {
+        throw new Error("Expected to find a session with encryptedData set");
+      }
+      expect(typeof withBlob.encryptedData).toBe("string");
+      expect(withBlob.encryptedData).toMatch(/^[A-Za-z0-9+/=]+$/);
     });
   });
 

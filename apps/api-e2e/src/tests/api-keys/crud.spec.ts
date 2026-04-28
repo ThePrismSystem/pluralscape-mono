@@ -39,30 +39,37 @@ test.describe("API keys CRUD", () => {
     await test.step("get API key by ID", async () => {
       const res = await request.get(`${keysUrl}/${keyId}`, { headers: authHeaders });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as { data: { id: string; keyType: string } };
+      const body = (await res.json()) as {
+        data: { id: string; keyType: string; encryptedData: string };
+      };
       expect(body.data.id).toBe(keyId);
       expect(body.data.keyType).toBe("metadata");
       // Fail-closed allowlist guard (ADR-023 Class C): the wire surface must
-      // never include sensitive server-only columns.
+      // never include sensitive server-only columns. encryptedData is the
+      // client-encrypted Class C payload — it MUST be exposed (surfaced in
+      // api-bqu4 / client-a0gf) so clients can decrypt it; it is not in this
+      // exclusion list.
       expect(body.data).not.toHaveProperty("tokenHash");
-      expect(body.data).not.toHaveProperty("encryptedData");
       expect(body.data).not.toHaveProperty("encryptedKeyMaterial");
       expect(body.data).not.toHaveProperty("accountId");
+      expect(typeof body.data.encryptedData).toBe("string");
     });
 
     await test.step("list includes the key", async () => {
       const res = await request.get(keysUrl, { headers: authHeaders });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as { data: Array<{ id: string }> };
+      const body = (await res.json()) as { data: Array<{ id: string; encryptedData: string }> };
       const ids = body.data.map((k) => k.id);
       expect(ids).toContain(keyId);
       const listed = body.data.find((k) => k.id === keyId);
-      expect(listed).toBeDefined();
+      if (!listed) {
+        throw new Error(`Expected list to include ApiKey ${keyId}`);
+      }
       // Same fail-closed guard on the list endpoint.
       expect(listed).not.toHaveProperty("tokenHash");
-      expect(listed).not.toHaveProperty("encryptedData");
       expect(listed).not.toHaveProperty("encryptedKeyMaterial");
       expect(listed).not.toHaveProperty("accountId");
+      expect(typeof listed.encryptedData).toBe("string");
     });
 
     await test.step("revoke API key", async () => {
