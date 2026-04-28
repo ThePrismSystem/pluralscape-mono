@@ -4,12 +4,13 @@ import {
   registerMaterializer,
   type MaterializerDb,
 } from "@pluralscape/sync/materializer";
+import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createMaterializerSubscriber } from "../materializer-subscriber.js";
 
 import type { DocumentSnapshotProvider } from "../crdt-query-bridge.js";
-import type { SyncDocumentId } from "@pluralscape/types";
+import type { SyncDocumentId, SyncDocumentType } from "@pluralscape/types";
 
 function makeMockMaterializerDb(): MaterializerDb {
   return {
@@ -30,6 +31,10 @@ function makeMockEngine(snapshots: Record<string, unknown>): {
   };
 }
 
+function docId(raw: string): SyncDocumentId {
+  return brandId<SyncDocumentId>(raw);
+}
+
 const TEST_DOC_TYPE = "system-core" as const;
 
 afterEach(() => {
@@ -38,9 +43,9 @@ afterEach(() => {
 
 describe("createMaterializerSubscriber", () => {
   test("calls registered materializer on sync:changes-merged", () => {
-    const docId = "system-core_sys_test1" as SyncDocumentId;
+    const id = docId("system-core_sys_test1");
     const docSnapshot = { members: {} };
-    const { engine, spy } = makeMockEngine({ [docId]: docSnapshot });
+    const { engine, spy } = makeMockEngine({ [id]: docSnapshot });
     const materializerDb = makeMockMaterializerDb();
     const eventBus = createEventBus<DataLayerEventMap>();
 
@@ -54,13 +59,13 @@ describe("createMaterializerSubscriber", () => {
 
     eventBus.emit("sync:changes-merged", {
       type: "sync:changes-merged",
-      documentId: docId,
+      documentId: id,
       documentType: TEST_DOC_TYPE,
       dirtyEntityTypes: new Set(["member"]),
       conflicts: [],
     });
 
-    expect(spy).toHaveBeenCalledWith(docId);
+    expect(spy).toHaveBeenCalledWith(id);
     expect(materializeSpy).toHaveBeenCalledTimes(1);
     expect(materializeSpy).toHaveBeenCalledWith(
       docSnapshot,
@@ -73,7 +78,7 @@ describe("createMaterializerSubscriber", () => {
   });
 
   test("no-ops when getDocumentSnapshot returns undefined (session evicted)", () => {
-    const docId = "system-core_sys_evicted" as SyncDocumentId;
+    const id = docId("system-core_sys_evicted");
     const { engine } = makeMockEngine({});
     const materializerDb = makeMockMaterializerDb();
     const eventBus = createEventBus<DataLayerEventMap>();
@@ -85,7 +90,7 @@ describe("createMaterializerSubscriber", () => {
 
     eventBus.emit("sync:changes-merged", {
       type: "sync:changes-merged",
-      documentId: docId,
+      documentId: id,
       documentType: TEST_DOC_TYPE,
       dirtyEntityTypes: new Set(["member"]),
       conflicts: [],
@@ -96,9 +101,9 @@ describe("createMaterializerSubscriber", () => {
   });
 
   test("invokes materializer with no dirty filter on sync:snapshot-applied", () => {
-    const docId = "system-core_sys_snap" as SyncDocumentId;
+    const id = docId("system-core_sys_snap");
     const docSnapshot = { members: {} };
-    const { engine } = makeMockEngine({ [docId]: docSnapshot });
+    const { engine } = makeMockEngine({ [id]: docSnapshot });
     const materializerDb = makeMockMaterializerDb();
     const eventBus = createEventBus<DataLayerEventMap>();
 
@@ -109,7 +114,7 @@ describe("createMaterializerSubscriber", () => {
 
     eventBus.emit("sync:snapshot-applied", {
       type: "sync:snapshot-applied",
-      documentId: docId,
+      documentId: id,
       documentType: TEST_DOC_TYPE,
     });
 
@@ -118,8 +123,8 @@ describe("createMaterializerSubscriber", () => {
   });
 
   test("dispose unsubscribes both listeners", () => {
-    const docId = "system-core_sys_dispose" as SyncDocumentId;
-    const { engine } = makeMockEngine({ [docId]: { members: {} } });
+    const id = docId("system-core_sys_dispose");
+    const { engine } = makeMockEngine({ [id]: { members: {} } });
     const materializerDb = makeMockMaterializerDb();
     const eventBus: EventBus<DataLayerEventMap> = createEventBus();
 
@@ -131,7 +136,7 @@ describe("createMaterializerSubscriber", () => {
 
     eventBus.emit("sync:changes-merged", {
       type: "sync:changes-merged",
-      documentId: docId,
+      documentId: id,
       documentType: TEST_DOC_TYPE,
       dirtyEntityTypes: new Set(["member"]),
       conflicts: [],
@@ -139,7 +144,7 @@ describe("createMaterializerSubscriber", () => {
 
     eventBus.emit("sync:snapshot-applied", {
       type: "sync:snapshot-applied",
-      documentId: docId,
+      documentId: id,
       documentType: TEST_DOC_TYPE,
     });
 
@@ -147,24 +152,29 @@ describe("createMaterializerSubscriber", () => {
   });
 
   test("skips silently when no materializer is registered for the document type", () => {
-    const docId = "system-core_sys_unknown" as SyncDocumentId;
-    const { engine } = makeMockEngine({ [docId]: { members: {} } });
+    const id = docId("system-core_sys_unknown");
+    const { engine } = makeMockEngine({ [id]: { members: {} } });
     const materializerDb = makeMockMaterializerDb();
     const eventBus = createEventBus<DataLayerEventMap>();
+
+    // A SyncDocumentType union is closed at compile time; pretend an unknown
+    // value via a typed local so we exercise the registry-miss branch without
+    // resorting to inline `as never` in test bodies.
+    const unknownDocType: SyncDocumentType = "nonexistent-doc-type" as SyncDocumentType;
 
     const handle = createMaterializerSubscriber({ engine, materializerDb, eventBus });
 
     expect(() => {
       eventBus.emit("sync:changes-merged", {
         type: "sync:changes-merged",
-        documentId: docId,
-        documentType: "nonexistent-doc-type" as never,
+        documentId: id,
+        documentType: unknownDocType,
         dirtyEntityTypes: new Set(["member"]),
         conflicts: [],
       });
     }).not.toThrow();
 
-    expect(getMaterializer("nonexistent-doc-type" as never)).toBeUndefined();
+    expect(getMaterializer(unknownDocType)).toBeUndefined();
     handle.dispose();
   });
 });
