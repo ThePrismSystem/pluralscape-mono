@@ -19,11 +19,11 @@ describe("assertStructuralColumnsEquivalent", () => {
       createdAt: integer("created_at").notNull(),
     });
 
-    expect(() =>
-      { assertStructuralColumnsEquivalent(getTableColumns(server), getTableColumns(cache), {
+    expect(() => {
+      assertStructuralColumnsEquivalent(getTableColumns(server), getTableColumns(cache), {
         skip: ["encryptedData", "version", "name"],
-      }); },
-    ).not.toThrow();
+      });
+    }).not.toThrow();
   });
 
   test("throws when cache is missing a structural column", () => {
@@ -33,11 +33,11 @@ describe("assertStructuralColumnsEquivalent", () => {
     });
     const cache = sqliteTable("b_cache", { id: text("id").primaryKey() });
 
-    expect(() =>
-      { assertStructuralColumnsEquivalent(getTableColumns(server), getTableColumns(cache), {
+    expect(() => {
+      assertStructuralColumnsEquivalent(getTableColumns(server), getTableColumns(cache), {
         skip: [],
-      }); },
-    ).toThrow(/missing structural column "systemId"/);
+      });
+    }).toThrow(/missing structural column "systemId"/);
   });
 
   test("throws when notNull differs between schemas", () => {
@@ -50,10 +50,10 @@ describe("assertStructuralColumnsEquivalent", () => {
       systemId: text("system_id"),
     });
 
-    expect(() =>
-      { assertStructuralColumnsEquivalent(getTableColumns(server), getTableColumns(cache), {
+    expect(() => {
+      assertStructuralColumnsEquivalent(getTableColumns(server), getTableColumns(cache), {
         skip: [],
-      }); },
-    ).toThrow(/notNull mismatch/);
+      });
+    }).toThrow(/notNull mismatch/);
   });
 });

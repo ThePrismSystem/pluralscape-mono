@@ -11,9 +11,7 @@ describe("entityIdentity (pg)", () => {
   it("produces id (PK) and systemId (notNull FK) columns", () => {
     const t = pgTable("test_identity", { ...entityIdentity<MemberId>() });
     const cols = getTableColumns(t);
-    expect(cols.id).toBeDefined();
     expect(cols.id.primary).toBe(true);
-    expect(cols.systemId).toBeDefined();
     expect(cols.systemId.notNull).toBe(true);
   });
 });
@@ -22,7 +20,6 @@ describe("encryptedPayload (pg)", () => {
   it("produces a notNull encryptedData bytea column", () => {
     const t = pgTable("test_payload", { ...encryptedPayload() });
     const cols = getTableColumns(t);
-    expect(cols.encryptedData).toBeDefined();
     expect(cols.encryptedData.notNull).toBe(true);
   });
 });

@@ -1,7 +1,6 @@
 import * as cache from "@pluralscape/db/sqlite-client-cache";
 import { getTableConfig } from "drizzle-orm/sqlite-core";
 
-
 import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
