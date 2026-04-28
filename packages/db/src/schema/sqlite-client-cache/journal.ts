@@ -5,13 +5,14 @@ import { archivable, timestamps } from "../../helpers/audit.sqlite.js";
 import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 
 import type {
-  AnyBrandedId,
   EntityLink,
   FrontingSessionId,
   FrontingSnapshot,
   JournalBlock,
   JournalEntryId,
+  MemberId,
   SlugHash,
+  SystemStructureEntityId,
   WikiPageId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -24,7 +25,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const journalEntries = sqliteTable("journal_entries", {
   ...entityIdentity<JournalEntryId>(),
   authorEntityType: text("author_entity_type").$type<"member" | "structure-entity" | null>(),
-  authorEntityId: brandedId<AnyBrandedId>("author_entity_id"),
+  authorEntityId: brandedId<MemberId | SystemStructureEntityId>("author_entity_id"),
   frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id"),
   title: text("title").notNull(),
   blocks: sqliteJsonOf<readonly JournalBlock[]>("blocks").notNull(),

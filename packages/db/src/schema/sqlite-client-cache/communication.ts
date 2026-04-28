@@ -6,7 +6,6 @@ import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 
 import type {
   AcknowledgementId,
-  AnyBrandedId,
   BlobId,
   BoardMessageId,
   ChannelId,
@@ -89,7 +88,7 @@ export const boardMessages = sqliteTable("board_messages", {
 export const notes = sqliteTable("notes", {
   ...entityIdentity<NoteId>(),
   authorEntityType: text("author_entity_type").$type<NoteAuthorEntityType | null>(),
-  authorEntityId: brandedId<AnyBrandedId>("author_entity_id"),
+  authorEntityId: brandedId<MemberId | SystemStructureEntityId>("author_entity_id"),
   title: text("title").notNull(),
   content: text("content").notNull(),
   backgroundColor: text("background_color").$type<HexColor | null>(),
