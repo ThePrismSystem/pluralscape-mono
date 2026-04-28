@@ -1,5 +1,4 @@
-// Cache schemas are added per-entity-group in subsequent commits.
-// See ADR-038 for the architecture and encoding rules.
+// Decrypted client-cache schemas. Encoding rules: ADR-038.
 export { systems, type LocalSystemRow, type NewLocalSystem } from "./systems.js";
 export {
   memberPhotos,

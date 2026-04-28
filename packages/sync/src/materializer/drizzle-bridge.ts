@@ -6,8 +6,6 @@ import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 /**
  * Mapping from `SyncedEntityType` to its Drizzle SQLite cache table.
- * Replaces the schema portion of the legacy `ENTITY_TABLE_REGISTRY`.
- *
  * Every `SyncedEntityType` MUST have a cache table registered here.
  */
 const ENTITY_TO_TABLE = {

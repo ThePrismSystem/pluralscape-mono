@@ -31,9 +31,8 @@ export interface EntityMetadata {
 }
 
 /**
- * Per-entity-type behaviour metadata. The values here previously lived
- * inline in `entity-registry.ts`'s `EntityTableDef` records; they're
- * extracted now that the schema portion is supplied by Drizzle.
+ * Per-entity-type behaviour metadata. Drives query-invalidation routing
+ * (`hotPath`, `compoundDetailKey`) and search-index generation (`ftsColumns`).
  */
 export const ENTITY_METADATA = {
   // ── system-core document ──────────────────────────────────────────
