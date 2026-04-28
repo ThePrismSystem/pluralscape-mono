@@ -16,36 +16,30 @@ import {
   archivableConsistencyCheckFor,
   timestamps,
   versioned,
-  versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { pgTimeFormatCheck } from "../../helpers/check.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 
 import { members } from "./members.js";
-import { systems } from "./systems.js";
 
-import type {
-  CheckInRecordId,
-  MemberId,
-  ServerInternal,
-  SystemId,
-  TimerId,
-} from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, ServerInternal, TimerId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = pgTable(
   "timer_configs",
   {
-    id: brandedId<TimerId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<TimerId>(),
     enabled: boolean("enabled").notNull().default(true),
     intervalMinutes: integer("interval_minutes"),
     wakingHoursOnly: boolean("waking_hours_only"),
     wakingStart: varchar("waking_start", { length: 255 }),
     wakingEnd: varchar("waking_end", { length: 255 }),
     nextCheckInAt: pgTimestamp("next_check_in_at"),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -53,10 +47,9 @@ export const timerConfigs = pgTable(
   (t) => [
     index("timer_configs_system_archived_idx").on(t.systemId, t.archived),
     unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("timer_configs", t.version),
     check("timer_configs_waking_start_format", pgTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", pgTimeFormatCheck(t.wakingEnd)),
-    archivableConsistencyCheckFor("timer_configs", t.archived, t.archivedAt),
+    ...serverEntityChecks("timer_configs", t),
     index("timer_configs_next_check_in_idx")
       .on(t.nextCheckInAt)
       .where(sql`${t.enabled} = true AND ${t.archivedAt} IS NULL`),
@@ -66,16 +59,12 @@ export const timerConfigs = pgTable(
   ],
 );
 
-// CheckInRecord is a Cluster 6 entity; its own `id` brand lift lives with
-// that cluster. The FK columns pointing at timer-config and member are lifted
-// here because they reference this cluster's and Cluster 1's tables.
+// Carve-out: nullable encryptedData (response payload optional until captured)
+// and no timestamps()/versioned() — entityIdentity applies.
 export const checkInRecords = pgTable(
   "check_in_records",
   {
-    id: brandedId<CheckInRecordId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<CheckInRecordId>(),
     timerConfigId: brandedId<TimerId>("timer_config_id").notNull(),
     scheduledAt: pgTimestamp("scheduled_at").notNull(),
     respondedAt: pgTimestamp("responded_at"),
