@@ -93,3 +93,20 @@ export {
   type NewLocalJournalEntry,
   type NewLocalWikiPage,
 } from "./journal.js";
+export {
+  bucketContentTags,
+  buckets,
+  friendCodes,
+  friendConnections,
+  keyGrants,
+  type LocalBucketContentTagRow,
+  type LocalBucketRow,
+  type LocalFriendCodeRow,
+  type LocalFriendConnectionRow,
+  type LocalKeyGrantRow,
+  type NewLocalBucket,
+  type NewLocalBucketContentTag,
+  type NewLocalFriendCode,
+  type NewLocalFriendConnection,
+  type NewLocalKeyGrant,
+} from "./privacy.js";
