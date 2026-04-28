@@ -1,9 +1,12 @@
 import {
-  ENTITY_TABLE_REGISTRY,
+  ENTITY_METADATA,
   FRIEND_EXPORTABLE_ENTITY_TYPES,
+  getTableMetadataForEntityType,
 } from "@pluralscape/sync/materializer";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+
+import { SEARCH_DEBOUNCE_MS, SEARCH_RESULTS_LIMIT } from "./search.constants.js";
 
 import type { LocalDatabase } from "../data/local-database.js";
 import type { SyncedEntityType } from "@pluralscape/sync";
@@ -20,22 +23,18 @@ export interface SearchResult {
   readonly data: Record<string, unknown>;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────
-
-/** Debounce delay for search input (ms). */
-const SEARCH_DEBOUNCE_MS = 300;
-
-/** Maximum results per entity type per FTS5 query. */
-const SEARCH_RESULTS_LIMIT = 20;
-
 // ── Searchable entity lists ───────────────────────────────────────────
 
 /**
  * Entity types that have FTS columns defined — these are searchable.
+ *
+ * `Object.keys` returns `string[]`, so the cast is needed to recover the
+ * key union; `ENTITY_METADATA` is `as const satisfies Record<SyncedEntityType, …>`,
+ * so the cast is provably sound (closed iteration over a const-asserted record).
  */
-const SEARCHABLE_ENTITY_TYPES: readonly SyncedEntityType[] = (
-  Object.keys(ENTITY_TABLE_REGISTRY) as SyncedEntityType[]
-).filter((entityType) => ENTITY_TABLE_REGISTRY[entityType].ftsColumns.length > 0);
+const SEARCHABLE_ENTITY_TYPES: readonly (keyof typeof ENTITY_METADATA)[] = (
+  Object.keys(ENTITY_METADATA) as (keyof typeof ENTITY_METADATA)[]
+).filter((entityType) => ENTITY_METADATA[entityType].ftsColumns.length > 0);
 
 // ── Query builder ─────────────────────────────────────────────────────
 
@@ -106,8 +105,7 @@ export async function executeSearch(
   const results: SearchResult[] = [];
 
   for (const entityType of SEARCHABLE_ENTITY_TYPES) {
-    const def = ENTITY_TABLE_REGISTRY[entityType];
-    const { tableName } = def;
+    const { tableName } = getTableMetadataForEntityType(entityType);
 
     if (scope === "self" || scope === "all") {
       const ftsName = `fts_${tableName}`;

@@ -233,7 +233,7 @@ describe("systemCoreMaterializer", () => {
 
     getSystemCoreMaterializer().materialize(doc, db, eventBus);
 
-    const systemInserts = db.calls.filter((c) => c.sql.includes("INSERT OR REPLACE INTO system "));
+    const systemInserts = db.calls.filter((c) => c.sql.includes("INSERT OR REPLACE INTO systems "));
     expect(systemInserts.length).toBeGreaterThan(0);
   });
 
@@ -243,8 +243,8 @@ describe("systemCoreMaterializer", () => {
 
     const doc: Record<string, unknown> = {
       groupMemberships: {
-        grp_1_mem_1: true,
-        grp_1_mem_2: true,
+        "grp_1:mem_1": true,
+        "grp_1:mem_2": true,
       },
     };
 

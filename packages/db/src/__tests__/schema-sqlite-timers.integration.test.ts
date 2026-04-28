@@ -29,7 +29,7 @@ describe("SQLite timers schema", () => {
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
-  const insertMember = (systemId: string, id?: string): string =>
+  const insertMember = (systemId: string, id?: string): MemberId =>
     sqliteInsertMember(db, systemId, id);
 
   beforeAll(() => {

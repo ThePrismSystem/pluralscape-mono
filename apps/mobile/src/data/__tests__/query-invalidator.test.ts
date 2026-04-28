@@ -98,7 +98,7 @@ describe("createQueryInvalidator", () => {
 
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["members"] });
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["groups"] });
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["system"] });
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["systems"] });
 
       // None of the non-hotPath calls carry a predicate (broad fallback).
       for (const [i] of invalidateQueries.mock.calls.entries()) {

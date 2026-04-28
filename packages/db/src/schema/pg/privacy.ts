@@ -15,11 +15,16 @@ import {
   archivable,
   archivableConsistencyCheckFor,
   timestamps,
-  versioned,
   versionCheckFor,
+  versioned,
 } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -40,11 +45,8 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const buckets = pgTable(
   "buckets",
   {
-    id: brandedId<BucketId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...entityIdentity<BucketId>(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -52,8 +54,7 @@ export const buckets = pgTable(
   (t) => [
     index("buckets_system_archived_idx").on(t.systemId, t.archived),
     unique("buckets_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("buckets", t.version),
-    archivableConsistencyCheckFor("buckets", t.archived, t.archivedAt),
+    ...serverEntityChecks("buckets", t),
   ],
 );
 
@@ -86,16 +87,15 @@ export const bucketContentTags = pgTable(
   ],
 );
 
+// Carve-outs: keyGrants has system-scoped identity but no encrypted payload
+// and no audit columns (createdAt/revokedAt are bespoke).
 export const keyGrants = pgTable(
   "key_grants",
   {
-    id: brandedId<KeyGrantId>("id").primaryKey(),
+    ...entityIdentity<KeyGrantId>(),
     bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     friendAccountId: brandedId<AccountId>("friend_account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
@@ -114,8 +114,9 @@ export const keyGrants = pgTable(
   ],
 );
 
-// Connections are intentionally directional: A→B and B→A are separate entries
-// Friend connections are account-level (not system-level) to support non-system viewer accounts.
+// Connections are intentionally directional: A→B and B→A are separate entries.
+// Friend connections are account-level (not system-level) to support non-system
+// viewer accounts — entityIdentity does not fit (no systemId).
 export const friendConnections = pgTable(
   "friend_connections",
   {
@@ -150,6 +151,7 @@ export const friendConnections = pgTable(
   ],
 );
 
+// Account-scoped (not system-scoped); entityIdentity does not fit.
 export const friendCodes = pgTable(
   "friend_codes",
   {

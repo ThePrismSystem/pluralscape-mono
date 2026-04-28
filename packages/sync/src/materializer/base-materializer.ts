@@ -1,5 +1,7 @@
+import { ENTITY_METADATA } from "./entity-metadata.js";
+
 import type { SyncDocumentType } from "../document-types.js";
-import type { EntityTableDef } from "./entity-registry.js";
+import type { MaterializerTableMetadata } from "./drizzle-bridge.js";
 import type { EntityOperation } from "../event-bus/event-map.js";
 import type { EventBus, DataLayerEventMap } from "../event-bus/index.js";
 import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
@@ -147,12 +149,13 @@ function emitEntityEvents(
  * - Uses `INSERT OR REPLACE INTO` for inserts and updates.
  * - Uses `DELETE FROM … WHERE id = ?` for deletes.
  * - Wraps all writes in a single transaction.
- * - Emits `materialized:entity` events for each change when `tableDef.hotPath` is true.
+ * - Emits `materialized:entity` events for each change when the entity
+ *   type is hot-path (per `ENTITY_METADATA[entityType].hotPath`).
  *   Document-level events are NOT emitted here — the caller is responsible for that.
  */
 export function applyDiff(
   db: MaterializerDb,
-  tableDef: EntityTableDef,
+  meta: MaterializerTableMetadata,
   entityType: SyncedEntityType,
   documentType: SyncDocumentType,
   diff: DiffResult,
@@ -162,8 +165,7 @@ export function applyDiff(
     return;
   }
 
-  const { tableName, columns } = tableDef;
-  const columnNames = columns.map((c) => c.name);
+  const { tableName, columnNames } = meta;
 
   db.transaction(() => {
     for (const row of diff.inserts) {
@@ -177,7 +179,7 @@ export function applyDiff(
     }
   });
 
-  if (tableDef.hotPath) {
+  if (ENTITY_METADATA[entityType].hotPath) {
     emitEntityEvents(
       eventBus,
       documentType,

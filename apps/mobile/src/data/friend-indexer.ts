@@ -1,7 +1,8 @@
 import {
-  ENTITY_TABLE_REGISTRY,
+  ENTITY_METADATA,
   FRIEND_EXPORTABLE_ENTITY_TYPES,
   entityToRow,
+  getTableMetadataForEntityType,
 } from "@pluralscape/sync/materializer";
 
 import type { DataLayerEventMap, EventBus, SyncedEntityType } from "@pluralscape/sync";
@@ -36,9 +37,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Type-guard: returns true when `value` is a known SyncedEntityType. */
+function isSyncedEntityType(value: string): value is SyncedEntityType {
+  return Object.hasOwn(ENTITY_METADATA, value);
+}
+
 /** Type-guard: checks whether a string is a known friend-exportable entity type. */
 function isFriendExportableEntityType(value: string): value is SyncedEntityType {
-  return FRIEND_EXPORTABLE_ENTITY_TYPES.has(value as SyncedEntityType);
+  return isSyncedEntityType(value) && FRIEND_EXPORTABLE_ENTITY_TYPES.has(value);
 }
 
 // ── Core indexing logic ───────────────────────────────────────────────
@@ -48,8 +54,8 @@ async function indexFriend(connectionId: string, config: FriendIndexerConfig): P
 
   // 1. Delete all existing rows for this connection across all friend_ tables.
   for (const entityType of FRIEND_EXPORTABLE_ENTITY_TYPES) {
-    const tableDef = ENTITY_TABLE_REGISTRY[entityType];
-    db.execute(`DELETE FROM friend_${tableDef.tableName} WHERE connection_id = ?`, [connectionId]);
+    const { tableName } = getTableMetadataForEntityType(entityType);
+    db.execute(`DELETE FROM friend_${tableName} WHERE connection_id = ?`, [connectionId]);
   }
 
   // 2. Fetch all pages and insert decrypted entities.
@@ -60,21 +66,18 @@ async function indexFriend(connectionId: string, config: FriendIndexerConfig): P
     for (const entity of page.data) {
       if (!isFriendExportableEntityType(entity.entityType)) continue;
 
-      const tableDef = ENTITY_TABLE_REGISTRY[entity.entityType];
-      const friendTableName = `friend_${tableDef.tableName}`;
+      const { tableName, columnNames } = getTableMetadataForEntityType(entity.entityType);
+      const friendTableName = `friend_${tableName}`;
       const decrypted = decryptEntity(entity.encryptedData, entity.entityType);
 
-      // Build the row from the decrypted entity (without connection_id first).
-      const columnNames = tableDef.columns.map((c: { name: string }) => c.name);
       const row = entityToRow(entity.id, decrypted, columnNames);
 
-      // Prepend connection_id to columns and params.
-      const presentColumns = ["connection_id", ...columnNames.filter((col: string) => col in row)];
+      const presentColumns = ["connection_id", ...columnNames.filter((col) => col in row)];
       const placeholders = presentColumns.map(() => "?").join(", ");
       const sql = `INSERT OR REPLACE INTO ${friendTableName} (${presentColumns.join(", ")}) VALUES (${placeholders})`;
       const params: unknown[] = [
         connectionId,
-        ...columnNames.filter((col: string) => col in row).map((col: string) => row[col] ?? null),
+        ...columnNames.filter((col) => col in row).map((col) => row[col] ?? null),
       ];
 
       db.execute(sql, params);

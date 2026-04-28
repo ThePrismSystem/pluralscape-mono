@@ -11,15 +11,14 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.sqlite.js";
+import { brandedId } from "../../columns/sqlite.js";
+import { archivable, timestamps, versionCheckFor, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck, exclusiveNullCheck } from "../../helpers/check.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.sqlite.js";
 import { FIELD_DEFINITION_SCOPE_TYPES, FIELD_TYPES } from "../../helpers/enums.js";
 
 import { groups } from "./groups.js";
@@ -45,14 +44,11 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const fieldDefinitions = sqliteTable(
   "field_definitions",
   {
-    id: brandedId<FieldDefinitionId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<FieldDefinitionId>(),
     fieldType: text("field_type").notNull().$type<FieldType>(),
     required: integer("required", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -61,23 +57,22 @@ export const fieldDefinitions = sqliteTable(
     index("field_definitions_system_archived_idx").on(t.systemId, t.archived),
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
-    versionCheckFor("field_definitions", t.version),
-    archivableConsistencyCheckFor("field_definitions", t.archived, t.archivedAt),
+    ...serverEntityChecks("field_definitions", t),
   ],
 );
 
+// `fieldValues` deviates from the standard entity shape: it carries a version
+// but is not archivable (CRDT replaces values on update). entityIdentity and
+// encryptedPayload still apply.
 export const fieldValues = sqliteTable(
   "field_values",
   {
-    id: brandedId<FieldValueId>("id").primaryKey(),
+    ...entityIdentity<FieldValueId>(),
     fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
     memberId: brandedId<MemberId>("member_id"),
     structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
     groupId: brandedId<GroupId>("group_id"),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
   },
@@ -124,6 +119,8 @@ export const fieldValues = sqliteTable(
   ],
 );
 
+// `fieldBucketVisibility` is a pure link table — no entity identity, no
+// encrypted payload, no audit columns.
 export const fieldBucketVisibility = sqliteTable(
   "field_bucket_visibility",
   {
@@ -144,18 +141,17 @@ export const fieldBucketVisibility = sqliteTable(
   ],
 );
 
+// `fieldDefinitionScopes` carries a version but no encrypted payload and is
+// not archivable. entityIdentity applies.
 export const fieldDefinitionScopes = sqliteTable(
   "field_definition_scopes",
   {
-    id: brandedId<FieldDefinitionScopeId>("id").primaryKey(),
+    ...entityIdentity<FieldDefinitionScopeId>(),
     fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
     scopeType: text("scope_type")
       .notNull()
       .$type<"system" | "member" | "group" | "structure-entity-type">(),
     scopeEntityTypeId: brandedId<SystemStructureEntityTypeId>("scope_entity_type_id"),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     ...timestamps(),
     ...versioned(),
   },

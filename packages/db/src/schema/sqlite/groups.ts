@@ -10,31 +10,27 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.sqlite.js";
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.sqlite.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { GroupId, SystemId } from "@pluralscape/types";
+import type { GroupId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const groups = sqliteTable(
   "groups",
   {
-    id: brandedId<GroupId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<GroupId>(),
     parentGroupId: brandedId<GroupId>("parent_group_id"),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -47,8 +43,7 @@ export const groups = sqliteTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("restrict"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
-    versionCheckFor("groups", t.version),
-    archivableConsistencyCheckFor("groups", t.archived, t.archivedAt),
+    ...serverEntityChecks("groups", t),
   ],
 );
 

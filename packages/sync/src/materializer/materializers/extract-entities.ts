@@ -4,7 +4,7 @@ import {
   type SyncedEntityType,
 } from "../../strategies/crdt-strategies.js";
 import { entityToRow, type EntityRow } from "../base-materializer.js";
-import { getTableDef } from "../entity-registry.js";
+import { getTableMetadataForEntityType } from "../drizzle-bridge.js";
 
 /**
  * Extract entity rows from an Automerge document for a given entity type.
@@ -25,10 +25,9 @@ export function extractEntities(
   const raw = doc[strategy.fieldName];
   if (raw === undefined || raw === null) return [];
 
-  const tableDef = getTableDef(entityType);
-  const columnNames = tableDef.columns.map((c) => c.name);
+  const meta = getTableMetadataForEntityType(entityType);
 
-  return extractByStorageType(strategy.storageType, entityType, raw, columnNames);
+  return extractByStorageType(strategy.storageType, entityType, raw, meta.columnNames);
 }
 
 function extractByStorageType(
@@ -77,17 +76,27 @@ function extractSingletonEntity(
   return [entityToRow(id, entity, columnNames)];
 }
 
-/** junction-map: Record<compoundKey, true> — key IS the entity */
+/**
+ * junction-map: `Record<compoundKey, true>` — the key IS the entity.
+ *
+ * Compound keys join branded IDs with `:` (e.g., `grp_abc:mem_xyz`). `_`
+ * cannot be the separator because branded ID prefixes use `[a-z]+_`,
+ * which would split inside an ID. The producers (CRDT writers) and the
+ * extractor share this convention; both must change together.
+ */
 function extractJunctionEntities(raw: unknown, columnNames: readonly string[]): EntityRow[] {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return [];
   const rows: EntityRow[] = [];
+  const nonIdColumns = columnNames.filter((c) => c !== "id");
   for (const compoundKey of Object.keys(raw as Record<string, unknown>)) {
-    const parts = compoundKey.split("_");
-    if (parts.length < 2) continue;
+    const parts = compoundKey.split(":");
+    if (parts.length !== nonIdColumns.length) {
+      throw new Error(
+        `Junction compound key "${compoundKey}" has ${parts.length.toString()} parts; expected ${nonIdColumns.length.toString()} for columns [${nonIdColumns.join(", ")}]`,
+      );
+    }
     const entityObj: Record<string, unknown> = {};
-    // For junction maps, the non-id column names (excluding "id") map to the key parts
-    const nonIdColumns = columnNames.filter((c) => c !== "id");
-    for (let i = 0; i < nonIdColumns.length && i < parts.length; i++) {
+    for (let i = 0; i < nonIdColumns.length; i++) {
       entityObj[nonIdColumns[i] ?? ""] = parts[i];
     }
     rows.push({ id: compoundKey, ...entityObj } as EntityRow);

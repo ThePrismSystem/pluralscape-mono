@@ -1,44 +1,147 @@
-import {
-  ENTITY_TABLE_REGISTRY,
-  FRIEND_EXPORTABLE_ENTITY_TYPES,
-  type ColumnDef,
-  type EntityTableDef,
-} from "./entity-registry.js";
+import { getTableName, is, SQL } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/sqlite-core";
 
-import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
+import { ENTITY_CRDT_STRATEGIES, type SyncedEntityType } from "../strategies/crdt-strategies.js";
 
-/** Column injected at position 0 for every friend_ table. */
-const CONNECTION_ID_COLUMN: ColumnDef = {
-  name: "connection_id",
-  sqlType: "TEXT",
-  notNull: true,
-};
+import { getTableMetadataForEntityType } from "./drizzle-bridge.js";
+import { ENTITY_METADATA, FRIEND_EXPORTABLE_ENTITY_TYPES } from "./entity-metadata.js";
 
-// ── DDL helpers ───────────────────────────────────────────────────────
+import type { Column } from "drizzle-orm";
+import type {
+  Check,
+  ForeignKey,
+  Index,
+  PrimaryKey,
+  UniqueConstraint,
+} from "drizzle-orm/sqlite-core";
 
-function columnToSql(col: ColumnDef): string {
-  const parts: string[] = [col.name, col.sqlType];
-  if (col.primaryKey) parts.push("PRIMARY KEY");
+// ── Column / constraint formatters ───────────────────────────────────
+
+function formatDefaultLiteral(value: unknown): string {
+  if (value === null) return "NULL";
+  if (typeof value === "string") return `'${value.replaceAll("'", "''")}'`;
+  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  if (typeof value === "boolean") return value ? "1" : "0";
+  throw new Error(`Cannot format DEFAULT literal of type ${typeof value}`);
+}
+
+function formatColumn(col: Column): string {
+  const parts: string[] = [col.name, col.getSQLType().toUpperCase()];
+  if (col.primary) parts.push("PRIMARY KEY");
   if (col.notNull) parts.push("NOT NULL");
+  if (col.hasDefault && col.default !== undefined) {
+    if (is(col.default, SQL)) {
+      throw new Error(
+        `Column ${col.name} uses an SQL-expression default; cache schemas must use literal defaults`,
+      );
+    }
+    parts.push(`DEFAULT ${formatDefaultLiteral(col.default)}`);
+  }
   return parts.join(" ");
 }
 
-function buildCreateTable(tableName: string, columns: readonly ColumnDef[]): string {
-  const colDefs = columns.map(columnToSql).join(", ");
-  return `CREATE TABLE IF NOT EXISTS ${tableName} (${colDefs})`;
+function formatPrimaryKey(pk: PrimaryKey): string {
+  const cols = pk.columns.map((c) => c.name).join(", ");
+  return `PRIMARY KEY (${cols})`;
 }
 
-function buildEntityTable(def: EntityTableDef): string {
-  return buildCreateTable(def.tableName, def.columns);
+function formatForeignKey(fk: ForeignKey): string {
+  const ref = fk.reference();
+  const cols = ref.columns.map((c) => c.name).join(", ");
+  const fcols = ref.foreignColumns.map((c) => c.name).join(", ");
+  const ftable = getTableName(ref.foreignTable);
+  const segments = [`FOREIGN KEY (${cols}) REFERENCES ${ftable}(${fcols})`];
+  if (fk.onDelete) segments.push(`ON DELETE ${fk.onDelete.toUpperCase()}`);
+  if (fk.onUpdate) segments.push(`ON UPDATE ${fk.onUpdate.toUpperCase()}`);
+  return segments.join(" ");
 }
 
-function buildFriendTable(def: EntityTableDef): string {
-  const friendTableName = `friend_${def.tableName}`;
-  const columns: readonly ColumnDef[] = [CONNECTION_ID_COLUMN, ...def.columns];
-  return buildCreateTable(friendTableName, columns);
+function formatUniqueConstraint(uc: UniqueConstraint): string {
+  const cols = uc.columns.map((c) => c.name).join(", ");
+  return `UNIQUE (${cols})`;
 }
 
-// ── FTS helpers ───────────────────────────────────────────────────────
+function formatCheck(chk: Check): string {
+  // SQL.toQuery() requires a dialect, which we don't have here. The cache
+  // schemas don't currently use CHECK constraints; throw if one appears so
+  // the user wires up dialect-aware emission rather than silently dropping it.
+  throw new Error(
+    `CHECK constraint "${chk.name}" cannot be emitted without dialect support; add SQL serialization if needed`,
+  );
+}
+
+function formatIndex(tableName: string, idx: Index): string {
+  const { name, columns, unique } = idx.config;
+  const colNames = columns.map((c) => {
+    if (is(c, SQL)) {
+      throw new Error(`Index ${name} on ${tableName} uses an SQL-expression column; not supported`);
+    }
+    return c.name;
+  });
+  const kind = unique ? "UNIQUE INDEX" : "INDEX";
+  return `CREATE ${kind} IF NOT EXISTS ${name} ON ${tableName} (${colNames.join(", ")})`;
+}
+
+// ── Table builders ───────────────────────────────────────────────────
+
+interface TableBuildInput {
+  readonly tableName: string;
+  readonly extraColumnLines: readonly string[];
+  readonly columns: readonly Column[];
+  readonly primaryKeys: readonly PrimaryKey[];
+  readonly foreignKeys: readonly ForeignKey[];
+  readonly uniqueConstraints: readonly UniqueConstraint[];
+  readonly checks: readonly Check[];
+}
+
+function buildCreateTable(input: TableBuildInput): string {
+  const lines: string[] = [
+    ...input.extraColumnLines,
+    ...input.columns.map(formatColumn),
+    ...input.primaryKeys.map(formatPrimaryKey),
+    ...input.foreignKeys.map(formatForeignKey),
+    ...input.uniqueConstraints.map(formatUniqueConstraint),
+    ...input.checks.map(formatCheck),
+  ];
+  return `CREATE TABLE IF NOT EXISTS ${input.tableName} (${lines.join(", ")})`;
+}
+
+function buildEntityTable(entityType: SyncedEntityType): { create: string; indexes: string[] } {
+  const meta = getTableMetadataForEntityType(entityType);
+  const config = getTableConfig(meta.drizzleTable);
+  const create = buildCreateTable({
+    tableName: meta.tableName,
+    extraColumnLines: [],
+    columns: config.columns,
+    primaryKeys: config.primaryKeys,
+    foreignKeys: config.foreignKeys,
+    uniqueConstraints: config.uniqueConstraints,
+    checks: config.checks,
+  });
+  const indexes = config.indexes.map((i) => formatIndex(meta.tableName, i));
+  return { create, indexes };
+}
+
+function buildFriendTable(entityType: SyncedEntityType): { create: string; indexes: string[] } {
+  const meta = getTableMetadataForEntityType(entityType);
+  const config = getTableConfig(meta.drizzleTable);
+  const friendTableName = `friend_${meta.tableName}`;
+  // Friend tables drop FKs (referenced rows live in own-system tables, not
+  // friend mirrors) but keep the column shape and PK/UNIQUE/CHECK constraints.
+  const create = buildCreateTable({
+    tableName: friendTableName,
+    extraColumnLines: ["connection_id TEXT NOT NULL"],
+    columns: config.columns,
+    primaryKeys: config.primaryKeys,
+    foreignKeys: [],
+    uniqueConstraints: config.uniqueConstraints,
+    checks: config.checks,
+  });
+  const indexes = config.indexes.map((i) => formatIndex(friendTableName, i));
+  return { create, indexes };
+}
+
+// ── FTS helpers ──────────────────────────────────────────────────────
 
 function buildFtsVirtualTable(tableName: string, ftsColumns: readonly string[]): string {
   const cols = ftsColumns.join(", ");
@@ -73,11 +176,16 @@ function buildFtsTriggers(tableName: string, ftsColumns: readonly string[]): str
   return [insertTrigger, deleteTrigger, updateTrigger];
 }
 
-// ── Public API ────────────────────────────────────────────────────────
+// ── Public API ───────────────────────────────────────────────────────
+
+const ENTITY_TYPES = Object.keys(ENTITY_CRDT_STRATEGIES) as readonly SyncedEntityType[];
 
 /**
- * Generates the `crdt_documents` binary store table plus all entity
- * tables (own + friend_ variants) as `CREATE TABLE IF NOT EXISTS` DDL.
+ * Generates the `crdt_documents` binary store table plus all entity tables
+ * (own + friend_ variants) and their indexes as DDL. Schema is derived from
+ * the Drizzle cache schemas via `getTableConfig`: column shape, defaults,
+ * PRIMARY KEY (single + composite), FOREIGN KEY clauses (with ON DELETE),
+ * UNIQUE constraints, and CREATE INDEX statements all flow from one source.
  */
 export function generateSchemaStatements(): string[] {
   const stmts: string[] = [];
@@ -86,14 +194,13 @@ export function generateSchemaStatements(): string[] {
     "CREATE TABLE IF NOT EXISTS crdt_documents (document_id TEXT PRIMARY KEY, document_type TEXT NOT NULL, binary BLOB NOT NULL, last_merged_at INTEGER NOT NULL)",
   );
 
-  for (const [entityType, def] of Object.entries(ENTITY_TABLE_REGISTRY) as [
-    SyncedEntityType,
-    EntityTableDef,
-  ][]) {
-    stmts.push(buildEntityTable(def));
+  for (const entityType of ENTITY_TYPES) {
+    const own = buildEntityTable(entityType);
+    stmts.push(own.create, ...own.indexes);
 
     if (FRIEND_EXPORTABLE_ENTITY_TYPES.has(entityType)) {
-      stmts.push(buildFriendTable(def));
+      const friend = buildFriendTable(entityType);
+      stmts.push(friend.create, ...friend.indexes);
     }
   }
 
@@ -107,19 +214,18 @@ export function generateSchemaStatements(): string[] {
 export function generateFtsStatements(): string[] {
   const stmts: string[] = [];
 
-  for (const [entityType, def] of Object.entries(ENTITY_TABLE_REGISTRY) as [
-    SyncedEntityType,
-    EntityTableDef,
-  ][]) {
-    if (def.ftsColumns.length > 0) {
-      stmts.push(buildFtsVirtualTable(def.tableName, def.ftsColumns));
-      stmts.push(...buildFtsTriggers(def.tableName, def.ftsColumns));
-    }
+  for (const entityType of ENTITY_TYPES) {
+    const ftsColumns = ENTITY_METADATA[entityType].ftsColumns;
+    if (ftsColumns.length === 0) continue;
 
-    if (FRIEND_EXPORTABLE_ENTITY_TYPES.has(entityType) && def.ftsColumns.length > 0) {
-      const friendTableName = `friend_${def.tableName}`;
-      stmts.push(buildFtsVirtualTable(friendTableName, def.ftsColumns));
-      stmts.push(...buildFtsTriggers(friendTableName, def.ftsColumns));
+    const meta = getTableMetadataForEntityType(entityType);
+    stmts.push(buildFtsVirtualTable(meta.tableName, ftsColumns));
+    stmts.push(...buildFtsTriggers(meta.tableName, ftsColumns));
+
+    if (FRIEND_EXPORTABLE_ENTITY_TYPES.has(entityType)) {
+      const friendTableName = `friend_${meta.tableName}`;
+      stmts.push(buildFtsVirtualTable(friendTableName, ftsColumns));
+      stmts.push(...buildFtsTriggers(friendTableName, ftsColumns));
     }
   }
 

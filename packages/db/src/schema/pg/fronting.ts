@@ -2,14 +2,13 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, pgTable, primaryKey, unique } from "drizzle-orm/pg-core";
 
 import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { atLeastOneNotNull } from "../../helpers/check.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 
 import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
@@ -30,11 +29,8 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const customFronts = pgTable(
   "custom_fronts",
   {
-    id: brandedId<CustomFrontId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...entityIdentity<CustomFrontId>(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -42,14 +38,14 @@ export const customFronts = pgTable(
   (t) => [
     index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
     unique("custom_fronts_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("custom_fronts", t.version),
-    archivableConsistencyCheckFor("custom_fronts", t.archived, t.archivedAt),
+    ...serverEntityChecks("custom_fronts", t),
   ],
 );
 
-// NOTE: The production migration adds PARTITION BY RANGE ("start_time") which Drizzle
-// cannot express. Running drizzle-kit generate for this table requires manual verification.
-// See migration 0013 for details.
+// Carve-out: composite PK (id, start_time) for PARTITION BY RANGE (start_time);
+// `id` is notNull rather than primaryKey, so entityIdentity does not fit. The
+// production migration adds the partitioning clause manually — see migration
+// 0013.
 export const frontingSessions = pgTable(
   "fronting_sessions",
   {
@@ -68,8 +64,6 @@ export const frontingSessions = pgTable(
     ...archivable(),
   },
   (t) => [
-    // Composite PK (id, start_time) required by PARTITION BY RANGE (start_time). This diverges
-    // from the SQLite schema (simple PK on id) — see schema/sqlite/fronting.ts for cross-ref.
     primaryKey({ columns: [t.id, t.startTime] }),
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
@@ -103,8 +97,7 @@ export const frontingSessions = pgTable(
       t.structureEntityId,
       t.startTime,
     ),
-    versionCheckFor("fronting_sessions", t.version),
-    archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
+    ...serverEntityChecks("fronting_sessions", t),
     // Invariant: every session must have at least one subject (member, custom front, or structure entity).
     // Subject FKs use ON DELETE RESTRICT — fronting sessions referencing a subject must be removed
     // before that subject can be deleted. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
@@ -118,11 +111,8 @@ export const frontingSessions = pgTable(
 export const frontingComments = pgTable(
   "fronting_comments",
   {
-    id: brandedId<FrontingCommentId>("id").primaryKey(),
+    ...entityIdentity<FrontingCommentId>(),
     frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id").notNull(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     /**
      * Denormalized from parent fronting session for FK on partitioned table
      * (ADR 019). Branded `ServerInternal<UnixMillis>` to keep the field
@@ -134,7 +124,7 @@ export const frontingComments = pgTable(
     memberId: brandedId<MemberId>("member_id"),
     customFrontId: brandedId<CustomFrontId>("custom_front_id"),
     structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -159,8 +149,7 @@ export const frontingComments = pgTable(
       columns: [t.structureEntityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
     }).onDelete("restrict"),
-    versionCheckFor("fronting_comments", t.version),
-    archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
+    ...serverEntityChecks("fronting_comments", t),
     // Invariant: every comment must have at least one author (member, custom front, or structure entity).
     check(
       "fronting_comments_author_check",

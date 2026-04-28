@@ -15,10 +15,10 @@ import { brandedId, pgTimestamp } from "../../columns/pg.js";
 import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, MAX_BLOB_SIZE_BYTES } from "../../helpers/db.constants.js";
+import { entityIdentity } from "../../helpers/entity-shape.pg.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
-import { systems } from "./systems.js";
 
 import type {
   BlobId,
@@ -26,17 +26,16 @@ import type {
   BucketId,
   ChecksumHex,
   EncryptionTier,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: blob metadata has no encrypted payload (the blob itself is the
+// encrypted payload, stored externally), no version tracking, and bespoke
+// createdAt/uploadedAt/expiresAt timestamps instead of the standard mixin.
 export const blobMetadata = pgTable(
   "blob_metadata",
   {
-    id: brandedId<BlobId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<BlobId>(),
     storageKey: varchar("storage_key", { length: 1024 }).notNull(),
     mimeType: varchar("mime_type", { length: 255 }),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),

@@ -116,3 +116,20 @@ export function brandedId<B extends AnyBrandedId>(
 ): ReturnType<typeof brandedIdImpl<B>> {
   return brandedIdImpl<B>(name);
 }
+
+function sqliteJsonOfImpl<T>(name: string) {
+  return sqliteJson(name).$type<T>();
+}
+
+/**
+ * Typed wrapper around `sqliteJson`. Use for cache-schema columns that hold
+ * complex types (arrays, objects) as JSON-encoded TEXT. The runtime is
+ * identical to `sqliteJson(name)`; the wrapper exists to add `.$type<T>()` so
+ * `InferSelectModel` returns `T` instead of `unknown`.
+ *
+ * Example:
+ *   pronouns: sqliteJsonOf<readonly string[]>("pronouns").notNull(),
+ */
+export function sqliteJsonOf<T>(name: string): ReturnType<typeof sqliteJsonOfImpl<T>> {
+  return sqliteJsonOfImpl<T>(name);
+}

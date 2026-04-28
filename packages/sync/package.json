@@ -13,8 +13,10 @@
   "dependencies": {
     "@automerge/automerge": "^3.2.6",
     "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/db": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "@pluralscape/validation": "workspace:*"
+    "@pluralscape/validation": "workspace:*",
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",

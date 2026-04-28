@@ -1,30 +1,24 @@
 import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+import { pgTimestamp } from "../../columns/pg.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 import { FRONTING_REPORT_FORMATS } from "../../helpers/enums.js";
 
-import { systems } from "./systems.js";
-
-import type { FrontingReportId, ReportFormat, SystemId } from "@pluralscape/types";
+import type { FrontingReportId, ReportFormat } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const frontingReports = pgTable(
   "fronting_reports",
   {
-    id: brandedId<FrontingReportId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...entityIdentity<FrontingReportId>(),
+    ...encryptedPayload(),
     format: varchar("format", { length: ENUM_MAX_LENGTH }).notNull().$type<ReportFormat>(),
     generatedAt: pgTimestamp("generated_at").notNull(),
     ...timestamps(),
@@ -34,8 +28,7 @@ export const frontingReports = pgTable(
   (t) => [
     index("fronting_reports_system_id_idx").on(t.systemId),
     check("fronting_reports_format_check", enumCheck(t.format, FRONTING_REPORT_FORMATS)),
-    versionCheckFor("fronting_reports", t.version),
-    archivableConsistencyCheckFor("fronting_reports", t.archived, t.archivedAt),
+    ...serverEntityChecks("fronting_reports", t),
   ],
 );
 

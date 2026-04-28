@@ -1,13 +1,12 @@
 import { foreignKey, index, pgTable, unique } from "drizzle-orm/pg-core";
 
 import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
+import { archivable, timestamps, versionCheckFor, versioned } from "../../helpers/audit.pg.js";
 import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 
 import { systems } from "./systems.js";
 
@@ -18,12 +17,9 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const innerworldRegions = pgTable(
   "innerworld_regions",
   {
-    id: brandedId<InnerWorldRegionId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<InnerWorldRegionId>(),
     parentRegionId: brandedId<InnerWorldRegionId>("parent_region_id"),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -35,20 +31,16 @@ export const innerworldRegions = pgTable(
       columns: [t.parentRegionId, t.systemId],
       foreignColumns: [t.id, t.systemId],
     }).onDelete("restrict"),
-    versionCheckFor("innerworld_regions", t.version),
-    archivableConsistencyCheckFor("innerworld_regions", t.archived, t.archivedAt),
+    ...serverEntityChecks("innerworld_regions", t),
   ],
 );
 
 export const innerworldEntities = pgTable(
   "innerworld_entities",
   {
-    id: brandedId<InnerWorldEntityId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<InnerWorldEntityId>(),
     regionId: brandedId<InnerWorldRegionId>("region_id"),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -60,11 +52,12 @@ export const innerworldEntities = pgTable(
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("restrict"),
-    versionCheckFor("innerworld_entities", t.version),
-    archivableConsistencyCheckFor("innerworld_entities", t.archived, t.archivedAt),
+    ...serverEntityChecks("innerworld_entities", t),
   ],
 );
 
+// Singleton per system — systemId is the primary key. entityIdentity does not
+// fit (no separate id column).
 export const innerworldCanvas = pgTable(
   "innerworld_canvas",
   {

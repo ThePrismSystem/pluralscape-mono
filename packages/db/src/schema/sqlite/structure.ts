@@ -10,15 +10,14 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.sqlite.js";
+import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.sqlite.js";
 import { RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -40,15 +39,12 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const relationships = sqliteTable(
   "relationships",
   {
-    id: brandedId<RelationshipId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<RelationshipId>(),
     sourceMemberId: brandedId<MemberId>("source_member_id"),
     targetMemberId: brandedId<MemberId>("target_member_id"),
     type: text("type").notNull().$type<Relationship["type"]>(),
     bidirectional: integer("bidirectional", { mode: "boolean" }).notNull().default(false),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -64,20 +60,16 @@ export const relationships = sqliteTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
-    versionCheckFor("relationships", t.version),
-    archivableConsistencyCheckFor("relationships", t.archived, t.archivedAt),
+    ...serverEntityChecks("relationships", t),
   ],
 );
 
 export const systemStructureEntityTypes = sqliteTable(
   "system_structure_entity_types",
   {
-    id: brandedId<SystemStructureEntityTypeId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<SystemStructureEntityTypeId>(),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -85,21 +77,17 @@ export const systemStructureEntityTypes = sqliteTable(
   (t) => [
     index("system_structure_entity_types_system_archived_idx").on(t.systemId, t.archived),
     unique("system_structure_entity_types_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("system_structure_entity_types", t.version),
-    archivableConsistencyCheckFor("system_structure_entity_types", t.archived, t.archivedAt),
+    ...serverEntityChecks("system_structure_entity_types", t),
   ],
 );
 
 export const systemStructureEntities = sqliteTable(
   "system_structure_entities",
   {
-    id: brandedId<SystemStructureEntityId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<SystemStructureEntityId>(),
     entityTypeId: brandedId<SystemStructureEntityTypeId>("entity_type_id").notNull(),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -112,8 +100,7 @@ export const systemStructureEntities = sqliteTable(
       columns: [t.entityTypeId, t.systemId],
       foreignColumns: [systemStructureEntityTypes.id, systemStructureEntityTypes.systemId],
     }).onDelete("restrict"),
-    versionCheckFor("system_structure_entities", t.version),
-    archivableConsistencyCheckFor("system_structure_entities", t.archived, t.archivedAt),
+    ...serverEntityChecks("system_structure_entities", t),
   ],
 );
 

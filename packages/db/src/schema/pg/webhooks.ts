@@ -12,24 +12,17 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { brandedId, pgBinary, pgTimestamp } from "../../columns/pg.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, URL_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { entityIdentity, serverEntityChecks } from "../../helpers/entity-shape.pg.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { apiKeys } from "./api-keys.js";
-import { systems } from "./systems.js";
 
 import type {
   ApiKeyId,
   ServerSecret,
-  SystemId,
   T3EncryptedBytes,
   WebhookDeliveryId,
   WebhookDeliveryStatus,
@@ -38,13 +31,13 @@ import type {
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out for encryptedPayload: the T3 server-readable HMAC `secret` lives
+// in this table instead of an encrypted blob, because the server must read it
+// to sign outbound webhook payloads at delivery time.
 export const webhookConfigs = pgTable(
   "webhook_configs",
   {
-    id: brandedId<WebhookId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<WebhookId>(),
     url: varchar("url", { length: URL_MAX_LENGTH }).notNull(),
     /** T3 (server-readable): raw HMAC signing key the server uses to sign outbound webhook payloads. Intentionally not E2E encrypted — server must read it to produce signatures at delivery time. */
     secret: pgBinary("secret").notNull().$type<ServerSecret>(),
@@ -60,8 +53,7 @@ export const webhookConfigs = pgTable(
   (t) => [
     index("webhook_configs_system_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("webhook_configs", t.version),
-    archivableConsistencyCheckFor("webhook_configs", t.archived, t.archivedAt),
+    ...serverEntityChecks("webhook_configs", t),
   ],
 );
 
@@ -72,15 +64,15 @@ export const webhookConfigs = pgTable(
  *   DELETE FROM webhook_deliveries
  *   WHERE status IN ('success', 'failed') AND created_at < $cutoff
  * Actual cleanup job is blocked by infra-m2t5 (background job infrastructure).
+ *
+ * Carve-out: deliveries have no audit columns and `encrypted_data` is a raw
+ * pgBinary (not an EncryptedBlob), so encryptedPayload doesn't apply.
  */
 export const webhookDeliveries = pgTable(
   "webhook_deliveries",
   {
-    id: brandedId<WebhookDeliveryId>("id").primaryKey(),
+    ...entityIdentity<WebhookDeliveryId>(),
     webhookId: brandedId<WebhookId>("webhook_id").notNull(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     eventType: varchar("event_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<WebhookEventType>(),

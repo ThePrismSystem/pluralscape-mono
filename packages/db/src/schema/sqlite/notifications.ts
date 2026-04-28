@@ -16,14 +16,13 @@ import {
   archivableConsistencyCheckFor,
   timestamps,
   versioned,
-  versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import { entityIdentity, serverEntityChecks } from "../../helpers/entity-shape.sqlite.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
 import { friendConnections } from "./privacy.js";
-import { systems } from "./systems.js";
 
 import type {
   AccountId,
@@ -34,20 +33,18 @@ import type {
   FriendNotificationPreferenceId,
   NotificationConfigId,
   NotificationEventType,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: device_tokens has no encrypted payload and bespoke
+// createdAt/lastActiveAt/revokedAt timestamps instead of the standard mixin.
 export const deviceTokens = sqliteTable(
   "device_tokens",
   {
-    id: brandedId<DeviceTokenId>("id").primaryKey(),
+    ...entityIdentity<DeviceTokenId>(),
     accountId: brandedId<AccountId>("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     platform: text("platform").notNull().$type<DeviceTokenPlatform>(),
     tokenHash: text("token_hash").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
@@ -63,13 +60,12 @@ export const deviceTokens = sqliteTable(
   ],
 );
 
+// Carve-out: this table has no encrypted payload (the configuration is plain
+// settings, not user content).
 export const notificationConfigs = sqliteTable(
   "notification_configs",
   {
-    id: brandedId<NotificationConfigId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<NotificationConfigId>(),
     eventType: text("event_type").notNull().$type<NotificationEventType>(),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
     pushEnabled: integer("push_enabled", { mode: "boolean" }).notNull().default(false),
@@ -85,11 +81,11 @@ export const notificationConfigs = sqliteTable(
       "notification_configs_event_type_check",
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
     ),
-    archivableConsistencyCheckFor("notification_configs", t.archived, t.archivedAt),
-    versionCheckFor("notification_configs", t.version),
+    ...serverEntityChecks("notification_configs", t),
   ],
 );
 
+// Account-scoped (not system-scoped) — entityIdentity does not fit.
 export const friendNotificationPreferences = sqliteTable(
   "friend_notification_preferences",
   {

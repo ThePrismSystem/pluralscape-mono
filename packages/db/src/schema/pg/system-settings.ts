@@ -1,14 +1,17 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { brandedId } from "../../columns/pg.js";
+import { timestamps, versionCheckFor, versioned } from "../../helpers/audit.pg.js";
+import { encryptedPayload } from "../../helpers/entity-shape.pg.js";
 
 import { systems } from "./systems.js";
 
 import type { Locale, PinHash, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: system_settings is a singleton per system (systemId is UNIQUE),
+// not a generic system-scoped entity. The encryptedPayload mixin still applies.
 export const systemSettings = pgTable(
   "system_settings",
   {
@@ -27,7 +30,7 @@ export const systemSettings = pgTable(
      * the settings blob (zero-knowledge constraint).
      */
     biometricEnabled: boolean("biometric_enabled").notNull().default(false),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
   },

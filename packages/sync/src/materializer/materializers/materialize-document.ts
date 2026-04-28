@@ -1,16 +1,23 @@
+import { ENTITY_CRDT_STRATEGIES } from "../../strategies/crdt-strategies.js";
 import {
   diffEntities,
   applyDiff,
   type MaterializerDb,
   type EntityRow,
 } from "../base-materializer.js";
-import { getTableDef, getEntityTypesForDocument } from "../entity-registry.js";
+import { getTableMetadataForEntityType } from "../drizzle-bridge.js";
 
 import { extractEntities } from "./extract-entities.js";
 
 import type { SyncDocumentType } from "../../document-types.js";
 import type { EventBus, DataLayerEventMap } from "../../event-bus/index.js";
 import type { SyncedEntityType } from "../../strategies/crdt-strategies.js";
+
+function getEntityTypesForDocument(documentType: SyncDocumentType): SyncedEntityType[] {
+  return (Object.keys(ENTITY_CRDT_STRATEGIES) as SyncedEntityType[]).filter(
+    (entityType) => ENTITY_CRDT_STRATEGIES[entityType].document === documentType,
+  );
+}
 
 /**
  * Shared materialization logic for all document types.
@@ -39,19 +46,15 @@ export function materializeDocument(
   const entityTypes = getEntityTypesForDocument(documentType);
 
   for (const entityType of entityTypes) {
-    // Skip entity types whose CRDT fields were not touched by this change.
     if (dirtyEntityTypes !== undefined && !dirtyEntityTypes.has(entityType)) continue;
 
     const incoming = extractEntities(entityType, doc);
-
-    // Skip entity types with no incoming data — avoids full-table scan
-    // when the document contains no entities of this type.
     if (incoming.length === 0) continue;
 
-    const tableDef = getTableDef(entityType);
-    const current = db.queryAll<EntityRow>(`SELECT * FROM ${tableDef.tableName}`, []);
+    const meta = getTableMetadataForEntityType(entityType);
+    const current = db.queryAll<EntityRow>(`SELECT * FROM ${meta.tableName}`, []);
     const diff = diffEntities(current, incoming);
-    applyDiff(db, tableDef, entityType, documentType, diff, eventBus);
+    applyDiff(db, meta, entityType, documentType, diff, eventBus);
   }
 
   eventBus.emit("materialized:document", {

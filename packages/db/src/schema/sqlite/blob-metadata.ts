@@ -14,10 +14,10 @@ import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { MAX_BLOB_SIZE_BYTES } from "../../helpers/db.constants.js";
+import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
-import { systems } from "./systems.js";
 
 import type {
   BlobId,
@@ -25,17 +25,16 @@ import type {
   BucketId,
   ChecksumHex,
   EncryptionTier,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: blob metadata has no encrypted payload (the blob itself is the
+// encrypted payload, stored externally), no version tracking, and bespoke
+// createdAt/uploadedAt/expiresAt timestamps instead of the standard mixin.
 export const blobMetadata = sqliteTable(
   "blob_metadata",
   {
-    id: brandedId<BlobId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<BlobId>(),
     storageKey: text("storage_key").notNull(),
     mimeType: text("mime_type"),
     /** SQLite integer is 64-bit in practice; PG uses bigint explicitly. Semantically equivalent but distinguish when comparing raw schemas. */

@@ -18,7 +18,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { GroupId, SystemId } from "@pluralscape/types";
+import type { GroupId, MemberId, SystemId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = {
@@ -35,7 +35,7 @@ describe("SQLite groups schema", () => {
 
   const insertAccount = (id?: string) => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => sqliteInsertSystem(db, accountId, id);
-  const insertMember = (systemId: string, id?: string): string =>
+  const insertMember = (systemId: string, id?: string): MemberId =>
     sqliteInsertMember(db, systemId, id);
 
   function insertGroup(

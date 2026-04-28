@@ -13,14 +13,13 @@ export {
   type MaterializerDb,
 } from "./base-materializer.js";
 
+export { getTableMetadataForEntityType, type MaterializerTableMetadata } from "./drizzle-bridge.js";
+
 export {
-  getTableDef,
-  getEntityTypesForDocument,
-  ENTITY_TABLE_REGISTRY,
+  ENTITY_METADATA,
   FRIEND_EXPORTABLE_ENTITY_TYPES,
-  type ColumnDef,
-  type EntityTableDef,
-} from "./entity-registry.js";
+  type EntityMetadata,
+} from "./entity-metadata.js";
 
 export { generateSchemaStatements, generateFtsStatements, generateAllDdl } from "./local-schema.js";
 

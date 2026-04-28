@@ -1,23 +1,22 @@
 import { boolean, check, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { timestamps, versionCheckFor, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { entityIdentity } from "../../helpers/entity-shape.pg.js";
 import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
 
-import { systems } from "./systems.js";
-
-import type { PKBridgeConfigId, PKSyncDirection, SystemId } from "@pluralscape/types";
+import type { PKBridgeConfigId, PKSyncDirection } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: this table has three distinct encrypted blob columns
+// (pk_token_encrypted, entity_mappings, error_log) instead of a single
+// `encrypted_data`, so encryptedPayload does not fit. Not archivable.
 export const pkBridgeConfigs = pgTable(
   "pk_bridge_configs",
   {
-    id: brandedId<PKBridgeConfigId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<PKBridgeConfigId>(),
     enabled: boolean("enabled").notNull().default(true),
     syncDirection: varchar("sync_direction", { length: ENUM_MAX_LENGTH })
       .notNull()

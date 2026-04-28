@@ -1,26 +1,23 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, unique } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.sqlite.js";
+import { brandedId, sqliteTimestamp } from "../../columns/sqlite.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { atLeastOneNotNull } from "../../helpers/check.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.sqlite.js";
 
 import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
-import { systems } from "./systems.js";
 
 import type {
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
   MemberId,
-  SystemId,
   SystemStructureEntityId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -28,11 +25,8 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const customFronts = sqliteTable(
   "custom_fronts",
   {
-    id: brandedId<CustomFrontId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...entityIdentity<CustomFrontId>(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -40,8 +34,7 @@ export const customFronts = sqliteTable(
   (t) => [
     index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
     unique("custom_fronts_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("custom_fronts", t.version),
-    archivableConsistencyCheckFor("custom_fronts", t.archived, t.archivedAt),
+    ...serverEntityChecks("custom_fronts", t),
   ],
 );
 
@@ -50,16 +43,13 @@ export const customFronts = sqliteTable(
 export const frontingSessions = sqliteTable(
   "fronting_sessions",
   {
-    id: brandedId<FrontingSessionId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<FrontingSessionId>(),
     startTime: sqliteTimestamp("start_time").notNull(),
     endTime: sqliteTimestamp("end_time"),
     memberId: brandedId<MemberId>("member_id"),
     customFrontId: brandedId<CustomFrontId>("custom_front_id"),
     structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -94,8 +84,7 @@ export const frontingSessions = sqliteTable(
       t.structureEntityId,
       t.startTime,
     ),
-    versionCheckFor("fronting_sessions", t.version),
-    archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
+    ...serverEntityChecks("fronting_sessions", t),
     // Invariant: every session must have at least one subject (member, custom front, or structure entity).
     // Subject FKs use ON DELETE RESTRICT — fronting sessions referencing a subject must be removed
     // before that subject can be deleted. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
@@ -109,15 +98,12 @@ export const frontingSessions = sqliteTable(
 export const frontingComments = sqliteTable(
   "fronting_comments",
   {
-    id: brandedId<FrontingCommentId>("id").primaryKey(),
+    ...entityIdentity<FrontingCommentId>(),
     frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id").notNull(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     memberId: brandedId<MemberId>("member_id"),
     customFrontId: brandedId<CustomFrontId>("custom_front_id"),
     structureEntityId: brandedId<SystemStructureEntityId>("structure_entity_id"),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -141,8 +127,7 @@ export const frontingComments = sqliteTable(
       columns: [t.structureEntityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
     }).onDelete("restrict"),
-    versionCheckFor("fronting_comments", t.version),
-    archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
+    ...serverEntityChecks("fronting_comments", t),
     // Invariant: every comment must have at least one author (member, custom front, or structure entity).
     check(
       "fronting_comments_author_check",

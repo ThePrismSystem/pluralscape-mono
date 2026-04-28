@@ -1,4 +1,4 @@
-import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, sqliteTable, unique } from "drizzle-orm/sqlite-core";
 
 import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import {
@@ -8,6 +8,11 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.sqlite.js";
 
 import { systems } from "./systems.js";
 
@@ -17,11 +22,8 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 export const members = sqliteTable(
   "members",
   {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...entityIdentity<MemberId>(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -30,8 +32,7 @@ export const members = sqliteTable(
     index("members_system_id_archived_idx").on(t.systemId, t.archived),
     index("members_created_at_idx").on(t.createdAt),
     unique("members_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("members", t.version),
-    archivableConsistencyCheckFor("members", t.archived, t.archivedAt),
+    ...serverEntityChecks("members", t),
   ],
 );
 

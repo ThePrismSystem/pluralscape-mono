@@ -1,27 +1,21 @@
 import { foreignKey, index, integer, pgTable, unique } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId } from "../../columns/pg.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 
-import { systems } from "./systems.js";
-
-import type { MemberId, MemberPhotoId, SystemId } from "@pluralscape/types";
+import type { MemberId, MemberPhotoId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const members = pgTable(
   "members",
   {
-    id: brandedId<MemberId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...entityIdentity<MemberId>(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -30,22 +24,18 @@ export const members = pgTable(
     index("members_system_id_archived_idx").on(t.systemId, t.archived),
     index("members_created_at_idx").on(t.createdAt),
     unique("members_id_system_id_unique").on(t.id, t.systemId),
-    versionCheckFor("members", t.version),
-    archivableConsistencyCheckFor("members", t.archived, t.archivedAt),
+    ...serverEntityChecks("members", t),
   ],
 );
 
 export const memberPhotos = pgTable(
   "member_photos",
   {
-    id: brandedId<MemberPhotoId>("id").primaryKey(),
+    ...entityIdentity<MemberPhotoId>(),
     memberId: brandedId<MemberId>("member_id").notNull(),
     /** Denormalized from members — avoids join through members for RLS queries. */
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull().default(0),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -57,8 +47,7 @@ export const memberPhotos = pgTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
-    versionCheckFor("member_photos", t.version),
-    archivableConsistencyCheckFor("member_photos", t.archived, t.archivedAt),
+    ...serverEntityChecks("member_photos", t),
   ],
 );
 

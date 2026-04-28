@@ -1,22 +1,21 @@
 import { check, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { timestamps, versionCheckFor, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import { entityIdentity } from "../../helpers/entity-shape.sqlite.js";
 import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
 
-import { systems } from "./systems.js";
-
-import type { PKBridgeConfigId, PKSyncDirection, SystemId } from "@pluralscape/types";
+import type { PKBridgeConfigId, PKSyncDirection } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: this table has three distinct encrypted blob columns
+// (pk_token_encrypted, entity_mappings, error_log) instead of a single
+// `encrypted_data`, so encryptedPayload does not fit. Not archivable.
 export const pkBridgeConfigs = sqliteTable(
   "pk_bridge_configs",
   {
-    id: brandedId<PKBridgeConfigId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<PKBridgeConfigId>(),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     syncDirection: text("sync_direction").notNull().$type<PKSyncDirection>(),
     /** T1 encrypted: PluralKit API token, encrypted client-side with master key. */

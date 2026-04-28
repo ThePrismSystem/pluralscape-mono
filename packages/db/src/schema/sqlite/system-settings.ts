@@ -1,14 +1,17 @@
 import { sql } from "drizzle-orm";
 import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { brandedId, sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { brandedId } from "../../columns/sqlite.js";
+import { timestamps, versionCheckFor, versioned } from "../../helpers/audit.sqlite.js";
+import { encryptedPayload } from "../../helpers/entity-shape.sqlite.js";
 
 import { systems } from "./systems.js";
 
 import type { Locale, PinHash, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: system_settings is a singleton per system (systemId is UNIQUE),
+// not a generic system-scoped entity. The encryptedPayload mixin still applies.
 export const systemSettings = sqliteTable(
   "system_settings",
   {
@@ -21,7 +24,7 @@ export const systemSettings = sqliteTable(
     /** Must use Argon2id — PINs are low-entropy (4-6 digits) and trivially reversible with weak hashes. */
     pinHash: text("pin_hash").$type<PinHash | null>(),
     biometricEnabled: integer("biometric_enabled", { mode: "boolean" }).notNull().default(false),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
   },
