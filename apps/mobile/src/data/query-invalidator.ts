@@ -7,7 +7,6 @@ import type {
   SearchScope as EventSearchScope,
   SyncDocumentType,
 } from "@pluralscape/sync";
-import type { EntityMetadata } from "@pluralscape/sync/materializer";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 function getEntityTypesForDocument(
@@ -75,7 +74,7 @@ export function createQueryInvalidator(
     const entityTypes = getEntityTypesForDocument(event.documentType);
     for (const entityType of entityTypes) {
       const { tableName } = getTableMetadataForEntityType(entityType);
-      const meta: EntityMetadata = ENTITY_METADATA[entityType];
+      const meta = ENTITY_METADATA[entityType];
       // Narrowing: for hot-path entity types whose detail keys are shaped
       // `[tableName, entityId]`, per-entity `materialized:entity` events
       // (see `unsubEntity` below) already precisely invalidate those detail
@@ -88,7 +87,7 @@ export function createQueryInvalidator(
       // would skip details that the entity-event prefix match also misses.
       // In both cases the document event must broadly invalidate
       // `[tableName]` so details stay fresh.
-      const canNarrowToLists = meta.hotPath && meta.compoundDetailKey !== true;
+      const canNarrowToLists = meta.hotPath && !meta.compoundDetailKey;
       if (canNarrowToLists) {
         void queryClient.invalidateQueries({
           queryKey: [tableName],
