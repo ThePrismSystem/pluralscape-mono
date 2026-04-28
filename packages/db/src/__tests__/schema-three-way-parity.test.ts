@@ -21,7 +21,7 @@ import * as cache from "../schema/sqlite-client-cache/index.js";
 
 import { assertStructuralColumnsEquivalent } from "./helpers/three-way-parity.js";
 
-import type { Member, MemberPhoto, System } from "@pluralscape/types";
+import type { Group, GroupMembership, Member, MemberPhoto, System } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
 const SERVER_ONLY_COLUMNS = ["encryptedData", "version"] as const;
@@ -91,5 +91,43 @@ describe("three-way schema parity — system", () => {
     type _Check = AssertSubset<VariantKeys, keyof System>;
     const sentinel: _Check = "name";
     expect(sentinel).toBe("name");
+  });
+});
+
+describe("three-way schema parity — groups", () => {
+  test("server PG ↔ cache structural columns equivalent", () => {
+    assertStructuralColumnsEquivalent(
+      getTableColumns(pgSchema.groups),
+      getTableColumns(cache.groups),
+      { skip: [...SERVER_ONLY_COLUMNS] },
+    );
+  });
+
+  test("server SQLite ↔ cache structural columns equivalent", () => {
+    assertStructuralColumnsEquivalent(
+      getTableColumns(sqliteSchema.groups),
+      getTableColumns(cache.groups),
+      { skip: [...SERVER_ONLY_COLUMNS] },
+    );
+  });
+
+  test("cache columns ↔ Group domain fields", () => {
+    type ColKeys = StringKeys<InferSelectModel<typeof cache.groups>>;
+    type VariantKeys = Exclude<ColKeys, EntityStructuralKey>;
+    type _Check = AssertSubset<VariantKeys, keyof Group>;
+    const sentinel: _Check = "name";
+    expect(sentinel).toBe("name");
+  });
+});
+
+describe("three-way schema parity — group_memberships", () => {
+  test("cache columns ↔ GroupMembership domain fields", () => {
+    type ColKeys = StringKeys<InferSelectModel<typeof cache.groupMemberships>>;
+    // systemId and createdAt are persistence metadata not present on the
+    // domain GroupMembership type.
+    type VariantKeys = Exclude<ColKeys, "systemId" | "createdAt">;
+    type _Check = AssertSubset<VariantKeys, keyof GroupMembership>;
+    const sentinel: _Check = "groupId";
+    expect(sentinel).toBe("groupId");
   });
 });

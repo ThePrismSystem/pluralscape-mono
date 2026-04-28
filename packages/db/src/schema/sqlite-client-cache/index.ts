@@ -9,3 +9,11 @@ export {
   type NewLocalMember,
   type NewLocalMemberPhoto,
 } from "./members.js";
+export {
+  groupMemberships,
+  groups,
+  type LocalGroupMembershipRow,
+  type LocalGroupRow,
+  type NewLocalGroup,
+  type NewLocalGroupMembership,
+} from "./groups.js";
