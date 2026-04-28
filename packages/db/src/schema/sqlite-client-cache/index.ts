@@ -51,3 +51,23 @@ export {
   type NewLocalPoll,
   type NewLocalPollVote,
 } from "./communication.js";
+export {
+  relationships,
+  systemStructureEntities,
+  systemStructureEntityAssociations,
+  systemStructureEntityLinks,
+  systemStructureEntityMemberLinks,
+  systemStructureEntityTypes,
+  type LocalRelationshipRow,
+  type LocalSystemStructureEntityAssociationRow,
+  type LocalSystemStructureEntityLinkRow,
+  type LocalSystemStructureEntityMemberLinkRow,
+  type LocalSystemStructureEntityRow,
+  type LocalSystemStructureEntityTypeRow,
+  type NewLocalRelationship,
+  type NewLocalSystemStructureEntity,
+  type NewLocalSystemStructureEntityAssociation,
+  type NewLocalSystemStructureEntityLink,
+  type NewLocalSystemStructureEntityMemberLink,
+  type NewLocalSystemStructureEntityType,
+} from "./structure.js";
