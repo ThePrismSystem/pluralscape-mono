@@ -10,32 +10,28 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+import { brandedId, pgTimestamp } from "../../columns/pg.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import {
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { GroupId, SystemId } from "@pluralscape/types";
+import type { GroupId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const groups = pgTable(
   "groups",
   {
-    id: brandedId<GroupId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<GroupId>(),
     parentGroupId: brandedId<GroupId>("parent_group_id"),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -48,8 +44,7 @@ export const groups = pgTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("restrict"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
-    versionCheckFor("groups", t.version),
-    archivableConsistencyCheckFor("groups", t.archived, t.archivedAt),
+    ...serverEntityChecks("groups", t),
   ],
 );
 

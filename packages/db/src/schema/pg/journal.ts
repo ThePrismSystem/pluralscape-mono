@@ -1,35 +1,23 @@
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
+import { brandedId } from "../../columns/pg.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import {
-  archivable,
-  archivableConsistencyCheckFor,
-  timestamps,
-  versioned,
-  versionCheckFor,
-} from "../../helpers/audit.pg.js";
+  encryptedPayload,
+  entityIdentity,
+  serverEntityChecks,
+} from "../../helpers/entity-shape.pg.js";
 
-import { systems } from "./systems.js";
-
-import type {
-  FrontingSessionId,
-  JournalEntryId,
-  SlugHash,
-  SystemId,
-  WikiPageId,
-} from "@pluralscape/types";
+import type { FrontingSessionId, JournalEntryId, SlugHash, WikiPageId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const journalEntries = pgTable(
   "journal_entries",
   {
-    id: brandedId<JournalEntryId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<JournalEntryId>(),
     frontingSessionId: brandedId<FrontingSessionId>("fronting_session_id"),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -40,23 +28,19 @@ export const journalEntries = pgTable(
     // fronting_session_id FK is application-enforced only — PostgreSQL cannot
     // enforce FKs against a partitioned table without the partition key (ADR 019).
     index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
-    versionCheckFor("journal_entries", t.version),
-    archivableConsistencyCheckFor("journal_entries", t.archived, t.archivedAt),
+    ...serverEntityChecks("journal_entries", t),
   ],
 );
 
 export const wikiPages = pgTable(
   "wiki_pages",
   {
-    id: brandedId<WikiPageId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<WikiPageId>(),
     // slugHash is a SHA-256 hex digest of the decrypted slug — server-visible
     // for uniqueness enforcement without ever reading the slug. Branded
     // `SlugHash` to prevent accidental mixing with other 64-char hex values.
     slugHash: varchar("slug_hash", { length: 64 }).notNull().$type<SlugHash>(),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -66,8 +50,7 @@ export const wikiPages = pgTable(
     uniqueIndex("wiki_pages_system_id_slug_hash_idx")
       .on(t.systemId, t.slugHash)
       .where(sql`${t.archived} = false`),
-    versionCheckFor("wiki_pages", t.version),
-    archivableConsistencyCheckFor("wiki_pages", t.archived, t.archivedAt),
+    ...serverEntityChecks("wiki_pages", t),
     check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );
