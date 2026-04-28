@@ -1,4 +1,5 @@
 import {
+  ENTITY_METADATA,
   FRIEND_EXPORTABLE_ENTITY_TYPES,
   entityToRow,
   getTableMetadataForEntityType,
@@ -36,9 +37,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Type-guard: returns true when `value` is a known SyncedEntityType. */
+function isSyncedEntityType(value: string): value is SyncedEntityType {
+  return Object.hasOwn(ENTITY_METADATA, value);
+}
+
 /** Type-guard: checks whether a string is a known friend-exportable entity type. */
 function isFriendExportableEntityType(value: string): value is SyncedEntityType {
-  return FRIEND_EXPORTABLE_ENTITY_TYPES.has(value as SyncedEntityType);
+  return isSyncedEntityType(value) && FRIEND_EXPORTABLE_ENTITY_TYPES.has(value);
 }
 
 // ── Core indexing logic ───────────────────────────────────────────────

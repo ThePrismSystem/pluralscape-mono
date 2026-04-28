@@ -33,9 +33,13 @@ const SEARCH_RESULTS_LIMIT = 20;
 
 /**
  * Entity types that have FTS columns defined — these are searchable.
+ *
+ * `Object.keys` returns `string[]`, so the cast is needed to recover the
+ * key union; `ENTITY_METADATA` is `as const satisfies Record<SyncedEntityType, …>`,
+ * so the cast is provably sound (closed iteration over a const-asserted record).
  */
-const SEARCHABLE_ENTITY_TYPES: readonly SyncedEntityType[] = (
-  Object.keys(ENTITY_METADATA) as SyncedEntityType[]
+const SEARCHABLE_ENTITY_TYPES: readonly (keyof typeof ENTITY_METADATA)[] = (
+  Object.keys(ENTITY_METADATA) as (keyof typeof ENTITY_METADATA)[]
 ).filter((entityType) => ENTITY_METADATA[entityType].ftsColumns.length > 0);
 
 // ── Query builder ─────────────────────────────────────────────────────

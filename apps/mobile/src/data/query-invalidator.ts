@@ -6,13 +6,15 @@ import type {
   EventBus,
   SearchScope as EventSearchScope,
   SyncDocumentType,
-  SyncedEntityType,
 } from "@pluralscape/sync";
 import type { EntityMetadata } from "@pluralscape/sync/materializer";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
-function getEntityTypesForDocument(documentType: SyncDocumentType): SyncedEntityType[] {
-  return (Object.keys(ENTITY_CRDT_STRATEGIES) as SyncedEntityType[]).filter(
+function getEntityTypesForDocument(
+  documentType: SyncDocumentType,
+): (keyof typeof ENTITY_CRDT_STRATEGIES)[] {
+  // safe: closed iteration over `as const satisfies Record<SyncedEntityType,…>` map.
+  return (Object.keys(ENTITY_CRDT_STRATEGIES) as (keyof typeof ENTITY_CRDT_STRATEGIES)[]).filter(
     (entityType) => ENTITY_CRDT_STRATEGIES[entityType].document === documentType,
   );
 }
