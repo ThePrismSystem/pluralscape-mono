@@ -95,7 +95,18 @@ ApiKeyResponse:
     cannot be retrieved again.
   type: object
   required:
-    [id, systemId, keyType, scopes, createdAt, lastUsedAt, revokedAt, expiresAt, scopedBucketIds]
+    [
+      id,
+      systemId,
+      keyType,
+      scopes,
+      createdAt,
+      lastUsedAt,
+      revokedAt,
+      expiresAt,
+      scopedBucketIds,
+      encryptedData,
+    ]
   properties:
     id:
       type: string
@@ -140,6 +151,12 @@ ApiKeyResponse:
         type: string
       nullable: true
       description: "Privacy bucket IDs this key is scoped to, null if unrestricted"
+    encryptedData:
+      type: string
+      description: |
+        Base64-encoded T1 ciphertext blob carrying the `ApiKeyEncryptedPayload`
+        (name plus, for crypto variants, the X25519 publicKey). Decrypted
+        client-side via `decryptApiKeyPayload` from `@pluralscape/data`.
 
 ApiKeyCreateResponse:
   description: |

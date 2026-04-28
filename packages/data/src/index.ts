@@ -26,6 +26,14 @@ export {
   type SessionListRowWithDeviceInfo,
 } from "./transforms/session-helpers.js";
 
+export { decryptApiKeyPayload, encryptApiKeyPayload } from "./transforms/api-key.js";
+
+export {
+  withDecodedApiKeyPayload,
+  type ApiKeyListRow,
+  type ApiKeyListRowWithPayload,
+} from "./transforms/api-key-helpers.js";
+
 export {
   decryptMember,
   decryptMemberPage,

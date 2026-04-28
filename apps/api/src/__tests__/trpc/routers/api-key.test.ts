@@ -52,6 +52,7 @@ const MOCK_API_KEY_RESULT = {
   revokedAt: null,
   expiresAt: null,
   scopedBucketIds: null,
+  encryptedData: "dGVzdGVuY3J5cHRlZGRhdGE=" as EncryptedBase64,
 };
 
 const MOCK_CREATE_RESULT = {

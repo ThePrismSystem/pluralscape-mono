@@ -4,8 +4,16 @@ import { apiKeys } from "@pluralscape/db/pg";
 import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import { env } from "../../env.js";
+import { encryptedBlobToBase64 } from "../../lib/encrypted-blob.js";
 
-import type { ApiKeyId, ApiKeyScope, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  ApiKeyId,
+  ApiKeyScope,
+  EncryptedBase64,
+  EncryptedBlob,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -19,6 +27,12 @@ export interface ApiKeyResult {
   readonly revokedAt: UnixMillis | null;
   readonly expiresAt: UnixMillis | null;
   readonly scopedBucketIds: readonly string[] | null;
+  /**
+   * Base64-encoded T1 ciphertext blob carrying the `ApiKeyEncryptedPayload`
+   * (name plus, for crypto variants, the X25519 publicKey). Decrypted
+   * client-side via `decryptApiKeyPayload` from `@pluralscape/data`.
+   */
+  readonly encryptedData: EncryptedBase64;
 }
 
 // ── Shared select columns ──────────────────────────────────────────
@@ -33,6 +47,7 @@ export const API_KEY_SELECT_COLUMNS = {
   revokedAt: apiKeys.revokedAt,
   expiresAt: apiKeys.expiresAt,
   scopedBucketIds: apiKeys.scopedBucketIds,
+  encryptedData: apiKeys.encryptedData,
 } as const;
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -47,6 +62,7 @@ export function toApiKeyResult(row: {
   revokedAt: number | null;
   expiresAt: number | null;
   scopedBucketIds: readonly string[] | null;
+  encryptedData: EncryptedBlob;
 }): ApiKeyResult {
   return {
     id: brandId<ApiKeyId>(row.id),
@@ -58,6 +74,7 @@ export function toApiKeyResult(row: {
     revokedAt: toUnixMillisOrNull(row.revokedAt),
     expiresAt: toUnixMillisOrNull(row.expiresAt),
     scopedBucketIds: row.scopedBucketIds,
+    encryptedData: encryptedBlobToBase64(row.encryptedData),
   };
 }
 

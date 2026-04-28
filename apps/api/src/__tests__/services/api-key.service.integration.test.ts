@@ -194,6 +194,28 @@ describe("api-key.service (PGlite integration)", () => {
     expect(match?.scopes).toEqual(scopes);
   });
 
+  it("returns encryptedData as base64 from get and list", async () => {
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["read:members"]),
+      auth,
+      noopAudit,
+    );
+
+    expect(typeof created.encryptedData).toBe("string");
+    expect(created.encryptedData).toMatch(/^[A-Za-z0-9+/=]+$/);
+
+    const fetched = await getApiKey(asDb(db), systemId, created.id, auth);
+    expect(typeof fetched.encryptedData).toBe("string");
+    expect(fetched.encryptedData).toMatch(/^[A-Za-z0-9+/=]+$/);
+
+    const listed = await listApiKeys(asDb(db), systemId, auth);
+    const match = listed.data.find((k) => k.id === created.id);
+    expect(typeof match?.encryptedData).toBe("string");
+    expect(match?.encryptedData).toMatch(/^[A-Za-z0-9+/=]+$/);
+  });
+
   // ── Validation rejections ─────────────────────────────────────
 
   it("rejects invalid scope string", async () => {
