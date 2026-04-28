@@ -11,6 +11,7 @@ const {
   mockCloseSync,
   mockDeleteDatabaseSync,
   mockOpenDatabaseSync,
+  mockLoggerWarn,
 } = vi.hoisted(() => {
   const mockFinalizeSync = vi.fn();
   const mockGetFirstSync = vi.fn<() => Record<string, unknown> | null>(() => null);
@@ -31,6 +32,7 @@ const {
     execSync: mockExecSync,
     closeSync: mockCloseSync,
   }));
+  const mockLoggerWarn = vi.fn();
 
   return {
     mockFinalizeSync,
@@ -42,12 +44,22 @@ const {
     mockCloseSync,
     mockDeleteDatabaseSync,
     mockOpenDatabaseSync,
+    mockLoggerWarn,
   };
 });
 
 vi.mock("expo-sqlite", () => ({
   openDatabaseSync: mockOpenDatabaseSync,
   deleteDatabaseSync: mockDeleteDatabaseSync,
+}));
+
+vi.mock("../../../lib/logger.js", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: mockLoggerWarn,
+    error: vi.fn(),
+  },
 }));
 
 import {
@@ -251,6 +263,28 @@ describe("createExpoSqliteDriver", () => {
       expect(mockDeleteDatabaseSync).toHaveBeenCalledWith("pluralscape-sync.db");
       // openDatabaseSync called twice: initial open + reopen after delete
       expect(mockOpenDatabaseSync).toHaveBeenCalledTimes(2);
+    });
+
+    it("logs a warning when wiping an unencrypted DB so the destructive branch is observable", async () => {
+      let execCallCount = 0;
+      mockExecSync.mockImplementation((sql: string) => {
+        execCallCount++;
+        if (execCallCount === 2 && sql.includes("sqlite_master")) {
+          throw new Error("file is not a database");
+        }
+      });
+
+      await createExpoSqliteDriver({ encryptionKeyHex: TEST_KEY_HEX });
+
+      expect(mockLoggerWarn).toHaveBeenCalledTimes(1);
+      const [message, context] = mockLoggerWarn.mock.calls[0] ?? [];
+      expect(message).toContain("unencrypted DB detected");
+      expect(context).toEqual({ dbName: "pluralscape-sync.db" });
+    });
+
+    it("does not log when encrypted open succeeds on first attempt", async () => {
+      await createExpoSqliteDriver({ encryptionKeyHex: TEST_KEY_HEX });
+      expect(mockLoggerWarn).not.toHaveBeenCalled();
     });
 
     it("does not delete DB when encrypted open succeeds", async () => {

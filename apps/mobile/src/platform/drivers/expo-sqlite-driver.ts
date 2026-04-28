@@ -7,6 +7,7 @@ import {
 } from "expo-sqlite";
 
 import { createMaterializerDbAdapter } from "../../data/materializer-db-adapter.js";
+import { logger } from "../../lib/logger.js";
 
 import type { SqliteDriver, SqliteStatement } from "@pluralscape/sync/adapters";
 import type { MaterializerDb } from "@pluralscape/sync/materializer";
@@ -108,8 +109,15 @@ export function createExpoSqliteDriver(
     db.execSync(`PRAGMA key = "x'${encryptionKeyHex}'"`);
 
     if (!isDatabaseAccessible(db)) {
-      // Database exists but was created without encryption (pre-production migration).
-      // Close, delete the unencrypted file, and recreate with encryption.
+      // Database exists but was created without encryption (pre-production
+      // migration). Close, delete the unencrypted file, and recreate with
+      // encryption. Logged so the wipe is observable in production diagnostics
+      // — once the DB is encrypted, the branch never matches again, so this
+      // log fires at most once per device install.
+      logger.warn(
+        "[expo-sqlite-driver] unencrypted DB detected; deleting and recreating with encryption",
+        { dbName: DB_NAME },
+      );
       db.closeSync();
       deleteDatabaseSync(DB_NAME);
 
