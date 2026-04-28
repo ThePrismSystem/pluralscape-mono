@@ -1,22 +1,18 @@
 import { index, integer, pgTable } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { timestamps, versionCheckFor, versioned } from "../../helpers/audit.pg.js";
+import { encryptedPayload, entityIdentity } from "../../helpers/entity-shape.pg.js";
 
-import { systems } from "./systems.js";
-
-import type { SafeModeContentId, SystemId } from "@pluralscape/types";
+import type { SafeModeContentId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: not archivable (curated content list, replaced wholesale on edit).
 export const safeModeContent = pgTable(
   "safe_mode_content",
   {
-    id: brandedId<SafeModeContentId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<SafeModeContentId>(),
     sortOrder: integer("sort_order").notNull().default(0),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
   },

@@ -4,10 +4,10 @@ import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 import { brandedId, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { entityIdentity } from "../../helpers/entity-shape.pg.js";
 import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
-import { systems } from "./systems.js";
 
 import type {
   BucketId,
@@ -16,20 +16,18 @@ import type {
   EntityType,
   RotationItemStatus,
   RotationState,
-  SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: rotation tracking tables have no encrypted payload and no audit
+// columns; lifecycle tracked via state/initiatedAt/completedAt fields.
 export const bucketKeyRotations = pgTable(
   "bucket_key_rotations",
   {
-    id: brandedId<BucketKeyRotationId>("id").primaryKey(),
+    ...entityIdentity<BucketKeyRotationId>(),
     bucketId: brandedId<BucketId>("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "restrict" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     fromKeyVersion: integer("from_key_version").notNull(),
     toKeyVersion: integer("to_key_version").notNull(),
     state: varchar("state", { length: ENUM_MAX_LENGTH })
@@ -57,13 +55,10 @@ export const bucketKeyRotations = pgTable(
 export const bucketRotationItems = pgTable(
   "bucket_rotation_items",
   {
-    id: brandedId<BucketRotationItemId>("id").primaryKey(),
+    ...entityIdentity<BucketRotationItemId>(),
     rotationId: brandedId<BucketKeyRotationId>("rotation_id")
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "restrict" }),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
     entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
     // Polymorphic row reference — domain `BucketRotationItem.entityId` is a
     // plain string, so this column stays as a plain varchar (the actual

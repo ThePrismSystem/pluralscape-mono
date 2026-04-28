@@ -1,20 +1,23 @@
 import { pgTable } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { brandedId } from "../../columns/pg.js";
+import { timestamps, versionCheckFor, versioned } from "../../helpers/audit.pg.js";
+import { encryptedPayload } from "../../helpers/entity-shape.pg.js";
 
 import { systems } from "./systems.js";
 
 import type { SystemId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Singleton per system — systemId is the primary key. entityIdentity does not
+// fit (no separate id column).
 export const nomenclatureSettings = pgTable(
   "nomenclature_settings",
   {
     systemId: brandedId<SystemId>("system_id")
       .primaryKey()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     ...timestamps(),
     ...versioned(),
   },

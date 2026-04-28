@@ -1,26 +1,23 @@
 import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { brandedId, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH } from "../../helpers/db.constants.js";
+import { encryptedPayload, entityIdentity } from "../../helpers/entity-shape.pg.js";
 import { SNAPSHOT_TRIGGERS } from "../../helpers/enums.js";
 
-import { systems } from "./systems.js";
-
-import type { SnapshotTrigger, SystemId, SystemSnapshotId } from "@pluralscape/types";
+import type { SnapshotTrigger, SystemSnapshotId } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Carve-out: append-only snapshot history; no audit columns, only createdAt.
 export const systemSnapshots = pgTable(
   "system_snapshots",
   {
-    id: brandedId<SystemSnapshotId>("id").primaryKey(),
-    systemId: brandedId<SystemId>("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    ...entityIdentity<SystemSnapshotId>(),
     snapshotTrigger: varchar("snapshot_trigger", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<SnapshotTrigger>(),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...encryptedPayload(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
