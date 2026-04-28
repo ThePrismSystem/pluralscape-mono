@@ -12,7 +12,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 /**
  * Decrypted client-cache projection of `TimerConfig`.
  */
-export const timerConfigs = sqliteTable("timer_configs", {
+export const timerConfigs = sqliteTable("timers", {
   ...entityIdentity<TimerId>(),
   intervalMinutes: integer("interval_minutes"),
   wakingHoursOnly: integer("waking_hours_only", { mode: "boolean" }),

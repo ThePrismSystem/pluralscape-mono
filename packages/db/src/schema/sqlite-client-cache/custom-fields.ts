@@ -82,7 +82,7 @@ export const fieldValues = sqliteTable(
  * Mirrors `FieldBucketVisibility` exactly.
  */
 export const fieldBucketVisibility = sqliteTable(
-  "field_bucket_visibility",
+  "field_bucket_visibilities",
   {
     fieldDefinitionId: brandedId<FieldDefinitionId>("field_definition_id").notNull(),
     bucketId: brandedId<BucketId>("bucket_id").notNull(),

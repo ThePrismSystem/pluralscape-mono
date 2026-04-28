@@ -23,7 +23,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 /**
  * Decrypted client-cache projection of `SystemStructureEntityType`.
  */
-export const systemStructureEntityTypes = sqliteTable("system_structure_entity_types", {
+export const systemStructureEntityTypes = sqliteTable("structure_entity_types", {
   ...entityIdentity<SystemStructureEntityTypeId>(),
   name: text("name").notNull(),
   description: text("description"),
@@ -39,7 +39,7 @@ export const systemStructureEntityTypes = sqliteTable("system_structure_entity_t
  * Decrypted client-cache projection of `SystemStructureEntity`.
  */
 export const systemStructureEntities = sqliteTable(
-  "system_structure_entities",
+  "structure_entities",
   {
     ...entityIdentity<SystemStructureEntityId>(),
     entityTypeId: brandedId<SystemStructureEntityTypeId>("entity_type_id").notNull(),
@@ -94,7 +94,7 @@ export const relationships = sqliteTable(
  * `SystemStructureEntityLink` exactly.
  */
 export const systemStructureEntityLinks = sqliteTable(
-  "system_structure_entity_links",
+  "structure_entity_links",
   {
     ...entityIdentity<SystemStructureEntityLinkId>(),
     entityId: brandedId<SystemStructureEntityId>("entity_id").notNull(),
@@ -119,7 +119,7 @@ export const systemStructureEntityLinks = sqliteTable(
  * `SystemStructureEntityMemberLink` exactly.
  */
 export const systemStructureEntityMemberLinks = sqliteTable(
-  "system_structure_entity_member_links",
+  "structure_entity_member_links",
   {
     ...entityIdentity<SystemStructureEntityMemberLinkId>(),
     parentEntityId: brandedId<SystemStructureEntityId>("parent_entity_id"),
@@ -144,7 +144,7 @@ export const systemStructureEntityMemberLinks = sqliteTable(
  * `SystemStructureEntityAssociation` exactly.
  */
 export const systemStructureEntityAssociations = sqliteTable(
-  "system_structure_entity_associations",
+  "structure_entity_associations",
   {
     ...entityIdentity<SystemStructureEntityAssociationId>(),
     sourceEntityId: brandedId<SystemStructureEntityId>("source_entity_id").notNull(),
