@@ -34,10 +34,6 @@ export const members = sqliteTable("members", {
   ...archivable(),
 });
 
-/**
- * CARVE-OUT (ADR-038): member_photos FKs to members.id/.systemId. The cache
- * shape mirrors `MemberPhoto` from `@pluralscape/types`.
- */
 export const memberPhotos = sqliteTable(
   "member_photos",
   {
