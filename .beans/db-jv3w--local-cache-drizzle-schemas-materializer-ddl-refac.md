@@ -1,11 +1,11 @@
 ---
 # db-jv3w
 title: Local-cache Drizzle schemas + materializer DDL refactor (PR2)
-status: in-progress
+status: completed
 type: epic
 priority: high
 created_at: 2026-04-28T00:06:39Z
-updated_at: 2026-04-28T06:23:42Z
+updated_at: 2026-04-28T07:40:48Z
 parent: ps-cd6x
 blocking:
   - sync-xjfi
@@ -70,3 +70,19 @@ The materializer's `applyDiff`, `entityToRow`, and `extractEntities` all consume
 ## 2026-04-28 — Reopened for review-cleanup
 
 Multi-agent review of PR #581 surfaced 4 Critical, 14 Important, and ~8 Suggestion-level findings. Bundling all fixes onto the existing branch via force-push (per design at `docs/superpowers/specs/2026-04-28-pr581-review-cleanup-design.md`).
+
+## 2026-04-28 — Review-cleanup commits added
+
+Added 21 commits closing out the multi-agent review of PR #581:
+
+**Critical (4):** clear bridge error message; junction tables on `:` separator + orphan-cache deletion; DDL emitter walks full Drizzle table config; (1d folded into junction-tables commit).
+
+**Important (14):** drop `webhookConfigs.secret` (T3 leak); tighten `lifecycleEvents.payload` to variant residual; orphan-cache deletion (folded); wikiPages.slugHash JSDoc fix; replace mobile `as SyncedEntityType` casts with provable narrowings; `applyDiff` derives hotPath internally; `compoundDetailKey` required; `notes`/`journalEntries.authorEntityId` tightened to branded union; ADR-038 fixes (drop fabricated mixin, correct test path); `drizzleTable` marked `@internal`; three-way parity coverage extended to all SyncedEntityType (~30 cases); DDL runtime-validity integration test; cache schema round-trip integration test (5 shape patterns); search constants extracted to peer module.
+
+**Suggestions (5):** cache-header JSDoc cull (~13 boilerplate headers); PR-archaeology preamble dropped; `ALL_CACHE_TABLES` and `getTableForEntityType` removed; `FRIEND_EXPORTABLE_ENTITY_TYPES` derived from `friendExportable` flag; redundant member_photos CARVE-OUT comment dropped.
+
+**Bonus fix:** discovered cache `systems` table was named singular while server uses plural; renamed to align (FKs from `entityIdentity` mixin reference the server-side systems table by JS reference).
+
+**Skipped:** 2m round-trip tests for FK-parent tables (members, buckets, lifecycleEvents) — pre-existing FK-shape issue (composite FKs reference single-PK parents) is out of scope for this cleanup. 3d (friend-indexer upsert reuse) and 3f (AssertSubset → expectTypeOf().toExtend()) deferred to follow-up.
+
+**Verification:** `pnpm typecheck`, `pnpm format`, `pnpm lint` all pass; `pnpm vitest run` (sync, db, mobile) — 3043+ tests pass; `pnpm vitest run --project sync-integration --project db-integration` — 1612 tests pass.
