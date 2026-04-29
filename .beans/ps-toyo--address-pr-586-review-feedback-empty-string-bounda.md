@@ -1,10 +1,11 @@
 ---
 # ps-toyo
 title: "Address PR #586 review feedback — empty-string boundary, max-50 enforcement, JSDoc cleanup, brand-type assertions"
-status: in-progress
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-29T08:41:51Z
-updated_at: 2026-04-29T08:41:51Z
+updated_at: 2026-04-29T09:37:12Z
 parent: ps-cd6x
 ---
 
@@ -64,3 +65,17 @@ under `scripts/.sp-test-*.json`).
 
 Verification: typecheck, lint, types:check-sot, unit (13194 passed),
 integration (3063 passed), e2e (509 passed) all green; format:fix clean.
+
+### Commit 6 (227e3d5b)
+
+Encoded the 50-character limit on FrontingSession.comment via a Zod refine that preserves the FrontingSessionComment brand. Introduced MAX_FRONTING_COMMENT_LENGTH in new packages/types/src/fronting.constants.ts; the entity-level field declaration retains its existing constraint marker.
+
+### Commit 7 (04524590)
+
+Added expectTypeOf brand assertions for Note/Poll/FieldDefinition mirroring the FrontingSession precedent — locks in compile-time brand identity for the canonical chain projections.
+
+### Commit 8 (this commit)
+
+Removed all references to docs/local-audits/2026-04-27-free-text-label-brand-audit.md from packages/types/src/value-types.ts (6 sites) and from the 4 brand-task bean bodies (types-cdr5, types-09m5, types-e6n9, types-gkhk). Replaced audit-citing preambles with self-contained one-line rationale text. Aligned peer brand JSDoc (NoteContent, PollOptionLabel, FrontingSessionPositionality, FrontingSessionOuttrigger) to the existing LifecycleEventName one-line peer-delegation precedent. Fixed PollTitle grammar ambiguity. Named FieldDefinition's same-entity peer (description) explicitly. Verified zero local-audits references remain in packages/, .beans/, apps/.
+
+Verification: format, lint, typecheck, types:check-sot, unit (13204 passed), integration (3063 passed), e2e (509 passed) all green.

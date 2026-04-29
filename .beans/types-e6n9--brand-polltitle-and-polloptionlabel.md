@@ -5,11 +5,11 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-27T21:25:41Z
-updated_at: 2026-04-29T07:07:30Z
+updated_at: 2026-04-29T09:27:18Z
 parent: ps-cd6x
 ---
 
-Per types-t3tn audit (2026-04-27): Poll.title and PollOption.label are sibling free-text fields across the parent/child relationship; cross-field swap risk is concrete in option-edit forms. Brand PollTitle and PollOptionLabel as separate phantom brands. See docs/local-audits/2026-04-27-free-text-label-brand-audit.md.
+Poll.title and PollOption.label are sibling free-text fields across the parent/child relationship; cross-field swap risk is concrete in option-edit forms. Brand PollTitle and PollOptionLabel as separate phantom brands.
 
 ## Summary of Changes
 
