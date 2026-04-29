@@ -41,5 +41,11 @@ export type FriendNotificationPreferenceServerMetadata = Omit<
  * JSON-wire representation of a FriendNotificationPreference. Derived from
  * the domain type via `Serialize<T>`; branded IDs become plain strings,
  * `UnixMillis` becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not
+ * `FriendNotificationPreferenceServerMetadata`) because the server row
+ * widens `archived` to a raw boolean and omits the `version` column
+ * (table is not `versioned()`); the domain carries the `archived: false`
+ * literal that callers see.
  */
 export type FriendNotificationPreferenceWire = Serialize<FriendNotificationPreference>;

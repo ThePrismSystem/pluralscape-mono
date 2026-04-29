@@ -75,8 +75,10 @@ export interface AccountServerMetadata extends Account {
 }
 
 /**
- * JSON-wire representation of an Account. Derived from the domain `Account`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`, and `Uint8Array` becomes `string` (base64).
+ * JSON-wire representation of an Account. Derived from
+ * `AccountServerMetadata` via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`, and `Uint8Array` becomes `string`
+ * (base64). `ServerInternal<…>`-branded server-only columns are stripped
+ * by `Serialize<>` so the client never sees them.
  */
-export type AccountWire = Serialize<Account>;
+export type AccountWire = Serialize<AccountServerMetadata>;

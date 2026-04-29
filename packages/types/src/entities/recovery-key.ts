@@ -22,9 +22,9 @@ export interface RecoveryKey {
 export type RecoveryKeyServerMetadata = RecoveryKey;
 
 /**
- * JSON-wire representation of a RecoveryKey. Derived from the domain
- * `RecoveryKey` type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`, and `Uint8Array` becomes `string`
+ * JSON-wire representation of a RecoveryKey. Derived from
+ * `RecoveryKeyServerMetadata` via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`, and `Uint8Array` becomes `string`
  * (base64).
  */
-export type RecoveryKeyWire = Serialize<RecoveryKey>;
+export type RecoveryKeyWire = Serialize<RecoveryKeyServerMetadata>;

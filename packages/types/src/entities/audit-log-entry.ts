@@ -299,5 +299,12 @@ export interface AuditLogEntryServerMetadata {
  * JSON-wire representation of an AuditLogEntry. Derived from the domain
  * `AuditLogEntry` type via `Serialize<T>`; branded IDs become plain strings,
  * `UnixMillis` becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not `AuditLogEntryServerMetadata`)
+ * because the row uses `timestamp` while the API exposes `createdAt`, and
+ * the denormalized `accountId` column (`ServerInternal<AccountId> | null`)
+ * is not stripped by `Serialize<>` due to the `| null` union. The mapping
+ * layer in `apps/api/src/services/audit-log-query.service.ts` projects the
+ * row to the domain shape before serialization.
  */
 export type AuditLogEntryWire = Serialize<AuditLogEntry>;

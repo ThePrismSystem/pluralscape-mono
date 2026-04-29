@@ -305,7 +305,11 @@ import type {
   SystemStructureEntityServerMetadata,
   SystemStructureEntityWire,
 } from "./entities/structure-entity.js";
-import type { SyncDocument, SyncDocumentWire } from "./entities/sync-document.js";
+import type {
+  SyncDocument,
+  SyncDocumentServerMetadata,
+  SyncDocumentWire,
+} from "./entities/sync-document.js";
 import type {
   SystemSettings,
   SystemSettingsEncryptedFields,
@@ -755,8 +759,9 @@ export type SotEntityManifest = {
   SyncDocument: {
     domain: SyncDocument;
     // SyncDocument has no server-only columns — the server sees the same
-    // document-metadata shape as the client.
-    server: SyncDocument;
+    // document-metadata shape as the client. Identity alias maintains
+    // canonical-chain consistency across the plaintext fleet.
+    server: SyncDocumentServerMetadata;
     wire: SyncDocumentWire;
     encryptedFields: never;
   };

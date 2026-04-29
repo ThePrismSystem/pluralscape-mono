@@ -74,6 +74,12 @@ export type BlobMetadataServerMetadata = Omit<
  * JSON-wire representation of BlobMetadata. Derived from the domain type
  * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
  * becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not `BlobMetadataServerMetadata`)
+ * because the server row widens `mimeType`/`checksum` to nullable (the row
+ * exists in a pending state pre-upload) and adds `createdAt`/`expiresAt`/
+ * `archived`/`archivedAt` columns the API does not expose. Confirmed
+ * blob reads project to the domain shape before serialization.
  */
 export type BlobMetadataWire = Serialize<BlobMetadata>;
 

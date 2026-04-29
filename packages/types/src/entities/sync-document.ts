@@ -36,11 +36,21 @@ export interface SyncDocument {
 }
 
 /**
- * JSON-wire representation of SyncDocument. Derived from the domain
- * type via `Serialize<T>`; branded IDs become plain strings,
- * `UnixMillis` becomes `number`.
+ * Server-visible SyncDocument metadata — raw Drizzle row shape. Identity
+ * case: SyncDocument has no server-only columns; the server sees the same
+ * document-metadata shape as the client. The alias exists so the canonical
+ * chain `SyncDocument → SyncDocumentServerMetadata →
+ * Serialize<SyncDocumentServerMetadata>` holds uniformly across the
+ * plaintext fleet.
  */
-export type SyncDocumentWire = Serialize<SyncDocument>;
+export type SyncDocumentServerMetadata = SyncDocument;
+
+/**
+ * JSON-wire representation of SyncDocument. Derived from
+ * `SyncDocumentServerMetadata` via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`.
+ */
+export type SyncDocumentWire = Serialize<SyncDocumentServerMetadata>;
 
 /** Overall sync status for a system. Runtime state, not persisted. */
 export interface SyncState {

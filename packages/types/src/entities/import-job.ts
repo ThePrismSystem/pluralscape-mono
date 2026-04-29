@@ -163,11 +163,13 @@ export type ImportJobServerMetadata = ImportJob & {
 };
 
 /**
- * JSON-wire representation of ImportJob. Derived from the domain type
- * via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`.
+ * JSON-wire representation of ImportJob. Derived from
+ * `ImportJobServerMetadata` via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`. `ServerInternal<…>`-branded
+ * server-only columns (`checkpointState`) are stripped by `Serialize<>`
+ * so the client never sees them.
  */
-export type ImportJobWire = Serialize<ImportJob>;
+export type ImportJobWire = Serialize<ImportJobServerMetadata>;
 
 /** Schema version for `ImportCheckpointState`. Bumped when the shape changes. */
 export type ImportCheckpointSchemaVersion = 2;

@@ -34,6 +34,10 @@ export type KeyGrantServerMetadata = Omit<KeyGrant, "encryptedBucketKey"> & {
  * JSON-wire representation of a KeyGrant. Derived from the domain type via
  * `Serialize<T>`; branded IDs become plain strings, `UnixMillis` becomes
  * `number`, and `Uint8Array` becomes `string` (base64).
+ *
+ * NB: Wire is derived from the domain type (not `KeyGrantServerMetadata`)
+ * because the server row renames the column to `encryptedKey` and adds
+ * the owning `systemId` FK, neither of which the API exposes.
  */
 export type KeyGrantWire = Serialize<KeyGrant>;
 

@@ -26,8 +26,9 @@ export interface AuthKey {
 export type AuthKeyServerMetadata = AuthKey;
 
 /**
- * JSON-wire representation of an AuthKey. Derived from the domain `AuthKey`
- * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
- * becomes `number`, and `Uint8Array` becomes `string` (base64).
+ * JSON-wire representation of an AuthKey. Derived from
+ * `AuthKeyServerMetadata` via `Serialize<T>`; branded IDs become plain
+ * strings, `UnixMillis` becomes `number`, and `Uint8Array` becomes `string`
+ * (base64).
  */
-export type AuthKeyWire = Serialize<AuthKey>;
+export type AuthKeyWire = Serialize<AuthKeyServerMetadata>;

@@ -34,6 +34,10 @@ export interface BucketKeyRotationServerMetadata extends BucketKeyRotation {
  * JSON-wire representation of a BucketKeyRotation. Derived from the domain
  * type via `Serialize<T>`; branded IDs become plain strings, `UnixMillis`
  * becomes `number`.
+ *
+ * NB: Wire is derived from the domain type (not
+ * `BucketKeyRotationServerMetadata`) because the server row adds the
+ * owning `systemId` FK that the API does not expose.
  */
 export type BucketKeyRotationWire = Serialize<BucketKeyRotation>;
 
