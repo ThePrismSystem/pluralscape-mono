@@ -4,7 +4,18 @@ import importPlugin from "eslint-plugin-import-x";
 import unicornPlugin from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
+import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
+
 export default tseslint.config(
+  {
+    plugins: {
+      pluralscape: {
+        rules: {
+          "no-hand-rolled-request-types": noHandRolledRequestTypes,
+        },
+      },
+    },
+  },
   {
     ignores: [
       "**/dist/**",
