@@ -1,10 +1,8 @@
 import { timerConfigs } from "@pluralscape/db/pg";
 import { now, toUnixMillis } from "@pluralscape/types";
-import { UpdateTimerConfigBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -18,25 +16,22 @@ import type { TimerConfigResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId, TimerId } from "@pluralscape/types";
+import type { UpdateTimerConfigBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateTimerConfig(
   db: PostgresJsDatabase,
   systemId: SystemId,
   timerId: TimerId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateTimerConfigBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<TimerConfigResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateTimerConfigBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-  const version = parsed.version;
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const version = body.version;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -45,31 +40,29 @@ export async function updateTimerConfig(
       updatedAt: timestamp,
     };
 
-    if (parsed.enabled !== undefined) {
-      setClause.enabled = parsed.enabled;
+    if (body.enabled !== undefined) {
+      setClause.enabled = body.enabled;
     }
-    if (parsed.intervalMinutes !== undefined) {
-      setClause.intervalMinutes = parsed.intervalMinutes;
+    if (body.intervalMinutes !== undefined) {
+      setClause.intervalMinutes = body.intervalMinutes;
     }
-    if (parsed.wakingHoursOnly !== undefined) {
-      setClause.wakingHoursOnly = parsed.wakingHoursOnly;
+    if (body.wakingHoursOnly !== undefined) {
+      setClause.wakingHoursOnly = body.wakingHoursOnly;
     }
-    if (parsed.wakingStart !== undefined) {
-      setClause.wakingStart = parsed.wakingStart;
+    if (body.wakingStart !== undefined) {
+      setClause.wakingStart = body.wakingStart;
     }
-    if (parsed.wakingEnd !== undefined) {
-      setClause.wakingEnd = parsed.wakingEnd;
+    if (body.wakingEnd !== undefined) {
+      setClause.wakingEnd = body.wakingEnd;
     }
 
-    // Recompute nextCheckInAt when scheduling-related fields change
     if (
-      parsed.enabled !== undefined ||
-      parsed.intervalMinutes !== undefined ||
-      parsed.wakingHoursOnly !== undefined ||
-      parsed.wakingStart !== undefined ||
-      parsed.wakingEnd !== undefined
+      body.enabled !== undefined ||
+      body.intervalMinutes !== undefined ||
+      body.wakingHoursOnly !== undefined ||
+      body.wakingStart !== undefined ||
+      body.wakingEnd !== undefined
     ) {
-      // We need the current config to merge with updated fields
       const [current] = await tx
         .select()
         .from(timerConfigs)
@@ -83,17 +76,17 @@ export async function updateTimerConfig(
         .limit(1);
 
       if (current) {
-        const effectiveEnabled = parsed.enabled ?? current.enabled;
-        const effectiveInterval = parsed.intervalMinutes ?? current.intervalMinutes;
+        const effectiveEnabled = body.enabled ?? current.enabled;
+        const effectiveInterval = body.intervalMinutes ?? current.intervalMinutes;
 
         if (effectiveEnabled && effectiveInterval !== null) {
           setClause.nextCheckInAt = toUnixMillis(
             computeNextCheckInAt(
               {
                 intervalMinutes: effectiveInterval,
-                wakingHoursOnly: parsed.wakingHoursOnly ?? current.wakingHoursOnly,
-                wakingStart: parsed.wakingStart ?? current.wakingStart,
-                wakingEnd: parsed.wakingEnd ?? current.wakingEnd,
+                wakingHoursOnly: body.wakingHoursOnly ?? current.wakingHoursOnly,
+                wakingStart: body.wakingStart ?? current.wakingStart,
+                wakingEnd: body.wakingEnd ?? current.wakingEnd,
               },
               Date.now(),
             ),

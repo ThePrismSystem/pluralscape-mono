@@ -33,7 +33,12 @@ import {
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
+import type {
+  CreateTimerConfigBodySchema,
+  UpdateTimerConfigBodySchema,
+} from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { timerConfigs, checkInRecords } = schema;
 
@@ -62,17 +67,15 @@ describe("timer-config.service (PGlite integration)", () => {
   });
 
   function createParams(
-    overrides: Partial<{
-      encryptedData: string;
-      version: number;
-      enabled: boolean;
-      intervalMinutes: number;
-      wakingHoursOnly: boolean;
-      wakingStart: string;
-      wakingEnd: string;
-    }> = {},
-  ) {
+    overrides: Partial<z.infer<typeof CreateTimerConfigBodySchema>> = {},
+  ): z.infer<typeof CreateTimerConfigBodySchema> {
     return { encryptedData: testEncryptedDataBase64(), ...overrides };
+  }
+
+  function updateParams(
+    overrides: Partial<z.infer<typeof UpdateTimerConfigBodySchema>> = {},
+  ): z.infer<typeof UpdateTimerConfigBodySchema> {
+    return { encryptedData: testEncryptedDataBase64(), version: 1, ...overrides };
   }
 
   describe("createTimerConfig", () => {
@@ -201,7 +204,7 @@ describe("timer-config.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         t1.id,
-        createParams({ version: 1, enabled: false }),
+        updateParams({ version: 1, enabled: false }),
         auth,
         noopAudit,
       );
@@ -215,12 +218,12 @@ describe("timer-config.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         t1.id,
-        createParams({ version: 1 }),
+        updateParams({ version: 1 }),
         auth,
         noopAudit,
       );
       await assertApiError(
-        updateTimerConfig(asDb(db), systemId, t1.id, createParams({ version: 1 }), auth, noopAudit),
+        updateTimerConfig(asDb(db), systemId, t1.id, updateParams({ version: 1 }), auth, noopAudit),
         "CONFLICT",
         409,
       );
@@ -233,7 +236,7 @@ describe("timer-config.service (PGlite integration)", () => {
           asDb(db),
           systemId,
           t1.id,
-          createParams({ version: 1, wakingHoursOnly: true }),
+          updateParams({ version: 1, wakingHoursOnly: true }),
           auth,
           noopAudit,
         ),
