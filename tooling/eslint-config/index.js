@@ -5,6 +5,7 @@ import unicornPlugin from "eslint-plugin-unicorn";
 import tseslint from "typescript-eslint";
 
 import noHandRolledRequestTypes from "./rules/no-hand-rolled-request-types.js";
+import noParamsUnknown from "./rules/no-params-unknown.js";
 
 export default tseslint.config(
   {
@@ -12,6 +13,7 @@ export default tseslint.config(
       pluralscape: {
         rules: {
           "no-hand-rolled-request-types": noHandRolledRequestTypes,
+          "no-params-unknown": noParamsUnknown,
         },
       },
     },

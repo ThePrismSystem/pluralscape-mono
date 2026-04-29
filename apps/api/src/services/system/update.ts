@@ -3,6 +3,7 @@ import { now } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
+// eslint-disable-next-line pluralscape/no-params-unknown
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
@@ -20,6 +21,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export async function updateSystemProfile(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

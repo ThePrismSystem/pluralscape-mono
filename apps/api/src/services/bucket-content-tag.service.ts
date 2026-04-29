@@ -47,6 +47,7 @@ export async function tagContent(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -105,6 +106,7 @@ export async function untagContent(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

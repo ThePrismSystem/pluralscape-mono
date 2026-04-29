@@ -5,6 +5,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { checkDependents } from "../lib/check-dependents.js";
+// eslint-disable-next-line pluralscape/no-params-unknown
 import { parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
@@ -66,6 +67,7 @@ export function createHierarchyService<
   async function create(
     db: PostgresJsDatabase,
     systemId: SystemId,
+    // eslint-disable-next-line pluralscape/no-params-unknown
     params: unknown,
     auth: AuthContext,
     audit: AuditWriter,
@@ -241,6 +243,7 @@ export function createHierarchyService<
     db: PostgresJsDatabase,
     systemId: SystemId,
     entityId: TId,
+    // eslint-disable-next-line pluralscape/no-params-unknown
     params: unknown,
     auth: AuthContext,
     audit: AuditWriter,

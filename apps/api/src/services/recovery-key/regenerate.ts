@@ -25,6 +25,7 @@ export interface RegenerateRecoveryKeyResult {
 export async function regenerateRecoveryKeyBackup(
   db: PostgresJsDatabase,
   accountId: AccountId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   audit: AuditWriter,
 ): Promise<RegenerateRecoveryKeyResult> {

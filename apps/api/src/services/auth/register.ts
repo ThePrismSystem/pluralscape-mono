@@ -53,6 +53,7 @@ export interface RegistrationInitiateResult {
 
 export async function initiateRegistration(
   db: PostgresJsDatabase,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   retried = false,
 ): Promise<RegistrationInitiateResult> {
@@ -153,6 +154,7 @@ export interface RegistrationCommitResult {
 
 export async function commitRegistration(
   db: PostgresJsDatabase,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   platform: ClientPlatform,
   audit: AuditWriter,

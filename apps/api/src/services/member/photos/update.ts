@@ -22,6 +22,7 @@ export async function reorderMemberPhotos(
   db: PostgresJsDatabase,
   systemId: SystemId,
   memberId: MemberId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

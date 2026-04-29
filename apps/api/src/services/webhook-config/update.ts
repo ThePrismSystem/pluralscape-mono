@@ -34,6 +34,7 @@ export async function updateWebhookConfig(
   db: PostgresJsDatabase,
   systemId: SystemId,
   webhookId: WebhookId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -110,6 +111,7 @@ export async function rotateWebhookSecret(
   db: PostgresJsDatabase,
   systemId: SystemId,
   webhookId: WebhookId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

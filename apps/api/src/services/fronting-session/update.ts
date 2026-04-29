@@ -8,6 +8,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+// eslint-disable-next-line pluralscape/no-params-unknown
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
@@ -28,6 +29,7 @@ export async function updateFrontingSession(
   db: PostgresJsDatabase,
   systemId: SystemId,
   sessionId: FrontingSessionId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -94,6 +96,7 @@ export async function endFrontingSession(
   db: PostgresJsDatabase,
   systemId: SystemId,
   sessionId: FrontingSessionId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

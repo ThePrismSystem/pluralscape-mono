@@ -3,6 +3,7 @@ import { now } from "@pluralscape/types";
 import { UpdatePollBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
+// eslint-disable-next-line pluralscape/no-params-unknown
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -22,6 +23,7 @@ export async function updatePoll(
   db: PostgresJsDatabase,
   systemId: SystemId,
   pollId: PollId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

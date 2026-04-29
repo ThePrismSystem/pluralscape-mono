@@ -54,6 +54,7 @@ export async function updateImportJob(
   db: PostgresJsDatabase,
   systemId: SystemId,
   id: ImportJobId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

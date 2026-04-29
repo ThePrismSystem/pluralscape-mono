@@ -68,6 +68,7 @@ export type ChangeEmailResult =
 export async function changeEmail(
   db: PostgresJsDatabase,
   accountId: AccountId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   audit: AuditWriter,
 ): Promise<ChangeEmailResult> {
@@ -166,6 +167,7 @@ export interface ChangePasswordResult {
 export async function changePassword(
   db: PostgresJsDatabase,
   accountId: AccountId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   audit: AuditWriter,
 ): Promise<ChangePasswordResult> {
@@ -278,6 +280,7 @@ export interface UpdateAccountSettingsResult {
 export async function updateAccountSettings(
   db: PostgresJsDatabase,
   accountId: AccountId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   audit: AuditWriter,
 ): Promise<UpdateAccountSettingsResult> {

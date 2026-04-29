@@ -47,6 +47,7 @@ export async function claimRotationChunk(
   systemId: SystemId,
   bucketId: BucketId,
   rotationId: BucketKeyRotationId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
 ): Promise<ChunkClaimResponse> {

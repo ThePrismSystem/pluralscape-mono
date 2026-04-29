@@ -57,6 +57,7 @@ async function generateTokenPair(): Promise<{ token: string; tokenHash: string }
 export async function createApiKey(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

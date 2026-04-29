@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+// eslint-disable-next-line pluralscape/no-params-unknown
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../../lib/encrypted-blob.js";
 import { withTenantRead, withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -72,6 +73,7 @@ export async function getCanvas(
 export async function upsertCanvas(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

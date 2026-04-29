@@ -30,6 +30,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export async function createStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

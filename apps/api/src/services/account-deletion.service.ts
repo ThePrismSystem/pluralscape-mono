@@ -31,6 +31,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  */
 export async function deleteAccount(
   db: PostgresJsDatabase,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

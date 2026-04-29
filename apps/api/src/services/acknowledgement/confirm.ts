@@ -23,6 +23,7 @@ export async function confirmAcknowledgement(
   db: PostgresJsDatabase,
   systemId: SystemId,
   ackId: AcknowledgementId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

@@ -37,6 +37,7 @@ export async function createUploadUrl(
   storageAdapter: BlobStorageAdapter,
   quotaService: BlobQuotaService,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

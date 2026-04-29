@@ -41,6 +41,7 @@ export async function initiateRotation(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

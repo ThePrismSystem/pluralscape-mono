@@ -23,6 +23,7 @@ export async function updateEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
   entityTypeId: SystemStructureEntityTypeId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

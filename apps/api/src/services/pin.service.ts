@@ -31,6 +31,7 @@ const DUMMY_ARGON2_PIN_HASH =
 export async function setPin(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -69,6 +70,7 @@ export async function setPin(
 export async function removePin(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -122,6 +124,7 @@ export async function removePin(
 export async function verifyPinCode(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

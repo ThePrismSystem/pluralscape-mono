@@ -42,6 +42,7 @@ export async function updateEntityLink(
   db: PostgresJsDatabase,
   systemId: SystemId,
   linkId: string,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -127,6 +128,7 @@ function toEntityLinkResult(row: {
 export async function createEntityLink(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

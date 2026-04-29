@@ -33,6 +33,7 @@ function hashToken(token: string): string {
 
 export async function enrollBiometric(
   db: PostgresJsDatabase,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -95,6 +96,7 @@ export async function enrollBiometric(
 
 export async function verifyBiometric(
   db: PostgresJsDatabase,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

@@ -4,6 +4,7 @@ import { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+// eslint-disable-next-line pluralscape/no-params-unknown
 import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -23,6 +24,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export async function createFrontingSession(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

@@ -99,6 +99,7 @@ export async function getSystemSettings(
 export async function updateSystemSettings(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

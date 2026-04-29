@@ -89,6 +89,7 @@ export interface SetupStepResult {
 export async function setupNomenclatureStep(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -137,6 +138,7 @@ export async function setupNomenclatureStep(
 export async function setupProfileStep(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
@@ -183,6 +185,7 @@ export type SetupCompleteResult = ReturnType<typeof toSystemSettingsResult>;
 export async function setupComplete(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

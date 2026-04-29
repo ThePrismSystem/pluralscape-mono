@@ -21,6 +21,7 @@ export async function confirmUpload(
   db: PostgresJsDatabase,
   systemId: SystemId,
   blobId: BlobId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

@@ -24,6 +24,7 @@ export async function updateStructureEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
   entityId: SystemStructureEntityId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

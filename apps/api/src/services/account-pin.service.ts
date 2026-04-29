@@ -49,6 +49,7 @@ async function resolveSystemId(tx: PostgresJsDatabase, accountId: AccountId): Pr
 export async function setAccountPin(
   db: PostgresJsDatabase,
   accountId: AccountId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   audit: AuditWriter,
 ): Promise<void> {
@@ -85,6 +86,7 @@ export async function setAccountPin(
 export async function removeAccountPin(
   db: PostgresJsDatabase,
   accountId: AccountId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   audit: AuditWriter,
 ): Promise<void> {
@@ -134,6 +136,7 @@ export async function removeAccountPin(
 export async function verifyAccountPin(
   db: PostgresJsDatabase,
   accountId: AccountId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   audit: AuditWriter,
 ): Promise<{ verified: true }> {

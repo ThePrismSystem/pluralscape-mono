@@ -39,6 +39,7 @@ export interface PasswordResetResult {
 
 export async function resetPasswordWithRecoveryKey(
   db: PostgresJsDatabase,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   platform: ClientPlatform,
   audit: AuditWriter,

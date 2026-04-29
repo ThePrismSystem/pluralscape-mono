@@ -3,6 +3,7 @@ import { now } from "@pluralscape/types";
 import { UpdateRegionBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
+// eslint-disable-next-line pluralscape/no-params-unknown
 import { parseAndValidateBlob } from "../../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../../lib/occ-update.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
@@ -22,6 +23,7 @@ export async function updateRegion(
   db: PostgresJsDatabase,
   systemId: SystemId,
   regionId: InnerWorldRegionId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

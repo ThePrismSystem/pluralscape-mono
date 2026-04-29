@@ -67,6 +67,7 @@ function toEntityAssociationResult(row: {
 export async function createEntityAssociation(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,

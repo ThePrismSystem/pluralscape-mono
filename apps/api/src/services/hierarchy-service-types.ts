@@ -128,6 +128,7 @@ export interface HierarchyService<TId extends string, TResult extends { readonly
   readonly create: (
     db: PostgresJsDatabase,
     systemId: SystemId,
+    // eslint-disable-next-line pluralscape/no-params-unknown
     params: unknown,
     auth: AuthContext,
     audit: AuditWriter,
@@ -153,6 +154,7 @@ export interface HierarchyService<TId extends string, TResult extends { readonly
     db: PostgresJsDatabase,
     systemId: SystemId,
     entityId: TId,
+    // eslint-disable-next-line pluralscape/no-params-unknown
     params: unknown,
     auth: AuthContext,
     audit: AuditWriter,

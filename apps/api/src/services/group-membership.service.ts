@@ -48,6 +48,7 @@ export async function addMember(
   db: PostgresJsDatabase,
   systemId: SystemId,
   groupId: GroupId,
+  // eslint-disable-next-line pluralscape/no-params-unknown
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
