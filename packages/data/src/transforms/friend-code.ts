@@ -25,7 +25,13 @@ export function narrowFriendCode(raw: FriendCodeWire): Archivable<FriendCode> {
   };
 
   if (raw.archived) {
-    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
+    // Defensive: the discriminated wire type prevents this construction in honest
+    // TypeScript; the widening cast lets us guard against malformed runtime input.
+    const archivedAt = raw.archivedAt as number | null;
+    if (archivedAt === null) {
+      throw new Error("Archived friendCode missing archivedAt");
+    }
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(archivedAt) };
   }
   return { ...base, archived: false as const };
 }
