@@ -1,10 +1,8 @@
 import { notes } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateNoteBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -18,29 +16,22 @@ import type { NoteResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { NoteId, SystemId } from "@pluralscape/types";
+import type { UpdateNoteBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
-/**
- * Updates a note's encrypted data with optimistic concurrency control.
- * Author (entityType/entityId) is immutable after creation.
- */
 export async function updateNote(
   db: PostgresJsDatabase,
   systemId: SystemId,
   noteId: NoteId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateNoteBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<NoteResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateNoteBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-  const version = parsed.version;
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const version = body.version;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

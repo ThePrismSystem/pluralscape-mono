@@ -65,7 +65,12 @@ describe("channel.service (PGlite integration)", () => {
       const result = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         audit,
       );
@@ -85,7 +90,12 @@ describe("channel.service (PGlite integration)", () => {
       const category = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -111,7 +121,12 @@ describe("channel.service (PGlite integration)", () => {
       const category = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -138,7 +153,12 @@ describe("channel.service (PGlite integration)", () => {
       const channel1 = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -188,7 +208,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -211,7 +236,12 @@ describe("channel.service (PGlite integration)", () => {
         await createChannel(
           asDb(db),
           systemId,
-          { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: i },
+          {
+            encryptedData: testEncryptedDataBase64(),
+            type: "channel",
+            parentId: undefined,
+            sortOrder: i,
+          },
           auth,
           noopAudit,
         );
@@ -226,14 +256,24 @@ describe("channel.service (PGlite integration)", () => {
       await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
       await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -247,7 +287,12 @@ describe("channel.service (PGlite integration)", () => {
       const category = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -266,7 +311,12 @@ describe("channel.service (PGlite integration)", () => {
       await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 1 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 1,
+        },
         auth,
         noopAudit,
       );
@@ -280,7 +330,12 @@ describe("channel.service (PGlite integration)", () => {
       const ch = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -295,7 +350,12 @@ describe("channel.service (PGlite integration)", () => {
       const ch = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -311,7 +371,12 @@ describe("channel.service (PGlite integration)", () => {
         await createChannel(
           asDb(db),
           systemId,
-          { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: i },
+          {
+            encryptedData: testEncryptedDataBase64(),
+            type: "channel",
+            parentId: undefined,
+            sortOrder: i,
+          },
           auth,
           noopAudit,
         );
@@ -341,7 +406,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -364,7 +434,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -385,7 +460,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -421,7 +501,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -434,7 +519,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -455,7 +545,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -474,7 +569,12 @@ describe("channel.service (PGlite integration)", () => {
       await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -494,7 +594,12 @@ describe("channel.service (PGlite integration)", () => {
       const created = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -509,7 +614,12 @@ describe("channel.service (PGlite integration)", () => {
       const category = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "category",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -542,7 +652,12 @@ describe("channel.service (PGlite integration)", () => {
       const channel = await createChannel(
         asDb(db),
         systemId,
-        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          type: "channel",
+          parentId: undefined,
+          sortOrder: 0,
+        },
         auth,
         noopAudit,
       );
@@ -551,7 +666,7 @@ describe("channel.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         channel.id,
-        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now(), replyToId: undefined },
         auth,
         noopAudit,
       );

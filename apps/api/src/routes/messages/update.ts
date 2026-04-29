@@ -1,7 +1,9 @@
 import { ID_PREFIXES } from "@pluralscape/types";
-import { MessageTimestampQuerySchema } from "@pluralscape/validation";
+import { MessageTimestampQuerySchema, UpdateMessageBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
+import { HTTP_BAD_REQUEST } from "../../http.constants.js";
+import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
@@ -17,7 +19,17 @@ export const updateRoute = new Hono<AuthEnv>();
 updateRoute.use("*", createCategoryRateLimiter("write"));
 
 updateRoute.put("/:messageId", async (c) => {
-  const body = await parseJsonBody(c);
+  const rawBody = await parseJsonBody(c);
+  const parsed = UpdateMessageBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parsed.error.issues,
+    );
+  }
+
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const messageId = requireIdParam(c.req.param("messageId"), "messageId", ID_PREFIXES.message);
@@ -27,7 +39,7 @@ updateRoute.put("/:messageId", async (c) => {
   });
 
   const db = await getDb();
-  const result = await updateMessage(db, systemId, messageId, body, auth, audit, {
+  const result = await updateMessage(db, systemId, messageId, parsed.data, auth, audit, {
     timestamp: query.timestamp,
   });
   return c.json(envelope(result));

@@ -1,10 +1,8 @@
 import { channels } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateChannelBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -18,25 +16,22 @@ import type { ChannelResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { ChannelId, SystemId } from "@pluralscape/types";
+import type { UpdateChannelBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateChannel(
   db: PostgresJsDatabase,
   systemId: SystemId,
   channelId: ChannelId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateChannelBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<ChannelResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateChannelBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-  const version = parsed.version;
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const version = body.version;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -44,7 +39,7 @@ export async function updateChannel(
       encryptedData: blob,
       updatedAt: timestamp,
       version: sql`${channels.version} + 1`,
-      ...(parsed.sortOrder !== undefined ? { sortOrder: parsed.sortOrder } : {}),
+      ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
     };
 
     const updated = await tx

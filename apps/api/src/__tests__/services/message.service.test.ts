@@ -133,7 +133,11 @@ describe("message service", () => {
   // ── createMessage ──────────────────────────────────────────────
 
   describe("createMessage", () => {
-    const validPayload = { encryptedData: VALID_BLOB_BASE64, timestamp: 1000 };
+    const validPayload = {
+      encryptedData: VALID_BLOB_BASE64,
+      timestamp: 1000,
+      replyToId: undefined,
+    };
 
     it("creates a message and returns result", async () => {
       const { db, chain } = mockDb();
@@ -149,14 +153,6 @@ describe("message service", () => {
         chain,
         expect.objectContaining({ eventType: "message.created" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        createMessage(db, SYSTEM_ID, CHANNEL_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws NOT_FOUND when channel does not exist", async () => {
@@ -270,14 +266,6 @@ describe("message service", () => {
         chain,
         expect.objectContaining({ eventType: "message.updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        updateMessage(db, SYSTEM_ID, MESSAGE_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws CONFLICT on OCC version mismatch", async () => {

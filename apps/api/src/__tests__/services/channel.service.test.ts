@@ -132,7 +132,13 @@ describe("channel service", () => {
   // ── createChannel ──────────────────────────────────────────────
 
   describe("createChannel", () => {
-    const validPayload = { encryptedData: VALID_BLOB_BASE64, type: "channel", sortOrder: 0 };
+    const validPayload = {
+      encryptedData: VALID_BLOB_BASE64,
+      type: "channel" as const,
+      sortOrder: 0,
+      parentId: undefined,
+    };
+    const PARENT_CHANNEL_ID = brandId<ChannelId>("ch_00000000-0000-4000-a000-000000000001");
 
     it("creates a channel and returns result", async () => {
       const { db, chain } = mockDb();
@@ -149,14 +155,6 @@ describe("channel service", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(createChannel(db, SYSTEM_ID, { bad: true }, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-      );
-    });
-
     it("throws INVALID_HIERARCHY when category has a parentId", async () => {
       const { db } = mockDb();
 
@@ -168,7 +166,7 @@ describe("channel service", () => {
             encryptedData: VALID_BLOB_BASE64,
             type: "category",
             sortOrder: 0,
-            parentId: "ch_00000000-0000-4000-a000-000000000001",
+            parentId: PARENT_CHANNEL_ID,
           },
           AUTH,
           mockAudit,
@@ -188,7 +186,7 @@ describe("channel service", () => {
             encryptedData: VALID_BLOB_BASE64,
             type: "channel",
             sortOrder: 0,
-            parentId: "ch_00000000-0000-4000-a000-000000000001",
+            parentId: PARENT_CHANNEL_ID,
           },
           AUTH,
           mockAudit,
@@ -210,7 +208,7 @@ describe("channel service", () => {
             encryptedData: VALID_BLOB_BASE64,
             type: "channel",
             sortOrder: 0,
-            parentId: "ch_00000000-0000-4000-a000-000000000001",
+            parentId: PARENT_CHANNEL_ID,
           },
           AUTH,
           mockAudit,
@@ -337,14 +335,6 @@ describe("channel service", () => {
         chain,
         expect.objectContaining({ eventType: "channel.updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        updateChannel(db, SYSTEM_ID, CHANNEL_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws CONFLICT on OCC version mismatch", async () => {

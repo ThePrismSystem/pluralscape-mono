@@ -1,10 +1,8 @@
 import { boardMessages } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateBoardMessageBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -18,25 +16,22 @@ import type { BoardMessageResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { BoardMessageId, SystemId } from "@pluralscape/types";
+import type { UpdateBoardMessageBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateBoardMessage(
   db: PostgresJsDatabase,
   systemId: SystemId,
   boardMessageId: BoardMessageId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateBoardMessageBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BoardMessageResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateBoardMessageBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-  const version = parsed.version;
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const version = body.version;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -44,8 +39,8 @@ export async function updateBoardMessage(
       encryptedData: blob,
       updatedAt: timestamp,
       version: sql`${boardMessages.version} + 1`,
-      ...(parsed.sortOrder !== undefined ? { sortOrder: parsed.sortOrder } : {}),
-      ...(parsed.pinned !== undefined ? { pinned: parsed.pinned } : {}),
+      ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
+      ...(body.pinned !== undefined ? { pinned: body.pinned } : {}),
     };
 
     const updated = await tx

@@ -1,5 +1,4 @@
 import { boardMessages } from "@pluralscape/db/pg";
-import { ReorderBoardMessagesBodySchema } from "@pluralscape/validation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -12,26 +11,21 @@ import { dispatchWebhookEvent } from "../webhook-dispatcher.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
+import type { ReorderBoardMessagesBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function reorderBoardMessages(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof ReorderBoardMessagesBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = ReorderBoardMessagesBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid reorder payload");
-  }
-
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Reject duplicate board message IDs
-    const targetIds = parsed.data.operations.map((op) => op.boardMessageId);
+    const targetIds = body.operations.map((op) => op.boardMessageId);
     if (new Set(targetIds).size !== targetIds.length) {
       throw new ApiHttpError(
         HTTP_BAD_REQUEST,
@@ -40,8 +34,7 @@ export async function reorderBoardMessages(
       );
     }
 
-    // Batch UPDATE with CASE/WHEN — single round-trip instead of N
-    const cases = parsed.data.operations.map(
+    const cases = body.operations.map(
       (op) => sql`WHEN ${boardMessages.id} = ${op.boardMessageId} THEN ${op.sortOrder}`,
     );
 
@@ -59,7 +52,7 @@ export async function reorderBoardMessages(
       )
       .returning({ id: boardMessages.id });
 
-    if (updatedRows.length !== parsed.data.operations.length) {
+    if (updatedRows.length !== body.operations.length) {
       const updatedIds = new Set(updatedRows.map((r) => r.id));
       const missing = targetIds.filter((id) => !updatedIds.has(id));
       throw new ApiHttpError(
@@ -72,11 +65,11 @@ export async function reorderBoardMessages(
     await audit(tx, {
       eventType: "board-message.reordered",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Reordered ${String(parsed.data.operations.length)} board message(s)`,
+      detail: `Reordered ${String(body.operations.length)} board message(s)`,
       systemId,
     });
     await Promise.all(
-      parsed.data.operations.map((op) =>
+      body.operations.map((op) =>
         dispatchWebhookEvent(tx, systemId, "board-message.reordered", {
           boardMessageId: op.boardMessageId,
         }),
