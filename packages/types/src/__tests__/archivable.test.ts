@@ -16,9 +16,9 @@ describe("Archivable<T>", () => {
   it("narrows on archived discriminant", () => {
     const check = (value: Archivable<Sample>) => {
       if (value.archived) {
-        expectTypeOf(value).toExtend<Archived<Sample>>();
+        expectTypeOf(value).toEqualTypeOf<Archived<Sample>>();
       } else {
-        expectTypeOf(value).toExtend<Sample>();
+        expectTypeOf(value).toEqualTypeOf<Sample>();
       }
     };
     void check;
