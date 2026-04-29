@@ -1,7 +1,7 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { brandId, brandValue } from "@pluralscape/types";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   decryptFieldDefinition,
@@ -14,9 +14,14 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { FieldDefinitionEncryptedInput, FieldValueDecrypted } from "../custom-field.js";
+import type {
+  FieldDefinitionDecrypted,
+  FieldDefinitionEncryptedInput,
+  FieldValueDecrypted,
+} from "../custom-field.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  FieldDefinition,
   FieldDefinitionId,
   FieldDefinitionLabel,
   FieldValueId,
@@ -465,5 +470,16 @@ describe("FieldValueDecrypted shape", () => {
     expect(result.systemId).toBe(BASE_VALUE_RESULT.systemId);
     expect(result.groupId).toBeNull();
     expect(result.structureEntityId).toBeNull();
+  });
+});
+
+// ── brand types ───────────────────────────────────────────────────────
+
+describe("brand types", () => {
+  it("FieldDefinition.name is branded as FieldDefinitionLabel", () => {
+    expectTypeOf<FieldDefinition["name"]>().toEqualTypeOf<FieldDefinitionLabel>();
+  });
+  it("FieldDefinitionDecrypted.name is branded as FieldDefinitionLabel", () => {
+    expectTypeOf<FieldDefinitionDecrypted["name"]>().toEqualTypeOf<FieldDefinitionLabel>();
   });
 });

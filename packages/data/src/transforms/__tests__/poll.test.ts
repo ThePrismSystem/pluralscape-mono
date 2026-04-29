@@ -1,7 +1,7 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { toUnixMillis, brandId, brandValue } from "@pluralscape/types";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
 import {
@@ -20,6 +20,7 @@ import type {
   EntityReference,
   HexColor,
   MemberId,
+  Poll,
   PollEncryptedInput,
   PollId,
   PollKind,
@@ -326,5 +327,16 @@ describe("PollEncryptedInputSchema validation", () => {
       encryptedData: makeBase64Blob({ title: "A poll" }, masterKey),
     };
     expect(() => decryptPoll(raw, masterKey)).toThrow(/options/);
+  });
+});
+
+// ── brand types ───────────────────────────────────────────────────────
+
+describe("brand types", () => {
+  it("Poll.title is branded as PollTitle", () => {
+    expectTypeOf<Poll["title"]>().toEqualTypeOf<PollTitle>();
+  });
+  it("PollOption.label is branded as PollOptionLabel", () => {
+    expectTypeOf<PollOption["label"]>().toEqualTypeOf<PollOptionLabel>();
   });
 });
