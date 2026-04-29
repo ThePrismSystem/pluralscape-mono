@@ -1,3 +1,4 @@
+import { ChangeEmailSchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
@@ -24,12 +25,21 @@ changeEmailRoute.use("*", createCategoryRateLimiter("authHeavy"));
 changeEmailRoute.put("/", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const body = await parseJsonBody(c);
+  const rawBody = await parseJsonBody(c);
+  const parsed = ChangeEmailSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parsed.error.issues,
+    );
+  }
   const audit = createAuditWriter(c, auth);
   const ipAddress = extractIpAddress(c);
 
   try {
-    const result = await changeEmail(db, auth.accountId, body, audit);
+    const result = await changeEmail(db, auth.accountId, parsed.data, audit);
 
     if (result.kind === "changed") {
       // Fire-and-forget: notify the OLD address of the change. The helper

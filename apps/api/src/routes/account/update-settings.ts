@@ -1,6 +1,7 @@
+import { UpdateAccountSettingsSchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_CONFLICT } from "../../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
@@ -18,11 +19,20 @@ updateSettingsRoute.use("*", createCategoryRateLimiter("write"));
 updateSettingsRoute.put("/", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const body = await parseJsonBody(c);
+  const rawBody = await parseJsonBody(c);
+  const parsed = UpdateAccountSettingsSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parsed.error.issues,
+    );
+  }
   const audit = createAuditWriter(c, auth);
 
   try {
-    const result = await updateAccountSettings(db, auth.accountId, body, audit);
+    const result = await updateAccountSettings(db, auth.accountId, parsed.data, audit);
     return c.json(envelope(result));
   } catch (error: unknown) {
     if (error instanceof ConcurrencyError) {

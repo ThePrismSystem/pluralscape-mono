@@ -13,7 +13,6 @@ import {
   now,
   toUnixMillis,
 } from "@pluralscape/types";
-import { PasswordResetViaRecoveryKeySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { equalizeAntiEnumTiming } from "../../lib/anti-enum-timing.js";
@@ -28,7 +27,9 @@ import { NoActiveRecoveryKeyError } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { ClientPlatform } from "../../routes/auth/auth.constants.js";
 import type { AccountId, RecoveryKeyId, SessionId } from "@pluralscape/types";
+import type { PasswordResetViaRecoveryKeySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Reset Password via Recovery Key ──────────────────────────────
 
@@ -39,15 +40,13 @@ export interface PasswordResetResult {
 
 export async function resetPasswordWithRecoveryKey(
   db: PostgresJsDatabase,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof PasswordResetViaRecoveryKeySchema>,
   platform: ClientPlatform,
   audit: AuditWriter,
 ): Promise<PasswordResetResult | null> {
   const startTime = performance.now();
-  const parsed = PasswordResetViaRecoveryKeySchema.parse(params);
 
-  const emailHash = hashEmail(parsed.email);
+  const emailHash = hashEmail(body.email);
 
   // Look up account by email hash
   const [account] = await db
@@ -91,18 +90,18 @@ export async function resetPasswordWithRecoveryKey(
 
   const storedRecoveryHash = ensureUint8Array(activeKey.recoveryKeyHash);
   assertRecoveryKeyHash(storedRecoveryHash);
-  const recoveryKeyValid = verifyRecoveryKey(fromHex(parsed.recoveryKeyHash), storedRecoveryHash);
+  const recoveryKeyValid = verifyRecoveryKey(fromHex(body.recoveryKeyHash), storedRecoveryHash);
   if (!recoveryKeyValid) {
     await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
   try {
-    const newAuthKeyBytes = fromHex(parsed.newAuthKey);
+    const newAuthKeyBytes = fromHex(body.newAuthKey);
     assertAuthKey(newAuthKeyBytes);
     const newAuthKeyHash = hashAuthKey(newAuthKeyBytes);
-    const newEncryptedMasterKeyBytes = fromHex(parsed.newEncryptedMasterKey);
-    const newRecoveryEncryptedMasterKeyBytes = fromHex(parsed.newRecoveryEncryptedMasterKey);
+    const newEncryptedMasterKeyBytes = fromHex(body.newEncryptedMasterKey);
+    const newRecoveryEncryptedMasterKeyBytes = fromHex(body.newRecoveryEncryptedMasterKey);
 
     const timestamp = now();
     const rawToken = generateSessionToken();
@@ -118,7 +117,7 @@ export async function resetPasswordWithRecoveryKey(
         .update(accounts)
         .set({
           authKeyHash: newAuthKeyHash,
-          kdfSalt: parsed.newKdfSalt,
+          kdfSalt: body.newKdfSalt,
           encryptedMasterKey: newEncryptedMasterKeyBytes,
           updatedAt: timestamp,
         })
@@ -140,7 +139,7 @@ export async function resetPasswordWithRecoveryKey(
         id: newRecoveryKeyId,
         accountId: account.id,
         encryptedMasterKey: newRecoveryEncryptedMasterKeyBytes,
-        recoveryKeyHash: fromHex(parsed.newRecoveryKeyHash),
+        recoveryKeyHash: fromHex(body.newRecoveryKeyHash),
         createdAt: timestamp,
       });
 

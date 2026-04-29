@@ -10,11 +10,6 @@ import {
 } from "@pluralscape/crypto";
 import { accounts, authKeys, sessions } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import {
-  ChangeEmailSchema,
-  ChangePasswordSchema,
-  UpdateAccountSettingsSchema,
-} from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { ensureUint8Array } from "../../lib/binary.js";
@@ -31,7 +26,13 @@ import { ConcurrencyError } from "./internal.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AccountId } from "@pluralscape/types";
+import type {
+  ChangeEmailSchema,
+  ChangePasswordSchema,
+  UpdateAccountSettingsSchema,
+} from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Change Email ──────────────────────────────────────────────────
 
@@ -68,12 +69,9 @@ export type ChangeEmailResult =
 export async function changeEmail(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof ChangeEmailSchema>,
   audit: AuditWriter,
 ): Promise<ChangeEmailResult> {
-  const parsed = ChangeEmailSchema.parse(params);
-
   const account = await withAccountRead(db, accountId, async (tx) => {
     const [row] = await tx
       .select({
@@ -91,7 +89,7 @@ export async function changeEmail(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const authKeyBytes = fromHex(parsed.authKey);
+  const authKeyBytes = fromHex(body.authKey);
   assertAuthKey(authKeyBytes);
   const storedHash = ensureUint8Array(account.authKeyHash);
   assertAuthKeyHash(storedHash);
@@ -100,7 +98,7 @@ export async function changeEmail(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const newEmailHash = hashEmail(parsed.email);
+  const newEmailHash = hashEmail(body.email);
   if (newEmailHash === account.emailHash) {
     return { kind: "noop" };
   }
@@ -149,7 +147,7 @@ export async function changeEmail(
   return {
     kind: "changed",
     oldEmail,
-    newEmail: parsed.email,
+    newEmail: body.email,
     // The UPDATE above set version = account.version + 1, so this is the
     // post-change value — stable across the commit, safe to key on.
     version: account.version + 1,
@@ -167,12 +165,9 @@ export interface ChangePasswordResult {
 export async function changePassword(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof ChangePasswordSchema>,
   audit: AuditWriter,
 ): Promise<ChangePasswordResult> {
-  const parsed = ChangePasswordSchema.parse(params);
-
   const account = await withAccountRead(db, accountId, async (tx) => {
     const [row] = await tx
       .select({
@@ -189,7 +184,7 @@ export async function changePassword(
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
   }
 
-  const oldAuthKeyBytes = fromHex(parsed.oldAuthKey);
+  const oldAuthKeyBytes = fromHex(body.oldAuthKey);
   assertAuthKey(oldAuthKeyBytes);
   const storedHash = ensureUint8Array(account.authKeyHash);
   assertAuthKeyHash(storedHash);
@@ -199,12 +194,12 @@ export async function changePassword(
   }
 
   // Hash the new auth key (BLAKE2B) — server never sees the raw key again after this point
-  const newAuthKeyBytes = fromHex(parsed.newAuthKey);
+  const newAuthKeyBytes = fromHex(body.newAuthKey);
   assertAuthKey(newAuthKeyBytes);
   const newAuthKeyHash = hashAuthKey(newAuthKeyBytes);
 
   // Client sends the re-wrapped master key blob; server stores it opaquely
-  const newEncMasterKeyBytes = fromHex(parsed.newEncryptedMasterKey);
+  const newEncMasterKeyBytes = fromHex(body.newEncryptedMasterKey);
 
   // Look up the signing public key for challenge verification
   const [signingKey] = await withAccountRead(db, accountId, async (tx) => {
@@ -222,7 +217,7 @@ export async function changePassword(
   const sigPublicKey = ensureUint8Array(signingKey.publicKey);
   assertSignPublicKey(sigPublicKey);
 
-  const signatureBytes = fromHex(parsed.challengeSignature);
+  const signatureBytes = fromHex(body.challengeSignature);
   assertSignature(signatureBytes);
 
   // Client signs the new auth key hash as proof of key derivation
@@ -238,7 +233,7 @@ export async function changePassword(
       .update(accounts)
       .set({
         authKeyHash: newAuthKeyHash,
-        kdfSalt: parsed.newKdfSalt,
+        kdfSalt: body.newKdfSalt,
         encryptedMasterKey: newEncMasterKeyBytes,
         updatedAt: timestamp,
         version: account.version + 1,
@@ -280,23 +275,20 @@ export interface UpdateAccountSettingsResult {
 export async function updateAccountSettings(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateAccountSettingsSchema>,
   audit: AuditWriter,
 ): Promise<UpdateAccountSettingsResult> {
-  const parsed = UpdateAccountSettingsSchema.parse(params);
-
   const timestamp = now();
 
   const updated = await withAccountTransaction(db, accountId, async (tx) => {
     const [row] = await tx
       .update(accounts)
       .set({
-        auditLogIpTracking: parsed.auditLogIpTracking,
+        auditLogIpTracking: body.auditLogIpTracking,
         updatedAt: timestamp,
-        version: parsed.version + 1,
+        version: body.version + 1,
       })
-      .where(and(eq(accounts.id, accountId), eq(accounts.version, parsed.version)))
+      .where(and(eq(accounts.id, accountId), eq(accounts.version, body.version)))
       .returning({
         auditLogIpTracking: accounts.auditLogIpTracking,
         version: accounts.version,
@@ -306,7 +298,7 @@ export async function updateAccountSettings(
       throw new ConcurrencyError("Account was modified concurrently");
     }
 
-    const detail = parsed.auditLogIpTracking
+    const detail = body.auditLogIpTracking
       ? "Audit log IP tracking enabled"
       : "Audit log IP tracking disabled";
 
@@ -314,7 +306,7 @@ export async function updateAccountSettings(
       eventType: "settings.changed",
       actor: { kind: "account", id: accountId },
       detail,
-      overrideTrackIp: parsed.auditLogIpTracking,
+      overrideTrackIp: body.auditLogIpTracking,
     });
 
     return row;

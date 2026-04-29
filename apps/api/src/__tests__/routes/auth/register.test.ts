@@ -60,6 +60,7 @@ const VALID_COMMIT_BODY = {
   recoveryEncryptedMasterKey: "cd".repeat(48),
   challengeSignature: "ab".repeat(64),
   recoveryKeyBackupConfirmed: true,
+  recoveryKeyHash: "11".repeat(32),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

@@ -98,6 +98,7 @@ async function runBenchmark(): Promise<BenchmarkResult> {
           recoveryEncryptedMasterKey: dummyBlob,
           challengeSignature: toHex(challengeSignature),
           recoveryKeyBackupConfirmed: true,
+          recoveryKeyHash: toHex(sodium.randomBytes(32)),
         },
         "web",
         createAuditWriter(benchmarkContext()),

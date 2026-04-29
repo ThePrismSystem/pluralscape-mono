@@ -1,3 +1,4 @@
+import { RegistrationCommitSchema, RegistrationInitiateSchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
@@ -20,10 +21,20 @@ export const registerRoute = new Hono();
 registerRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 registerRoute.post("/initiate", async (c) => {
-  const body = await parseJsonBody(c);
+  const rawBody = await parseJsonBody(c);
+  const parsed = RegistrationInitiateSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parsed.error.issues,
+    );
+  }
+
   const db = await getDb();
 
-  const result = await initiateRegistration(db, body);
+  const result = await initiateRegistration(db, parsed.data);
   return c.json(
     envelope({
       accountId: result.accountId,
@@ -35,14 +46,23 @@ registerRoute.post("/initiate", async (c) => {
 });
 
 registerRoute.post("/commit", createIdempotencyMiddleware(), async (c) => {
-  const body = await parseJsonBody(c);
+  const rawBody = await parseJsonBody(c);
+  const parsed = RegistrationCommitSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parsed.error.issues,
+    );
+  }
 
   const platform = extractPlatform(c);
   const audit = createAuditWriter(c);
   const db = await getDb();
 
   try {
-    const result = await commitRegistration(db, body, platform, audit);
+    const result = await commitRegistration(db, parsed.data, platform, audit);
     return c.json(
       envelope({
         sessionToken: result.sessionToken,

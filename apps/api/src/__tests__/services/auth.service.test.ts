@@ -343,6 +343,7 @@ describe("auth service", () => {
 
     const validParams = {
       email: "test@example.com",
+      accountType: "system" as const,
     };
 
     it("returns accountId, kdfSalt, and challengeNonce on success", async () => {
@@ -385,11 +386,6 @@ describe("auth service", () => {
       chain.transaction.mockRejectedValueOnce(new Error("connection refused"));
 
       await expect(initiateRegistration(db, validParams)).rejects.toThrow("connection refused");
-    });
-
-    it("throws on invalid email format", async () => {
-      const { db } = mockDb();
-      await expect(initiateRegistration(db, { email: "not-an-email" })).rejects.toThrow();
     });
 
     it("calls encryptEmail when getEmailEncryptionKey returns a key", async () => {

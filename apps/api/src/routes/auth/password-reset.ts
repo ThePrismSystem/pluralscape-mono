@@ -1,4 +1,5 @@
 import { RATE_LIMITS } from "@pluralscape/types";
+import { PasswordResetViaRecoveryKeySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import {
@@ -22,19 +23,19 @@ export const passwordResetRoute = new Hono();
 passwordResetRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 passwordResetRoute.post("/recovery-key", async (c) => {
-  const body = await parseJsonBody(c);
-
-  // Validate email presence — required for both the service call and rate limiting
-  const email =
-    typeof body === "object" && body !== null && "email" in body
-      ? (body as { email: unknown }).email
-      : undefined;
-  if (typeof email !== "string") {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Email is required");
+  const rawBody = await parseJsonBody(c);
+  const parsed = PasswordResetViaRecoveryKeySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parsed.error.issues,
+    );
   }
 
   // Per-account rate limiting on recovery attempts (keyed by email hash)
-  const emailHash = hashEmail(email);
+  const emailHash = hashEmail(parsed.data.email);
   const { limit, windowMs } = RATE_LIMITS.recoveryAttempt;
   const rateCheck = await checkRateLimit(`recovery:${emailHash}`, limit, windowMs);
   if (!rateCheck.allowed) {
@@ -50,7 +51,7 @@ passwordResetRoute.post("/recovery-key", async (c) => {
   const db = await getDb();
 
   try {
-    const result = await resetPasswordWithRecoveryKey(db, body, platform, audit);
+    const result = await resetPasswordWithRecoveryKey(db, parsed.data, platform, audit);
     if (!result) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
     }

@@ -24,7 +24,7 @@ describe("biometric auth timing safety (structural verification)", () => {
 
   it("hashes the token before any DB comparison", () => {
     // The service must call hashToken() on the raw token before the DB query
-    expect(serviceSource).toContain("hashToken(parsed.data.token)");
+    expect(serviceSource).toContain("hashToken(body.token)");
   });
 
   it("uses DB WHERE clause for lookup, not in-memory comparison", () => {
@@ -39,8 +39,8 @@ describe("biometric auth timing safety (structural verification)", () => {
     for (const line of lines) {
       // Skip comments and imports
       if (line.trimStart().startsWith("//") || line.trimStart().startsWith("import")) continue;
-      // No direct comparison of parsed.data.token or token variable with === or ==
-      if (line.includes("parsed.data.token") && (line.includes("===") || line.includes("=="))) {
+      // No direct comparison of body.token or token variable with === or ==
+      if (line.includes("body.token") && (line.includes("===") || line.includes("=="))) {
         throw new Error(`Raw token compared directly: ${line.trim()}`);
       }
     }

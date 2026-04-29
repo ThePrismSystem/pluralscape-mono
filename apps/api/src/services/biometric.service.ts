@@ -1,10 +1,9 @@
 import { GENERIC_HASH_BYTES_MAX, getSodium } from "@pluralscape/crypto";
 import { biometricTokens, systemSettings } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { BiometricEnrollBodySchema, BiometricVerifyBodySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from "../http.constants.js";
+import { HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { requireSession } from "../lib/auth-context.js";
 import { toHex } from "../lib/hex.js";
@@ -14,7 +13,9 @@ import { tenantCtx } from "../lib/tenant-context.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { BiometricTokenId } from "@pluralscape/types";
+import type { BiometricEnrollBodySchema, BiometricVerifyBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -33,16 +34,11 @@ function hashToken(token: string): string {
 
 export async function enrollBiometric(
   db: PostgresJsDatabase,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof BiometricEnrollBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<{ id: BiometricTokenId }> {
   const session = requireSession(auth);
-  const parsed = BiometricEnrollBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid enroll payload");
-  }
 
   // Guard: biometric must be enabled in system settings
   if (!auth.systemId) {
@@ -70,7 +66,7 @@ export async function enrollBiometric(
       );
     }
 
-    const tokenHash = hashToken(parsed.data.token);
+    const tokenHash = hashToken(body.token);
     const id = brandId<BiometricTokenId>(createId(ID_PREFIXES.biometricToken));
     const timestamp = now();
 
@@ -96,16 +92,11 @@ export async function enrollBiometric(
 
 export async function verifyBiometric(
   db: PostgresJsDatabase,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof BiometricVerifyBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<{ verified: true }> {
   const session = requireSession(auth);
-  const parsed = BiometricVerifyBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid verify payload");
-  }
 
   if (!auth.systemId) {
     throw new ApiHttpError(
@@ -116,7 +107,7 @@ export async function verifyBiometric(
   }
 
   const systemId = auth.systemId;
-  const tokenHash = hashToken(parsed.data.token);
+  const tokenHash = hashToken(body.token);
 
   const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [match] = await tx

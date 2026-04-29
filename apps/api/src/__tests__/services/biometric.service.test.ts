@@ -93,18 +93,6 @@ describe("enrollBiometric", () => {
     expect(chain.insert).toHaveBeenCalledOnce();
   });
 
-  it("throws VALIDATION_ERROR for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(enrollBiometric(db, { token: "" }, createAuth(), mockAudit)).rejects.toMatchObject(
-      {
-        code: "VALIDATION_ERROR",
-        message: "Invalid enroll payload",
-        status: 400,
-      },
-    );
-  });
-
   it("throws BIOMETRIC_DISABLED when biometricEnabled is false", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ biometricEnabled: false }]);
@@ -166,18 +154,6 @@ describe("verifyBiometric", () => {
     const result = await verifyBiometric(db, VALID_VERIFY_BODY, createAuth(), mockAudit);
 
     expect(result).toEqual({ verified: true });
-  });
-
-  it("throws VALIDATION_ERROR for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(verifyBiometric(db, { token: "" }, createAuth(), mockAudit)).rejects.toMatchObject(
-      {
-        code: "VALIDATION_ERROR",
-        message: "Invalid verify payload",
-        status: 400,
-      },
-    );
   });
 
   it("throws INVALID_TOKEN when no matching token is found", async () => {

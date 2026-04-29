@@ -1,21 +1,22 @@
 import { systemSettings } from "@pluralscape/db/pg";
 import { systems } from "@pluralscape/db/pg";
 import { brandId } from "@pluralscape/types";
-import {
-  RemovePinBodySchema,
-  SetPinBodySchema,
-  VerifyPinBodySchema,
-} from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
+import { HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { hashPinOffload, verifyPinOffload } from "../lib/kdf-offload.js";
 import { withAccountTransaction } from "../lib/rls-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AccountId, PinHash, SystemId } from "@pluralscape/types";
+import type {
+  RemovePinBodySchema,
+  SetPinBodySchema,
+  VerifyPinBodySchema,
+} from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 /**
  * Dummy Argon2id hash for anti-timing attacks on PIN verification.
@@ -49,16 +50,10 @@ async function resolveSystemId(tx: PostgresJsDatabase, accountId: AccountId): Pr
 export async function setAccountPin(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof SetPinBodySchema>,
   audit: AuditWriter,
 ): Promise<void> {
-  const parsed = SetPinBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
-  }
-
-  const pinHash = (await hashPinOffload(parsed.data.pin)) as PinHash;
+  const pinHash = (await hashPinOffload(body.pin)) as PinHash;
 
   await withAccountTransaction(db, accountId, async (tx) => {
     const systemId = await resolveSystemId(tx, accountId);
@@ -86,15 +81,9 @@ export async function setAccountPin(
 export async function removeAccountPin(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof RemovePinBodySchema>,
   audit: AuditWriter,
 ): Promise<void> {
-  const parsed = RemovePinBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
-  }
-
   await withAccountTransaction(db, accountId, async (tx) => {
     const systemId = await resolveSystemId(tx, accountId);
 
@@ -113,7 +102,7 @@ export async function removeAccountPin(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "No PIN is set");
     }
 
-    const valid = await verifyPinOffload(row.pinHash, parsed.data.pin);
+    const valid = await verifyPinOffload(row.pinHash, body.pin);
     if (!valid) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_PIN", "PIN is incorrect");
     }
@@ -136,15 +125,9 @@ export async function removeAccountPin(
 export async function verifyAccountPin(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof VerifyPinBodySchema>,
   audit: AuditWriter,
 ): Promise<{ verified: true }> {
-  const parsed = VerifyPinBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
-  }
-
   return withAccountTransaction(db, accountId, async (tx) => {
     const systemId = await resolveSystemId(tx, accountId);
 
@@ -156,7 +139,7 @@ export async function verifyAccountPin(
 
     // Anti-timing: always run verification even when no PIN is set
     const storedHash = row?.pinHash ?? DUMMY_ARGON2_PIN_HASH;
-    const valid = await verifyPinOffload(storedHash, parsed.data.pin);
+    const valid = await verifyPinOffload(storedHash, body.pin);
 
     if (!row) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");

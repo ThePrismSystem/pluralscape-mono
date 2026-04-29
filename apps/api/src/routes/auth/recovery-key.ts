@@ -1,3 +1,4 @@
+import { RegenerateRecoveryKeySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CREATED, HTTP_NOT_FOUND } from "../../http.constants.js";
@@ -36,12 +37,21 @@ recoveryKeyRoutes.post(
     const auth = c.get("auth");
     const db = await getDb();
 
-    const body = await parseJsonBody(c);
+    const rawBody = await parseJsonBody(c);
+    const parsed = RegenerateRecoveryKeySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "VALIDATION_ERROR",
+        "Invalid request body",
+        parsed.error.issues,
+      );
+    }
 
     const audit = createAuditWriter(c, auth);
 
     try {
-      const result = await regenerateRecoveryKeyBackup(db, auth.accountId, body, audit);
+      const result = await regenerateRecoveryKeyBackup(db, auth.accountId, parsed.data, audit);
 
       // Fire-and-forget: enqueue recovery-key-regenerated email notification
       const queue = getQueue();
