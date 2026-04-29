@@ -72,7 +72,7 @@ export type PollOptionLabel = Brand<string, "PollOptionLabel">;
 
 /**
  * Free-text user-supplied fronting-session status comment.
- * Max 50 characters (runtime enforced separately). SP-compatible.
+ * Max 50 characters (runtime enforced). SP-compatible.
  *
  * Branded distinct from {@link FrontingSessionPositionality} and
  * {@link FrontingSessionOuttrigger} — three same-entity peers all

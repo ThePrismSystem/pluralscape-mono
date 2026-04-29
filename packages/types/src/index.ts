@@ -117,6 +117,9 @@ export type {
 } from "./value-types.js";
 export { brandValue } from "./value-types.js";
 
+// ── Fronting constants ───────────────────────────────────────────
+export { MAX_FRONTING_COMMENT_LENGTH } from "./fronting.constants.js";
+
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";
 

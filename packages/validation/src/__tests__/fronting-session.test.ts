@@ -216,6 +216,44 @@ describe("FrontingSessionEncryptedInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  // ── 50-char limit on comment (SP compatibility) ──────────────────
+
+  it("accepts a 1-character comment (sanity)", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      comment: "a",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a comment of exactly 50 characters (boundary)", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      comment: "a".repeat(50),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a comment of 51 characters (just over the limit)", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      comment: "a".repeat(51),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message).join(" ");
+      expect(messages).toContain("50 characters");
+    }
+  });
+
+  it("accepts comment: null (limit only applies to non-null values)", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      comment: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects empty-string positionality when non-null", () => {
     const result = FrontingSessionEncryptedInputSchema.safeParse({
       ...allNull,

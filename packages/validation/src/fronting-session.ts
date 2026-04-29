@@ -1,3 +1,4 @@
+import { MAX_FRONTING_COMMENT_LENGTH } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import { optionalBrandedId, requireSubject, REQUIRE_SUBJECT_MESSAGE } from "./branded-id.js";
@@ -15,7 +16,11 @@ import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
  */
 export const FrontingSessionEncryptedInputSchema = z
   .object({
-    comment: brandedString<"FrontingSessionComment">().nullable(),
+    comment: brandedString<"FrontingSessionComment">()
+      .refine((v) => v.length <= MAX_FRONTING_COMMENT_LENGTH, {
+        message: `comment must be at most ${String(MAX_FRONTING_COMMENT_LENGTH)} characters`,
+      })
+      .nullable(),
     positionality: brandedString<"FrontingSessionPositionality">().nullable(),
     outtrigger: brandedString<"FrontingSessionOuttrigger">().nullable(),
     outtriggerSentiment: z.enum(["negative", "neutral", "positive"]).nullable(),
