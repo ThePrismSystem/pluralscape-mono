@@ -171,6 +171,7 @@ export type {
   DateRange,
   AuditMetadata,
   Archived,
+  Archivable,
   SortDirection,
   EntityReference,
 } from "./utility.js";
