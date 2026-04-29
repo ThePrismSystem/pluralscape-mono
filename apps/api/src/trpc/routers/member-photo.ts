@@ -113,13 +113,6 @@ export const memberPhotoRouter = router({
     .input(MemberIdSchema.and(ReorderPhotosBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return reorderMemberPhotos(
-        ctx.db,
-        ctx.systemId,
-        input.memberId,
-        { order: input.order },
-        ctx.auth,
-        audit,
-      );
+      return reorderMemberPhotos(ctx.db, ctx.systemId, input.memberId, input, ctx.auth, audit);
     }),
 });
