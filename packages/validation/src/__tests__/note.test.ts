@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { CreateNoteBodySchema, NoteQuerySchema, UpdateNoteBodySchema } from "../note.js";
+import {
+  CreateNoteBodySchema,
+  NoteEncryptedInputSchema,
+  NoteQuerySchema,
+  UpdateNoteBodySchema,
+} from "../note.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "../validation.constants.js";
 
 describe("CreateNoteBodySchema", () => {
@@ -132,6 +137,35 @@ describe("UpdateNoteBodySchema", () => {
 
   it("rejects missing encryptedData", () => {
     const result = UpdateNoteBodySchema.safeParse({ version: 1 });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("NoteEncryptedInputSchema", () => {
+  it("accepts non-empty title and content with null backgroundColor", () => {
+    const result = NoteEncryptedInputSchema.safeParse({
+      title: "Morning thoughts",
+      content: "Woke up fronting.",
+      backgroundColor: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty title", () => {
+    const result = NoteEncryptedInputSchema.safeParse({
+      title: "",
+      content: "x",
+      backgroundColor: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty content", () => {
+    const result = NoteEncryptedInputSchema.safeParse({
+      title: "x",
+      content: "",
+      backgroundColor: null,
+    });
     expect(result.success).toBe(false);
   });
 });

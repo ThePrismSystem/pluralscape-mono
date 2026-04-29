@@ -43,11 +43,32 @@ export type MappedPoll = Omit<z.infer<typeof CreatePollBodySchema>, "encryptedDa
 };
 
 export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPoll> {
+  // The PollTitle and PollOptionLabel brands reject empty strings. Guard
+  // both at the SP boundary before any downstream branding so a malformed
+  // source poll becomes a non-fatal import failure instead of a Zod parse
+  // error inside the persister.
+  if (sp.name.length === 0) {
+    return failed({
+      kind: "empty-name",
+      message: `poll "${sp._id}" has empty name`,
+      targetField: "name",
+    });
+  }
+  const sourceOptions = sp.options ?? [];
+  const emptyLabelIndex = sourceOptions.findIndex((o) => o.name.length === 0);
+  if (emptyLabelIndex !== -1) {
+    return failed({
+      kind: "empty-name",
+      message: `poll "${sp._id}" option at index ${String(emptyLabelIndex)} has empty label`,
+      targetField: "options",
+    });
+  }
+
   // SP poll options have an optional `id` field — freshly-created polls ship
   // options without ids. Fall back to a stable positional synthetic id so
   // downstream votes can still reference them by position even without a
   // server-assigned id.
-  const options = (sp.options ?? []).map((o, idx) => ({
+  const options = sourceOptions.map((o, idx) => ({
     id: brandId<PollOptionId>(o.id ?? `${sp._id}_opt_${String(idx)}`),
     label: brandValue<PollOptionLabel>(o.name),
     voteCount: 0,
@@ -55,7 +76,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
     emoji: null,
   }));
 
-  const hasInvalidOptionColor = (sp.options ?? []).some(
+  const hasInvalidOptionColor = sourceOptions.some(
     (o) =>
       o.color !== undefined &&
       o.color !== null &&

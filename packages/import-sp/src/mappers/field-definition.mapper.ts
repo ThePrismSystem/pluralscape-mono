@@ -25,7 +25,7 @@ import {
   SP_FIELD_TYPE_YEAR,
 } from "../import-sp.constants.js";
 
-import { mapped, type MapperResult } from "./mapper-result.js";
+import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPCustomField, SPCustomFieldType } from "../sources/sp-types.js";
@@ -101,6 +101,16 @@ export function mapFieldDefinition(
   sp: SPCustomField,
   ctx: MappingContext,
 ): MapperResult<MappedFieldDefinition> {
+  // FieldDefinitionLabel brand rejects empty strings; guard at the SP
+  // boundary so a malformed source custom-field becomes a non-fatal import
+  // failure instead of a downstream Zod parse error.
+  if (sp.name.length === 0) {
+    return failed({
+      kind: "empty-name",
+      message: `field-definition "${sp._id}" has empty name`,
+      targetField: "name",
+    });
+  }
   const fieldType = spTypeToFieldType(sp.type);
   const orderResult = fractionalIndexToOrder(sp.order);
   if (!orderResult.ok) {

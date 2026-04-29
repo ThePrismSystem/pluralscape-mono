@@ -43,20 +43,39 @@ describe("mapJournalEntry", () => {
     }
   });
 
-  it("allows empty body (empty content string)", () => {
+  it("rejects empty content with kind empty-name targeting content", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const sp: SPNote = {
       _id: "n3",
-      title: "Blank",
+      title: "Blank body",
       note: "",
       date: 1,
       member: "src_m1",
     };
     const result = mapJournalEntry(sp, ctx);
-    expect(result.status).toBe("mapped");
-    if (result.status === "mapped") {
-      expect(result.payload.encrypted.content).toBe("");
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("empty-name");
+      expect(result.targetField).toBe("content");
+    }
+  });
+
+  it("rejects empty title with kind empty-name targeting title", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("member", "src_m1", "ps_m1");
+    const sp: SPNote = {
+      _id: "n3b",
+      title: "",
+      note: "Body without title",
+      date: 1,
+      member: "src_m1",
+    };
+    const result = mapJournalEntry(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("empty-name");
+      expect(result.targetField).toBe("title");
     }
   });
 

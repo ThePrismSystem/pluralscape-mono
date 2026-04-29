@@ -37,6 +37,24 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
     });
   }
 
+  // The Pluralscape NoteTitle/NoteContent brands reject empty strings. Stop
+  // them at the SP boundary so a malformed source note becomes a non-fatal
+  // import failure instead of a downstream Zod parse error.
+  if (sp.title.length === 0) {
+    return failed({
+      kind: "empty-name",
+      message: `note "${sp._id}" has empty title`,
+      targetField: "title",
+    });
+  }
+  if (sp.note.length === 0) {
+    return failed({
+      kind: "empty-name",
+      message: `note "${sp._id}" has empty content`,
+      targetField: "content",
+    });
+  }
+
   if (sp.supportMarkdown !== undefined) {
     ctx.addWarningOnce("journal-entry.supportMarkdown-dropped", {
       entityType: "journal-entry",

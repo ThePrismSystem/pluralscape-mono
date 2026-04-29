@@ -51,10 +51,10 @@ export function mapFrontingSession(
   const endTime = sp.live ? null : (sp.endTime ?? null);
 
   const encrypted: FrontingSessionEncryptedInput = {
-    comment:
-      sp.customStatus === undefined || sp.customStatus === null
-        ? null
-        : brandValue<FrontingSessionComment>(sp.customStatus),
+    // SP source may carry an empty `customStatus` string for sessions with no
+    // user-entered note. The Pluralscape brand requires non-empty when present,
+    // so coerce empty/missing alike to null at the boundary.
+    comment: sp.customStatus?.length ? brandValue<FrontingSessionComment>(sp.customStatus) : null,
     positionality: null,
     outtrigger: null,
     outtriggerSentiment: null,

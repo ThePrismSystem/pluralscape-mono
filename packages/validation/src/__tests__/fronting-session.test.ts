@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CreateFrontingSessionBodySchema,
+  FrontingSessionEncryptedInputSchema,
   UpdateFrontingSessionBodySchema,
   EndFrontingSessionBodySchema,
   FrontingSessionQuerySchema,
@@ -165,6 +166,70 @@ describe("CreateFrontingSessionBodySchema", () => {
     if (result.success) {
       expect("admin" in result.data).toBe(false);
     }
+  });
+});
+
+// ── FrontingSessionEncryptedInputSchema ─────────────────────────────
+
+describe("FrontingSessionEncryptedInputSchema", () => {
+  const allNull = {
+    comment: null,
+    positionality: null,
+    outtrigger: null,
+    outtriggerSentiment: null,
+  } as const;
+
+  it("accepts all-null encrypted fields", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse(allNull);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts non-empty comment", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      comment: "feeling blurry",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts non-empty positionality", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      positionality: "co-conscious",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts non-empty outtrigger", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      outtrigger: "loud noise",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty-string comment when non-null", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      comment: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty-string positionality when non-null", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      positionality: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty-string outtrigger when non-null", () => {
+    const result = FrontingSessionEncryptedInputSchema.safeParse({
+      ...allNull,
+      outtrigger: "",
+    });
+    expect(result.success).toBe(false);
   });
 });
 
