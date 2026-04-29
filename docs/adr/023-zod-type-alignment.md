@@ -129,6 +129,35 @@ Class E surfaces (2):
 - **Entity-level:** `webhook-delivery` (`WebhookDeliveryServerMetadata.encryptedData: T3EncryptedBytes`)
 - **Column-level inside a Class C entity:** `ApiKeyServerMetadata.encryptedKeyMaterial: T3EncryptedBytes | null` (only present on `CryptoApiKey` rows). The `ApiKey` entity is therefore a hybrid Class C + Class E — its primary encrypted blob follows the Class C convention, while the side-channel key material is documented as a Class E exception.
 
+### Archivable plaintext entities — discriminated `ServerMetadata`/`Wire`
+
+For plaintext entities with the `archivable` column pair (`archived`,
+`archived_at`), the database CHECK constraint
+`(archived = true) = (archived_at IS NOT NULL)` is reflected in the type
+system as a discriminated union:
+
+- `<X>ServerMetadata = Archivable<<X>>` where
+  `Archivable<T> = T | Archived<T>` (defined in
+  `packages/types/src/utility.ts`)
+- `<X>Wire = Serialize<<X>ServerMetadata>` — the discriminated form falls
+  out automatically because `Serialize` distributes over unions
+- The flat Drizzle row shape is reconstructed locally in the parity test
+  (`packages/db/src/__tests__/type-parity/<x>.type.test.ts`) and not
+  exported from `@pluralscape/types` — this prevents accidental misuse in
+  application code
+
+The runtime invariant is defended once at the Drizzle read boundary by
+`narrowArchivableRow<T>` (`apps/api/src/lib/archivable-row.ts`). The
+adapter throws on either inconsistent state — defensive against the CHECK
+ever being dropped or violated.
+
+Currently applied to: `NotificationConfig`, `FriendCode`. Future plaintext
+archivables emerging from `ps-6phh` follow this pattern.
+
+Encrypted archivables remain on the `EncryptedWire<T>` row-shape contract
+(Class A/B/C) — the encrypted-keyset row dominates the parity story and
+the discriminated archivable shape doesn't compose cleanly with it.
+
 ### Enforcement — `pnpm types:check-sot`
 
 A single root script (`scripts/check-types-sot.ts`) runs all three parity mechanisms sequentially, short-circuiting on first failure. CI step in `.github/workflows/ci.yml` blocks on failure. Drift at any layer fails CI.
