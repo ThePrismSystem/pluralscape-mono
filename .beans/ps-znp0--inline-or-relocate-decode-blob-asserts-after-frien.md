@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-27T19:00:19Z
-updated_at: 2026-04-28T18:50:56Z
+updated_at: 2026-04-29T00:01:36Z
 parent: ps-cd6x
 ---
 
@@ -39,3 +39,11 @@ Single-consumer helpers in `decode-blob.ts` are a code smell; either inline them
 - Deleted assertObjectBlob and assertStringField from packages/data/src/transforms/decode-blob.ts (sole consumers were the dashboard decryption helpers)
 - Added regression test for missing-required-field rejection on custom front
 - Updated existing throw assertions to match new Zod error messages (expected object/string)
+
+## Summary of Changes
+
+Shipped in PR #583 (commit fe37a42c, merged 2026-04-28):
+
+- `packages/validation/src/friend-dashboard-blob.ts` — new `FriendDashboardMemberBlobSchema`, `FriendDashboardCustomFrontBlobSchema`, `FriendDashboardStructureEntityBlobSchema`, `FriendDashboardFrontingSessionBlobSchema` (Zod, matching the post-`types-emid` decrypt-boundary pattern).
+- `packages/data/src/transforms/friend-dashboard.ts` — migrated from `assertObjectBlob`/`assertStringField` to the new schemas.
+- `packages/data/src/transforms/decode-blob.ts` — `assertObjectBlob` and `assertStringField` deleted (zero remaining consumers).

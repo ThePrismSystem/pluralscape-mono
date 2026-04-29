@@ -1,11 +1,11 @@
 ---
 # types-0e9j
 title: Archive-aware plaintext wire union for NotificationConfig/FriendCode
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-27T22:28:59Z
-updated_at: 2026-04-29T00:33:27Z
+updated_at: 2026-04-29T01:34:25Z
 parent: ps-cd6x
 ---
 
@@ -34,3 +34,15 @@ Encrypted entities like `MemberServerMetadata` accept the same loosening as the 
 - `packages/types/src/entities/friend-code.ts:37`
 - `packages/data/src/transforms/notification-config.ts` (narrowNotificationConfig)
 - `packages/data/src/transforms/friend-code.ts` (narrowFriendCode)
+
+## Summary of Changes
+
+Implemented the discriminated archivable type chain for plaintext entities per spec docs/superpowers/specs/2026-04-28-types-0e9j-archivable-discriminated-design.md.
+
+- Archivable<T> added to packages/types/src/utility.ts — discriminated union helper.
+- narrowArchivableRow added to apps/api/src/lib/archivable-row.ts — runtime adapter at the Drizzle read boundary; throws on either CHECK-violating state.
+- NotificationConfig — ServerMetadata is now Archivable<NotificationConfig>; Wire derives discriminated naturally; transform's runtime throw removed; service uses adapter at all read sites.
+- FriendCode — same pattern.
+- Drizzle parity tests define the flat Row helper locally (not exported from @pluralscape/types) to prevent application-code misuse.
+- Tooling: tooling/eslint-config/index.js now configures @typescript-eslint/no-unused-vars to allow ^\_-prefixed names (standard convention).
+- ADR-023 — new section documenting the convention; future plaintext archivables under ps-6phh follow it.
