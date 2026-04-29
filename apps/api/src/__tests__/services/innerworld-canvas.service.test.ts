@@ -202,14 +202,6 @@ describe("upsertCanvas", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(upsertCanvas(db, SYSTEM_ID, { bad: "data" }, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
-  });
-
   it("throws 400 for malformed blob", async () => {
     const { db } = mockDb();
     const { deserializeEncryptedBlob } = await import("@pluralscape/crypto");

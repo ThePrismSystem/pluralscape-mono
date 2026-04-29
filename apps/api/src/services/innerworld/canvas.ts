@@ -5,8 +5,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { encryptedBlobToBase64, parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { encryptedBlobToBase64, validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantRead, withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -21,6 +20,7 @@ import type {
   SystemId,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -73,18 +73,13 @@ export async function getCanvas(
 export async function upsertCanvas(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateCanvasBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CanvasResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateCanvasBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const timestamp = now();
 
@@ -97,7 +92,7 @@ export async function upsertCanvas(
 
     if (!existing) {
       // First write — require version=1
-      if (parsed.version !== 1) {
+      if (body.version !== 1) {
         throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Canvas not found");
       }
 
@@ -126,7 +121,7 @@ export async function upsertCanvas(
     }
 
     // Existing canvas — OCC update
-    if (existing.version !== parsed.version) {
+    if (existing.version !== body.version) {
       throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
     }
 

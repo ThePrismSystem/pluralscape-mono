@@ -1,6 +1,9 @@
 import { ID_PREFIXES } from "@pluralscape/types";
+import { UpdateRegionBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
+import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
+import { ApiHttpError } from "../../../lib/api-error.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
@@ -16,13 +19,23 @@ export const updateRoute = new Hono<AuthEnv>();
 updateRoute.use("*", createCategoryRateLimiter("write"));
 
 updateRoute.put("/:regionId", async (c) => {
+  const rawBody = await parseJsonBody(c);
+  const parsed = UpdateRegionBodySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parsed.error.issues,
+    );
+  }
+
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const regionId = parseIdParam(c.req.param("regionId"), ID_PREFIXES.innerWorldRegion);
   const audit = createAuditWriter(c, auth);
-  const body = await parseJsonBody(c);
 
   const db = await getDb();
-  const result = await updateRegion(db, systemId, regionId, body, auth, audit);
+  const result = await updateRegion(db, systemId, regionId, parsed.data, auth, audit);
   return c.json(envelope(result));
 });

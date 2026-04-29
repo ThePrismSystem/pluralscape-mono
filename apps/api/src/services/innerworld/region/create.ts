@@ -5,8 +5,7 @@ import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
 import { tenantCtx } from "../../../lib/tenant-context.js";
@@ -20,22 +19,18 @@ import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { InnerWorldRegionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createRegion(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateRegionBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateRegionBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const regionId = brandId<InnerWorldRegionId>(createId(ID_PREFIXES.innerWorldRegion));
   const timestamp = now();
@@ -58,7 +53,7 @@ export async function createRegion(
     }
 
     // Validate parentRegionId exists in same system if provided
-    const parentRegionId = parsed.parentRegionId ?? null;
+    const parentRegionId = body.parentRegionId ?? null;
     if (parentRegionId !== null) {
       const [parent] = await tx
         .select({ id: innerworldRegions.id })
