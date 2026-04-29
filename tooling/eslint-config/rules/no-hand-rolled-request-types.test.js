@@ -37,6 +37,14 @@ describe("no-hand-rolled-request-types", () => {
           code: "export interface MemberInput { name: string; }",
           errors: [{ messageId: "rejectedSuffix" }],
         },
+        {
+          code: "export type UpdateMemberParams = { id: string };",
+          errors: [{ messageId: "rejectedSuffix" }],
+        },
+        {
+          code: "export type DeleteSystemArgs = { id: string };",
+          errors: [{ messageId: "rejectedSuffix" }],
+        },
       ],
     });
   });
