@@ -7,7 +7,7 @@ import { narrowArchivableRow } from "../../../lib/archivable-row.js";
 import { buildPaginatedResult } from "../../../lib/pagination.js";
 import { withAccountRead } from "../../../lib/rls-context.js";
 
-import { toFriendCodeResult, type FriendCodeResult } from "./internal.js";
+import { type FriendCodeResult } from "./internal.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { AccountId, FriendCode, FriendCodeId, PaginatedResult } from "@pluralscape/types";
@@ -56,7 +56,7 @@ export async function listFriendCodes(
       .limit(effectiveLimit + 1);
 
     return buildPaginatedResult(rows, effectiveLimit, (row) =>
-      toFriendCodeResult(narrowArchivableRow<FriendCode>(row)),
+      narrowArchivableRow<FriendCode>(row),
     );
   });
 }

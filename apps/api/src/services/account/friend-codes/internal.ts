@@ -1,27 +1,13 @@
-import type {
-  AccountId,
-  Archivable,
-  FriendCode,
-  FriendCodeId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { Archivable, FriendCode } from "@pluralscape/types";
 
-export interface FriendCodeResult {
-  readonly id: FriendCodeId;
-  readonly accountId: AccountId;
-  readonly code: string;
-  readonly createdAt: UnixMillis;
-  readonly expiresAt: UnixMillis | null;
-  readonly archived: boolean;
-}
-
-export function toFriendCodeResult(input: Archivable<FriendCode>): FriendCodeResult {
-  return {
-    id: input.id,
-    accountId: input.accountId,
-    code: input.code,
-    createdAt: input.createdAt,
-    expiresAt: input.expiresAt,
-    archived: input.archived,
-  };
-}
+/**
+ * Service-layer result type for FriendCode reads.
+ *
+ * Aliased to `Archivable<FriendCode>` after PR #585 — the prior projection
+ * mapper (`toFriendCodeResult`) became an identity function once the entity
+ * adopted the discriminated `Archivable<T>` chain, so it was removed in
+ * favor of pass-through. Callers receive the discriminated union directly
+ * and can narrow on `archived` to access `archivedAt` on the archived
+ * branch.
+ */
+export type FriendCodeResult = Archivable<FriendCode>;
