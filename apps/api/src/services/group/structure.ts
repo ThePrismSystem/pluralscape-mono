@@ -23,6 +23,7 @@ import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { GroupId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── MOVE ────────────────────────────────────────────────────────────
 
@@ -30,19 +31,13 @@ export async function moveGroup(
   db: PostgresJsDatabase,
   systemId: SystemId,
   groupId: GroupId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof MoveGroupBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = MoveGroupBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid move payload");
-  }
-
-  const { targetParentGroupId } = parsed.data;
+  const { targetParentGroupId } = body;
 
   // Reject self-parenting
   if (targetParentGroupId === groupId) {
@@ -102,7 +97,7 @@ export async function moveGroup(
         and(
           eq(groups.id, groupId),
           eq(groups.systemId, systemId),
-          eq(groups.version, parsed.data.version),
+          eq(groups.version, body.version),
           eq(groups.archived, false),
         ),
       )
@@ -141,17 +136,11 @@ export async function copyGroup(
   db: PostgresJsDatabase,
   systemId: SystemId,
   groupId: GroupId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CopyGroupBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = CopyGroupBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid copy payload");
-  }
 
   const timestamp = now();
 
@@ -169,9 +158,7 @@ export async function copyGroup(
 
     // Determine target parent — use provided value or default to same parent as source
     const targetParentGroupId =
-      parsed.data.targetParentGroupId !== undefined
-        ? parsed.data.targetParentGroupId
-        : source.parentGroupId;
+      body.targetParentGroupId !== undefined ? body.targetParentGroupId : source.parentGroupId;
 
     // Validate target parent if non-null
     if (targetParentGroupId !== null) {
@@ -225,7 +212,7 @@ export async function copyGroup(
     }
 
     // Optionally copy memberships
-    if (parsed.data.copyMemberships) {
+    if (body.copyMemberships) {
       const memberships = await tx
         .select({
           memberId: groupMemberships.memberId,
@@ -264,21 +251,15 @@ export async function copyGroup(
 export async function reorderGroups(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof ReorderGroupsBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = ReorderGroupsBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid reorder payload");
-  }
-
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Pre-flight: verify all target groups exist and are active
-    const groupIds = parsed.data.operations.map((op) => op.groupId);
+    const groupIds = body.operations.map((op) => op.groupId);
     const existing = await tx
       .select({ id: groups.id })
       .from(groups)
@@ -290,8 +271,8 @@ export async function reorderGroups(
       }
     }
 
-    const targetIds = parsed.data.operations.map((op) => op.groupId);
-    const cases = parsed.data.operations.map(
+    const targetIds = body.operations.map((op) => op.groupId);
+    const cases = body.operations.map(
       (op) => sql`WHEN ${groups.id} = ${op.groupId} THEN ${op.sortOrder}`,
     );
     const updatedRows = await tx
@@ -308,18 +289,18 @@ export async function reorderGroups(
       )
       .returning({ id: groups.id });
 
-    if (updatedRows.length !== parsed.data.operations.length) {
+    if (updatedRows.length !== body.operations.length) {
       throw new ApiHttpError(
         HTTP_NOT_FOUND,
         "NOT_FOUND",
-        `Expected ${String(parsed.data.operations.length)} groups, updated ${String(updatedRows.length)}`,
+        `Expected ${String(body.operations.length)} groups, updated ${String(updatedRows.length)}`,
       );
     }
 
     await audit(tx, {
       eventType: "group.updated",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Reordered ${String(parsed.data.operations.length)} group(s)`,
+      detail: `Reordered ${String(body.operations.length)} group(s)`,
       systemId,
     });
   });

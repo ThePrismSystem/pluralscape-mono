@@ -523,7 +523,7 @@ describe("moveGroup", () => {
         db,
         SYSTEM_ID,
         GROUP_ID,
-        { targetParentGroupId: "grp_nonexistent", version: 1 },
+        { targetParentGroupId: brandId<GroupId>("grp_nonexistent"), version: 1 },
         AUTH,
         mockAudit,
       ),
@@ -620,7 +620,7 @@ describe("reorderGroups", () => {
       reorderGroups(
         db,
         SYSTEM_ID,
-        { operations: [{ groupId: "grp_nonexistent", sortOrder: 0 }] },
+        { operations: [{ groupId: brandId<GroupId>("grp_nonexistent"), sortOrder: 0 }] },
         AUTH,
         mockAudit,
       ),
@@ -639,7 +639,7 @@ describe("reorderGroups", () => {
         {
           operations: [
             { groupId: GROUP_ID, sortOrder: 1 },
-            { groupId: "grp_nonexistent", sortOrder: 2 },
+            { groupId: brandId<GroupId>("grp_nonexistent"), sortOrder: 2 },
           ],
         },
         AUTH,
@@ -651,14 +651,6 @@ describe("reorderGroups", () => {
         code: "NOT_FOUND",
         message: "Group grp_nonexistent not found",
       }),
-    );
-  });
-
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(reorderGroups(db, SYSTEM_ID, { operations: [] }, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
     );
   });
 });
@@ -745,7 +737,14 @@ describe("copyGroup", () => {
       makeGroupRow({ id: "grp_copy", parentGroupId: "grp_parent", sortOrder: 4 }),
     ]);
 
-    const result = await copyGroup(db, SYSTEM_ID, GROUP_ID, {}, AUTH, mockAudit);
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { copyMemberships: false },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.id).toBe("grp_copy");
     expect(mockAudit).toHaveBeenCalledWith(
@@ -769,7 +768,7 @@ describe("copyGroup", () => {
       db,
       SYSTEM_ID,
       GROUP_ID,
-      { targetParentGroupId: null },
+      { targetParentGroupId: null, copyMemberships: false },
       AUTH,
       mockAudit,
     );
@@ -822,9 +821,9 @@ describe("copyGroup", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await expect(copyGroup(db, SYSTEM_ID, GROUP_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-    );
+    await expect(
+      copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: false }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("throws 404 when target parent group not found", async () => {
@@ -838,19 +837,11 @@ describe("copyGroup", () => {
         db,
         SYSTEM_ID,
         GROUP_ID,
-        { targetParentGroupId: "grp_nonexistent" },
+        { targetParentGroupId: brandId<GroupId>("grp_nonexistent"), copyMemberships: false },
         AUTH,
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws VALIDATION_ERROR for invalid params", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: "yes" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 404 for wrong system ownership (fail-closed privacy)", async () => {
@@ -862,8 +853,8 @@ describe("copyGroup", () => {
       sessionId: "sess_test-session",
     });
 
-    await expect(copyGroup(db, SYSTEM_ID, GROUP_ID, {}, wrongAuth, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-    );
+    await expect(
+      copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: false }, wrongAuth, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

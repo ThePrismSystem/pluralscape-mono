@@ -4,7 +4,7 @@ import { brandId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateSystemSettingsBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { SYSTEM_SETTINGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
@@ -17,6 +17,7 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { EncryptedBlob, SystemId, SystemSettingsId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -99,19 +100,13 @@ export async function getSystemSettings(
 export async function updateSystemSettings(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateSystemSettingsBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SystemSettingsResult> {
-  const parsed = UpdateSystemSettingsBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid settings payload");
-  }
-
   assertSystemOwnership(systemId, auth);
 
-  const blob = validateEncryptedBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(body.encryptedData);
   const timestamp = now();
 
   const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -119,16 +114,14 @@ export async function updateSystemSettings(
       .update(systemSettings)
       .set({
         encryptedData: blob,
-        ...(parsed.data.locale !== undefined && { locale: parsed.data.locale }),
-        ...(parsed.data.biometricEnabled !== undefined && {
-          biometricEnabled: parsed.data.biometricEnabled,
+        ...(body.locale !== undefined && { locale: body.locale }),
+        ...(body.biometricEnabled !== undefined && {
+          biometricEnabled: body.biometricEnabled,
         }),
         updatedAt: timestamp,
         version: sql`${systemSettings.version} + 1`,
       })
-      .where(
-        and(eq(systemSettings.systemId, systemId), eq(systemSettings.version, parsed.data.version)),
-      )
+      .where(and(eq(systemSettings.systemId, systemId), eq(systemSettings.version, body.version)))
       .returning();
 
     if (updated.length === 0) {
