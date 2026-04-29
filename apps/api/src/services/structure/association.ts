@@ -4,10 +4,9 @@ import {
   systemStructureEntityLinks,
 } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
-import { CreateStructureEntityAssociationBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../../lib/rls-context.js";
@@ -24,7 +23,9 @@ import type {
   SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { CreateStructureEntityAssociationBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Result types ───────────────────────────────────────────────────
 
@@ -67,17 +68,11 @@ function toEntityAssociationResult(row: {
 export async function createEntityAssociation(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateStructureEntityAssociationBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityAssociationResult> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = CreateStructureEntityAssociationBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
 
   const assocId = brandId<SystemStructureEntityAssociationId>(
     createId(ID_PREFIXES.structureEntityAssociation),
@@ -90,8 +85,8 @@ export async function createEntityAssociation(
       .values({
         id: assocId,
         systemId,
-        sourceEntityId: parsed.data.sourceEntityId,
-        targetEntityId: parsed.data.targetEntityId,
+        sourceEntityId: body.sourceEntityId,
+        targetEntityId: body.targetEntityId,
         createdAt: timestamp,
       })
       .returning();

@@ -5,7 +5,11 @@ import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
 import { makeTestAuth } from "../../helpers/test-auth.js";
 
-import type { SystemId, SystemStructureEntityAssociationId } from "@pluralscape/types";
+import type {
+  SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -42,15 +46,6 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
   };
 });
 
-vi.mock("@pluralscape/validation", () => ({
-  CreateStructureEntityAssociationBodySchema: {
-    safeParse: vi.fn().mockReturnValue({
-      success: true,
-      data: { sourceEntityId: "sse_source", targetEntityId: "sse_target" },
-    }),
-  },
-}));
-
 vi.mock("drizzle-orm", async (importOriginal) => {
   const actual = await importOriginal<typeof import("drizzle-orm")>();
   return {
@@ -66,7 +61,6 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
-const { CreateStructureEntityAssociationBodySchema } = await import("@pluralscape/validation");
 
 const {
   createEntityAssociation,
@@ -79,6 +73,8 @@ const {
 
 const SYSTEM_ID = brandId<SystemId>("sys_test-system");
 const ASSOC_ID = brandId<SystemStructureEntityAssociationId>("sea_test-assoc");
+const SOURCE_ID = brandId<SystemStructureEntityId>("sse_source");
+const TARGET_ID = brandId<SystemStructureEntityId>("sse_target");
 const AUTH = makeTestAuth({ systemId: SYSTEM_ID });
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -104,7 +100,7 @@ describe("structure-entity-association service", () => {
   // ── createEntityAssociation ────────────────────────────────────
 
   describe("createEntityAssociation", () => {
-    const validPayload = { sourceEntityId: "sse_source", targetEntityId: "sse_target" };
+    const validPayload = { sourceEntityId: SOURCE_ID, targetEntityId: TARGET_ID };
 
     it("creates an association and returns result", async () => {
       const { db, chain } = mockDb();
@@ -120,19 +116,6 @@ describe("structure-entity-association service", () => {
       expect(mockAudit).toHaveBeenCalledWith(
         chain,
         expect.objectContaining({ eventType: "structure-entity-association.created" }),
-      );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-      const schema = vi.mocked(CreateStructureEntityAssociationBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      await expect(createEntityAssociation(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
       );
     });
 

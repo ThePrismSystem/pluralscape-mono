@@ -1,9 +1,8 @@
 import { systemStructureEntityMemberLinks } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
-import { CreateStructureEntityMemberLinkBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../../lib/rls-context.js";
@@ -21,7 +20,9 @@ import type {
   SystemStructureEntityMemberLinkId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { CreateStructureEntityMemberLinkBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Result types ───────────────────────────────────────────────────
 
@@ -63,17 +64,11 @@ function toEntityMemberLinkResult(row: {
 export async function createEntityMemberLink(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateStructureEntityMemberLinkBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityMemberLinkResult> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = CreateStructureEntityMemberLinkBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
 
   const linkId = brandId<SystemStructureEntityMemberLinkId>(
     createId(ID_PREFIXES.structureEntityMemberLink),
@@ -86,9 +81,9 @@ export async function createEntityMemberLink(
       .values({
         id: linkId,
         systemId,
-        parentEntityId: parsed.data.parentEntityId,
-        memberId: parsed.data.memberId,
-        sortOrder: parsed.data.sortOrder,
+        parentEntityId: body.parentEntityId,
+        memberId: body.memberId,
+        sortOrder: body.sortOrder,
         createdAt: timestamp,
       })
       .returning();

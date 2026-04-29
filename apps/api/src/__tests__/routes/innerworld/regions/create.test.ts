@@ -62,7 +62,7 @@ describe("POST /systems/:id/innerworld/regions", () => {
     const res = await createApp().request(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Test Region" }),
+      body: JSON.stringify({ encryptedData: "dGVzdA==" }),
     });
 
     expect(res.status).toBe(201);

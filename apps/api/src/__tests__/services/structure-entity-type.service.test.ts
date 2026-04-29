@@ -141,14 +141,6 @@ describe("structure-entity-type service", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(createEntityType(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-      );
-    });
-
     it("throws when INSERT returns no rows", async () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
@@ -294,14 +286,6 @@ describe("structure-entity-type service", () => {
         chain,
         expect.objectContaining({ eventType: "structure-entity-type.updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const { db } = mockDb();
-
-      await expect(
-        updateEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, {}, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
     it("throws CONFLICT on version mismatch (entity exists)", async () => {

@@ -47,7 +47,7 @@ const MOCK_REGION = {
   updatedAt: 2000 as never,
 };
 
-const VALID_BODY = { encryptedData: "dXBkYXRlZA==" as EncryptedBase64 };
+const VALID_BODY = { encryptedData: "dXBkYXRlZA==" as EncryptedBase64, version: 1 };
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ describe("PUT /systems/:id/innerworld/regions/:regionId", () => {
     const res = await createApp().request(REGION_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Updated Region" }),
+      body: JSON.stringify(VALID_BODY),
     });
 
     expect(res.status).toBe(404);

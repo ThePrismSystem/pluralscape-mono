@@ -98,18 +98,19 @@ describe("createStructureEntity", () => {
     vi.restoreAllMocks();
   });
 
+  const PARENT_ENTITY_ID = brandId<SystemStructureEntityId>("sse_parent-entity");
+  const MISSING_TYPE_ID = brandId<SystemStructureEntityTypeId>("set_missing");
+
   it("creates a structure entity with valid payload", async () => {
     const { db, chain } = mockDb();
-    // Entity type existence check
     chain.limit.mockResolvedValueOnce([{ id: "set_test-entity-type" }]);
-    // Insert returning
     chain.returning.mockResolvedValueOnce([makeStructureEntityRow()]);
 
     const result = await createStructureEntity(
       db,
       SYSTEM_ID,
       {
-        structureEntityTypeId: "set_test-entity-type",
+        structureEntityTypeId: ENTITY_TYPE_ID,
         encryptedData: VALID_BLOB_BASE64,
         parentEntityId: null,
         sortOrder: 0,
@@ -134,9 +135,9 @@ describe("createStructureEntity", () => {
       db,
       SYSTEM_ID,
       {
-        structureEntityTypeId: "set_test-entity-type",
+        structureEntityTypeId: ENTITY_TYPE_ID,
         encryptedData: VALID_BLOB_BASE64,
-        parentEntityId: "sse_parent-entity",
+        parentEntityId: PARENT_ENTITY_ID,
         sortOrder: 0,
       },
       AUTH,
@@ -145,14 +146,6 @@ describe("createStructureEntity", () => {
 
     expect(result.id).toBe("sse_test-entity");
     expect(chain.insert).toHaveBeenCalledTimes(2);
-  });
-
-  it("throws VALIDATION_ERROR for invalid payload", async () => {
-    const { db } = mockDb();
-
-    await expect(createStructureEntity(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-      "Invalid create payload",
-    );
   });
 
   it("throws NOT_FOUND when entity type does not exist", async () => {
@@ -164,7 +157,7 @@ describe("createStructureEntity", () => {
         db,
         SYSTEM_ID,
         {
-          structureEntityTypeId: "set_missing",
+          structureEntityTypeId: MISSING_TYPE_ID,
           encryptedData: VALID_BLOB_BASE64,
           parentEntityId: null,
           sortOrder: 0,
@@ -185,7 +178,7 @@ describe("createStructureEntity", () => {
         db,
         SYSTEM_ID,
         {
-          structureEntityTypeId: "set_test-entity-type",
+          structureEntityTypeId: ENTITY_TYPE_ID,
           encryptedData: VALID_BLOB_BASE64,
           parentEntityId: null,
           sortOrder: 0,
@@ -310,14 +303,6 @@ describe("updateStructureEntity", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalled();
-  });
-
-  it("throws VALIDATION_ERROR for invalid payload", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateStructureEntity(db, SYSTEM_ID, ENTITY_ID, {}, AUTH, mockAudit),
-    ).rejects.toThrow("Invalid update payload");
   });
 
   it("throws CONFLICT on version mismatch", async () => {

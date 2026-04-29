@@ -1,9 +1,6 @@
 import { systemStructureEntityTypes } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateStructureEntityTypeBodySchema } from "@pluralscape/validation";
 
-import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
-import { ApiHttpError } from "../../../lib/api-error.js";
 import { validateEncryptedBlob } from "../../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
@@ -15,24 +12,20 @@ import { toEntityTypeResult, type EntityTypeResult } from "./internal.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { SystemId, SystemStructureEntityTypeId } from "@pluralscape/types";
+import type { CreateStructureEntityTypeBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createEntityType(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateStructureEntityTypeBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityTypeResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = CreateStructureEntityTypeBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
-
-  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
   const entityTypeId = brandId<SystemStructureEntityTypeId>(
     createId(ID_PREFIXES.structureEntityType),
   );
@@ -44,7 +37,7 @@ export async function createEntityType(
       .values({
         id: entityTypeId,
         systemId,
-        sortOrder: parsed.data.sortOrder,
+        sortOrder: body.sortOrder,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,

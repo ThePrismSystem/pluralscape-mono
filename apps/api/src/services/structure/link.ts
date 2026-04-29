@@ -1,12 +1,8 @@
 import { systemStructureEntityLinks } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
-import {
-  CreateStructureEntityLinkBodySchema,
-  UpdateStructureEntityLinkBodySchema,
-} from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { buildPaginatedResult } from "../../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../../lib/rls-context.js";
@@ -23,7 +19,12 @@ import type {
   SystemStructureEntityLinkId,
   UnixMillis,
 } from "@pluralscape/types";
+import type {
+  CreateStructureEntityLinkBodySchema,
+  UpdateStructureEntityLinkBodySchema,
+} from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 // ── Result types ───────────────────────────────────────────────────
 
@@ -42,17 +43,11 @@ export async function updateEntityLink(
   db: PostgresJsDatabase,
   systemId: SystemId,
   linkId: string,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateStructureEntityLinkBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityLinkResult> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = UpdateStructureEntityLinkBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
-  }
 
   const linkIdBranded = brandId<SystemStructureEntityLinkId>(linkId);
 
@@ -75,7 +70,7 @@ export async function updateEntityLink(
 
     const [row] = await tx
       .update(systemStructureEntityLinks)
-      .set({ sortOrder: parsed.data.sortOrder })
+      .set({ sortOrder: body.sortOrder })
       .where(
         and(
           eq(systemStructureEntityLinks.id, linkIdBranded),
@@ -128,19 +123,13 @@ function toEntityLinkResult(row: {
 export async function createEntityLink(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateStructureEntityLinkBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityLinkResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = CreateStructureEntityLinkBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
-
-  const { entityId, parentEntityId, sortOrder } = parsed.data;
+  const { entityId, parentEntityId, sortOrder } = body;
 
   if (entityId === parentEntityId) {
     throw new ApiHttpError(HTTP_CONFLICT, "CYCLE_DETECTED", "Cannot link entity to itself");
