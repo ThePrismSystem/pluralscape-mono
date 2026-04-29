@@ -35,7 +35,7 @@ import {
   encryptSystemSettingsUpdate,
 } from "@pluralscape/data/transforms/system-settings";
 import { encryptTimerConfigInput } from "@pluralscape/data/transforms/timer-check-in";
-import { brandId } from "@pluralscape/types";
+import { brandId, brandValue } from "@pluralscape/types";
 
 import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test-crypto.js";
 
@@ -55,6 +55,7 @@ import type {
   ChatMessageWire,
   CheckInRecordId,
   CustomFrontWire,
+  FieldDefinitionLabel,
   FieldDefinitionWire,
   FieldValueWire,
   FrontingCommentWire,
@@ -170,7 +171,11 @@ export function makeRawFieldDefinition(
   overrides?: Partial<FieldDefinitionWire>,
 ): FieldDefinitionWire {
   const encrypted = encryptFieldDefinitionInput(
-    { name: `Field ${id}`, description: "A test field", options: null },
+    {
+      name: brandValue<FieldDefinitionLabel>(`Field ${id}`),
+      description: "A test field",
+      options: null,
+    },
     TEST_MASTER_KEY,
   );
   return {

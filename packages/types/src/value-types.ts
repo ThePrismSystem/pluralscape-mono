@@ -19,6 +19,18 @@ export type LifecycleEventForm = Brand<string, "LifecycleEventForm">;
  */
 export type LifecycleEventName = Brand<string, "LifecycleEventName">;
 
+/**
+ * Free-text user-supplied field-definition display label.
+ * Examples: "Pronouns", "Age", "Job".
+ *
+ * Branded so a `FieldDefinition.name` value cannot accidentally be
+ * assigned to other free-text slots — `FieldDefinition.name` is the
+ * field's display label and is widely passed as a UI label key, with
+ * high confusion risk against content strings. See
+ * docs/local-audits/2026-04-27-free-text-label-brand-audit.md.
+ */
+export type FieldDefinitionLabel = Brand<string, "FieldDefinitionLabel">;
+
 /** Constraint for {@link brandValue} — any string-backed phantom brand. */
 type AnyBrandedValue = Brand<string, string>;
 

@@ -4,6 +4,7 @@ import type { BucketId, FieldDefinitionId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
+import type { FieldDefinitionLabel } from "../value-types.js";
 
 /** The supported field types for custom fields (single source of truth). */
 export const FIELD_TYPES = [
@@ -29,7 +30,7 @@ export interface FieldBucketVisibility {
 export interface FieldDefinition extends AuditMetadata {
   readonly id: FieldDefinitionId;
   readonly systemId: SystemId;
-  readonly name: string;
+  readonly name: FieldDefinitionLabel;
   readonly description: string | null;
   readonly fieldType: FieldType;
   /** Valid options for select / multi-select fields. Null for other types. */

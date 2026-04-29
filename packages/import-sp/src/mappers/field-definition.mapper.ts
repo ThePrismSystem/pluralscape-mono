@@ -12,6 +12,8 @@
  * prefix decode — sufficient for small field sets and lets users fine-tune
  * ordering after import.
  */
+import { brandValue } from "@pluralscape/types";
+
 import {
   SP_FIELD_TYPE_COLOR,
   SP_FIELD_TYPE_DATE,
@@ -28,7 +30,7 @@ import { mapped, type MapperResult } from "./mapper-result.js";
 import type { MappingContext } from "./context.js";
 import type { SPCustomField, SPCustomFieldType } from "../sources/sp-types.js";
 import type { FieldDefinitionEncryptedInput } from "@pluralscape/data";
-import type { FieldType } from "@pluralscape/types";
+import type { FieldDefinitionLabel, FieldType } from "@pluralscape/types";
 import type { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -109,7 +111,7 @@ export function mapFieldDefinition(
     });
   }
   const encrypted: FieldDefinitionEncryptedInput = {
-    name: sp.name,
+    name: brandValue<FieldDefinitionLabel>(sp.name),
     description: null,
     options: null,
   };

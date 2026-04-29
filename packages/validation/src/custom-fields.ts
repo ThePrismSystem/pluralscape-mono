@@ -1,6 +1,7 @@
 import { FIELD_TYPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
+import { brandedString } from "./branded.js";
 import {
   MAX_ENCRYPTED_FIELD_DATA_SIZE,
   MAX_ENCRYPTED_FIELD_VALUE_SIZE,
@@ -18,7 +19,7 @@ const FieldTypeSchema = z.enum(FIELD_TYPES);
  */
 export const FieldDefinitionEncryptedInputSchema = z
   .object({
-    name: z.string().min(1),
+    name: brandedString<"FieldDefinitionLabel">(),
     description: z.string().nullable(),
     options: z.array(z.string()).readonly().nullable(),
   })

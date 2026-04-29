@@ -103,7 +103,11 @@ export { brandId } from "./brand-utils.js";
 export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.js";
 
 // ── Branded value types (non-ID display labels) ──────────────────
-export type { LifecycleEventForm, LifecycleEventName } from "./value-types.js";
+export type {
+  FieldDefinitionLabel,
+  LifecycleEventForm,
+  LifecycleEventName,
+} from "./value-types.js";
 export { brandValue } from "./value-types.js";
 
 // ── Checksum ─────────────────────────────────────────────────────
