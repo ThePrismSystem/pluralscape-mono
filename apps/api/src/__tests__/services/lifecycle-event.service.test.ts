@@ -143,28 +143,6 @@ describe("createLifecycleEvent", () => {
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
-
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createLifecycleEvent(db, SYSTEM_ID, { invalid: true }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
-  it("throws 400 for invalid eventType", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createLifecycleEvent(
-        db,
-        SYSTEM_ID,
-        { eventType: "not-a-valid-event-type", occurredAt: 900, encryptedData: VALID_BLOB_BASE64 },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
 });
 
 describe("listLifecycleEvents", () => {

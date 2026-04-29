@@ -70,6 +70,9 @@ const VALID_CREATE_PARAMS = {
   encryptedData: VALID_BLOB_BASE64,
   startTime: 1000,
   memberId: MEMBER_ID,
+  customFrontId: undefined,
+  structureEntityId: undefined,
+  endTime: undefined,
 };
 
 function makeFSRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -119,14 +122,6 @@ describe("createFrontingSession", () => {
     await expect(
       createFrontingSession(db, SYSTEM_ID, VALID_CREATE_PARAMS, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 400 for invalid body (parseAndValidateBlob fails)", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createFrontingSession(db, SYSTEM_ID, { bad: "data" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws when INSERT returns no rows", async () => {
@@ -416,14 +411,6 @@ describe("updateFrontingSession", () => {
     );
   });
 
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateFrontingSession(db, SYSTEM_ID, FS_ID, { bad: "data" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws 409 on version conflict", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
@@ -487,14 +474,6 @@ describe("endFrontingSession", () => {
       chain,
       expect.objectContaining({ eventType: "fronting-session.ended" }),
     );
-  });
-
-  it("throws 400 for invalid payload (safeParse fails)", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      endFrontingSession(db, SYSTEM_ID, FS_ID, { bad: "data" }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 404 when session not found", async () => {

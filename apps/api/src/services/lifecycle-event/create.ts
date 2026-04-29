@@ -1,15 +1,10 @@
 import { lifecycleEvents } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
-import {
-  CreateLifecycleEventBodySchema,
-  validateLifecycleMetadata,
-  type PlaintextMetadata,
-} from "@pluralscape/validation";
+import { validateLifecycleMetadata, type PlaintextMetadata } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -22,39 +17,35 @@ import type { LifecycleEventResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { LifecycleEventId, SystemId } from "@pluralscape/types";
+import type { CreateLifecycleEventBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createLifecycleEvent(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateLifecycleEventBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LifecycleEventResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateLifecycleEventBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const eventId = brandId<LifecycleEventId>(createId(ID_PREFIXES.lifecycleEvent));
   const timestamp = now();
 
-  // Validate per-event-type metadata if provided
   let metadata: PlaintextMetadata | null = null;
-  if (parsed.plaintextMetadata) {
-    const metaResult = validateLifecycleMetadata(parsed.eventType, parsed.plaintextMetadata);
+  if (body.plaintextMetadata) {
+    const metaResult = validateLifecycleMetadata(body.eventType, body.plaintextMetadata);
     if (!metaResult.success) {
       throw new ApiHttpError(
         HTTP_BAD_REQUEST,
         "VALIDATION_ERROR",
-        `Invalid plaintext metadata for event type "${parsed.eventType}"`,
+        `Invalid plaintext metadata for event type "${body.eventType}"`,
       );
     }
-    metadata = parsed.plaintextMetadata;
+    metadata = body.plaintextMetadata;
   }
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -63,8 +54,8 @@ export async function createLifecycleEvent(
       .values({
         id: eventId,
         systemId,
-        eventType: parsed.eventType,
-        occurredAt: toUnixMillis(parsed.occurredAt),
+        eventType: body.eventType,
+        occurredAt: toUnixMillis(body.occurredAt),
         recordedAt: timestamp,
         updatedAt: timestamp,
         encryptedData: blob,
@@ -79,7 +70,7 @@ export async function createLifecycleEvent(
     await audit(tx, {
       eventType: "lifecycle-event.created",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Lifecycle event ${parsed.eventType} recorded`,
+      detail: `Lifecycle event ${body.eventType} recorded`,
       systemId,
     });
     await dispatchWebhookEvent(tx, systemId, "lifecycle.event-recorded", {

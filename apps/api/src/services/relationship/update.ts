@@ -1,10 +1,8 @@
 import { relationships } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { UpdateRelationshipBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -17,24 +15,21 @@ import type { RelationshipResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { RelationshipId, SystemId } from "@pluralscape/types";
+import type { UpdateRelationshipBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateRelationship(
   db: PostgresJsDatabase,
   systemId: SystemId,
   relationshipId: RelationshipId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateRelationshipBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateRelationshipBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const timestamp = now();
 
@@ -42,8 +37,8 @@ export async function updateRelationship(
     const updated = await tx
       .update(relationships)
       .set({
-        type: parsed.type,
-        bidirectional: parsed.bidirectional,
+        type: body.type,
+        bidirectional: body.bidirectional,
         encryptedData: blob,
         updatedAt: timestamp,
         version: sql`${relationships.version} + 1`,
@@ -52,7 +47,7 @@ export async function updateRelationship(
         and(
           eq(relationships.id, relationshipId),
           eq(relationships.systemId, systemId),
-          eq(relationships.version, parsed.version),
+          eq(relationships.version, body.version),
           eq(relationships.archived, false),
         ),
       )

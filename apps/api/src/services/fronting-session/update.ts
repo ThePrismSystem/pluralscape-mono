@@ -1,15 +1,10 @@
 import { frontingSessions } from "@pluralscape/db/pg";
 import { now, toUnixMillis } from "@pluralscape/types";
-import {
-  EndFrontingSessionBodySchema,
-  UpdateFrontingSessionBodySchema,
-} from "@pluralscape/validation";
 import { and, eq, isNull, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -23,25 +18,25 @@ import type { FrontingSessionResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FrontingSessionId, SystemId } from "@pluralscape/types";
+import type {
+  EndFrontingSessionBodySchema,
+  UpdateFrontingSessionBodySchema,
+} from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateFrontingSession(
   db: PostgresJsDatabase,
   systemId: SystemId,
   sessionId: FrontingSessionId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateFrontingSessionBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FrontingSessionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateFrontingSessionBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-  const version = parsed.version;
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
+  const version = body.version;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
@@ -96,22 +91,16 @@ export async function endFrontingSession(
   db: PostgresJsDatabase,
   systemId: SystemId,
   sessionId: FrontingSessionId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof EndFrontingSessionBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FrontingSessionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = EndFrontingSessionBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-  const { endTime, version } = result.data;
+  const { endTime, version } = body;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Read current session to validate state and endTime > startTime
     const [current] = await tx
       .select({
         id: frontingSessions.id,

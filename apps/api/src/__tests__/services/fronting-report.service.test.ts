@@ -137,13 +137,6 @@ describe("createFrontingReport", () => {
     );
   });
 
-  it("rejects invalid payload", async () => {
-    const { db } = mockDb();
-    await expect(
-      createFrontingReport(db, SYSTEM_ID, { format: "html" }, AUTH, mockAudit),
-    ).rejects.toThrow("Invalid payload");
-  });
-
   it("throws when INSERT returns no rows", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
@@ -251,13 +244,6 @@ describe("updateFrontingReport", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
-  });
-
-  it("rejects invalid payload", async () => {
-    const { db } = mockDb();
-    await expect(
-      updateFrontingReport(db, SYSTEM_ID, REPORT_ID, { version: 1 }, AUTH, mockAudit),
-    ).rejects.toThrow("Invalid payload");
   });
 });
 

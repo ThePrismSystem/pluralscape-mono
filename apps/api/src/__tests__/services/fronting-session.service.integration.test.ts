@@ -58,7 +58,9 @@ import type {
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { members, customFronts, frontingSessions, frontingComments } = schema;
 
@@ -107,18 +109,15 @@ describe("fronting-session.service (PGlite integration)", () => {
     return id;
   }
 
-  function createParams(
-    overrides: Partial<{
-      encryptedData: string;
-      startTime: number;
-      memberId: MemberId;
-      customFrontId: CustomFrontId;
-    }> = {},
-  ) {
+  type CreateBody = z.infer<typeof CreateFrontingSessionBodySchema>;
+
+  function createParams(overrides: Partial<CreateBody> = {}): CreateBody {
     return {
       encryptedData: testEncryptedDataBase64(),
       startTime: toUnixMillis(Date.now()),
       memberId,
+      customFrontId: undefined,
+      structureEntityId: undefined,
       ...overrides,
     };
   }
@@ -195,20 +194,6 @@ describe("fronting-session.service (PGlite integration)", () => {
         "INVALID_SUBJECT",
         400,
         "not found",
-      );
-    });
-
-    it("rejects payload without any subject", async () => {
-      await assertApiError(
-        createFrontingSession(
-          asDb(db),
-          systemId,
-          { encryptedData: testEncryptedDataBase64(), startTime: toUnixMillis(Date.now()) },
-          auth,
-          noopAudit,
-        ),
-        "VALIDATION_ERROR",
-        400,
       );
     });
 
@@ -738,7 +723,12 @@ describe("fronting-session.service (PGlite integration)", () => {
         asDb(db),
         systemId,
         created.id,
-        { encryptedData: testEncryptedDataBase64(), memberId },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          memberId,
+          customFrontId: undefined,
+          structureEntityId: undefined,
+        },
         auth,
         noopAudit,
       );

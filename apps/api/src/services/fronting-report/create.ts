@@ -1,9 +1,7 @@
 import { frontingReports } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now, toUnixMillis } from "@pluralscape/types";
-import { CreateFrontingReportBodySchema } from "@pluralscape/validation";
 
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -15,23 +13,20 @@ import type { FrontingReportResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { FrontingReportId, SystemId } from "@pluralscape/types";
+import type { CreateFrontingReportBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createFrontingReport(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateFrontingReportBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FrontingReportResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateFrontingReportBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   const reportId = brandId<FrontingReportId>(createId(ID_PREFIXES.frontingReport));
   const timestamp = now();
@@ -43,8 +38,8 @@ export async function createFrontingReport(
         id: reportId,
         systemId,
         encryptedData: blob,
-        format: parsed.format,
-        generatedAt: toUnixMillis(parsed.generatedAt),
+        format: body.format,
+        generatedAt: toUnixMillis(body.generatedAt),
         createdAt: timestamp,
         updatedAt: timestamp,
       })

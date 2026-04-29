@@ -1,12 +1,10 @@
 import { members, relationships } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, now } from "@pluralscape/types";
-import { CreateRelationshipBodySchema } from "@pluralscape/validation";
 import { and, eq, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -18,26 +16,22 @@ import type { RelationshipResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { MemberId, RelationshipId, SystemId } from "@pluralscape/types";
+import type { CreateRelationshipBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createRelationship(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateRelationshipBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateRelationshipBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
-  // Reject nulls at API level (schema requires them, but be explicit)
-  if (!parsed.sourceMemberId || !parsed.targetMemberId) {
+  if (!body.sourceMemberId || !body.targetMemberId) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
@@ -47,11 +41,10 @@ export async function createRelationship(
 
   const relationshipId = brandId<RelationshipId>(createId(ID_PREFIXES.relationship));
   const timestamp = now();
-  const sourceMemberId = brandId<MemberId>(parsed.sourceMemberId);
-  const targetMemberId = brandId<MemberId>(parsed.targetMemberId);
+  const sourceMemberId = brandId<MemberId>(body.sourceMemberId);
+  const targetMemberId = brandId<MemberId>(body.targetMemberId);
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Validate both members exist in the same system
     const memberRows = await tx
       .select({ id: members.id })
       .from(members)
@@ -77,8 +70,8 @@ export async function createRelationship(
         systemId,
         sourceMemberId,
         targetMemberId,
-        type: parsed.type,
-        bidirectional: parsed.bidirectional,
+        type: body.type,
+        bidirectional: body.bidirectional,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,
