@@ -75,6 +75,8 @@ import type {
   NoteTitle,
   NoteWire,
   PollOptionId,
+  PollOptionLabel,
+  PollTitle,
   PollVoteWire,
   PollWire,
   RelationshipType,
@@ -566,12 +568,12 @@ export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire
 export function makeRawPoll(id: string, overrides?: Partial<PollWire>): PollWire {
   const encrypted = encryptPollInput(
     {
-      title: `Poll ${id}`,
+      title: brandValue<PollTitle>(`Poll ${id}`),
       description: null,
       options: [
         {
           id: brandId<PollOptionId>("opt-1"),
-          label: "Yes",
+          label: brandValue<PollOptionLabel>("Yes"),
           voteCount: 0,
           color: null,
           emoji: null,

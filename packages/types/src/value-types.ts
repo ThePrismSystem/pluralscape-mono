@@ -51,6 +51,25 @@ export type NoteTitle = Brand<string, "NoteTitle">;
  */
 export type NoteContent = Brand<string, "NoteContent">;
 
+/**
+ * Free-text user-supplied poll title.
+ *
+ * Branded distinct from {@link PollOptionLabel} to prevent
+ * cross-field assignment between parent and child option labels in
+ * poll-edit forms — Poll.title and PollOption.label are both
+ * user-typed strings on the same entity tree. See
+ * docs/local-audits/2026-04-27-free-text-label-brand-audit.md.
+ */
+export type PollTitle = Brand<string, "PollTitle">;
+
+/**
+ * Free-text user-supplied poll-option label.
+ *
+ * Branded distinct from {@link PollTitle} (parent/child peer). See
+ * docs/local-audits/2026-04-27-free-text-label-brand-audit.md.
+ */
+export type PollOptionLabel = Brand<string, "PollOptionLabel">;
+
 /** Constraint for {@link brandValue} — any string-backed phantom brand. */
 type AnyBrandedValue = Brand<string, string>;
 

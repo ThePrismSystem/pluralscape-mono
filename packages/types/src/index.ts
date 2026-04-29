@@ -109,6 +109,8 @@ export type {
   LifecycleEventName,
   NoteContent,
   NoteTitle,
+  PollOptionLabel,
+  PollTitle,
 } from "./value-types.js";
 export { brandValue } from "./value-types.js";
 

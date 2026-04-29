@@ -14,14 +14,19 @@
  * can't be resolved become `{memberId: null, isVeto: false}` with a warning —
  * the vote is still preserved, just unattributed.
  */
-import { brandId } from "@pluralscape/types";
+import { brandId, brandValue } from "@pluralscape/types";
 
 import { parseHexColor } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPPoll } from "../sources/sp-types.js";
-import type { PollEncryptedInput, PollOptionId } from "@pluralscape/types";
+import type {
+  PollEncryptedInput,
+  PollOptionId,
+  PollOptionLabel,
+  PollTitle,
+} from "@pluralscape/types";
 import type { CreatePollBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -44,7 +49,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
   // server-assigned id.
   const options = (sp.options ?? []).map((o, idx) => ({
     id: brandId<PollOptionId>(o.id ?? `${sp._id}_opt_${String(idx)}`),
-    label: o.name,
+    label: brandValue<PollOptionLabel>(o.name),
     voteCount: 0,
     color: parseHexColor(o.color),
     emoji: null,
@@ -100,7 +105,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
   }
 
   const encrypted: PollEncryptedInput = {
-    title: sp.name,
+    title: brandValue<PollTitle>(sp.name),
     description: sp.desc ?? null,
     options,
   };

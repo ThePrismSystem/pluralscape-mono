@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis, brandId } from "@pluralscape/types";
+import { toUnixMillis, brandId, brandValue } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -25,7 +25,9 @@ import type {
   PollKind,
   PollOption,
   PollOptionId,
+  PollOptionLabel,
   PollStatus,
+  PollTitle,
   PollVoteEncryptedInput,
   PollVoteId,
   SystemId,
@@ -45,7 +47,7 @@ beforeAll(async () => {
 function makePollOption(id: string): PollOption {
   return {
     id: brandId<PollOptionId>(id),
-    label: `Option ${id}`,
+    label: brandValue<PollOptionLabel>(`Option ${id}`),
     voteCount: 0,
     color: "#aabbcc" as HexColor,
     emoji: null,
@@ -54,7 +56,7 @@ function makePollOption(id: string): PollOption {
 
 function makePollEncryptedInput(): PollEncryptedInput {
   return {
-    title: "Best snack?",
+    title: brandValue<PollTitle>("Best snack?"),
     description: "Vote for your favourite.",
     options: [makePollOption("opt_001"), makePollOption("opt_002")],
   };
@@ -143,7 +145,11 @@ describe("decryptPoll", () => {
   });
 
   it("handles null description", () => {
-    const fields: PollEncryptedInput = { title: "Yes/No?", description: null, options: [] };
+    const fields: PollEncryptedInput = {
+      title: brandValue<PollTitle>("Yes/No?"),
+      description: null,
+      options: [],
+    };
     const result = decryptPoll(makeServerPoll(fields), masterKey);
     expect(result.description).toBeNull();
     expect(result.options).toEqual([]);

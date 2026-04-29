@@ -35,6 +35,7 @@ import type {
   NoteContent,
   NoteTitle,
   Poll,
+  PollTitle,
   SystemStructureEntityId,
   WikiPage,
 } from "@pluralscape/types";
@@ -148,7 +149,7 @@ export function rowToPoll(row: Record<string, unknown>): Poll | ArchivedPoll {
       "created_by_member_id",
       id,
     ) as Poll["createdByMemberId"],
-    title: guardedStr(row["title"], "polls", "title", id),
+    title: brandValue<PollTitle>(guardedStr(row["title"], "polls", "title", id)),
     description: strOrNull(row["description"], "polls", "description", id),
     kind: guardedStr(row["kind"], "polls", "kind", id) as Poll["kind"],
     options: [] as Poll["options"],

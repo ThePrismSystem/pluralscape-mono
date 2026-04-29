@@ -4,11 +4,12 @@ import type { HexColor, MemberId, PollId, PollOptionId, SystemId } from "../ids.
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
+import type { PollOptionLabel, PollTitle } from "../value-types.js";
 
 /** A single option within a poll. */
 export interface PollOption {
   readonly id: PollOptionId;
-  readonly label: string;
+  readonly label: PollOptionLabel;
   readonly voteCount: number;
   readonly color: HexColor | null;
   readonly emoji: string | null;
@@ -32,7 +33,7 @@ export interface Poll extends AuditMetadata {
   readonly systemId: SystemId;
   /** Member who created the poll. null when imported from a source system (e.g., Simply Plural) that has no per-poll creator concept. */
   readonly createdByMemberId: MemberId | null;
-  readonly title: string;
+  readonly title: PollTitle;
   readonly description: string | null;
   readonly kind: PollKind;
   readonly options: readonly PollOption[];
