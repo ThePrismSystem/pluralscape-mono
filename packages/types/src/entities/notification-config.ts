@@ -31,21 +31,9 @@ export type ArchivedNotificationConfig = Archived<NotificationConfig>;
  * Discriminated union of the live and archived shapes — the database CHECK
  * invariant `(archived = true) = (archived_at IS NOT NULL)` is encoded in
  * the type system here. Recover this shape from a flat Drizzle row via
- * `narrowArchivableRow` (apps/api/src/lib/archivable-row.ts). For the flat
- * row shape (used only for Drizzle parity assertions), see
- * `NotificationConfigServerMetadataRow`.
+ * `narrowArchivableRow` (apps/api/src/lib/archivable-row.ts).
  */
 export type NotificationConfigServerMetadata = Archivable<NotificationConfig>;
-
-/**
- * Flat shape of the `notification_configs` Drizzle row — used for the
- * Drizzle structural-parity assertion only. Application code should consume
- * the discriminated `NotificationConfigServerMetadata` after narrowing.
- */
-export type NotificationConfigServerMetadataRow = Omit<NotificationConfig, "archived"> & {
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
 
 /**
  * JSON-wire NotificationConfig (live or archived) — discriminated.
