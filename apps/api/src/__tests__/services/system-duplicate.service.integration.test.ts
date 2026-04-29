@@ -33,7 +33,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
   let accountId: AccountId;
   let systemId: SystemId;
   let auth: AuthContext;
-  let snapshotId: string;
+  let snapshotId: SystemSnapshotId;
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -45,10 +45,10 @@ describe("system-duplicate.service (PGlite integration)", () => {
     auth = makeAuth(accountId, systemId);
 
     // Create a snapshot for the source system
-    snapshotId = `snap_${crypto.randomUUID()}`;
+    snapshotId = brandId<SystemSnapshotId>(`snap_${crypto.randomUUID()}`);
     const now = toUnixMillis(Date.now());
     await db.insert(systemSnapshots).values({
-      id: brandId<SystemSnapshotId>(snapshotId),
+      id: snapshotId,
       systemId,
       snapshotTrigger: "manual",
       encryptedData: testBlob(),
@@ -100,7 +100,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
       const [snapshot] = await db
         .select()
         .from(systemSnapshots)
-        .where(eq(systemSnapshots.id, brandId<SystemSnapshotId>(snapshotId)));
+        .where(eq(systemSnapshots.id, snapshotId));
       expect(snapshot?.id).toBe(snapshotId);
     });
 
@@ -116,7 +116,7 @@ describe("system-duplicate.service (PGlite integration)", () => {
     });
 
     it("rejects duplication for nonexistent snapshot", async () => {
-      const fakeSnapshotId = `snap_${crypto.randomUUID()}`;
+      const fakeSnapshotId = brandId<SystemSnapshotId>(`snap_${crypto.randomUUID()}`);
 
       await assertApiError(
         duplicateSystem(asDb(db), systemId, { snapshotId: fakeSnapshotId }, auth, noopAudit),

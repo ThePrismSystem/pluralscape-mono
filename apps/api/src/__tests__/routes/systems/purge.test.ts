@@ -33,7 +33,7 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const PURGE_URL = `/systems/${SYS_ID}/purge`;
 
-const VALID_BODY = { confirmation: "PURGE" };
+const VALID_BODY = { authKey: "a".repeat(64) };
 
 // ── Tests ────────────────────────────────────────────────────────
 

@@ -5,8 +5,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { checkDependents } from "../lib/check-dependents.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
@@ -21,7 +20,12 @@ import {
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
-import type { HierarchyService, HierarchyServiceConfig } from "./hierarchy-service-types.js";
+import type {
+  HierarchyCreateBody,
+  HierarchyService,
+  HierarchyServiceConfig,
+  HierarchyUpdateBody,
+} from "./hierarchy-service-types.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
@@ -35,7 +39,11 @@ export function createHierarchyService<
   TRow extends Record<string, unknown>,
   TId extends string,
   TResult extends { readonly id: string },
->(cfg: HierarchyServiceConfig<TRow, TResult>): HierarchyService<TId, TResult> {
+  TCreateBody extends HierarchyCreateBody,
+  TUpdateBody extends HierarchyUpdateBody,
+>(
+  cfg: HierarchyServiceConfig<TRow, TResult, TCreateBody, TUpdateBody>,
+): HierarchyService<TId, TResult, TCreateBody, TUpdateBody> {
   const {
     table,
     columns,
@@ -67,18 +75,13 @@ export function createHierarchyService<
   async function create(
     db: PostgresJsDatabase,
     systemId: SystemId,
-    // eslint-disable-next-line pluralscape/no-params-unknown
-    params: unknown,
+    body: TCreateBody,
     auth: AuthContext,
     audit: AuditWriter,
   ): Promise<TResult> {
     assertSystemOwnership(systemId, auth);
 
-    const { parsed, blob } = parseAndValidateBlob(
-      params,
-      cfg.createSchema,
-      MAX_ENCRYPTED_DATA_BYTES,
-    );
+    const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
     const entityId = createId(idPrefix);
     const timestamp = now();
@@ -106,9 +109,11 @@ export function createHierarchyService<
         }
       }
 
-      // Validate parent exists in same system if non-null
-      const parsedRecord = parsed as Record<string, unknown>;
-      const rawParentId = parentFieldName in parsedRecord ? parsedRecord[parentFieldName] : null;
+      // Validate parent exists in same system if non-null. The body is typed
+      // generically — the parent field is referenced by name from cfg.parentFieldName,
+      // so we read the value via Reflect.get which keeps strict typing without
+      // any cast.
+      const rawParentId: unknown = Reflect.get(body, parentFieldName);
       const parentId = typeof rawParentId === "string" ? rawParentId : null;
       if (parentId !== null) {
         const [parent] = await tx
@@ -132,7 +137,7 @@ export function createHierarchyService<
         }
       }
 
-      const extraValues = cfg.createInsertValues(parsed as Record<string, unknown>);
+      const extraValues = cfg.createInsertValues(body);
 
       const [row] = await tx
         .insert(table)
@@ -243,28 +248,22 @@ export function createHierarchyService<
     db: PostgresJsDatabase,
     systemId: SystemId,
     entityId: TId,
-    // eslint-disable-next-line pluralscape/no-params-unknown
-    params: unknown,
+    body: TUpdateBody,
     auth: AuthContext,
     audit: AuditWriter,
   ): Promise<TResult> {
     assertSystemOwnership(systemId, auth);
 
-    const { parsed, blob } = parseAndValidateBlob(
-      params,
-      cfg.updateSchema,
-      MAX_ENCRYPTED_DATA_BYTES,
-    );
+    const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
     const timestamp = now();
-    const parsedRecord = parsed as Record<string, unknown>;
 
     return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
       if (cfg.beforeUpdate) {
-        await cfg.beforeUpdate(tx, entityId, parsedRecord, systemId);
+        await cfg.beforeUpdate(tx, entityId, body, systemId);
       }
 
-      const extraValues = cfg.updateSetValues(parsedRecord);
+      const extraValues = cfg.updateSetValues(body);
 
       const updated = await tx
         .update(table)
@@ -278,7 +277,7 @@ export function createHierarchyService<
           and(
             eq(columns.id, entityId),
             eq(columns.systemId, systemId),
-            eq(columns.version, parsedRecord.version as number),
+            eq(columns.version, body.version),
             eq(columns.archived, false),
           ),
         )

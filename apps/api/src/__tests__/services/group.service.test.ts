@@ -117,7 +117,11 @@ describe("createGroup", () => {
       createGroup(
         db,
         SYSTEM_ID,
-        { encryptedData: VALID_BLOB_BASE64, parentGroupId: "grp_nonexistent", sortOrder: 0 },
+        {
+          encryptedData: VALID_BLOB_BASE64,
+          parentGroupId: brandId<GroupId>("grp_nonexistent"),
+          sortOrder: 0,
+        },
         AUTH,
         mockAudit,
       ),
@@ -139,14 +143,6 @@ describe("createGroup", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(createGroup(db, SYSTEM_ID, { bad: "data" }, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
-  });
-
   it("throws 400 for oversized encryptedData", async () => {
     const { db } = mockDb();
     const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
@@ -159,7 +155,7 @@ describe("createGroup", () => {
         AUTH,
         mockAudit,
       ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "BLOB_TOO_LARGE" }));
   });
 
   it("throws 400 for malformed blob", async () => {
@@ -336,14 +332,6 @@ describe("updateGroup", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 400 for invalid body", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updateGroup(db, SYSTEM_ID, GROUP_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 });
 

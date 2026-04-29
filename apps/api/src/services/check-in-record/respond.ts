@@ -1,6 +1,5 @@
 import { checkInRecords, members } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { RespondCheckInRecordBodySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
@@ -15,24 +14,21 @@ import type { CheckInRecordResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { CheckInRecordId, SystemId } from "@pluralscape/types";
+import type { RespondCheckInRecordBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function respondCheckInRecord(
   db: PostgresJsDatabase,
   systemId: SystemId,
   recordId: CheckInRecordId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof RespondCheckInRecordBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CheckInRecordResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parseResult = RespondCheckInRecordBodySchema.safeParse(params);
-  if (!parseResult.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-  const { respondedByMemberId } = parseResult.data;
+  const { respondedByMemberId } = body;
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {

@@ -140,6 +140,8 @@ describe("purgeSystem", () => {
   it("rejects invalid body (missing authKey)", async () => {
     const { db } = mockDb();
 
-    await expect(purgeSystem(db, SYSTEM_ID, {}, stubAuth(), stubAudit())).rejects.toThrow();
+    await expect(
+      purgeSystem(db, SYSTEM_ID, { authKey: "" }, stubAuth(), stubAudit()),
+    ).rejects.toThrow();
   });
 });

@@ -12,10 +12,9 @@ import {
   createId,
   now,
 } from "@pluralscape/types";
-import { InitiateRotationBodySchema } from "@pluralscape/validation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../../http.constants.js";
+import { HTTP_CONFLICT } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { withTenantTransaction } from "../../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../../lib/system-ownership.js";
@@ -35,23 +34,19 @@ import type {
   RotationItemStatus,
   SystemId,
 } from "@pluralscape/types";
+import type { InitiateRotationBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function initiateRotation(
   db: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof InitiateRotationBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BucketKeyRotation> {
   assertSystemOwnership(systemId, auth);
-
-  const parsed = InitiateRotationBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid initiate payload");
-  }
 
   const rotationId = brandId<BucketKeyRotationId>(createId(ID_PREFIXES.bucketKeyRotation));
   const timestamp = now();
@@ -105,8 +100,8 @@ export async function initiateRotation(
         id: rotationId,
         bucketId,
         systemId,
-        fromKeyVersion: parsed.data.newKeyVersion - 1,
-        toKeyVersion: parsed.data.newKeyVersion,
+        fromKeyVersion: body.newKeyVersion - 1,
+        toKeyVersion: body.newKeyVersion,
         state: ROTATION_STATES.initiated,
         initiatedAt: timestamp,
         totalItems: tags.length,
@@ -146,15 +141,15 @@ export async function initiateRotation(
         ),
       );
 
-    if (parsed.data.friendKeyGrants.length > 0) {
+    if (body.friendKeyGrants.length > 0) {
       await tx.insert(keyGrants).values(
-        parsed.data.friendKeyGrants.map((grant) => ({
+        body.friendKeyGrants.map((grant) => ({
           id: brandId<KeyGrantId>(createId(ID_PREFIXES.keyGrant)),
           bucketId,
           systemId,
           friendAccountId: brandId<AccountId>(grant.friendAccountId),
           encryptedKey: Buffer.from(grant.encryptedKey, "base64"),
-          keyVersion: parsed.data.newKeyVersion,
+          keyVersion: body.newKeyVersion,
           createdAt: timestamp,
         })),
       );

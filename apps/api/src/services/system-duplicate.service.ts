@@ -1,6 +1,5 @@
 import { systemSnapshots, systems } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { DuplicateSystemBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_FORBIDDEN, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -10,7 +9,9 @@ import { withAccountTransaction } from "../lib/rls-context.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { SystemId, SystemSnapshotId } from "@pluralscape/types";
+import type { DuplicateSystemBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export interface DuplicateSystemResult {
   readonly id: SystemId;
@@ -28,8 +29,7 @@ export interface DuplicateSystemResult {
 export async function duplicateSystem(
   db: PostgresJsDatabase,
   sourceSystemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof DuplicateSystemBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<DuplicateSystemResult> {
@@ -41,7 +41,7 @@ export async function duplicateSystem(
     );
   }
 
-  const { snapshotId } = DuplicateSystemBodySchema.parse(params);
+  const { snapshotId } = body;
 
   const newSystemId = brandId<SystemId>(createId(ID_PREFIXES.system));
   const timestamp = now();

@@ -166,12 +166,6 @@ describe("bucket-content-tag service", () => {
       expect(dispatchWebhookEvent).not.toHaveBeenCalled();
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      await expect(
-        tagContent({} as never, SYSTEM_ID, BUCKET_ID, { bad: true }, AUTH, mockAudit),
-      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-    });
-
     it("rejects when ownership check fails", async () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 

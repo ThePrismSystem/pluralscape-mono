@@ -1,6 +1,5 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, brandId, createId, toUnixMillis } from "@pluralscape/types";
-import { CreateCheckInRecordBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
@@ -17,26 +16,21 @@ import type { CheckInRecordResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { CheckInRecordId, SystemId } from "@pluralscape/types";
+import type { CreateCheckInRecordBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function createCheckInRecord(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateCheckInRecordBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CheckInRecordResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = CreateCheckInRecordBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-  const parsed = result.data;
-
-  const blob = parsed.encryptedData
-    ? validateEncryptedBlob(parsed.encryptedData, MAX_ENCRYPTED_DATA_BYTES)
+  const blob = body.encryptedData
+    ? validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES)
     : null;
 
   const recordId = brandId<CheckInRecordId>(createId(ID_PREFIXES.checkInRecord));
@@ -48,7 +42,7 @@ export async function createCheckInRecord(
       .from(timerConfigs)
       .where(
         and(
-          eq(timerConfigs.id, parsed.timerConfigId),
+          eq(timerConfigs.id, body.timerConfigId),
           eq(timerConfigs.systemId, systemId),
           eq(timerConfigs.archived, false),
         ),
@@ -68,8 +62,8 @@ export async function createCheckInRecord(
       .values({
         id: recordId,
         systemId,
-        timerConfigId: parsed.timerConfigId,
-        scheduledAt: toUnixMillis(parsed.scheduledAt),
+        timerConfigId: body.timerConfigId,
+        scheduledAt: toUnixMillis(body.scheduledAt),
         encryptedData: blob,
       })
       .returning();

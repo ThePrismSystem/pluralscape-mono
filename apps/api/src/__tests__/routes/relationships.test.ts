@@ -87,7 +87,19 @@ const MOCK_PAGINATED = {
   totalCount: null,
 };
 
-const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
+const VALID_BODY = {
+  sourceMemberId: "mem_00000000-0000-0000-0000-000000000001",
+  targetMemberId: "mem_00000000-0000-0000-0000-000000000002",
+  type: "partner" as const,
+  bidirectional: true,
+  encryptedData: "dGVzdA==" as EncryptedBase64,
+};
+const VALID_UPDATE_BODY = {
+  type: "partner" as const,
+  bidirectional: true,
+  encryptedData: "dGVzdA==" as EncryptedBase64,
+  version: 1,
+};
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -262,7 +274,7 @@ describe("PUT /systems/:id/relationships/:relationshipId", () => {
   it("returns 200 on success", async () => {
     vi.mocked(updateRelationship).mockResolvedValueOnce({ ...MOCK_RELATIONSHIP, version: 2 });
     const app = createApp();
-    const res = await putJSON(app, `${BASE_URL}/${REL_ID}`, { ...VALID_BODY, version: 1 });
+    const res = await putJSON(app, `${BASE_URL}/${REL_ID}`, VALID_UPDATE_BODY);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { version: number } };
     expect(body.data.version).toBe(2);

@@ -34,7 +34,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const NEW_SYS_ID = "sys_660e8400-e29b-41d4-a716-446655440000";
 const DUPLICATE_URL = `/systems/${SYS_ID}/duplicate`;
 
-const VALID_BODY = { name: "Copy of System" };
+const VALID_BODY = { snapshotId: "snap_770e8400-e29b-41d4-a716-446655440000" };
 
 const MOCK_RESULT = {
   id: NEW_SYS_ID as never,

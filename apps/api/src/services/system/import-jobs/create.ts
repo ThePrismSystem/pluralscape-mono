@@ -6,7 +6,6 @@ import {
   createId,
   now,
 } from "@pluralscape/types";
-import { CreateImportJobBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
@@ -25,7 +24,9 @@ import type {
   ImportJobId,
   SystemId,
 } from "@pluralscape/types";
+import type { CreateImportJobBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 /** Canonical order for deciding which collection to start on when seeding
  *  the initial checkpoint. First TRUE entry in this order wins.
@@ -64,19 +65,11 @@ function firstSelectedCollection(
 export async function createImportJob(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateImportJobBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<ImportJobResult> {
   assertSystemOwnership(systemId, auth);
-  const parseResult = CreateImportJobBodySchema.safeParse(params);
-  if (!parseResult.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid request body", {
-      issues: parseResult.error.issues,
-    });
-  }
-  const parsed = parseResult.data;
 
   const id = brandId<ImportJobId>(createId(ID_PREFIXES.importJob));
   const timestamp = now();
@@ -86,13 +79,13 @@ export async function createImportJob(
       schemaVersion: IMPORT_CHECKPOINT_SCHEMA_VERSION,
       checkpoint: {
         completedCollections: [],
-        currentCollection: firstSelectedCollection(parsed.selectedCategories),
+        currentCollection: firstSelectedCollection(body.selectedCategories),
         currentCollectionLastSourceId: null,
         realPrivacyBucketsMapped: false,
       },
       options: {
-        selectedCategories: parsed.selectedCategories,
-        avatarMode: parsed.avatarMode,
+        selectedCategories: body.selectedCategories,
+        avatarMode: body.avatarMode,
       },
       totals: { perCollection: {} },
     };
@@ -103,7 +96,7 @@ export async function createImportJob(
         id,
         accountId: auth.accountId,
         systemId,
-        source: parsed.source,
+        source: body.source,
         status: "pending",
         progressPercent: 0,
         warningCount: 0,
@@ -121,7 +114,7 @@ export async function createImportJob(
     await audit(tx, {
       eventType: "import-job.created",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Import job created (source: ${parsed.source})`,
+      detail: `Import job created (source: ${body.source})`,
       systemId,
     });
 

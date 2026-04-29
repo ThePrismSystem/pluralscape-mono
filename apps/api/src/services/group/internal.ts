@@ -1,6 +1,5 @@
 import { fieldValues, groupMemberships, groups } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES } from "@pluralscape/types";
-import { CreateGroupBodySchema, UpdateGroupBodySchema } from "@pluralscape/validation";
 
 import { MAX_GROUPS_PER_SYSTEM } from "../../quota.constants.js";
 import { createHierarchyService } from "../hierarchy-service-factory.js";
@@ -12,10 +11,14 @@ import type {
   GroupId,
   GroupServerMetadata,
 } from "@pluralscape/types";
+import type { CreateGroupBodySchema, UpdateGroupBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
 export type GroupResult = EncryptedWire<GroupServerMetadata>;
+type CreateGroupBody = z.infer<typeof CreateGroupBodySchema>;
+type UpdateGroupBody = z.infer<typeof UpdateGroupBodySchema>;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -55,7 +58,9 @@ export const groupHierarchy = createHierarchyService<
     archivedAt: number | null;
   },
   GroupId,
-  GroupResult
+  GroupResult,
+  CreateGroupBody,
+  UpdateGroupBody
 >({
   table: groups,
   columns: {
@@ -74,10 +79,8 @@ export const groupHierarchy = createHierarchyService<
   maxPerSystem: MAX_GROUPS_PER_SYSTEM,
   parentFieldName: "parentGroupId",
   toResult: toGroupResult,
-  createSchema: CreateGroupBodySchema,
-  updateSchema: UpdateGroupBodySchema,
-  createInsertValues: (parsed) => ({
-    sortOrder: parsed.sortOrder,
+  createInsertValues: (body) => ({
+    sortOrder: body.sortOrder,
   }),
   updateSetValues: () => ({}),
   dependentChecks: [

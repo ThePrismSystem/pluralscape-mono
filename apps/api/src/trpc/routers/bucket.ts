@@ -191,14 +191,7 @@ export const bucketRouter = router({
     .input(BucketIdSchema.and(TagContentBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return tagContent(
-        ctx.db,
-        ctx.systemId,
-        input.bucketId,
-        { entityType: input.entityType, entityId: input.entityId },
-        ctx.auth,
-        audit,
-      );
+      return tagContent(ctx.db, ctx.systemId, input.bucketId, input, ctx.auth, audit);
     }),
 
   untagContent: systemProcedure
@@ -206,14 +199,9 @@ export const bucketRouter = router({
     .input(BucketIdSchema.and(UntagContentParamsSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      await untagContent(
-        ctx.db,
-        ctx.systemId,
-        input.bucketId,
-        { entityType: input.entityType, entityId: input.entityId },
-        ctx.auth,
-        audit,
-      );
+      const { bucketId, systemId: _systemId, ...body } = input;
+      void _systemId;
+      await untagContent(ctx.db, ctx.systemId, bucketId, body, ctx.auth, audit);
       return { success: true as const };
     }),
 
@@ -292,7 +280,7 @@ export const bucketRouter = router({
         ctx.systemId,
         input.bucketId,
         input.rotationId,
-        input,
+        { chunkSize: input.chunkSize },
         ctx.auth,
       );
     }),
@@ -307,7 +295,7 @@ export const bucketRouter = router({
         ctx.systemId,
         input.bucketId,
         input.rotationId,
-        input,
+        { items: input.items },
         ctx.auth,
         audit,
       );

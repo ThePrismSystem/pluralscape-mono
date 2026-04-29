@@ -220,23 +220,6 @@ describe("createTimerConfig", () => {
       createTimerConfig(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow("Failed to create timer config");
   });
-
-  it("throws 400 when wakingHoursOnly is true but wakingStart/wakingEnd missing", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      createTimerConfig(
-        db,
-        SYSTEM_ID,
-        {
-          encryptedData: VALID_BLOB_BASE64,
-          wakingHoursOnly: true,
-        },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
 });
 
 describe("listTimerConfigs", () => {

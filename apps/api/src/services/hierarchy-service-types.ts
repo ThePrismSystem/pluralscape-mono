@@ -12,7 +12,6 @@ import type {
 import type { ColumnBaseConfig, ColumnDataType } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { z } from "zod/v4";
 
 // ── Type helpers ───────────────────────────────────────────────────
 
@@ -48,10 +47,23 @@ export interface DependentCheck {
   readonly filterArchived?: AnyPgColumn;
 }
 
+/** Body shape required for create — encrypted blob plus arbitrary extras. */
+export interface HierarchyCreateBody {
+  readonly encryptedData: string;
+}
+
+/** Body shape required for update — encrypted blob, OCC version, plus extras. */
+export interface HierarchyUpdateBody {
+  readonly encryptedData: string;
+  readonly version: number;
+}
+
 /** Configuration for the hierarchy service factory. */
 export interface HierarchyServiceConfig<
   TRow extends Record<string, unknown>,
   TResult extends { readonly id: string },
+  TCreateBody extends HierarchyCreateBody,
+  TUpdateBody extends HierarchyUpdateBody,
 > {
   /** The Drizzle table reference. */
   readonly table: PgTable;
@@ -67,14 +79,10 @@ export interface HierarchyServiceConfig<
   readonly parentFieldName: string;
   /** Maps a raw DB row to the domain result type. */
   readonly toResult: (row: TRow) => TResult;
-  /** Zod schema for create body validation. */
-  readonly createSchema: z.ZodType<{ encryptedData: string }>;
-  /** Zod schema for update body validation. */
-  readonly updateSchema: z.ZodType<{ encryptedData: string; version: number }>;
-  /** Additional insert values derived from the parsed create body. */
-  readonly createInsertValues: (parsed: Record<string, unknown>) => Record<string, unknown>;
-  /** Additional set values derived from the parsed update body. */
-  readonly updateSetValues: (parsed: Record<string, unknown>) => Record<string, unknown>;
+  /** Additional insert values derived from the typed create body. */
+  readonly createInsertValues: (body: TCreateBody) => Record<string, unknown>;
+  /** Additional set values derived from the typed update body. */
+  readonly updateSetValues: (body: TUpdateBody) => Record<string, unknown>;
   /** Dependent tables/columns checked before delete (409 pattern). */
   readonly dependentChecks: readonly DependentCheck[];
   /** Audit event type strings. */
@@ -92,7 +100,7 @@ export interface HierarchyServiceConfig<
   readonly beforeUpdate?: (
     tx: PostgresJsDatabase,
     entityId: string,
-    parsed: Record<string, unknown>,
+    body: TUpdateBody,
     systemId: SystemId,
   ) => Promise<void>;
   /**
@@ -124,12 +132,16 @@ export interface BaseHierarchyResult {
 
 // ── Service interface ──────────────────────────────────────────────
 
-export interface HierarchyService<TId extends string, TResult extends { readonly id: string }> {
+export interface HierarchyService<
+  TId extends string,
+  TResult extends { readonly id: string },
+  TCreateBody extends HierarchyCreateBody,
+  TUpdateBody extends HierarchyUpdateBody,
+> {
   readonly create: (
     db: PostgresJsDatabase,
     systemId: SystemId,
-    // eslint-disable-next-line pluralscape/no-params-unknown
-    params: unknown,
+    body: TCreateBody,
     auth: AuthContext,
     audit: AuditWriter,
   ) => Promise<TResult>;
@@ -154,8 +166,7 @@ export interface HierarchyService<TId extends string, TResult extends { readonly
     db: PostgresJsDatabase,
     systemId: SystemId,
     entityId: TId,
-    // eslint-disable-next-line pluralscape/no-params-unknown
-    params: unknown,
+    body: TUpdateBody,
     auth: AuthContext,
     audit: AuditWriter,
   ) => Promise<TResult>;

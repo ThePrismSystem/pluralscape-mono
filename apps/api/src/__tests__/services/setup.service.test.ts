@@ -191,23 +191,6 @@ describe("setup service", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const schema = vi.mocked(SetupNomenclatureStepBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      const { db } = mockDb();
-
-      await expect(setupNomenclatureStep(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toMatchObject(
-        {
-          code: "VALIDATION_ERROR",
-          message: "Invalid nomenclature payload",
-        },
-      );
-    });
-
     it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
       const { validateEncryptedBlob } = await import("../../lib/encrypted-blob.js");
       const { ApiHttpError } = await import("../../lib/api-error.js");
@@ -261,21 +244,6 @@ describe("setup service", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      const schema = vi.mocked(SetupProfileStepBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      const { db } = mockDb();
-
-      await expect(setupProfileStep(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toMatchObject({
-        code: "VALIDATION_ERROR",
-        message: "Invalid profile payload",
-      });
-    });
-
     it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
       const { validateEncryptedBlob } = await import("../../lib/encrypted-blob.js");
       const { ApiHttpError } = await import("../../lib/api-error.js");
@@ -300,7 +268,10 @@ describe("setup service", () => {
   // ── setupComplete ─────────────────────────────────────────────────
 
   describe("setupComplete", () => {
-    const VALID_PARAMS = { encryptedData: VALID_ENCRYPTED_DATA };
+    const VALID_PARAMS = {
+      encryptedData: VALID_ENCRYPTED_DATA,
+      recoveryKeyBackupConfirmed: true as const,
+    };
 
     beforeEach(() => {
       const schema = vi.mocked(SetupCompleteBodySchema);

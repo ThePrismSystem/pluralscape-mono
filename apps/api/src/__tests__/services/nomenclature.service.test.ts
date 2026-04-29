@@ -73,14 +73,6 @@ function mockSafeParseSuccess(data: Record<string, unknown>): void {
   (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValue({ success: true, data });
 }
 
-function mockSafeParseFailure(): void {
-  const schema = vi.mocked(UpdateNomenclatureBodySchema);
-  (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-    success: false,
-    error: { issues: [] },
-  });
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe("nomenclature service", () => {
@@ -151,18 +143,6 @@ describe("nomenclature service", () => {
         chain,
         expect.objectContaining({ eventType: "settings.nomenclature-updated" }),
       );
-    });
-
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      mockSafeParseFailure();
-      const { db } = mockDb();
-
-      await expect(
-        updateNomenclatureSettings(db, SYSTEM_ID, {}, AUTH, mockAudit),
-      ).rejects.toMatchObject({
-        code: "VALIDATION_ERROR",
-        message: "Invalid nomenclature payload",
-      });
     });
 
     it("throws CONFLICT on version mismatch", async () => {

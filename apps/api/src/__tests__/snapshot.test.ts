@@ -39,17 +39,10 @@ vi.mock("../lib/tenant-context.js", () => ({
   })),
 }));
 
-const mockParseAndValidateBlob = vi.fn();
+const mockValidateEncryptedBlob = vi.fn();
 vi.mock("../lib/encrypted-blob.js", () => ({
-  parseAndValidateBlob: (
-    params: unknown,
-    schema: unknown,
-    maxBytes: number,
-  ): { parsed: Record<string, unknown>; blob: EncryptedBlob } =>
-    mockParseAndValidateBlob(params, schema, maxBytes) as {
-      parsed: Record<string, unknown>;
-      blob: EncryptedBlob;
-    },
+  validateEncryptedBlob: (base64Data: string, maxBytes: number): EncryptedBlob =>
+    mockValidateEncryptedBlob(base64Data, maxBytes) as EncryptedBlob,
   encryptedBlobToBase64: (): string => "base64encodedblob",
 }));
 
@@ -134,10 +127,7 @@ describe("createSnapshot", () => {
 
   it("creates snapshot and writes audit on success", async () => {
     const { db, chain } = mockDb();
-    mockParseAndValidateBlob.mockReturnValue({
-      parsed: { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
-      blob: FAKE_BLOB,
-    });
+    mockValidateEncryptedBlob.mockReturnValue(FAKE_BLOB);
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
     chain.returning.mockResolvedValueOnce([snapshotRow()]);
 
@@ -160,10 +150,7 @@ describe("createSnapshot", () => {
 
   it("throws when INSERT returns no rows", async () => {
     const { db, chain } = mockDb();
-    mockParseAndValidateBlob.mockReturnValue({
-      parsed: { snapshotTrigger: "manual", encryptedData: "abc" as EncryptedBase64 },
-      blob: FAKE_BLOB,
-    });
+    mockValidateEncryptedBlob.mockReturnValue(FAKE_BLOB);
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
     chain.returning.mockResolvedValueOnce([]);
 

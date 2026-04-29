@@ -79,7 +79,11 @@ const MOCK_PAGINATED = {
   totalCount: null,
 };
 
-const VALID_BODY = { encryptedData: "dGVzdA==" as EncryptedBase64 };
+const VALID_BODY = {
+  eventType: "discovery" as const,
+  occurredAt: 1000,
+  encryptedData: "dGVzdA==" as EncryptedBase64,
+};
 
 // ── Tests ────────────────────────────────────────────────────────
 
