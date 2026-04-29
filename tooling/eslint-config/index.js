@@ -36,14 +36,15 @@ export default tseslint.config(
       // Ban all eslint-disable comments — fix the violation, don't suppress it
       "@eslint-community/eslint-comments/no-use": "error",
 
-      // Allow underscore-prefixed names as intentionally unused
+      // Allow underscore-prefixed names as intentionally unused. Catch bindings
+      // are intentionally NOT exempted: empty/swallowed catches violate the
+      // no-swallowed-errors policy in CLAUDE.md.
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
           destructuredArrayIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
         },
       ],
 
