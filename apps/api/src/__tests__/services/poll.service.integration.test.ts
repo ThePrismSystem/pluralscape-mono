@@ -33,11 +33,15 @@ import {
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, MemberId, SystemId } from "@pluralscape/types";
+import type { CreatePollBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { polls, pollVotes } = schema;
 
-function makeCreateParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+type CreateBody = z.infer<typeof CreatePollBodySchema>;
+
+function makeCreateParams(overrides: Partial<CreateBody> = {}): CreateBody {
   return {
     encryptedData: testEncryptedDataBase64(),
     kind: "standard",
@@ -45,6 +49,7 @@ function makeCreateParams(overrides: Record<string, unknown> = {}): Record<strin
     maxVotesPerMember: 1,
     allowAbstain: false,
     allowVeto: false,
+    createdByMemberId: undefined,
     ...overrides,
   };
 }
@@ -54,7 +59,7 @@ describe("poll.service (PGlite integration)", () => {
   let db: PgliteDatabase<typeof schema>;
   let accountId: AccountId;
   let systemId: SystemId;
-  let memberId: string;
+  let memberId: MemberId;
   let auth: AuthContext;
 
   beforeAll(async () => {
@@ -65,7 +70,7 @@ describe("poll.service (PGlite integration)", () => {
     accountId = brandId<AccountId>(await pgInsertAccount(db));
     systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     const memId = `mem_${crypto.randomUUID()}`;
-    memberId = await pgInsertMember(db, systemId, memId);
+    memberId = brandId<MemberId>(await pgInsertMember(db, systemId, memId));
     auth = makeAuth(accountId, systemId);
   });
 

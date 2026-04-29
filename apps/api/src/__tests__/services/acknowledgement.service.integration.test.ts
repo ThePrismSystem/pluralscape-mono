@@ -35,14 +35,19 @@ import {
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, MemberId, SystemId } from "@pluralscape/types";
+import type { CreateAcknowledgementBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { z } from "zod/v4";
 
 const { acknowledgements } = schema;
 
-function makeCreateParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+type CreateBody = z.infer<typeof CreateAcknowledgementBodySchema>;
+
+function makeCreateParams(overrides: Partial<CreateBody> = {}): CreateBody {
   return {
     encryptedData: testEncryptedDataBase64(),
+    createdByMemberId: undefined,
     ...overrides,
   };
 }
@@ -52,7 +57,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
   let db: PgliteDatabase<typeof schema>;
   let accountId: AccountId;
   let systemId: SystemId;
-  let memberId: string;
+  let memberId: MemberId;
   let auth: AuthContext;
 
   beforeAll(async () => {
@@ -63,7 +68,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
     accountId = brandId<AccountId>(await pgInsertAccount(db));
     systemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
     const memId = `mem_${crypto.randomUUID()}`;
-    memberId = await pgInsertMember(db, systemId, memId);
+    memberId = brandId<MemberId>(await pgInsertMember(db, systemId, memId));
     auth = makeAuth(accountId, systemId);
   });
 

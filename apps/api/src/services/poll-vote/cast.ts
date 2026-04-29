@@ -1,12 +1,10 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { CastVoteBodySchema } from "@pluralscape/validation";
 import { and, count, eq, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -27,27 +25,23 @@ import type {
   SystemId,
   SystemStructureEntityId,
 } from "@pluralscape/types";
+import type { CastVoteBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function castVote(
   db: PostgresJsDatabase,
   systemId: SystemId,
   pollId: PollId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CastVoteBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<PollVoteResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CastVoteBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // 1. Fetch the poll (FOR UPDATE to serialize concurrent vote casts)
     const [poll] = await tx
       .select()
       .from(polls)
@@ -59,18 +53,15 @@ export async function castVote(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
     }
 
-    // 2. Check poll is open
     if (poll.status === POLL_STATUS_CLOSED) {
       throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
     }
 
-    // 2b. Check time-based expiry
     if (poll.endsAt !== null && now() >= poll.endsAt) {
       throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll has ended");
     }
 
-    // 3. Abstain check
-    const optionId = parsed.optionId;
+    const optionId = body.optionId;
     if (optionId === null && !poll.allowAbstain) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
@@ -79,8 +70,7 @@ export async function castVote(
       );
     }
 
-    // 4. Veto check
-    if (parsed.isVeto && !poll.allowVeto) {
+    if (body.isVeto && !poll.allowVeto) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "VETO_NOT_ALLOWED",
@@ -88,10 +78,9 @@ export async function castVote(
       );
     }
 
-    // 5. Cooperative enforcement: count existing votes by this voter
     const voter: EntityReference<"member" | "structure-entity"> = {
-      entityType: parsed.voter.entityType,
-      entityId: brandId<MemberId | SystemStructureEntityId>(parsed.voter.entityId),
+      entityType: body.voter.entityType,
+      entityId: brandId<MemberId | SystemStructureEntityId>(body.voter.entityId),
     };
     const [voteCountResult] = await tx
       .select({ count: count() })
@@ -114,7 +103,6 @@ export async function castVote(
       );
     }
 
-    // 6. Insert the vote
     const voteId = brandId<PollVoteId>(createId(ID_PREFIXES.pollVote));
     const brandedOptionId = optionId === null ? null : brandId<PollOptionId>(optionId);
     const timestamp = now();
@@ -127,7 +115,7 @@ export async function castVote(
         systemId,
         optionId: brandedOptionId,
         voter,
-        isVeto: parsed.isVeto,
+        isVeto: body.isVeto,
         votedAt: timestamp,
         encryptedData: blob,
         createdAt: timestamp,
@@ -139,20 +127,17 @@ export async function castVote(
       throw new Error("Failed to cast vote — INSERT returned no rows");
     }
 
-    // 7. Audit
     await audit(tx, {
-      eventType: parsed.isVeto ? "poll-vote.vetoed" : "poll-vote.cast",
+      eventType: body.isVeto ? "poll-vote.vetoed" : "poll-vote.cast",
       actor: { kind: "account", id: auth.accountId },
-      detail: parsed.isVeto ? "Poll vote vetoed" : "Poll vote cast",
+      detail: body.isVeto ? "Poll vote vetoed" : "Poll vote cast",
       systemId,
     });
     const result = toVoteResult(row);
-    await dispatchWebhookEvent(
-      tx,
-      systemId,
-      parsed.isVeto ? "poll-vote.vetoed" : "poll-vote.cast",
-      { pollId: pollId, voteId: result.id },
-    );
+    await dispatchWebhookEvent(tx, systemId, body.isVeto ? "poll-vote.vetoed" : "poll-vote.cast", {
+      pollId: pollId,
+      voteId: result.id,
+    });
 
     return result;
   });

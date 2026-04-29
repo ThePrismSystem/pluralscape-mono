@@ -1,12 +1,10 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
 import { brandId, now } from "@pluralscape/types";
-import { UpdatePollVoteBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
-// eslint-disable-next-line pluralscape/no-params-unknown
-import { parseAndValidateBlob } from "../../lib/encrypted-blob.js";
+import { validateEncryptedBlob } from "../../lib/encrypted-blob.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
 import { tenantCtx } from "../../lib/tenant-context.js";
@@ -19,28 +17,24 @@ import type { PollVoteResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { PollId, PollOptionId, PollVoteId, SystemId } from "@pluralscape/types";
+import type { UpdatePollVoteBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updatePollVote(
   db: PostgresJsDatabase,
   systemId: SystemId,
   pollId: PollId,
   voteId: PollVoteId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdatePollVoteBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<PollVoteResult> {
   assertSystemOwnership(systemId, auth);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdatePollVoteBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  const blob = validateEncryptedBlob(body.encryptedData, MAX_ENCRYPTED_DATA_BYTES);
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Fetch the vote with row lock for OCC
     const [existing] = await tx
       .select()
       .from(pollVotes)
@@ -59,7 +53,6 @@ export async function updatePollVote(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll vote not found");
     }
 
-    // Verify the parent poll is still open
     const [poll] = await tx
       .select()
       .from(polls)
@@ -78,8 +71,7 @@ export async function updatePollVote(
       throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll has ended");
     }
 
-    // Veto check
-    if (parsed.isVeto === true && !poll.allowVeto) {
+    if (body.isVeto === true && !poll.allowVeto) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "VETO_NOT_ALLOWED",
@@ -87,8 +79,7 @@ export async function updatePollVote(
       );
     }
 
-    // Abstain check
-    if (parsed.optionId === null && !poll.allowAbstain) {
+    if (body.optionId === null && !poll.allowAbstain) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "ABSTAIN_NOT_ALLOWED",
@@ -100,8 +91,8 @@ export async function updatePollVote(
     const [updated] = await tx
       .update(pollVotes)
       .set({
-        optionId: parsed.optionId === null ? null : brandId<PollOptionId>(parsed.optionId),
-        isVeto: parsed.isVeto ?? existing.isVeto,
+        optionId: body.optionId === null ? null : brandId<PollOptionId>(body.optionId),
+        isVeto: body.isVeto ?? existing.isVeto,
         encryptedData: blob,
         votedAt: timestamp,
       })

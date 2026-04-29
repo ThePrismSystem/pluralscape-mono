@@ -178,6 +178,7 @@ describe("concurrent guard semantics", () => {
         {
           encryptedData: testEncryptedDataBase64(),
           kind: "standard",
+          createdByMemberId: undefined,
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
           allowAbstain: false,
@@ -187,11 +188,11 @@ describe("concurrent guard semantics", () => {
         noopAudit,
       );
 
-      const voter: z.input<typeof CastVoteBodySchema>["voter"] = {
+      const voter: z.infer<typeof CastVoteBodySchema>["voter"] = {
         entityType: "member",
         entityId: memberId,
       };
-      const voteParams = (): z.input<typeof CastVoteBodySchema> => ({
+      const voteParams = (): z.infer<typeof CastVoteBodySchema> => ({
         encryptedData: testEncryptedDataBase64(),
         voter,
         // Distinct optionIds — irrelevant to the per-voter cap, but proves

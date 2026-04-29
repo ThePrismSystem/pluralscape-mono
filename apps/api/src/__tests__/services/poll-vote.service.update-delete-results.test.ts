@@ -269,14 +269,6 @@ describe("updatePollVote", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "ABSTAIN_NOT_ALLOWED" }));
   });
 
-  it("throws VALIDATION_ERROR for invalid payload", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      updatePollVote(db, SYSTEM_ID, POLL_ID, VOTE_ID, { bad: true }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-  });
-
   it("throws internal error when UPDATE returns no rows", async () => {
     const { db, chain } = mockDb();
     mockUpdateVoteChain(chain, [makeVoteRow()], [makePollRow()]);
