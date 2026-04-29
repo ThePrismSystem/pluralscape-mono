@@ -52,7 +52,7 @@ const PHOTO_RESULT = {
   archivedAt: null,
 };
 
-const VALID_BODY = { order: [PHOTO_ID] };
+const VALID_BODY = { order: [{ id: PHOTO_ID, sortOrder: 0 }] };
 const REORDER_PATH = `/systems/${SYS_ID}/members/${MEM_ID}/photos/reorder`;
 
 // ── Tests ────────────────────────────────────────────────────────
