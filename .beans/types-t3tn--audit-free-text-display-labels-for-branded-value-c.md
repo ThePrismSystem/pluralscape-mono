@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: low
 created_at: 2026-04-27T04:54:10Z
-updated_at: 2026-04-27T21:26:15Z
+updated_at: 2026-04-29T09:39:41Z
 parent: ps-cd6x
 ---
 
@@ -13,17 +13,6 @@ Per types-yxgc spec (2026-04-26): inventory remaining free-text fields across th
 
 ## Summary of Changes
 
-Audit document at docs/local-audits/2026-04-27-free-text-label-brand-audit.md
-covering 33 candidate fields across packages/types/src/entities/ outside the
-lifecycle-event scope (types-yxgc) and Member/Group/Channel name (types-f3fk).
+Audit completed: 33 candidate fields surveyed across packages/types/src/entities/ outside the lifecycle-event scope (types-yxgc) and Member/Group/Channel name (types-f3fk).
 
-Decisions: 5 brand candidates filed as follow-up beans (types-gkhk, types-e6n9,
-types-cdr5, types-x37g, types-09m5), 9 don't-brand singletons with one-line
-rationale, 3 deferred clusters (EntityDescription cluster, System.name vs
-displayName, NotificationPayload templating). Two clusters (CustomFront.name +
-the entity-display-names cluster) folded into types-f3fk's scope rather than
-filing separate beans, plus two design questions (EntityDescription strategy,
-System.name vs displayName) folded into types-f3fk for resolution before any
-description / system-name follow-ups are filed.
-
-See audit doc for the full table.
+Decisions: 5 brand candidates filed as follow-up beans (types-gkhk, types-e6n9, types-cdr5, types-x37g, types-09m5), 9 don't-brand singletons with one-line rationale, 3 deferred clusters (EntityDescription cluster, System.name vs displayName, NotificationPayload templating). Two clusters (CustomFront.name + the entity-display-names cluster) folded into types-f3fk's scope rather than filing separate beans, plus two design questions (EntityDescription strategy, System.name vs displayName) folded into types-f3fk for resolution before any description / system-name follow-ups are filed.

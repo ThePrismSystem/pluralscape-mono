@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-29T08:41:51Z
-updated_at: 2026-04-29T09:37:12Z
+updated_at: 2026-04-29T09:39:43Z
 parent: ps-cd6x
 ---
 
@@ -76,6 +76,6 @@ Added expectTypeOf brand assertions for Note/Poll/FieldDefinition mirroring the 
 
 ### Commit 8 (this commit)
 
-Removed all references to docs/local-audits/2026-04-27-free-text-label-brand-audit.md from packages/types/src/value-types.ts (6 sites) and from the 4 brand-task bean bodies (types-cdr5, types-09m5, types-e6n9, types-gkhk). Replaced audit-citing preambles with self-contained one-line rationale text. Aligned peer brand JSDoc (NoteContent, PollOptionLabel, FrontingSessionPositionality, FrontingSessionOuttrigger) to the existing LifecycleEventName one-line peer-delegation precedent. Fixed PollTitle grammar ambiguity. Named FieldDefinition's same-entity peer (description) explicitly. Verified zero local-audits references remain in packages/, .beans/, apps/.
+Removed all local-audit path references from packages/types/src/value-types.ts (6 sites) and from the 4 brand-task bean bodies (types-cdr5, types-09m5, types-e6n9, types-gkhk). Replaced audit-citing preambles with self-contained one-line rationale text. Aligned peer brand JSDoc (NoteContent, PollOptionLabel, FrontingSessionPositionality, FrontingSessionOuttrigger) to the existing LifecycleEventName one-line peer-delegation precedent. Fixed PollTitle grammar ambiguity. Named FieldDefinition's same-entity peer (description) explicitly. Verified zero local-audits references remain in packages/, .beans/, apps/.
 
 Verification: format, lint, typecheck, types:check-sot, unit (13204 passed), integration (3063 passed), e2e (509 passed) all green.
