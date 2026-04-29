@@ -7,7 +7,10 @@ import type { NotificationConfigWire, NotificationEventType } from "@pluralscape
 const NOW = 1_700_000_000_000;
 const LATER = 1_700_002_000_000;
 
-function makeLiveRaw(overrides?: Partial<NotificationConfigWire>): NotificationConfigWire {
+type LiveWire = Extract<NotificationConfigWire, { archived: false }>;
+type ArchivedWire = Extract<NotificationConfigWire, { archived: true }>;
+
+function makeLiveRaw(overrides?: Partial<LiveWire>): LiveWire {
   return {
     id: "nc_test0001",
     systemId: "sys_test001",
@@ -19,10 +22,10 @@ function makeLiveRaw(overrides?: Partial<NotificationConfigWire>): NotificationC
     updatedAt: NOW,
     archived: false,
     ...overrides,
-  } as NotificationConfigWire;
+  };
 }
 
-function makeArchivedRaw(): NotificationConfigWire {
+function makeArchivedRaw(): ArchivedWire {
   return {
     id: "nc_test0001",
     systemId: "sys_test001",
@@ -34,7 +37,7 @@ function makeArchivedRaw(): NotificationConfigWire {
     updatedAt: NOW,
     archived: true,
     archivedAt: LATER,
-  } as NotificationConfigWire;
+  };
 }
 
 describe("narrowNotificationConfig", () => {
