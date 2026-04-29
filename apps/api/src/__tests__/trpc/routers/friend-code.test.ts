@@ -45,7 +45,7 @@ const MOCK_CODE_RESULT = {
   code: "ABCD-EFGH",
   createdAt: 1_700_000_000_000 as UnixMillis,
   expiresAt: null,
-  archived: false,
+  archived: false as const,
 };
 
 describe("friendCode router", () => {

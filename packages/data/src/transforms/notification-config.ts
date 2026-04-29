@@ -1,7 +1,7 @@
 import { brandId, toUnixMillis } from "@pluralscape/types";
 
 import type {
-  Archived,
+  Archivable,
   NotificationConfig,
   NotificationConfigId,
   NotificationConfigWire,
@@ -17,7 +17,7 @@ export interface NotificationConfigPage {
 /** Narrow a wire notification config; re-brands stripped IDs/timestamps. */
 export function narrowNotificationConfig(
   raw: NotificationConfigWire,
-): NotificationConfig | Archived<NotificationConfig> {
+): Archivable<NotificationConfig> {
   const base = {
     id: brandId<NotificationConfigId>(raw.id),
     systemId: brandId<SystemId>(raw.systemId),
@@ -30,15 +30,20 @@ export function narrowNotificationConfig(
   };
 
   if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived notificationConfig missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
+    // Defensive: the discriminated wire type prevents this construction in honest
+    // TypeScript; the widening cast lets us guard against malformed runtime input.
+    const archivedAt = raw.archivedAt as number | null;
+    if (archivedAt === null) {
+      throw new Error("Archived notificationConfig missing archivedAt");
+    }
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
 /** Narrow a paginated notification config list. */
 export function narrowNotificationConfigPage(raw: NotificationConfigPage): {
-  data: (NotificationConfig | Archived<NotificationConfig>)[];
+  data: Archivable<NotificationConfig>[];
   nextCursor: string | null;
 } {
   return {

@@ -2,6 +2,7 @@ import { notificationConfigs } from "@pluralscape/db/pg";
 import { brandId, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
+import { narrowArchivableRow } from "../lib/archivable-row.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -12,8 +13,10 @@ import { invalidateSwitchAlertConfigCache } from "./switch-alert-dispatcher.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  Archivable,
   AuditEventType,
   FriendNotificationEventType,
+  NotificationConfig,
   NotificationConfigId,
   NotificationEventType,
   SystemId,
@@ -55,23 +58,17 @@ export interface NotificationConfigResult {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function toNotificationConfigResult(row: {
-  id: string;
-  systemId: string;
-  eventType: NotificationEventType;
-  enabled: boolean;
-  pushEnabled: boolean;
-  createdAt: number;
-  updatedAt: number;
-}): NotificationConfigResult {
+function toNotificationConfigResult(
+  config: Archivable<NotificationConfig>,
+): NotificationConfigResult {
   return {
-    id: brandId<NotificationConfigId>(row.id),
-    systemId: brandId<SystemId>(row.systemId),
-    eventType: row.eventType,
-    enabled: row.enabled,
-    pushEnabled: row.pushEnabled,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    id: config.id,
+    systemId: config.systemId,
+    eventType: config.eventType,
+    enabled: config.enabled,
+    pushEnabled: config.pushEnabled,
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
   };
 }
 
@@ -112,7 +109,7 @@ async function insertNotificationConfig(
     throw new Error("Notification config insert returned no rows");
   }
 
-  return toNotificationConfigResult(created);
+  return toNotificationConfigResult(narrowArchivableRow<NotificationConfig>(created));
 }
 
 // ── Service functions ────────────────────────────────────────────────
@@ -144,7 +141,7 @@ export async function getOrCreateNotificationConfig(
       .limit(1);
 
     if (existing) {
-      return toNotificationConfigResult(existing);
+      return toNotificationConfigResult(narrowArchivableRow<NotificationConfig>(existing));
     }
 
     return insertNotificationConfig(tx, systemId, eventType);
@@ -211,7 +208,7 @@ export async function updateNotificationConfig(
       systemId,
     });
 
-    return toNotificationConfigResult(updated);
+    return toNotificationConfigResult(narrowArchivableRow<NotificationConfig>(updated));
   });
 
   if (isFriendNotificationEventType(eventType)) {
@@ -237,6 +234,8 @@ export async function listNotificationConfigs(
       )
       .limit(MAX_PAGE_LIMIT);
 
-    return rows.map(toNotificationConfigResult);
+    return rows.map((row) =>
+      toNotificationConfigResult(narrowArchivableRow<NotificationConfig>(row)),
+    );
   });
 }

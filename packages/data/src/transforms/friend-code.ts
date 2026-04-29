@@ -2,7 +2,7 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import type {
   AccountId,
-  Archived,
+  Archivable,
   FriendCode,
   FriendCodeId,
   FriendCodeWire,
@@ -15,7 +15,7 @@ export interface FriendCodePage {
 }
 
 /** Narrow a wire friend code; re-brands stripped IDs/timestamps. */
-export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<FriendCode> {
+export function narrowFriendCode(raw: FriendCodeWire): Archivable<FriendCode> {
   const base = {
     id: brandId<FriendCodeId>(raw.id),
     accountId: brandId<AccountId>(raw.accountId),
@@ -25,15 +25,20 @@ export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<Fri
   };
 
   if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived friendCode missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
+    // Defensive: the discriminated wire type prevents this construction in honest
+    // TypeScript; the widening cast lets us guard against malformed runtime input.
+    const archivedAt = raw.archivedAt as number | null;
+    if (archivedAt === null) {
+      throw new Error("Archived friendCode missing archivedAt");
+    }
+    return { ...base, archived: true as const, archivedAt: toUnixMillis(archivedAt) };
   }
   return { ...base, archived: false as const };
 }
 
 /** Narrow a paginated friend code list. */
 export function narrowFriendCodePage(raw: FriendCodePage): {
-  data: (FriendCode | Archived<FriendCode>)[];
+  data: Archivable<FriendCode>[];
   nextCursor: string | null;
 } {
   return {

@@ -8,7 +8,10 @@ const NOW = 1_700_000_000_000;
 const LATER = 1_700_002_000_000;
 const EXPIRES = 1_700_086_400_000;
 
-function makeRaw(overrides?: Partial<FriendCodeWire>): FriendCodeWire {
+type LiveWire = Extract<FriendCodeWire, { archived: false }>;
+type ArchivedWire = Extract<FriendCodeWire, { archived: true }>;
+
+function makeLiveRaw(overrides?: Partial<LiveWire>): LiveWire {
   return {
     id: "fcd_test001",
     accountId: "acc_test001",
@@ -16,14 +19,25 @@ function makeRaw(overrides?: Partial<FriendCodeWire>): FriendCodeWire {
     createdAt: NOW,
     expiresAt: EXPIRES,
     archived: false,
-    archivedAt: null,
     ...overrides,
+  };
+}
+
+function makeArchivedRaw(): ArchivedWire {
+  return {
+    id: "fcd_test001",
+    accountId: "acc_test001",
+    code: "ABCD-1234",
+    createdAt: NOW,
+    expiresAt: EXPIRES,
+    archived: true,
+    archivedAt: LATER,
   };
 }
 
 describe("narrowFriendCode", () => {
   it("returns live entity with archived: false", () => {
-    const result = narrowFriendCode(makeRaw());
+    const result = narrowFriendCode(makeLiveRaw());
     expect(result.archived).toBe(false);
     expect(result.id).toBe("fcd_test001");
     expect(result.accountId).toBe("acc_test001");
@@ -33,28 +47,21 @@ describe("narrowFriendCode", () => {
   });
 
   it("returns archived entity with archivedAt", () => {
-    const result = narrowFriendCode(makeRaw({ archived: true, archivedAt: LATER }));
+    const result = narrowFriendCode(makeArchivedRaw());
     expect(result.archived).toBe(true);
-    if (result.archived) {
-      expect(result.archivedAt).toBe(LATER);
-    }
-  });
-
-  it("throws when archived=true but archivedAt is null", () => {
-    expect(() => narrowFriendCode(makeRaw({ archived: true, archivedAt: null }))).toThrow(
-      "missing archivedAt",
-    );
+    if (!result.archived) throw new Error("expected archived=true");
+    expect(result.archivedAt).toBe(LATER);
   });
 
   it("handles null expiresAt (non-expiring code)", () => {
-    const result = narrowFriendCode(makeRaw({ expiresAt: null }));
+    const result = narrowFriendCode(makeLiveRaw({ expiresAt: null }));
     expect(result.expiresAt).toBeNull();
   });
 });
 
 describe("narrowFriendCodePage", () => {
   it("narrows all items and preserves cursor", () => {
-    const page = { data: [makeRaw(), makeRaw()], nextCursor: "cursor_abc" };
+    const page = { data: [makeLiveRaw(), makeLiveRaw()], nextCursor: "cursor_abc" };
     const result = narrowFriendCodePage(page);
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("cursor_abc");

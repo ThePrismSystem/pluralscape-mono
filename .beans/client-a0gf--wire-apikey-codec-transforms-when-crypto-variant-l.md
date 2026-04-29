@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-27T19:00:01Z
-updated_at: 2026-04-28T18:45:41Z
+updated_at: 2026-04-29T00:01:32Z
 parent: ps-cd6x
 ---
 
@@ -41,3 +41,12 @@ When the crypto-variant work picks up:
 - Added unit tests for withDecodedApiKeyPayload (crypto/metadata variants + field preservation)
 - Added E2E test exercising full crypto-variant publicKey encrypt-on-create → decrypt-on-list flow
 - pnpm trpc:parity and pnpm types:check-sot pass
+
+## Summary of Changes
+
+Shipped in PR #583 (commit 6db1cd54, merged 2026-04-28):
+
+- `apps/api/src/services/api-key/internal.ts:35,50,65,77` — `apiKey.list` and `apiKey.get` project `encryptedData` via `encryptedBlobToBase64`.
+- `packages/data/src/transforms/api-key-helpers.ts` — new `withDecodedApiKeyPayload(apiKey, masterKey)` helper wrapping `decryptApiKeyPayload`.
+- E2E test exercises the crypto-variant publicKey encrypt-on-create -> list -> decrypt round-trip.
+- Mobile UI consumption is gated on future ApiKey crypto-variant screens — not in scope here.

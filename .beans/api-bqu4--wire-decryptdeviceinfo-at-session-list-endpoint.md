@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-27T18:59:53Z
-updated_at: 2026-04-28T17:55:43Z
+updated_at: 2026-04-29T00:01:28Z
 parent: ps-cd6x
 ---
 
@@ -37,3 +37,12 @@ Landed in `types-emid` (PR #579) as part of pre-release data-layer scaffolding. 
 - Added unit test for withDecryptedDeviceInfo (present + null cases)
 - Added E2E contract test asserting encryptedData field is exposed on session list
 - pnpm trpc:parity and pnpm types:check-sot pass
+
+## Summary of Changes
+
+Shipped in PR #583 (commit 1dd16910, merged 2026-04-28):
+
+- `apps/api/src/services/auth/sessions.ts:28,59,73` — `listSessions` now projects `encryptedData` via `encryptedBlobToBase64OrNull`.
+- `packages/data/src/transforms/session-helpers.ts` — new `withDecryptedDeviceInfo(session, masterKey)` helper using the `decryptDeviceInfo` codec from `transforms/session.ts`.
+- OpenAPI / tRPC contracts emit the field; integration + E2E tests cover the round-trip.
+- Mobile UI consumption is gated on the future session-list screen — not in scope here.

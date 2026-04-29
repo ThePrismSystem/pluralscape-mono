@@ -52,6 +52,17 @@ export type Archived<T extends { readonly archived: false }> = T extends {
   ? Omit<T, "archived"> & { readonly archived: true; readonly archivedAt: UnixMillis }
   : never;
 
+/**
+ * The discriminated union of an archivable entity in either the live or
+ * archived state.
+ *
+ * Pairs with `Archived<T>` to encode the database CHECK invariant
+ * `(archived = true) = (archived_at IS NOT NULL)` directly in the type
+ * system. Use `narrowArchivableRow` (apps/api/src/lib/archivable-row.ts)
+ * to convert flat Drizzle rows into this shape at the read boundary.
+ */
+export type Archivable<T extends { readonly archived: false }> = T | Archived<T>;
+
 /** Sort direction for queries. */
 export type SortDirection = "asc" | "desc";
 

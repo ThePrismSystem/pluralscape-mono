@@ -3,13 +3,14 @@ import { brandId } from "@pluralscape/types";
 import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 
 import { assertAccountOwnership } from "../../../lib/account-ownership.js";
+import { narrowArchivableRow } from "../../../lib/archivable-row.js";
 import { buildPaginatedResult } from "../../../lib/pagination.js";
 import { withAccountRead } from "../../../lib/rls-context.js";
 
-import { toFriendCodeResult, type FriendCodeResult } from "./internal.js";
+import { type FriendCodeResult } from "./internal.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { AccountId, FriendCodeId, PaginatedResult } from "@pluralscape/types";
+import type { AccountId, FriendCode, FriendCodeId, PaginatedResult } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Default page size for friend code listing. */
@@ -54,6 +55,8 @@ export async function listFriendCodes(
       .orderBy(desc(friendCodes.id))
       .limit(effectiveLimit + 1);
 
-    return buildPaginatedResult(rows, effectiveLimit, toFriendCodeResult);
+    return buildPaginatedResult(rows, effectiveLimit, (row) =>
+      narrowArchivableRow<FriendCode>(row),
+    );
   });
 }

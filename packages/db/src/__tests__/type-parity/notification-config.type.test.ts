@@ -1,29 +1,35 @@
 /**
- * Drizzle parity check: the NotificationConfig row shape inferred from
- * the `notification_configs` table structurally matches
- * `NotificationConfigServerMetadata` in @pluralscape/types.
+ * Drizzle parity check for `notification_configs`.
  *
- * Plaintext entity — relaxes the domain's `archived: false` literal to
- * the raw boolean column and adds the nullable `archivedAt` that the
- * archivable-consistency check requires. See `member.type.test.ts` for
- * the general rationale behind the brand-stripped comparison.
+ * The Drizzle row is structurally flat (`archived: boolean`, `archivedAt:
+ * UnixMillis | null`). The application-facing
+ * `NotificationConfigServerMetadata` is the discriminated `Archivable<>`
+ * union. This file pins the flat row shape against a locally-defined
+ * `Row` type so the assertion is independent of any public type changes.
+ * See ADR-023 § Archivable plaintext entities for the convention.
  */
 
 import { describe, expectTypeOf, it } from "vitest";
 
 import { notificationConfigs } from "../../schema/pg/notifications.js";
 
-import type { Equal, NotificationConfigServerMetadata } from "@pluralscape/types";
+import type { Equal, NotificationConfig, UnixMillis } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
+/** Flat shape of the `notification_configs` Drizzle row — local to this parity test. */
+type NotificationConfigServerMetadataRow = Omit<NotificationConfig, "archived"> & {
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
 describe("NotificationConfig Drizzle parity", () => {
-  it("notification_configs Drizzle row has the same property keys as NotificationConfigServerMetadata", () => {
+  it("notification_configs Drizzle row has the same property keys as the flat row helper", () => {
     type Row = InferSelectModel<typeof notificationConfigs>;
-    expectTypeOf<keyof Row>().toEqualTypeOf<keyof NotificationConfigServerMetadata>();
+    expectTypeOf<keyof Row>().toEqualTypeOf<keyof NotificationConfigServerMetadataRow>();
   });
 
-  it("notification_configs Drizzle row equals NotificationConfigServerMetadata", () => {
+  it("notification_configs Drizzle row equals the flat row helper", () => {
     type Row = InferSelectModel<typeof notificationConfigs>;
-    expectTypeOf<Equal<Row, NotificationConfigServerMetadata>>().toEqualTypeOf<true>();
+    expectTypeOf<Equal<Row, NotificationConfigServerMetadataRow>>().toEqualTypeOf<true>();
   });
 });

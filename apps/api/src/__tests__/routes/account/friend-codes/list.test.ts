@@ -42,7 +42,7 @@ const MOCK_CODE = {
   code: "ABCD-1234",
   createdAt: 1000 as never,
   expiresAt: null,
-  archived: false,
+  archived: false as const,
 };
 
 // ── Tests ────────────────────────────────────────────────────────

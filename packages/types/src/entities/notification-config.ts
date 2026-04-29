@@ -1,7 +1,7 @@
 import type { NotificationConfigId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
-import type { Archived, AuditMetadata } from "../utility.js";
+import type { Archivable, Archived, AuditMetadata } from "../utility.js";
 
 /** Events that can trigger a notification. */
 export type NotificationEventType =
@@ -12,7 +12,7 @@ export type NotificationEventType =
   | "sync-conflict"
   | "friend-switch-alert";
 
-/** Per-event notification configuration. */
+/** Per-event notification configuration (live state). */
 export interface NotificationConfig extends AuditMetadata {
   readonly id: NotificationConfigId;
   readonly systemId: SystemId;
@@ -26,18 +26,23 @@ export interface NotificationConfig extends AuditMetadata {
 export type ArchivedNotificationConfig = Archived<NotificationConfig>;
 
 /**
- * Server-visible NotificationConfig metadata — raw Drizzle row shape.
+ * Server-visible NotificationConfig metadata.
  *
- * Plaintext entity. Relaxes the domain's `archived: false` literal to the
- * raw boolean column and adds the nullable `archivedAt` that the
- * archivable-consistency check requires.
+ * Discriminated union of the live and archived shapes — the database CHECK
+ * invariant `(archived = true) = (archived_at IS NOT NULL)` is encoded in
+ * the type system here. Produced from a flat Drizzle row at the read boundary
+ * by `narrowArchivableRow` (apps/api/src/lib/archivable-row.ts).
  */
-export type NotificationConfigServerMetadata = Omit<NotificationConfig, "archived"> & {
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-};
+export type NotificationConfigServerMetadata = Archivable<NotificationConfig>;
 
-/** JSON-wire NotificationConfig (live or archived). Branded IDs and UnixMillis get stripped at the wire boundary. */
+/**
+ * JSON-wire NotificationConfig (live or archived) — discriminated.
+ *
+ * `Serialize` distributes over the underlying union, so this type is the
+ * discriminated wire union: `Serialize<NotificationConfig> |
+ * Serialize<Archived<NotificationConfig>>`. Branded IDs and `UnixMillis`
+ * are stripped at the wire boundary.
+ */
 export type NotificationConfigWire = Serialize<NotificationConfigServerMetadata>;
 
 /** A notification payload ready for delivery. */

@@ -1,24 +1,13 @@
-import { friendCodes } from "@pluralscape/db/pg";
-import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import type { Archivable, FriendCode } from "@pluralscape/types";
 
-import type { AccountId, FriendCodeId, UnixMillis } from "@pluralscape/types";
-
-export interface FriendCodeResult {
-  readonly id: FriendCodeId;
-  readonly accountId: AccountId;
-  readonly code: string;
-  readonly createdAt: UnixMillis;
-  readonly expiresAt: UnixMillis | null;
-  readonly archived: boolean;
-}
-
-export function toFriendCodeResult(row: typeof friendCodes.$inferSelect): FriendCodeResult {
-  return {
-    id: brandId<FriendCodeId>(row.id),
-    accountId: brandId<AccountId>(row.accountId),
-    code: row.code,
-    createdAt: toUnixMillis(row.createdAt),
-    expiresAt: toUnixMillisOrNull(row.expiresAt),
-    archived: row.archived,
-  };
-}
+/**
+ * Service-layer result type for FriendCode reads.
+ *
+ * Aliased to `Archivable<FriendCode>` after PR #585 — the prior projection
+ * mapper (`toFriendCodeResult`) became an identity function once the entity
+ * adopted the discriminated `Archivable<T>` chain, so it was removed in
+ * favor of pass-through. Callers receive the discriminated union directly
+ * and can narrow on `archived` to access `archivedAt` on the archived
+ * branch.
+ */
+export type FriendCodeResult = Archivable<FriendCode>;
