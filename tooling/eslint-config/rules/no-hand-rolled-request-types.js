@@ -14,16 +14,11 @@
 const REJECTED_BODY_CREDS_PARAMS_ARGS = /^[A-Z]\w*(Body|Credentials|Params|Args)$/;
 const REJECTED_BARE_INPUT = /^[A-Z]\w*(?<!Encrypted)Input$/;
 
-// Allow-list (G8 soft mode — emptied in Task 21 of the ps-6phh plan / G8 strict).
-// These are temporary, NOT a backwards-compat shim. Once the corresponding
-// Zod schemas in `@pluralscape/validation` replace these as the source of truth,
-// the entries are removed and the strict-mode regression test in
-// `tooling/eslint-config/rules/__tests__/` asserts the array is literally `[]`.
-const ALLOW_LIST = new Set([
-  "LoginCredentials",
-  "RegistrationInitiateInput",
-  "RegistrationCommitInput",
-]);
+// Allow-list — empty (G8 strict, Task 21 of ps-6phh). Drift recurrence
+// requires bypassing CI: the regression test in
+// `tooling/eslint-config/rules/__tests__/allow-lists-empty.test.js`
+// asserts this set is literally empty (Task 23).
+const ALLOW_LIST = new Set([]);
 
 export default {
   meta: {

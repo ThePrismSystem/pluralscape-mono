@@ -22,33 +22,6 @@ export interface Account extends AuditMetadata {
   readonly encryptedMasterKey: Uint8Array;
 }
 
-/** Input type for login. */
-export interface LoginCredentials {
-  readonly email: string;
-  readonly authKey: string;
-}
-
-/** Input for registration phase 1: initiate. */
-export interface RegistrationInitiateInput {
-  readonly email: string;
-  readonly accountType: AccountType;
-}
-
-/** Input for registration phase 2: commit. */
-export interface RegistrationCommitInput {
-  readonly accountId: string;
-  readonly authKey: string;
-  readonly encryptedMasterKey: string;
-  readonly encryptedSigningPrivateKey: string;
-  readonly encryptedEncryptionPrivateKey: string;
-  readonly publicSigningKey: string;
-  readonly publicEncryptionKey: string;
-  readonly recoveryEncryptedMasterKey: string;
-  readonly challengeSignature: string;
-  readonly recoveryKeyBackupConfirmed: boolean;
-  readonly recoveryKeyHash: string;
-}
-
 /**
  * Server-visible Account metadata — raw Drizzle row shape.
  *

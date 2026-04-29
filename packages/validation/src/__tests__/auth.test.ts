@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   ChangeEmailSchema,
@@ -11,6 +11,8 @@ import {
   SaltFetchSchema,
   UpdateAccountSettingsSchema,
 } from "../auth.js";
+
+import type { z } from "zod/v4";
 
 // Valid hex strings of required lengths
 const AUTH_KEY = "a".repeat(64); // 32 bytes → 64 hex chars
@@ -589,5 +591,24 @@ describe("UpdateAccountSettingsSchema", () => {
       expect(result.data).toEqual({ auditLogIpTracking: false, version: 1 });
       expect("admin" in result.data).toBe(false);
     }
+  });
+});
+
+// ── Type-level parity for inferred request inputs ─────────────────────
+// Replaces the parity assertions previously held in
+// `packages/types/src/__tests__/auth.test.ts` against the hand-rolled
+// `LoginCredentials` interface (dropped in Task 21 of ps-6phh).
+
+describe("LoginSchema (z.infer parity)", () => {
+  type LoginCredentials = z.infer<typeof LoginSchema>;
+
+  it("has no id or timestamps", () => {
+    expectTypeOf<LoginCredentials>().not.toHaveProperty("id");
+    expectTypeOf<LoginCredentials>().not.toHaveProperty("createdAt");
+  });
+
+  it("has expected fields", () => {
+    expectTypeOf<LoginCredentials["email"]>().toEqualTypeOf<string>();
+    expectTypeOf<LoginCredentials["authKey"]>().toEqualTypeOf<string>();
   });
 });

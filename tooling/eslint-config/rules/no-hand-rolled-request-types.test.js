@@ -19,10 +19,6 @@ describe("no-hand-rolled-request-types", () => {
         { code: "export type MemberEncryptedFields = 'name' | 'pronouns';" },
         { code: "export type MemberEncryptedInput = Pick<Member, MemberEncryptedFields>;" },
         { code: "export interface DeviceInfo { platform: string; }" }, // whitelist
-        // Allow-listed soft-mode exceptions (Task 21 will remove these):
-        { code: "export interface LoginCredentials { email: string; }" },
-        { code: "export interface RegistrationInitiateInput { email: string; }" },
-        { code: "export interface RegistrationCommitInput { token: string; }" },
       ],
       invalid: [
         {
@@ -43,6 +39,19 @@ describe("no-hand-rolled-request-types", () => {
         },
         {
           code: "export type DeleteSystemArgs = { id: string };",
+          errors: [{ messageId: "rejectedSuffix" }],
+        },
+        // G8 strict: previously allow-listed names now fail.
+        {
+          code: "export interface LoginCredentials { email: string; }",
+          errors: [{ messageId: "rejectedSuffix" }],
+        },
+        {
+          code: "export interface RegistrationInitiateInput { email: string; }",
+          errors: [{ messageId: "rejectedSuffix" }],
+        },
+        {
+          code: "export interface RegistrationCommitInput { token: string; }",
           errors: [{ messageId: "rejectedSuffix" }],
         },
       ],
