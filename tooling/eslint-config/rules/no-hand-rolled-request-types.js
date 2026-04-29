@@ -21,6 +21,7 @@ const REJECTED_BARE_INPUT = /^[A-Z]\w*(?<!Encrypted)Input$/;
 const ALLOW_LIST = new Set([]);
 
 export default {
+  allowList: ALLOW_LIST,
   meta: {
     type: "problem",
     docs: {

@@ -5,14 +5,16 @@
 //    pattern (validation lives at the REST/tRPC boundary, not in services).
 //
 // 2. Imports of `parseAndValidateBlob` from `apps/api/src/lib/encrypted-blob.js` —
-//    the helper is being retired in Task 22 of the ps-6phh plan; canonical
-//    services use `validateEncryptedBlob(body.encryptedData, MAX)` instead.
+//    the helper was retired in Task 22 of the ps-6phh plan; canonical services
+//    use `validateEncryptedBlob(body.encryptedData, MAX)` instead.
 //
-// Lands in soft mode (every existing violation gets an inline
-// `// eslint-disable-next-line` comment). Cluster commits (Tasks 5-15)
-// remove those comments as services are converted. Task 22 retires the
-// helper and Task 23 asserts the disable-comment count is zero.
+// G9 strict (Task 22): allow-list is empty. The regression trap test in
+// `tooling/eslint-config/rules/__tests__/allow-lists-empty.test.js`
+// (Task 23) asserts this stays empty — drift requires bypassing CI.
+const ALLOW_LIST = new Set([]);
+
 export default {
+  allowList: ALLOW_LIST,
   meta: {
     type: "problem",
     docs: {

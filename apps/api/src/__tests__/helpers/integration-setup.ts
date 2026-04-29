@@ -66,7 +66,7 @@ export function asDb(db: PgliteDatabase<typeof schema>): PostgresJsDatabase {
 
 /**
  * Create a base64-encoded serialized EncryptedBlob suitable for service params.
- * This round-trips through the real blob codec so parseAndValidateBlob succeeds.
+ * This round-trips through the real blob codec so validateEncryptedBlob succeeds.
  */
 export function testEncryptedDataBase64(): string {
   const blob = testBlob();
