@@ -105,6 +105,9 @@ export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.j
 // ── Branded value types (non-ID display labels) ──────────────────
 export type {
   FieldDefinitionLabel,
+  FrontingSessionComment,
+  FrontingSessionOuttrigger,
+  FrontingSessionPositionality,
   LifecycleEventForm,
   LifecycleEventName,
   NoteContent,

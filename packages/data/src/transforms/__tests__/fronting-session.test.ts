@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { brandId } from "@pluralscape/types";
+import { brandId, brandValue } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -15,8 +15,11 @@ import { makeBase64Blob } from "./helpers.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   EncryptedBase64,
+  FrontingSessionComment,
   FrontingSessionEncryptedInput,
   FrontingSessionId,
+  FrontingSessionOuttrigger,
+  FrontingSessionPositionality,
   MemberId,
   PaginationCursor,
   SystemId,
@@ -41,9 +44,9 @@ function makeRawSession(
   }> = {},
 ) {
   const fields: FrontingSessionEncryptedInput = overrides.encryptedFields ?? {
-    comment: "feeling good",
-    positionality: "close",
-    outtrigger: "stress",
+    comment: brandValue<FrontingSessionComment>("feeling good"),
+    positionality: brandValue<FrontingSessionPositionality>("close"),
+    outtrigger: brandValue<FrontingSessionOuttrigger>("stress"),
     outtriggerSentiment: "negative",
   };
   return {
@@ -170,9 +173,9 @@ describe("decryptFrontingSessionPage", () => {
 describe("encryptFrontingSessionInput", () => {
   it("encrypts fields and returns encryptedData string", () => {
     const fields: FrontingSessionEncryptedInput = {
-      comment: "hello",
+      comment: brandValue<FrontingSessionComment>("hello"),
       positionality: null,
-      outtrigger: "joy",
+      outtrigger: brandValue<FrontingSessionOuttrigger>("joy"),
       outtriggerSentiment: "positive",
     };
     const result = encryptFrontingSessionInput(fields, masterKey);
@@ -183,8 +186,8 @@ describe("encryptFrontingSessionInput", () => {
 
   it("round-trips: encrypted data can be decrypted back", () => {
     const fields: FrontingSessionEncryptedInput = {
-      comment: "round-trip",
-      positionality: "far",
+      comment: brandValue<FrontingSessionComment>("round-trip"),
+      positionality: brandValue<FrontingSessionPositionality>("far"),
       outtrigger: null,
       outtriggerSentiment: null,
     };
@@ -202,7 +205,7 @@ describe("encryptFrontingSessionInput", () => {
 describe("encryptFrontingSessionUpdate", () => {
   it("encrypts fields and includes version", () => {
     const fields: FrontingSessionEncryptedInput = {
-      comment: "updated",
+      comment: brandValue<FrontingSessionComment>("updated"),
       positionality: null,
       outtrigger: null,
       outtriggerSentiment: null,
@@ -215,9 +218,9 @@ describe("encryptFrontingSessionUpdate", () => {
 
   it("round-trips: update data can be decrypted back", () => {
     const fields: FrontingSessionEncryptedInput = {
-      comment: "updated comment",
-      positionality: "very close",
-      outtrigger: "music",
+      comment: brandValue<FrontingSessionComment>("updated comment"),
+      positionality: brandValue<FrontingSessionPositionality>("very close"),
+      outtrigger: brandValue<FrontingSessionOuttrigger>("music"),
       outtriggerSentiment: "positive",
     };
     const { encryptedData, version } = encryptFrontingSessionUpdate(fields, 3, masterKey);

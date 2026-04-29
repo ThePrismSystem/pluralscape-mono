@@ -70,6 +70,36 @@ export type PollTitle = Brand<string, "PollTitle">;
  */
 export type PollOptionLabel = Brand<string, "PollOptionLabel">;
 
+/**
+ * Free-text user-supplied fronting-session status comment.
+ * Max 50 characters (runtime enforced separately). SP-compatible.
+ *
+ * Branded distinct from {@link FrontingSessionPositionality} and
+ * {@link FrontingSessionOuttrigger} — three same-entity peers all
+ * stored in the FrontingSession encrypted blob with concrete
+ * cross-field swap risk through shared fronting-rendering helpers.
+ * See docs/local-audits/2026-04-27-free-text-label-brand-audit.md.
+ */
+export type FrontingSessionComment = Brand<string, "FrontingSessionComment">;
+
+/**
+ * Free-text user-supplied fronting-session positionality (e.g. close
+ * vs far, height).
+ *
+ * Branded distinct from {@link FrontingSessionComment} and
+ * {@link FrontingSessionOuttrigger} (same-entity peers).
+ */
+export type FrontingSessionPositionality = Brand<string, "FrontingSessionPositionality">;
+
+/**
+ * Free-text user-supplied fronting-session outtrigger reason —
+ * what caused the fronting change. Stored in the T1 encrypted blob.
+ *
+ * Branded distinct from {@link FrontingSessionComment} and
+ * {@link FrontingSessionPositionality} (same-entity peers).
+ */
+export type FrontingSessionOuttrigger = Brand<string, "FrontingSessionOuttrigger">;
+
 /** Constraint for {@link brandValue} — any string-backed phantom brand. */
 type AnyBrandedValue = Brand<string, string>;
 

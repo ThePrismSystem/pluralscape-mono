@@ -10,6 +10,11 @@ import type {
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata } from "../utility.js";
+import type {
+  FrontingSessionComment,
+  FrontingSessionOuttrigger,
+  FrontingSessionPositionality,
+} from "../value-types.js";
 
 /** Sentiment classification for an outtrigger reason. */
 export type OuttriggerSentiment = "negative" | "neutral" | "positive";
@@ -21,14 +26,14 @@ interface FrontingSessionBase extends AuditMetadata {
   readonly memberId: MemberId | null;
   readonly startTime: UnixMillis;
   /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
-  readonly comment: string | null;
+  readonly comment: FrontingSessionComment | null;
   readonly customFrontId: CustomFrontId | null;
   /** FK to linked structure entity. */
   readonly structureEntityId: SystemStructureEntityId | null;
   /** Free-text description of fronting positionality (e.g. close vs far, height). */
-  readonly positionality: string | null;
+  readonly positionality: FrontingSessionPositionality | null;
   /** Free-text reason describing what caused the fronting change. Stored in T1 encrypted blob. */
-  readonly outtrigger: string | null;
+  readonly outtrigger: FrontingSessionOuttrigger | null;
   /** Sentiment classification for the outtrigger reason. Stored in T1 encrypted blob. */
   readonly outtriggerSentiment: OuttriggerSentiment | null;
   readonly archived: false;

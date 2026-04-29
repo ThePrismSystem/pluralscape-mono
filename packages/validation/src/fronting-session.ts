@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 
 import { optionalBrandedId, requireSubject, REQUIRE_SUBJECT_MESSAGE } from "./branded-id.js";
+import { brandedString } from "./branded.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
@@ -14,9 +15,9 @@ import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
  */
 export const FrontingSessionEncryptedInputSchema = z
   .object({
-    comment: z.string().nullable(),
-    positionality: z.string().nullable(),
-    outtrigger: z.string().nullable(),
+    comment: brandedString<"FrontingSessionComment">().nullable(),
+    positionality: brandedString<"FrontingSessionPositionality">().nullable(),
+    outtrigger: brandedString<"FrontingSessionOuttrigger">().nullable(),
     outtriggerSentiment: z.enum(["negative", "neutral", "positive"]).nullable(),
   })
   .readonly();

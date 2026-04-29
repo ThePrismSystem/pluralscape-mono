@@ -60,7 +60,9 @@ import type {
   FieldValueWire,
   FrontingCommentWire,
   FrontingReportWire,
+  FrontingSessionComment,
   FrontingSessionId,
+  FrontingSessionPositionality,
   FrontingSessionWire,
   GroupWire,
   InnerWorldCanvasWire,
@@ -306,8 +308,8 @@ export function makeRawFrontingSession(
 ): FrontingSessionWire {
   const encrypted = encryptFrontingSessionInput(
     {
-      comment: `Session ${id}`,
-      positionality: "close",
+      comment: brandValue<FrontingSessionComment>(`Session ${id}`),
+      positionality: brandValue<FrontingSessionPositionality>("close"),
       outtrigger: null,
       outtriggerSentiment: null,
     },
