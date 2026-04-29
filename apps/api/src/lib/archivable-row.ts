@@ -28,7 +28,7 @@ export function narrowArchivableRow<T extends { readonly archived: false }>(
     // nested generic Omits, so we cast through the constraint bound
     // `{ readonly archived: false }` (which the spread satisfies concretely)
     // and then to T (a subtype of that same bound).
-    const { archivedAt: _archivedAt, ...rest } = row;
+    const { archivedAt: _, ...rest } = row;
     return { ...rest, archived: false as const } as {
       readonly archived: false;
     } as T;

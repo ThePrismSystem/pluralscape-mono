@@ -21,8 +21,8 @@ export type ArchivedFriendCode = Archived<FriendCode>;
  *
  * Discriminated union of the live and archived shapes — the database CHECK
  * invariant `(archived = true) = (archived_at IS NOT NULL)` is encoded in
- * the type system here. Recover this shape from a flat Drizzle row via
- * `narrowArchivableRow` (apps/api/src/lib/archivable-row.ts).
+ * the type system here. Produced from a flat Drizzle row at the read boundary
+ * by `narrowArchivableRow` (apps/api/src/lib/archivable-row.ts).
  */
 export type FriendCodeServerMetadata = Archivable<FriendCode>;
 

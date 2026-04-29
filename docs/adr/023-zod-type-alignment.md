@@ -151,8 +151,9 @@ The runtime invariant is defended once at the Drizzle read boundary by
 adapter throws on either inconsistent state — defensive against the CHECK
 ever being dropped or violated.
 
-Currently applied to: `NotificationConfig`, `FriendCode`. Future plaintext
-archivables emerging from `ps-6phh` follow this pattern.
+Parity tests in `packages/db/src/__tests__/type-parity/` are the source of
+truth for the applied set; future plaintext archivables emerging from
+`ps-6phh` follow this pattern.
 
 Encrypted archivables remain on the `EncryptedWire<T>` row-shape contract
 (Class A/B/C) — the encrypted-keyset row dominates the parity story and
