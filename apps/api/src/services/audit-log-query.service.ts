@@ -14,6 +14,7 @@ import type {
   AuditEventType,
   AuditLogEntryId,
   PaginatedResult,
+  ServerInternal,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -120,7 +121,10 @@ export async function queryAuditLog(
   params: AuditLogQueryParams,
 ): Promise<PaginatedResult<AuditLogEntryResult>> {
   const conditions = [
-    eq(auditLog.accountId, accountId),
+    // The accountId column is branded `ServerInternal<AccountId>` so the
+    // wire envelope strips it; tag the lookup value so Drizzle's typed
+    // `eq()` overload accepts it.
+    eq(auditLog.accountId, accountId as ServerInternal<AccountId>),
     gt(auditLog.timestamp, params.from),
     lt(auditLog.timestamp, params.to),
   ];

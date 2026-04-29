@@ -26,7 +26,7 @@ import { _resetEmailAdapterForTesting, setEmailAdapterForTesting } from "../../l
 import { processEmailJob } from "../../services/email-worker.js";
 import { asDb } from "../helpers/integration-setup.js";
 
-import type { AccountId, JobPayloadMap } from "@pluralscape/types";
+import type { AccountId, JobPayloadMap, ServerInternal } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 describe("email-worker (PGlite integration)", () => {
@@ -92,7 +92,7 @@ describe("email-worker (PGlite integration)", () => {
     const encrypted = encryptEmail("test@example.com");
     await db
       .update(schema.accounts)
-      .set({ encryptedEmail: encrypted })
+      .set({ encryptedEmail: encrypted as ServerInternal<Uint8Array> })
       .where(eq(schema.accounts.id, accountId));
 
     await processEmailJob(asDb(db), makePayload());
@@ -108,7 +108,7 @@ describe("email-worker (PGlite integration)", () => {
     const encrypted = encryptEmail("vars-test@example.com");
     await db
       .update(schema.accounts)
-      .set({ encryptedEmail: encrypted })
+      .set({ encryptedEmail: encrypted as ServerInternal<Uint8Array> })
       .where(eq(schema.accounts.id, accountId));
 
     await processEmailJob(

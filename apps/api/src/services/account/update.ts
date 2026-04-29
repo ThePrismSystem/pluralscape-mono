@@ -25,7 +25,7 @@ import { INCORRECT_PASSWORD_ERROR } from "../auth.constants.js";
 import { ConcurrencyError } from "./internal.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AccountId } from "@pluralscape/types";
+import type { AccountId, ServerInternal } from "@pluralscape/types";
 import type {
   ChangeEmailSchema,
   ChangePasswordSchema,
@@ -284,7 +284,10 @@ export async function updateAccountSettings(
     const [row] = await tx
       .update(accounts)
       .set({
-        auditLogIpTracking: body.auditLogIpTracking,
+        // The DB column is branded `ServerInternal<boolean>` so it is
+        // stripped from the wire envelope by `Serialize<>`. Tag the body
+        // value at the insert site — pure compile-time brand, no runtime cost.
+        auditLogIpTracking: body.auditLogIpTracking as ServerInternal<boolean>,
         updatedAt: timestamp,
         version: body.version + 1,
       })

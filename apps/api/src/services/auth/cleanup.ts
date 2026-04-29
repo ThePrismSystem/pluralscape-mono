@@ -3,6 +3,7 @@ import { accounts } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { and, eq, lt } from "drizzle-orm";
 
+import type { ServerInternal, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Cleanup ──────────────────────────────────────────────────────
@@ -14,7 +15,9 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  * and an expired challenge nonce. Safe to call on a schedule.
  */
 export async function cleanupExpiredRegistrations(db: PostgresJsDatabase): Promise<number> {
-  const threshold = now();
+  // The challenge expiry column is branded `ServerInternal<UnixMillis>`;
+  // tag the comparison threshold to satisfy Drizzle's typed `lt()` overload.
+  const threshold = now() as ServerInternal<UnixMillis>;
   const zeroes = new Uint8Array(AUTH_KEY_HASH_BYTES);
 
   const deleted = await db

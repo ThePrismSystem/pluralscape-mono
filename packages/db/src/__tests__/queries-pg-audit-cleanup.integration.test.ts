@@ -17,7 +17,13 @@ import {
 } from "./helpers/pg-helpers.js";
 
 import type { DbAuditActor } from "../helpers/types.js";
-import type { AccountId, AuditLogEntryId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  AccountId,
+  AuditLogEntryId,
+  ServerInternal,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, auditLog };
@@ -52,7 +58,9 @@ describe("pgCleanupAuditLog", () => {
     const id = makeAuditLogEntryId();
     await db.insert(auditLog).values({
       id,
-      accountId: brandId<AccountId>(opts.accountId),
+      // The accountId column is branded `ServerInternal<AccountId>` (server-only
+      // join helper, stripped from the wire). Tag the lookup at the insert site.
+      accountId: brandId<AccountId>(opts.accountId) as ServerInternal<AccountId>,
       systemId: brandId<SystemId>(opts.systemId),
       eventType: "auth.login",
       timestamp: opts.timestamp ?? fixtureNow(),

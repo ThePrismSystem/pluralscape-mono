@@ -1,5 +1,6 @@
 import type { Plaintext } from "../encryption-primitives.js";
 import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "../ids.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 
@@ -275,8 +276,12 @@ export interface AuditLogEntryServerMetadata {
    * DB-internal denormalized account reference — avoids joining through
    * `systems` to get the owning account. Nullable because audit logs
    * survive account deletion with references nullified (ON DELETE SET NULL).
+   *
+   * Branded `ServerInternal<…>` so `Serialize<AuditLogEntryServerMetadata>`
+   * strips it from the wire — the denormalized account FK is server-only
+   * scaffolding, never exposed to clients.
    */
-  readonly accountId: AccountId | null;
+  readonly accountId: ServerInternal<AccountId> | null;
   /**
    * Nullable because audit logs survive system deletion with references
    * nullified (ON DELETE SET NULL) — audit history must be preserved.

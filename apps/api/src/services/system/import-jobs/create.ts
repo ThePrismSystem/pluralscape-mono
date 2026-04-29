@@ -22,6 +22,7 @@ import type {
   ImportCheckpointState,
   ImportCollectionType,
   ImportJobId,
+  ServerInternal,
   SystemId,
 } from "@pluralscape/types";
 import type { CreateImportJobBodySchema } from "@pluralscape/validation";
@@ -101,7 +102,7 @@ export async function createImportJob(
         progressPercent: 0,
         warningCount: 0,
         chunksCompleted: 0,
-        checkpointState: initialCheckpoint,
+        checkpointState: initialCheckpoint as ServerInternal<ImportCheckpointState>,
         createdAt: timestamp,
         updatedAt: timestamp,
       })

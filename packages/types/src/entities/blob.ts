@@ -1,4 +1,5 @@
 import type { BlobId, BucketId, ChecksumHex, SystemId } from "../ids.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived } from "../utility.js";
@@ -44,22 +45,27 @@ export type ArchivedBlobMetadata = Archived<BlobMetadata>;
  * literal (the DB carries boolean) and adding the server-only columns the
  * domain doesn't expose: storage wiring (`storageKey`), encryption tier
  * metadata (`encryptionTier`, `bucketId`), and separate `createdAt` /
- * `expiresAt` timestamps alongside the domain's `uploadedAt`. Also widens
- * `mimeType` + `checksum` to nullable — the row exists in a pending state
- * between pre-signed URL issuance and upload completion.
+ * `expiresAt` timestamps alongside the domain's `uploadedAt`.
+ *
+ * The S3 `storageKey`, `encryptionTier`, `bucketId`, and `expiresAt` fields
+ * are branded `ServerInternal<…>` so `Serialize<>` strips them — the client
+ * never sees the storage layout. The nullable widening of `mimeType` /
+ * `checksum` is kept unbranded: the row exists in a pending state between
+ * pre-signed URL issuance and upload completion, but client-facing reads
+ * always project these as non-null on confirmed blobs.
  */
 export type BlobMetadataServerMetadata = Omit<
   BlobMetadata,
   "archived" | "mimeType" | "checksum" | "uploadedAt"
 > & {
-  readonly storageKey: string;
+  readonly storageKey: ServerInternal<string>;
   readonly mimeType: string | null;
-  readonly encryptionTier: EncryptionTier;
-  readonly bucketId: BucketId | null;
+  readonly encryptionTier: ServerInternal<EncryptionTier>;
+  readonly bucketId: ServerInternal<BucketId> | null;
   readonly checksum: ChecksumHex | null;
   readonly createdAt: UnixMillis;
   readonly uploadedAt: UnixMillis | null;
-  readonly expiresAt: UnixMillis | null;
+  readonly expiresAt: ServerInternal<UnixMillis> | null;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
 };

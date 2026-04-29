@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlobArchiverImpl } from "../../lib/blob-archiver.js";
 import { mockDb } from "../helpers/mock-db.js";
 
-import type { StorageKey } from "@pluralscape/types";
+import type { ServerInternal, StorageKey } from "@pluralscape/types";
 
 vi.mock("@pluralscape/types", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@pluralscape/types")>();
@@ -33,7 +33,10 @@ describe("BlobArchiverImpl", () => {
       expect.objectContaining({ archived: true, archivedAt: 1_700_000_000_000 }),
     );
     expect(chain.where).toHaveBeenCalledWith(
-      and(eq(blobMetadata.storageKey, storageKey), eq(blobMetadata.archived, false)),
+      and(
+        eq(blobMetadata.storageKey, storageKey as string as ServerInternal<string>),
+        eq(blobMetadata.archived, false),
+      ),
     );
   });
 

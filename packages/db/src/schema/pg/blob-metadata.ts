@@ -26,27 +26,33 @@ import type {
   BucketId,
   ChecksumHex,
   EncryptionTier,
+  ServerInternal,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 // Carve-out: blob metadata has no encrypted payload (the blob itself is the
 // encrypted payload, stored externally), no version tracking, and bespoke
 // createdAt/uploadedAt/expiresAt timestamps instead of the standard mixin.
+//
+// The S3 `storage_key`, `encryption_tier`, `bucket_id`, and `expires_at`
+// columns are branded `ServerInternal<…>` so `Serialize<>` strips them at
+// the wire boundary — clients never see storage layout or expiry plumbing.
 export const blobMetadata = pgTable(
   "blob_metadata",
   {
     ...entityIdentity<BlobId>(),
-    storageKey: varchar("storage_key", { length: 1024 }).notNull(),
+    storageKey: varchar("storage_key", { length: 1024 }).notNull().$type<ServerInternal<string>>(),
     mimeType: varchar("mime_type", { length: 255 }),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
-    encryptionTier: integer("encryption_tier").notNull().$type<EncryptionTier>(),
-    bucketId: brandedId<BucketId>("bucket_id"),
+    encryptionTier: integer("encryption_tier").notNull().$type<ServerInternal<EncryptionTier>>(),
+    bucketId: brandedId<ServerInternal<BucketId>>("bucket_id"),
     purpose: varchar("purpose", { length: ENUM_MAX_LENGTH }).notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: brandedId<BlobId>("thumbnail_of_blob_id"),
     checksum: varchar("checksum", { length: 255 }).$type<ChecksumHex>(),
     createdAt: pgTimestamp("created_at").notNull(),
     uploadedAt: pgTimestamp("uploaded_at"),
-    expiresAt: pgTimestamp("expires_at"),
+    expiresAt: pgTimestamp("expires_at").$type<ServerInternal<UnixMillis>>(),
     ...archivable(),
   },
   (t) => [

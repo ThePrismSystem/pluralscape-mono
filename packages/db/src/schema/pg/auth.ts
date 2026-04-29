@@ -15,7 +15,9 @@ import type {
   DeviceTransferRequestId,
   DeviceTransferStatus,
   RecoveryKeyId,
+  ServerInternal,
   SessionId,
+  UnixMillis,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -33,14 +35,32 @@ export const accounts = pgTable(
     kdfSalt: varchar("kdf_salt", { length: 255 }).notNull(),
     /** Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key. */
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
-    /** Challenge nonce for two-phase registration. Cleared after successful commit. */
-    challengeNonce: pgBinary("challenge_nonce"),
-    /** Expiry time for the challenge nonce (5 minutes after creation). */
-    challengeExpiresAt: pgTimestamp("challenge_expires_at"),
-    /** Server-side encrypted email for operational communication (ADR 029). Null for pre-migration accounts. */
-    encryptedEmail: pgBinary("encrypted_email"),
-    /** When true, IP address and user-agent are persisted in audit log entries. Default off (ADR 028). */
-    auditLogIpTracking: boolean("audit_log_ip_tracking").notNull().default(false),
+    /**
+     * Challenge nonce for two-phase registration. Cleared after successful
+     * commit. Branded `ServerInternal<…>` so `Serialize<AccountServerMetadata>`
+     * strips it from the wire — never leaks to clients.
+     */
+    challengeNonce: pgBinary("challenge_nonce").$type<ServerInternal<Uint8Array>>(),
+    /**
+     * Expiry time for the challenge nonce (5 minutes after creation).
+     * Branded `ServerInternal<…>` for the same reason as `challengeNonce`.
+     */
+    challengeExpiresAt: pgTimestamp("challenge_expires_at").$type<ServerInternal<UnixMillis>>(),
+    /**
+     * Server-side encrypted email for operational communication (ADR 029).
+     * Null for pre-migration accounts. Branded `ServerInternal<…>` so it
+     * never appears on the wire — clients work with the email hash only.
+     */
+    encryptedEmail: pgBinary("encrypted_email").$type<ServerInternal<Uint8Array>>(),
+    /**
+     * When true, IP address and user-agent are persisted in audit log
+     * entries. Default off (ADR 028). Branded `ServerInternal<…>` — server
+     * security policy, not part of the client-visible account shape.
+     */
+    auditLogIpTracking: boolean("audit_log_ip_tracking")
+      .notNull()
+      .default(false)
+      .$type<ServerInternal<boolean>>(),
     ...timestamps(),
     ...versioned(),
   },

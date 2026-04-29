@@ -1,4 +1,5 @@
 import type { AccountId, ImportJobId, SystemId } from "../ids.js";
+import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 
@@ -152,9 +153,13 @@ export interface ImportJob {
  * Derived from `ImportJob` by adding `checkpointState`: the resumable
  * import engine state the client writes back to the server between
  * chunks but doesn't expose on the domain view of an import job.
+ *
+ * Branded `ServerInternal<…>` so `Serialize<ImportJobServerMetadata>`
+ * strips the column from the wire — checkpoint state is engine-internal
+ * resumption scaffolding, not part of the client-visible job shape.
  */
 export type ImportJobServerMetadata = ImportJob & {
-  readonly checkpointState: ImportCheckpointState | null;
+  readonly checkpointState: ServerInternal<ImportCheckpointState> | null;
 };
 
 /**
