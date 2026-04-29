@@ -10,12 +10,14 @@
  *
  * Fails when the author FK can't be resolved.
  */
+import { brandValue } from "@pluralscape/types";
+
 import { parseHexColor } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPNote } from "../sources/sp-types.js";
-import type { NoteEncryptedInput } from "@pluralscape/types";
+import type { NoteContent, NoteEncryptedInput, NoteTitle } from "@pluralscape/types";
 import type { CreateNoteBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -53,8 +55,8 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
   }
 
   const encrypted: NoteEncryptedInput = {
-    title: sp.title,
-    content: sp.note,
+    title: brandValue<NoteTitle>(sp.title),
+    content: brandValue<NoteContent>(sp.note),
     backgroundColor,
   };
 

@@ -1,6 +1,7 @@
 import { NOTE_AUTHOR_ENTITY_TYPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
+import { brandedString } from "./branded.js";
 import { HexColorSchema } from "./plaintext-shared.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE, MAX_QUERY_PARAM_STRING_LENGTH } from "./validation.constants.js";
@@ -14,8 +15,8 @@ import { MAX_ENCRYPTED_DATA_SIZE, MAX_QUERY_PARAM_STRING_LENGTH } from "./valida
  */
 export const NoteEncryptedInputSchema = z
   .object({
-    title: z.string().min(1),
-    content: z.string(),
+    title: brandedString<"NoteTitle">(),
+    content: brandedString<"NoteContent">(),
     backgroundColor: HexColorSchema.nullable(),
   })
   .readonly();

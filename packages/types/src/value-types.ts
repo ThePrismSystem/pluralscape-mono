@@ -31,6 +31,26 @@ export type LifecycleEventName = Brand<string, "LifecycleEventName">;
  */
 export type FieldDefinitionLabel = Brand<string, "FieldDefinitionLabel">;
 
+/**
+ * Free-text user-supplied note title.
+ *
+ * Branded distinct from {@link NoteContent} to prevent cross-field
+ * assignment between same-entity peers — Note has both `title` and
+ * `content` as user-typed strings. Render pipelines treat them
+ * differently (titles get truncation/tooltip; content gets rich-block
+ * rendering). See
+ * docs/local-audits/2026-04-27-free-text-label-brand-audit.md.
+ */
+export type NoteTitle = Brand<string, "NoteTitle">;
+
+/**
+ * Free-text user-supplied note body.
+ *
+ * Branded distinct from {@link NoteTitle} (same-entity peer). See
+ * docs/local-audits/2026-04-27-free-text-label-brand-audit.md.
+ */
+export type NoteContent = Brand<string, "NoteContent">;
+
 /** Constraint for {@link brandValue} — any string-backed phantom brand. */
 type AnyBrandedValue = Brand<string, string>;
 

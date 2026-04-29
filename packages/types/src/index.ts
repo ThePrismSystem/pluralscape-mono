@@ -107,6 +107,8 @@ export type {
   FieldDefinitionLabel,
   LifecycleEventForm,
   LifecycleEventName,
+  NoteContent,
+  NoteTitle,
 } from "./value-types.js";
 export { brandValue } from "./value-types.js";
 

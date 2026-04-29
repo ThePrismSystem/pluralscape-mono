@@ -71,6 +71,8 @@ import type {
   MemberId,
   MemberWire,
   EncryptedBase64,
+  NoteContent,
+  NoteTitle,
   NoteWire,
   PollOptionId,
   PollVoteWire,
@@ -537,7 +539,11 @@ export function makeRawMessage(
 
 export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire {
   const encrypted = encryptNoteInput(
-    { title: "Note", content: "Body", backgroundColor: null },
+    {
+      title: brandValue<NoteTitle>("Note"),
+      content: brandValue<NoteContent>("Body"),
+      backgroundColor: null,
+    },
     TEST_MASTER_KEY,
   );
   return {

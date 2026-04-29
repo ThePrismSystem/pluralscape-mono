@@ -1,6 +1,6 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis, brandId } from "@pluralscape/types";
+import { toUnixMillis, brandId, brandValue } from "@pluralscape/types";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
@@ -12,8 +12,10 @@ import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   HexColor,
   NoteAuthorEntityType,
+  NoteContent,
   NoteEncryptedInput,
   NoteId,
+  NoteTitle,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -28,8 +30,8 @@ beforeAll(async () => {
 
 function makeEncryptedFields(): NoteEncryptedInput {
   return {
-    title: "My Note",
-    content: "Note content goes here.",
+    title: brandValue<NoteTitle>("My Note"),
+    content: brandValue<NoteContent>("Note content goes here."),
     backgroundColor: "#ffffff" as HexColor,
   };
 }
