@@ -91,6 +91,17 @@ describe("mapFieldDefinition", () => {
     }
   });
 
+  it("rejects empty name with kind empty-name targeting name", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f_empty", name: "", type: 0, order: "0" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("empty-name");
+      expect(result.targetField).toBe("name");
+    }
+  });
+
   it("unparseable order emits a warning and returns 0", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPCustomField = { _id: "f4", name: "Bad", type: 0, order: "!!!" };

@@ -103,8 +103,22 @@ export { brandId } from "./brand-utils.js";
 export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.js";
 
 // ── Branded value types (non-ID display labels) ──────────────────
-export type { LifecycleEventForm, LifecycleEventName } from "./value-types.js";
+export type {
+  FieldDefinitionLabel,
+  FrontingSessionComment,
+  FrontingSessionOuttrigger,
+  FrontingSessionPositionality,
+  LifecycleEventForm,
+  LifecycleEventName,
+  NoteContent,
+  NoteTitle,
+  PollOptionLabel,
+  PollTitle,
+} from "./value-types.js";
 export { brandValue } from "./value-types.js";
+
+// ── Fronting constants ───────────────────────────────────────────
+export { MAX_FRONTING_COMMENT_LENGTH } from "./fronting.constants.js";
 
 // ── Checksum ─────────────────────────────────────────────────────
 export { toChecksumHex } from "./checksum.js";

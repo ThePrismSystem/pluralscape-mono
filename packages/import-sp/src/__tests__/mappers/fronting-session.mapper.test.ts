@@ -167,6 +167,29 @@ describe("mapFrontingSession", () => {
     }
   });
 
+  it("coerces empty customStatus to null comment", () => {
+    // SP often emits an empty-string `customStatus` for sessions with no
+    // user-entered note. The FrontingSessionComment brand requires a
+    // non-empty value when present, so the mapper normalizes "" to null
+    // at the boundary instead of letting it reach the persister.
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("member", "src_m1", "ps_m1");
+    const sp: SPFrontHistory = {
+      _id: "fh_empty_status",
+      member: "src_m1",
+      custom: false,
+      live: false,
+      startTime: 1,
+      endTime: 2,
+      customStatus: "",
+    };
+    const result = mapFrontingSession(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.encrypted.comment).toBeNull();
+    }
+  });
+
   it("non-live session with omitted endTime produces endTime: null", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");

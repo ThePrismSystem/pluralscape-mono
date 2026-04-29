@@ -128,6 +128,40 @@ describe("mapPoll", () => {
     expect(result.status).toBe("mapped");
   });
 
+  it("rejects empty poll name with kind empty-name targeting name", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPPoll = {
+      _id: "p_empty_name",
+      name: "",
+      options: [{ id: "o1", name: "Yes" }],
+    };
+    const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("empty-name");
+      expect(result.targetField).toBe("name");
+    }
+  });
+
+  it("rejects empty option label with kind empty-name targeting options", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPPoll = {
+      _id: "p_empty_opt",
+      name: "Pick one",
+      options: [
+        { id: "o1", name: "Yes" },
+        { id: "o2", name: "" },
+      ],
+    };
+    const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("empty-name");
+      expect(result.targetField).toBe("options");
+      expect(result.message).toContain("index 1");
+    }
+  });
+
   it("maps custom kind and flags, preserves desc and endTime", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPPoll = {

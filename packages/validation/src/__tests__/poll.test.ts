@@ -3,11 +3,20 @@ import { describe, expect, it } from "vitest";
 import {
   CastVoteBodySchema,
   CreatePollBodySchema,
+  PollEncryptedInputSchema,
   PollQuerySchema,
   PollVoteQuerySchema,
   UpdatePollBodySchema,
 } from "../poll.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "../validation.constants.js";
+
+const VALID_POLL_OPTION = {
+  id: "popt_abc",
+  label: "Yes",
+  voteCount: 0,
+  color: null,
+  emoji: null,
+} as const;
 
 /** Remove a key from an object (lint-safe alternative to destructuring with _). */
 function omit<T extends Record<string, unknown>, K extends keyof T>(obj: T, key: K): Omit<T, K> {
@@ -274,6 +283,46 @@ describe("CastVoteBodySchema", () => {
     if (result.success) {
       expect("extra" in result.data).toBe(false);
     }
+  });
+});
+
+// ── PollEncryptedInputSchema ─────────────────────────────────────
+
+describe("PollEncryptedInputSchema", () => {
+  it("accepts non-empty title with a single valid option", () => {
+    const result = PollEncryptedInputSchema.safeParse({
+      title: "Lunch?",
+      description: null,
+      options: [VALID_POLL_OPTION],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty title", () => {
+    const result = PollEncryptedInputSchema.safeParse({
+      title: "",
+      description: null,
+      options: [VALID_POLL_OPTION],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an option with empty label (validated through PollEncryptedInputSchema)", () => {
+    const result = PollEncryptedInputSchema.safeParse({
+      title: "Lunch?",
+      description: null,
+      options: [{ ...VALID_POLL_OPTION, label: "" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an option with empty id (validated through PollEncryptedInputSchema)", () => {
+    const result = PollEncryptedInputSchema.safeParse({
+      title: "Lunch?",
+      description: null,
+      options: [{ ...VALID_POLL_OPTION, id: "" }],
+    });
+    expect(result.success).toBe(false);
   });
 });
 

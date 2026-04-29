@@ -1,11 +1,11 @@
 ---
 # ps-0vwf
 title: Closeout quick wins
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-04-21T13:54:51Z
-updated_at: 2026-04-21T17:31:55Z
+updated_at: 2026-04-29T04:11:44Z
 parent: ps-cd6x
 ---
 
@@ -39,3 +39,16 @@ docs/superpowers/specs/2026-04-21-m9a-closeout-hardening-design.md
 - db-4pir — RLS lint rule + unset-context integration test (commit 63db35fe)
 
 Deferred: ps-lg9y (blocked by api-6l1q service refactor epic; lands after that completes).
+
+## Summary of Changes
+
+All 8 children completed:
+
+- api-e3li — typed JobQueue mock
+- ps-g5dl — local audit archive
+- ps-sg0u — ADR supersession fields + backfills
+- mobile-8ovj — shared mobile test factories
+- api-6d0l — dev-only crypto constants module
+- api-lm4o — Hono AuthEnv typing + CONTRIBUTING doc
+- db-4pir — RLS lint rule + unset-context integration test
+- ps-lg9y — CI/pre-commit LOC cap on apps/api/src/services/\*_/_.ts (landed after api-6l1q service refactor epic completed)

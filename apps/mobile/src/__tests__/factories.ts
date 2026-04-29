@@ -35,7 +35,7 @@ import {
   encryptSystemSettingsUpdate,
 } from "@pluralscape/data/transforms/system-settings";
 import { encryptTimerConfigInput } from "@pluralscape/data/transforms/timer-check-in";
-import { brandId } from "@pluralscape/types";
+import { brandId, brandValue } from "@pluralscape/types";
 
 import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "../hooks/__tests__/helpers/test-crypto.js";
 
@@ -55,11 +55,14 @@ import type {
   ChatMessageWire,
   CheckInRecordId,
   CustomFrontWire,
+  FieldDefinitionLabel,
   FieldDefinitionWire,
   FieldValueWire,
   FrontingCommentWire,
   FrontingReportWire,
+  FrontingSessionComment,
   FrontingSessionId,
+  FrontingSessionPositionality,
   FrontingSessionWire,
   GroupWire,
   InnerWorldCanvasWire,
@@ -70,8 +73,12 @@ import type {
   MemberId,
   MemberWire,
   EncryptedBase64,
+  NoteContent,
+  NoteTitle,
   NoteWire,
   PollOptionId,
+  PollOptionLabel,
+  PollTitle,
   PollVoteWire,
   PollWire,
   RelationshipType,
@@ -170,7 +177,11 @@ export function makeRawFieldDefinition(
   overrides?: Partial<FieldDefinitionWire>,
 ): FieldDefinitionWire {
   const encrypted = encryptFieldDefinitionInput(
-    { name: `Field ${id}`, description: "A test field", options: null },
+    {
+      name: brandValue<FieldDefinitionLabel>(`Field ${id}`),
+      description: "A test field",
+      options: null,
+    },
     TEST_MASTER_KEY,
   );
   return {
@@ -297,8 +308,8 @@ export function makeRawFrontingSession(
 ): FrontingSessionWire {
   const encrypted = encryptFrontingSessionInput(
     {
-      comment: `Session ${id}`,
-      positionality: "close",
+      comment: brandValue<FrontingSessionComment>(`Session ${id}`),
+      positionality: brandValue<FrontingSessionPositionality>("close"),
       outtrigger: null,
       outtriggerSentiment: null,
     },
@@ -532,7 +543,11 @@ export function makeRawMessage(
 
 export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire {
   const encrypted = encryptNoteInput(
-    { title: "Note", content: "Body", backgroundColor: null },
+    {
+      title: brandValue<NoteTitle>("Note"),
+      content: brandValue<NoteContent>("Body"),
+      backgroundColor: null,
+    },
     TEST_MASTER_KEY,
   );
   return {
@@ -555,12 +570,12 @@ export function makeRawNote(id: string, overrides?: Partial<NoteWire>): NoteWire
 export function makeRawPoll(id: string, overrides?: Partial<PollWire>): PollWire {
   const encrypted = encryptPollInput(
     {
-      title: `Poll ${id}`,
+      title: brandValue<PollTitle>(`Poll ${id}`),
       description: null,
       options: [
         {
           id: brandId<PollOptionId>("opt-1"),
-          label: "Yes",
+          label: brandValue<PollOptionLabel>("Yes"),
           voteCount: 0,
           color: null,
           emoji: null,

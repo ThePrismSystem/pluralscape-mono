@@ -12,6 +12,8 @@
  * prefix decode — sufficient for small field sets and lets users fine-tune
  * ordering after import.
  */
+import { brandValue } from "@pluralscape/types";
+
 import {
   SP_FIELD_TYPE_COLOR,
   SP_FIELD_TYPE_DATE,
@@ -23,12 +25,12 @@ import {
   SP_FIELD_TYPE_YEAR,
 } from "../import-sp.constants.js";
 
-import { mapped, type MapperResult } from "./mapper-result.js";
+import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPCustomField, SPCustomFieldType } from "../sources/sp-types.js";
 import type { FieldDefinitionEncryptedInput } from "@pluralscape/data";
-import type { FieldType } from "@pluralscape/types";
+import type { FieldDefinitionLabel, FieldType } from "@pluralscape/types";
 import type { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -99,6 +101,16 @@ export function mapFieldDefinition(
   sp: SPCustomField,
   ctx: MappingContext,
 ): MapperResult<MappedFieldDefinition> {
+  // FieldDefinitionLabel brand rejects empty strings; guard at the SP
+  // boundary so a malformed source custom-field becomes a non-fatal import
+  // failure instead of a downstream Zod parse error.
+  if (sp.name.length === 0) {
+    return failed({
+      kind: "empty-name",
+      message: `field-definition "${sp._id}" has empty name`,
+      targetField: "name",
+    });
+  }
   const fieldType = spTypeToFieldType(sp.type);
   const orderResult = fractionalIndexToOrder(sp.order);
   if (!orderResult.ok) {
@@ -109,7 +121,7 @@ export function mapFieldDefinition(
     });
   }
   const encrypted: FieldDefinitionEncryptedInput = {
-    name: sp.name,
+    name: brandValue<FieldDefinitionLabel>(sp.name),
     description: null,
     options: null,
   };

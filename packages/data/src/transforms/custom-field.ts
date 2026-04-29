@@ -11,6 +11,7 @@ import type {
   FieldDefinition,
   FieldDefinitionEncryptedFields,
   FieldDefinitionId,
+  FieldDefinitionLabel,
   FieldDefinitionWire,
   FieldType,
   FieldValueId,
@@ -46,7 +47,7 @@ export type FieldValueEncryptedInput = FieldValueUnion;
 export interface FieldDefinitionDecrypted {
   readonly id: FieldDefinitionId;
   readonly systemId: SystemId;
-  readonly name: string;
+  readonly name: FieldDefinitionLabel;
   readonly description: string | null;
   readonly fieldType: FieldType;
   readonly options: readonly string[] | null;

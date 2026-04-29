@@ -4,6 +4,7 @@ import type { AnyBrandedId, HexColor, NoteId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 import type { Archived, AuditMetadata, EntityReference } from "../utility.js";
+import type { NoteContent, NoteTitle } from "../value-types.js";
 
 /** Valid entity types that can author a note. */
 export type NoteAuthorEntityType = "member" | "structure-entity";
@@ -19,8 +20,8 @@ export interface Note extends AuditMetadata {
   readonly id: NoteId;
   readonly systemId: SystemId;
   readonly author: EntityReference<NoteAuthorEntityType> | null;
-  readonly title: string;
-  readonly content: string;
+  readonly title: NoteTitle;
+  readonly content: NoteContent;
   readonly backgroundColor: HexColor | null;
   readonly archived: false;
 }

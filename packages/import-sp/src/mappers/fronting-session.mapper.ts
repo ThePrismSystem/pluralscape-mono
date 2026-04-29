@@ -10,13 +10,18 @@
  * moves on (sessions whose referenced member was skipped upstream simply
  * can't be materialised).
  */
-import { brandId } from "@pluralscape/types";
+import { brandId, brandValue } from "@pluralscape/types";
 
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPFrontHistory } from "../sources/sp-types.js";
-import type { CustomFrontId, FrontingSessionEncryptedInput, MemberId } from "@pluralscape/types";
+import type {
+  CustomFrontId,
+  FrontingSessionComment,
+  FrontingSessionEncryptedInput,
+  MemberId,
+} from "@pluralscape/types";
 import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -46,7 +51,10 @@ export function mapFrontingSession(
   const endTime = sp.live ? null : (sp.endTime ?? null);
 
   const encrypted: FrontingSessionEncryptedInput = {
-    comment: sp.customStatus ?? null,
+    // SP source may carry an empty `customStatus` string for sessions with no
+    // user-entered note. The Pluralscape brand requires non-empty when present,
+    // so coerce empty/missing alike to null at the boundary.
+    comment: sp.customStatus?.length ? brandValue<FrontingSessionComment>(sp.customStatus) : null,
     positionality: null,
     outtrigger: null,
     outtriggerSentiment: null,

@@ -1,7 +1,7 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { brandId } from "@pluralscape/types";
-import { beforeAll, describe, expect, it } from "vitest";
+import { brandId, brandValue } from "@pluralscape/types";
+import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   decryptFieldDefinition,
@@ -14,9 +14,19 @@ import {
 
 import { makeBase64Blob } from "./helpers.js";
 
-import type { FieldDefinitionEncryptedInput, FieldValueDecrypted } from "../custom-field.js";
+import type {
+  FieldDefinitionDecrypted,
+  FieldDefinitionEncryptedInput,
+  FieldValueDecrypted,
+} from "../custom-field.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { FieldDefinitionId, FieldValueId, SystemId } from "@pluralscape/types";
+import type {
+  FieldDefinition,
+  FieldDefinitionId,
+  FieldDefinitionLabel,
+  FieldValueId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Test helpers ──────────────────────────────────────────────────────
 
@@ -58,7 +68,7 @@ const BASE_VALUE_RESULT = {
 describe("decryptFieldDefinition", () => {
   it("decrypts name, description, and options from the encrypted blob", () => {
     const encrypted: FieldDefinitionEncryptedInput = {
-      name: "Pronoun",
+      name: brandValue<FieldDefinitionLabel>("Pronoun"),
       description: "Preferred pronoun",
       options: null,
     };
@@ -82,7 +92,7 @@ describe("decryptFieldDefinition", () => {
 
   it("decrypts select field with options array", () => {
     const encrypted: FieldDefinitionEncryptedInput = {
-      name: "Role",
+      name: brandValue<FieldDefinitionLabel>("Role"),
       description: null,
       options: ["host", "protector", "gatekeeper"],
     };
@@ -107,7 +117,7 @@ describe("decryptFieldDefinition", () => {
   it("throws when blob was encrypted with a different key", () => {
     const otherKey = generateMasterKey();
     const encrypted: FieldDefinitionEncryptedInput = {
-      name: "X",
+      name: brandValue<FieldDefinitionLabel>("X"),
       description: null,
       options: null,
     };
@@ -121,7 +131,7 @@ describe("decryptFieldDefinition", () => {
 describe("decryptFieldDefinitionPage", () => {
   it("decrypts all items and passes through nextCursor", () => {
     const encrypted: FieldDefinitionEncryptedInput = {
-      name: "Field A",
+      name: brandValue<FieldDefinitionLabel>("Field A"),
       description: null,
       options: null,
     };
@@ -149,12 +159,12 @@ describe("decryptFieldDefinitionPage", () => {
 
   it("decrypts multiple items", () => {
     const enc1: FieldDefinitionEncryptedInput = {
-      name: "Alpha",
+      name: brandValue<FieldDefinitionLabel>("Alpha"),
       description: "First",
       options: null,
     };
     const enc2: FieldDefinitionEncryptedInput = {
-      name: "Beta",
+      name: brandValue<FieldDefinitionLabel>("Beta"),
       description: null,
       options: ["a", "b"],
     };
@@ -189,7 +199,7 @@ describe("decryptFieldDefinitionPage", () => {
 describe("encryptFieldDefinitionInput", () => {
   it("returns an object with encryptedData string", () => {
     const data: FieldDefinitionEncryptedInput = {
-      name: "Height",
+      name: brandValue<FieldDefinitionLabel>("Height"),
       description: "Member height",
       options: null,
     };
@@ -202,7 +212,7 @@ describe("encryptFieldDefinitionInput", () => {
 
   it("round-trips: decryptFieldDefinition recovers original fields", () => {
     const data: FieldDefinitionEncryptedInput = {
-      name: "Mood",
+      name: brandValue<FieldDefinitionLabel>("Mood"),
       description: null,
       options: ["happy", "calm", "anxious"],
     };
@@ -460,5 +470,16 @@ describe("FieldValueDecrypted shape", () => {
     expect(result.systemId).toBe(BASE_VALUE_RESULT.systemId);
     expect(result.groupId).toBeNull();
     expect(result.structureEntityId).toBeNull();
+  });
+});
+
+// ── brand types ───────────────────────────────────────────────────────
+
+describe("brand types", () => {
+  it("FieldDefinition.name is branded as FieldDefinitionLabel", () => {
+    expectTypeOf<FieldDefinition["name"]>().toEqualTypeOf<FieldDefinitionLabel>();
+  });
+  it("FieldDefinitionDecrypted.name is branded as FieldDefinitionLabel", () => {
+    expectTypeOf<FieldDefinitionDecrypted["name"]>().toEqualTypeOf<FieldDefinitionLabel>();
   });
 });

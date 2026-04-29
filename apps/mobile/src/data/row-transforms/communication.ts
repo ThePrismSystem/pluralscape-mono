@@ -1,4 +1,4 @@
-import { brandId } from "@pluralscape/types";
+import { brandId, brandValue } from "@pluralscape/types";
 
 import {
   guardedNum,
@@ -32,7 +32,10 @@ import type {
   MemberId,
   Note,
   NoteAuthorEntityType,
+  NoteContent,
+  NoteTitle,
   Poll,
+  PollTitle,
   SystemStructureEntityId,
   WikiPage,
 } from "@pluralscape/types";
@@ -146,7 +149,7 @@ export function rowToPoll(row: Record<string, unknown>): Poll | ArchivedPoll {
       "created_by_member_id",
       id,
     ) as Poll["createdByMemberId"],
-    title: guardedStr(row["title"], "polls", "title", id),
+    title: brandValue<PollTitle>(guardedStr(row["title"], "polls", "title", id)),
     description: strOrNull(row["description"], "polls", "description", id),
     kind: guardedStr(row["kind"], "polls", "kind", id) as Poll["kind"],
     options: [] as Poll["options"],
@@ -312,8 +315,8 @@ export function rowToNote(row: Record<string, unknown>): Note | Archived<Note> {
     id: guardedStr(row["id"], "notes", "id", id) as Note["id"],
     systemId: guardedStr(row["system_id"], "notes", "system_id", id) as Note["systemId"],
     author,
-    title: guardedStr(row["title"], "notes", "title", id),
-    content: guardedStr(row["content"], "notes", "content", id),
+    title: brandValue<NoteTitle>(guardedStr(row["title"], "notes", "title", id)),
+    content: brandValue<NoteContent>(guardedStr(row["content"], "notes", "content", id)),
     backgroundColor: strOrNull(
       row["background_color"],
       "notes",

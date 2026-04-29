@@ -5,15 +5,15 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-04-27T04:54:07Z
-updated_at: 2026-04-27T21:27:05Z
-parent: ps-cd6x
+updated_at: 2026-04-29T09:39:16Z
+parent: ps-9u4w
 ---
 
 Per types-yxgc spec (2026-04-26): expand non-ID branded value types to fleet display labels. Pattern: define brands in packages/types/src/value-types.ts, apply to domain types, update Zod schemas to brandedString, brand at transform construction. Cross-link: docs/superpowers/specs/2026-04-26-m9a-closeout-design.md
 
-## Audit fold-ins from types-t3tn (2026-04-27)
+## Fold-ins from sibling brand work
 
-The types-t3tn audit doc (at docs/local-audits/2026-04-27-free-text-label-brand-audit.md, gitignored) folded these scope items into types-f3fk rather than filing separate beans:
+The following scope items are folded into types-f3fk rather than filed as separate beans:
 
 **Direct fold-ins (when implementing types-f3fk, also brand these):**
 

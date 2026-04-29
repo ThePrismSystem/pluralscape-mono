@@ -15,7 +15,7 @@ export const POLL_VOTER_ENTITY_TYPES = ["member", "structure-entity"] as const;
 const PollOptionSchema = z
   .object({
     id: brandedString<"PollOptionId">(),
-    label: z.string().min(1),
+    label: brandedString<"PollOptionLabel">(),
     voteCount: z.number().int().min(0),
     color: HexColorSchema.nullable(),
     emoji: z.string().nullable(),
@@ -29,7 +29,7 @@ const PollOptionSchema = z
  */
 export const PollEncryptedInputSchema = z
   .object({
-    title: z.string().min(1),
+    title: brandedString<"PollTitle">(),
     description: z.string().nullable(),
     options: z.array(PollOptionSchema).readonly(),
   })

@@ -1,3 +1,5 @@
+import { brandValue } from "@pluralscape/types";
+
 import {
   guardedStr,
   guardedToMs,
@@ -15,6 +17,9 @@ import type {
   CustomFront,
   FrontingComment,
   FrontingSession,
+  FrontingSessionComment,
+  FrontingSessionOuttrigger,
+  FrontingSessionPositionality,
 } from "@pluralscape/types";
 
 export function rowToCustomFront(row: Record<string, unknown>): CustomFront | ArchivedCustomFront {
@@ -48,6 +53,14 @@ export function rowToFrontingSession(
   const archived = intToBool(row["archived"]);
   const updatedAt = guardedToMs(row["updated_at"], "fronting_sessions", "updated_at", id);
   const endTime = toMsOrNull(row["end_time"], "fronting_sessions", "end_time", id);
+  const commentRaw = strOrNull(row["comment"], "fronting_sessions", "comment", id);
+  const positionalityRaw = strOrNull(
+    row["positionality"],
+    "fronting_sessions",
+    "positionality",
+    id,
+  );
+  const outtriggerRaw = strOrNull(row["outtrigger"], "fronting_sessions", "outtrigger", id);
   const baseCommon = {
     id: guardedStr(row["id"], "fronting_sessions", "id", id) as FrontingSession["id"],
     systemId: guardedStr(
@@ -63,7 +76,7 @@ export function rowToFrontingSession(
       id,
     ) as FrontingSession["memberId"],
     startTime: guardedToMs(row["start_time"], "fronting_sessions", "start_time", id),
-    comment: strOrNull(row["comment"], "fronting_sessions", "comment", id),
+    comment: commentRaw === null ? null : brandValue<FrontingSessionComment>(commentRaw),
     customFrontId: strOrNull(
       row["custom_front_id"],
       "fronting_sessions",
@@ -76,8 +89,10 @@ export function rowToFrontingSession(
       "structure_entity_id",
       id,
     ) as FrontingSession["structureEntityId"],
-    positionality: strOrNull(row["positionality"], "fronting_sessions", "positionality", id),
-    outtrigger: strOrNull(row["outtrigger"], "fronting_sessions", "outtrigger", id),
+    positionality:
+      positionalityRaw === null ? null : brandValue<FrontingSessionPositionality>(positionalityRaw),
+    outtrigger:
+      outtriggerRaw === null ? null : brandValue<FrontingSessionOuttrigger>(outtriggerRaw),
     outtriggerSentiment: strOrNull(
       row["outtrigger_sentiment"],
       "fronting_sessions",

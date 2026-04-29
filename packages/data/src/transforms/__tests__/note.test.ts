@@ -1,7 +1,7 @@
 import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { toUnixMillis, brandId } from "@pluralscape/types";
-import { beforeAll, describe, expect, it } from "vitest";
+import { toUnixMillis, brandId, brandValue } from "@pluralscape/types";
+import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 
 import { encryptAndEncodeT1 } from "../decode-blob.js";
 import { decryptNote, decryptNotePage, encryptNoteInput, encryptNoteUpdate } from "../note.js";
@@ -11,9 +11,12 @@ import { makeBase64Blob } from "./helpers.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   HexColor,
+  Note,
   NoteAuthorEntityType,
+  NoteContent,
   NoteEncryptedInput,
   NoteId,
+  NoteTitle,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -28,8 +31,8 @@ beforeAll(async () => {
 
 function makeEncryptedFields(): NoteEncryptedInput {
   return {
-    title: "My Note",
-    content: "Note content goes here.",
+    title: brandValue<NoteTitle>("My Note"),
+    content: brandValue<NoteContent>("Note content goes here."),
     backgroundColor: "#ffffff" as HexColor,
   };
 }
@@ -206,5 +209,16 @@ describe("NoteEncryptedInputSchema validation", () => {
       encryptedData: makeBase64Blob({ title: "My Note" }, masterKey),
     };
     expect(() => decryptNote(raw, masterKey)).toThrow(/content/);
+  });
+});
+
+// ── brand types ───────────────────────────────────────────────────────
+
+describe("brand types", () => {
+  it("Note.title is branded as NoteTitle", () => {
+    expectTypeOf<Note["title"]>().toEqualTypeOf<NoteTitle>();
+  });
+  it("Note.content is branded as NoteContent", () => {
+    expectTypeOf<Note["content"]>().toEqualTypeOf<NoteContent>();
   });
 });

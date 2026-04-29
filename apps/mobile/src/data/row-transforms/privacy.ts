@@ -1,3 +1,5 @@
+import { brandValue } from "@pluralscape/types";
+
 import {
   guardedNum,
   guardedStr,
@@ -17,6 +19,7 @@ import type {
 } from "@pluralscape/data/transforms/custom-field";
 import type {
   ArchivedPrivacyBucket,
+  FieldDefinitionLabel,
   FieldValueUnion,
   PrivacyBucket,
   SystemId,
@@ -58,7 +61,9 @@ export function rowToFieldDefinition(row: Record<string, unknown>): FieldDefinit
       "system_id",
       id,
     ) as FieldDefinitionDecrypted["systemId"],
-    name: guardedStr(row["name"], "field_definitions", "name", id),
+    name: brandValue<FieldDefinitionLabel>(
+      guardedStr(row["name"], "field_definitions", "name", id),
+    ),
     description: strOrNull(row["description"], "field_definitions", "description", id),
     fieldType: guardedStr(
       row["field_type"],

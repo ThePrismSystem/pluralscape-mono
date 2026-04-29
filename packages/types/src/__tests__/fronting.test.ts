@@ -21,6 +21,11 @@ import type {
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
+import type {
+  FrontingSessionComment,
+  FrontingSessionOuttrigger,
+  FrontingSessionPositionality,
+} from "../value-types.js";
 
 describe("FrontingSession", () => {
   it("discriminates on endTime — null narrows to ActiveFrontingSession", () => {
@@ -40,10 +45,14 @@ describe("FrontingSession", () => {
     expectTypeOf<ActiveFrontingSession["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<ActiveFrontingSession["memberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<ActiveFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<ActiveFrontingSession["comment"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<ActiveFrontingSession["comment"]>().toEqualTypeOf<FrontingSessionComment | null>();
     expectTypeOf<ActiveFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<ActiveFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ActiveFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<
+      ActiveFrontingSession["positionality"]
+    >().toEqualTypeOf<FrontingSessionPositionality | null>();
+    expectTypeOf<
+      ActiveFrontingSession["outtrigger"]
+    >().toEqualTypeOf<FrontingSessionOuttrigger | null>();
     expectTypeOf<
       ActiveFrontingSession["outtriggerSentiment"]
     >().toEqualTypeOf<OuttriggerSentiment | null>();
@@ -55,10 +64,16 @@ describe("FrontingSession", () => {
     expectTypeOf<CompletedFrontingSession["memberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<CompletedFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CompletedFrontingSession["endTime"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<CompletedFrontingSession["comment"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<
+      CompletedFrontingSession["comment"]
+    >().toEqualTypeOf<FrontingSessionComment | null>();
     expectTypeOf<CompletedFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<CompletedFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<CompletedFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<
+      CompletedFrontingSession["positionality"]
+    >().toEqualTypeOf<FrontingSessionPositionality | null>();
+    expectTypeOf<
+      CompletedFrontingSession["outtrigger"]
+    >().toEqualTypeOf<FrontingSessionOuttrigger | null>();
     expectTypeOf<
       CompletedFrontingSession["outtriggerSentiment"]
     >().toEqualTypeOf<OuttriggerSentiment | null>();

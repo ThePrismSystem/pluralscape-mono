@@ -10,12 +10,14 @@
  *
  * Fails when the author FK can't be resolved.
  */
+import { brandValue } from "@pluralscape/types";
+
 import { parseHexColor } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPNote } from "../sources/sp-types.js";
-import type { NoteEncryptedInput } from "@pluralscape/types";
+import type { NoteContent, NoteEncryptedInput, NoteTitle } from "@pluralscape/types";
 import type { CreateNoteBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -32,6 +34,24 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
       message: `FK miss: member ${sp.member} not in translation table`,
       missingRefs: [sp.member],
       targetField: "member",
+    });
+  }
+
+  // The Pluralscape NoteTitle/NoteContent brands reject empty strings. Stop
+  // them at the SP boundary so a malformed source note becomes a non-fatal
+  // import failure instead of a downstream Zod parse error.
+  if (sp.title.length === 0) {
+    return failed({
+      kind: "empty-name",
+      message: `note "${sp._id}" has empty title`,
+      targetField: "title",
+    });
+  }
+  if (sp.note.length === 0) {
+    return failed({
+      kind: "empty-name",
+      message: `note "${sp._id}" has empty content`,
+      targetField: "content",
     });
   }
 
@@ -53,8 +73,8 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
   }
 
   const encrypted: NoteEncryptedInput = {
-    title: sp.title,
-    content: sp.note,
+    title: brandValue<NoteTitle>(sp.title),
+    content: brandValue<NoteContent>(sp.note),
     backgroundColor,
   };
 
