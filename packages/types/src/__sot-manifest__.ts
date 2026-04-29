@@ -163,6 +163,11 @@ import type {
   GroupServerMetadata,
   GroupWire,
 } from "./entities/group.js";
+import type {
+  ImportEntityRef,
+  ImportEntityRefServerMetadata,
+  ImportEntityRefWire,
+} from "./entities/import-entity-ref.js";
 import type { ImportJob, ImportJobServerMetadata, ImportJobWire } from "./entities/import-job.js";
 import type {
   InnerWorldCanvas,
@@ -776,6 +781,14 @@ export type SotEntityManifest = {
     wire: ImportJobWire;
     // Plaintext domain — `checkpointState` is server-only resumption
     // state, attached only to the server-side metadata.
+    encryptedFields: never;
+  };
+  ImportEntityRef: {
+    domain: ImportEntityRef;
+    server: ImportEntityRefServerMetadata;
+    wire: ImportEntityRefWire;
+    // Plaintext entity — identity case on the discriminated union;
+    // source-entity to target-entity mapping carries no encrypted fields.
     encryptedFields: never;
   };
   ExportRequest: {
