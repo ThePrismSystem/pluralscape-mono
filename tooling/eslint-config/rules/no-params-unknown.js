@@ -47,9 +47,13 @@ export default {
       FunctionExpression: checkParams,
       ArrowFunctionExpression: checkParams,
       // Also covers TypeScript interface/type function signatures:
-      // readonly create: (params: unknown) => Promise<T>
+      //   readonly create: (params: unknown) => Promise<T>   ← TSFunctionType
+      //   create(params: unknown): Promise<T>                ← TSMethodSignature
       TSFunctionType: checkParams,
-      "ImportDeclaration[source.value=/encrypted-blob/]"(node) {
+      TSMethodSignature: checkParams,
+      // Anchor to the encrypted-blob module specifically — substring match
+      // would also fire on hypothetical neighbors like `unencrypted-blob`.
+      "ImportDeclaration[source.value=/\\/encrypted-blob(\\.js)?$/]"(node) {
         const hasParse = node.specifiers.some(
           (s) => s.type === "ImportSpecifier" && s.imported?.name === "parseAndValidateBlob",
         );
