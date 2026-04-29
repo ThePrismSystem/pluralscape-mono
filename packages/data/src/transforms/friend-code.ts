@@ -2,7 +2,7 @@ import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 
 import type {
   AccountId,
-  Archived,
+  Archivable,
   FriendCode,
   FriendCodeId,
   FriendCodeWire,
@@ -15,7 +15,7 @@ export interface FriendCodePage {
 }
 
 /** Narrow a wire friend code; re-brands stripped IDs/timestamps. */
-export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<FriendCode> {
+export function narrowFriendCode(raw: FriendCodeWire): Archivable<FriendCode> {
   const base = {
     id: brandId<FriendCodeId>(raw.id),
     accountId: brandId<AccountId>(raw.accountId),
@@ -25,7 +25,6 @@ export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<Fri
   };
 
   if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived friendCode missing archivedAt");
     return { ...base, archived: true as const, archivedAt: toUnixMillis(raw.archivedAt) };
   }
   return { ...base, archived: false as const };
@@ -33,7 +32,7 @@ export function narrowFriendCode(raw: FriendCodeWire): FriendCode | Archived<Fri
 
 /** Narrow a paginated friend code list. */
 export function narrowFriendCodePage(raw: FriendCodePage): {
-  data: (FriendCode | Archived<FriendCode>)[];
+  data: Archivable<FriendCode>[];
   nextCursor: string | null;
 } {
   return {

@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
+import { narrowArchivableRow } from "../../../lib/archivable-row.js";
 import { withAccountTransaction } from "../../../lib/rls-context.js";
 import { isUniqueViolation } from "../../../lib/unique-violation.js";
 import { MAX_FRIEND_CODES_PER_ACCOUNT } from "../../../quota.constants.js";
@@ -15,7 +16,7 @@ import { toFriendCodeResult, type FriendCodeResult } from "./internal.js";
 
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type { AccountId, AuditEventType, FriendCodeId } from "@pluralscape/types";
+import type { AccountId, AuditEventType, FriendCode, FriendCodeId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Audit event: a friend code was generated. */
@@ -115,6 +116,6 @@ export async function generateFriendCode(
       systemId: null,
     });
 
-    return toFriendCodeResult(row);
+    return toFriendCodeResult(narrowArchivableRow<FriendCode>(row));
   });
 }

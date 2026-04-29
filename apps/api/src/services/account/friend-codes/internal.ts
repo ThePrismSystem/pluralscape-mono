@@ -1,7 +1,10 @@
-import { friendCodes } from "@pluralscape/db/pg";
-import { brandId, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-
-import type { AccountId, FriendCodeId, UnixMillis } from "@pluralscape/types";
+import type {
+  AccountId,
+  Archivable,
+  FriendCode,
+  FriendCodeId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 export interface FriendCodeResult {
   readonly id: FriendCodeId;
@@ -12,13 +15,13 @@ export interface FriendCodeResult {
   readonly archived: boolean;
 }
 
-export function toFriendCodeResult(row: typeof friendCodes.$inferSelect): FriendCodeResult {
+export function toFriendCodeResult(input: Archivable<FriendCode>): FriendCodeResult {
   return {
-    id: brandId<FriendCodeId>(row.id),
-    accountId: brandId<AccountId>(row.accountId),
-    code: row.code,
-    createdAt: toUnixMillis(row.createdAt),
-    expiresAt: toUnixMillisOrNull(row.expiresAt),
-    archived: row.archived,
+    id: input.id,
+    accountId: input.accountId,
+    code: input.code,
+    createdAt: input.createdAt,
+    expiresAt: input.expiresAt,
+    archived: input.archived,
   };
 }
