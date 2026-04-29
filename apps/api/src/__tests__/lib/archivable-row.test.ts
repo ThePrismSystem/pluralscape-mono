@@ -35,9 +35,8 @@ describe("narrowArchivableRow", () => {
   it("returns the archived shape with branded archivedAt for archived rows", () => {
     const result = narrowArchivableRow<SampleLive>(archivedRow);
     expect(result.archived).toBe(true);
-    if (result.archived) {
-      expect(result.archivedAt).toBe(1_700_000_000_000);
-    }
+    if (!result.archived) throw new Error("Expected archived shape");
+    expect(result.archivedAt).toBe(1_700_000_000_000);
   });
 
   it("throws when archived=true but archivedAt is null (CHECK violation)", () => {

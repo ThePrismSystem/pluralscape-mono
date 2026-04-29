@@ -24,8 +24,14 @@ export function narrowArchivableRow<T extends { readonly archived: false }>(
         "Archivable row CHECK invariant violated: archived=false with non-null archivedAt",
       );
     }
-    const entries = Object.entries(row).filter(([k]) => k !== "archivedAt");
-    return { ...Object.fromEntries(entries), archived: false } as T;
+    // `rest` is structurally T minus `archived`. TypeScript cannot simplify
+    // nested generic Omits, so we cast through the constraint bound
+    // `{ readonly archived: false }` (which the spread satisfies concretely)
+    // and then to T (a subtype of that same bound).
+    const { archivedAt: _archivedAt, ...rest } = row;
+    return { ...rest, archived: false as const } as {
+      readonly archived: false;
+    } as T;
   }
   if (row.archivedAt === null) {
     throw new Error("Archivable row CHECK invariant violated: archived=true with archivedAt=null");

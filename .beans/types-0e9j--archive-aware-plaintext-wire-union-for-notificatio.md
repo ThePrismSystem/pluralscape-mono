@@ -1,11 +1,11 @@
 ---
 # types-0e9j
 title: Archive-aware plaintext wire union for NotificationConfig/FriendCode
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-27T22:28:59Z
-updated_at: 2026-04-27T22:29:44Z
+updated_at: 2026-04-29T00:33:27Z
 parent: ps-cd6x
 ---
 
