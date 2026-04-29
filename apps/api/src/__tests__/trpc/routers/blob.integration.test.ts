@@ -1,3 +1,4 @@
+import { toChecksumHex } from "@pluralscape/types";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // Hoisted mocks for dispatch-style external services. This same block lives at
@@ -75,9 +76,11 @@ const TEST_BLOB_ENCRYPTION_TIER = 1 as const;
 
 /**
  * 64-char hex digest — the exact length enforced by ConfirmUploadBodySchema.
- * Any other length fails Zod validation with VALIDATION_ERROR.
+ * Any other length fails Zod validation with VALIDATION_ERROR. Branded as
+ * the canonical ChecksumHex so the seeding helper can call confirmUpload
+ * with the parsed-body shape directly.
  */
-const VALID_CHECKSUM_HEX = "a".repeat(64);
+const VALID_CHECKSUM_HEX = toChecksumHex("a".repeat(64));
 
 /** Default list limit used by the router; matches MAX_BLOB_LIMIT behaviour. */
 const TEST_LIST_LIMIT = 10;

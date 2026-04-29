@@ -2,14 +2,8 @@ import { randomBytes } from "node:crypto";
 
 import { webhookConfigs } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import {
-  RotateWebhookSecretBodySchema,
-  UpdateWebhookConfigBodySchema,
-} from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
 import { assertOccUpdated } from "../../lib/occ-update.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -28,25 +22,24 @@ import type { WebhookConfigCreateResult, WebhookConfigResult } from "./internal.
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId, WebhookId } from "@pluralscape/types";
+import type {
+  RotateWebhookSecretBodySchema,
+  UpdateWebhookConfigBodySchema,
+} from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function updateWebhookConfig(
   db: PostgresJsDatabase,
   systemId: SystemId,
   webhookId: WebhookId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof UpdateWebhookConfigBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<WebhookConfigResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parseResult = UpdateWebhookConfigBodySchema.safeParse(params);
-  if (!parseResult.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const { url, eventTypes, enabled, version } = parseResult.data;
+  const { url, eventTypes, enabled, version } = body;
 
   if (url !== undefined) {
     await validateWebhookUrl(url);
@@ -111,19 +104,13 @@ export async function rotateWebhookSecret(
   db: PostgresJsDatabase,
   systemId: SystemId,
   webhookId: WebhookId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof RotateWebhookSecretBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<WebhookConfigCreateResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parseResult = RotateWebhookSecretBodySchema.safeParse(params);
-  if (!parseResult.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const { version } = parseResult.data;
+  const { version } = body;
   const timestamp = now();
   const secretBytes = toServerSecret(randomBytes(WEBHOOK_SECRET_BYTES));
 

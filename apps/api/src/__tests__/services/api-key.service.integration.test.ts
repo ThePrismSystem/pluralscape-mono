@@ -216,36 +216,6 @@ describe("api-key.service (PGlite integration)", () => {
     expect(match?.encryptedData).toMatch(/^[A-Za-z0-9+/=]+$/);
   });
 
-  // ── Validation rejections ─────────────────────────────────────
-
-  it("rejects invalid scope string", async () => {
-    await expect(
-      createApiKey(
-        asDb(db),
-        systemId,
-        makeCreateParams(["banana" as ApiKeyScope]),
-        auth,
-        noopAudit,
-      ),
-    ).rejects.toThrow("Invalid payload");
-  });
-
-  it("rejects empty scopes array", async () => {
-    await expect(
-      createApiKey(asDb(db), systemId, makeCreateParams([]), auth, noopAudit),
-    ).rejects.toThrow("Invalid payload");
-  });
-
-  it("rejects missing scopes field", async () => {
-    const params = {
-      keyType: "metadata" as const,
-      encryptedData: testEncryptedDataBase64(),
-    };
-    await expect(createApiKey(asDb(db), systemId, params, auth, noopAudit)).rejects.toThrow(
-      "Invalid payload",
-    );
-  });
-
   // ── Key type validation (crypto) ──────────────────────────────
 
   it("creates crypto key with encryptedKeyMaterial", async () => {
@@ -264,30 +234,10 @@ describe("api-key.service (PGlite integration)", () => {
     expect(result.scopes).toEqual(["read:members"]);
   });
 
-  it("rejects crypto key without encryptedKeyMaterial", async () => {
-    await expect(
-      createApiKey(
-        asDb(db),
-        systemId,
-        makeCreateParams(["read:members"], { keyType: "crypto" }),
-        auth,
-        noopAudit,
-      ),
-    ).rejects.toThrow("Invalid payload");
-  });
-
-  it("rejects metadata key with encryptedKeyMaterial", async () => {
-    const keyMaterial = Buffer.from("test-key-material").toString("base64");
-    await expect(
-      createApiKey(
-        asDb(db),
-        systemId,
-        makeCreateParams(["read:members"], { encryptedKeyMaterial: keyMaterial }),
-        auth,
-        noopAudit,
-      ),
-    ).rejects.toThrow("Invalid payload");
-  });
+  // The keyType ↔ encryptedKeyMaterial coupling is enforced by
+  // CreateApiKeyBodySchema's `.refine(...)` at the route/tRPC boundary; the
+  // service consumes already-parsed bodies, so these refinement-level checks
+  // are no longer reachable here.
 
   // ── Revocation ────────────────────────────────────────────────
 

@@ -8,7 +8,6 @@ import {
   now,
   toUnixMillis,
 } from "@pluralscape/types";
-import { CreateUploadUrlBodySchema } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST, HTTP_CONTENT_TOO_LARGE } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -22,7 +21,9 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobStorageAdapter } from "@pluralscape/storage";
 import type { BlobQuotaService } from "@pluralscape/storage/quota";
 import type { BlobId, StorageKey, SystemId, UnixMillis } from "@pluralscape/types";
+import type { CreateUploadUrlBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export interface UploadUrlResult {
   readonly blobId: BlobId;
@@ -37,19 +38,13 @@ export async function createUploadUrl(
   storageAdapter: BlobStorageAdapter,
   quotaService: BlobQuotaService,
   systemId: SystemId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof CreateUploadUrlBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<UploadUrlResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = CreateUploadUrlBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const { purpose, mimeType, sizeBytes, encryptionTier } = result.data;
+  const { purpose, mimeType, sizeBytes, encryptionTier } = body;
 
   // Check per-purpose size limit
   const maxSize = BLOB_SIZE_LIMITS[purpose];

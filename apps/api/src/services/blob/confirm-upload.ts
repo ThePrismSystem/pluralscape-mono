@@ -1,9 +1,8 @@
 import { blobMetadata } from "@pluralscape/db/pg";
 import { brandId, now } from "@pluralscape/types";
-import { ConfirmUploadBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { withTenantTransaction } from "../../lib/rls-context.js";
 import { assertSystemOwnership } from "../../lib/system-ownership.js";
@@ -15,25 +14,21 @@ import type { BlobResult } from "./internal.js";
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobId, SystemId } from "@pluralscape/types";
+import type { ConfirmUploadBodySchema } from "@pluralscape/validation";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { z } from "zod/v4";
 
 export async function confirmUpload(
   db: PostgresJsDatabase,
   systemId: SystemId,
   blobId: BlobId,
-  // eslint-disable-next-line pluralscape/no-params-unknown
-  params: unknown,
+  body: z.infer<typeof ConfirmUploadBodySchema>,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BlobResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = ConfirmUploadBodySchema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const { checksum, thumbnailOfBlobId } = result.data;
+  const { checksum, thumbnailOfBlobId } = body;
   const thumbnailOfBlobIdBranded = thumbnailOfBlobId ? brandId<BlobId>(thumbnailOfBlobId) : null;
   const timestamp = now();
 

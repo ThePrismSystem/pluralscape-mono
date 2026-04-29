@@ -47,6 +47,7 @@ import type {
   SystemId,
   T3EncryptedBytes,
   WebhookDeliveryId,
+  WebhookEventType,
   WebhookId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -77,18 +78,38 @@ describe("webhook-config.service (PGlite integration)", () => {
     await db.delete(webhookConfigs);
   });
 
+  /**
+   * Build a body matching the canonical service signature.
+   *
+   * The service now consumes `z.infer<typeof CreateWebhookConfigBodySchema>`,
+   * which (after default-application at parse time) types `enabled` as a
+   * concrete boolean and includes `cryptoKeyId` (optional Brand). Tests
+   * construct the parsed-body shape directly; boundary validation lives in
+   * the route layer.
+   *
+   * `eventTypes` is intentionally a mutable `WebhookEventType[]` because the
+   * Zod schema's `Readonly<{...}>` wrapper only freezes the top-level object,
+   * not the inner array — and Drizzle's `.values({ eventTypes })` requires a
+   * mutable list.
+   */
   function createParams(
     overrides: Partial<{
       url: string;
-      eventTypes: string[];
+      eventTypes: WebhookEventType[];
       enabled: boolean;
-      cryptoKeyId: string;
+      cryptoKeyId: undefined;
     }> = {},
-  ) {
+  ): {
+    url: string;
+    eventTypes: WebhookEventType[];
+    enabled: boolean;
+    cryptoKeyId: undefined;
+  } {
     return {
       url: "https://example.com/webhook",
       eventTypes: ["fronting.started"],
       enabled: true,
+      cryptoKeyId: undefined,
       ...overrides,
     };
   }
@@ -106,33 +127,8 @@ describe("webhook-config.service (PGlite integration)", () => {
       expect(audit.calls[0]?.eventType).toBe("webhook-config.created");
     });
 
-    it("validates event types", async () => {
-      await assertApiError(
-        createWebhookConfig(
-          asDb(db),
-          systemId,
-          createParams({ eventTypes: ["invalid.event"] }),
-          auth,
-          noopAudit,
-        ),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
-
-    it("validates URL format", async () => {
-      await assertApiError(
-        createWebhookConfig(
-          asDb(db),
-          systemId,
-          createParams({ url: "not-a-url" }),
-          auth,
-          noopAudit,
-        ),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
+    // Schema-level validation (event types, URL format) is exercised at the
+    // route/tRPC boundary; the service consumes already-parsed bodies.
 
     it("wraps SSRF validation Error into VALIDATION_ERROR on create", async () => {
       const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
@@ -264,27 +260,7 @@ describe("webhook-config.service (PGlite integration)", () => {
       );
     });
 
-    it("re-validates URL on update", async () => {
-      const created = await createWebhookConfig(
-        asDb(db),
-        systemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await assertApiError(
-        updateWebhookConfig(
-          asDb(db),
-          systemId,
-          created.id,
-          { version: 1, url: "not-a-url" },
-          auth,
-          noopAudit,
-        ),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
+    // URL format validation moved to the route/tRPC boundary.
   });
 
   describe("deleteWebhookConfig", () => {
