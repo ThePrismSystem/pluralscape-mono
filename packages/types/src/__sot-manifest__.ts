@@ -96,6 +96,11 @@ import type {
   DeviceTransferRequestWire,
 } from "./entities/device-transfer-request.js";
 import type {
+  ExportRequest,
+  ExportRequestServerMetadata,
+  ExportRequestWire,
+} from "./entities/export-request.js";
+import type {
   FieldDefinitionScope,
   FieldDefinitionScopeServerMetadata,
   FieldDefinitionScopeWire,
@@ -771,6 +776,14 @@ export type SotEntityManifest = {
     wire: ImportJobWire;
     // Plaintext domain — `checkpointState` is server-only resumption
     // state, attached only to the server-side metadata.
+    encryptedFields: never;
+  };
+  ExportRequest: {
+    domain: ExportRequest;
+    server: ExportRequestServerMetadata;
+    wire: ExportRequestWire;
+    // Plaintext entity — identity case; the domain already exposes
+    // everything the server tracks for an export request.
     encryptedFields: never;
   };
   // ── Cluster 10: Privacy-social ────────────────────────────────────────
