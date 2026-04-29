@@ -7,7 +7,7 @@ import type { NotificationConfigWire, NotificationEventType } from "@pluralscape
 const NOW = 1_700_000_000_000;
 const LATER = 1_700_002_000_000;
 
-function makeRaw(overrides?: Partial<NotificationConfigWire>): NotificationConfigWire {
+function makeLiveRaw(overrides?: Partial<NotificationConfigWire>): NotificationConfigWire {
   return {
     id: "nc_test0001",
     systemId: "sys_test001",
@@ -18,14 +18,28 @@ function makeRaw(overrides?: Partial<NotificationConfigWire>): NotificationConfi
     createdAt: NOW,
     updatedAt: NOW,
     archived: false,
-    archivedAt: null,
     ...overrides,
-  };
+  } as NotificationConfigWire;
+}
+
+function makeArchivedRaw(): NotificationConfigWire {
+  return {
+    id: "nc_test0001",
+    systemId: "sys_test001",
+    eventType: "switch-reminder" as NotificationEventType,
+    enabled: true,
+    pushEnabled: false,
+    version: 1,
+    createdAt: NOW,
+    updatedAt: NOW,
+    archived: true,
+    archivedAt: LATER,
+  } as NotificationConfigWire;
 }
 
 describe("narrowNotificationConfig", () => {
   it("returns live entity with archived: false", () => {
-    const result = narrowNotificationConfig(makeRaw());
+    const result = narrowNotificationConfig(makeLiveRaw());
     expect(result.archived).toBe(false);
     expect(result.id).toBe("nc_test0001");
     expect(result.systemId).toBe("sys_test001");
@@ -38,33 +52,26 @@ describe("narrowNotificationConfig", () => {
   });
 
   it("returns archived entity with archivedAt", () => {
-    const result = narrowNotificationConfig(makeRaw({ archived: true, archivedAt: LATER }));
+    const result = narrowNotificationConfig(makeArchivedRaw());
     expect(result.archived).toBe(true);
-    if (result.archived) {
-      expect(result.archivedAt).toBe(LATER);
-    }
-  });
-
-  it("throws when archived=true but archivedAt is null", () => {
-    expect(() => narrowNotificationConfig(makeRaw({ archived: true, archivedAt: null }))).toThrow(
-      "missing archivedAt",
-    );
+    if (!result.archived) throw new Error("Expected archived shape");
+    expect(result.archivedAt).toBe(LATER);
   });
 
   it("handles pushEnabled: true", () => {
-    const result = narrowNotificationConfig(makeRaw({ pushEnabled: true }));
+    const result = narrowNotificationConfig(makeLiveRaw({ pushEnabled: true }));
     expect(result.pushEnabled).toBe(true);
   });
 
   it("handles enabled: false", () => {
-    const result = narrowNotificationConfig(makeRaw({ enabled: false }));
+    const result = narrowNotificationConfig(makeLiveRaw({ enabled: false }));
     expect(result.enabled).toBe(false);
   });
 });
 
 describe("narrowNotificationConfigPage", () => {
   it("narrows all items and preserves cursor", () => {
-    const page = { data: [makeRaw(), makeRaw()], nextCursor: "cursor_abc" };
+    const page = { data: [makeLiveRaw(), makeArchivedRaw()], nextCursor: "cursor_abc" };
     const result = narrowNotificationConfigPage(page);
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("cursor_abc");
