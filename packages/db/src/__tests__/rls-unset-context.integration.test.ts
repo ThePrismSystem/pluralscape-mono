@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { enableRls, systemRlsPolicy } from "../rls/policies.js";
 
 import { pgInsertAccount, pgInsertMember, pgInsertSystem } from "./helpers/pg-helpers.js";
+import { APP_ROLE, clearSessionContext, setSessionSystemId } from "./helpers/rls-test-helpers.js";
 
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -28,8 +29,6 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 describe("RLS unset-context fail-silent behavior", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
-
-  const APP_ROLE = "app_user";
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -84,7 +83,7 @@ describe("RLS unset-context fail-silent behavior", () => {
     const accountId = await pgInsertAccount(db);
     const systemId = await pgInsertSystem(db, accountId);
 
-    await db.execute(sql`SELECT set_config('app.current_system_id', ${systemId}, false)`);
+    await setSessionSystemId(db, systemId);
     await pgInsertMember(db, systemId);
 
     // Create role and grant table access before enabling RLS.
@@ -103,7 +102,7 @@ describe("RLS unset-context fail-silent behavior", () => {
     await client.query(`SET ROLE ${APP_ROLE}`);
 
     // Clear context before test body — this is the state under test.
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
   });
 
   afterAll(async () => {
@@ -122,7 +121,7 @@ describe("RLS unset-context fail-silent behavior", () => {
   });
 
   it("returns 0 rows from members when context is unset", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await db.execute<{ id: string }>(sql`SELECT id FROM members LIMIT 10`);
     const rows = Array.isArray(result) ? result : (result.rows as Array<{ id: string }>);
@@ -135,7 +134,7 @@ describe("RLS unset-context fail-silent behavior", () => {
 
   it("still returns 0 rows after context is explicitly reset to empty string", async () => {
     // Belt-and-suspenders: confirm the empty-string path is equivalent to unset.
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await db.execute<{ id: string }>(sql`SELECT id FROM members LIMIT 10`);
     const rows = Array.isArray(result) ? result : (result.rows as Array<{ id: string }>);
