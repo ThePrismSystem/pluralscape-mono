@@ -94,8 +94,8 @@ describe("PostMergeValidator: enforceTombstones", () => {
       d.members[asMemberId("mem_1")] = makeActiveMember("mem_1");
     });
     await relay.submit(seedEnv);
-    const _r1 = await relay.getEnvelopesSince(asSyncDocId("doc-tomb-enforce"), 0);
-    sessionB.applyEncryptedChanges(_r1.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-tomb-enforce"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     // A archives. B makes an unrelated edit concurrently (does not un-archive).
     const envA = sessionA.change((d) => {

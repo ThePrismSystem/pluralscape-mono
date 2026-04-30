@@ -109,8 +109,8 @@ describe("runAllValidations (module-level function)", () => {
       d.groups[asGroupId("grpC")] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
-    const _r7 = await relay.getEnvelopesSince(asSyncDocId("doc-notif-test"), 0);
-    sessionB.applyEncryptedChanges(_r7.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-notif-test"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     const envA = sessionA.change((d) => {
       const g = d.groups[asGroupId("grpA")];
@@ -154,8 +154,8 @@ describe("runAllValidations (module-level function)", () => {
       d.groups[asGroupId("grpC")] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
-    const _r8 = await relay.getEnvelopesSince(asSyncDocId("doc-multi-validator"), 0);
-    sessionB.applyEncryptedChanges(_r8.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-multi-validator"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     const envA = sessionA.change((d) => {
       const g = d.groups[asGroupId("grpA")];

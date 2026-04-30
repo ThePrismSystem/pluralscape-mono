@@ -62,8 +62,8 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
       };
     });
     await relay.submit(seedEnv);
-    const _r5 = await relay.getEnvelopesSince(asSyncDocId("doc-checkin-norm"), 0);
-    sessionB.applyEncryptedChanges(_r5.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-checkin-norm"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     // A responds, B dismisses concurrently
     const envA = sessionA.change((d) => {

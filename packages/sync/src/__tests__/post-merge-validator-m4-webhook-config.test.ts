@@ -8,91 +8,31 @@
  * Companion file: post-merge-validator-m4-timer-config.test.ts holds
  * normalizeTimerConfig tests + runAllValidations timer integration.
  */
-import * as Automerge from "@automerge/automerge";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { fromDoc } from "../factories/document-factory.js";
 import { normalizeWebhookConfigs, runAllValidations } from "../post-merge-validator.js";
-import { EncryptedSyncSession } from "../sync-session.js";
 
-import { asSyncDocId, asTimerId } from "./test-crypto-helpers.js";
+import {
+  makeKeys,
+  makeTimer,
+  makeWebhookConfig,
+  makeWebhookSession,
+  s,
+  setSodium,
+} from "./helpers/validator-fixtures.js";
+import { asTimerId } from "./test-crypto-helpers.js";
 
-import type { CrdtTimer } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
-
-// ── helpers ──────────────────────────────────────────────────────────
-
-const s = (val: string): Automerge.ImmutableString => new Automerge.ImmutableString(val);
 
 let sodium: SodiumAdapter;
 
 beforeAll(async () => {
   sodium = new WasmSodiumAdapter();
   await sodium.init();
+  setSodium(sodium);
 });
-
-function makeKeys(): DocumentKeys {
-  return {
-    encryptionKey: sodium.aeadKeygen(),
-    signingKeys: sodium.signKeypair(),
-  };
-}
-
-function makeTimer(id: string, overrides?: Partial<CrdtTimer>): CrdtTimer {
-  return {
-    id: s(id),
-    systemId: s("sys_1"),
-    intervalMinutes: 30,
-    wakingHoursOnly: false,
-    wakingStart: null,
-    wakingEnd: null,
-    promptText: s("How are you?"),
-    enabled: true,
-    archived: false,
-    createdAt: 1000,
-    updatedAt: 1000,
-    ...overrides,
-  };
-}
-
-interface WebhookConfigShape {
-  url: Automerge.ImmutableString;
-  eventTypes: Automerge.ImmutableString[];
-  enabled: boolean;
-}
-
-interface WebhookTestDocument {
-  timers: Record<string, CrdtTimer>;
-  webhookConfigs: Record<string, WebhookConfigShape>;
-}
-
-/**
- * Helper to create a session with the "webhookConfigs" field for testing.
- * SystemCoreDocument does not include webhookConfigs yet, so we build a
- * minimal document via fromDoc with the correct shape.
- */
-function createSessionWithWebhookConfigs(
-  keys: DocumentKeys,
-  docId: string,
-): EncryptedSyncSession<WebhookTestDocument> {
-  const base = fromDoc({ timers: {}, webhookConfigs: {} });
-  return new EncryptedSyncSession<WebhookTestDocument>({
-    doc: Automerge.clone(base),
-    keys,
-    documentId: asSyncDocId(docId),
-    sodium,
-  });
-}
-
-function makeWebhookConfig(url: string, eventTypes: string[], enabled = true): WebhookConfigShape {
-  return {
-    url: s(url),
-    eventTypes: eventTypes.map((et) => s(et)),
-    enabled,
-  };
-}
 
 // ── normalizeWebhookConfigs ──────────────────────────────────────────
 
@@ -104,7 +44,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("generates notification for config with invalid URL format", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-badurl");
+    const session = makeWebhookSession(keys, "doc-m4-wh-badurl");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("not-a-url", ["member.created"]);
@@ -121,7 +61,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("generates notification for config with non-HTTP(S) URL (ftp://)", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-ftp");
+    const session = makeWebhookSession(keys, "doc-m4-wh-ftp");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("ftp://example.com/hook", ["member.created"]);
@@ -136,7 +76,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("produces no notification for config with valid HTTPS URL", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-https");
+    const session = makeWebhookSession(keys, "doc-m4-wh-https");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/webhook", [
@@ -151,7 +91,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("produces no notification for config with valid HTTP URL", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-http");
+    const session = makeWebhookSession(keys, "doc-m4-wh-http");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("http://localhost:8080/hook", [
@@ -166,7 +106,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("skips URL validation when url is a plain string (non-object guard)", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-plain-url");
+    const session = makeWebhookSession(keys, "doc-m4-wh-plain-url");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", ["member.created"]);
@@ -180,7 +120,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("generates notification for config with unknown event type", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-unk-evt");
+    const session = makeWebhookSession(keys, "doc-m4-wh-unk-evt");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", [
@@ -197,7 +137,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("produces no notification for config with all valid event types", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-valid-evt");
+    const session = makeWebhookSession(keys, "doc-m4-wh-valid-evt");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", [
@@ -214,7 +154,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("validates plain-string event types via typeof fallback", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-plain-str-evt");
+    const session = makeWebhookSession(keys, "doc-m4-wh-plain-str-evt");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", [
@@ -231,7 +171,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("generates one notification per config for mix of valid and invalid event types (breaks on first invalid)", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-mix-evt");
+    const session = makeWebhookSession(keys, "doc-m4-wh-mix-evt");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", [
@@ -249,7 +189,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("returns count=0 for empty configs map", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-empty");
+    const session = makeWebhookSession(keys, "doc-m4-wh-empty");
 
     const result = normalizeWebhookConfigs(session);
 
@@ -259,7 +199,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("returns count=0 for config with empty eventTypes array", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-empty-evt");
+    const session = makeWebhookSession(keys, "doc-m4-wh-empty-evt");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", []);
@@ -272,7 +212,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("skips eventTypes validation when eventTypes is not an array", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-nonarr-evt");
+    const session = makeWebhookSession(keys, "doc-m4-wh-nonarr-evt");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = {
@@ -291,7 +231,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
   });
 
   it("only invalid configs generate notifications in a multi-config set", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-multi");
+    const session = makeWebhookSession(keys, "doc-m4-wh-multi");
 
     session.change((d) => {
       d.webhookConfigs["wh_valid"] = makeWebhookConfig("https://example.com/hook", [
@@ -322,7 +262,7 @@ describe("runAllValidations (M4 webhook integration)", () => {
   });
 
   it("triggers normalizeWebhookConfigs when document has webhookConfigs field", () => {
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-run-webhook");
+    const session = makeWebhookSession(keys, "doc-m4-run-webhook");
 
     session.change((d) => {
       d.webhookConfigs["wh_1"] = makeWebhookConfig("ftp://bad-protocol.com/hook", [
@@ -339,7 +279,7 @@ describe("runAllValidations (M4 webhook integration)", () => {
   it("runs both validators when both timers and webhookConfigs are present", () => {
     // Cross-coverage: this also exercises the timer validator's success path
     // alongside the webhook validator's success path.
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-run-both");
+    const session = makeWebhookSession(keys, "doc-m4-run-both");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -5 });
@@ -359,7 +299,7 @@ describe("runAllValidations (M4 webhook integration)", () => {
   it("catches webhook validator error without blocking timer validation", () => {
     // Cross-coverage: webhook-error path is the test focus; timer validator
     // runs as the success companion.
-    const session = createSessionWithWebhookConfigs(keys, "doc-m4-run-error-rev");
+    const session = makeWebhookSession(keys, "doc-m4-run-error-rev");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -5 });

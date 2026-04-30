@@ -63,8 +63,8 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
       };
     });
     await relay.submit(seedEnv);
-    const _r6 = await relay.getEnvelopesSince(asSyncDocId("doc-friend-norm"), 0);
-    sessionB.applyEncryptedChanges(_r6.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-friend-norm"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     // B sets status to pending while A keeps accepted
     const envA = sessionA.change((d) => {

@@ -12,102 +12,31 @@ import * as Automerge from "@automerge/automerge";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  createFrontingDocument,
-  createSystemCoreDocument,
-  fromDoc,
-} from "../factories/document-factory.js";
+import { createFrontingDocument } from "../factories/document-factory.js";
 import { normalizeTimerConfig, runAllValidations } from "../post-merge-validator.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
+import {
+  makeKeys,
+  makeSystemCoreSession,
+  makeTimer,
+  makeWebhookConfig,
+  makeWebhookSession,
+  s,
+  setSodium,
+} from "./helpers/validator-fixtures.js";
 import { asSyncDocId, asTimerId } from "./test-crypto-helpers.js";
 
-import type { CrdtTimer, SystemCoreDocument } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
-
-// ── helpers ──────────────────────────────────────────────────────────
-
-const s = (val: string): Automerge.ImmutableString => new Automerge.ImmutableString(val);
 
 let sodium: SodiumAdapter;
 
 beforeAll(async () => {
   sodium = new WasmSodiumAdapter();
   await sodium.init();
+  setSodium(sodium);
 });
-
-function makeKeys(): DocumentKeys {
-  return {
-    encryptionKey: sodium.aeadKeygen(),
-    signingKeys: sodium.signKeypair(),
-  };
-}
-
-function makeTimer(id: string, overrides?: Partial<CrdtTimer>): CrdtTimer {
-  return {
-    id: s(id),
-    systemId: s("sys_1"),
-    intervalMinutes: 30,
-    wakingHoursOnly: false,
-    wakingStart: null,
-    wakingEnd: null,
-    promptText: s("How are you?"),
-    enabled: true,
-    archived: false,
-    createdAt: 1000,
-    updatedAt: 1000,
-    ...overrides,
-  };
-}
-
-function createTimerSession(
-  keys: DocumentKeys,
-  docId: string,
-): EncryptedSyncSession<SystemCoreDocument> {
-  return new EncryptedSyncSession<SystemCoreDocument>({
-    doc: createSystemCoreDocument(),
-    keys,
-    documentId: asSyncDocId(docId),
-    sodium,
-  });
-}
-
-interface WebhookConfigShape {
-  url: Automerge.ImmutableString;
-  eventTypes: Automerge.ImmutableString[];
-  enabled: boolean;
-}
-interface TimerWithWebhookDocument {
-  timers: Record<string, CrdtTimer>;
-  webhookConfigs: Record<string, WebhookConfigShape>;
-}
-
-/**
- * Helper to build a document carrying both timers and webhookConfigs — used
- * by the cross-validator runAllValidations test that exercises the
- * "timer error does not block webhook" path.
- */
-function createTimerAndWebhookSession(
-  keys: DocumentKeys,
-  docId: string,
-): EncryptedSyncSession<TimerWithWebhookDocument> {
-  const base = fromDoc({ timers: {}, webhookConfigs: {} });
-  return new EncryptedSyncSession<TimerWithWebhookDocument>({
-    doc: Automerge.clone(base),
-    keys,
-    documentId: asSyncDocId(docId),
-    sodium,
-  });
-}
-
-function makeWebhookConfig(url: string, eventTypes: string[], enabled = true): WebhookConfigShape {
-  return {
-    url: s(url),
-    eventTypes: eventTypes.map((et) => s(et)),
-    enabled,
-  };
-}
 
 // ── normalizeTimerConfig ─────────────────────────────────────────────
 
@@ -121,7 +50,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   it.each([-100, -5, 0])(
     "disables timer with intervalMinutes = %i and generates notification",
     (interval) => {
-      const session = createTimerSession(keys, `doc-m4-timer-interval-${String(interval)}`);
+      const session = makeSystemCoreSession(keys, `doc-m4-timer-interval-${String(interval)}`);
 
       session.change((d) => {
         d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: interval });
@@ -139,7 +68,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   );
 
   it("does not normalize timer with intervalMinutes = null (field not set)", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-null-interval");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-null-interval");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: null });
@@ -153,7 +82,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("still counts already-disabled timer with invalid intervalMinutes", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-already-disabled");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-already-disabled");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -10, enabled: false });
@@ -167,7 +96,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("does not disable timer with overnight waking hours (start=22:00, end=08:00)", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-hours-overnight");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-hours-overnight");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -186,7 +115,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("disables timer with wakingHoursOnly=true and start equals end", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-hours-eq");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-hours-eq");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -210,7 +139,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   ] as [string | null, string | null, string][])(
     "disables timer with wakingHoursOnly=true and missing bound (start=%s, end=%s)",
     (start, end, suffix) => {
-      const session = createTimerSession(keys, `doc-m4-timer-${suffix}`);
+      const session = makeSystemCoreSession(keys, `doc-m4-timer-${suffix}`);
 
       session.change((d) => {
         d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -230,7 +159,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   );
 
   it("does not modify timer with wakingHoursOnly=true and valid hours (start < end)", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-valid-h");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-valid-h");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -248,7 +177,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("skips hours validation when wakingHoursOnly is false", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-wh-false");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-wh-false");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -265,7 +194,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("skips hours validation when wakingHoursOnly is null", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-wh-null");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-wh-null");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -282,7 +211,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("skips archived timers even with invalid config", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-arch");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-arch");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -305,7 +234,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("produces no notifications for a valid timer (positive interval, valid hours)", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-all-ok");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-all-ok");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
@@ -324,7 +253,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("disables only invalid timers in a mixed set (overnight range is valid)", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-mixed");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-mixed");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_valid")] = makeTimer("tmr_valid", {
@@ -357,7 +286,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
   });
 
   it("returns count=0 for empty timers map", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-empty");
+    const session = makeSystemCoreSession(keys, "doc-m4-timer-empty");
 
     const result = normalizeTimerConfig(session);
 
@@ -377,7 +306,7 @@ describe("runAllValidations (M4 timer integration)", () => {
   });
 
   it("triggers normalizeTimerConfig when document has timers field", () => {
-    const session = createTimerSession(keys, "doc-m4-run-timer");
+    const session = makeSystemCoreSession(keys, "doc-m4-run-timer");
 
     session.change((d) => {
       d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -1 });
@@ -411,7 +340,7 @@ describe("runAllValidations (M4 timer integration)", () => {
   it("catches timer validator error without blocking webhook validation", () => {
     // Cross-coverage: this exercises both validators — the timer-error path
     // is the test focus; the webhook validator runs as the success companion.
-    const session = createTimerAndWebhookSession(keys, "doc-m4-run-error");
+    const session = makeWebhookSession(keys, "doc-m4-run-error");
 
     session.change((d) => {
       // @ts-expect-error -- deliberately corrupting the timers map to test error handling

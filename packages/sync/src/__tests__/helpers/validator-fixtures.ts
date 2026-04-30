@@ -2,9 +2,12 @@
  * Shared fixture builders for post-merge-validator test files.
  *
  * Provides helpers used across ≥2 split test files:
- *   - sodium lifecycle (beforeAll init)
- *   - makeKeys / makeSessions / makeGroup / makeRegion
- *   - makeWebhookSession for webhook-config tests
+ *   - sodium lifecycle (beforeAll init / setSodium)
+ *   - Session/key factories: makeKeys, makeSessions, makeRelayAndSessions,
+ *     makeWebhookSession, makeSystemCoreSession
+ *   - Entity factories: makeGroup, makeRegion, makeActiveMember,
+ *     makeArchivedMember, makeFrontingSession, makeTimer, makeWebhookConfig
+ *   - ID factories: newFsId, newCommentId
  *   - Immutable string shorthand `s`
  */
 import * as Automerge from "@automerge/automerge";
@@ -13,12 +16,12 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { createSystemCoreDocument, fromDoc } from "../../factories/document-factory.js";
 import { EncryptedRelay } from "../../relay.js";
 import { EncryptedSyncSession } from "../../sync-session.js";
-import { asSyncDocId } from "../test-crypto-helpers.js";
+import { asFrontingCommentId, asFrontingSessionId, asSyncDocId } from "../test-crypto-helpers.js";
 
-import type { CrdtGroup, CrdtInnerWorldRegion } from "../../schemas/system-core.js";
+import type { CrdtGroup, CrdtInnerWorldRegion, CrdtTimer } from "../../schemas/system-core.js";
 import type { DocumentKeys } from "../../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
-import type { SyncDocumentId } from "@pluralscape/types";
+import type { FrontingCommentId, FrontingSessionId, SyncDocumentId } from "@pluralscape/types";
 
 // ── Sodium singleton ──────────────────────────────────────────────────
 
@@ -43,6 +46,15 @@ export async function initSodium(): Promise<SodiumAdapter> {
 
 /** Wrap a plain string in an Automerge ImmutableString. */
 export const s = (val: string): Automerge.ImmutableString => new Automerge.ImmutableString(val);
+
+// ── ID factories ─────────────────────────────────────────────────────
+
+/** Mint a fresh branded FrontingSessionId from a UUID. */
+export const newFsId = (): FrontingSessionId => asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+
+/** Mint a fresh branded FrontingCommentId from a UUID. */
+export const newCommentId = (): FrontingCommentId =>
+  asFrontingCommentId(`fc_${crypto.randomUUID()}`);
 
 // ── Session / key factories ──────────────────────────────────────────
 
@@ -117,14 +129,19 @@ export function makeRegion(id: string, parentId?: string): CrdtInnerWorldRegion 
 
 // ── Webhook session factory ──────────────────────────────────────────
 
-interface WebhookConfigShape {
+export interface WebhookConfigShape {
   url: Automerge.ImmutableString;
   eventTypes: Automerge.ImmutableString[];
   enabled: boolean;
 }
 
-interface WebhookTestDocument {
-  timers: Record<string, unknown>;
+/**
+ * Document shape for tests that exercise webhook normalization. `timers`
+ * is typed as `Record<string, CrdtTimer>` so the same session can be used
+ * by cross-validator tests that exercise both timer + webhook paths.
+ */
+export interface WebhookTestDocument {
+  timers: Record<string, CrdtTimer>;
   webhookConfigs: Record<string, WebhookConfigShape>;
 }
 
@@ -140,6 +157,19 @@ export function makeWebhookSession(
     documentId: asSyncDocId(docId),
     sodium,
   });
+}
+
+/** Build a minimal webhook config fixture (ImmutableString-wrapped url/eventTypes). */
+export function makeWebhookConfig(
+  url: string,
+  eventTypes: string[],
+  enabled = true,
+): WebhookConfigShape {
+  return {
+    url: s(url),
+    eventTypes: eventTypes.map((et) => s(et)),
+    enabled,
+  };
 }
 
 /** Build a plain system-core session for tests that only need a single session. */

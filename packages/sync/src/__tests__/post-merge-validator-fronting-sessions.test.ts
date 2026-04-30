@@ -17,12 +17,17 @@ import { createFrontingDocument, createSystemCoreDocument } from "../factories/d
 import { normalizeFrontingSessions, runAllValidations } from "../post-merge-validator.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { makeFrontingSession, makeKeys, s, setSodium } from "./helpers/validator-fixtures.js";
-import { asFrontingSessionId, asSyncDocId } from "./test-crypto-helpers.js";
+import {
+  makeFrontingSession,
+  makeKeys,
+  newFsId,
+  s,
+  setSodium,
+} from "./helpers/validator-fixtures.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
-import type { FrontingSessionId } from "@pluralscape/types";
 
 let sodium: SodiumAdapter;
 let keys: DocumentKeys;
@@ -32,8 +37,6 @@ beforeAll(async () => {
   await sodium.init();
   setSodium(sodium);
 });
-
-const newFsId = (): FrontingSessionId => asFrontingSessionId(`fs_${crypto.randomUUID()}`);
 
 // ── normalizeFrontingSessions ─────────────────────────────────────────
 

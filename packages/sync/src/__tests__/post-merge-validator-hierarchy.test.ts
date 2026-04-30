@@ -56,8 +56,8 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.groups[asGroupId("groupB")] = makeGroup("groupB", 2);
     });
     await relay.submit(seedEnv);
-    const _r2 = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-fix"), 0);
-    sessionB.applyEncryptedChanges(_r2.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-fix"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     // Create mutual parent cycle
     const envA = sessionA.change((d) => {
@@ -92,8 +92,8 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.groups[asGroupId("grpY")] = makeGroup("grpY", 2);
     });
     await relay.submit(seedEnv);
-    const _r3 = await relay.getEnvelopesSince(asSyncDocId("doc-grp-cycle-2"), 0);
-    sessionB.applyEncryptedChanges(_r3.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-grp-cycle-2"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     const envA = sessionA.change((d) => {
       const g = d.groups[asGroupId("grpX")];
@@ -124,8 +124,8 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.innerWorldRegions[asInnerWorldRegionId("rg_b")] = makeRegion("rg_b");
     });
     await relay.submit(seedEnv);
-    const _r4 = await relay.getEnvelopesSince(asSyncDocId("doc-rg-cycle"), 0);
-    sessionB.applyEncryptedChanges(_r4.envelopes);
+    const seedReplay = await relay.getEnvelopesSince(asSyncDocId("doc-rg-cycle"), 0);
+    sessionB.applyEncryptedChanges(seedReplay.envelopes);
 
     const envA = sessionA.change((d) => {
       const rg = d.innerWorldRegions[asInnerWorldRegionId("rg_a")];

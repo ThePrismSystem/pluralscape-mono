@@ -15,8 +15,8 @@ import { createFrontingDocument, createSystemCoreDocument } from "../factories/d
 import { normalizeFrontingCommentAuthors, runAllValidations } from "../post-merge-validator.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { makeKeys, s, setSodium } from "./helpers/validator-fixtures.js";
-import { asFrontingCommentId, asSyncDocId } from "./test-crypto-helpers.js";
+import { makeKeys, newCommentId, s, setSodium } from "./helpers/validator-fixtures.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -46,9 +46,9 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       sodium,
     });
 
-    const commentId = `fc_${crypto.randomUUID()}`;
+    const commentId = newCommentId();
     session.change((d) => {
-      d.comments[asFrontingCommentId(commentId)] = {
+      d.comments[commentId] = {
         id: s(commentId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -63,7 +63,7 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
     });
     // Null out memberId to simulate CRDT merge artifact
     session.change((d) => {
-      const target = d.comments[asFrontingCommentId(commentId)];
+      const target = d.comments[commentId];
       if (target) target.memberId = null;
     });
 
@@ -86,9 +86,9 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       sodium,
     });
 
-    const commentId = `fc_${crypto.randomUUID()}`;
+    const commentId = newCommentId();
     session.change((d) => {
-      d.comments[asFrontingCommentId(commentId)] = {
+      d.comments[commentId] = {
         id: s(commentId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -117,10 +117,10 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       sodium,
     });
 
-    const id1 = `fc_${crypto.randomUUID()}`;
-    const id2 = `fc_${crypto.randomUUID()}`;
+    const id1 = newCommentId();
+    const id2 = newCommentId();
     session.change((d) => {
-      d.comments[asFrontingCommentId(id1)] = {
+      d.comments[id1] = {
         id: s(id1),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -132,7 +132,7 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.comments[asFrontingCommentId(id2)] = {
+      d.comments[id2] = {
         id: s(id2),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -146,8 +146,8 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       };
     });
     session.change((d) => {
-      const c1 = d.comments[asFrontingCommentId(id1)];
-      const c2 = d.comments[asFrontingCommentId(id2)];
+      const c1 = d.comments[id1];
+      const c2 = d.comments[id2];
       if (c1) c1.memberId = null;
       if (c2) c2.memberId = null;
     });
@@ -183,9 +183,9 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       sodium,
     });
 
-    const commentId = `fc_${crypto.randomUUID()}`;
+    const commentId = newCommentId();
     session.change((d) => {
-      d.comments[asFrontingCommentId(commentId)] = {
+      d.comments[commentId] = {
         id: s(commentId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -214,9 +214,9 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       sodium,
     });
 
-    const commentId = `fc_${crypto.randomUUID()}`;
+    const commentId = newCommentId();
     session.change((d) => {
-      d.comments[asFrontingCommentId(commentId)] = {
+      d.comments[commentId] = {
         id: s(commentId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -245,12 +245,12 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       sodium,
     });
 
-    const validMemberId = `fc_${crypto.randomUUID()}`;
-    const validCustomFrontId = `fc_${crypto.randomUUID()}`;
-    const authorlessId = `fc_${crypto.randomUUID()}`;
+    const validMemberId = newCommentId();
+    const validCustomFrontId = newCommentId();
+    const authorlessId = newCommentId();
 
     session.change((d) => {
-      d.comments[asFrontingCommentId(validMemberId)] = {
+      d.comments[validMemberId] = {
         id: s(validMemberId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -262,7 +262,7 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.comments[asFrontingCommentId(validCustomFrontId)] = {
+      d.comments[validCustomFrontId] = {
         id: s(validCustomFrontId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -274,7 +274,7 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.comments[asFrontingCommentId(authorlessId)] = {
+      d.comments[authorlessId] = {
         id: s(authorlessId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -288,7 +288,7 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
       };
     });
     session.change((d) => {
-      const target = d.comments[asFrontingCommentId(authorlessId)];
+      const target = d.comments[authorlessId];
       if (target) target.memberId = null;
     });
 
@@ -316,9 +316,9 @@ describe("runAllValidations: frontingCommentAuthor dispatch", () => {
       sodium,
     });
 
-    const commentId = `fc_${crypto.randomUUID()}`;
+    const commentId = newCommentId();
     session.change((d) => {
-      d.comments[asFrontingCommentId(commentId)] = {
+      d.comments[commentId] = {
         id: s(commentId),
         frontingSessionId: s("fs_1"),
         systemId: s("sys_1"),
@@ -332,7 +332,7 @@ describe("runAllValidations: frontingCommentAuthor dispatch", () => {
       };
     });
     session.change((d) => {
-      const target = d.comments[asFrontingCommentId(commentId)];
+      const target = d.comments[commentId];
       if (target) target.memberId = null;
     });
 
