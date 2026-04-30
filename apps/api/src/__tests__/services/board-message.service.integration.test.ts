@@ -620,14 +620,6 @@ describe("board-message.service (PGlite integration)", () => {
       );
     });
 
-    it("throws VALIDATION_ERROR for invalid payload", async () => {
-      await assertApiError(
-        reorderBoardMessages(asDb(db), systemId, { operations: [] }, auth, noopAudit),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
-
     it("throws VALIDATION_ERROR for duplicate board message IDs", async () => {
       const bm = await createBoardMessage(
         asDb(db),

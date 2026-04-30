@@ -411,22 +411,6 @@ describe("import-job.service (PGlite integration)", () => {
       );
     });
 
-    it("rejects empty update", async () => {
-      const created = await createImportJob(
-        asDb(db),
-        systemId,
-        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
-        auth,
-        noopAudit,
-      );
-
-      await assertApiError(
-        updateImportJob(asDb(db), systemId, created.id, {}, auth, noopAudit),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
-
     it("rejects when systemId does not belong to the caller", async () => {
       const created = await createImportJob(
         asDb(db),

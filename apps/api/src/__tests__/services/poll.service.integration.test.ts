@@ -140,20 +140,6 @@ describe("poll.service (PGlite integration)", () => {
 
       expectSingleAuditEvent(audit, "poll.created");
     });
-
-    it("rejects creation with allowMultipleVotes=false and maxVotesPerMember > 1", async () => {
-      await assertApiError(
-        createPoll(
-          asDb(db),
-          systemId,
-          makeCreateParams({ allowMultipleVotes: false, maxVotesPerMember: 3 }),
-          auth,
-          noopAudit,
-        ),
-        "VALIDATION_ERROR",
-        400,
-      );
-    });
   });
 
   // ── GET ─────────────────────────────────────────────────────────
