@@ -43,9 +43,8 @@ vi.mock("../../../env.js", () => ({
 
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 const { updateWebhookConfig } = await import("../../../services/webhook-config/update.js");
-const { deleteWebhookConfig, archiveWebhookConfig, restoreWebhookConfig } = await import(
-  "../../../services/webhook-config/lifecycle.js"
-);
+const { deleteWebhookConfig, archiveWebhookConfig, restoreWebhookConfig } =
+  await import("../../../services/webhook-config/lifecycle.js");
 const { parseWebhookConfigQuery } = await import("../../../services/webhook-config/queries.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────

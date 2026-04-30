@@ -21,6 +21,7 @@ import {
   spyAudit,
   asDb,
 } from "../../../helpers/integration-setup.js";
+
 import { insertBucket, insertContentTags, initiateParams } from "./internal.js";
 
 import type { AuthContext } from "../../../../lib/auth-context.js";
@@ -70,7 +71,14 @@ describe("bucket/rotations — initiateRotation (PGlite integration)", () => {
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 3);
 
-      const result = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const result = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
       expect(result.id).toMatch(/^bkr_/);
       expect(result.bucketId).toBe(bucketId);
@@ -87,7 +95,14 @@ describe("bucket/rotations — initiateRotation (PGlite integration)", () => {
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 2);
 
-      const result = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const result = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
       const items = await db
         .select()
@@ -185,7 +200,14 @@ describe("bucket/rotations — initiateRotation (PGlite integration)", () => {
         failedItems: 0,
       });
 
-      const result = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(3), auth, noopAudit);
+      const result = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(3),
+        auth,
+        noopAudit,
+      );
 
       expect(result.state).toBe(ROTATION_STATES.initiated);
       expect(result.toKeyVersion).toBe(3);
@@ -202,7 +224,14 @@ describe("bucket/rotations — initiateRotation (PGlite integration)", () => {
       const bucketId = await insertBucket(db, systemId);
       // No content tags inserted
 
-      const result = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const result = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
       expect(result.totalItems).toBe(0);
       expect(result.state).toBe(ROTATION_STATES.initiated);

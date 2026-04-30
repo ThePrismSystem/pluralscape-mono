@@ -26,7 +26,23 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const { acknowledgements, checkInRecords, fieldDefinitions, fieldValues, frontingComments, frontingSessions, groupMemberships, groups, memberPhotos, members, notes, polls, relationships, systemStructureEntityMemberLinks, timerConfigs } = schema;
+const {
+  acknowledgements,
+  checkInRecords,
+  fieldDefinitions,
+  fieldValues,
+  frontingComments,
+  frontingSessions,
+  groupMemberships,
+  groups,
+  memberPhotos,
+  members,
+  notes,
+  polls,
+  relationships,
+  systemStructureEntityMemberLinks,
+  timerConfigs,
+} = schema;
 
 describe("member.service — updateMember / archiveMember / restoreMember (PGlite integration)", () => {
   let client: PGlite;
@@ -69,7 +85,13 @@ describe("member.service — updateMember / archiveMember / restoreMember (PGlit
 
   describe("updateMember", () => {
     it("increments version on successful update", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const updated = await updateMember(
         asDb(db),
@@ -84,7 +106,13 @@ describe("member.service — updateMember / archiveMember / restoreMember (PGlit
     });
 
     it("throws CONFLICT on stale version", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       await updateMember(
         asDb(db),
@@ -127,7 +155,13 @@ describe("member.service — updateMember / archiveMember / restoreMember (PGlit
 
   describe("archiveMember", () => {
     it("archives a member so getMember returns NOT_FOUND", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       await archiveMember(asDb(db), systemId, created.id, auth, noopAudit);
 
@@ -145,7 +179,13 @@ describe("member.service — updateMember / archiveMember / restoreMember (PGlit
 
   describe("restoreMember", () => {
     it("restores an archived member", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       await archiveMember(asDb(db), systemId, created.id, auth, noopAudit);
       const restored = await restoreMember(asDb(db), systemId, created.id, auth, noopAudit);
@@ -156,7 +196,13 @@ describe("member.service — updateMember / archiveMember / restoreMember (PGlit
     });
 
     it("throws NOT_FOUND when restoring a non-archived (active) member", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       // Member is active, not archived — restore should throw NOT_FOUND
       await assertApiError(
         restoreMember(asDb(db), systemId, created.id, auth, noopAudit),

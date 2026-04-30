@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
+
 import { AUTH, RECORD_ID, SYSTEM_ID, TIMER_ID, makePendingRow } from "./internal.js";
 
 import type { CheckInRecordId } from "@pluralscape/types";

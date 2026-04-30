@@ -5,7 +5,10 @@ import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
 import { makeTestAuth } from "../../helpers/test-auth.js";
 
-import type { ArchivableEntityConfig, DeletableEntityConfig } from "../../../lib/entity-lifecycle.js";
+import type {
+  ArchivableEntityConfig,
+  DeletableEntityConfig,
+} from "../../../lib/entity-lifecycle.js";
 import type { EncryptedBase64, BoardMessageId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
@@ -86,7 +89,8 @@ const { createBoardMessage } = await import("../../../services/board-message/cre
 const { listBoardMessages, getBoardMessage } =
   await import("../../../services/board-message/queries.js");
 const { updateBoardMessage } = await import("../../../services/board-message/update.js");
-const { pinBoardMessage, unpinBoardMessage } = await import("../../../services/board-message/pin.js");
+const { pinBoardMessage, unpinBoardMessage } =
+  await import("../../../services/board-message/pin.js");
 const { reorderBoardMessages } = await import("../../../services/board-message/reorder.js");
 const { deleteBoardMessage } = await import("../../../services/board-message/delete.js");
 const { archiveBoardMessage, restoreBoardMessage } =

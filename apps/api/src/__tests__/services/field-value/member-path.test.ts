@@ -2,7 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
-import { AUTH, FIELD_DEF_ID, MEMBER_ID, SYSTEM_ID, VALID_BLOB_BASE64, makeFieldValueRow } from "./internal.js";
+
+import {
+  AUTH,
+  FIELD_DEF_ID,
+  MEMBER_ID,
+  SYSTEM_ID,
+  VALID_BLOB_BASE64,
+  makeFieldValueRow,
+} from "./internal.js";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -63,7 +71,15 @@ describe("setFieldValueForOwner (member path)", () => {
     // 4. insert returning
     chain.returning.mockResolvedValueOnce([row]);
 
-    const result = await setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit);
+    const result = await setFieldValueForOwner(
+      db,
+      SYSTEM_ID,
+      MEMBER_OWNER,
+      FIELD_DEF_ID,
+      { encryptedData: VALID_BLOB_BASE64 },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.id).toBe("fv_test-value");
     expect(result.fieldDefinitionId).toBe(FIELD_DEF_ID);
@@ -71,7 +87,10 @@ describe("setFieldValueForOwner (member path)", () => {
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(result.version).toBe(1);
     expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "field-value.set" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "field-value.set" }),
+    );
   });
 
   it("throws 409 when field value already exists", async () => {
@@ -81,7 +100,15 @@ describe("setFieldValueForOwner (member path)", () => {
     chain.limit.mockResolvedValueOnce([{ id: "fv_existing" }]);
 
     await expect(
-      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+      setFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
   });
 
@@ -90,8 +117,18 @@ describe("setFieldValueForOwner (member path)", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "Member not found" }));
+      setFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "Member not found" }),
+    );
   });
 
   it("throws 404 when field definition not found", async () => {
@@ -100,8 +137,22 @@ describe("setFieldValueForOwner (member path)", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "Field definition not found" }));
+      setFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "Field definition not found",
+      }),
+    );
   });
 
   it("throws 400 when encrypted blob fails deserialization", async () => {
@@ -115,7 +166,15 @@ describe("setFieldValueForOwner (member path)", () => {
     chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
 
     await expect(
-      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+      setFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
@@ -130,7 +189,15 @@ describe("setFieldValueForOwner (member path)", () => {
     chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
 
     await expect(
-      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+      setFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(TypeError);
   });
 
@@ -139,7 +206,15 @@ describe("setFieldValueForOwner (member path)", () => {
     const { db } = mockDb();
 
     await expect(
-      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+      setFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -190,15 +265,22 @@ describe("updateFieldValueForOwner (member path)", () => {
     chain.returning.mockResolvedValueOnce([updatedRow]);
 
     const result = await updateFieldValueForOwner(
-      db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID,
+      db,
+      SYSTEM_ID,
+      MEMBER_OWNER,
+      FIELD_DEF_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1 },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.id).toBe("fv_test-value");
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "field-value.updated" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "field-value.updated" }),
+    );
   });
 
   it("throws 409 on version conflict", async () => {
@@ -209,7 +291,15 @@ describe("updateFieldValueForOwner (member path)", () => {
     chain.limit.mockResolvedValueOnce([{ id: "fv_test-value" }]);
 
     await expect(
-      updateFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64, version: 1 }, AUTH, mockAudit),
+      updateFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
   });
 
@@ -221,7 +311,15 @@ describe("updateFieldValueForOwner (member path)", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      updateFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, { encryptedData: VALID_BLOB_BASE64, version: 1 }, AUTH, mockAudit),
+      updateFieldValueForOwner(
+        db,
+        SYSTEM_ID,
+        MEMBER_OWNER,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -240,7 +338,10 @@ describe("deleteFieldValueForOwner (member path)", () => {
     await deleteFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, AUTH, mockAudit);
 
     expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "field-value.deleted" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "field-value.deleted" }),
+    );
   });
 
   it("throws 404 when field value not found", async () => {

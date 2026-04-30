@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { VALID_BLOB_BASE64 } from "../../helpers/mock-crypto.js";
 import { captureWhereArg, mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
+
 import { AUTH, SYSTEM_ID, TIMER_ID, makeTimerRow } from "./internal.js";
 
 import type { MockChain } from "../../helpers/mock-db.js";
@@ -28,7 +29,8 @@ vi.mock("../../../lib/system-ownership.js", () => ({
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
 const { createTimerConfig } = await import("../../../services/timer-config/create.js");
-const { listTimerConfigs, getTimerConfig } = await import("../../../services/timer-config/queries.js");
+const { listTimerConfigs, getTimerConfig } =
+  await import("../../../services/timer-config/queries.js");
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -46,24 +48,46 @@ describe("createTimerConfig", () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([makeTimerRow()]);
 
-    const result = await createTimerConfig(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit);
+    const result = await createTimerConfig(
+      db,
+      SYSTEM_ID,
+      { encryptedData: VALID_BLOB_BASE64 },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.id).toBe(TIMER_ID);
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(result.enabled).toBe(true);
     expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "timer-config.created" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "timer-config.created" }),
+    );
   });
 
   it("creates a timer config with all optional fields", async () => {
-    const row = makeTimerRow({ enabled: false, intervalMinutes: 60, wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: "22:00" });
+    const row = makeTimerRow({
+      enabled: false,
+      intervalMinutes: 60,
+      wakingHoursOnly: true,
+      wakingStart: "08:00",
+      wakingEnd: "22:00",
+    });
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([row]);
 
     const result = await createTimerConfig(
       db,
       SYSTEM_ID,
-      { encryptedData: VALID_BLOB_BASE64, enabled: false, intervalMinutes: 60, wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: "22:00" },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        enabled: false,
+        intervalMinutes: 60,
+        wakingHoursOnly: true,
+        wakingStart: "08:00",
+        wakingEnd: "22:00",
+      },
       AUTH,
       mockAudit,
     );
@@ -126,14 +150,25 @@ describe("createTimerConfig", () => {
   });
 
   it("computes nextCheckInAt with waking hours in create", async () => {
-    const row = makeTimerRow({ intervalMinutes: 30, wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: "22:00" });
+    const row = makeTimerRow({
+      intervalMinutes: 30,
+      wakingHoursOnly: true,
+      wakingStart: "08:00",
+      wakingEnd: "22:00",
+    });
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([row]);
 
     const result = await createTimerConfig(
       db,
       SYSTEM_ID,
-      { encryptedData: VALID_BLOB_BASE64, intervalMinutes: 30, wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: "22:00" },
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: "08:00",
+        wakingEnd: "22:00",
+      },
       AUTH,
       mockAudit,
     );
@@ -288,7 +323,9 @@ describe("getTimerConfig", () => {
 
   it("maps wakingHoursOnly true branch correctly", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeTimerRow({ wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: "22:00" })]);
+    chain.limit.mockResolvedValueOnce([
+      makeTimerRow({ wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: "22:00" }),
+    ]);
 
     const result = await getTimerConfig(db, SYSTEM_ID, TIMER_ID, AUTH);
 
@@ -299,7 +336,9 @@ describe("getTimerConfig", () => {
 
   it("maps wakingHoursOnly null branch correctly", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeTimerRow({ wakingHoursOnly: null, wakingStart: null, wakingEnd: null })]);
+    chain.limit.mockResolvedValueOnce([
+      makeTimerRow({ wakingHoursOnly: null, wakingStart: null, wakingEnd: null }),
+    ]);
 
     const result = await getTimerConfig(db, SYSTEM_ID, TIMER_ID, AUTH);
 
@@ -311,7 +350,9 @@ describe("getTimerConfig", () => {
   it("maps wakingHoursOnly true with null wakingStart to false branch", async () => {
     const { db, chain } = mockDb();
     // wakingHoursOnly=true but wakingStart=null falls to else branch
-    chain.limit.mockResolvedValueOnce([makeTimerRow({ wakingHoursOnly: true, wakingStart: null, wakingEnd: "22:00" })]);
+    chain.limit.mockResolvedValueOnce([
+      makeTimerRow({ wakingHoursOnly: true, wakingStart: null, wakingEnd: "22:00" }),
+    ]);
 
     const result = await getTimerConfig(db, SYSTEM_ID, TIMER_ID, AUTH);
 
@@ -321,7 +362,9 @@ describe("getTimerConfig", () => {
 
   it("maps wakingHoursOnly true with null wakingEnd to false branch", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeTimerRow({ wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: null })]);
+    chain.limit.mockResolvedValueOnce([
+      makeTimerRow({ wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: null }),
+    ]);
 
     const result = await getTimerConfig(db, SYSTEM_ID, TIMER_ID, AUTH);
 

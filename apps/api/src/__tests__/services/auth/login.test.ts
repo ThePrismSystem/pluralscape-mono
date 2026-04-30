@@ -4,7 +4,6 @@
  * Covers: loginAccount (all success/failure/throttle paths),
  * LoginThrottledError, per-account session limiting.
  */
-import { brandId } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockEnv = vi.hoisted(() => ({
@@ -13,12 +12,12 @@ const mockEnv = vi.hoisted(() => ({
   TRUST_PROXY: false,
 }));
 
-vi.mock("../../env.js", () => ({ env: mockEnv }));
+vi.mock("../../../env.js", () => ({ env: mockEnv }));
 
-import { MAX_SESSIONS_PER_ACCOUNT } from "../../quota.constants.js";
-import { LoginThrottledError, loginAccount } from "../../services/auth/login.js";
-import { mockDb } from "../helpers/mock-db.js";
-import { createMockLogger } from "../helpers/mock-logger.js";
+import { MAX_SESSIONS_PER_ACCOUNT } from "../../../quota.constants.js";
+import { LoginThrottledError, loginAccount } from "../../../services/auth/login.js";
+import { mockDb } from "../../helpers/mock-db.js";
+import { createMockLogger } from "../../helpers/mock-logger.js";
 
 import type { SessionRevocation } from "./internal.js";
 
@@ -53,11 +52,11 @@ vi.mock("@pluralscape/crypto", () => ({
   serializePublicKey: () => "base64-encoded-key",
 }));
 
-vi.mock("../../lib/audit-log.js", () => ({
+vi.mock("../../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../lib/email-hash.js", () => ({
+vi.mock("../../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
 
@@ -68,7 +67,7 @@ const mockLoginStoreRecordFailure =
     (key: string) => Promise<{ throttled: boolean; failedAttempts: number; windowResetAt: number }>
   >();
 const mockLoginStoreReset = vi.fn<(key: string) => Promise<void>>();
-vi.mock("../../middleware/stores/account-login-store.js", () => ({
+vi.mock("../../../middleware/stores/account-login-store.js", () => ({
   getAccountLoginStore: () => ({
     check: (key: string) => mockLoginStoreCheck(key),
     recordFailure: (key: string) => mockLoginStoreRecordFailure(key),
@@ -77,7 +76,7 @@ vi.mock("../../middleware/stores/account-login-store.js", () => ({
 }));
 
 const mockEqualizeAntiEnumTiming = vi.fn<(startTime: number) => Promise<void>>();
-vi.mock("../../lib/anti-enum-timing.js", () => ({
+vi.mock("../../../lib/anti-enum-timing.js", () => ({
   equalizeAntiEnumTiming: (startTime: number) => mockEqualizeAntiEnumTiming(startTime),
 }));
 
@@ -172,10 +171,9 @@ describe("loginAccount", () => {
     const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
     expect(result).toBeNull();
     await vi.waitFor(() => {
-      expect(logMethods.error).toHaveBeenCalledWith(
-        "[audit] Failed to write auth.login-failed:",
-        { err: auditError },
-      );
+      expect(logMethods.error).toHaveBeenCalledWith("[audit] Failed to write auth.login-failed:", {
+        err: auditError,
+      });
     });
   });
 
@@ -333,10 +331,9 @@ describe("loginAccount", () => {
 
     await loginAccount(db, credentials, "web", mockAudit, mockLogger);
     await vi.waitFor(() => {
-      expect(logMethods.error).toHaveBeenCalledWith(
-        "[audit] Failed to write auth.login-failed:",
-        { err: { message: "non-error-audit" } },
-      );
+      expect(logMethods.error).toHaveBeenCalledWith("[audit] Failed to write auth.login-failed:", {
+        err: { message: "non-error-audit" },
+      });
     });
   });
 
@@ -387,9 +384,7 @@ describe("loginAccount", () => {
 
   it("logs error when throttle reset throws after successful login (Error)", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([makeAccountRow()])
-      .mockResolvedValueOnce([{ total: 0 }]);
+    chain.limit.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([{ total: 0 }]);
     mockLoginStoreReset.mockRejectedValueOnce(new Error("valkey reset fail"));
 
     const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -402,9 +397,7 @@ describe("loginAccount", () => {
 
   it("logs error when throttle reset throws after successful login (non-Error)", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([makeAccountRow()])
-      .mockResolvedValueOnce([{ total: 0 }]);
+    chain.limit.mockResolvedValueOnce([makeAccountRow()]).mockResolvedValueOnce([{ total: 0 }]);
     mockLoginStoreReset.mockRejectedValueOnce("reset-string");
 
     const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -436,11 +429,10 @@ describe("loginAccount", () => {
 
     const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
     expect(result).not.toBeNull();
-    const setCalls = chain.set.mock.calls;
+    const setCalls: unknown[][] = chain.set.mock.calls;
     const revocationCall = setCalls.find(
       (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
     );
     expect(revocationCall).toBeUndefined();
   });
 });
-

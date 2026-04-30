@@ -32,12 +32,10 @@ vi.mock("../../../services/webhook-dispatcher.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { updateFrontingSession, endFrontingSession } = await import(
-  "../../../services/fronting-session/update.js"
-);
-const { deleteFrontingSession, archiveFrontingSession, restoreFrontingSession } = await import(
-  "../../../services/fronting-session/lifecycle.js"
-);
+const { updateFrontingSession, endFrontingSession } =
+  await import("../../../services/fronting-session/update.js");
+const { deleteFrontingSession, archiveFrontingSession, restoreFrontingSession } =
+  await import("../../../services/fronting-session/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

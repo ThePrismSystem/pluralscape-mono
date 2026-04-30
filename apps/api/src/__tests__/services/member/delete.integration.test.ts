@@ -41,7 +41,23 @@ import type {
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const { acknowledgements, checkInRecords, fieldDefinitions, fieldValues, frontingComments, frontingSessions, groupMemberships, groups, memberPhotos, members, notes, polls, relationships, systemStructureEntityMemberLinks, timerConfigs } = schema;
+const {
+  acknowledgements,
+  checkInRecords,
+  fieldDefinitions,
+  fieldValues,
+  frontingComments,
+  frontingSessions,
+  groupMemberships,
+  groups,
+  memberPhotos,
+  members,
+  notes,
+  polls,
+  relationships,
+  systemStructureEntityMemberLinks,
+  timerConfigs,
+} = schema;
 
 describe("member.service — deleteMember (PGlite integration)", () => {
   let client: PGlite;
@@ -84,7 +100,13 @@ describe("member.service — deleteMember (PGlite integration)", () => {
 
   describe("deleteMember", () => {
     it("removes the member so getMember returns NOT_FOUND", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       await deleteMember(asDb(db), systemId, created.id, auth, noopAudit);
 
@@ -100,7 +122,13 @@ describe("member.service — deleteMember (PGlite integration)", () => {
     });
 
     it("throws HAS_DEPENDENTS when member has photos", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(memberPhotos).values({
         id: brandId<MemberPhotoId>(`mph_${crypto.randomUUID()}`),
@@ -112,13 +140,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "photos")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has fronting sessions", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(frontingSessions).values({
         id: brandId<FrontingSessionId>(`fs_${crypto.randomUUID()}`),
@@ -130,13 +168,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "frontingSessions")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has a relationship", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(relationships).values({
         id: brandId<RelationshipId>(`rel_${crypto.randomUUID()}`),
@@ -148,13 +196,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "relationships")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has notes", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(notes).values({
         id: brandId<NoteId>(`note_${crypto.randomUUID()}`),
@@ -166,13 +224,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "notes")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has acknowledgements", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(acknowledgements).values({
         id: brandId<AcknowledgementId>(`ack_${crypto.randomUUID()}`),
@@ -183,13 +251,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "acknowledgements")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has polls", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(polls).values({
         id: brandId<PollId>(`poll_${crypto.randomUUID()}`),
@@ -205,13 +283,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "polls")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has check-in records", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       const timerId = brandId<TimerId>(`tmr_${crypto.randomUUID()}`);
       await db.insert(timerConfigs).values({
@@ -229,13 +317,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         respondedByMemberId: created.id,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "checkInRecords")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has group memberships", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const groupId = genGroupId();
       const now = toUnixMillis(Date.now());
       await db.insert(groups).values({
@@ -246,15 +344,27 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         createdAt: now,
         updatedAt: now,
       });
-      await db.insert(groupMemberships).values({ groupId, memberId: created.id, systemId, createdAt: now });
+      await db
+        .insert(groupMemberships)
+        .values({ groupId, memberId: created.id, systemId, createdAt: now });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "groupMemberships")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has field values", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       // Insert field definition first (FK constraint)
@@ -276,13 +386,23 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "fieldValues")).toBe(true);
     });
 
     it("throws HAS_DEPENDENTS when member has structure entity member links", async () => {
-      const created = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const created = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(systemStructureEntityMemberLinks).values({
         id: brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`),
@@ -292,7 +412,11 @@ describe("member.service — deleteMember (PGlite integration)", () => {
         createdAt: now,
       });
 
-      const err = await assertApiError(deleteMember(asDb(db), systemId, created.id, auth, noopAudit), "HAS_DEPENDENTS", 409);
+      const err = await assertApiError(
+        deleteMember(asDb(db), systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
       const detail = err.details as { dependents: { type: string; count: number }[] };
       expect(detail.dependents.some((d) => d.type === "structureEntityMemberLinks")).toBe(true);
     });

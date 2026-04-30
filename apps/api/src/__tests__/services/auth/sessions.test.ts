@@ -12,16 +12,16 @@ const mockEnv = vi.hoisted(() => ({
   TRUST_PROXY: false,
 }));
 
-vi.mock("../../env.js", () => ({ env: mockEnv }));
+vi.mock("../../../env.js", () => ({ env: mockEnv }));
 
-import { fromCursor } from "../../lib/pagination.js";
+import { fromCursor } from "../../../lib/pagination.js";
 import {
   listSessions,
   logoutCurrentSession,
   revokeAllSessions,
   revokeSession,
-} from "../../services/auth/sessions.js";
-import { mockDb } from "../helpers/mock-db.js";
+} from "../../../services/auth/sessions.js";
+import { mockDb } from "../../helpers/mock-db.js";
 
 import type { SessionRevocation } from "./internal.js";
 import type { AccountId, SessionId } from "@pluralscape/types";
@@ -35,7 +35,7 @@ vi.mock("@pluralscape/crypto", () => ({
   getSodium: () => ({ randomBytes: (n: number) => new Uint8Array(n) }),
 }));
 
-vi.mock("../../lib/audit-log.js", () => ({
+vi.mock("../../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -169,7 +169,12 @@ describe("revokeSession", () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
 
-    const result = await revokeSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit);
+    const result = await revokeSession(
+      db,
+      brandId<SessionId>("sess_1"),
+      TEST_ACCOUNT_ID,
+      mockAudit,
+    );
     expect(result).toBe(false);
   });
 
@@ -177,7 +182,12 @@ describe("revokeSession", () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
-    const result = await revokeSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit);
+    const result = await revokeSession(
+      db,
+      brandId<SessionId>("sess_1"),
+      TEST_ACCOUNT_ID,
+      mockAudit,
+    );
     expect(result).toBe(true);
     expect(chain.transaction).toHaveBeenCalled();
   });
@@ -200,7 +210,12 @@ describe("revokeSession", () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
 
-    const result = await revokeSession(db, brandId<SessionId>("sess_1"), TEST_ACCOUNT_ID, mockAudit);
+    const result = await revokeSession(
+      db,
+      brandId<SessionId>("sess_1"),
+      TEST_ACCOUNT_ID,
+      mockAudit,
+    );
     expect(result).toBe(false);
   });
 });

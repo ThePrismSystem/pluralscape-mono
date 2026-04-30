@@ -23,10 +23,16 @@ import {
   spyAudit,
   asDb,
 } from "../../../helpers/integration-setup.js";
+
 import { insertBucket, insertContentTags, initiateParams } from "./internal.js";
 
 import type { AuthContext } from "../../../../lib/auth-context.js";
-import type { AccountId, BucketKeyRotationId, BucketRotationItemId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { bucketContentTags, bucketKeyRotations, bucketRotationItems, buckets, keyGrants } = schema;
@@ -70,9 +76,23 @@ describe("bucket/rotations — claimRotationChunk / completeRotationChunk (PGlit
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 3);
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
-      const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 10 }, auth);
+      const claim = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 10 },
+        auth,
+      );
 
       expect(claim.data).toHaveLength(3);
       expect(claim.rotationState).toBe(ROTATION_STATES.migrating);
@@ -86,9 +106,23 @@ describe("bucket/rotations — claimRotationChunk / completeRotationChunk (PGlit
       const bucketId = await insertBucket(db, systemId);
       // No content tags — rotation has 0 items
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
-      const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 10 }, auth);
+      const claim = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 10 },
+        auth,
+      );
 
       expect(claim.data).toHaveLength(0);
     });
@@ -97,9 +131,23 @@ describe("bucket/rotations — claimRotationChunk / completeRotationChunk (PGlit
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 5);
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
-      const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 2 }, auth);
+      const claim = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 2 },
+        auth,
+      );
 
       expect(claim.data).toHaveLength(2);
     });
@@ -147,8 +195,22 @@ describe("bucket/rotations — claimRotationChunk / completeRotationChunk (PGlit
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 2);
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
-      const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 10 }, auth);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
+      const claim = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 10 },
+        auth,
+      );
 
       const completionResult = await completeRotationChunk(
         asDb(db),
@@ -170,8 +232,22 @@ describe("bucket/rotations — claimRotationChunk / completeRotationChunk (PGlit
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 2);
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
-      const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 10 }, auth);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
+      const claim = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 10 },
+        auth,
+      );
 
       // Complete first item, fail second
       const completionResult = await completeRotationChunk(
@@ -199,7 +275,12 @@ describe("bucket/rotations — claimRotationChunk / completeRotationChunk (PGlit
       const items = await db
         .select()
         .from(bucketRotationItems)
-        .where(eq(bucketRotationItems.id, brandId<BucketRotationItemId>((claim.data[1] as { id: string }).id)));
+        .where(
+          eq(
+            bucketRotationItems.id,
+            brandId<BucketRotationItemId>((claim.data[1] as { id: string }).id),
+          ),
+        );
       expect(items[0]?.status).toBe(ROTATION_ITEM_STATUSES.pending);
       expect(items[0]?.attempts).toBe(1);
     });
@@ -260,8 +341,22 @@ describe("bucket/rotations — claimRotationChunk / completeRotationChunk (PGlit
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 1);
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
-      const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 10 }, auth);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
+      const claim = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 10 },
+        auth,
+      );
 
       const audit = spyAudit();
       await completeRotationChunk(

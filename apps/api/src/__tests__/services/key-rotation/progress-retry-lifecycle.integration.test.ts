@@ -35,7 +35,6 @@ import type {
   BucketId,
   BucketKeyRotationId,
   BucketRotationItemId,
-  KeyGrantId,
   SystemId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";

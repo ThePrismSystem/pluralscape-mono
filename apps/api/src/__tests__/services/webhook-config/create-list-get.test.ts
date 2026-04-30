@@ -43,9 +43,8 @@ vi.mock("../../../env.js", () => ({
 
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 const { createWebhookConfig } = await import("../../../services/webhook-config/create.js");
-const { listWebhookConfigs, getWebhookConfig } = await import(
-  "../../../services/webhook-config/queries.js"
-);
+const { listWebhookConfigs, getWebhookConfig } =
+  await import("../../../services/webhook-config/queries.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -185,13 +184,7 @@ describe("createWebhookConfig", () => {
     mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
     await expect(
-      createWebhookConfig(
-        db,
-        brandId<SystemId>("sys_other"),
-        validCreatePayload,
-        AUTH,
-        mockAudit,
-      ),
+      createWebhookConfig(db, brandId<SystemId>("sys_other"), validCreatePayload, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -347,9 +340,9 @@ describe("getWebhookConfig", () => {
     const { db } = mockDb();
     mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-    await expect(
-      getWebhookConfig(db, brandId<SystemId>("sys_other"), WH_ID, AUTH),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    await expect(getWebhookConfig(db, brandId<SystemId>("sys_other"), WH_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 
   it("maps row fields correctly via toWebhookConfigResult", async () => {

@@ -17,13 +17,12 @@ vi.hoisted(() => {
 });
 
 import { createBoardMessage } from "../../../services/board-message/create.js";
-import { deleteBoardMessage } from "../../../services/board-message/delete.js";
 import {
   archiveBoardMessage,
   restoreBoardMessage,
 } from "../../../services/board-message/lifecycle.js";
 import { pinBoardMessage, unpinBoardMessage } from "../../../services/board-message/pin.js";
-import { getBoardMessage, listBoardMessages } from "../../../services/board-message/queries.js";
+import { getBoardMessage } from "../../../services/board-message/queries.js";
 import { reorderBoardMessages } from "../../../services/board-message/reorder.js";
 import { clearWebhookConfigCache } from "../../../services/webhook-dispatcher.js";
 import {
@@ -441,72 +440,6 @@ describe("board-message.service (PGlite integration) — pin, reorder, lifecycle
         restoreBoardMessage(asDb(db), systemId, created.id, auth, noopAudit),
         "NOT_ARCHIVED",
         409,
-      );
-    });
-  });
-
-  // ── CROSS-SYSTEM ISOLATION ──────────────────────────────────────
-
-  describe("cross-system isolation", () => {
-    it("cannot access another system's board message by ID", async () => {
-      const created = await createBoardMessage(
-        asDb(db),
-        systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
-        auth,
-        noopAudit,
-      );
-
-      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
-      const otherAuth = makeAuth(accountId, otherSystemId);
-
-      await assertApiError(
-        getBoardMessage(asDb(db), otherSystemId, created.id, otherAuth),
-        "NOT_FOUND",
-        404,
-      );
-    });
-
-    it("list does not return another system's board messages", async () => {
-      await createBoardMessage(
-        asDb(db),
-        systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
-        auth,
-        noopAudit,
-      );
-
-      const otherSystemId = brandId<SystemId>(await pgInsertSystem(db, accountId));
-      const otherAuth = makeAuth(accountId, otherSystemId);
-
-      const result = await listBoardMessages(asDb(db), otherSystemId, otherAuth);
-      expect(result.data).toHaveLength(0);
-    });
-  });
-
-  // ── DELETE ──────────────────────────────────────────────────────
-
-  describe("deleteBoardMessage", () => {
-    it("deletes a board message (leaf entity, no dependent checks)", async () => {
-      const created = await createBoardMessage(
-        asDb(db),
-        systemId,
-        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: false },
-        auth,
-        noopAudit,
-      );
-
-      const audit = spyAudit();
-      await deleteBoardMessage(asDb(db), systemId, created.id, auth, audit);
-      await assertApiError(getBoardMessage(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
-      expect(audit.calls[0]?.eventType).toBe("board-message.deleted");
-    });
-
-    it("throws NOT_FOUND for non-existent board message", async () => {
-      await assertApiError(
-        deleteBoardMessage(asDb(db), systemId, genBoardMessageId(), auth, noopAudit),
-        "NOT_FOUND",
-        404,
       );
     });
   });

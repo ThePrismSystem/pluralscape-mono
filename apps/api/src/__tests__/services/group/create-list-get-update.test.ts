@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { toCursor } from "../../../lib/pagination.js";
 import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
-import { makeTestAuth } from "../../helpers/test-auth.js";
+
 import { AUTH, GROUP_ID, SYSTEM_ID, VALID_BLOB_BASE64, makeGroupRow } from "./internal.js";
 
 import type { GroupId } from "@pluralscape/types";
@@ -74,7 +74,10 @@ describe("createGroup", () => {
     expect(result.id).toBe(GROUP_ID);
     expect(result.sortOrder).toBe(0);
     expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.created" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "group.created" }),
+    );
   });
 
   it("validates parentGroupId exists when non-null", async () => {
@@ -85,7 +88,11 @@ describe("createGroup", () => {
       createGroup(
         db,
         SYSTEM_ID,
-        { encryptedData: VALID_BLOB_BASE64, parentGroupId: brandId<GroupId>("grp_nonexistent"), sortOrder: 0 },
+        {
+          encryptedData: VALID_BLOB_BASE64,
+          parentGroupId: brandId<GroupId>("grp_nonexistent"),
+          sortOrder: 0,
+        },
         AUTH,
         mockAudit,
       ),
@@ -97,7 +104,13 @@ describe("createGroup", () => {
     const { db } = mockDb();
 
     await expect(
-      createGroup(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 }, AUTH, mockAudit),
+      createGroup(
+        db,
+        SYSTEM_ID,
+        { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -106,7 +119,13 @@ describe("createGroup", () => {
     const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
 
     await expect(
-      createGroup(db, SYSTEM_ID, { encryptedData: oversized, parentGroupId: null, sortOrder: 0 }, AUTH, mockAudit),
+      createGroup(
+        db,
+        SYSTEM_ID,
+        { encryptedData: oversized, parentGroupId: null, sortOrder: 0 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "BLOB_TOO_LARGE" }));
   });
 
@@ -118,7 +137,13 @@ describe("createGroup", () => {
     });
 
     await expect(
-      createGroup(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 }, AUTH, mockAudit),
+      createGroup(
+        db,
+        SYSTEM_ID,
+        { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
@@ -129,7 +154,13 @@ describe("createGroup", () => {
       .mockResolvedValueOnce([{ count: 200 }]); // quota count -> at limit
 
     await expect(
-      createGroup(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 }, AUTH, mockAudit),
+      createGroup(
+        db,
+        SYSTEM_ID,
+        { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
   });
 });
@@ -225,13 +256,19 @@ describe("updateGroup", () => {
     chain.returning.mockResolvedValueOnce([updatedRow]);
 
     const result = await updateGroup(
-      db, SYSTEM_ID, GROUP_ID,
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1 },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.version).toBe(2);
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.updated" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "group.updated" }),
+    );
   });
 
   it("throws 409 on version conflict", async () => {
@@ -240,7 +277,14 @@ describe("updateGroup", () => {
     chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
 
     await expect(
-      updateGroup(db, SYSTEM_ID, GROUP_ID, { encryptedData: VALID_BLOB_BASE64, version: 1 }, AUTH, mockAudit),
+      updateGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
   });
 
@@ -250,7 +294,14 @@ describe("updateGroup", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      updateGroup(db, SYSTEM_ID, GROUP_ID, { encryptedData: VALID_BLOB_BASE64, version: 1 }, AUTH, mockAudit),
+      updateGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

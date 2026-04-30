@@ -1,15 +1,14 @@
 /**
- * Unit tests for member/create.ts (duplicate) and member/lifecycle.ts.
- *
- * Covers: duplicateMember, archiveMember, restoreMember, deleteMember.
+ * Unit tests for member/lifecycle.ts — archive, restore, delete.
  */
 import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { mockDb } from "../helpers/mock-db.js";
-import { makeTestAuth } from "../helpers/test-auth.js";
+import { mockDb } from "../../helpers/mock-db.js";
 
-import type { MemberId, SystemId } from "@pluralscape/types";
+import { AUTH, MEMBER_ID, SYSTEM_ID, makeMemberRow } from "./internal.js";
+
+import type { MemberId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -28,213 +27,29 @@ vi.mock("@pluralscape/crypto", () => ({
   },
 }));
 
-vi.mock("../../lib/audit-log.js", () => ({
+vi.mock("../../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../lib/system-ownership.js", () => ({
+vi.mock("../../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../services/webhook-dispatcher.js", () => ({
+vi.mock("../../../services/webhook-dispatcher.js", () => ({
   dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
 }));
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { duplicateMember } = await import("../../services/member/create.js");
 const { archiveMember, restoreMember, deleteMember } =
-  await import("../../services/member/lifecycle.js");
-const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
+  await import("../../../services/member/lifecycle.js");
+const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = brandId<SystemId>("sys_test-system");
-const MEMBER_ID = brandId<MemberId>("mem_test-member");
-
-const AUTH = makeTestAuth({
-  accountId: "acct_test-account",
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test-session",
-});
-
 const mockAudit = vi.fn().mockResolvedValue(undefined);
-const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
 
-function makeMemberRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: "mem_test-member",
-    systemId: SYSTEM_ID,
-    encryptedData: new Uint8Array([1, 2, 3]),
-    version: 1,
-    createdAt: 1000,
-    updatedAt: 1000,
-    archived: false,
-    archivedAt: null,
-    ...overrides,
-  };
-}
-
-// ── duplicateMember ───────────────────────────────────────────────────
-
-describe("duplicateMember", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    mockAudit.mockClear();
-  });
-
-  it("duplicates a member successfully", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeMemberRow()]);
-    const newRow = makeMemberRow({ id: "mem_new-member" });
-    chain.returning.mockResolvedValueOnce([newRow]);
-
-    const result = await duplicateMember(
-      db,
-      SYSTEM_ID,
-      MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyPhotos: false, copyFields: false, copyMemberships: false },
-      AUTH,
-      mockAudit,
-    );
-
-    expect(result.id).toBe("mem_new-member");
-    expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(
-      chain,
-      expect.objectContaining({ eventType: "member.duplicated" }),
-    );
-  });
-
-  it("throws 404 when source member not found", async () => {
-    const { db } = mockDb();
-    await expect(
-      duplicateMember(
-        db,
-        SYSTEM_ID,
-        brandId<MemberId>("mem_nonexistent"),
-        { encryptedData: VALID_BLOB_BASE64, copyPhotos: false, copyFields: false, copyMemberships: false },
-        AUTH,
-        mockAudit,
-      ),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("copies photos when copyPhotos is true", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeMemberRow()]);
-    const newRow = makeMemberRow({ id: "mem_new-member" });
-    chain.returning.mockResolvedValueOnce([newRow]);
-    chain.where
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([])
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([{
-        id: "mphoto_existing", memberId: MEMBER_ID, systemId: SYSTEM_ID,
-        sortOrder: 0, encryptedData: new Uint8Array([4, 5, 6]), archived: false,
-      }]);
-    chain.returning.mockResolvedValueOnce([{ id: "mphoto_new" }]);
-
-    const result = await duplicateMember(
-      db,
-      SYSTEM_ID,
-      MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyPhotos: true, copyFields: false, copyMemberships: false },
-      AUTH,
-      mockAudit,
-    );
-
-    expect(result.id).toBe("mem_new-member");
-    expect(chain.insert).toHaveBeenCalledTimes(2);
-  });
-
-  it("copies field values when copyFields is true", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeMemberRow()]);
-    const newRow = makeMemberRow({ id: "mem_new-member" });
-    chain.returning.mockResolvedValueOnce([newRow]);
-    chain.where
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([])
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([{
-        id: "fval_existing", fieldDefinitionId: "fdef_test",
-        memberId: MEMBER_ID, systemId: SYSTEM_ID, encryptedData: new Uint8Array([7, 8, 9]),
-      }]);
-    chain.returning.mockResolvedValueOnce([{ id: "fval_new" }]);
-
-    const result = await duplicateMember(
-      db,
-      SYSTEM_ID,
-      MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyPhotos: false, copyFields: true, copyMemberships: false },
-      AUTH,
-      mockAudit,
-    );
-
-    expect(result.id).toBe("mem_new-member");
-    expect(chain.insert).toHaveBeenCalledTimes(2);
-  });
-
-  it("copies group memberships when copyMemberships is true", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeMemberRow()]);
-    const newRow = makeMemberRow({ id: "mem_new-member" });
-    chain.returning.mockResolvedValueOnce([newRow]);
-    chain.where
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([])
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([
-        { groupId: "grp_group-1", memberId: MEMBER_ID, systemId: SYSTEM_ID, createdAt: 1000 },
-        { groupId: "grp_group-2", memberId: MEMBER_ID, systemId: SYSTEM_ID, createdAt: 1000 },
-      ]);
-    chain.returning.mockResolvedValueOnce([{ groupId: "grp_group-1" }, { groupId: "grp_group-2" }]);
-
-    const result = await duplicateMember(
-      db,
-      SYSTEM_ID,
-      MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyPhotos: false, copyFields: false, copyMemberships: true },
-      AUTH,
-      mockAudit,
-    );
-
-    expect(result.id).toBe("mem_new-member");
-    expect(chain.insert).toHaveBeenCalledTimes(2);
-    expect(mockAudit).toHaveBeenCalledWith(
-      chain,
-      expect.objectContaining({
-        eventType: "member.duplicated",
-        detail: expect.stringContaining("2 membership(s) copied"),
-      }),
-    );
-  });
-
-  it("skips membership copy when source has no memberships", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([makeMemberRow()]);
-    const newRow = makeMemberRow({ id: "mem_new-member" });
-    chain.returning.mockResolvedValueOnce([newRow]);
-    chain.where
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([]);
-
-    const result = await duplicateMember(
-      db,
-      SYSTEM_ID,
-      MEMBER_ID,
-      { encryptedData: VALID_BLOB_BASE64, copyPhotos: false, copyFields: false, copyMemberships: true },
-      AUTH,
-      mockAudit,
-    );
-
-    expect(result.id).toBe("mem_new-member");
-    expect(chain.insert).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ── archiveMember ─────────────────────────────────────────────────────
+// ── Tests ────────────────────────────────────────────────────────────
 
 describe("archiveMember", () => {
   afterEach(() => {
@@ -268,8 +83,6 @@ describe("archiveMember", () => {
   });
 });
 
-// ── restoreMember ─────────────────────────────────────────────────────
-
 describe("restoreMember", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -300,8 +113,6 @@ describe("restoreMember", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
-
-// ── deleteMember ──────────────────────────────────────────────────────
 
 describe("deleteMember", () => {
   afterEach(() => {
@@ -379,7 +190,11 @@ describe("deleteMember", () => {
       await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
       expect.unreachable("Should have thrown");
     } catch (err: unknown) {
-      const error = err as { status: number; code: string; details: { dependents: { type: string; count: number }[] } };
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
       expect(error.status).toBe(409);
       expect(error.code).toBe("HAS_DEPENDENTS");
       expect(error.details.dependents).toEqual([
@@ -414,7 +229,11 @@ describe("deleteMember", () => {
       await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
       expect.unreachable("Should have thrown");
     } catch (err: unknown) {
-      const error = err as { status: number; code: string; details: { dependents: { type: string; count: number }[] } };
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
       expect(error.status).toBe(409);
       expect(error.code).toBe("HAS_DEPENDENTS");
       expect(error.details.dependents).toEqual([{ type: "relationships", count: 2 }]);
@@ -422,7 +241,7 @@ describe("deleteMember", () => {
   });
 
   it("rejects cross-system access", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
     vi.mocked(assertSystemOwnership).mockImplementationOnce(() => {
       throw new ApiHttpError(403, "FORBIDDEN", "System ownership check failed");
     });
@@ -446,7 +265,11 @@ describe("deleteMember", () => {
       await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
       expect.unreachable("Should have thrown");
     } catch (err: unknown) {
-      const error = err as { status: number; code: string; details: { dependents: { type: string; count: number }[] } };
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
       expect(error.status).toBe(409);
       expect(error.code).toBe("HAS_DEPENDENTS");
       expect(error.details.dependents).toEqual([{ type: "acknowledgements", count: 4 }]);

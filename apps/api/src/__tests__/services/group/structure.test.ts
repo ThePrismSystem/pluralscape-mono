@@ -2,9 +2,9 @@ import { brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../../helpers/mock-db.js";
-import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
 import { makeTestAuth } from "../../helpers/test-auth.js";
-import { AUTH, GROUP_ID, SYSTEM_ID, VALID_BLOB_BASE64, makeGroupRow } from "./internal.js";
+
+import { AUTH, GROUP_ID, SYSTEM_ID, makeGroupRow } from "./internal.js";
 
 import type { GroupId } from "@pluralscape/types";
 
@@ -39,96 +39,15 @@ vi.mock("../../../services/webhook-dispatcher.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { deleteGroup, archiveGroup, restoreGroup } = await import("../../../services/group/lifecycle.js");
 const { getGroupTree } = await import("../../../services/group/queries.js");
-const { moveGroup, reorderGroups, copyGroup } = await import("../../../services/group/structure.js");
-const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
+const { moveGroup, reorderGroups, copyGroup } =
+  await import("../../../services/group/structure.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
 // ── Tests ────────────────────────────────────────────────────────────
-
-describe("deleteGroup", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    mockAudit.mockClear();
-  });
-
-  it("deletes an empty group", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
-    chain.where
-      .mockReturnValueOnce(chain) // existence check → chains to .limit()
-      .mockResolvedValueOnce([{ count: 0 }]) // child groups count
-      .mockResolvedValueOnce([{ count: 0 }]) // memberships count
-      .mockResolvedValueOnce([{ count: 0 }]); // field values count
-
-    await deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
-
-    expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.deleted" }));
-  });
-
-  it("throws 404 when group not found", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      deleteGroup(db, SYSTEM_ID, brandId<GroupId>("grp_nonexistent"), AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-
-  it("throws 409 when group has dependents", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
-    chain.where
-      .mockReturnValueOnce(chain) // existence → .limit()
-      .mockResolvedValueOnce([{ count: 2 }]) // child groups
-      .mockResolvedValueOnce([{ count: 3 }]) // memberships
-      .mockResolvedValueOnce([{ count: 0 }]); // field values
-
-    await expect(deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit)).rejects.toThrow(
-      expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS", message: expect.stringContaining("2 child group(s)") }),
-    );
-  });
-
-  it("runs dependent checks in parallel via Promise.all", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
-
-    // Use manually-controlled deferred promises. If the implementation dispatches
-    // queries sequentially, it will block on the first unresolved promise and never
-    // reach the second .where() call. With Promise.all, both .where() calls happen
-    // synchronously before either promise resolves.
-    let resolve1!: (v: { count: number }[]) => void;
-    let resolve2!: (v: { count: number }[]) => void;
-    let resolve3!: (v: { count: number }[]) => void;
-
-    chain.where
-      .mockReturnValueOnce(chain) // existence → .limit()
-      .mockReturnValueOnce(new Promise<{ count: number }[]>((r) => { resolve1 = r; }))
-      .mockReturnValueOnce(new Promise<{ count: number }[]>((r) => { resolve2 = r; }))
-      .mockReturnValueOnce(new Promise<{ count: number }[]>((r) => { resolve3 = r; }));
-
-    // Start deleteGroup without awaiting — sequential impl would deadlock here
-    const done = deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
-
-    // Flush microtasks so RLS context set + existence check resolves and dependent queries dispatch
-    await new Promise<void>((r) => { queueMicrotask(r); });
-    await new Promise<void>((r) => { queueMicrotask(r); });
-
-    // All dependent-check .where() calls dispatched before any resolved
-    expect(chain.where).toHaveBeenCalledTimes(4); // 1 existence + 3 dependents
-
-    resolve1([{ count: 0 }]);
-    resolve2([{ count: 0 }]);
-    resolve3([{ count: 0 }]);
-    await done;
-
-    expect(chain.select).toHaveBeenCalledTimes(4);
-  });
-});
 
 describe("moveGroup", () => {
   afterEach(() => {
@@ -148,20 +67,33 @@ describe("moveGroup", () => {
     chain.returning.mockResolvedValueOnce([makeGroupRow({ parentGroupId: parentId, version: 2 })]);
 
     const result = await moveGroup(
-      db, SYSTEM_ID, GROUP_ID,
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
       { targetParentGroupId: parentId, version: 1 },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.parentGroupId).toBe(parentId);
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.moved" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "group.moved" }),
+    );
   });
 
   it("moves group to root", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([makeGroupRow({ parentGroupId: null, version: 2 })]);
 
-    const result = await moveGroup(db, SYSTEM_ID, GROUP_ID, { targetParentGroupId: null, version: 1 }, AUTH, mockAudit);
+    const result = await moveGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { targetParentGroupId: null, version: 1 },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.parentGroupId).toBeNull();
   });
@@ -170,7 +102,14 @@ describe("moveGroup", () => {
     const { db } = mockDb();
 
     await expect(
-      moveGroup(db, SYSTEM_ID, GROUP_ID, { targetParentGroupId: GROUP_ID, version: 1 }, AUTH, mockAudit),
+      moveGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { targetParentGroupId: GROUP_ID, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
@@ -179,7 +118,14 @@ describe("moveGroup", () => {
     chain.limit.mockResolvedValueOnce([]); // target not found
 
     await expect(
-      moveGroup(db, SYSTEM_ID, GROUP_ID, { targetParentGroupId: brandId<GroupId>("grp_nonexistent"), version: 1 }, AUTH, mockAudit),
+      moveGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { targetParentGroupId: brandId<GroupId>("grp_nonexistent"), version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -192,7 +138,14 @@ describe("moveGroup", () => {
       .mockResolvedValueOnce([{ parentGroupId: GROUP_ID }]);
 
     await expect(
-      moveGroup(db, SYSTEM_ID, GROUP_ID, { targetParentGroupId: childId, version: 1 }, AUTH, mockAudit),
+      moveGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { targetParentGroupId: childId, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
   });
 });
@@ -239,14 +192,19 @@ describe("reorderGroups", () => {
     chain.returning.mockResolvedValue([{ id: GROUP_ID }]);
 
     await reorderGroups(
-      db, SYSTEM_ID,
+      db,
+      SYSTEM_ID,
       { operations: [{ groupId: GROUP_ID, sortOrder: 5 }] },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledTimes(1);
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.updated", detail: "Reordered 1 group(s)" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "group.updated", detail: "Reordered 1 group(s)" }),
+    );
   });
 
   it("throws 404 when group in operation not found", async () => {
@@ -255,7 +213,13 @@ describe("reorderGroups", () => {
     chain.where.mockResolvedValueOnce([]);
 
     await expect(
-      reorderGroups(db, SYSTEM_ID, { operations: [{ groupId: brandId<GroupId>("grp_nonexistent"), sortOrder: 0 }] }, AUTH, mockAudit),
+      reorderGroups(
+        db,
+        SYSTEM_ID,
+        { operations: [{ groupId: brandId<GroupId>("grp_nonexistent"), sortOrder: 0 }] },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -266,66 +230,24 @@ describe("reorderGroups", () => {
 
     await expect(
       reorderGroups(
-        db, SYSTEM_ID,
-        { operations: [{ groupId: GROUP_ID, sortOrder: 1 }, { groupId: brandId<GroupId>("grp_nonexistent"), sortOrder: 2 }] },
-        AUTH, mockAudit,
+        db,
+        SYSTEM_ID,
+        {
+          operations: [
+            { groupId: GROUP_ID, sortOrder: 1 },
+            { groupId: brandId<GroupId>("grp_nonexistent"), sortOrder: 2 },
+          ],
+        },
+        AUTH,
+        mockAudit,
       ),
     ).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "Group grp_nonexistent not found" }),
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "Group grp_nonexistent not found",
+      }),
     );
-  });
-});
-
-describe("archiveGroup", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    mockAudit.mockClear();
-  });
-
-  it("archives a group", async () => {
-    const { db, chain } = mockDb();
-    chain.returning.mockResolvedValueOnce([{ id: GROUP_ID }]);
-
-    await archiveGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
-
-    expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.archived" }));
-  });
-
-  it("throws 404 when group not found", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      archiveGroup(db, SYSTEM_ID, brandId<GroupId>("grp_nonexistent"), AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-  });
-});
-
-describe("restoreGroup", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    mockAudit.mockClear();
-  });
-
-  it("restores an archived group", async () => {
-    const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ id: GROUP_ID, parentGroupId: null }]) // archived group found
-      .mockResolvedValueOnce([]); // no parent check needed (null parent)
-    chain.returning.mockResolvedValueOnce([makeGroupRow({ version: 2 })]);
-
-    const result = await restoreGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
-
-    expect(result.version).toBe(2);
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.restored" }));
-  });
-
-  it("throws 404 when archived group not found", async () => {
-    const { db } = mockDb();
-
-    await expect(
-      restoreGroup(db, SYSTEM_ID, brandId<GroupId>("grp_nonexistent"), AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
 
@@ -346,21 +268,42 @@ describe("copyGroup", () => {
       .mockReturnValueOnce(chain) // source group where
       .mockReturnValueOnce(chain) // target parent where
       .mockResolvedValueOnce([{ maxSort: 3 }]); // max sort where (terminal)
-    chain.returning.mockResolvedValueOnce([makeGroupRow({ id: "grp_copy", parentGroupId: "grp_parent", sortOrder: 4 })]);
+    chain.returning.mockResolvedValueOnce([
+      makeGroupRow({ id: "grp_copy", parentGroupId: "grp_parent", sortOrder: 4 }),
+    ]);
 
-    const result = await copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: false }, AUTH, mockAudit);
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { copyMemberships: false },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.id).toBe("grp_copy");
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "group.created" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "group.created" }),
+    );
   });
 
   it("copies a group to root when targetParentGroupId is null", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([makeGroupRow()]); // source
     chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ maxSort: 5 }]);
-    chain.returning.mockResolvedValueOnce([makeGroupRow({ id: "grp_root_copy", parentGroupId: null, sortOrder: 6 })]);
+    chain.returning.mockResolvedValueOnce([
+      makeGroupRow({ id: "grp_root_copy", parentGroupId: null, sortOrder: 6 }),
+    ]);
 
-    const result = await copyGroup(db, SYSTEM_ID, GROUP_ID, { targetParentGroupId: null, copyMemberships: false }, AUTH, mockAudit);
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { targetParentGroupId: null, copyMemberships: false },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.id).toBe("grp_root_copy");
   });
@@ -374,7 +317,14 @@ describe("copyGroup", () => {
       .mockResolvedValueOnce([{ memberId: "mem_a" }, { memberId: "mem_b" }]); // membership select (terminal)
     chain.returning.mockResolvedValueOnce([makeGroupRow({ id: "grp_copy_m" })]);
 
-    const result = await copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: true }, AUTH, mockAudit);
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { copyMemberships: true },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.id).toBe("grp_copy_m");
     expect(chain.transaction).toHaveBeenCalledOnce();
@@ -386,7 +336,14 @@ describe("copyGroup", () => {
     chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ maxSort: 0 }]);
     chain.returning.mockResolvedValueOnce([makeGroupRow({ id: "grp_no_copy" })]);
 
-    const result = await copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: false }, AUTH, mockAudit);
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { copyMemberships: false },
+      AUTH,
+      mockAudit,
+    );
 
     expect(result.id).toBe("grp_no_copy");
   });
@@ -408,9 +365,12 @@ describe("copyGroup", () => {
 
     await expect(
       copyGroup(
-        db, SYSTEM_ID, GROUP_ID,
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
         { targetParentGroupId: brandId<GroupId>("grp_nonexistent"), copyMemberships: false },
-        AUTH, mockAudit,
+        AUTH,
+        mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
@@ -418,7 +378,11 @@ describe("copyGroup", () => {
   it("throws 404 for wrong system ownership (fail-closed privacy)", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]); // ownership check returns no matching system
-    const wrongAuth = makeTestAuth({ accountId: "acct_test-account", systemId: "sys_other", sessionId: "sess_test-session" });
+    const wrongAuth = makeTestAuth({
+      accountId: "acct_test-account",
+      systemId: "sys_other",
+      sessionId: "sess_test-session",
+    });
 
     await expect(
       copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: false }, wrongAuth, mockAudit),

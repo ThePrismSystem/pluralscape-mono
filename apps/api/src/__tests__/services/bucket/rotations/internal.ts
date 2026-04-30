@@ -6,9 +6,9 @@ import * as schema from "@pluralscape/db/pg";
 import { testBlob } from "@pluralscape/db/test-helpers/pg-helpers";
 import { brandId, toUnixMillis } from "@pluralscape/types";
 
-import { asDb, genBucketId } from "../../../helpers/integration-setup.js";
+import { genBucketId } from "../../../helpers/integration-setup.js";
 
-import type { BucketId, KeyGrantId } from "@pluralscape/types";
+import type { BucketId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { buckets, bucketContentTags } = schema;
@@ -16,7 +16,7 @@ const { buckets, bucketContentTags } = schema;
 /** Insert a bucket row and return its branded ID. */
 export async function insertBucket(
   db: PgliteDatabase<typeof schema>,
-  systemId: string,
+  systemId: SystemId,
   id?: BucketId,
 ): Promise<BucketId> {
   const resolvedId = id ?? genBucketId();
@@ -34,7 +34,7 @@ export async function insertBucket(
 /** Insert N content tag rows for a bucket, returning the entity IDs. */
 export async function insertContentTags(
   db: PgliteDatabase<typeof schema>,
-  systemId: string,
+  systemId: SystemId,
   bucketId: BucketId,
   count: number,
 ): Promise<string[]> {
@@ -42,13 +42,19 @@ export async function insertContentTags(
   for (let i = 0; i < count; i++) {
     const entityId = crypto.randomUUID();
     entityIds.push(entityId);
-    await db.insert(bucketContentTags).values({ entityType: "member", entityId, bucketId, systemId });
+    await db
+      .insert(bucketContentTags)
+      .values({ entityType: "member", entityId, bucketId, systemId });
   }
   return entityIds;
 }
 
 /** Standard initiate payload: wrappedNewKey, newKeyVersion, no friend grants. */
-export function initiateParams(newKeyVersion = 2) {
+export function initiateParams(newKeyVersion = 2): {
+  wrappedNewKey: string;
+  newKeyVersion: number;
+  friendKeyGrants: never[];
+} {
   return {
     wrappedNewKey: "wrapped-key-base64",
     newKeyVersion,

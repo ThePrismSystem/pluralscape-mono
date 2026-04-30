@@ -17,8 +17,8 @@ vi.mock("../../../services/webhook-dispatcher.js", () => ({
   clearWebhookConfigCache: vi.fn(),
 }));
 
-import { archiveFrontingSession } from "../../../services/fronting-session/lifecycle.js";
 import { createFrontingSession } from "../../../services/fronting-session/create.js";
+import { archiveFrontingSession } from "../../../services/fronting-session/lifecycle.js";
 import {
   getActiveFronting,
   getFrontingSession,
@@ -40,12 +40,7 @@ import {
 } from "../../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../../lib/auth-context.js";
-import type {
-  AccountId,
-  CustomFrontId,
-  MemberId,
-  SystemId,
-} from "@pluralscape/types";
+import type { AccountId, CustomFrontId, MemberId, SystemId } from "@pluralscape/types";
 import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { z } from "zod/v4";

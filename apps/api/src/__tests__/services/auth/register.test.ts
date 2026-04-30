@@ -4,8 +4,7 @@
  * Covers: initiateRegistration, commitRegistration, cleanupExpiredRegistrations,
  * ValidationError, isDuplicateEmailError helpers.
  */
-import { brandId } from "@pluralscape/types";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockEnv = vi.hoisted(() => ({
   NODE_ENV: "test" as "development" | "test" | "production",
@@ -13,18 +12,16 @@ const mockEnv = vi.hoisted(() => ({
   TRUST_PROXY: false,
 }));
 
-vi.mock("../../env.js", () => ({ env: mockEnv }));
+vi.mock("../../../env.js", () => ({ env: mockEnv }));
 
-import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
+import { PG_UNIQUE_VIOLATION } from "../../../db.constants.js";
 import {
   ValidationError,
   commitRegistration,
   initiateRegistration,
   isDuplicateEmailError,
-} from "../../services/auth/register.js";
-import { mockDb, type MockChain } from "../helpers/mock-db.js";
-
-import type { AccountId } from "@pluralscape/types";
+} from "../../../services/auth/register.js";
+import { mockDb, type MockChain } from "../../helpers/mock-db.js";
 
 // ── Mock external dependencies ────────────────────────────────────────
 
@@ -58,23 +55,23 @@ vi.mock("@pluralscape/crypto", () => ({
   serializePublicKey: () => "base64-encoded-key",
 }));
 
-vi.mock("../../lib/audit-log.js", () => ({
+vi.mock("../../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../lib/email-hash.js", () => ({
+vi.mock("../../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
 
 const mockGetEmailEncryptionKey = vi.fn<() => Uint8Array | null>();
 const mockEncryptEmail = vi.fn<(email: string) => Uint8Array>();
-vi.mock("../../lib/email-encrypt.js", () => ({
+vi.mock("../../../lib/email-encrypt.js", () => ({
   getEmailEncryptionKey: () => mockGetEmailEncryptionKey(),
   encryptEmail: (email: string) => mockEncryptEmail(email),
 }));
 
 const mockEqualizeAntiEnumTiming = vi.fn<(startTime: number) => Promise<void>>();
-vi.mock("../../lib/anti-enum-timing.js", () => ({
+vi.mock("../../../lib/anti-enum-timing.js", () => ({
   equalizeAntiEnumTiming: (startTime: number) => mockEqualizeAntiEnumTiming(startTime),
 }));
 
@@ -85,11 +82,6 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
 });
 
 // ── Fixtures ─────────────────────────────────────────────────────────
-
-/** Valid hex string of N bytes (all zeros). */
-function hexZeros(byteLen: number): string {
-  return "00".repeat(byteLen);
-}
 
 /** Valid hex string of N bytes (non-zero). */
 function hexFilled(byteLen: number, fill = 0xab): string {
@@ -134,6 +126,18 @@ describe("ValidationError", () => {
     const err = new ValidationError("trace test");
     expect(typeof err.stack).toBe("string");
   });
+});
+
+// ── Tests ─────────────────────────────────────────────────────────────
+
+beforeEach(() => {
+  mockNow.mockReturnValue(Date.now());
+  mockAudit.mockClear();
+  mockVerifyChallenge.mockClear();
+  mockVerifyChallenge.mockReturnValue(true);
+  mockEqualizeAntiEnumTiming.mockClear();
+  mockGetEmailEncryptionKey.mockReturnValue(null);
+  mockEncryptEmail.mockReturnValue(new Uint8Array(56));
 });
 
 // ── initiateRegistration ──────────────────────────────────────────────
@@ -442,7 +446,7 @@ describe("commitRegistration", () => {
 describe("cleanupExpiredRegistrations", () => {
   it("returns count of deleted abandoned placeholders", async () => {
     const { db, chain } = mockDb();
-    const { cleanupExpiredRegistrations } = await import("../../services/auth/cleanup.js");
+    const { cleanupExpiredRegistrations } = await import("../../../services/auth/cleanup.js");
     chain.returning.mockResolvedValueOnce([{ id: "acct_1" }, { id: "acct_2" }]);
 
     const count = await cleanupExpiredRegistrations(db);
@@ -452,7 +456,7 @@ describe("cleanupExpiredRegistrations", () => {
 
   it("returns 0 when no expired placeholders exist", async () => {
     const { db, chain } = mockDb();
-    const { cleanupExpiredRegistrations } = await import("../../services/auth/cleanup.js");
+    const { cleanupExpiredRegistrations } = await import("../../../services/auth/cleanup.js");
     chain.returning.mockResolvedValueOnce([]);
 
     const count = await cleanupExpiredRegistrations(db);

@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { VALID_BLOB_BASE64 } from "../../helpers/mock-crypto.js";
 import { captureWhereArg, mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
+
 import {
   AUTH,
   MEMBER_ID,
@@ -36,8 +37,7 @@ vi.mock("../../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { createCheckInRecord } = await import("../../../services/check-in-record/create.js");
-const { listCheckInRecords, parseCheckInRecordQuery } =
-  await import("../../../services/check-in-record/list.js");
+const { listCheckInRecords } = await import("../../../services/check-in-record/list.js");
 const { getCheckInRecord } = await import("../../../services/check-in-record/get.js");
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 

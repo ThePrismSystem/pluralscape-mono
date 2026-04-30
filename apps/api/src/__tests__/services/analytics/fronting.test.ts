@@ -9,6 +9,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
 
+import { AUTH, SYSTEM_ID, makeAggRow, makeDateRange } from "./internal.js";
+
 import type { DateRangeFilter } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -21,12 +23,6 @@ vi.mock("../../../lib/system-ownership.js", () => ({
 
 const { computeFrontingBreakdown } = await import("../../../services/analytics/fronting.js");
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
-
-// ── Fixtures ─────────────────────────────────────────────────────────
-
-import { AUTH, SYSTEM_ID, makeAggRow, makeDateRange } from "./internal.js";
-
-const NOW = Date.now();
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -55,7 +51,12 @@ describe("computeFrontingBreakdown", () => {
   it("computes breakdown for a single member session", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([
-      makeAggRow({ subjectType: "member", subjectId: "mem_test-member", totalDuration: 3_600_000, sessionCount: 1 }),
+      makeAggRow({
+        subjectType: "member",
+        subjectId: "mem_test-member",
+        totalDuration: 3_600_000,
+        sessionCount: 1,
+      }),
     ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
@@ -91,28 +92,50 @@ describe("computeFrontingBreakdown", () => {
     ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
-    expect(result.subjectBreakdowns[0]).toMatchObject({ subjectType: "customFront", subjectId: "cf_test-cf" });
+    expect(result.subjectBreakdowns[0]).toMatchObject({
+      subjectType: "customFront",
+      subjectId: "cf_test-cf",
+    });
   });
 
   it("includes structure entities with subjectType discriminator", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([
-      makeAggRow({ subjectType: "structureEntity", subjectId: "ste_test-entity", totalDuration: 1_800_000 }),
+      makeAggRow({
+        subjectType: "structureEntity",
+        subjectId: "ste_test-entity",
+        totalDuration: 1_800_000,
+      }),
     ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
-    expect(result.subjectBreakdowns[0]).toMatchObject({ subjectType: "structureEntity", subjectId: "ste_test-entity" });
+    expect(result.subjectBreakdowns[0]).toMatchObject({
+      subjectType: "structureEntity",
+      subjectId: "ste_test-entity",
+    });
   });
 
   it("calculates correct percentages across multiple subjects", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([
-      makeAggRow({ subjectType: "member", subjectId: "mem_a", totalDuration: 10_800_000, sessionCount: 1 }),
-      makeAggRow({ subjectType: "customFront", subjectId: "cf_b", totalDuration: 3_600_000, sessionCount: 1 }),
+      makeAggRow({
+        subjectType: "member",
+        subjectId: "mem_a",
+        totalDuration: 10_800_000,
+        sessionCount: 1,
+      }),
+      makeAggRow({
+        subjectType: "customFront",
+        subjectId: "cf_b",
+        totalDuration: 3_600_000,
+        sessionCount: 1,
+      }),
     ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
-    const member = result.subjectBreakdowns.find((b: { subjectId: string }) => b.subjectId === "mem_a");
+    const member = result.subjectBreakdowns.find(
+      (b: { subjectId: string }) => b.subjectId === "mem_a",
+    );
     const cf = result.subjectBreakdowns.find((b: { subjectId: string }) => b.subjectId === "cf_b");
     expect(member?.percentageOfTotal).toBe(75);
     expect(cf?.percentageOfTotal).toBe(25);
@@ -150,7 +173,11 @@ describe("computeFrontingBreakdown", () => {
     chain.limit.mockResolvedValueOnce([
       makeAggRow({ subjectType: "member", subjectId: "mem_alpha", totalDuration: 3_600_000 }),
       makeAggRow({ subjectType: "customFront", subjectId: "cf_beta", totalDuration: 1_800_000 }),
-      makeAggRow({ subjectType: "structureEntity", subjectId: "ste_gamma", totalDuration: 900_000 }),
+      makeAggRow({
+        subjectType: "structureEntity",
+        subjectId: "ste_gamma",
+        totalDuration: 900_000,
+      }),
     ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
@@ -222,12 +249,24 @@ describe("computeFrontingBreakdown — edge-case branches", () => {
   it("mixes member and customFront subjects with varying durations", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([
-      makeAggRow({ subjectType: "member", subjectId: "mem_x", totalDuration: 9_000_000, sessionCount: 2 }),
-      makeAggRow({ subjectType: "customFront", subjectId: "cf_y", totalDuration: 900_000, sessionCount: 1 }),
+      makeAggRow({
+        subjectType: "member",
+        subjectId: "mem_x",
+        totalDuration: 9_000_000,
+        sessionCount: 2,
+      }),
+      makeAggRow({
+        subjectType: "customFront",
+        subjectId: "cf_y",
+        totalDuration: 900_000,
+        sessionCount: 1,
+      }),
     ]);
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
-    const memX = result.subjectBreakdowns.find((b: { subjectId: string }) => b.subjectId === "mem_x");
+    const memX = result.subjectBreakdowns.find(
+      (b: { subjectId: string }) => b.subjectId === "mem_x",
+    );
     const cfY = result.subjectBreakdowns.find((b: { subjectId: string }) => b.subjectId === "cf_y");
     expect(memX?.averageSessionLength).toBe(4_500_000);
     expect(memX?.percentageOfTotal).toBeCloseTo(90.9, 1);

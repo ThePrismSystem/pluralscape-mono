@@ -16,12 +16,7 @@ import { updateImportJob } from "../../../../services/system/import-jobs/update.
 import { asDb, assertApiError, makeAuth, noopAudit } from "../../../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../../../lib/auth-context.js";
-import type {
-  AccountId,
-  ImportCheckpointState,
-  ImportJobId,
-  SystemId,
-} from "@pluralscape/types";
+import type { AccountId, ImportCheckpointState, ImportJobId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { importJobs } = schema;

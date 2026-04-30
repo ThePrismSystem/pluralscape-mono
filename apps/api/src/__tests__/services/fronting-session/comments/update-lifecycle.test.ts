@@ -5,7 +5,7 @@ import { VALID_BLOB_BASE64 } from "../../../helpers/mock-crypto.js";
 import { mockDb } from "../../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../../helpers/mock-ownership.js";
 
-import { AUTH, COMMENT_ID, MEMBER_ID, SESSION_ID, SYSTEM_ID, makeCommentRow } from "./internal.js";
+import { AUTH, COMMENT_ID, SESSION_ID, SYSTEM_ID, makeCommentRow } from "./internal.js";
 
 import type { FrontingCommentId } from "@pluralscape/types";
 
@@ -31,12 +31,10 @@ vi.mock("../../../../lib/validate-subject-ids.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../../../lib/system-ownership.js");
-const { updateFrontingComment } = await import(
-  "../../../../services/fronting-session/comments/update.js"
-);
-const { deleteFrontingComment, archiveFrontingComment, restoreFrontingComment } = await import(
-  "../../../../services/fronting-session/comments/lifecycle.js"
-);
+const { updateFrontingComment } =
+  await import("../../../../services/fronting-session/comments/update.js");
+const { deleteFrontingComment, archiveFrontingComment, restoreFrontingComment } =
+  await import("../../../../services/fronting-session/comments/lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

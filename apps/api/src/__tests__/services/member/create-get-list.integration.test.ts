@@ -28,7 +28,23 @@ import type { AuthContext } from "../../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const { acknowledgements, checkInRecords, fieldDefinitions, fieldValues, frontingComments, frontingSessions, groupMemberships, groups, memberPhotos, members, notes, polls, relationships, systemStructureEntityMemberLinks, timerConfigs } = schema;
+const {
+  acknowledgements,
+  checkInRecords,
+  fieldDefinitions,
+  fieldValues,
+  frontingComments,
+  frontingSessions,
+  groupMemberships,
+  groups,
+  memberPhotos,
+  members,
+  notes,
+  polls,
+  relationships,
+  systemStructureEntityMemberLinks,
+  timerConfigs,
+} = schema;
 
 describe("member.service — create / getMember / listMembers (PGlite integration)", () => {
   let client: PGlite;
@@ -164,9 +180,27 @@ describe("member.service — create / getMember / listMembers (PGlite integratio
 
   describe("listMembers", () => {
     it("paginates with limit and cursor", async () => {
-      await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
-      await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
-      await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
+      await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
+      await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const page1 = await listMembers(asDb(db), systemId, auth, { limit: 2 });
       expect(page1.data).toHaveLength(2);
@@ -183,8 +217,20 @@ describe("member.service — create / getMember / listMembers (PGlite integratio
     });
 
     it("includes archived members when includeArchived is true", async () => {
-      const active = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
-      const archived = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const active = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
+      const archived = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       await archiveMember(asDb(db), systemId, archived.id, auth, noopAudit);
 
       const withArchived = await listMembers(asDb(db), systemId, auth, { includeArchived: true });
@@ -196,8 +242,20 @@ describe("member.service — create / getMember / listMembers (PGlite integratio
     });
 
     it("filters by groupId", async () => {
-      const m1 = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
-      await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const m1 = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
+      await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const groupId = genGroupId();
       const now = toUnixMillis(Date.now());
@@ -209,7 +267,9 @@ describe("member.service — create / getMember / listMembers (PGlite integratio
         createdAt: now,
         updatedAt: now,
       });
-      await db.insert(groupMemberships).values({ groupId, memberId: m1.id, systemId, createdAt: now });
+      await db
+        .insert(groupMemberships)
+        .values({ groupId, memberId: m1.id, systemId, createdAt: now });
 
       const result = await listMembers(asDb(db), systemId, auth, { groupId });
       expect(result.data).toHaveLength(1);

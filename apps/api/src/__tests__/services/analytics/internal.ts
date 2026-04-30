@@ -9,7 +9,7 @@ import { makeTestAuth } from "../../helpers/test-auth.js";
 import type { DateRangeFilter, SystemId } from "@pluralscape/types";
 
 export const SYSTEM_ID = brandId<SystemId>("sys_test-system");
-const NOW = Date.now();
+export const NOW = Date.now();
 
 export const AUTH = makeTestAuth({
   accountId: "acct_test-account",
@@ -38,6 +38,16 @@ export function makeSessionRow(overrides: Record<string, unknown> = {}): Record<
     archived: false,
     ...overrides,
   };
+}
+
+/** Compact constructor for member-fronting session rows. */
+export function memberSession(
+  id: string,
+  memberId: string,
+  startTime: number | null,
+  endTime: number | null,
+): Record<string, unknown> {
+  return makeSessionRow({ id, memberId, startTime, endTime });
 }
 
 /**

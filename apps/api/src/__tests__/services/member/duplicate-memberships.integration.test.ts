@@ -34,7 +34,23 @@ import type {
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const { acknowledgements, checkInRecords, fieldDefinitions, fieldValues, frontingComments, frontingSessions, groupMemberships, groups, memberPhotos, members, notes, polls, relationships, systemStructureEntityMemberLinks, timerConfigs } = schema;
+const {
+  acknowledgements,
+  checkInRecords,
+  fieldDefinitions,
+  fieldValues,
+  frontingComments,
+  frontingSessions,
+  groupMemberships,
+  groups,
+  memberPhotos,
+  members,
+  notes,
+  polls,
+  relationships,
+  systemStructureEntityMemberLinks,
+  timerConfigs,
+} = schema;
 
 describe("member.service — duplicateMember / listAllMemberMemberships (PGlite integration)", () => {
   let client: PGlite;
@@ -77,13 +93,24 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
 
   describe("duplicateMember", () => {
     it("duplicates a member without copying extras", async () => {
-      const source = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const source = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const dup = await duplicateMember(
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: false, copyFields: false, copyMemberships: false },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: false,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -100,7 +127,12 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
           asDb(db),
           systemId,
           genMemberId(),
-          { encryptedData: testEncryptedDataBase64(), copyPhotos: false, copyFields: false, copyMemberships: false },
+          {
+            encryptedData: testEncryptedDataBase64(),
+            copyPhotos: false,
+            copyFields: false,
+            copyMemberships: false,
+          },
           auth,
           noopAudit,
         ),
@@ -110,7 +142,13 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("copies photos when copyPhotos is true and source has photos", async () => {
-      const source = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const source = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       await db.insert(memberPhotos).values({
         id: brandId<MemberPhotoId>(`mph_${crypto.randomUUID()}`),
@@ -126,7 +164,12 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: true, copyFields: false, copyMemberships: false },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: true,
+          copyFields: false,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -139,13 +182,24 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("duplicates without copying photos when source has no photos", async () => {
-      const source = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const source = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const dup = await duplicateMember(
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: true, copyFields: false, copyMemberships: false },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: true,
+          copyFields: false,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -158,7 +212,13 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("copies field values when copyFields is true and source has values", async () => {
-      const source = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const source = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       const fdId = brandId<FieldDefinitionId>(`fd_${crypto.randomUUID()}`);
       await db.insert(fieldDefinitions).values({
@@ -183,7 +243,12 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: false, copyFields: true, copyMemberships: false },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: true,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -196,13 +261,24 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("duplicates without copying field values when source has none", async () => {
-      const source = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const source = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const dup = await duplicateMember(
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: false, copyFields: true, copyMemberships: false },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: true,
+          copyMemberships: false,
+        },
         auth,
         noopAudit,
       );
@@ -215,7 +291,13 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("copies group memberships when copyMemberships is true and source has memberships", async () => {
-      const source = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const source = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const groupId = genGroupId();
       const now = toUnixMillis(Date.now());
       await db.insert(groups).values({
@@ -226,13 +308,20 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
         createdAt: now,
         updatedAt: now,
       });
-      await db.insert(groupMemberships).values({ groupId, memberId: source.id, systemId, createdAt: now });
+      await db
+        .insert(groupMemberships)
+        .values({ groupId, memberId: source.id, systemId, createdAt: now });
 
       const dup = await duplicateMember(
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: false, copyFields: false, copyMemberships: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: false,
+          copyMemberships: true,
+        },
         auth,
         noopAudit,
       );
@@ -246,13 +335,24 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("duplicates without copying memberships when source has none", async () => {
-      const source = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const source = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const dup = await duplicateMember(
         asDb(db),
         systemId,
         source.id,
-        { encryptedData: testEncryptedDataBase64(), copyPhotos: false, copyFields: false, copyMemberships: true },
+        {
+          encryptedData: testEncryptedDataBase64(),
+          copyPhotos: false,
+          copyFields: false,
+          copyMemberships: true,
+        },
         auth,
         noopAudit,
       );
@@ -267,7 +367,13 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
 
   describe("listAllMemberMemberships", () => {
     it("returns empty groups and structureEntities when member has no memberships", async () => {
-      const member = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const member = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
 
       const result = await listAllMemberMemberships(asDb(db), systemId, member.id, auth);
 
@@ -276,7 +382,13 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("returns group memberships when member belongs to a group", async () => {
-      const member = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const member = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const groupId = genGroupId();
       const now = toUnixMillis(Date.now());
       await db.insert(groups).values({
@@ -287,7 +399,9 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
         createdAt: now,
         updatedAt: now,
       });
-      await db.insert(groupMemberships).values({ groupId, memberId: member.id, systemId, createdAt: now });
+      await db
+        .insert(groupMemberships)
+        .values({ groupId, memberId: member.id, systemId, createdAt: now });
 
       const result = await listAllMemberMemberships(asDb(db), systemId, member.id, auth);
 
@@ -296,7 +410,13 @@ describe("member.service — duplicateMember / listAllMemberMemberships (PGlite 
     });
 
     it("returns structure entity links when present", async () => {
-      const member = await createMember(asDb(db), systemId, { encryptedData: testEncryptedDataBase64() }, auth, noopAudit);
+      const member = await createMember(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
       const now = toUnixMillis(Date.now());
       const linkId = brandId<SystemStructureEntityMemberLinkId>(`ssml_${crypto.randomUUID()}`);
       await db.insert(systemStructureEntityMemberLinks).values({

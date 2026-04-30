@@ -41,12 +41,10 @@ vi.mock("../../../../lib/validate-subject-ids.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../../../lib/system-ownership.js");
-const { createFrontingComment } = await import(
-  "../../../../services/fronting-session/comments/create.js"
-);
-const { listFrontingComments, getFrontingComment } = await import(
-  "../../../../services/fronting-session/comments/queries.js"
-);
+const { createFrontingComment } =
+  await import("../../../../services/fronting-session/comments/create.js");
+const { listFrontingComments, getFrontingComment } =
+  await import("../../../../services/fronting-session/comments/queries.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 

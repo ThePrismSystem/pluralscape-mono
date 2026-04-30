@@ -16,9 +16,7 @@ vi.hoisted(() => {
 });
 
 import { createBoardMessage } from "../../../services/board-message/create.js";
-import {
-  archiveBoardMessage,
-} from "../../../services/board-message/lifecycle.js";
+import { archiveBoardMessage } from "../../../services/board-message/lifecycle.js";
 import { getBoardMessage, listBoardMessages } from "../../../services/board-message/queries.js";
 import { updateBoardMessage } from "../../../services/board-message/update.js";
 import { clearWebhookConfigCache } from "../../../services/webhook-dispatcher.js";

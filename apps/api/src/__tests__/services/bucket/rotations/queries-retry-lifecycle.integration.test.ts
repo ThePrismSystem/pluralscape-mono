@@ -25,10 +25,17 @@ import {
   spyAudit,
   asDb,
 } from "../../../helpers/integration-setup.js";
+
 import { insertBucket, insertContentTags, initiateParams } from "./internal.js";
 
 import type { AuthContext } from "../../../../lib/auth-context.js";
-import type { AccountId, BucketKeyRotationId, BucketRotationItemId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  AccountId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { bucketContentTags, bucketKeyRotations, bucketRotationItems, buckets, keyGrants } = schema;
@@ -72,10 +79,24 @@ describe("bucket/rotations — getRotationProgress / retryRotation / full lifecy
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 4);
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
       // Claim and complete 2 of 4
-      const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 2 }, auth);
+      const claim = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 2 },
+        auth,
+      );
 
       await completeRotationChunk(
         asDb(db),
@@ -246,12 +267,26 @@ describe("bucket/rotations — getRotationProgress / retryRotation / full lifecy
       await insertContentTags(db, systemId, bucketId, 5);
 
       // Step 1: Initiate
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
       expect(rotation.state).toBe(ROTATION_STATES.initiated);
       expect(rotation.totalItems).toBe(5);
 
       // Step 2: Claim first chunk
-      const chunk1 = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 3 }, auth);
+      const chunk1 = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 3 },
+        auth,
+      );
       expect(chunk1.data).toHaveLength(3);
       expect(chunk1.rotationState).toBe(ROTATION_STATES.migrating);
 
@@ -270,7 +305,14 @@ describe("bucket/rotations — getRotationProgress / retryRotation / full lifecy
       expect(completion1.transitioned).toBe(false);
 
       // Step 4: Claim remaining chunk
-      const chunk2 = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 10 }, auth);
+      const chunk2 = await claimRotationChunk(
+        asDb(db),
+        systemId,
+        bucketId,
+        rotation.id,
+        { chunkSize: 10 },
+        auth,
+      );
       expect(chunk2.data).toHaveLength(2);
 
       // Step 5: Complete remaining chunk
@@ -300,12 +342,26 @@ describe("bucket/rotations — getRotationProgress / retryRotation / full lifecy
       const bucketId = await insertBucket(db, systemId);
       await insertContentTags(db, systemId, bucketId, 1);
 
-      const rotation = await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
+      const rotation = await initiateRotation(
+        asDb(db),
+        systemId,
+        bucketId,
+        initiateParams(),
+        auth,
+        noopAudit,
+      );
 
       // Repeatedly claim and fail the single item until max attempts exhausted
       // maxItemAttempts = 3, so we need 3 failure rounds
       for (let attempt = 0; attempt < 3; attempt++) {
-        const claim = await claimRotationChunk(asDb(db), systemId, bucketId, rotation.id, { chunkSize: 10 }, auth);
+        const claim = await claimRotationChunk(
+          asDb(db),
+          systemId,
+          bucketId,
+          rotation.id,
+          { chunkSize: 10 },
+          auth,
+        );
 
         if (claim.data.length === 0) break;
 

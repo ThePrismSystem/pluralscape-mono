@@ -12,10 +12,10 @@ const mockEnv = vi.hoisted(() => ({
   TRUST_PROXY: false,
 }));
 
-vi.mock("../../env.js", () => ({ env: mockEnv }));
+vi.mock("../../../env.js", () => ({ env: mockEnv }));
 
-import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
-import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
+import { extractIpAddress, extractPlatform, extractUserAgent } from "../../../lib/request-meta.js";
+import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../../routes/auth/auth.constants.js";
 
 import type { Context } from "hono";
 

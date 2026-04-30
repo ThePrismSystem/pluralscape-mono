@@ -11,12 +11,12 @@ const mockEnv = vi.hoisted(() => ({
   TRUST_PROXY: false,
 }));
 
-vi.mock("../../env.js", () => ({ env: mockEnv }));
+vi.mock("../../../env.js", () => ({ env: mockEnv }));
 
-import { MAX_SESSIONS_PER_ACCOUNT } from "../../quota.constants.js";
-import { LoginThrottledError, loginAccount } from "../../services/auth/login.js";
-import { mockDb } from "../helpers/mock-db.js";
-import { createMockLogger } from "../helpers/mock-logger.js";
+import { MAX_SESSIONS_PER_ACCOUNT } from "../../../quota.constants.js";
+import { LoginThrottledError, loginAccount } from "../../../services/auth/login.js";
+import { mockDb } from "../../helpers/mock-db.js";
+import { createMockLogger } from "../../helpers/mock-logger.js";
 
 import type { SessionRevocation } from "./internal.js";
 
@@ -37,27 +37,36 @@ vi.mock("@pluralscape/crypto", () => ({
   assertAuthKey: vi.fn(),
   assertAuthKeyHash: vi.fn(),
   assertChallengeNonce: vi.fn(),
-  getSodium: () => ({ randomBytes: (n: number) => new Uint8Array(n), memzero: vi.fn(), genericHash: () => new Uint8Array(32) }),
+  getSodium: () => ({
+    randomBytes: (n: number) => new Uint8Array(n),
+    memzero: vi.fn(),
+    genericHash: () => new Uint8Array(32),
+  }),
   generateSalt: () => new Uint8Array(16),
   generateChallengeNonce: () => new Uint8Array(32),
   hashAuthKey: (authKey: Uint8Array) => new Uint8Array(32).fill(authKey[0] ?? 0),
-  verifyAuthKey: (authKey: Uint8Array, storedHash: Uint8Array) => mockVerifyAuthKey(authKey, storedHash),
+  verifyAuthKey: (authKey: Uint8Array, storedHash: Uint8Array) =>
+    mockVerifyAuthKey(authKey, storedHash),
   verifyChallenge: vi.fn().mockReturnValue(true),
   serializePublicKey: () => "base64-encoded-key",
 }));
 
-vi.mock("../../lib/audit-log.js", () => ({
+vi.mock("../../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../lib/email-hash.js", () => ({
+vi.mock("../../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
 
-const mockLoginStoreCheck = vi.fn<(key: string) => Promise<{ throttled: boolean; windowResetAt: number }>>();
-const mockLoginStoreRecordFailure = vi.fn<(key: string) => Promise<{ throttled: boolean; failedAttempts: number; windowResetAt: number }>>();
+const mockLoginStoreCheck =
+  vi.fn<(key: string) => Promise<{ throttled: boolean; windowResetAt: number }>>();
+const mockLoginStoreRecordFailure =
+  vi.fn<
+    (key: string) => Promise<{ throttled: boolean; failedAttempts: number; windowResetAt: number }>
+  >();
 const mockLoginStoreReset = vi.fn<(key: string) => Promise<void>>();
-vi.mock("../../middleware/stores/account-login-store.js", () => ({
+vi.mock("../../../middleware/stores/account-login-store.js", () => ({
   getAccountLoginStore: () => ({
     check: (key: string) => mockLoginStoreCheck(key),
     recordFailure: (key: string) => mockLoginStoreRecordFailure(key),
@@ -65,7 +74,7 @@ vi.mock("../../middleware/stores/account-login-store.js", () => ({
   }),
 }));
 
-vi.mock("../../lib/anti-enum-timing.js", () => ({
+vi.mock("../../../lib/anti-enum-timing.js", () => ({
   equalizeAntiEnumTiming: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -107,7 +116,11 @@ beforeEach(() => {
   mockAudit.mockClear();
   mockVerifyAuthKey.mockReturnValue(true);
   mockLoginStoreCheck.mockResolvedValue({ throttled: false, windowResetAt: Date.now() + 900_000 });
-  mockLoginStoreRecordFailure.mockResolvedValue({ throttled: false, failedAttempts: 1, windowResetAt: Date.now() + 900_000 });
+  mockLoginStoreRecordFailure.mockResolvedValue({
+    throttled: false,
+    failedAttempts: 1,
+    windowResetAt: Date.now() + 900_000,
+  });
   mockLoginStoreReset.mockResolvedValue(undefined);
 });
 
@@ -126,7 +139,7 @@ describe("loginAccount — per-account session limiting", () => {
 
     await loginAccount(db, sessionCreds, "web", mockAudit, mockLogger);
 
-    const setCalls = chain.set.mock.calls;
+    const setCalls: unknown[][] = chain.set.mock.calls;
     const revocationCall = setCalls.find(
       (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
     );
@@ -154,7 +167,7 @@ describe("loginAccount — per-account session limiting", () => {
 
     await loginAccount(db, sessionCreds, "web", mockAudit, mockLogger);
 
-    const setCalls = chain.set.mock.calls;
+    const setCalls: unknown[][] = chain.set.mock.calls;
     const revocationCall = setCalls.find(
       (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
     );

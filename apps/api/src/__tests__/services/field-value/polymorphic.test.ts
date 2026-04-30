@@ -197,7 +197,9 @@ describe("listFieldValuesForOwner", () => {
 
   it("lists field values for group owner", async () => {
     const { db, chain } = mockDb();
-    const rows = [makeFieldValueRow({ memberId: null, groupId: GROUP_ID, structureEntityId: null })];
+    const rows = [
+      makeFieldValueRow({ memberId: null, groupId: GROUP_ID, structureEntityId: null }),
+    ];
     // assertGroupActive → group found
     chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
     chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce(rows);

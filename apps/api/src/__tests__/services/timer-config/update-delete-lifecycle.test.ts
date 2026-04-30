@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { VALID_BLOB_BASE64 } from "../../helpers/mock-crypto.js";
 import { mockDb } from "../../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
+
 import { AUTH, SYSTEM_ID, TIMER_ID, makeTimerRow } from "./internal.js";
 
 import type { TimerId } from "@pluralscape/types";
@@ -27,7 +28,8 @@ vi.mock("../../../lib/system-ownership.js", () => ({
 
 const { updateTimerConfig } = await import("../../../services/timer-config/update.js");
 const { deleteTimerConfig } = await import("../../../services/timer-config/delete.js");
-const { archiveTimerConfig, restoreTimerConfig } = await import("../../../services/timer-config/lifecycle.js");
+const { archiveTimerConfig, restoreTimerConfig } =
+  await import("../../../services/timer-config/lifecycle.js");
 const { parseTimerConfigQuery } = await import("../../../services/timer-config/queries.js");
 const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 
@@ -47,23 +49,49 @@ describe("updateTimerConfig", () => {
     chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2 })]);
 
     const result = await updateTimerConfig(
-      db, SYSTEM_ID, TIMER_ID,
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1 },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.version).toBe(2);
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "timer-config.updated" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "timer-config.updated" }),
+    );
   });
 
   it("updates with all optional fields", async () => {
     const { db, chain } = mockDb();
-    chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2, enabled: false, intervalMinutes: 120, wakingHoursOnly: true, wakingStart: "09:00", wakingEnd: "21:00" })]);
+    chain.returning.mockResolvedValueOnce([
+      makeTimerRow({
+        version: 2,
+        enabled: false,
+        intervalMinutes: 120,
+        wakingHoursOnly: true,
+        wakingStart: "09:00",
+        wakingEnd: "21:00",
+      }),
+    ]);
 
     const result = await updateTimerConfig(
-      db, SYSTEM_ID, TIMER_ID,
-      { encryptedData: VALID_BLOB_BASE64, version: 1, enabled: false, intervalMinutes: 120, wakingHoursOnly: true, wakingStart: "09:00", wakingEnd: "21:00" },
-      AUTH, mockAudit,
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
+      {
+        encryptedData: VALID_BLOB_BASE64,
+        version: 1,
+        enabled: false,
+        intervalMinutes: 120,
+        wakingHoursOnly: true,
+        wakingStart: "09:00",
+        wakingEnd: "21:00",
+      },
+      AUTH,
+      mockAudit,
     );
 
     expect(result.enabled).toBe(false);
@@ -77,7 +105,14 @@ describe("updateTimerConfig", () => {
     chain.limit.mockResolvedValueOnce([{ id: TIMER_ID }]);
 
     await expect(
-      updateTimerConfig(db, SYSTEM_ID, TIMER_ID, { encryptedData: VALID_BLOB_BASE64, version: 1 }, AUTH, mockAudit),
+      updateTimerConfig(
+        db,
+        SYSTEM_ID,
+        TIMER_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
   });
 
@@ -87,7 +122,14 @@ describe("updateTimerConfig", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      updateTimerConfig(db, SYSTEM_ID, TIMER_ID, { encryptedData: VALID_BLOB_BASE64, version: 1 }, AUTH, mockAudit),
+      updateTimerConfig(
+        db,
+        SYSTEM_ID,
+        TIMER_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -96,7 +138,14 @@ describe("updateTimerConfig", () => {
     const { db } = mockDb();
 
     await expect(
-      updateTimerConfig(db, SYSTEM_ID, TIMER_ID, { encryptedData: VALID_BLOB_BASE64, version: 1 }, AUTH, mockAudit),
+      updateTimerConfig(
+        db,
+        SYSTEM_ID,
+        TIMER_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
@@ -108,9 +157,12 @@ describe("updateTimerConfig", () => {
     chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2, intervalMinutes: 60 })]);
 
     const result = await updateTimerConfig(
-      db, SYSTEM_ID, TIMER_ID,
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1, intervalMinutes: 60 },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.intervalMinutes).toBe(60);
@@ -125,9 +177,12 @@ describe("updateTimerConfig", () => {
     chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2, enabled: false })]);
 
     const result = await updateTimerConfig(
-      db, SYSTEM_ID, TIMER_ID,
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1, enabled: false },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.enabled).toBe(false);
@@ -136,13 +191,26 @@ describe("updateTimerConfig", () => {
   it("recomputes nextCheckInAt with waking hours in update", async () => {
     const { db, chain } = mockDb();
     // Current row has enabled=true, interval set, and waking hours
-    chain.limit.mockResolvedValueOnce([makeTimerRow({ enabled: true, intervalMinutes: 30, wakingHoursOnly: true, wakingStart: "08:00", wakingEnd: "22:00" })]);
-    chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2, wakingHoursOnly: true, wakingStart: "09:00", wakingEnd: "21:00" })]);
+    chain.limit.mockResolvedValueOnce([
+      makeTimerRow({
+        enabled: true,
+        intervalMinutes: 30,
+        wakingHoursOnly: true,
+        wakingStart: "08:00",
+        wakingEnd: "22:00",
+      }),
+    ]);
+    chain.returning.mockResolvedValueOnce([
+      makeTimerRow({ version: 2, wakingHoursOnly: true, wakingStart: "09:00", wakingEnd: "21:00" }),
+    ]);
 
     const result = await updateTimerConfig(
-      db, SYSTEM_ID, TIMER_ID,
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1, wakingStart: "09:00", wakingEnd: "21:00" },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.wakingStart).toBe("09:00");
@@ -154,9 +222,12 @@ describe("updateTimerConfig", () => {
     chain.returning.mockResolvedValueOnce([makeTimerRow({ version: 2, enabled: false })]);
 
     const result = await updateTimerConfig(
-      db, SYSTEM_ID, TIMER_ID,
+      db,
+      SYSTEM_ID,
+      TIMER_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1, enabled: false },
-      AUTH, mockAudit,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.enabled).toBe(false);
@@ -178,7 +249,10 @@ describe("deleteTimerConfig", () => {
     await deleteTimerConfig(db, SYSTEM_ID, TIMER_ID, AUTH, mockAudit);
 
     expect(chain.transaction).toHaveBeenCalled();
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "timer-config.deleted" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "timer-config.deleted" }),
+    );
   });
 
   it("throws 404 when timer config not found", async () => {
@@ -238,7 +312,10 @@ describe("archiveTimerConfig", () => {
 
     await archiveTimerConfig(db, SYSTEM_ID, TIMER_ID, AUTH, mockAudit);
 
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "timer-config.archived" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "timer-config.archived" }),
+    );
   });
 
   it("throws 404 when timer config not found", async () => {
@@ -285,7 +362,10 @@ describe("restoreTimerConfig", () => {
     const result = await restoreTimerConfig(db, SYSTEM_ID, TIMER_ID, AUTH, mockAudit);
 
     expect(result.version).toBe(2);
-    expect(mockAudit).toHaveBeenCalledWith(chain, expect.objectContaining({ eventType: "timer-config.restored" }));
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "timer-config.restored" }),
+    );
   });
 
   it("throws 404 when archived timer config not found", async () => {

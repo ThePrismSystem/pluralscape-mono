@@ -6,10 +6,10 @@
 import { PAGINATION, brandId } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fromCursor } from "../../lib/pagination.js";
-import { mockDb } from "../helpers/mock-db.js";
-import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
-import { makeTestAuth } from "../helpers/test-auth.js";
+import { fromCursor } from "../../../lib/pagination.js";
+import { mockDb } from "../../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../../helpers/mock-ownership.js";
+import { makeTestAuth } from "../../helpers/test-auth.js";
 
 import type { MemberId, SystemId } from "@pluralscape/types";
 
@@ -30,27 +30,27 @@ vi.mock("@pluralscape/crypto", () => ({
   },
 }));
 
-vi.mock("../../lib/audit-log.js", () => ({
+vi.mock("../../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../lib/system-ownership.js", () => ({
+vi.mock("../../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../services/webhook-dispatcher.js", () => ({
+vi.mock("../../../services/webhook-dispatcher.js", () => ({
   dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
 }));
 
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const { createMember } = await import("../../services/member/create.js");
-const { listMembers, getMember } = await import("../../services/member/queries.js");
-const { updateMember } = await import("../../services/member/update.js");
-const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
+const { createMember } = await import("../../../services/member/create.js");
+const { listMembers, getMember } = await import("../../../services/member/queries.js");
+const { updateMember } = await import("../../../services/member/update.js");
+const { assertSystemOwnership } = await import("../../../lib/system-ownership.js");
 const { dispatchWebhookEvent: mockDispatchWebhookEvent } =
-  await import("../../services/webhook-dispatcher.js");
+  await import("../../../services/webhook-dispatcher.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -138,9 +138,7 @@ describe("createMember", () => {
 
   it("throws QUOTA_EXCEEDED when member count is at maximum", async () => {
     const { db, chain } = mockDb();
-    chain.where
-      .mockReturnValueOnce(chain)
-      .mockResolvedValueOnce([{ count: 5000 }]);
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 5000 }]);
 
     await expect(
       createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
