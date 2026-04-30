@@ -1,11 +1,11 @@
 ---
 # ps-6phh
 title: Plaintext/special entity type SoT consolidation
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-04-25T08:02:48Z
-updated_at: 2026-04-30T00:46:47Z
+updated_at: 2026-04-30T03:39:54Z
 parent: ps-cd6x
 blocked_by:
   - ps-y4tb

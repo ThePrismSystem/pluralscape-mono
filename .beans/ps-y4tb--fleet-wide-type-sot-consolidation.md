@@ -1,11 +1,11 @@
 ---
 # ps-y4tb
 title: Encrypted-entity type SoT consolidation
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-04-25T07:48:01Z
-updated_at: 2026-04-25T09:34:38Z
+updated_at: 2026-04-30T03:40:02Z
 parent: ps-cd6x
 ---
 
@@ -82,3 +82,7 @@ Member → MemberEncryptedFields → MemberEncryptedInput
 11 commits across Class A (18), Class B (10), Class D (2) per plan. Class C (api-key, session, system-snapshot) tracked separately in `ps-qmyt`. Class E (webhook-delivery) tracked in `ps-f3ox`. Plaintext entities tracked in `ps-6phh`.
 
 Worktree to use: `/home/theprismsystem/git/ps-y4tb-fleet` from `origin/main` (post-merge).
+
+## Summary of Changes
+
+Encrypted-entity type SoT consolidation completed across the 34-entity fleet. Member pilot (PR #560) locked in the canonical chain (`X` → `XEncryptedFields` → `XEncryptedInput` → `XServerMetadata` → `XResult` → `XWire`), and all child tasks landed: ps-etbc (fleet rollout), types-yxgc (branded value labels), types-x61u/types-vmk9 (encrypted-keys hardening + brand pinHash + Relationship.label invariant), types-1spw (G4 anchored to data transforms), types-600s (CheckInRecord canonical chain), types-kk7a (JSDoc + ADR-023 cross-references). Class C tracked separately in ps-qmyt (completed); Class E in ps-f3ox (completed); plaintext sibling in ps-6phh (completed).

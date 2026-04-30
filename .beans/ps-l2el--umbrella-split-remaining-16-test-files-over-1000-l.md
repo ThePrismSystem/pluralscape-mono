@@ -1,10 +1,11 @@
 ---
 # ps-l2el
 title: "Umbrella: split remaining 16 test files over 1,000 LOC"
-status: todo
+status: scrapped
 type: task
+priority: normal
 created_at: 2026-04-21T13:57:36Z
-updated_at: 2026-04-21T13:57:36Z
+updated_at: 2026-04-30T04:59:58Z
 parent: ps-36rg
 ---
 
@@ -37,3 +38,7 @@ Systematic split of the remaining 16 test files over 1,000 LOC, following the pa
 
 - File ≤600 LOC after split; every test preserved; relevant vitest project passes; coverage unchanged or higher
 - Umbrella bean completed only when all 16 boxes are checked and each underlying PR merged
+
+## Reasons for Scrapping
+
+Replaced by package-batched T2 beans per the 2026-04-29 re-scope spec (docs/superpowers/specs/2026-04-29-test-file-split-epic-design.md). The original 16-file umbrella structure didn't match the new tiered batching strategy. New T2 beans are direct children of ps-36rg, blocked-by the three T1 named-split beans.
