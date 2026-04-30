@@ -58,13 +58,11 @@ export default [
     },
   },
   {
-    // Cap service file length at 450 LOC. If you hit the cap, split the
-    // file — do not raise it. Project-wide
-    // `@eslint-community/eslint-comments/no-use` applies uniformly here
-    // (no escape hatch for `eslint-disable-next-line`).
+    // `pluralscape/no-params-unknown` enforces typed params on service
+    // functions. The `max-lines` cap moved to the shared config in
+    // tooling/eslint-config (see LOC ceilings block).
     files: ["src/services/**/*.ts"],
     rules: {
-      "max-lines": ["error", { max: 450, skipBlankLines: true, skipComments: true }],
       "pluralscape/no-params-unknown": "error",
     },
   },

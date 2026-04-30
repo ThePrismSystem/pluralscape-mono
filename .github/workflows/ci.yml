@@ -28,6 +28,9 @@ jobs:
       - name: Lint (zero warnings)
         run: pnpm lint
 
+      - name: LOC ceilings (max-lines from repo root)
+        run: pnpm lint:loc
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
