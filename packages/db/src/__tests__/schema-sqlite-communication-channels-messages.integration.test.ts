@@ -303,7 +303,7 @@ describe("SQLite communication schema — channels and messages", () => {
           .prepare(
             "INSERT INTO messages (id, channel_id, system_id, timestamp, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
           )
-          .run(crypto.randomUUID(), channelId, systemId, now, now, now),
+          .run(crypto.randomUUID(), channelId, systemId, now, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
 
