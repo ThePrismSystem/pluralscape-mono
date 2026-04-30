@@ -35,10 +35,12 @@ export { createFakeImportSource, createInMemoryPersister, mapped, failed, skippe
 // ---------------------------------------------------------------------------
 
 export const SIMPLE_DEPENDENCY_ORDER = ["members", "groups"] as const;
+export const MEMBERS_DEPENDENCY_ORDER = ["members"] as const;
 
-export const SIMPLE_COLLECTION_TO_ENTITY_TYPE = (
-  collection: string,
-): ImportCollectionType => {
+/** Default engine options used by virtually every test. */
+export const DEFAULT_OPTIONS = { selectedCategories: {}, avatarMode: "skip" } as const;
+
+export const SIMPLE_COLLECTION_TO_ENTITY_TYPE = (collection: string): ImportCollectionType => {
   const map: Record<string, ImportCollectionType> = {
     members: "member",
     groups: "group",
@@ -47,6 +49,9 @@ export const SIMPLE_COLLECTION_TO_ENTITY_TYPE = (
   if (!entityType) throw new Error(`Unknown collection: ${collection}`);
   return entityType;
 };
+
+/** Single-collection variant: collapses every collection to "member". */
+export const memberCollectionToEntityType = (): ImportCollectionType => "member";
 
 // ---------------------------------------------------------------------------
 // Default data factories
@@ -81,12 +86,19 @@ export const simpleMapperDispatch: Readonly<Record<string, MapperDispatchEntry>>
       const memberRef = record["memberRef"] as string | undefined;
       if (memberRef) {
         const resolved = ctx.translate("member", memberRef);
-        if (!resolved)
-          return failed({ kind: "fk-miss", message: `missing member ${memberRef}` });
+        if (!resolved) return failed({ kind: "fk-miss", message: `missing member ${memberRef}` });
       }
       return mapped(doc);
     },
   },
+};
+
+/**
+ * Members-only passthrough dispatch — every member document maps unchanged.
+ * Heavily reused by single-mapper persister and error-classification tests.
+ */
+export const passthroughMembersDispatch: Readonly<Record<string, MapperDispatchEntry>> = {
+  members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
 };
 
 // ---------------------------------------------------------------------------
@@ -122,21 +134,11 @@ export function makeBatchSource(docs: Record<string, unknown>[]): ImportDataSour
 }
 
 export function makeBatchDispatch(
-  mapBatch: (
-    docs: readonly SourceDocument[],
-    ctx: MappingContext,
-  ) => readonly BatchMapperOutput[],
+  mapBatch: (docs: readonly SourceDocument[], ctx: MappingContext) => readonly BatchMapperOutput[],
 ): Readonly<Record<string, MapperDispatchEntry>> {
   return {
     items: { entityType: "member", batch: true, mapBatch } as BatchMapperEntry,
   };
-}
-
-/** Identity batch mapper — maps every doc through unchanged. */
-export function makePassthroughBatchDispatch(): Readonly<Record<string, MapperDispatchEntry>> {
-  return makeBatchDispatch((docs) =>
-    docs.map((d) => ({ sourceEntityId: d.sourceId, result: mapped(d.document) })),
-  );
 }
 
 /** Batch entry that maps all docs without modification, typed for direct use. */

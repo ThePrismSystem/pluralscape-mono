@@ -12,15 +12,14 @@
 import { describe, expect, it } from "vitest";
 
 import { runImportEngine } from "../import-engine.js";
+
 import {
-  makeSimpleData,
   simpleMapperDispatch,
   noopProgress,
   createFakeImportSource,
   createInMemoryPersister,
   mapped,
   failed,
-  makeBatchDispatch,
   BATCH_DEPENDENCY_ORDER,
   batchCollectionToEntityType,
   passthroughBatchEntry,
@@ -347,8 +346,7 @@ describe("error classification via FK miss in simpleMapperDispatch", () => {
       sourceFormat: "simply-plural",
       mapperDispatch: simpleMapperDispatch,
       dependencyOrder: ["members", "groups"],
-      collectionToEntityType: (c: string) =>
-        c === "members" ? "member" : "group",
+      collectionToEntityType: (c: string) => (c === "members" ? "member" : "group"),
       options: { selectedCategories: {}, avatarMode: "skip" },
       onProgress: noopProgress,
     });

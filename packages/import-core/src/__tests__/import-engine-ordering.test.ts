@@ -13,6 +13,7 @@
 import { describe, expect, it } from "vitest";
 
 import { runImportEngine } from "../import-engine.js";
+
 import {
   SIMPLE_DEPENDENCY_ORDER,
   SIMPLE_COLLECTION_TO_ENTITY_TYPE,
@@ -21,7 +22,6 @@ import {
   noopProgress,
   createFakeImportSource,
   createInMemoryPersister,
-  mapped,
   failed,
 } from "./helpers/engine-fixtures.js";
 

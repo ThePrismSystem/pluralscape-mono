@@ -3,9 +3,8 @@
  *
  * Covers: persister contract invocation (single-mapper path), abort signal
  * semantics, source.close() lifecycle, drop events, beforeCollection hook,
- * skipped/failed mapper results, upsert action variants (single mapper).
- *
- * See also: import-engine-persister-batch for the batch-mapper path.
+ * skipped/failed mapper results. See import-engine-persister-batch for the
+ * batch-mapper path.
  *
  * Companion files: import-engine-parsing, import-engine-ordering,
  *                  import-engine-checkpoint, import-engine-error-classification,
@@ -16,11 +15,16 @@ import { describe, expect, it } from "vitest";
 
 import { emptyCheckpointState } from "../checkpoint.js";
 import { runImportEngine } from "../import-engine.js";
+
 import {
   SIMPLE_DEPENDENCY_ORDER,
   SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+  MEMBERS_DEPENDENCY_ORDER,
+  DEFAULT_OPTIONS,
+  memberCollectionToEntityType,
   makeSimpleData,
   simpleMapperDispatch,
+  passthroughMembersDispatch,
   noopProgress,
   createFakeImportSource,
   createInMemoryPersister,
@@ -29,28 +33,14 @@ import {
   failed,
 } from "./helpers/engine-fixtures.js";
 
+import type { BeforeCollectionArgs, BeforeCollectionResult } from "../import-engine.js";
 import type { MapperDispatchEntry } from "../mapper-dispatch.js";
 import type { SourceEvent, ImportDataSource } from "../source.types.js";
-import type { BeforeCollectionArgs, BeforeCollectionResult } from "../import-engine.js";
-
-// ---------------------------------------------------------------------------
-// Abort signal (single-mapper path)
-// ---------------------------------------------------------------------------
 
 describe("abort signal", () => {
   it("returns aborted outcome when signal fires during iteration", async () => {
     const controller = new AbortController();
     let docCount = 0;
-
-    const data = {
-      members: [
-        { _id: "m1", name: "A" },
-        { _id: "m2", name: "B" },
-        { _id: "m3", name: "C" },
-        { _id: "m4", name: "D" },
-        { _id: "m5", name: "E" },
-      ],
-    };
 
     // Mapper that aborts after processing 2 docs
     const abortingDispatch: Readonly<Record<string, MapperDispatchEntry>> = {
@@ -58,15 +48,21 @@ describe("abort signal", () => {
         entityType: "member",
         map: (doc: unknown) => {
           docCount += 1;
-          if (docCount >= 2) {
-            controller.abort();
-          }
+          if (docCount >= 2) controller.abort();
           return mapped(doc);
         },
       },
     };
 
-    const source = createFakeImportSource(data);
+    const source = createFakeImportSource({
+      members: [
+        { _id: "m1", name: "A" },
+        { _id: "m2", name: "B" },
+        { _id: "m3", name: "C" },
+        { _id: "m4", name: "D" },
+        { _id: "m5", name: "E" },
+      ],
+    });
     const { persister, snapshot } = createInMemoryPersister();
 
     const result = await runImportEngine({
@@ -74,9 +70,9 @@ describe("abort signal", () => {
       persister,
       sourceFormat: "simply-plural",
       mapperDispatch: abortingDispatch,
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
       abortSignal: controller.signal,
     });
@@ -88,9 +84,7 @@ describe("abort signal", () => {
     expect(snap.countByType("member")).toBeGreaterThanOrEqual(2);
     expect(snap.countByType("member")).toBeLessThan(5);
   });
-});
 
-describe("abort signal before collection iteration", () => {
   it("aborts before processing any collection when signal is already aborted", async () => {
     const controller = new AbortController();
     controller.abort(); // Pre-abort
@@ -105,7 +99,7 @@ describe("abort signal before collection iteration", () => {
       mapperDispatch: simpleMapperDispatch,
       dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
       collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
       abortSignal: controller.signal,
     });
@@ -115,10 +109,6 @@ describe("abort signal before collection iteration", () => {
     expect(snapshot().countByType("group")).toBe(0);
   });
 });
-
-// ---------------------------------------------------------------------------
-// source.close() lifecycle
-// ---------------------------------------------------------------------------
 
 describe("source.close() is always called", () => {
   it("calls close even on successful completion", async () => {
@@ -138,25 +128,19 @@ describe("source.close() is always called", () => {
       source,
       persister,
       sourceFormat: "simply-plural",
-      mapperDispatch: {
-        members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
-      },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      mapperDispatch: passthroughMembersDispatch,
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
     expect(closeCalled).toBe(true);
   });
-});
 
-describe("source.close() error path", () => {
   it("produces a warning when source.close() throws", async () => {
     const source = createFakeImportSource(makeSimpleData());
-    source.close = () => {
-      return Promise.reject(new Error("close failed"));
-    };
+    source.close = () => Promise.reject(new Error("close failed"));
     const { persister } = createInMemoryPersister();
 
     const result = await runImportEngine({
@@ -166,16 +150,14 @@ describe("source.close() error path", () => {
       mapperDispatch: simpleMapperDispatch,
       dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
       collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
     expect(result.outcome).toBe("completed");
     expect(result.warnings.some((w) => w.message.includes("source.close() failed"))).toBe(true);
   });
-});
 
-describe("source.close() error on aborted run", () => {
   it("produces a warning when source.close() throws during an aborted run", async () => {
     const controller = new AbortController();
     controller.abort(); // Pre-abort
@@ -190,7 +172,7 @@ describe("source.close() error on aborted run", () => {
       mapperDispatch: simpleMapperDispatch,
       dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
       collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
       abortSignal: controller.signal,
     });
@@ -200,10 +182,6 @@ describe("source.close() error on aborted run", () => {
     expect(closeWarning?.message).toContain("close leaked handle");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Drop events from source (single-mapper path)
-// ---------------------------------------------------------------------------
 
 describe("drop events from source", () => {
   it("records drop events as non-fatal errors and continues", async () => {
@@ -225,12 +203,10 @@ describe("drop events from source", () => {
       source,
       persister,
       sourceFormat: "simply-plural",
-      mapperDispatch: {
-        members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
-      },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      mapperDispatch: passthroughMembersDispatch,
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
@@ -240,10 +216,8 @@ describe("drop events from source", () => {
     expect(result.errors[0]?.fatal).toBe(false);
     expect(snapshot().countByType("member")).toBe(1);
   });
-});
 
-describe("drop event with null sourceId", () => {
-  it("records error without advancing lastSourceId", async () => {
+  it("records drop with null sourceId without advancing lastSourceId", async () => {
     const source: ImportDataSource = {
       mode: "fake",
       async *iterate(): AsyncGenerator<SourceEvent> {
@@ -260,12 +234,10 @@ describe("drop event with null sourceId", () => {
       source,
       persister,
       sourceFormat: "simply-plural",
-      mapperDispatch: {
-        members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
-      },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      mapperDispatch: passthroughMembersDispatch,
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
@@ -273,13 +245,7 @@ describe("drop event with null sourceId", () => {
     expect(result.errors).toHaveLength(1);
     expect(snapshot().countByType("member")).toBe(1);
   });
-});
 
-// ---------------------------------------------------------------------------
-// Abort after drop in single-mapper path
-// ---------------------------------------------------------------------------
-
-describe("abort after drop in single mapper", () => {
   it("aborts when signal fires after processing a drop event", async () => {
     const controller = new AbortController();
     const source: ImportDataSource = {
@@ -299,26 +265,18 @@ describe("abort after drop in single mapper", () => {
       source,
       persister,
       sourceFormat: "simply-plural",
-      mapperDispatch: {
-        members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
-      },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      mapperDispatch: passthroughMembersDispatch,
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
       abortSignal: controller.signal,
     });
 
     expect(result.outcome).toBe("aborted");
   });
-});
 
-// ---------------------------------------------------------------------------
-// source iteration fatal throw (single-mapper path)
-// ---------------------------------------------------------------------------
-
-describe("source iteration fatal throw", () => {
-  it("produces a fatal error when iterate() throws mid-iteration", async () => {
+  it("produces a fatal error when source iterate() throws mid-iteration", async () => {
     const source: ImportDataSource = {
       mode: "fake",
       async *iterate(collection: string): AsyncGenerator<SourceEvent> {
@@ -337,12 +295,10 @@ describe("source iteration fatal throw", () => {
       source,
       persister,
       sourceFormat: "simply-plural",
-      mapperDispatch: {
-        members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
-      },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      mapperDispatch: passthroughMembersDispatch,
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
@@ -352,10 +308,6 @@ describe("source iteration fatal throw", () => {
     expect(result.errors[0]?.message).toBe("network timeout");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Non-fatal / skipped / failed single-mapper results
-// ---------------------------------------------------------------------------
 
 describe("non-fatal persister error in single mapper continues", () => {
   it("records error and processes remaining entities", async () => {
@@ -381,12 +333,10 @@ describe("non-fatal persister error in single mapper continues", () => {
       source,
       persister,
       sourceFormat: "simply-plural",
-      mapperDispatch: {
-        members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
-      },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      mapperDispatch: passthroughMembersDispatch,
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
@@ -395,10 +345,8 @@ describe("non-fatal persister error in single mapper continues", () => {
     expect(result.errors[0]?.fatal).toBe(false);
     expect(snapshot().countByType("member")).toBe(1); // m2 succeeded
   });
-});
 
-describe("skipped mapper result in single mapper path", () => {
-  it("advances checkpoint past skipped entities", async () => {
+  it("advances checkpoint past skipped mapper results", async () => {
     const source = createFakeImportSource({
       members: [
         { _id: "m1", name: "" },
@@ -421,19 +369,17 @@ describe("skipped mapper result in single mapper path", () => {
           },
         },
       },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
     expect(result.outcome).toBe("completed");
     expect(snapshot().countByType("member")).toBe(1);
   });
-});
 
-describe("failed mapper result in single mapper path", () => {
-  it("records non-fatal error and continues", async () => {
+  it("records failed mapper result as non-fatal and continues", async () => {
     const source = createFakeImportSource({
       members: [
         { _id: "m1", name: "Aria" },
@@ -458,9 +404,9 @@ describe("failed mapper result in single mapper path", () => {
           },
         },
       },
-      dependencyOrder: ["members"],
-      collectionToEntityType: () => "member",
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      dependencyOrder: MEMBERS_DEPENDENCY_ORDER,
+      collectionToEntityType: memberCollectionToEntityType,
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
     });
 
@@ -470,10 +416,6 @@ describe("failed mapper result in single mapper path", () => {
     expect(snapshot().countByType("member")).toBe(2);
   });
 });
-
-// ---------------------------------------------------------------------------
-// beforeCollection hook
-// ---------------------------------------------------------------------------
 
 describe("beforeCollection hook", () => {
   it("is called before each collection and can modify state", async () => {
@@ -489,7 +431,7 @@ describe("beforeCollection hook", () => {
       mapperDispatch: simpleMapperDispatch,
       dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
       collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
       beforeCollection: (args: BeforeCollectionArgs): Promise<BeforeCollectionResult> => {
         calledFor.push(args.collection);
@@ -512,7 +454,7 @@ describe("beforeCollection hook", () => {
       mapperDispatch: simpleMapperDispatch,
       dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
       collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
       beforeCollection: (args: BeforeCollectionArgs): Promise<BeforeCollectionResult> => {
         if (args.collection === "groups") {
@@ -524,9 +466,7 @@ describe("beforeCollection hook", () => {
 
     expect(result.outcome).toBe("aborted");
   });
-});
 
-describe("beforeCollection abort on first collection", () => {
   it("aborts immediately when beforeCollection returns abort on first collection", async () => {
     const source = createFakeImportSource(makeSimpleData());
     const { persister, snapshot } = createInMemoryPersister();
@@ -538,25 +478,22 @@ describe("beforeCollection abort on first collection", () => {
       mapperDispatch: simpleMapperDispatch,
       dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
       collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
-      options: { selectedCategories: {}, avatarMode: "skip" },
+      options: DEFAULT_OPTIONS,
       onProgress: noopProgress,
-      beforeCollection: (): Promise<BeforeCollectionResult> => {
-        // Abort on the very first collection
-        return Promise.resolve({
+      beforeCollection: (): Promise<BeforeCollectionResult> =>
+        Promise.resolve({
           state: emptyCheckpointState({
             firstEntityType: "member",
             selectedCategories: {},
             avatarMode: "skip",
           }),
           abort: true,
-        });
-      },
+        }),
     });
 
     expect(result.outcome).toBe("aborted");
-    // Nothing should have been persisted
+    // Nothing persisted
     expect(snapshot().countByType("member")).toBe(0);
     expect(snapshot().countByType("group")).toBe(0);
   });
 });
-

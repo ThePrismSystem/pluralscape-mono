@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 
 import { emptyCheckpointState } from "../checkpoint.js";
 import { runImportEngine } from "../import-engine.js";
+
 import {
   SIMPLE_DEPENDENCY_ORDER,
   SIMPLE_COLLECTION_TO_ENTITY_TYPE,
@@ -34,10 +35,6 @@ import {
 import type { MapperDispatchEntry } from "../mapper-dispatch.js";
 import type { SourceEvent, ImportDataSource } from "../source.types.js";
 import type { ImportCheckpointState } from "@pluralscape/types";
-
-// ---------------------------------------------------------------------------
-// Resume from checkpoint (single-mapper path)
-// ---------------------------------------------------------------------------
 
 describe("resume from checkpoint", () => {
   it("resumes mid-collection from a prior checkpoint", async () => {
@@ -120,10 +117,6 @@ describe("resume from checkpoint", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Resume with unknown entity type
-// ---------------------------------------------------------------------------
-
 describe("resume with unknown entity type falls back to start", () => {
   it("starts from index 0 when checkpoint entity type is not in dependency order", async () => {
     const source = createFakeImportSource(makeSimpleData());
@@ -154,10 +147,6 @@ describe("resume with unknown entity type falls back to start", () => {
     expect(snapshot().countByType("group")).toBe(2);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Batch mapper resume from checkpoint
-// ---------------------------------------------------------------------------
 
 describe("batch mapper resume from checkpoint", () => {
   it("skips documents before the resume cutoff in batch path", async () => {
@@ -245,10 +234,6 @@ describe("batch mapper resume from checkpoint", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// persistMapperResult stateRef propagation
-// ---------------------------------------------------------------------------
-
 describe("persistMapperResult stateRef propagation", () => {
   it("returns aborted result with correct checkpoint state on fatal persister error", async () => {
     const source = createFakeImportSource({
@@ -334,10 +319,6 @@ describe("persistMapperResult stateRef propagation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// selectedCategories opt-out advances checkpoint for non-last collection
-// ---------------------------------------------------------------------------
-
 describe("selectedCategories opt-out advances checkpoint for non-last collection", () => {
   it("marks opted-out first collection as completed and processes the second", async () => {
     const source = createFakeImportSource(makeSimpleData());
@@ -368,10 +349,6 @@ describe("selectedCategories opt-out advances checkpoint for non-last collection
     expect(progressStates.length).toBeGreaterThanOrEqual(1);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Batch mapper upsert action variants (updated, skipped) — idempotency check
-// ---------------------------------------------------------------------------
 
 describe("batch mapper upsert actions (updated, skipped)", () => {
   it("handles updated and skipped upsert actions in batch path", async () => {
@@ -479,10 +456,6 @@ describe("batch mapper upsert actions (updated, skipped)", () => {
     expect(snapshot().countByType("member")).toBe(2);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Upsert action variants in single-mapper path (idempotent re-import)
-// ---------------------------------------------------------------------------
 
 describe("upsert action variants in single mapper", () => {
   it("handles 'updated' upsert action on re-import", async () => {

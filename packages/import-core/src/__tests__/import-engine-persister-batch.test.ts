@@ -15,9 +15,9 @@
 import { describe, expect, it } from "vitest";
 
 import { runImportEngine } from "../import-engine.js";
+
 import {
   noopProgress,
-  createFakeImportSource,
   createInMemoryPersister,
   mapped,
   skipped,
