@@ -21,6 +21,7 @@ import { dualTenantRlsPolicy, enableRls } from "../rls/policies.js";
 import { pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 import {
   APP_ROLE,
+  clearSessionContext,
   createAccountsAndSystemsSchema,
   setSessionAccountId,
   setSessionSystemId,
@@ -122,14 +123,13 @@ describe("RLS cross-tenant isolation — dual scope (PGlite)", () => {
     await setSessionAccountId(db, accountIdA);
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM api_keys`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM api_keys`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(apiKeyIdA);
+    expect(result.rows[0]?.id).toBe(apiKeyIdA);
   });
 
   it("returns empty when GUCs cleared (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await db.execute(sql`SELECT * FROM api_keys`);
     expect(result.rows).toHaveLength(0);
@@ -256,14 +256,13 @@ describe("RLS cross-tenant isolation — import_jobs (PGlite)", () => {
     await setSessionAccountId(db, accountIdA);
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM import_jobs`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM import_jobs`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(jobIdA);
+    expect(result.rows[0]?.id).toBe(jobIdA);
   });
 
   it("returns empty when GUCs cleared (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await db.execute(sql`SELECT * FROM import_jobs`);
     expect(result.rows).toHaveLength(0);
@@ -375,14 +374,13 @@ describe("RLS cross-tenant isolation — import_entity_refs (PGlite)", () => {
     await setSessionAccountId(db, accountIdA);
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM import_entity_refs`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM import_entity_refs`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(refIdA);
+    expect(result.rows[0]?.id).toBe(refIdA);
   });
 
   it("returns empty when GUCs cleared (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await db.execute(sql`SELECT * FROM import_entity_refs`);
     expect(result.rows).toHaveLength(0);

@@ -22,6 +22,7 @@ import { auditLogRlsPolicy, enableRls } from "../rls/policies.js";
 import { pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 import {
   APP_ROLE,
+  clearSessionContext,
   createAccountsAndSystemsSchema,
   setSessionAccountId,
   setSessionSystemId,
@@ -170,8 +171,7 @@ describe("RLS audit_log NULL-aware tenant isolation (PGlite)", () => {
   });
 
   it("fail-closed when no tenant context is set", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await db.execute(sql`SELECT id FROM audit_log`);
     expect(result.rows).toHaveLength(0);

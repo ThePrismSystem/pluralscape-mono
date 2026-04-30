@@ -21,7 +21,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { enableRls, systemFkRlsPolicy, systemRlsPolicy } from "../rls/policies.js";
 
 import { createPgSyncTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
-import { setSessionSystemId } from "./helpers/rls-test-helpers.js";
+import { clearSessionSystemId, setSessionSystemId } from "./helpers/rls-test-helpers.js";
 
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { AccountId, SystemId } from "@pluralscape/types";
@@ -159,13 +159,13 @@ describe("RLS cross-tenant isolation — system-fk scope (sync tables, PGlite)",
   it("sync_changes: only sees rows for current system via FK join", async () => {
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM sync_changes`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM sync_changes`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(changeIdA);
+    expect(result.rows[0]?.id).toBe(changeIdA);
   });
 
   it("sync_changes: returns empty when context cleared (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
 
     const result = await db.execute(sql`SELECT * FROM sync_changes`);
     expect(result.rows).toHaveLength(0);
@@ -174,17 +174,17 @@ describe("RLS cross-tenant isolation — system-fk scope (sync tables, PGlite)",
   it("sync_snapshots: only sees rows for current system via FK join", async () => {
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM sync_snapshots`);
+    const result = await db.execute<{ document_id: string }>(sql`SELECT * FROM sync_snapshots`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["document_id"]).toBe(docIdA);
+    expect(result.rows[0]?.document_id).toBe(docIdA);
   });
 
   it("sync_conflicts: only sees rows for current system via FK join", async () => {
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM sync_conflicts`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM sync_conflicts`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(conflictIdA);
+    expect(result.rows[0]?.id).toBe(conflictIdA);
   });
 
   it("sync_changes: cross-tenant INSERT blocked", async () => {
@@ -231,8 +231,8 @@ describe("RLS cross-tenant isolation — system-fk scope (sync tables, PGlite)",
     expect(rowsA.rows).toHaveLength(1);
 
     await setSessionSystemId(db, systemIdB);
-    const rowsB = await db.execute(sql`SELECT * FROM sync_changes`);
+    const rowsB = await db.execute<{ id: string }>(sql`SELECT * FROM sync_changes`);
     expect(rowsB.rows).toHaveLength(1);
-    expect((rowsB.rows[0] as Record<string, unknown>)["id"]).toBe(changeIdB);
+    expect(rowsB.rows[0]?.id).toBe(changeIdB);
   });
 });

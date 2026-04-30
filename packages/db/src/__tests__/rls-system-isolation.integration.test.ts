@@ -26,6 +26,7 @@ import { fixtureNow } from "./fixtures/timestamps.js";
 import { pgInsertAccount, pgInsertMember, pgInsertSystem, testBlob } from "./helpers/pg-helpers.js";
 import {
   APP_ROLE,
+  clearSessionSystemId,
   createAccountsAndSystemsSchema,
   setSessionSystemId,
 } from "./helpers/rls-test-helpers.js";
@@ -147,7 +148,7 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
   });
 
   it("returns empty when session variable was never set (true fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
 
     const rows = await db.select().from(members);
 
@@ -274,13 +275,15 @@ describe("RLS cross-tenant isolation — system-pk scope (PGlite)", () => {
   it("only sees nomenclature_settings for current system", async () => {
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM nomenclature_settings`);
+    const result = await db.execute<{ system_id: string }>(
+      sql`SELECT * FROM nomenclature_settings`,
+    );
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["system_id"]).toBe(systemIdA);
+    expect(result.rows[0]?.system_id).toBe(systemIdA);
   });
 
   it("returns empty when no system context (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
 
     const result = await db.execute(sql`SELECT * FROM nomenclature_settings`);
     expect(result.rows).toHaveLength(0);
@@ -412,13 +415,13 @@ describe("RLS cross-tenant isolation — bucket_rotation_items (system scope, PG
   it("only sees rotation items for correct tenant", async () => {
     await setSessionSystemId(db, systemIdA);
 
-    const result = await db.execute(sql`SELECT * FROM bucket_rotation_items`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM bucket_rotation_items`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(itemIdA);
+    expect(result.rows[0]?.id).toBe(itemIdA);
   });
 
   it("returns empty when no system context (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
 
     const result = await db.execute(sql`SELECT * FROM bucket_rotation_items`);
     expect(result.rows).toHaveLength(0);

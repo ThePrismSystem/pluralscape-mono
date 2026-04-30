@@ -24,7 +24,12 @@ import {
 } from "../rls/policies.js";
 
 import { pgInsertAccount } from "./helpers/pg-helpers.js";
-import { APP_ROLE, createAccountsSchema, setSessionAccountId } from "./helpers/rls-test-helpers.js";
+import {
+  APP_ROLE,
+  clearSessionAccountId,
+  createAccountsSchema,
+  setSessionAccountId,
+} from "./helpers/rls-test-helpers.js";
 
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -89,13 +94,13 @@ describe("RLS cross-tenant isolation — account scope (PGlite)", () => {
   it("only sees auth keys for current account", async () => {
     await setSessionAccountId(db, accountIdA);
 
-    const result = await db.execute(sql`SELECT * FROM auth_keys`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM auth_keys`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(authKeyIdA);
+    expect(result.rows[0]?.id).toBe(authKeyIdA);
   });
 
   it("returns empty when no account context set (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await clearSessionAccountId(db);
 
     const result = await db.execute(sql`SELECT * FROM auth_keys`);
     expect(result.rows).toHaveLength(0);
@@ -103,9 +108,9 @@ describe("RLS cross-tenant isolation — account scope (PGlite)", () => {
 
   it("switching account changes visible rows", async () => {
     await setSessionAccountId(db, accountIdB);
-    const result = await db.execute(sql`SELECT * FROM auth_keys`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM auth_keys`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(authKeyIdB);
+    expect(result.rows[0]?.id).toBe(authKeyIdB);
   });
 });
 
@@ -147,13 +152,13 @@ describe("RLS cross-tenant isolation — account-pk scope (PGlite)", () => {
   it("only sees own account row", async () => {
     await setSessionAccountId(db, accountIdA);
 
-    const result = await db.execute(sql`SELECT * FROM accounts`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM accounts`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(accountIdA);
+    expect(result.rows[0]?.id).toBe(accountIdA);
   });
 
   it("returns empty when no account context (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await clearSessionAccountId(db);
 
     const result = await db.execute(sql`SELECT * FROM accounts`);
     expect(result.rows).toHaveLength(0);
@@ -249,13 +254,13 @@ describe("RLS cross-tenant isolation — account-fk scope (PGlite)", () => {
   it("only sees biometric tokens for current account", async () => {
     await setSessionAccountId(db, accountIdA);
 
-    const result = await db.execute(sql`SELECT * FROM biometric_tokens`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM biometric_tokens`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(tokenIdA);
+    expect(result.rows[0]?.id).toBe(tokenIdA);
   });
 
   it("returns empty when no account context (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await clearSessionAccountId(db);
 
     const result = await db.execute(sql`SELECT * FROM biometric_tokens`);
     expect(result.rows).toHaveLength(0);
@@ -264,9 +269,9 @@ describe("RLS cross-tenant isolation — account-fk scope (PGlite)", () => {
   it("switching account shows different tokens", async () => {
     await setSessionAccountId(db, accountIdB);
 
-    const result = await db.execute(sql`SELECT * FROM biometric_tokens`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM biometric_tokens`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(tokenIdB);
+    expect(result.rows[0]?.id).toBe(tokenIdB);
   });
 
   it("cross-tenant token not visible", async () => {
@@ -421,7 +426,7 @@ describe("RLS cross-tenant isolation — account-bidirectional (friend_connectio
   });
 
   it("returns empty when no account context (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await clearSessionAccountId(db);
 
     const result = await db.execute(sql`SELECT * FROM friend_connections`);
     expect(result.rows).toHaveLength(0);

@@ -1,6 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
 import { brandId } from "@pluralscape/types";
-import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -21,6 +20,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
+import { APP_ROLE, clearSessionContext, setSessionSystemId } from "./helpers/rls-test-helpers.js";
 
 import type { SystemId } from "@pluralscape/types";
 
@@ -559,7 +559,6 @@ describe("getDeploymentMode", () => {
 });
 
 describe("PG search_index RLS policy enforcement", () => {
-  const APP_ROLE = "search_rls_app_user";
   let client: PGlite;
   let db: ReturnType<typeof drizzle>;
   let systemIdA: string;
@@ -607,7 +606,7 @@ describe("PG search_index RLS policy enforcement", () => {
   });
 
   it("only returns rows for the active session system", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', ${systemIdA}, false)`);
+    await setSessionSystemId(db, systemIdA);
 
     const result = await client.query<{ system_id: string; entity_id: string }>(
       "SELECT system_id, entity_id FROM search_index",
@@ -619,7 +618,7 @@ describe("PG search_index RLS policy enforcement", () => {
   });
 
   it("switches visible rows when session context changes", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', ${systemIdB}, false)`);
+    await setSessionSystemId(db, systemIdB);
 
     const result = await client.query<{ system_id: string; entity_id: string }>(
       "SELECT system_id, entity_id FROM search_index",
@@ -631,7 +630,7 @@ describe("PG search_index RLS policy enforcement", () => {
   });
 
   it("returns empty when session GUC is unset (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await client.query<{ system_id: string }>("SELECT system_id FROM search_index");
 

@@ -6,7 +6,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { enableRls, systemRlsPolicy } from "../rls/policies.js";
 
 import { pgInsertAccount, pgInsertMember, pgInsertSystem } from "./helpers/pg-helpers.js";
-import { APP_ROLE, clearSessionContext, setSessionSystemId } from "./helpers/rls-test-helpers.js";
+import {
+  APP_ROLE,
+  clearSessionContext,
+  createAccountsAndSystemsSchema,
+  setSessionSystemId,
+} from "./helpers/rls-test-helpers.js";
 
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -34,37 +39,9 @@ describe("RLS unset-context fail-silent behavior", () => {
     client = await PGlite.create();
     db = drizzle(client);
 
-    // Create schema inline — matches the pattern used in rls-policies.integration.test.ts.
-    await client.query(`
-      CREATE TABLE accounts (
-        id VARCHAR(255) PRIMARY KEY,
-        email_hash VARCHAR(255) NOT NULL UNIQUE,
-        email_salt VARCHAR(255) NOT NULL,
-        auth_key_hash BYTEA NOT NULL,
-        kdf_salt VARCHAR(255),
-        encrypted_master_key BYTEA,
-        challenge_nonce BYTEA,
-        challenge_expires_at TIMESTAMPTZ,
-        encrypted_email BYTEA,
-        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
-        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-    await client.query(`
-      CREATE TABLE systems (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_data BYTEA,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1,
-        archived BOOLEAN NOT NULL DEFAULT false,
-        archived_at TIMESTAMPTZ
-      )
-    `);
+    // Shared accounts + systems DDL via helper. Members DDL is inline because it
+    // is unique to this test (UNIQUE (id, system_id) constraint not used elsewhere).
+    await createAccountsAndSystemsSchema(client);
     await client.query(`
       CREATE TABLE members (
         id VARCHAR(255) PRIMARY KEY,

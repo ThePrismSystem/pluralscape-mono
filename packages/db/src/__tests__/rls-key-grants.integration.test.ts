@@ -24,6 +24,9 @@ import { enableRls, keyGrantsRlsPolicy, systemRlsPolicy } from "../rls/policies.
 import { pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 import {
   APP_ROLE,
+  clearSessionAccountId,
+  clearSessionContext,
+  clearSessionSystemId,
   createAccountsAndSystemsSchema,
   setSessionAccountId,
   setSessionSystemId,
@@ -132,14 +135,13 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
     // exercise the owner-read path exclusively.
     await setSessionAccountId(db, accountIdA);
 
-    const result = await db.execute(sql`SELECT * FROM key_grants`);
+    const result = await db.execute<{ id: string }>(sql`SELECT * FROM key_grants`);
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(grantIdA);
+    expect(result.rows[0]?.id).toBe(grantIdA);
   });
 
   it("returns empty when no system/account context (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await clearSessionContext(db);
 
     const result = await db.execute(sql`SELECT * FROM key_grants`);
     expect(result.rows).toHaveLength(0);
@@ -158,18 +160,20 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
     // systemIdB). Set the friend's account context but NOT systemIdB — the
     // friend does not know or control the originating system's ID. The
     // friend-side read policy must still return the row.
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
     await setSessionAccountId(db, accountIdB);
 
-    const result = await db.execute(sql`SELECT * FROM key_grants WHERE id = ${grantIdB}`);
+    const result = await db.execute<{ id: string }>(
+      sql`SELECT * FROM key_grants WHERE id = ${grantIdB}`,
+    );
     expect(result.rows).toHaveLength(1);
-    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(grantIdB);
+    expect(result.rows[0]?.id).toBe(grantIdB);
   });
 
   it("friend cannot read grants addressed to other accounts", async () => {
     // accountIdA is not a friend on grantIdB — they must not see it through
     // the friend-side read policy.
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
     await setSessionAccountId(db, accountIdA);
 
     const result = await db.execute(sql`SELECT * FROM key_grants WHERE id = ${grantIdB}`);
@@ -200,7 +204,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
   it("friend-read cannot bypass write restriction (INSERT blocked without system context)", async () => {
     // A friend-only account must not be able to INSERT a grant — writes must
     // come from the originating system.
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
     await setSessionAccountId(db, accountIdB);
 
     await expect(
@@ -225,7 +229,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
     // owner-path UPDATE USING clause requires system_id = current_system_id()
     // and the friend-read policy is SELECT-only, so UPDATE affects 0 rows
     // (RLS silently hides rows whose write policy does not match).
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
     await setSessionAccountId(db, accountIdB);
 
     await client.query(`UPDATE key_grants SET revoked_at = $1 WHERE id = $2`, [
@@ -244,7 +248,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
   });
 
   it("friend cannot DELETE grant addressed to them", async () => {
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
     await setSessionAccountId(db, accountIdB);
 
     await client.query(`DELETE FROM key_grants WHERE id = $1`, [grantIdB]);
@@ -330,7 +334,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
     expect(friendOnly.rows).toHaveLength(1);
 
     // 2. Sibling-system GUC + account cleared → neither path matches.
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await clearSessionAccountId(db);
     const neither = await db.execute(sql`SELECT id FROM key_grants WHERE id = ${grantIdA}`);
     expect(neither.rows).toHaveLength(0);
 

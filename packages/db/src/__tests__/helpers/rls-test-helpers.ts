@@ -45,6 +45,18 @@ export async function clearSessionContext(
   await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
 }
 
+export async function clearSessionSystemId(
+  db: PgliteDatabase<Record<string, unknown>>,
+): Promise<void> {
+  await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+}
+
+export async function clearSessionAccountId(
+  db: PgliteDatabase<Record<string, unknown>>,
+): Promise<void> {
+  await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+}
+
 // ---------------------------------------------------------------------------
 // Schema DDL builders
 // ---------------------------------------------------------------------------

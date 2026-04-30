@@ -21,6 +21,8 @@ import { enableRls, systemsPkRlsPolicy } from "../rls/policies.js";
 import { pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 import {
   APP_ROLE,
+  clearSessionAccountId,
+  clearSessionSystemId,
   createAccountsAndSystemsSchema,
   setSessionAccountId,
   setSessionSystemId,
@@ -91,13 +93,13 @@ describe("RLS cross-tenant isolation — systems PK with account ownership (PGli
   });
 
   it("returns empty when either GUC is unset (fail-closed)", async () => {
-    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await clearSessionAccountId(db);
     await setSessionSystemId(db, systemIdA);
 
     const result = await db.execute(sql`SELECT * FROM systems`);
     expect(result.rows).toHaveLength(0);
 
-    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+    await clearSessionSystemId(db);
     await setSessionAccountId(db, accountIdA);
 
     const result2 = await db.execute(sql`SELECT * FROM systems`);
