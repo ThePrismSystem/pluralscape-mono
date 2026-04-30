@@ -118,7 +118,7 @@ UpdateStructureEntityLinkRequest:
 
 StructureEntityLinkResponse:
   type: object
-  required: [id, systemId, entityId, sortOrder, createdAt]
+  required: [id, systemId, entityId, parentEntityId, sortOrder, createdAt]
   properties:
     id:
       type: string
@@ -159,7 +159,7 @@ CreateStructureEntityMemberLinkRequest:
 
 StructureEntityMemberLinkResponse:
   type: object
-  required: [id, systemId, memberId, sortOrder, createdAt]
+  required: [id, systemId, parentEntityId, memberId, sortOrder, createdAt]
   properties:
     id:
       type: string

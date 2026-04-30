@@ -1,3 +1,4 @@
+import type { EncryptedWire } from "../encrypted-wire.js";
 import type { EncryptedBlob, T3EncryptedBytes } from "../encryption-primitives.js";
 import type { AccountId, ApiKeyId, Brand, BucketId, SystemId } from "../ids.js";
 import type { ScopeDomain, ScopeTier } from "../scope-domains.js";
@@ -102,25 +103,33 @@ export interface ApiKeyServerMetadata {
 }
 
 /**
- * Server-visible plaintext fields of an ApiKey row — the columns the
- * server can surface without decrypting `encryptedData`.
+ * Server-visible fields of an ApiKey row — the columns the server can
+ * surface to the client. Includes `encryptedData` (the Class C blob the
+ * client decrypts to recover `name` / `publicKey`); excludes server-only
+ * columns (`accountId`, `tokenHash`, `encryptedKeyMaterial`).
  *
  * Expressed as a positive allowlist (`Pick`) so a future column added
  * to `ApiKeyServerMetadata` defaults to **excluded** from the wire
  * surface. This is fail-closed: a new sensitive column cannot leak
  * by accident.
+ *
+ * `EncryptedWire<>` collapses the structured `EncryptedBlob` to a
+ * branded base64 string for the JSON wire form.
  */
-export type ApiKeyServerVisible = Pick<
-  ApiKeyServerMetadata,
-  | "id"
-  | "systemId"
-  | "keyType"
-  | "scopes"
-  | "createdAt"
-  | "lastUsedAt"
-  | "revokedAt"
-  | "expiresAt"
-  | "scopedBucketIds"
+export type ApiKeyServerVisible = EncryptedWire<
+  Pick<
+    ApiKeyServerMetadata,
+    | "id"
+    | "systemId"
+    | "keyType"
+    | "scopes"
+    | "createdAt"
+    | "lastUsedAt"
+    | "revokedAt"
+    | "expiresAt"
+    | "scopedBucketIds"
+    | "encryptedData"
+  >
 >;
 
 /**

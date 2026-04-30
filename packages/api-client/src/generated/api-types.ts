@@ -5762,6 +5762,13 @@ export interface components {
        * @description Unix timestamp in milliseconds when the session expires
        */
       expiresAt?: number | null;
+      /**
+       * @description Base64-encoded T1 ciphertext blob carrying the per-session DeviceInfo
+       *     payload (platform, appVersion, deviceName). Decrypted client-side via
+       *     `decryptDeviceInfo` from `@pluralscape/data`. Null on legacy rows that
+       *     pre-date device-info capture.
+       */
+      encryptedData?: string | null;
     };
     SessionListResponse: {
       data: components["schemas"]["SessionInfo"][];
@@ -6639,7 +6646,7 @@ export interface components {
       /** @description ID of the linked entity */
       entityId: string;
       /** @description ID of the parent entity, or null for a top-level link */
-      parentEntityId?: string | null;
+      parentEntityId: string | null;
       /** @description Display order among sibling links */
       sortOrder: number;
       /**
@@ -6662,7 +6669,7 @@ export interface components {
       /** @description System that owns this link */
       systemId: string;
       /** @description ID of the parent entity this member is linked under, or null for a top-level link */
-      parentEntityId?: string | null;
+      parentEntityId: string | null;
       /** @description ID of the linked member */
       memberId: string;
       /** @description Display order among sibling member links */
@@ -8586,6 +8593,12 @@ export interface components {
       expiresAt: number | null;
       /** @description Privacy bucket IDs this key is scoped to, null if unrestricted */
       scopedBucketIds: string[] | null;
+      /**
+       * @description Base64-encoded T1 ciphertext blob carrying the `ApiKeyEncryptedPayload`
+       *     (name plus, for crypto variants, the X25519 publicKey). Decrypted
+       *     client-side via `decryptApiKeyPayload` from `@pluralscape/data`.
+       */
+      encryptedData: string;
     };
     CreateApiKeyRequest: {
       keyType: components["schemas"]["ApiKeyType"];
@@ -8935,7 +8948,6 @@ export interface components {
       | "poll"
       | "timer"
       | "privacy-bucket"
-      | "friend"
       | "system-profile"
       | "system-settings"
       | "unknown";

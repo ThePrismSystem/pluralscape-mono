@@ -1,5 +1,4 @@
 import type { AccountId, ImportJobId, SystemId } from "../ids.js";
-import type { ServerInternal } from "../server-internal.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { Serialize } from "../type-assertions.js";
 
@@ -151,23 +150,19 @@ export interface ImportJob {
  * Server-visible import job metadata — raw Drizzle row shape.
  *
  * Derived from `ImportJob` by adding `checkpointState`: the resumable
- * import engine state the client writes back to the server between
- * chunks but doesn't expose on the domain view of an import job.
- *
- * Branded `ServerInternal<…>` so `Serialize<ImportJobServerMetadata>`
- * strips the column from the wire — checkpoint state is engine-internal
- * resumption scaffolding, not part of the client-visible job shape.
+ * import engine state. The client reads this between chunks to resume
+ * interrupted imports (see ADR-024 import resumability), so it is part
+ * of the client-visible wire shape rather than `ServerInternal<…>`.
  */
 export type ImportJobServerMetadata = ImportJob & {
-  readonly checkpointState: ServerInternal<ImportCheckpointState> | null;
+  readonly checkpointState: ImportCheckpointState | null;
 };
 
 /**
  * JSON-wire representation of ImportJob. Derived from
  * `ImportJobServerMetadata` via `Serialize<T>`; branded IDs become plain
- * strings, `UnixMillis` becomes `number`. `ServerInternal<…>`-branded
- * server-only columns (`checkpointState`) are stripped by `Serialize<>`
- * so the client never sees them.
+ * strings, `UnixMillis` becomes `number`. `checkpointState` is exposed on
+ * the wire so clients can resume interrupted imports.
  */
 export type ImportJobWire = Serialize<ImportJobServerMetadata>;
 

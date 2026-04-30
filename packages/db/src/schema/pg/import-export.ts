@@ -42,7 +42,6 @@ import type {
   ImportJobId,
   ImportJobStatus,
   ImportSourceFormat,
-  ServerInternal,
   SystemId,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -64,11 +63,10 @@ export const importJobs = pgTable(
     /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
     errorLog: jsonb("error_log").$type<readonly ImportError[]>(),
     /**
-     * Resumption state for interrupted imports. Branded `ServerInternal<…>`
-     * so `Serialize<ImportJobServerMetadata>` strips it at the wire boundary
-     * — engine-internal scaffolding, not part of the client-visible job.
+     * Resumption state for interrupted imports. Exposed on the wire so
+     * the client can resume mid-import (see ADR-024 import resumability).
      */
-    checkpointState: jsonb("checkpoint_state").$type<ServerInternal<ImportCheckpointState>>(),
+    checkpointState: jsonb("checkpoint_state").$type<ImportCheckpointState>(),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
