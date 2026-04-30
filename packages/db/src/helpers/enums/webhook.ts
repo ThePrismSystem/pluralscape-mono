@@ -1,0 +1,77 @@
+/**
+ * Webhook const arrays for varchar CHECK constraints.
+ * Values sourced from @pluralscape/types union types.
+ */
+
+import { type WebhookDeliveryStatus, type WebhookEventType } from "@pluralscape/types";
+
+export const WEBHOOK_EVENT_TYPES = [
+  "member.created",
+  "member.updated",
+  "member.archived",
+  "fronting.started",
+  "fronting.ended",
+  "group.created",
+  "group.updated",
+  "lifecycle.event-recorded",
+  "custom-front.changed",
+  "channel.created",
+  "channel.updated",
+  "channel.archived",
+  "channel.restored",
+  "channel.deleted",
+  "message.created",
+  "message.updated",
+  "message.archived",
+  "message.restored",
+  "message.deleted",
+  "board-message.created",
+  "board-message.updated",
+  "board-message.pinned",
+  "board-message.unpinned",
+  "board-message.reordered",
+  "board-message.archived",
+  "board-message.restored",
+  "board-message.deleted",
+  "note.created",
+  "note.updated",
+  "note.archived",
+  "note.restored",
+  "note.deleted",
+  "poll.created",
+  "poll.updated",
+  "poll.closed",
+  "poll.archived",
+  "poll.restored",
+  "poll.deleted",
+  "poll-vote.cast",
+  "poll-vote.vetoed",
+  "poll-vote.updated",
+  "poll-vote.archived",
+  "acknowledgement.created",
+  "acknowledgement.confirmed",
+  "acknowledgement.archived",
+  "acknowledgement.restored",
+  "acknowledgement.deleted",
+  // ── Privacy: buckets ──
+  "bucket.created",
+  "bucket.updated",
+  "bucket.archived",
+  "bucket.restored",
+  "bucket.deleted",
+  "bucket-content-tag.tagged",
+  "bucket-content-tag.untagged",
+  "field-bucket-visibility.set",
+  "field-bucket-visibility.removed",
+  // ── Privacy: friends ──
+  "friend.connected",
+  "friend.removed",
+  "friend.bucket-assigned",
+  "friend.bucket-unassigned",
+] as const satisfies readonly WebhookEventType[];
+
+export const WEBHOOK_DELIVERY_STATUSES = [
+  "pending",
+  "success",
+  "failed",
+] as const satisfies readonly WebhookDeliveryStatus[];
