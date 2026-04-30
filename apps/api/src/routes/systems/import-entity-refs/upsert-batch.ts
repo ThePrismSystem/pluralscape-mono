@@ -3,9 +3,9 @@ import { ImportEntityRefUpsertBatchBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_OK } from "../../../http.constants.js";
+import { parseBody } from "../../../lib/body-parse.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
-import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { upsertImportEntityRefBatch } from "../../../services/system/import-entity-refs/upsert-batch.js";
@@ -26,10 +26,9 @@ upsertBatchRoute.use("*", createCategoryRateLimiter("write"));
 upsertBatchRoute.post("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
-  const rawBody = await parseJsonBody(c);
-  const input = ImportEntityRefUpsertBatchBodySchema.parse(rawBody);
+  const body = await parseBody(c, ImportEntityRefUpsertBatchBodySchema);
 
   const db = await getDb();
-  const result = await upsertImportEntityRefBatch(db, systemId, input, auth);
+  const result = await upsertImportEntityRefBatch(db, systemId, body, auth);
   return c.json(envelope(result), HTTP_OK);
 });

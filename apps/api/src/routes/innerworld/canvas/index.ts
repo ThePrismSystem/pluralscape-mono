@@ -2,12 +2,11 @@ import { ID_PREFIXES } from "@pluralscape/types";
 import { UpdateCanvasBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
-import { ApiHttpError } from "../../../lib/api-error.js";
+import {} from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
+import { parseBody } from "../../../lib/body-parse.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
-import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { getCanvas, upsertCanvas } from "../../../services/innerworld/canvas.js";
@@ -34,23 +33,14 @@ const canvasWriteRoutes = new Hono<AuthEnv>();
 canvasWriteRoutes.use("*", createCategoryRateLimiter("write"));
 
 canvasWriteRoutes.put("/", async (c) => {
-  const rawBody = await parseJsonBody(c);
-  const parsed = UpdateCanvasBodySchema.safeParse(rawBody);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parsed.error.issues,
-    );
-  }
+  const body = await parseBody(c, UpdateCanvasBodySchema);
 
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
-  const result = await upsertCanvas(db, systemId, parsed.data, auth, audit);
+  const result = await upsertCanvas(db, systemId, body, auth, audit);
   return c.json(envelope(result));
 });
 

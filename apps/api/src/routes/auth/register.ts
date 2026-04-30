@@ -4,8 +4,8 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
@@ -21,20 +21,11 @@ export const registerRoute = new Hono();
 registerRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 registerRoute.post("/initiate", async (c) => {
-  const rawBody = await parseJsonBody(c);
-  const parsed = RegistrationInitiateSchema.safeParse(rawBody);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parsed.error.issues,
-    );
-  }
+  const body = await parseBody(c, RegistrationInitiateSchema);
 
   const db = await getDb();
 
-  const result = await initiateRegistration(db, parsed.data);
+  const result = await initiateRegistration(db, body);
   return c.json(
     envelope({
       accountId: result.accountId,
@@ -46,23 +37,14 @@ registerRoute.post("/initiate", async (c) => {
 });
 
 registerRoute.post("/commit", createIdempotencyMiddleware(), async (c) => {
-  const rawBody = await parseJsonBody(c);
-  const parsed = RegistrationCommitSchema.safeParse(rawBody);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parsed.error.issues,
-    );
-  }
+  const body = await parseBody(c, RegistrationCommitSchema);
 
   const platform = extractPlatform(c);
   const audit = createAuditWriter(c);
   const db = await getDb();
 
   try {
-    const result = await commitRegistration(db, parsed.data, platform, audit);
+    const result = await commitRegistration(db, body, platform, audit);
     return c.json(
       envelope({
         sessionToken: result.sessionToken,

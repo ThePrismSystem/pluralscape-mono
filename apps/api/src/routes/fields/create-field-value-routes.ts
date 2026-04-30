@@ -2,12 +2,11 @@ import { ID_PREFIXES, brandId } from "@pluralscape/types";
 import { SetFieldValueBodySchema, UpdateFieldValueBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST, HTTP_CREATED, HTTP_NO_CONTENT } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
+import { HTTP_CREATED, HTTP_NO_CONTENT } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { deleteFieldValueForOwner } from "../../services/field-value/delete.js";
@@ -72,16 +71,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
   const setRoute = new Hono<AuthEnv>();
   setRoute.use("*", createCategoryRateLimiter("write"));
   setRoute.post("/:fieldDefId", async (c) => {
-    const rawBody = await parseJsonBody(c);
-    const parsed = SetFieldValueBodySchema.safeParse(rawBody);
-    if (!parsed.success) {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Invalid request body",
-        parsed.error.issues,
-      );
-    }
+    const body = await parseBody(c, SetFieldValueBodySchema);
 
     const auth = c.get("auth");
     const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
@@ -90,15 +80,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
     const audit = createAuditWriter(c, auth);
 
     const db = await getDb();
-    const result = await setFieldValueForOwner(
-      db,
-      systemId,
-      owner,
-      fieldDefId,
-      parsed.data,
-      auth,
-      audit,
-    );
+    const result = await setFieldValueForOwner(db, systemId, owner, fieldDefId, body, auth, audit);
     return c.json(envelope(result), HTTP_CREATED);
   });
 
@@ -119,16 +101,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
   const updateRoute = new Hono<AuthEnv>();
   updateRoute.use("*", createCategoryRateLimiter("write"));
   updateRoute.put("/:fieldDefId", async (c) => {
-    const rawBody = await parseJsonBody(c);
-    const parsed = UpdateFieldValueBodySchema.safeParse(rawBody);
-    if (!parsed.success) {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Invalid request body",
-        parsed.error.issues,
-      );
-    }
+    const body = await parseBody(c, UpdateFieldValueBodySchema);
 
     const auth = c.get("auth");
     const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
@@ -142,7 +115,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
       systemId,
       owner,
       fieldDefId,
-      parsed.data,
+      body,
       auth,
       audit,
     );

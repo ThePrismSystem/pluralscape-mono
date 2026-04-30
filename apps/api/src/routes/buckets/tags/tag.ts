@@ -2,12 +2,11 @@ import { ID_PREFIXES } from "@pluralscape/types";
 import { TagContentBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../../http.constants.js";
-import { ApiHttpError } from "../../../lib/api-error.js";
+import { HTTP_CREATED } from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
+import { parseBody } from "../../../lib/body-parse.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
-import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { tagContent } from "../../../services/bucket-content-tag.service.js";
@@ -23,18 +22,9 @@ tagRoute.post("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const bucketId = requireIdParam(c.req.param("bucketId"), "bucketId", ID_PREFIXES.bucket);
   const audit = createAuditWriter(c, auth);
-  const rawBody = await parseJsonBody(c);
-  const parsed = TagContentBodySchema.safeParse(rawBody);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parsed.error.issues,
-    );
-  }
+  const body = await parseBody(c, TagContentBodySchema);
 
   const db = await getDb();
-  const result = await tagContent(db, systemId, bucketId, parsed.data, auth, audit);
+  const result = await tagContent(db, systemId, bucketId, body, auth, audit);
   return c.json(envelope(result), HTTP_CREATED);
 });

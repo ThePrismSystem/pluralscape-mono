@@ -6,9 +6,9 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam, requireParam } from "../../lib/id-param.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { updateNotificationConfig } from "../../services/notification-config.service.js";
@@ -35,19 +35,10 @@ updateRoute.patch("/:eventType", async (c) => {
   }
   const eventType = rawEventType as NotificationEventType;
 
-  const body = await parseJsonBody(c);
-  const parsed = UpdateNotificationConfigBodySchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Invalid request body",
-      parsed.error.issues,
-    );
-  }
+  const body = await parseBody(c, UpdateNotificationConfigBodySchema);
 
   const db = await getDb();
 
-  const result = await updateNotificationConfig(db, systemId, eventType, parsed.data, auth, audit);
+  const result = await updateNotificationConfig(db, systemId, eventType, body, auth, audit);
   return c.json(envelope(result));
 });

@@ -10,8 +10,10 @@ interface SafeParseable<T> {
 }
 
 /**
- * Parse query parameters against a Zod schema, throwing ApiHttpError on failure.
- * Includes Zod validation issue details in the error for non-production debugging.
+ * Parse query parameters against a Zod schema, throwing ApiHttpError on
+ * failure. The `details` field is the bare Zod issues array — matches
+ * `parseBody` and what route tests assert
+ * (`Array.isArray(body.error.details) === true`).
  */
 export function parseQuery<T>(
   schema: SafeParseable<T>,
@@ -19,9 +21,12 @@ export function parseQuery<T>(
 ): T {
   const result = schema.safeParse(query);
   if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters", {
-      issues: result.error.issues,
-    });
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid query parameters",
+      result.error.issues,
+    );
   }
   return result.data;
 }

@@ -6,10 +6,10 @@ import { Hono } from "hono";
 
 import { env } from "../../env.js";
 import { equalizeAntiEnumTiming } from "../../lib/anti-enum-timing.js";
+import { parseBody } from "../../lib/body-parse.js";
 import { getDb } from "../../lib/db.js";
 import { hashEmail } from "../../lib/email-hash.js";
 import { toHex } from "../../lib/hex.js";
-import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 
@@ -19,10 +19,9 @@ saltRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 saltRoute.post("/", async (c) => {
   const startTime = performance.now();
-  const body = await parseJsonBody(c);
-  const parsed = SaltFetchSchema.parse(body);
+  const body = await parseBody(c, SaltFetchSchema);
 
-  const emailHash = hashEmail(parsed.email);
+  const emailHash = hashEmail(body.email);
   const db = await getDb();
 
   const [account] = await db
@@ -58,7 +57,7 @@ saltRoute.post("/", async (c) => {
     throw new Error("ANTI_ENUM_SALT_SECRET is required in production");
   }
   const secretBytes = new TextEncoder().encode(secret);
-  const emailBytes = new TextEncoder().encode(parsed.email.toLowerCase().trim());
+  const emailBytes = new TextEncoder().encode(body.email.toLowerCase().trim());
 
   const fakeSalt = adapter.genericHash(PWHASH_SALT_BYTES, emailBytes, secretBytes);
   await equalizeAntiEnumTiming(startTime);

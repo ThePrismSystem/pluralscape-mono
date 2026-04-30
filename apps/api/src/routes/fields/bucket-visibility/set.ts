@@ -2,12 +2,11 @@ import { ID_PREFIXES } from "@pluralscape/types";
 import { SetFieldBucketVisibilityBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../../http.constants.js";
-import { ApiHttpError } from "../../../lib/api-error.js";
+import { HTTP_CREATED } from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
+import { parseBody } from "../../../lib/body-parse.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
-import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { setFieldBucketVisibility } from "../../../services/field-bucket-visibility.service.js";
@@ -27,18 +26,14 @@ setVisibilityRoute.post("/", async (c) => {
     ID_PREFIXES.fieldDefinition,
   );
   const audit = createAuditWriter(c, auth);
-  const body = await parseJsonBody(c);
-  const parsed = SetFieldBucketVisibilityBodySchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid set visibility payload");
-  }
+  const body = await parseBody(c, SetFieldBucketVisibilityBodySchema);
 
   const db = await getDb();
   const result = await setFieldBucketVisibility(
     db,
     systemId,
     fieldDefinitionId,
-    parsed.data.bucketId,
+    body.bucketId,
     auth,
     audit,
   );
