@@ -1,20 +1,22 @@
-// Forbids the legacy double-validation pattern in apps/api/src/services/**:
-//
-// 1. `params: unknown` parameter signatures — replaced by typed
-//    `body: z.infer<typeof XBodySchema>` parameters per the canonical
-//    pattern (validation lives at the REST/tRPC boundary, not in services).
-//
-// 2. Imports of `parseAndValidateBlob` from `apps/api/src/lib/encrypted-blob.js` —
-//    the helper was retired in Task 22 of the ps-6phh plan; canonical services
-//    use `validateEncryptedBlob(body.encryptedData, MAX)` instead.
-//
-// G9 strict (Task 22): allow-list is empty. The regression trap test in
-// `tooling/eslint-config/rules/__tests__/allow-lists-empty.test.js`
-// (Task 23) asserts this stays empty — drift requires bypassing CI.
-const ALLOW_LIST = new Set([]);
-
+/**
+ * G9 (strict): forbids the legacy double-validation pattern in
+ * `apps/api/src/services/**`:
+ *
+ * 1. `params: unknown` parameter signatures — replaced by typed
+ *    `body: z.infer<typeof XBodySchema>` parameters per the canonical
+ *    pattern (validation at the REST/tRPC boundary, not in services).
+ *
+ * 2. Imports of `parseAndValidateBlob` from
+ *    `apps/api/src/lib/encrypted-blob.js` — the helper has been retired.
+ *    Canonical services use
+ *    `validateEncryptedBlob(body.encryptedData, MAX)` instead.
+ *
+ * Rationale: see ADR-023, "single source of truth for request shapes".
+ *
+ * The rule has no allow-list. Exceptions require modifying this file
+ * directly, which is reviewed at the same level as a feature change.
+ */
 export default {
-  allowList: ALLOW_LIST,
   meta: {
     type: "problem",
     docs: {
@@ -24,7 +26,7 @@ export default {
       paramsUnknown:
         "params: unknown is the legacy double-validation pattern. Use body: z.infer<typeof XBodySchema> and validate at the route/tRPC boundary.",
       parseAndValidateBlobImport:
-        "parseAndValidateBlob is being retired (Task 22 of ps-6phh). Use validateEncryptedBlob(body.encryptedData, MAX) instead.",
+        "parseAndValidateBlob has been retired. Use validateEncryptedBlob(body.encryptedData, MAX) instead.",
     },
     schema: [],
   },

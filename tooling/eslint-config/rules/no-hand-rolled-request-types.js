@@ -1,27 +1,27 @@
-// Forbids hand-rolled request input type names in `@pluralscape/types/entities/**`.
-// The canonical chain (per ADR-023) keeps request shapes in `@pluralscape/validation`
-// as Zod schemas; consumers use `z.infer<typeof XBodySchema>` instead of importing
-// hand-rolled interfaces from `@pluralscape/types`.
-//
-// Two regex patterns:
-// - `Body|Credentials|Params|Args` suffixes are always rejected.
-// - `Input` suffix is rejected UNLESS preceded literally by "Encrypted" — this
-//   permits the canonical encrypted-input chain types (`MemberEncryptedInput`,
-//   `ChannelEncryptedInput`, etc.). The lookbehind only checks for the literal
-//   string "Encrypted" immediately before "Input"; in theory a name like
-//   `NotEncryptedInput` would slip through, but no such name exists in the
-//   domain (the canonical X-prefix is always an entity name).
+/**
+ * G8 (strict): no hand-rolled `*Body`, `*Input`, `*Credentials`, `*Params`,
+ * or `*Args` interfaces or type aliases in `@pluralscape/types/entities/**`.
+ * Use `z.infer<typeof XBodySchema>` (or peer schema) from
+ * `@pluralscape/validation` instead.
+ *
+ * Rationale: the canonical chain (see ADR-023) treats Zod schemas as the
+ * single source of truth for request shapes. Hand-rolled mirrors drift.
+ *
+ * The rule has no allow-list. Exceptions require modifying this file
+ * directly, which is reviewed at the same level as a feature change.
+ *
+ * Suffix patterns:
+ * - `Body|Credentials|Params|Args` are always rejected.
+ * - `Input` is rejected unless the literal substring "Encrypted"
+ *   immediately precedes it — permits the canonical encrypted-input
+ *   chain (`MemberEncryptedInput`, `ChannelEncryptedInput`, etc.).
+ *   Lowercase variants (`UnencryptedInput`) are still rejected because
+ *   the lookbehind checks for capital-E "Encrypted".
+ */
 const REJECTED_BODY_CREDS_PARAMS_ARGS = /^[A-Z]\w*(Body|Credentials|Params|Args)$/;
 const REJECTED_BARE_INPUT = /^[A-Z]\w*(?<!Encrypted)Input$/;
 
-// Allow-list — empty (G8 strict, Task 21 of ps-6phh). Drift recurrence
-// requires bypassing CI: the regression test in
-// `tooling/eslint-config/rules/__tests__/allow-lists-empty.test.js`
-// asserts this set is literally empty (Task 23).
-const ALLOW_LIST = new Set([]);
-
 export default {
-  allowList: ALLOW_LIST,
   meta: {
     type: "problem",
     docs: {
@@ -35,7 +35,6 @@ export default {
   },
   create(context) {
     function check(node, name) {
-      if (ALLOW_LIST.has(name)) return;
       if (REJECTED_BODY_CREDS_PARAMS_ARGS.test(name) || REJECTED_BARE_INPUT.test(name)) {
         context.report({ node, messageId: "rejectedSuffix", data: { name } });
       }

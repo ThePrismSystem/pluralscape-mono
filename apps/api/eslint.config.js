@@ -58,19 +58,14 @@ export default [
     },
   },
   {
-    // Cap service file length. Tightened from 500 to 450 after the api-6l1q
-    // closeout. If you hit the cap, split the file — do not raise it.
-    // Allow eslint-disable-next-line for the G9 soft-mode allow-list while
-    // cluster commits (Tasks 5-15) convert services. Task 23 asserts the
-    // allow-list is empty and this override is removed.
+    // Cap service file length at 450 LOC. If you hit the cap, split the
+    // file — do not raise it. Project-wide
+    // `@eslint-community/eslint-comments/no-use` applies uniformly here
+    // (no escape hatch for `eslint-disable-next-line`).
     files: ["src/services/**/*.ts"],
     rules: {
       "max-lines": ["error", { max: 450, skipBlankLines: true, skipComments: true }],
       "pluralscape/no-params-unknown": "error",
-      "@eslint-community/eslint-comments/no-use": [
-        "error",
-        { allow: ["eslint-disable-next-line"] },
-      ],
     },
   },
 ];
