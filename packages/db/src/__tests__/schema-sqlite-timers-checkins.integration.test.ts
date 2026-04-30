@@ -27,7 +27,7 @@ import {
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
-import type { CheckInRecordId, MemberId, TimerId } from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, members, timerConfigs, checkInRecords };
@@ -42,7 +42,7 @@ describe("SQLite timers schema — check_in_records", () => {
     sqliteInsertMember(db, systemId, id);
 
   /** Insert a timer config and return its id. */
-  function insertTimer(systemId: string): TimerId {
+  function insertTimer(systemId: SystemId): TimerId {
     const id = brandId<TimerId>(crypto.randomUUID());
     const now = fixtureNow();
     db.insert(timerConfigs)

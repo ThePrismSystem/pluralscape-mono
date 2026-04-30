@@ -45,6 +45,7 @@ export {
   createSqliteNomenclatureSettingsTables,
   createSqliteNotificationTables,
   createSqlitePkBridgeTables,
+  createSqlitePrivacyTables,
   createSqliteSafeModeContentTables,
   createSqliteSnapshotTables,
   createSqliteStructureTables,
