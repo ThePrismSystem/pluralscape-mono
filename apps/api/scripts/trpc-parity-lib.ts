@@ -12,7 +12,7 @@
  * 5. Idempotency — REST mutations with idempotency middleware (informational)
  */
 
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -155,12 +155,34 @@ export function extractTRPCRateLimits(
   procedures: Map<string, TRPCProcedureInfo>,
 ): Map<string, TRPCProcedureInfo> {
   const routersDir = resolve(API_ROOT, "src/trpc/routers");
-  const files = readdirSync(routersDir).filter((f) => f.endsWith(".ts"));
   const updated = new Map(procedures);
 
-  for (const file of files) {
-    const source = readFileSync(resolve(routersDir, file), "utf-8");
-    const routerPrefix = deriveRouterPrefix(file);
+  // Collect { filePath, routerPrefix } for top-level files and one level of subdirectories.
+  // Files in a subdirectory use the parent directory name as routerPrefix so that
+  // procedures in e.g. routers/structure/links.ts are still namespaced under "structure.*".
+  interface RouterFile {
+    filePath: string;
+    routerPrefix: string;
+  }
+  const routerFiles: RouterFile[] = [];
+
+  for (const entry of readdirSync(routersDir)) {
+    const entryPath = resolve(routersDir, entry);
+    if (statSync(entryPath).isDirectory()) {
+      // Subdirectory: derive prefix from the directory name
+      const dirPrefix = deriveRouterPrefix(entry);
+      for (const subEntry of readdirSync(entryPath)) {
+        if (subEntry.endsWith(".ts")) {
+          routerFiles.push({ filePath: resolve(entryPath, subEntry), routerPrefix: dirPrefix });
+        }
+      }
+    } else if (entry.endsWith(".ts")) {
+      routerFiles.push({ filePath: entryPath, routerPrefix: deriveRouterPrefix(entry) });
+    }
+  }
+
+  for (const { filePath, routerPrefix } of routerFiles) {
+    const source = readFileSync(filePath, "utf-8");
 
     // Build map of variable name → rate limit category
     const varToCategory = new Map<string, string>();
