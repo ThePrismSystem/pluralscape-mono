@@ -5,7 +5,7 @@ import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeRawPoll, makeRawPollVote, TEST_SYSTEM_ID } from "../../__tests__/factories.js";
+import { makeRawPoll, makeRawPollVote, TEST_SYSTEM_ID } from "../../__tests__/factories/index.js";
 
 import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
 

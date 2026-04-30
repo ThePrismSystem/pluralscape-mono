@@ -1,3 +1,10 @@
+/**
+ * Import hooks tests — useStartImport and useResumeActiveImport.
+ *
+ * Covers: startWithToken, startWithFile, abort ref, error coercion, masterKey
+ *         guard, resume with/without checkpoint, resume no-op guard
+ * Companion file: import.hooks-query-cancel.test.tsx
+ */
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
@@ -14,7 +21,7 @@ beforeAll(async () => {
   await initSodium();
 });
 
-// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+// ── Fixture registry ─────────────────────────────────────────────────
 const { fixtures } = vi.hoisted(() => {
   const store = new Map<string, unknown>();
   return { fixtures: store };
@@ -73,7 +80,6 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
               enabled: opts.enabled as boolean | undefined,
             };
             if (opts.refetchInterval !== undefined) {
-              // Record the refetchInterval so tests can assert it was wired.
               fixtures.set("importJob.get.lastRefetchInterval", opts.refetchInterval);
               queryOpts.refetchInterval = opts.refetchInterval as never;
             }
@@ -94,13 +100,10 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
   };
 });
 
-// ── expo-secure-store mock (SP token storage) ────────────────────────
+// ── expo-secure-store mock ───────────────────────────────────────────
 vi.mock("expo-secure-store", () => {
   const store = new Map<string, string>();
   return {
-    // Expose the keychain-accessibility constants that sp-token-storage.ts
-    // reads at module load; omitting them causes a ReferenceError when the
-    // hooks are exercised against this inline mock.
     WHEN_UNLOCKED: "AccessibleWhenUnlocked" as const,
     WHEN_UNLOCKED_THIS_DEVICE_ONLY: "AccessibleWhenUnlockedThisDeviceOnly" as const,
     AFTER_FIRST_UNLOCK: "AccessibleAfterFirstUnlock" as const,
@@ -118,15 +121,7 @@ vi.mock("expo-secure-store", () => {
 });
 
 // Must import AFTER all mocks
-const {
-  useStartImport,
-  useImportJob,
-  useImportProgress,
-  useImportSummary,
-  useResumeActiveImport,
-  useCancelImport,
-} = await import("../import.hooks.js");
-const { IMPORT_PROGRESS_POLL_INTERVAL_MS } = await import("../import-sp-mobile.constants.js");
+const { useStartImport, useResumeActiveImport } = await import("../import.hooks.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const NOW = 1_700_000_000_000 as UnixMillis;
@@ -207,7 +202,6 @@ describe("useStartImport", () => {
       });
     });
 
-    // runSpImport was invoked exactly once with the job id and persister.
     await waitFor(() => {
       expect(runSpImportMock).toHaveBeenCalled();
     });
@@ -247,7 +241,6 @@ describe("useStartImport", () => {
 
   it("exposes abortControllerRef as a React ref object", () => {
     const { result } = renderHookWithProviders(() => useStartImport());
-    // A React ref always has a `current` property; the initial value is null.
     expect(result.current.abortControllerRef).toHaveProperty("current");
     expect(result.current.abortControllerRef.current).toBeNull();
   });
@@ -345,210 +338,6 @@ describe("useStartImport", () => {
   });
 });
 
-// ── useImportJob ─────────────────────────────────────────────────────
-describe("useImportJob", () => {
-  it("returns the job row for a non-null id", async () => {
-    const job = makeJob("ij_1", "importing");
-    fixtures.set("importJob.get", job);
-
-    const { result } = renderHookWithProviders(() => useImportJob(brandId<ImportJobId>("ij_1")));
-
-    await waitFor(() => {
-      expect(result.current.data).toEqual(job);
-    });
-  });
-
-  it("returns a disabled query for a null id", () => {
-    const { result } = renderHookWithProviders(() => useImportJob(null));
-    expect(result.current.fetchStatus).toBe("idle");
-    expect(result.current.data).toBeUndefined();
-  });
-});
-
-// ── useImportProgress ────────────────────────────────────────────────
-describe("useImportProgress", () => {
-  it("returns null for a null jobId", () => {
-    const { result } = renderHookWithProviders(() => useImportProgress(null));
-    expect(result.current).toBeNull();
-  });
-
-  it("wires refetchInterval with the poll constant for non-terminal jobs", async () => {
-    const job = makeJob("ij_poll", "importing");
-    fixtures.set("importJob.get", job);
-
-    renderHookWithProviders(() => useImportProgress(brandId<ImportJobId>("ij_poll")));
-
-    await waitFor(() => {
-      expect(typeof fixtures.get("importJob.get.lastRefetchInterval")).toBe("function");
-    });
-
-    // Exercise the function form with a synthetic query-like shape and
-    // assert it returns the poll interval for non-terminal, and false for
-    // terminal.
-    const refetchIntervalFn = fixtures.get("importJob.get.lastRefetchInterval") as (q: {
-      state: { data: ImportJob | undefined };
-    }) => number | false;
-    expect(refetchIntervalFn({ state: { data: makeJob("ij_poll", "importing") } })).toBe(
-      IMPORT_PROGRESS_POLL_INTERVAL_MS,
-    );
-    expect(refetchIntervalFn({ state: { data: makeJob("ij_poll", "completed") } })).toBe(false);
-    expect(refetchIntervalFn({ state: { data: makeJob("ij_poll", "failed") } })).toBe(false);
-    expect(refetchIntervalFn({ state: { data: undefined } })).toBe(
-      IMPORT_PROGRESS_POLL_INTERVAL_MS,
-    );
-  });
-
-  it("derives the snapshot fields from the job row", async () => {
-    const job = makeJob("ij_snap", "importing");
-    fixtures.set("importJob.get", {
-      ...job,
-      progressPercent: 42,
-      errorLog: [
-        {
-          entityType: "member",
-          entityId: "mid_1",
-          message: "test",
-          fatal: false,
-          recoverable: false,
-        },
-      ],
-      checkpointState: {
-        schemaVersion: 1,
-        checkpoint: {
-          completedCollections: [],
-          currentCollection: "member",
-          currentCollectionLastSourceId: null,
-        },
-        options: { selectedCategories: {}, avatarMode: "skip" },
-        totals: {
-          perCollection: {
-            member: { total: 10, imported: 4, updated: 2, skipped: 1, failed: 0 },
-          },
-        },
-      },
-    });
-
-    const { result } = renderHookWithProviders(() =>
-      useImportProgress(brandId<ImportJobId>("ij_snap")),
-    );
-
-    await waitFor(() => {
-      expect(result.current).not.toBeNull();
-    });
-    expect(result.current).toEqual({
-      progressPercent: 42,
-      currentCollection: "member",
-      processedItems: 7, // 4 + 2 + 1
-      totalItems: 10,
-      errorCount: 1,
-      status: "importing",
-    });
-  });
-
-  it("derives zero totals when checkpointState is null", async () => {
-    const job = makeJob("ij_null_cp", "importing");
-    fixtures.set("importJob.get", {
-      ...job,
-      checkpointState: null,
-      errorLog: null,
-    });
-
-    const { result } = renderHookWithProviders(() =>
-      useImportProgress(brandId<ImportJobId>("ij_null_cp")),
-    );
-
-    await waitFor(() => {
-      expect(result.current).not.toBeNull();
-    });
-    expect(result.current).toEqual({
-      progressPercent: 0,
-      currentCollection: null,
-      processedItems: 0,
-      totalItems: 0,
-      errorCount: 0,
-      status: "importing",
-    });
-  });
-});
-
-// ── useImportSummary ─────────────────────────────────────────────────
-describe("useImportSummary", () => {
-  it("returns null for a null jobId", () => {
-    const { result } = renderHookWithProviders(() => useImportSummary(null));
-    expect(result.current).toBeNull();
-  });
-
-  it("derives the summary for a completed job", async () => {
-    const job = makeJob("ij_sum", "completed");
-    fixtures.set("importJob.get", {
-      ...job,
-      errorLog: [
-        {
-          entityType: "member",
-          entityId: "mid_1",
-          message: "non-fatal",
-          fatal: false,
-          recoverable: false,
-        },
-      ],
-      checkpointState: {
-        schemaVersion: 1,
-        checkpoint: {
-          completedCollections: [],
-          currentCollection: "member",
-          currentCollectionLastSourceId: null,
-        },
-        options: { selectedCategories: {}, avatarMode: "skip" },
-        totals: {
-          perCollection: {
-            member: { total: 10, imported: 10, updated: 0, skipped: 0, failed: 0 },
-          },
-        },
-      },
-    });
-
-    const { result } = renderHookWithProviders(() =>
-      useImportSummary(brandId<ImportJobId>("ij_sum")),
-    );
-
-    await waitFor(() => {
-      expect(result.current).not.toBeNull();
-    });
-    const snapshot = result.current;
-    expect(snapshot?.status).toBe("completed");
-    expect(snapshot?.completedAt).toBe(NOW);
-    expect(snapshot?.errors).toHaveLength(1);
-    expect(snapshot?.perCollection.member).toEqual({
-      total: 10,
-      imported: 10,
-      updated: 0,
-      skipped: 0,
-      failed: 0,
-    });
-  });
-
-  it("returns empty perCollection and errors when checkpointState is null", async () => {
-    const job = makeJob("ij_sum_null", "failed");
-    fixtures.set("importJob.get", {
-      ...job,
-      checkpointState: null,
-      errorLog: null,
-    });
-
-    const { result } = renderHookWithProviders(() =>
-      useImportSummary(brandId<ImportJobId>("ij_sum_null")),
-    );
-
-    await waitFor(() => {
-      expect(result.current).not.toBeNull();
-    });
-    expect(result.current?.perCollection).toEqual({});
-    expect(result.current?.errors).toEqual([]);
-    expect(result.current?.status).toBe("failed");
-    expect(result.current?.completedAt).toBeNull();
-  });
-});
-
 // ── useResumeActiveImport ────────────────────────────────────────────
 describe("useResumeActiveImport", () => {
   it("exposes the first importing job as the active job", async () => {
@@ -610,7 +399,6 @@ describe("useResumeActiveImport", () => {
     await act(async () => {
       await result.current.resume();
     });
-    // No runSpImport call should have been recorded since the last reset.
     expect(runSpImportMock).not.toHaveBeenCalled();
   });
 
@@ -621,7 +409,6 @@ describe("useResumeActiveImport", () => {
 
   it("exposes abortControllerRef as a React ref object", () => {
     const { result } = renderHookWithProviders(() => useResumeActiveImport());
-    // A React ref always has a `current` property; the initial value is null.
     expect(result.current.abortControllerRef).toHaveProperty("current");
     expect(result.current.abortControllerRef.current).toBeNull();
   });
@@ -708,50 +495,5 @@ describe("useResumeActiveImport", () => {
     expect(runSpImportMock).toHaveBeenCalledTimes(1);
     const callArgs = runSpImportMock.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(callArgs).not.toHaveProperty("initialCheckpoint");
-  });
-});
-
-// ── useCancelImport ──────────────────────────────────────────────────
-describe("useCancelImport", () => {
-  it("calls importJob.update with status=failed and preserves checkpoint", async () => {
-    const job = {
-      ...makeJob("ij_cancel", "importing"),
-      checkpointState: {
-        schemaVersion: 1,
-        checkpoint: {
-          completedCollections: ["privacy-bucket"],
-          currentCollection: "member",
-          currentCollectionLastSourceId: "src_1",
-        },
-        options: { selectedCategories: {}, avatarMode: "skip" },
-        totals: { perCollection: {} },
-      },
-    };
-    fixtures.set("importJob.get", job);
-
-    // Render both useCancelImport and useImportJob so we can wait for
-    // the job get query to populate cache before triggering cancel.
-    const { result } = renderHookWithProviders(() => {
-      const job = useImportJob(brandId<ImportJobId>("ij_cancel"));
-      const cancel = useCancelImport(brandId<ImportJobId>("ij_cancel"));
-      return { job, cancel };
-    });
-
-    await waitFor(() => {
-      expect(result.current.job.isSuccess).toBe(true);
-    });
-
-    await act(async () => {
-      await result.current.cancel.cancel();
-    });
-
-    const patch = fixtures.get("importJob.update.lastInput") as {
-      importJobId: string;
-      status: string;
-      checkpointState?: { checkpoint: { currentCollection: string } };
-    };
-    expect(patch.importJobId).toBe("ij_cancel");
-    expect(patch.status).toBe("failed");
-    expect(patch.checkpointState?.checkpoint.currentCollection).toBe("member");
   });
 });

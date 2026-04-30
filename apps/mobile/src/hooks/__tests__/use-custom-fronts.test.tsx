@@ -5,7 +5,7 @@ import { brandId } from "@pluralscape/types";
 import { act, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeRawCustomFront } from "../../__tests__/factories.js";
+import { makeRawCustomFront } from "../../__tests__/factories/index.js";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
